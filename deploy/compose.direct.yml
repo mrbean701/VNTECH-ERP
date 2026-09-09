@@ -1,0 +1,4 @@
+services:
+  app:
+    ports:
+      - "${VNTECH_BIND_ADDRESS:-0.0.0.0}:${VNTECH_APP_PORT:-8787}:8787"

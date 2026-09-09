@@ -1,0 +1,122 @@
+name: ${VNTECH_COMPOSE_PROJECT:-vntech-erp-v530-full-w2}
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TZ: Asia/Ho_Chi_Minh
+    volumes:
+      - type: bind
+        source: ${VNTECH_DB_DATA_PATH}
+        target: /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks: [vntech-backend]
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      REDISCLI_AUTH: ${REDIS_PASSWORD}
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD}", "--maxmemory", "512mb", "--maxmemory-policy", "allkeys-lru"]
+    volumes:
+      - type: bind
+        source: ${VNTECH_REDIS_DATA_PATH}
+        target: /data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep -q '^PONG$'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks: [vntech-backend]
+
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: ${VNTECH_APP_IMAGE:-vntech-erp-v530:5.3.0-full-w2}
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Ho_Chi_Minh
+      PORT: 8787
+      VNTECH_DEPLOYMENT_MODE: ${VNTECH_DEPLOYMENT_MODE}
+      VNTECH_DB_ENGINE: postgres
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD_URLENCODED}@postgres:5432/${POSTGRES_DB}
+      VNTECH_DB_POOL_MAX: ${VNTECH_DB_POOL_MAX:-30}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      VNTECH_REDIS_REQUIRED: "1"
+      VNTECH_STORAGE_DIR: /data/storage
+      VNTECH_BACKUP_DIR: /data/backups
+      VNTECH_SECRET_DIR: /data/secrets
+      VNTECH_STORAGE_MODE: ${VNTECH_STORAGE_MODE}
+      VNTECH_PUBLIC_URL: ${VNTECH_PUBLIC_URL}
+      VNTECH_COOKIE_SECURE: ${VNTECH_COOKIE_SECURE:-0}
+      VNTECH_NODE_NAME: ${VNTECH_NODE_NAME}
+      VNTECH_RELEASE_BUILD: ${VNTECH_RELEASE_BUILD:-5.3.0-MASTER-BASELINE-R1.1.1-FINAL-20260908}
+      VNTECH_PACKAGE_ID: ${VNTECH_PACKAGE_ID:-VNTECH_ERP_V5_3_0_MASTER_BASELINE_R1_1_1}
+      VNTECH_UI_CONTRACT_ID: ${VNTECH_UI_CONTRACT_ID:-VNTECH-UI-V5.3.0-MASTER-BASELINE-R1.1.1-FINAL-20260908}
+      VNTECH_TRUST_MODE: development
+      VNTECH_LICENSE_ENFORCEMENT: "0"
+      VNTECH_ALLOW_TEST_DATA_RESET: ${VNTECH_ALLOW_TEST_DATA_RESET:-0}
+      VNTECH_ALLOW_FACTORY_RESET: ${VNTECH_ALLOW_FACTORY_RESET:-0}
+    volumes:
+      - type: bind
+        source: ${VNTECH_STORAGE_HOST_PATH}
+        target: /data/storage
+      - type: bind
+        source: ${VNTECH_BACKUP_HOST_PATH}
+        target: /data/backups
+      - type: bind
+        source: ${VNTECH_SECRET_HOST_PATH}
+        target: /data/secrets
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8787/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    networks: [vntech-backend, vntech-edge]
+
+  backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Ho_Chi_Minh
+      PGHOST: postgres
+      PGPORT: 5432
+      PGDATABASE: ${POSTGRES_DB}
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      VNTECH_BACKUP_RETENTION_DAYS: ${VNTECH_BACKUP_RETENTION_DAYS:-30}
+      VNTECH_BACKUP_FILES_ENABLED: ${VNTECH_BACKUP_FILES_ENABLED:-0}
+    volumes:
+      - type: bind
+        source: ${VNTECH_BACKUP_HOST_PATH}
+        target: /backups
+      - type: bind
+        source: ${VNTECH_STORAGE_HOST_PATH}
+        target: /storage
+        read_only: true
+      - ./backup/backup-loop.sh:/backup-loop.sh:ro
+    entrypoint: ["/bin/sh", "/backup-loop.sh"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [vntech-backend]
+
+networks:
+  vntech-backend:
+    internal: true
+  vntech-edge:

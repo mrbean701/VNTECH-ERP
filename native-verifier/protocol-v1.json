@@ -1,0 +1,24 @@
+{
+  "protocol": "vntech-native-verifier/1",
+  "request": {
+    "releaseManifestPath": "string",
+    "licenseEnvelopePath": "string|null",
+    "tenantId": "string",
+    "machineFingerprint": "sha256",
+    "tpmEvidencePath": "string|null",
+    "nonce": "string"
+  },
+  "response": {
+    "valid": "boolean",
+    "signatureVerified": "boolean",
+    "releaseVerified": "boolean",
+    "licenseStatus": "missing|valid|invalid|expired|revoked",
+    "hardwareStatus": "not_required|matched|mismatched|unavailable",
+    "reasons": ["string"],
+    "verifiedAt": "date-time"
+  },
+  "w2Mode": {
+    "implementation": "foundation",
+    "enforcementEnabled": false
+  }
+}

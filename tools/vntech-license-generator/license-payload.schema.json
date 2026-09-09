@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vntech.local/schemas/license-payload-1.0.json",
+  "title": "VNTECH License Payload",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "licenseId", "tenantId", "companyCode", "productId", "issuedAt", "notBefore", "expiresAt"],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "licenseId": { "type": "string", "minLength": 8, "maxLength": 128 },
+    "tenantId": { "type": "string", "minLength": 2, "maxLength": 64 },
+    "companyCode": { "type": "string", "minLength": 2, "maxLength": 64 },
+    "productId": { "const": "VNTECH-KHO-MEP-001" },
+    "edition": { "type": "string", "default": "FULL" },
+    "features": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "issuedAt": { "type": "string", "format": "date-time" },
+    "notBefore": { "type": "string", "format": "date-time" },
+    "expiresAt": { "type": "string", "format": "date-time" },
+    "machineBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "allowedFingerprints"],
+      "properties": {
+        "mode": { "enum": ["none", "optional", "required"] },
+        "allowedFingerprints": { "type": "array", "items": { "type": "string", "pattern": "^[a-fA-F0-9]{64}$" }, "uniqueItems": true }
+      }
+    },
+    "transferGeneration": { "type": "integer", "minimum": 0 },
+    "nonce": { "type": "string", "minLength": 16, "maxLength": 256 }
+  }
+}
