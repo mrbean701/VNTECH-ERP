@@ -45,3 +45,8 @@ next-env.d.ts
 /.server-data/
 /.vntech_backups/
 /.vntech_update_state/
+
+# Maven / Java
+java-backend/**/target/
+*.log
+

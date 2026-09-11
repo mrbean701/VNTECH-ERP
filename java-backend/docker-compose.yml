@@ -1,0 +1,43 @@
+# VNTECH ERP — hạ tầng local cho backend Java (Spring Boot)
+#   MySQL 8.4 (schema chính, do Flyway quản lý) + Redis 7 (cache/session nếu bật)
+# Dùng cho dev muốn chạy đúng môi trường sản xuất trước cutover (docs/09 mục 5).
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: vntech-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: vntech_erp
+      MYSQL_USER: vntech
+      MYSQL_PASSWORD: vntech
+      TZ: Asia/Ho_Chi_Minh
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --sql-mode=STRICT_TRANS_TABLES,NO_ZERO_DATE,NO_ZERO_IN_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION
+    ports:
+      - "3306:3306"
+    volumes:
+      - vntech-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uvntech", "-pvntech"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    container_name: vntech-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  vntech-mysql-data:
