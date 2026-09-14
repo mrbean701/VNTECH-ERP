@@ -42,6 +42,9 @@ server:
 vntech:
   storage-dir: ${VNTECH_STORAGE_DIR:./data/storage}
   backup-dir: ${VNTECH_BACKUP_DIR:./data/backups}
+  # Nội dung tệp đính kèm (thay R2 env.BUCKET của JS) — key giữ nguyên cấu trúc <entityType>/<entityId>/<id>-<safeName>
+  files:
+    root: ${VNTECH_FILES_ROOT:./data/files}
   cookie-secure: ${VNTECH_COOKIE_SECURE:false}
   public-url: ${VNTECH_PUBLIC_URL:}
 
@@ -53,3 +56,14 @@ management:
   endpoint:
     health:
       show-details: always
+  health:
+    # Health indicator cho hạ tầng CHƯA cấu hình mặc định TẮT để /actuator/health trả UP.
+    # Bật lại khi có SMTP/Redis thật:
+    #   VNTECH_HEALTH_MAIL=true  VNTECH_HEALTH_REDIS=true
+    # (phát hiện 14/09/2026: health 503 vì Mail localhost:25 + Redis localhost:6379 chưa có)
+    mail:
+      enabled: ${VNTECH_HEALTH_MAIL:false}
+    redis:
+      enabled: ${VNTECH_HEALTH_REDIS:false}
+    db:
+      enabled: true

@@ -305,7 +305,7 @@ public class UserAdminStoreAdapter implements UserAdminStore {
     @Override
     public long countStagesUsingRole(String roleCode) {
         Long n = jdbcTemplate.queryForObject("""
-                SELECT COUNT(*) FROM approval_stage_catalog WHERE ','||allowed_role_codes||',' LIKE ?""",
+                SELECT COUNT(*) FROM approval_stage_catalog WHERE CONCAT(',',allowed_role_codes,',') LIKE ?""",
                 Long.class, "%," + roleCode + ",%");
         return n == null ? 0 : n;
     }
@@ -321,7 +321,7 @@ public class UserAdminStoreAdapter implements UserAdminStore {
     public void renameRoleInApprovalStages(String oldCode, String newCode, Instant now) {
         List<Map<String, Object>> stages = jdbcTemplate.queryForList("""
                 SELECT id,allowed_role_codes AS allowedRoleCodes FROM approval_stage_catalog
-                WHERE ','||allowed_role_codes||',' LIKE ?""", "%," + oldCode + ",%");
+                WHERE CONCAT(',',allowed_role_codes,',') LIKE ?""", "%," + oldCode + ",%");
         for (Map<String, Object> stage : stages) {
             List<String> codes = new java.util.ArrayList<>();
             for (String item : String.valueOf(stage.getOrDefault("allowedRoleCodes", "")).split(",")) {

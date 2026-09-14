@@ -129,7 +129,7 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                 FROM material_subcategories ms JOIN material_categories mc ON mc.id=ms.category_id
                 WHERE ms.active=1 AND mc.active=1 ORDER BY mc.sort_order,ms.sort_order,ms.name"""));
         List<Map<String, Object>> materials = new ArrayList<>(query("""
-                SELECT m.id,m.code,m.name,m.system,m.category_id AS categoryId,mc.code AS categoryCode,
+                SELECT m.id,m.code,m.name,m.`system`,m.category_id AS categoryId,mc.code AS categoryCode,
                        mc.name AS categoryName,m.subcategory_id AS subcategoryId,ms.code AS subcategoryCode,
                        ms.name AS subcategoryName,m.specification,m.brand,m.unit,m.standard_price AS standardPrice,
                        m.min_stock AS minStock,m.requires_cocq AS requiresCocq,m.requires_mar AS requiresMar
@@ -207,6 +207,32 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                            JOIN purchase_order_items actual_poi ON actual_poi.id=gri.purchase_order_item_id
                            GROUP BY actual_poi.purchase_order_id) gra ON gra.purchase_order_id=po.id
                 WHERE po.project_id IN (%s) ORDER BY po.ordered_at DESC LIMIT 300""".formatted(pidSql), params(pids));
+        // JS bootstrap gắn items[] lồng vào từng PO; front-end (ReceiptModal, PO detail) đọc trực tiếp po.items.
+        if (!purchaseOrders.isEmpty()) {
+            List<String> poIds = purchaseOrders.stream().map(r -> String.valueOf(r.get("id"))).toList();
+            String in = inClause(poIds);
+            List<Map<String, Object>> poItemRows = query("""
+                    SELECT poi.id,poi.purchase_order_id AS purchaseOrderId,poi.request_item_id AS requestItemId,
+                           poi.line_no AS lineNo,poi.system_code AS systemCode,
+                           poi.planned_delivery_at AS plannedDeliveryAt,poi.ordered_qty AS orderedQty,
+                           poi.delivered_qty AS actualDeliveredQty,
+                           CASE WHEN poi.delivered_qty>poi.received_qty THEN poi.delivered_qty-poi.received_qty ELSE 0 END AS pendingBchQty,
+                           poi.received_qty AS receivedQty,poi.closed_qty AS closedQty,poi.close_reason AS closeReason,
+                           CASE WHEN poi.ordered_qty>poi.received_qty+poi.closed_qty
+                                THEN poi.ordered_qty-poi.received_qty-poi.closed_qty ELSE 0 END AS remainingQty,
+                           poi.unit_price AS unitPrice,poi.status,
+                           mri.material_id AS materialId,m.code AS materialCode,m.name AS materialName,m.unit
+                    FROM purchase_order_items poi
+                    JOIN material_request_items mri ON mri.id=poi.request_item_id
+                    JOIN materials m ON m.id=mri.material_id
+                    WHERE poi.purchase_order_id IN (%s)
+                    ORDER BY poi.purchase_order_id,poi.line_no""".formatted(in), params(poIds));
+            purchaseOrders = purchaseOrders.stream().map(r -> {
+                Map<String, Object> out = new LinkedHashMap<>(r);
+                out.put("items", groupBy(poItemRows, "purchaseOrderId", String.valueOf(r.get("id"))));
+                return out;
+            }).toList();
+        }
         data.put("purchaseOrders", purchaseOrders);
 
         List<Map<String, Object>> receipts = pids.isEmpty() ? List.of() : query("""
@@ -227,6 +253,28 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                                   COALESCE(SUM(accepted_qty),0) AS accepted_qty,COALESCE(SUM(rejected_qty),0) AS rejected_qty
                            FROM goods_receipt_items GROUP BY receipt_id) gra ON gra.receipt_id=gr.id
                 WHERE po.project_id IN (%s) ORDER BY gr.received_at DESC LIMIT 300""".formatted(pidSql), params(pids));
+        // JS bootstrap gắn items[] lồng vào từng phiếu nhập (goods_receipt_items + PO + material).
+        if (!receipts.isEmpty()) {
+            List<String> receiptIds = receipts.stream().map(r -> String.valueOf(r.get("id"))).toList();
+            String in = inClause(receiptIds);
+            List<Map<String, Object>> receiptItemRows = query("""
+                    SELECT gri.id,gri.receipt_id AS receiptId,gri.purchase_order_item_id AS purchaseOrderItemId,
+                           poi.ordered_qty AS orderedQty,gri.received_qty AS actualQty,
+                           gri.accepted_qty AS acceptedQty,gri.rejected_qty AS rejectedQty,
+                           gri.lot_no AS lotNo,gri.qc_result AS qcResult,
+                           m.code AS materialCode,m.name AS materialName,m.unit
+                    FROM goods_receipt_items gri
+                    JOIN purchase_order_items poi ON poi.id=gri.purchase_order_item_id
+                    JOIN material_request_items mri ON mri.id=poi.request_item_id
+                    JOIN materials m ON m.id=mri.material_id
+                    WHERE gri.receipt_id IN (%s)
+                    ORDER BY gri.receipt_id,poi.line_no""".formatted(in), params(receiptIds));
+            receipts = receipts.stream().map(r -> {
+                Map<String, Object> out = new LinkedHashMap<>(r);
+                out.put("items", groupBy(receiptItemRows, "receiptId", String.valueOf(r.get("id"))));
+                return out;
+            }).toList();
+        }
         data.put("receipts", receipts);
 
         // ---- xuất kho + returns + stock counts ----
@@ -285,7 +333,7 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                        pbi.boq_code AS boqCode,pbi.contract_material_code AS contractMaterialCode,
                        pbi.approved_material_code AS approvedMaterialCode,pbi.material_id AS materialId,
                        m.code AS materialCode,COALESCE(bsi.contract_material_name,pbi.description) AS materialName,
-                       COALESCE(bsi.unit,m.unit) AS unit,COALESCE(NULLIF(bsi.source_system_code,''),m.system,'KHAC') AS systemCode,
+                       COALESCE(bsi.unit,m.unit) AS unit,COALESCE(NULLIF(bsi.source_system_code,''),m.`system`,'KHAC') AS systemCode,
                        bsi.source_subgroup_name AS subgroupName,mc.name AS categoryName,pbi.description,
                        pbi.item_type AS itemType,bsi.id AS sourceItemId,
                        COALESCE(bsi.mapping_status,'legacy_mapped') AS mappingStatus,
@@ -324,7 +372,7 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                        bsi.approved_material_code AS approvedMaterialCode,
                        bsi.contract_material_name AS materialName,bsi.unit,bsi.contract_qty AS contractQty,
                        bsi.remeasured_qty AS remeasuredQty,bsi.unit_price AS unitPrice,bsi.item_type AS itemType,
-                       bsi.note,COALESCE(NULLIF(bsi.source_system_code,''),m.system,'KHAC') AS systemCode,
+                       bsi.note,COALESCE(NULLIF(bsi.source_system_code,''),m.`system`,'KHAC') AS systemCode,
                        bsi.source_subgroup_name AS subgroupName,bsi.mapping_status AS mappingStatus,
                        bsi.mapped_material_id AS materialId,m.code AS materialCode,
                        m.name AS standardMaterialName,bsi.project_boq_item_id AS projectBoqItemId,bsi.active

@@ -100,7 +100,7 @@ public class RequestStoreAdapter implements RequestStore {
     @Override
     public List<Map<String, Object>> activeMaterials() {
         return jdbcTemplate.queryForList("""
-                SELECT id,code,name,unit,system,category_id AS categoryId,subcategory_id AS subcategoryId,
+                SELECT id,code,name,unit,`system`,category_id AS categoryId,subcategory_id AS subcategoryId,
                        standard_price AS standardPrice
                 FROM materials WHERE active=1""");
     }

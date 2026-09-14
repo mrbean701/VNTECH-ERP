@@ -319,7 +319,7 @@ CREATE TABLE IF NOT EXISTS `boq_price_import_batches` (
   `changed_count` INT NOT NULL DEFAULT 0,
   `unchanged_count` INT NOT NULL DEFAULT 0,
   `updated_by` VARCHAR(64) NULL,
-  `created_at` TIMESTAMP(3) NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+  `created_at` TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`id`)
 ) ;
 
@@ -330,7 +330,7 @@ CREATE TABLE IF NOT EXISTS `boq_price_import_items` (
   `old_unit_price` DECIMAL(18,4) NOT NULL DEFAULT 0,
   `new_unit_price` DECIMAL(18,4) NOT NULL DEFAULT 0,
   `changed` INT NOT NULL DEFAULT 0,
-  `created_at` TIMESTAMP(3) NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+  `created_at` TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`id`)
 ) ;
 
@@ -2132,3 +2132,36 @@ CREATE TABLE IF NOT EXISTS `work_items` (
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- Baseline tạo bởi generator — bảng: 114
+
+-- Giữ ràng buộc UNIQUE rời của MySQL (bản trước bỏ sót nên H2 lỏng hơn MySQL).
+CREATE UNIQUE INDEX IF NOT EXISTS `approval_email_recipients_scope_uidx` ON `approval_email_recipients` (`project_id`, `stage`);
+CREATE UNIQUE INDEX IF NOT EXISTS `approvals_request_stage_uidx` ON `approvals` (`request_id`, `stage`);
+CREATE UNIQUE INDEX IF NOT EXISTS `boq_import_batches_project_version_uidx` ON `boq_import_batches` (`project_id`, `version_no`);
+CREATE UNIQUE INDEX IF NOT EXISTS `boq_import_batches_contract_version_uidx` ON `boq_import_batches` (`contract_id`, `version_no`);
+CREATE UNIQUE INDEX IF NOT EXISTS `boq_mapping_candidates_run_source_rank_uidx` ON `boq_mapping_candidates` (`run_id`, `source_item_id`, `rank_no`);
+CREATE UNIQUE INDEX IF NOT EXISTS `boq_material_components_uidx` ON `boq_material_components` (`source_item_id`, `material_id`, `component_type`);
+CREATE UNIQUE INDEX IF NOT EXISTS `contract_ownership_transfers_no_uidx` ON `contract_ownership_transfers` (`transfer_no`);
+CREATE UNIQUE INDEX IF NOT EXISTS `document_sequences_scope_uidx` ON `document_sequences` (`document_type`, `project_id`, `year`);
+CREATE UNIQUE INDEX IF NOT EXISTS `goods_receipts_no_uidx` ON `goods_receipts` (`receipt_no`);
+CREATE UNIQUE INDEX IF NOT EXISTS `material_embeddings_provider_uidx` ON `material_embeddings` (`material_id`, `provider`, `model`);
+CREATE UNIQUE INDEX IF NOT EXISTS `material_mapping_history_uidx` ON `material_mapping_history` (`material_id`, `source_normalized`);
+CREATE UNIQUE INDEX IF NOT EXISTS `request_items_line_uidx` ON `material_request_items` (`request_id`, `line_no`);
+CREATE UNIQUE INDEX IF NOT EXISTS `material_requests_no_uidx` ON `material_requests` (`request_no`);
+CREATE UNIQUE INDEX IF NOT EXISTS `material_returns_no_uidx` ON `material_returns` (`return_no`);
+CREATE UNIQUE INDEX IF NOT EXISTS `material_subcategories_category_code_uidx` ON `material_subcategories` (`category_id`, `code`);
+CREATE UNIQUE INDEX IF NOT EXISTS `materials_code_uidx` ON `materials` (`code`);
+CREATE UNIQUE INDEX IF NOT EXISTS `projects_code_uidx` ON `projects` (`code`);
+CREATE UNIQUE INDEX IF NOT EXISTS `purchase_order_items_line_uidx` ON `purchase_order_items` (`purchase_order_id`, `line_no`);
+CREATE UNIQUE INDEX IF NOT EXISTS `purchase_orders_no_uidx` ON `purchase_orders` (`po_no`);
+CREATE UNIQUE INDEX IF NOT EXISTS `sessions_token_uidx` ON `sessions` (`token_hash`);
+CREATE UNIQUE INDEX IF NOT EXISTS `stock_count_items_uidx` ON `stock_count_items` (`stock_count_id`, `material_id`);
+CREATE UNIQUE INDEX IF NOT EXISTS `stock_counts_no_uidx` ON `stock_counts` (`count_no`);
+CREATE UNIQUE INDEX IF NOT EXISTS `stock_issues_no_uidx` ON `stock_issues` (`issue_no`);
+CREATE UNIQUE INDEX IF NOT EXISTS `suppliers_code_uidx` ON `suppliers` (`code`);
+CREATE UNIQUE INDEX IF NOT EXISTS `teams_code_uidx` ON `teams` (`code`);
+CREATE UNIQUE INDEX IF NOT EXISTS `user_module_permission_uidx` ON `user_module_permissions` (`user_id`, `module_key`);
+CREATE UNIQUE INDEX IF NOT EXISTS `user_project_scope_uidx` ON `user_project_scopes` (`user_id`, `project_id`);
+CREATE UNIQUE INDEX IF NOT EXISTS `users_employee_code_uidx` ON `users` (`employee_code`);
+CREATE UNIQUE INDEX IF NOT EXISTS `users_username_uidx` ON `users` (`username`);
+CREATE UNIQUE INDEX IF NOT EXISTS `users_email_uidx` ON `users` (`email`);
+CREATE UNIQUE INDEX IF NOT EXISTS `warehouses_code_uidx` ON `warehouses` (`code`);

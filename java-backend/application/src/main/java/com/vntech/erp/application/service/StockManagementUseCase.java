@@ -56,7 +56,10 @@ public final class StockManagementUseCase {
         String issueId = idGenerator.next("ISS");
         int year = java.time.LocalDate.now().getYear();
         long seq = store.nextSequenceNo("PX:" + projectId + ":" + year, "PX", projectId, year, now);
-        String issueNo = "PX-" + year + "-" + String.format("%04d", seq);
+        // Số phiếu PHẢI kèm mã dự án: document_sequences đếm theo (project, year) nên nếu chỉ dùng
+        // "PX-<year>-<seq>" thì hai dự án khác nhau sẽ trùng số và vi phạm stock_issues_no_uidx (global).
+        // Giữ cùng quy ước với số PO đang dùng: PO-<MÃ DỰ ÁN>-<year>-<seq>.
+        String issueNo = "PX-" + sv(mr, "projectCode").toUpperCase() + "-" + year + "-" + String.format("%04d", seq);
 
         List<Map<String, Object>> items = new ArrayList<>();
         for (int index = 0; index < rawLines.size(); index++) {
@@ -102,6 +105,8 @@ public final class StockManagementUseCase {
         header.put("issueNo", issueNo);
         header.put("projectId", projectId);
         header.put("fromWarehouseId", fromWarehouseId);
+        // Kho nhận là KHO TỔ ĐỘI (teams.warehouse_id) — JS ghi movement SMI chuyển hàng sang kho này.
+        header.put("toWarehouseId", sv(team, "warehouseId"));
         header.put("teamId", teamId);
         header.put("requestId", requestId);
         header.put("issuedBy", principal.userId());
@@ -147,7 +152,8 @@ public final class StockManagementUseCase {
         String returnId = idGenerator.next("RET");
         int year = java.time.LocalDate.now().getYear();
         long seq = store.nextSequenceNo("RET:" + projectId + ":" + year, "RET", projectId, year, now);
-        String returnNo = "RET-" + year + "-" + String.format("%04d", seq);
+        // Kèm mã dự án: material_returns_no_uidx là unique TOÀN CỤC nhưng sequence đếm theo (project, year).
+        String returnNo = "RET-" + sv(team, "projectCode").toUpperCase() + "-" + year + "-" + String.format("%04d", seq);
         String teamWarehouseId = sv(team, "warehouseId");
         List<Map<String, Object>> items = new ArrayList<>();
         for (int index = 0; index < rawLines.size(); index++) {
@@ -548,7 +554,9 @@ public final class StockManagementUseCase {
         int year = java.time.LocalDate.now().getYear();
         long seq = store.nextSequenceNo("KK:" + projectId + ":" + year, "KK", projectId, year, now);
         String countId = idGenerator.next("COUNT");
-        String countNo = "KK-" + year + "-" + String.format("%04d", seq);
+        // Kèm mã dự án: stock_counts_no_uidx unique TOÀN CỤC, sequence lại đếm theo (project, year).
+        String countNo = "KK-" + sv(warehouse, "projectCode").toUpperCase() + "-" + year + "-"
+                + String.format("%04d", seq);
         List<Map<String, Object>> items = new ArrayList<>();
         for (int index = 0; index < rawLines.size(); index++) {
             Map<String, Object> line = asMap(rawLines.get(index));

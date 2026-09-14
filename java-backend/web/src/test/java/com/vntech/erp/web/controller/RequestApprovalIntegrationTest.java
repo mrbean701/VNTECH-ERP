@@ -55,7 +55,7 @@ class RequestApprovalIntegrationTest {
                 "p_1", "PRJ-01", "Dự án 1", now, now);
         jdbc.update("INSERT INTO project_contracts (id,project_id,contract_no,contract_name,contract_type,status,is_primary,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?)",
                 "pc_1", "p_1", "HD-001", "Hợp đồng chính", "main", "active", 1, now, now);
-        jdbc.update("INSERT INTO materials (id,code,name,unit,system,active,created_at,updated_at) VALUES (?,?,?,?,?,1,?,?)",
+        jdbc.update("INSERT INTO materials (id,code,name,unit,`system`,active,created_at,updated_at) VALUES (?,?,?,?,?,1,?,?)",
                 "m_1", "M001", "Vật tư A", "cái", "DIEN", now, now);
         jdbc.update("INSERT INTO approval_stage_catalog (id,stage_no,name,allowed_role_codes,approval_mode,sla_hours,auto_approve_on_submit,active,sort_order,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
                 "stg_1", 1, "BCH / Chỉ huy trưởng", "engineer,commander,admin", "single", 8, 0, 1, 1, now, now);

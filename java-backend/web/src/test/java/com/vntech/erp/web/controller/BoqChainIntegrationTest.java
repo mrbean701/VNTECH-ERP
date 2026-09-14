@@ -70,9 +70,9 @@ class BoqChainIntegrationTest {
                 "p_boq", "PRJ-BOQ", "Dự án BOQ", now, now);
         jdbc.update("INSERT INTO project_contracts (id,project_id,contract_no,contract_name,contract_type,status,is_primary,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?)",
                 "pc_boq", "p_boq", "HD-BOQ", "Hợp đồng BOQ", "main", "active", 1, now, now);
-        jdbc.update("INSERT INTO materials (id,code,name,unit,system,active,created_at,updated_at) VALUES (?,?,?,?,?,1,?,?)",
+        jdbc.update("INSERT INTO materials (id,code,name,unit,`system`,active,created_at,updated_at) VALUES (?,?,?,?,?,1,?,?)",
                 "m_ppr", "M-PPR", "Ống nhựa PPR DN25", "m", "CTN", now, now);
-        jdbc.update("INSERT INTO materials (id,code,name,unit,system,active,created_at,updated_at) VALUES (?,?,?,?,?,1,?,?)",
+        jdbc.update("INSERT INTO materials (id,code,name,unit,`system`,active,created_at,updated_at) VALUES (?,?,?,?,?,1,?,?)",
                 "m_van", "M-VAN", "Van bi inox DN50", "cái", "CTN", now, now);
     }
 

@@ -149,25 +149,48 @@ public final class OpsTaskManagementUseCase {
     }
 
     // ============ project teams ============
+    /**
+     * Port nguyên trạng JS create_project_team: cần dự án đang hoạt động, chống trùng mã/tên trong dự án,
+     * sinh mã toàn cục <PROJECTCODE>-<CODE>, tạo KHO TỔ ĐỘI (type='team', cha là kho site) rồi mới ghi tổ đội
+     * trỏ tới kho đó — teams.warehouse_id là NOT NULL nên thiếu kho sẽ lỗi ràng buộc.
+     */
     public Map<String, Object> createProjectTeam(Principal principal, Map<String, Object> payload) {
         String projectId = trim(payload.get("projectId"));
         String code = trim(payload.get("code")).toUpperCase(Locale.ROOT);
         String name = trim(payload.get("name"));
-        if (projectId.isEmpty() || code.isEmpty() || name.isEmpty())
-            throw Api("Tổ đội cần dự án, mã và tên.");
-        if (store.teamCodeExists(projectId, code)) throw Api("Mã tổ đội đã tồn tại trong dự án.");
+        String trade = trim(payload.get("trade"));
+        if (projectId.isEmpty() || code.isEmpty() || name.isEmpty() || trade.isEmpty())
+            throw Api("Dự án, mã tổ đội, tên tổ đội và hạng mục là bắt buộc.");
+        Map<String, Object> project = store.findActiveProject(projectId)
+                .orElseThrow(() -> Api("Dự án không tồn tại hoặc đã đóng."));
+        if (store.teamCodeExists(projectId, code) || store.teamNameExists(projectId, name))
+            throw Api("Mã hoặc tên tổ đội đã tồn tại trong dự án này.");
+        String globalCode = (trim(project.get("code")) + "-" + code)
+                .replaceAll("[^A-Za-z0-9_-]", "-");
+        if (globalCode.length() > 48) globalCode = globalCode.substring(0, 48);
+        if (store.teamGlobalCodeExists(globalCode)) throw Api("Mã tổ đội đã tồn tại. Hãy dùng mã khác.");
+        // Kho site là cha của kho tổ đội; thiếu kho site thì không thể xuất vật tư cho tổ đội.
+        String siteWarehouseId = store.findFirstSiteWarehouse(projectId)
+                .map(w -> trim(w.get("id")))
+                .orElseThrow(() -> Api("Dự án chưa có kho dự án để liên kết tổ đội."));
+
+        String teamId = idGenerator.next("TEAM");
+        String warehouseId = idGenerator.next("WHTEAM");
+        String warehouseCode = ("TD-" + globalCode);
+        if (warehouseCode.length() > 48) warehouseCode = warehouseCode.substring(0, 48);
+
         Instant now = Instant.now();
         Map<String, Object> team = new LinkedHashMap<>();
-        team.put("id", idGenerator.next("TEAM"));
+        team.put("id", teamId);
         team.put("projectId", projectId);
-        team.put("code", code);
+        team.put("code", globalCode);
         team.put("name", name);
-        team.put("warehouseId", nvl(payload.get("warehouseId")));
-        team.put("description", nvl(payload.get("description")));
+        team.put("trade", trade);
+        team.put("warehouseId", warehouseId);
         team.put("leaderUserId", nvl(payload.get("leaderUserId")));
-        team.put("createdBy", principal.userId());
-        store.insertProjectTeam(team, now);
-        return Map.of("message", "Đã tạo tổ đội " + code + "; kho mặc định được liên kết để xuất vật tư.");
+        store.insertProjectTeamWithWarehouse(team, warehouseId, warehouseCode,
+                "Kho tổ đội · " + name, siteWarehouseId, now);
+        return Map.of("message", "Đã tạo tổ đội " + name + " trong dự án " + trim(project.get("code")) + ".");
     }
 
     public Map<String, Object> saveProjectTeam(Principal principal, Map<String, Object> payload) {
@@ -194,16 +217,26 @@ public final class OpsTaskManagementUseCase {
         String projectId = trim(payload.get("projectId"));
         store.findProjectTeam(teamId, projectId).orElseThrow(() -> Api("Không tìm thấy tổ đội."));
         boolean active = payload.get("active") == Boolean.TRUE || "1".equals(trim(payload.get("active")));
-        store.setProjectTeamStatus(teamId, active, Instant.now());
+        Instant now = Instant.now();
+        // JS set_project_team_status bật/tắt kèm kho tổ đội để tồn kho không còn dùng được khi tổ đội ngừng.
+        store.findTeamWarehouseId(teamId).ifPresent(warehouseId -> store.setWarehouseStatus(warehouseId, active, now));
+        store.setProjectTeamStatus(teamId, active, now);
         return Map.of("message", active ? "Đã kích hoạt tổ đội." : "Đã ngừng hoạt động của tổ đội (không xóa dữ liệu).");
     }
 
+    /**
+     * JS delete_project_team: chỉ xóa khi tổ đội CHƯA phát sinh giao dịch (xuất kho/hoàn trả/đề nghị),
+     * và xóa kèm kho tổ đội để không bỏ lại kho mồ côi.
+     */
     public Map<String, Object> deleteProjectTeam(Principal principal, Map<String, Object> payload) {
         String teamId = trim(payload.get("teamId"));
         String projectId = trim(payload.get("projectId"));
         store.findProjectTeam(teamId, projectId).orElseThrow(() -> Api("Không tìm thấy tổ đội."));
-        store.deleteProjectTeamSafe(teamId);
-        return Map.of("message", "Đã xóa tổ đội chưa phát sinh nghiệp vụ.");
+        if (store.teamHasTransactions(teamId))
+            throw Api("Tổ đội đã phát sinh giao dịch; chỉ được ngừng hoạt động, không được xóa vật lý.");
+        String warehouseId = store.findTeamWarehouseId(teamId).orElse(null);
+        store.deleteProjectTeamWithWarehouse(teamId, warehouseId);
+        return Map.of("message", "Đã xóa tổ đội chưa phát sinh giao dịch.");
     }
 
     // ============ approval stages ============

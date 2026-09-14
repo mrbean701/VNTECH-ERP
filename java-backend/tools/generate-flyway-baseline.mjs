@@ -16,6 +16,7 @@
  * ĐẶT Ở java-backend/tools — KHÔNG đặt trong scripts/ (fingerprint gate bản JS).
  */
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { dirname, resolve, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -56,6 +57,19 @@ function mysqlType(col) {
   return t;
 }
 
+/**
+ * MySQL giới hạn tên định danh 64 ký tự (Error 1059 nếu vượt).
+ * Tên index ghép `{table}_{suffix}_{col...}` rất dễ vượt (phát hiện 14/09/2026 trên MySQL 8.0.46).
+ * Khi vượt: giữ tiền tố, thay phần đuôi bằng hash ngắn (8 hex) để vẫn ổn định và duy nhất.
+ */
+function fitIdentifier(raw) {
+  const MAX = 64;
+  const safe = String(raw).replace(/[^a-zA-Z0-9_]/g, "");
+  if (safe.length <= MAX) return safe;
+  const hash = createHash("sha1").update(safe).digest("hex").slice(0, 8);
+  return `${safe.slice(0, MAX - 9)}_${hash}`;
+}
+
 function mysqlDefault(col) {
   if (col.default === undefined) return null;
   const d = String(col.default);
@@ -63,6 +77,15 @@ function mysqlDefault(col) {
   if (t === "TINYINT(1)") return /^(1|true)$/i.test(d) ? "1" : "0";
   if (t === "DECIMAL(18,4)") return Number(d).toString();
   if (t === "INT" || t === "BIGINT") return Number(d).toString();
+  // Hàm/biểu thức SQL không được bọc nháy đơn — nếu bọc, MySQL báo
+  // "Invalid default value" (Error 1067) khi migrate (phát hiện 14/09/2026 trên MySQL 8.0.46).
+  // LƯU Ý MySQL 8.0: cột DATETIME(3) yêu cầu CURRENT_TIMESTAMP(3) khớp độ chính xác,
+  // CURRENT_TIMESTAMP trần vẫn lỗi 1067 → phải chèn fsp khớp kiểu cột.
+  if (/^(CURRENT_TIMESTAMP|CURRENT_TIMESTAMP\(\)|NOW\(\)|CURRENT_DATE|CURRENT_DATE\(\)|CURRENT_TIME|CURRENT_TIME\(\)|LOCALTIME|LOCALTIME\(\)|LOCALTIMESTAMP|LOCALTIMESTAMP\(\))$/i.test(d.trim())) {
+    const fn = d.trim().toUpperCase().replace(/\(\)$/, "");
+    const fsp = /\((\d)\)/.exec(t);
+    return fsp ? `${fn}(${fsp[1]})` : fn;
+  }
   // các literal text khác — giữ nguyên nếu là số, ngược lại thêm quote
   if (/^-?\d+(\.\d+)?$/.test(d)) return `'${d}'`;
   return `'${d.replace(/'/g, "''")}'`;
@@ -97,8 +120,15 @@ for (const t of tables.sort((a, b) => a.table.localeCompare(b.table))) {
   // Inline UNIQUE (từ constraint trong CREATE TABLE) — tên theo cột (drizzle có thể 2 unique cùng tên khác cột)
   for (const ix of t.indexes) {
     if (ix.unique && ix.name === `${t.table}_inline_unique`) {
-      const uqName = `${t.table}_uidx_${ix.columns.join("_").replace(/[^a-zA-Z0-9_]/g, "")}`;
-      defs.push(`UNIQUE KEY \`${uqName}\` (${ix.columns.map((c) => `\`${c}\``).join(", ")})`);
+      const uqName = fitIdentifier(`${t.table}_uidx_${ix.columns.join("_").replace(/[^a-zA-Z0-9_]/g, "")}`);
+      // Cột TEXT trong UNIQUE KEY cần prefix length, nếu không MySQL báo
+      // Error 1170 "BLOB/TEXT column used in key specification without a key length"
+      // (phát hiện 14/09/2026 trên MySQL 8.0.46 — bảng custom_field_values/form_field_config).
+      const uqCols = ix.columns.map((c) => {
+        const col = t.columns.find((x) => x.name === c);
+        return col && mysqlType(col) === "TEXT" ? `\`${c}\`(191)` : `\`${c}\``;
+      }).join(", ");
+      defs.push(`UNIQUE KEY \`${uqName}\` (${uqCols})`);
     }
   }
 
@@ -128,6 +158,7 @@ for (const t of tables.sort((a, b) => a.table.localeCompare(b.table))) {
       continue;
     }
     createdIndexes.add(ix.name);
+    const indexName = fitIdentifier(ix.name);
     const kind = ix.unique ? "UNIQUE INDEX" : "INDEX";
     const cols = ix.columns.map((c) => {
       const col = t.columns.find((x) => x.name === c);
@@ -135,7 +166,7 @@ for (const t of tables.sort((a, b) => a.table.localeCompare(b.table))) {
       if (col && mysqlType(col) === "TEXT") return `\`${c}\`(191)`;
       return `\`${c}\``;
     }).join(", ");
-    out.push(`CREATE ${kind} \`${ix.name}\` ON \`${t.table}\` (${cols});`);
+    out.push(`CREATE ${kind} \`${indexName}\` ON \`${t.table}\` (${cols});`);
     out.push("");
   }
 }

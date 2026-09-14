@@ -23,16 +23,21 @@ public class WarehouseStockStoreAdapter implements WarehouseStockStore {
 
     @Override
     public Optional<Map<String, Object>> findTeam(String teamId, String projectId) {
-        List<Map<String, Object>> rows = jdbcTemplate.queryForList(
-                "SELECT id,warehouse_id AS warehouseId FROM teams WHERE id=? AND project_id=?", teamId, projectId);
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
+                SELECT t.id,t.warehouse_id AS warehouseId,p.code AS projectCode
+                FROM teams t JOIN projects p ON p.id=t.project_id
+                WHERE t.id=? AND t.project_id=?""", teamId, projectId);
         return rows.isEmpty() ? Optional.empty() : Optional.of(new LinkedHashMap<>(rows.get(0)));
     }
 
     @Override
     public Optional<Map<String, Object>> findRequestForIssue(String requestId, String projectId) {
         List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
-                SELECT id,status,contract_id AS contractId,boq_version_id AS boqVersionId
-                FROM material_requests WHERE id=? AND project_id=?""", requestId, projectId);
+                SELECT mr.id,mr.status,mr.contract_id AS contractId,mr.boq_version_id AS boqVersionId,
+                       p.code AS projectCode
+                FROM material_requests mr
+                JOIN projects p ON p.id=mr.project_id
+                WHERE mr.id=? AND mr.project_id=?""", requestId, projectId);
         return rows.isEmpty() ? Optional.empty() : Optional.of(new LinkedHashMap<>(rows.get(0)));
     }
 
@@ -123,17 +128,21 @@ public class WarehouseStockStoreAdapter implements WarehouseStockStore {
                     issueItemId, issueId, item.get("materialId"), item.get("requestItemId"),
                     item.get("contractId"), item.get("quantity"), 0, item.get("workPackageCode"),
                     item.get("installationArea"), now, now);
-            // stock_movements: xuất kho vật lý
+            // stock_movements: xuất kho vật lý — JS ghi movement_type 'SMI' và chuyển sang KHO TỔ ĐỘI
+            // (to_warehouse_id = team.warehouseId) để tồn tổ đội có hàng cho hoàn trả/kiểm kê.
+            // Bản port trước đây để to_warehouse_id/ destination_contract_id NULL và type 'ISSUE'
+            // ⇒ tồn tổ đội luôn 0, return_stock báo "vượt tồn vật lý tổ đội".
             jdbcTemplate.update("""
                     INSERT INTO stock_movements (id,project_id,contract_id,destination_contract_id,material_id,
                                                  from_warehouse_id,to_warehouse_id,movement_type,quantity,unit_cost,
                                                  occurred_at,reference_type,reference_id,posted_by,reversal_of_id,
                                                  created_at,updated_at)
-                    VALUES (?,?,?,NULL,?,?,NULL,?,?,0,?,?,?,?,NULL,?,?)""",
+                    VALUES (?,?,?,?,?,?,?,?,?,0,?,?,?,?,NULL,?,?)""",
                     "MOV_" + java.util.UUID.randomUUID(), header.get("projectId"), item.get("contractId"),
-                    item.get("materialId"), header.get("fromWarehouseId"), "ISSUE", item.get("quantity"),
+                    item.get("contractId"), item.get("materialId"), header.get("fromWarehouseId"),
+                    header.get("toWarehouseId"), "SMI", item.get("quantity"),
                     now, "stock_issue", issueId, header.get("issuedBy"), now, now);
-            // contract ledger: giảm tồn kế toán theo contract
+            // contract ledger: giảm tồn kế toán ở kho NGUỒN (JS giảm tại fromWarehouseId)
             jdbcTemplate.update("""
                     INSERT INTO contract_stock_ledger (id,project_id,contract_id,warehouse_id,material_id,
                                                        movement_type,quantity_delta,occurred_at,reference_type,
@@ -141,10 +150,22 @@ public class WarehouseStockStoreAdapter implements WarehouseStockStore {
                                                        actor_user_id,note,created_at)
                     VALUES (?,?,?,?,?,?,?,?,?,?,?,NULL,?,?,?)""",
                     "CSL_" + java.util.UUID.randomUUID(), header.get("projectId"), item.get("contractId"),
-                    header.get("fromWarehouseId"), item.get("materialId"), "ISSUE",
+                    header.get("fromWarehouseId"), item.get("materialId"), "SMI",
                     -((Number) item.get("quantity")).doubleValue(),
                     now, "stock_issue", issueId, issueItemId, header.get("issuedBy"),
                     "Xuất phục vụ lắp đặt", now);
+            // Tồn kế toán tại KHO TỔ ĐỘI tăng tương ứng (JS ghi thêm dòng ledger cho kho nhận).
+            jdbcTemplate.update("""
+                    INSERT INTO contract_stock_ledger (id,project_id,contract_id,warehouse_id,material_id,
+                                                       movement_type,quantity_delta,occurred_at,reference_type,
+                                                       reference_id,reference_item_id,counterparty_contract_id,
+                                                       actor_user_id,note,created_at)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,NULL,?,?,?)""",
+                    "CSL_" + java.util.UUID.randomUUID(), header.get("projectId"), item.get("contractId"),
+                    header.get("toWarehouseId"), item.get("materialId"), "SMI",
+                    ((Number) item.get("quantity")).doubleValue(),
+                    now, "stock_issue", issueId, issueItemId, header.get("issuedBy"),
+                    "Nhận tại kho tổ đội", now);
         }
     }
 
@@ -235,7 +256,7 @@ public class WarehouseStockStoreAdapter implements WarehouseStockStore {
             double accepted = ((Number) item.get("acceptedQty")).doubleValue();
             jdbcTemplate.update("""
                     INSERT INTO material_return_items (id,return_id,material_id,contract_id,quantity,
-                                                       accepted_qty,rejected_qty,condition,reason,created_at,updated_at)
+                                                       accepted_qty,rejected_qty,`condition`,reason,created_at,updated_at)
                     VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
                     returnItemId, returnId, item.get("materialId"), item.get("contractId"),
                     item.get("quantity"), accepted, ((Number) item.get("quantity")).doubleValue() - accepted,
@@ -537,7 +558,7 @@ public class WarehouseStockStoreAdapter implements WarehouseStockStore {
         }
         jdbcTemplate.update("""
                 UPDATE central_returns SET status='in_transit',approved_by=?,approved_at=?,
-                       note=CASE WHEN note IS NULL THEN ? ELSE note||' | '||? END,updated_at=? WHERE id=?""",
+                       note=CASE WHEN note IS NULL THEN ? ELSE CONCAT(note,' | ',?) END,updated_at=? WHERE id=?""",
                 userId, now, reason, reason, now, returnId);
     }
 
@@ -586,8 +607,10 @@ public class WarehouseStockStoreAdapter implements WarehouseStockStore {
     // ---------- stocktake ----------
     @Override
     public Optional<Map<String, Object>> findWarehouseById(String warehouseId) {
-        List<Map<String, Object>> rows = jdbcTemplate.queryForList(
-                "SELECT id,project_id AS projectId FROM warehouses WHERE id=?", warehouseId);
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
+                SELECT w.id,w.project_id AS projectId,w.code AS warehouseCode,p.code AS projectCode
+                FROM warehouses w LEFT JOIN projects p ON p.id=w.project_id
+                WHERE w.id=?""", warehouseId);
         return rows.isEmpty() ? Optional.empty() : Optional.of(new LinkedHashMap<>(rows.get(0)));
     }
 

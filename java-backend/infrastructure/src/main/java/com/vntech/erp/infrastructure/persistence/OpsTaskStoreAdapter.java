@@ -142,6 +142,85 @@ public class OpsTaskStoreAdapter implements OpsTaskStore {
                 team.get("warehouseId"), team.get("leaderUserId"), now, now);
     }
 
+    // ---- kho tổ đội ----
+    @Override @Transactional(readOnly = true)
+    public Optional<Map<String, Object>> findActiveProject(String projectId) {
+        return first("SELECT id,code,name FROM projects WHERE id=? AND status='active'", projectId);
+    }
+
+    @Override @Transactional(readOnly = true)
+    public Optional<Map<String, Object>> findFirstSiteWarehouse(String projectId) {
+        return first("""
+                SELECT id,code FROM warehouses
+                WHERE project_id=? AND type='site' AND active=1 ORDER BY code LIMIT 1""", projectId);
+    }
+
+    @Override @Transactional(readOnly = true)
+    public boolean teamGlobalCodeExists(String globalCode) {
+        Long n = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM teams WHERE code=?", Long.class, globalCode);
+        return n != null && n > 0;
+    }
+
+    @Override @Transactional(readOnly = true)
+    public boolean teamNameExists(String projectId, String name) {
+        Long n = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM teams WHERE project_id=? AND lower(name)=lower(?)", Long.class, projectId, name);
+        return n != null && n > 0;
+    }
+
+    /**
+     * JS create_project_team tạo 2 bản ghi trong cùng một batch: kho tổ đội (type='team', cha là kho site)
+     * rồi tổ đội trỏ tới kho đó. teams.warehouse_id là NOT NULL nên bắt buộc phải có kho trước.
+     */
+    @Override @Transactional
+    public void insertProjectTeamWithWarehouse(Map<String, Object> team, String warehouseId, String warehouseCode,
+                                               String warehouseName, String parentSiteWarehouseId, Instant now) {
+        jdbcTemplate.update("""
+                INSERT INTO warehouses (id,code,name,type,project_id,parent_warehouse_id,keeper_user_id,
+                                        active,created_at,updated_at)
+                VALUES (?,?,?,?,?,?,?,1,?,?)""",
+                warehouseId, warehouseCode, warehouseName, "team", team.get("projectId"),
+                parentSiteWarehouseId, null, now, now);
+        jdbcTemplate.update("""
+                INSERT INTO teams (id,project_id,code,name,trade,warehouse_id,leader_user_id,active,
+                                   created_at,updated_at)
+                VALUES (?,?,?,?,?,?,?,1,?,?)""",
+                team.get("id"), team.get("projectId"), team.get("code"), team.get("name"),
+                team.get("trade") != null ? team.get("trade") : "general",
+                warehouseId, team.get("leaderUserId"), now, now);
+    }
+
+    @Override @Transactional(readOnly = true)
+    public Optional<String> findTeamWarehouseId(String teamId) {
+        List<String> rows = jdbcTemplate.queryForList(
+                "SELECT warehouse_id FROM teams WHERE id=?", String.class, teamId);
+        return rows.isEmpty() ? Optional.empty() : Optional.ofNullable(rows.get(0));
+    }
+
+    @Override @Transactional(readOnly = true)
+    public boolean teamHasTransactions(String teamId) {
+        for (String table : new String[]{"stock_issues", "material_returns", "material_requests"}) {
+            Long n = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM " + table + " WHERE team_id=?", Long.class, teamId);
+            if (n != null && n > 0) return true;
+        }
+        return false;
+    }
+
+    @Override @Transactional
+    public void setWarehouseStatus(String warehouseId, boolean active, Instant now) {
+        if (warehouseId == null || warehouseId.isBlank()) return;
+        jdbcTemplate.update("UPDATE warehouses SET active=?,updated_at=? WHERE id=?", active ? 1 : 0, now, warehouseId);
+    }
+
+    @Override @Transactional
+    public void deleteProjectTeamWithWarehouse(String teamId, String warehouseId) {
+        jdbcTemplate.update("DELETE FROM teams WHERE id=?", teamId);
+        if (warehouseId != null && !warehouseId.isBlank()) {
+            jdbcTemplate.update("DELETE FROM warehouses WHERE id=?", warehouseId);
+        }
+    }
+
     @Override @Transactional
     public void updateProjectTeam(Map<String, Object> team, Instant now) {
         jdbcTemplate.update("""

@@ -14,6 +14,7 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import java.time.Instant;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -71,7 +72,7 @@ class AdminCatalogChainIntegrationTest {
                 "p_adm", "PRJ-ADM", "Dự án Admin", adminId, now, now);
         jdbc.update("INSERT INTO project_contracts (id,project_id,contract_no,contract_name,contract_type,status,is_primary,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?)",
                 "pc_adm", "p_adm", "HD-ADM", "HĐ ADM", "main", "active", 1, now, now);
-        jdbc.update("INSERT INTO materials (id,code,name,unit,system,active,created_at,updated_at) VALUES (?,?,?,?,?,1,?,?)",
+        jdbc.update("INSERT INTO materials (id,code,name,unit,`system`,active,created_at,updated_at) VALUES (?,?,?,?,?,1,?,?)",
                 "m_adm_seed", "M-ADM-SEED", "Vật tư thử", "cái", "DIEN", now, now);
         jdbc.update("INSERT INTO boq_versions (id,project_id,contract_id,version_no,version_code,version_name,revision_type,status,active,effective_at,created_at,updated_at) VALUES (?,?,?,1,'V1','BOQ V1','original','active',1,?,?,?)",
                 "bv_adm", "p_adm", "pc_adm", now, now, now);
@@ -103,7 +104,12 @@ class AdminCatalogChainIntegrationTest {
         postAction(action("save_approval_stage",
                 "\"code\":\"HT\",\"name\":\"Hội đồng kỹ thuật\",\"stageNo\":101,\"allowedRoleCodes\":\"engineer,admin\""), 200);
         postAction(action("create_project_team",
-                "\"projectId\":\"" + projectId + "\",\"code\":\"TD-ADM\",\"name\":\"Tổ ADM\",\"warehouseId\":\"wh_adm\""), 200);
+                "\"projectId\":\"" + projectId + "\",\"code\":\"TD-ADM\",\"name\":\"Tổ ADM\",\"trade\":\"installation\""), 200);
+        // create_project_team phải tự sinh kho tổ đội (teams.warehouse_id NOT NULL) như JS.
+        String teamWh = jdbc.queryForObject("SELECT warehouse_id FROM teams WHERE code=?",
+                String.class, "PRJ-ADM-TD-ADM");
+        assertEquals("team", jdbc.queryForObject("SELECT type FROM warehouses WHERE id=?", String.class, teamWh));
+        assertEquals(projectId, jdbc.queryForObject("SELECT project_id FROM warehouses WHERE id=?", String.class, teamWh));
         postAction(action("save_mar_approval",
                 "\"projectId\":\"" + projectId + "\",\"materialId\":\"" + matId + "\",\"status\":\"approved\",\"approvalNo\":\"MAR-01\""), 200);
         postAction(action("create_work_item",

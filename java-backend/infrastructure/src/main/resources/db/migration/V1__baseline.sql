@@ -344,7 +344,7 @@ CREATE TABLE `boq_price_import_batches` (
   `changed_count` INT NOT NULL DEFAULT 0,
   `unchanged_count` INT NOT NULL DEFAULT 0,
   `updated_by` VARCHAR(64) NULL,
-  `created_at` DATETIME(3) NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+  `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -355,7 +355,7 @@ CREATE TABLE `boq_price_import_items` (
   `old_unit_price` DECIMAL(18,4) NOT NULL DEFAULT 0,
   `new_unit_price` DECIMAL(18,4) NOT NULL DEFAULT 0,
   `changed` INT NOT NULL DEFAULT 0,
-  `created_at` DATETIME(3) NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+  `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -465,7 +465,7 @@ CREATE TABLE `business_role_group_scopes` (
   `created_at` DATETIME(3) NOT NULL,
   `updated_at` DATETIME(3) NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `business_role_group_scopes_uidx_business_group_id_business_scope_id` (`business_group_id`, `business_scope_id`)
+  UNIQUE KEY `business_role_group_scopes_uidx_business_group_id_busin_650a6dd2` (`business_group_id`, `business_scope_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE INDEX `business_role_group_scopes_group_idx` ON `business_role_group_scopes` (`business_group_id`, `is_primary`);
@@ -729,7 +729,7 @@ CREATE TABLE `custom_field_values` (
   `created_at` DATETIME(3) NOT NULL,
   `updated_at` DATETIME(3) NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `custom_field_values_uidx_form_key_entity_id_field_key` (`form_key`, `entity_id`, `field_key`)
+  UNIQUE KEY `custom_field_values_uidx_form_key_entity_id_field_key` (`form_key`(191), `entity_id`, `field_key`(191))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE INDEX `custom_field_values_entity_idx` ON `custom_field_values` (`form_key`(191), `entity_id`);
@@ -806,7 +806,7 @@ CREATE TABLE `form_field_config` (
   `created_at` DATETIME(3) NOT NULL,
   `updated_at` DATETIME(3) NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `form_field_config_uidx_form_key_field_key` (`form_key`, `field_key`)
+  UNIQUE KEY `form_field_config_uidx_form_key_field_key` (`form_key`(191), `field_key`(191))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `goods_receipt_items` (
@@ -936,7 +936,7 @@ CREATE TABLE `material_aliases` (
   `created_at` DATETIME(3) NOT NULL,
   `updated_at` DATETIME(3) NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `material_aliases_uidx_normalized_name` (`normalized_name`)
+  UNIQUE KEY `material_aliases_uidx_normalized_name` (`normalized_name`(191))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE INDEX `material_aliases_material_idx` ON `material_aliases` (`material_id`, `active`);
@@ -991,7 +991,7 @@ CREATE TABLE `material_external_codes` (
   `created_at` DATETIME(3) NOT NULL,
   `updated_at` DATETIME(3) NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `material_external_codes_uidx_code_type_owner_key_external_code` (`code_type`, `owner_key`, `external_code`)
+  UNIQUE KEY `material_external_codes_uidx_code_type_owner_key_external_code` (`code_type`(191), `owner_key`, `external_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE INDEX `material_external_codes_material_idx` ON `material_external_codes` (`material_id`, `active`);
@@ -1199,7 +1199,7 @@ CREATE TABLE `material_uom_conversions` (
   `created_at` DATETIME(3) NOT NULL,
   `updated_at` DATETIME(3) NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `material_uom_conversions_uidx_material_id_from_uom_to_uom` (`material_id`, `from_uom`, `to_uom`)
+  UNIQUE KEY `material_uom_conversions_uidx_material_id_from_uom_to_uom` (`material_id`, `from_uom`(191), `to_uom`(191))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `materials` (
@@ -1365,7 +1365,7 @@ CREATE TABLE `production_reports` (
   `created_at` DATETIME(3) NOT NULL,
   `updated_at` DATETIME(3) NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `production_reports_uidx_project_id_report_period` (`project_id`, `report_period`)
+  UNIQUE KEY `production_reports_uidx_project_id_report_period` (`project_id`, `report_period`(191))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE INDEX `production_reports_project_period_idx` ON `production_reports` (`project_id`, `report_period`(191));
@@ -1447,7 +1447,7 @@ CREATE TABLE `project_close_checks` (
   `created_at` DATETIME(3) NOT NULL,
   `updated_at` DATETIME(3) NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `project_close_checks_uidx_project_id_check_key` (`project_id`, `check_key`)
+  UNIQUE KEY `project_close_checks_uidx_project_id_check_key` (`project_id`, `check_key`(191))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `project_contracts` (
@@ -1878,7 +1878,7 @@ CREATE TABLE `team_production_records` (
   `created_at` DATETIME(3) NOT NULL,
   `updated_at` DATETIME(3) NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `team_production_records_uidx_subcontract_id_period_key` (`subcontract_id`, `period_key`)
+  UNIQUE KEY `team_production_records_uidx_subcontract_id_period_key` (`subcontract_id`, `period_key`(191))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE INDEX `team_production_project_idx` ON `team_production_records` (`project_id`, `team_id`, `period_key`(191));
@@ -2277,7 +2277,7 @@ CREATE TABLE `work_items` (
   `updated_at` DATETIME(3) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `work_items_uidx_task_no` (`task_no`),
-  UNIQUE KEY `work_items_uidx_dedupe_key` (`dedupe_key`)
+  UNIQUE KEY `work_items_uidx_dedupe_key` (`dedupe_key`(191))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE INDEX `work_items_department_idx` ON `work_items` (`department_code`, `status`, `assigned_to`(191), `due_at`);

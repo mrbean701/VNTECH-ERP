@@ -71,7 +71,7 @@ class StockChainIntegrationTest {
                 "p_stk", "PRJ-STK", "Dự án Kho", adminId, now, now);
         jdbc.update("INSERT INTO project_contracts (id,project_id,contract_no,contract_name,contract_type,status,is_primary,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?)",
                 "pc_stk", "p_stk", "HD-STK", "HĐ STK", "main", "active", 1, now, now);
-        jdbc.update("INSERT INTO materials (id,code,name,unit,system,active,created_at,updated_at) VALUES (?,?,?,?,?,1,?,?)",
+        jdbc.update("INSERT INTO materials (id,code,name,unit,`system`,active,created_at,updated_at) VALUES (?,?,?,?,?,1,?,?)",
                 "m_stk", "M-STK", "Vật tư Kho", "cái", "DIEN", now, now);
         jdbc.update("INSERT INTO boq_versions (id,project_id,contract_id,version_no,version_code,version_name,revision_type,status,active,effective_at,created_at,updated_at) VALUES (?,?,?,1,'V1','BOQ V1','original','active',1,?,?,?)",
                 "bv_stk", "p_stk", "pc_stk", now, now, now);

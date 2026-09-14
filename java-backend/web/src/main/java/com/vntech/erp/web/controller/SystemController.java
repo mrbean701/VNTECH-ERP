@@ -1080,6 +1080,17 @@ public class SystemController {
             }
         } catch (AuthUseCase.ApiError e) {
             return ResponseEntity.status(e.status()).body(json(Map.of("ok", false, "error", e.getMessage())));
+        } catch (org.springframework.dao.DuplicateKeyException e) {
+            // JS quy ước: lỗi UNIQUE/duplicate key → HTTP 409 kèm thông báo đọc được.
+            // Trước đây rơi vào 500 câm "Internal Server Error" nên UI không hiển thị được nguyên nhân
+            // (vd tạo dự án trùng mã, trùng số chứng từ, trùng mã vật tư...).
+            return ResponseEntity.status(409).body(json(Map.of("ok", false,
+                    "error", duplicateMessage(action, e))));
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            // Vi phạm ràng buộc khác (NOT NULL/FK/độ dài) — vẫn là lỗi DỮ LIỆU ĐẦU VÀO, không phải lỗi hệ thống.
+            return ResponseEntity.status(409).body(json(Map.of("ok", false,
+                    "error", "Dữ liệu vi phạm ràng buộc của hệ thống (trùng hoặc thiếu tham chiếu). "
+                            + "Vui lòng kiểm tra lại thông tin vừa nhập.")));
         }
     }
 
@@ -1088,6 +1099,97 @@ public class SystemController {
         body.put("ok", true);
         body.putAll(result);
         return body;
+    }
+
+    /**
+     * Chuyển lỗi trùng khoá thành thông báo tiếng Việt đọc được cho người dùng cuối.
+     *
+     * <p>Hai định dạng message phải xử lý (đã kiểm chứng bằng thực nghiệm):
+     * <ul>
+     *   <li><b>MySQL</b>: {@code Duplicate entry 'DA-MAU-01' for key 'projects.projects_code_uidx'}</li>
+     *   <li><b>H2</b> (test): {@code Unique index or primary key violation: "PUBLIC.PROJECTS_CODE_UIDX ON PUBLIC.PROJECTS(CODE) VALUES (...)"}</li>
+     * </ul>
+     * Bỏ qua việc này thì test H2 và production MySQL cho kết quả khác nhau — đúng loại lệch đã gây ra
+     * nhiều bug port trong dự án này.
+     */
+    private static String duplicateMessage(String action, org.springframework.dao.DuplicateKeyException e) {
+        String raw = e.getMostSpecificCause() != null
+                ? String.valueOf(e.getMostSpecificCause().getMessage())
+                : String.valueOf(e.getMessage());
+
+        String key = "";
+        String value = "";
+        // MySQL: for key 'table.index_name'
+        java.util.regex.Matcher my = java.util.regex.Pattern
+                .compile("for key '(?:[^.]+\\.)?([^']+)'").matcher(raw);
+        if (my.find()) key = my.group(1).toLowerCase(java.util.Locale.ROOT);
+        java.util.regex.Matcher mv = java.util.regex.Pattern
+                .compile("Duplicate entry '([^']*)'").matcher(raw);
+        if (mv.find()) value = mv.group(1);
+        // H2: "public.INDEX_NAME ON public.TABLE(...)  VALUES ( /* 1 */ 'value' )"
+        // Lưu ý: H2 in tên schema viết THƯỜNG (public.) trên một số bản, viết HOA trên bản khác
+        // ⇒ regex phải case-insensitive, nếu không sẽ không nhận diện được khoá nào.
+        if (key.isEmpty()) {
+            java.util.regex.Matcher h2 = java.util.regex.Pattern
+                    .compile("\\\"(?:[A-Za-z0-9_]+\\.)?([A-Za-z0-9_]+) ON [A-Za-z0-9_]+\\.([A-Za-z0-9_]+)\\(")
+                    .matcher(raw);
+            if (h2.find()) key = h2.group(1).toLowerCase(java.util.Locale.ROOT);
+            if (value.isEmpty()) {
+                java.util.regex.Matcher h2v = java.util.regex.Pattern
+                        .compile("VALUES \\(\\s*(?:/\\* \\d+ \\*/\\s*)?'([^']*)'").matcher(raw);
+                if (h2v.find()) value = h2v.group(1);
+            }
+        }
+
+        String subject = switch (key) {
+            // Tên khoá lấy ĐÚNG theo information_schema của DB (không đoán).
+            case "projects_code_uidx" -> "Mã dự án";
+            case "warehouses_code_uidx" -> "Mã kho";
+            case "materials_code_uidx" -> "Mã vật tư";
+            case "material_aliases_uidx_normalized_name" -> "Tên vật tư (alias)";
+            case "material_norms_uidx_norm_code" -> "Mã định mức";
+            case "suppliers_code_uidx" -> "Mã nhà cung cấp";
+            case "users_username_uidx" -> "Tên đăng nhập";
+            case "users_email_uidx" -> "Email";
+            case "users_employee_code_uidx" -> "Mã nhân viên";
+            case "teams_code_uidx" -> "Mã tổ đội";
+            case "bank_accounts_uidx_code" -> "Mã tài khoản ngân hàng";
+            case "purchase_orders_no_uidx" -> "Số PO";
+            case "goods_receipts_no_uidx" -> "Số phiếu nhập";
+            case "material_requests_no_uidx" -> "Số phiếu đề nghị";
+            case "stock_issues_no_uidx" -> "Số phiếu xuất";
+            case "material_returns_no_uidx" -> "Số phiếu hoàn trả";
+            case "stock_counts_no_uidx" -> "Số phiếu kiểm kê";
+            case "transfer_orders_uidx_transfer_no" -> "Số phiếu điều chuyển";
+            case "contract_ownership_transfers_no_uidx" -> "Số phiếu chuyển quyền sở hữu";
+            case "project_contracts_uidx_project_id_contract_no" -> "Số hợp đồng (trong dự án)";
+            case "team_subcontracts_uidx_project_id_contract_no" -> "Số HĐ giao khoán (trong dự án)";
+            case "payment_plans_uidx_plan_no" -> "Số kế hoạch thanh toán";
+            case "advance_requests_uidx_request_no" -> "Số đề nghị tạm ứng";
+            case "site_expense_claims_uidx_claim_no" -> "Số đề nghị chi phí";
+            case "cashbook_entries_uidx_entry_no" -> "Số phiếu sổ quỹ";
+            case "accounting_vouchers_uidx_voucher_no" -> "Số chứng từ kế toán";
+            case "labor_contracts_uidx_contract_no" -> "Số hợp đồng lao động";
+            case "benefit_records_uidx_benefit_no" -> "Số hồ sơ phúc lợi";
+            case "legal_documents_uidx_doc_no" -> "Số văn bản pháp lý";
+            case "official_correspondence_uidx_doc_no" -> "Số công văn";
+            case "seal_management_uidx_seal_no" -> "Số hiệu con dấu";
+            case "construction_daily_logs_uidx_log_no" -> "Số nhật ký thi công";
+            case "work_items_uidx_task_no" -> "Số nhiệm vụ";
+            case "boq_versions_uidx_contract_id_version_no" -> "Số phiên bản BOQ (trong hợp đồng)";
+            case "project_close_checks_uidx_project_id_check_key" -> "Mục kiểm tra đóng dự án";
+            case "material_mar_approvals_uidx_project_id_material_id" -> "MAR của vật tư trong dự án";
+            case "production_reports_uidx_project_id_report_period" -> "Báo cáo sản lượng kỳ này";
+            case "primary_key_f" -> "Mã định danh (trùng khoá chính)";
+            default -> "";
+        };
+        if (!subject.isEmpty()) {
+            return value.isEmpty()
+                    ? subject + " đã tồn tại. Vui lòng dùng giá trị khác."
+                    : subject + " \"" + value + "\" đã tồn tại. Vui lòng dùng giá trị khác.";
+        }
+        // Không nhận diện được khoá cụ thể: vẫn trả 409 kèm gợi ý, KHÔNG để lộ tên bảng cho người dùng.
+        return "Dữ liệu đã tồn tại (trùng khoá duy nhất). Vui lòng kiểm tra lại mã/số vừa nhập.";
     }
 
     private static BoqManagementUseCase.Principal asBoqPrincipal(AuthUseCase.CurrentUser cu) {

@@ -48,7 +48,7 @@ public class PurchaseStoreAdapter implements PurchaseStore {
                 SELECT mri.id,mri.material_id AS materialId,mri.contract_id AS contractId,
                        mri.boq_version_id AS boqVersionId,mri.boq_item_id AS boqItemId,
                        mri.approved_purchase_qty AS approvedQty,mri.ordered_qty AS orderedQty,
-                       m.system,m.requires_mar AS requiresMar
+                       m.`system`,m.requires_mar AS requiresMar
                 FROM material_request_items mri
                 JOIN materials m ON m.id=mri.material_id
                 WHERE mri.request_id=?""", requestId);
@@ -57,7 +57,7 @@ public class PurchaseStoreAdapter implements PurchaseStore {
     @Override
     public Optional<Map<String, Object>> findMaterial(String materialId) {
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(
-                "SELECT id,code,name,system,requires_mar AS requiresMar FROM materials WHERE id=?", materialId);
+                "SELECT id,code,name,`system`,requires_mar AS requiresMar FROM materials WHERE id=?", materialId);
         return rows.isEmpty() ? Optional.empty() : Optional.of(new LinkedHashMap<>(rows.get(0)));
     }
 

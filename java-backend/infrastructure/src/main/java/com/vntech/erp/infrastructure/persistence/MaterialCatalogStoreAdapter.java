@@ -40,7 +40,7 @@ public class MaterialCatalogStoreAdapter implements MaterialCatalogStore {
     @Override @Transactional
     public void insertMaterial(Map<String, Object> m, String createdBy, Instant now) {
         jdbcTemplate.update("""
-                INSERT INTO materials (id,code,name,system,specification,brand,unit,standard_price,requires_mar,
+                INSERT INTO materials (id,code,name,`system`,specification,brand,unit,standard_price,requires_mar,
                                        active,category_id,subcategory_id,created_at,updated_at)
                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 m.get("id"), m.get("code"), m.get("name"),
@@ -56,7 +56,7 @@ public class MaterialCatalogStoreAdapter implements MaterialCatalogStore {
     @Override @Transactional
     public void updateMaterial(Map<String, Object> m, Instant now) {
         jdbcTemplate.update("""
-                UPDATE materials SET code=?,name=?,system=?,specification=?,brand=?,unit=?,category_id=?,
+                UPDATE materials SET code=?,name=?,`system`=?,specification=?,brand=?,unit=?,category_id=?,
                        subcategory_id=?,standard_price=?,requires_mar=?,updated_at=?
                 WHERE id=?""",
                 m.get("code"), m.get("name"), m.get("system") != null ? m.get("system") : "KHAC",
@@ -267,11 +267,11 @@ public class MaterialCatalogStoreAdapter implements MaterialCatalogStore {
     public void importMaterialsBulk(List<Map<String, Object>> rows, String createdBy, Instant now) {
         for (Map<String, Object> m : rows) {
             jdbcTemplate.update("""
-                    INSERT INTO materials (id,code,name,specification,unit,system,category_id,subcategory_id,
+                    INSERT INTO materials (id,code,name,specification,unit,`system`,category_id,subcategory_id,
                                            standard_price,requires_mar,is_component,active,created_by,created_at,updated_at)
                     VALUES (?,?,?,?,?,?,?,?,?,?,?,1,?,?,?)
                     ON DUPLICATE KEY UPDATE name=VALUES(name),specification=VALUES(specification),unit=VALUES(unit),
-                        system=VALUES(system),category_id=VALUES(category_id),subcategory_id=VALUES(subcategory_id),
+                        `system`=VALUES(`system`),category_id=VALUES(category_id),subcategory_id=VALUES(subcategory_id),
                         standard_price=VALUES(standard_price),updated_at=VALUES(updated_at)""",
                     m.get("id"), m.get("code"), m.get("name"), m.get("specification"), m.get("unit"), m.get("system"),
                     m.get("categoryId"), m.get("subcategoryId"), m.get("standardPrice"),

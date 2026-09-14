@@ -32,6 +32,7 @@ import com.vntech.erp.application.service.AdminSystemUseCase;
 import com.vntech.erp.application.service.AuthUseCase;
 import com.vntech.erp.application.service.BoqManagementUseCase;
 import com.vntech.erp.application.service.FinanceManagementUseCase;
+import com.vntech.erp.application.service.FileUseCase;
 import com.vntech.erp.application.service.HrManagementUseCase;
 import com.vntech.erp.application.service.BootstrapUseCase;
 import com.vntech.erp.application.service.ListActiveProjectsUseCase;
@@ -68,6 +69,12 @@ public class ApplicationBeansConfig {
     @Bean
     public RbacService rbacService(ModulePermissionStore modulePermissionStore) {
         return new RbacService(modulePermissionStore);
+    }
+
+    /** Port /api/files (app/api/files/route.ts) — tệp đính kèm + archive dự án offline. */
+    @Bean
+    public FileUseCase fileUseCase(com.vntech.erp.application.port.out.FileStore fileStore) {
+        return new FileUseCase(fileStore);
     }
 
     @Bean

@@ -14,7 +14,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.time.Instant;
+import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -78,7 +80,7 @@ class SupplyChainEndToEndIntegrationTest {
                 "p_e2e", "PRJ-E2E", "Dự án E2E", adminId, now, now);
         jdbc.update("INSERT INTO project_contracts (id,project_id,contract_no,contract_name,contract_type,status,is_primary,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?)",
                 "pc_e2e", "p_e2e", "HD-E2E", "Hợp đồng E2E", "main", "active", 1, now, now);
-        jdbc.update("INSERT INTO materials (id,code,name,unit,system,active,created_at,updated_at) VALUES (?,?,?,?,?,1,?,?)",
+        jdbc.update("INSERT INTO materials (id,code,name,unit,`system`,active,created_at,updated_at) VALUES (?,?,?,?,?,1,?,?)",
                 "m_e2e", "M-E2E", "Vật tư E2E", "cái", "DIEN", now, now);
         jdbc.update("INSERT INTO boq_versions (id,project_id,contract_id,version_no,version_code,version_name,revision_type,status,active,effective_at,created_at,updated_at) VALUES (?,?,?,1,'V1','BOQ V1','original','active',1,?,?,?)",
                 "bv_e2e", "p_e2e", "pc_e2e", now, now, now);
@@ -157,6 +159,22 @@ class SupplyChainEndToEndIntegrationTest {
                 "\"projectId\":\"" + projectId + "\",\"fromWarehouseId\":\"wh_e2e\",\"teamId\":\"team_e2e\","
                         + "\"requestId\":\"" + requestId + "\",\"receivedByName\":\"Tổ trưởng E2E\","
                         + "\"lines\":[{\"materialId\":\"" + materialId + "\",\"quantity\":4,\"requestItemId\":\"" + mriId + "\"}]"), 200);
+        // BUG #10 (regression guard): cấp phát PHẢI chuyển hàng sang kho TỔ ĐỘI, không được để
+        // to_warehouse_id NULL — nếu sai thì tồn tổ đội luôn 0 và return_stock/kiểm kê đều hỏng.
+        // Lưu ý: fixture này seed team_e2e trỏ CHÍNH wh_e2e, nên chỉ khẳng định được trên movement
+        // (đúng chỗ bug nằm) + destination_contract_id; không khẳng định ledger vì 2 kho trùng nhau.
+        String teamWarehouseId = jdbc.queryForObject(
+                "SELECT warehouse_id FROM teams WHERE id='team_e2e'", String.class);
+        Map<String, Object> smi = jdbc.queryForMap(
+                "SELECT to_warehouse_id AS toWh, destination_contract_id AS destContract, quantity "
+                        + "FROM stock_movements WHERE movement_type='SMI' AND from_warehouse_id='wh_e2e' "
+                        + "AND reference_type='stock_issue' ORDER BY occurred_at DESC LIMIT 1");
+        assertEquals(teamWarehouseId, smi.get("toWh"),
+                "movement SMI phải có to_warehouse_id = kho tổ đội (bug #10: trước đây là NULL)");
+        assertEquals(contractId, smi.get("destContract"),
+                "movement SMI phải có destination_contract_id = contract của dòng (bug #10: trước đây NULL)");
+        assertEquals(0, new java.math.BigDecimal("4").compareTo((java.math.BigDecimal) smi.get("quantity")),
+                "movement SMI phải đúng số lượng 4");
         // Production → Thu hồi → Thanh toán
         postAction(action("save_production_report",
                 "\"projectId\":\"" + projectId + "\",\"reportPeriod\":\"2026-09\",\"plannedValue\":100000000,"

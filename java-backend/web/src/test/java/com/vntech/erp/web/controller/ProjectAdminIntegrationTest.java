@@ -64,9 +64,51 @@ class ProjectAdminIntegrationTest {
                 .andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.containsString("Mã dự án")));
     }
 
+    /**
+     * BUG #16 (regression guard): tạo dự án TRÙNG mã phải trả 409 + thông báo đọc được,
+     * KHÔNG được để lộ 500 câm "Internal Server Error" (JS quy ước duplicate key → 409).
+     *
+     * <p>Lưu ý: create_project ghi cả `projects` và `warehouses` (kho công trường mã `KHO-<mã>`).
+     * Lần tạo thứ 2 vi phạm CẢ HAI ràng buộc; DB nào ném trước tuỳ thứ tự insert (H2 ném kho trước,
+     * MySQL ném dự án trước) ⇒ chỉ khẳng định đúng bản chất: 409 + thông báo tiếng Việt có nghĩa,
+     * và KHÔNG lộ chi tiết kỹ thuật (tên bảng/index/SQL) ra cho người dùng.
+     */
     @Test
-    void setProjectStatus_invalidStatus_returns400() throws Exception {
+    void createProject_duplicateCode_returns409WithReadableMessage() throws Exception {
         MvcResult setup = setupAdmin();
+        jakarta.servlet.http.Cookie sessionCookie = setup.getResponse().getCookie("mep_session");
+
+        mockMvc.perform(post("/api/system")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"action":"create_project","code":"PRJ-DUP","name":"Dự án trùng"}""")
+                        .cookie(sessionCookie))
+                .andExpect(status().isOk());
+
+        MvcResult second = mockMvc.perform(post("/api/system")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"action":"create_project","code":"PRJ-DUP","name":"Dự án trùng lần 2"}""")
+                        .cookie(sessionCookie))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.ok").value(false))
+                .andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.anyOf(
+                        org.hamcrest.Matchers.containsString("Mã dự án"),
+                        org.hamcrest.Matchers.containsString("Mã kho"))))
+                .andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.containsString("đã tồn tại")))
+                .andReturn();
+
+        String body = second.getResponse().getContentAsString();
+        org.junit.jupiter.api.Assertions.assertFalse(body.contains("uidx"),
+                "Thông báo không được lộ tên index kỹ thuật: " + body);
+        org.junit.jupiter.api.Assertions.assertFalse(body.contains("INSERT INTO"),
+                "Thông báo không được lộ câu SQL: " + body);
+        org.junit.jupiter.api.Assertions.assertFalse(body.contains("Internal Server Error"),
+                "Không được trả 500 câm: " + body);
+    }
+
+    @Test
+    void setProjectStatus_invalidStatus_returns400() throws Exception {        MvcResult setup = setupAdmin();
         jakarta.servlet.http.Cookie sessionCookie = setup.getResponse().getCookie("mep_session");
         mockMvc.perform(post("/api/system")
                         .contentType(MediaType.APPLICATION_JSON)

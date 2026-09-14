@@ -258,14 +258,14 @@ public class BoqStoreAdapter implements BoqStore {
     @Override
     public Optional<Map<String, Object>> findMaterial(String materialId) {
         List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
-                SELECT id,code,name,system,unit FROM materials WHERE id=? AND active=1""", materialId);
+                SELECT id,code,name,`system`,unit FROM materials WHERE id=? AND active=1""", materialId);
         return rows.isEmpty() ? Optional.empty() : Optional.of(new LinkedHashMap<>(rows.get(0)));
     }
 
     @Override
     public Optional<Map<String, Object>> findMaterialByCode(String code) {
         List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
-                SELECT id,code,name,system,unit FROM materials WHERE upper(code)=upper(?) AND active=1""", code);
+                SELECT id,code,name,`system`,unit FROM materials WHERE upper(code)=upper(?) AND active=1""", code);
         return rows.isEmpty() ? Optional.empty() : Optional.of(new LinkedHashMap<>(rows.get(0)));
     }
 
@@ -309,7 +309,7 @@ public class BoqStoreAdapter implements BoqStore {
     @Override
     public List<Map<String, Object>> activeMaterialsForMatching() {
         return jdbcTemplate.queryForList("""
-                SELECT id,code,name,system,specification,brand,unit,active
+                SELECT id,code,name,`system`,specification,brand,unit,active
                 FROM materials WHERE active=1 AND upper(code)<>'__BOQ_STRUCTURE__' ORDER BY code""");
     }
 
@@ -582,7 +582,7 @@ public class BoqStoreAdapter implements BoqStore {
     @Override
     public List<Map<String, Object>> materialCatalogSimple() {
         return jdbcTemplate.queryForList(
-                "SELECT id,code,name,system,unit FROM materials WHERE active=1");
+                "SELECT id,code,name,`system`,unit FROM materials WHERE active=1");
     }
 
     @Override

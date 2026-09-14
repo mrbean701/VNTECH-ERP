@@ -27,6 +27,20 @@ public interface OpsTaskStore {
     void setProjectTeamStatus(String teamId, boolean active, Instant now);
     void deleteProjectTeamSafe(String teamId);
 
+    // ---- kho tổ đội (tạo kèm tổ đội, tương đương JS create_project_team) ----
+    Optional<Map<String, Object>> findActiveProject(String projectId);
+    Optional<Map<String, Object>> findFirstSiteWarehouse(String projectId);
+    boolean teamGlobalCodeExists(String globalCode);
+    boolean teamNameExists(String projectId, String name);
+    void insertProjectTeamWithWarehouse(Map<String, Object> team, String warehouseId, String warehouseCode,
+                                        String warehouseName, String parentSiteWarehouseId, Instant now);
+    /** Đồng bộ trạng thái/ẩn hiện kho tổ đội khi bật/tắt tổ đội (JS set_project_team_status). */
+    Optional<String> findTeamWarehouseId(String teamId);
+    /** true nếu tổ đội đã có phiếu xuất/hoàn trả/đề nghị — chặn xóa vật lý như JS. */
+    boolean teamHasTransactions(String teamId);
+    void setWarehouseStatus(String warehouseId, boolean active, Instant now);
+    void deleteProjectTeamWithWarehouse(String teamId, String warehouseId);
+
     Optional<Map<String, Object>> findApprovalStageCatalog(String stageNo);
     boolean stageCodeExists(String code, String excludeId);
     Optional<Map<String, Object>> findApprovalStage(String id);
