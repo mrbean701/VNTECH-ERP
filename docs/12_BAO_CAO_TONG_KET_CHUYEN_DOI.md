@@ -20,7 +20,7 @@ Backend Java (Clean Architecture, Spring Boot 3.5/Java 21) **thay thế toàn b�
 
 ## 2. KIỂM CHỨNG 4 TẦNG
 
-**Bảng test (63 test — 0 fail, `mvn clean verify`, 2026-09-11):**
+**Bảng test (64 test — 0 fail, `mvn clean verify`, 2026-09-11):**
 
 | # | Test class | Số test | Mục đích |
 |---|---|---|---|

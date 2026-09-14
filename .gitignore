@@ -45,6 +45,12 @@ next-env.d.ts
 /.server-data/
 /.vntech_backups/
 /.vntech_update_state/
+# Ảnh chụp màn hình & hồ sơ chẩn đoán do công cụ sinh ra (không phải mã nguồn)
+/screenshot-*.png
+/.memsearch/
+/.probe-*-profile/
+# Bản sao lưu cơ sở dữ liệu (dump lớn, không đưa vào kho mã)
+/backup/
 
 # Maven / Java
 java-backend/**/target/
