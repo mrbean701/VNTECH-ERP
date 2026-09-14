@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  VNTECH ERP — Java Clean Architecture (backend thay thế monolith JS)
+  Parent POM: Spring Boot 3.5.x + Java 21, Maven multi-module.
+  Modules tuân thủ Clean Architecture:
+    domain          -> lõi nghiệp vụ, KHÔNG phụ thuộc framework/DB
+    application     -> use-cases + ports (interface)
+    infrastructure  -> JPA/MySQL/Redis/SMTP/File/POI (adapters)
+    web             -> Spring Boot app: REST gateway /api/system, serve SPA
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>3.5.0</version>
+    <relativePath/>
+  </parent>
+
+  <groupId>com.vntech</groupId>
+  <artifactId>vntech-erp</artifactId>
+  <version>0.1.0-SNAPSHOT</version>
+  <packaging>pom</packaging>
+
+  <name>VNTECH ERP — Java Clean Architecture</name>
+  <description>Backend Java (Clean Architecture) + MySQL thay thế monolith JS — Strangler Fig theo docs/09_KE_HOACH_CHUYEN_SANG_JAVA_MYSQL.md</description>
+
+  <modules>
+    <module>domain</module>
+    <module>application</module>
+    <module>infrastructure</module>
+    <module>web</module>
+  </modules>
+
+  <properties>
+    <java.version>21</java.version>
+    <maven.compiler.release>21</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <!-- Nội bộ module -->
+      <dependency>
+        <groupId>com.vntech</groupId>
+        <artifactId>vntech-erp-domain</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.vntech</groupId>
+        <artifactId>vntech-erp-application</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.vntech</groupId>
+        <artifactId>vntech-erp-infrastructure</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <configuration>
+            <release>${maven.compiler.release}</release>
+            <parameters>true</parameters>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <configuration>
+            <!-- Mockito/byte-buddy self-attach trên JDK 21+ -->
+            <argLine>-XX:+EnableDynamicAgentLoading -Djdk.attach.allowAttachSelf=true</argLine>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+</project>

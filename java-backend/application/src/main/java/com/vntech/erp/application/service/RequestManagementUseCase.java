@@ -1,0 +1,522 @@
+package com.vntech.erp.application.service;
+
+import com.vntech.erp.application.port.out.IdGenerator;
+import com.vntech.erp.application.port.out.RequestStore;
+import com.vntech.erp.application.rbac.RbacService;
+
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+/**
+ * Use-case Phiếu đề nghị mua hàng — port nguyên trạng create_request của monolith JS:
+ * header required theo form config, resolve contract/BOQ context, material matching (id/code/name+unit/alias),
+ * đối chiếu dòng BOQ (nghiêm ngặt chống cộng lũy kế trùng), tạo MR + items + allocations + approvals 5 bậc
+ * (auto-approve bước 1 nếu cấu hình, workflow assignment per stage, SLA due_at).
+ */
+public final class RequestManagementUseCase {
+
+    private static final DateTimeFormatter ISO = DateTimeFormatter.ISO_LOCAL_DATE;
+
+    private final RequestStore store;
+    private final IdGenerator idGenerator;
+    private final RbacService rbac;
+
+    public RequestManagementUseCase(RequestStore store, IdGenerator idGenerator, RbacService rbac) {
+        this.store = store;
+        this.idGenerator = idGenerator;
+        this.rbac = rbac;
+    }
+
+    public interface Principal {
+        String userId();
+        String role();
+        String fullName();
+        String email();
+    }
+
+    public Map<String, Object> createRequest(Principal principal, Map<String, Object> payload) {
+        rbac.requireRole(principalAsCurrent(principal), List.of("engineer", "commander", "admin"));
+        String projectId = trim(payload.get("projectId"));
+        String neededAt = trim(payload.get("neededAt"));
+        String area = trim(payload.get("area"));
+        List<?> rawLines = payload.get("lines") instanceof List<?> l ? l : List.of();
+        if (projectId.isEmpty() || rawLines.isEmpty())
+            throw Api("Phiếu đề nghị phải có dự án và ít nhất một dòng vật tư.");
+        if (rawLines.size() > 100) throw Api("Mỗi phiếu đề nghị được nhập tối đa 100 dòng vật tư.");
+
+        // Header required theo form_field_config request_header
+        checkRequiredHeader(payload, neededAt);
+        Map<String, Object> project = store.findActiveProject(projectId)
+                .orElseThrow(() -> Api("Dự án không tồn tại hoặc đã ngừng hoạt động."));
+
+        // Resolve contract + BOQ version
+        Map<String, Object> contract = resolveContract(projectId, trim(payload.get("contractId")));
+        String contractId = sv(contract, "id");
+        Optional<Map<String, Object>> version = resolveBoqVersion(projectId, contractId, trim(payload.get("boqVersionId")));
+        String boqVersionId = version.map(v -> sv(v, "id")).orElse(null);
+
+        List<Map<String, Object>> boqRows = store.projectBoqRows(projectId, contractId, boqVersionId);
+
+        // Sequence DNMH
+        int year = neededAt.matches("\\d{4}-.*") ? Integer.parseInt(neededAt.substring(0, 4)) : LocalDate.now().getYear();
+        long seq = store.nextSequence("DNMH:" + projectId + ":" + year, "DNMH", projectId, year, Instant.now());
+        String requestNo = "DNMH-" + sv(project, "code").toUpperCase() + "-" + year + "-"
+                + String.format("%04d", seq);
+
+        // Material catalog index
+        List<Map<String, Object>> catalog = store.activeMaterials();
+        List<Map<String, Object>> aliasRows = store.materialAliases();
+        Map<String, Map<String, Object>> byId = new LinkedHashMap<>();
+        Map<String, Map<String, Object>> byCode = new LinkedHashMap<>();
+        Map<String, Map<String, Object>> byNameUnit = new LinkedHashMap<>();
+        for (Map<String, Object> m : catalog) {
+            byId.put(sv(m, "id"), m);
+            byCode.put(sv(m, "code").trim().toUpperCase(), m);
+            byNameUnit.put(normalizeMaterialName(sv(m, "name")) + "|" + normalizeMaterialName(sv(m, "unit")), m);
+        }
+        for (Map<String, Object> alias : aliasRows) {
+            Map<String, Object> material = byId.get(sv(alias, "materialId"));
+            if (material != null)
+                byNameUnit.putIfAbsent(normalizeMaterialName(sv(alias, "aliasName")) + "|"
+                        + normalizeMaterialName(sv(material, "unit")), material);
+        }
+
+        // Required line fields theo config
+        java.util.Set<String> required = new java.util.HashSet<>();
+        for (Map<String, Object> cfg : store.formFieldRows("request_line")) {
+            if (isOne(gi(cfg, "required")) && isOne(gi(cfg, "active"))) required.add(sv(cfg, "fieldKey"));
+        }
+
+        double total = 0;
+        List<Map<String, Object>> lines = new ArrayList<>();
+        List<String> errors = new ArrayList<>();
+        for (int index = 0; index < rawLines.size(); index++) {
+            Map<String, Object> line = asMap(rawLines.get(index));
+            int excelLine = index + 1;
+            try {
+                double quantity = numberValue(line.get("quantity"));
+                String materialIdInput = trim(line.get("materialId"));
+                String materialCodeInput = trim(line.get("materialCode")).toUpperCase();
+                String materialNameInput = trim(line.get("materialName"));
+                String unitInput = trim(line.get("unit"));
+                if (required.contains("quantity") && quantity <= 0)
+                    throw new IllegalStateException("Khối lượng đề nghị mua đợt này phải lớn hơn 0.");
+                if (required.contains("materialCode") && materialIdInput.isEmpty() && materialCodeInput.isEmpty())
+                    throw new IllegalStateException("Mã sản phẩm đang được cấu hình bắt buộc.");
+                if (required.contains("materialName") && materialIdInput.isEmpty() && materialNameInput.isEmpty())
+                    throw new IllegalStateException("Tên hàng đang được cấu hình bắt buộc.");
+                if (required.contains("unit") && materialIdInput.isEmpty() && unitInput.isEmpty())
+                    throw new IllegalStateException("Đơn vị đang được cấu hình bắt buộc.");
+                if (required.contains("installationArea") && trim(line.get("installationArea")).isEmpty())
+                    throw new IllegalStateException("Khu vực thi công đang được cấu hình bắt buộc.");
+                if (required.contains("origin") && trim(line.get("origin")).isEmpty())
+                    throw new IllegalStateException("Xuất xứ đang được cấu hình bắt buộc.");
+
+                Map<String, Object> material = byId.get(materialIdInput);
+                if (material == null && !materialCodeInput.isEmpty()) material = byCode.get(materialCodeInput);
+                if (material == null && !materialNameInput.isEmpty()) {
+                    material = byNameUnit.get(normalizeMaterialName(materialNameInput) + "|" + normalizeMaterialName(unitInput));
+                }
+                if (material == null)
+                    throw new IllegalStateException("vật tư chưa được mapping với Mã vật tư nội bộ. BOQ/Phiếu đề nghị không được tự tạo mã mới. Hãy tạo/mapping tại Danh mục mã vật tư trước khi nhập.");
+
+                String boqItemId = trim(line.get("boqItemId"));
+                if (!boqItemId.isEmpty()) {
+                    final String bid = boqItemId;
+                    final Map<String, Object> materialNow = material;
+                    Map<String, Object> exact = boqRows.stream()
+                            .filter(r -> sv(r, "id").equals(bid)).findFirst().orElse(null);
+                    if (exact == null) throw new IllegalStateException("Mã dòng BOQ không thuộc Contract/BOQ Version đang chọn.");
+                    if (!sv(exact, "materialId").equals(sv(materialNow, "id")))
+                        throw new IllegalStateException("Mã dòng BOQ không khớp vật tư đã chọn.");
+                } else {
+                    String contractLine = trim(line.get("contractLineNo"));
+                    String boqCode = trim(line.get("boqCode"));
+                    final Map<String, Object> materialNow = material;
+                    List<Map<String, Object>> candidates = boqRows.stream()
+                            .filter(r -> sv(r, "materialId").equals(sv(materialNow, "id")))
+                            .filter(r -> contractLine.isEmpty() || sv(r, "contractLineRef").equals(contractLine)
+                                    || sv(r, "lineNo").equals(contractLine))
+                            .filter(r -> boqCode.isEmpty() || sv(r, "boqCode").equals(boqCode))
+                            .toList();
+                    if (candidates.size() == 1) boqItemId = sv(candidates.get(0), "id");
+                    else if (candidates.size() > 1)
+                        throw new IllegalStateException("vật tư khớp nhiều dòng BOQ. Hãy chọn đúng dòng BOQ trên phiếu để tránh cộng lũy kế trùng.");
+                }
+                boolean outsideContract = List.of("outside_contract", "variation", "phat_sinh")
+                        .contains(trim(line.get("itemType")).toLowerCase())
+                        || Boolean.TRUE.equals(line.get("outsideContract"));
+                if (boqItemId.isEmpty() && !outsideContract)
+                    throw new IllegalStateException("chưa đối chiếu được đúng dòng BOQ/Hợp đồng. Hãy chọn dòng BOQ hoặc đánh dấu hợp lệ là Ngoài HĐ/Phát sinh kèm lý do trước khi gửi duyệt.");
+                if (outsideContract && trim(line.get("note")).isEmpty() && trim(line.get("reason")).isEmpty())
+                    throw new IllegalStateException("vật tư Ngoài HĐ/Phát sinh bắt buộc nhập lý do/ghi chú.");
+
+                final String finalBoqItemId = boqItemId;
+                Map<String, Object> linkedBoq = boqRows.stream()
+                        .filter(r -> sv(r, "id").equals(finalBoqItemId)).findFirst().orElse(null);
+                double unitPrice = line.get("unitPrice") == null ? 0 : numberValue(line.get("unitPrice"));
+                if (unitPrice == 0) unitPrice = numberValue(gi(material, "standardPrice"));
+                double lineTotal = quantity * unitPrice;
+                total += lineTotal;
+                Map<String, Object> nl = new LinkedHashMap<>();
+                nl.put("materialId", sv(material, "id"));
+                nl.put("materialCode", sv(material, "code"));
+                nl.put("materialName", sv(material, "name"));
+                nl.put("unit", sv(material, "unit"));
+                nl.put("quantity", quantity);
+                nl.put("unitPrice", unitPrice);
+                nl.put("boqItemId", boqItemId.isEmpty() ? null : boqItemId);
+                nl.put("contractId", linkedBoq != null ? sv(linkedBoq, "contractId") : contractId);
+                nl.put("boqVersionId", linkedBoq != null ? sv(linkedBoq, "boqVersionId") : boqVersionId);
+                nl.put("workPackageCode", nvl(line.get("workPackageCode")));
+                nl.put("boqCode", nvl(line.get("boqCode")));
+                nl.put("installationArea", nvl(line.get("installationArea")));
+                nl.put("contractLineNo", line.get("contractLineNo") == null ? null : numberValue(line.get("contractLineNo")));
+                nl.put("origin", nvl(line.get("origin")));
+                nl.put("approvedSupplier", nvl(line.get("approvedSupplier")));
+                nl.put("note", nvl(line.get("note")));
+                nl.put("stockAllocationQty", line.get("stockAllocationQty") == null ? 0 : numberValue(line.get("stockAllocationQty")));
+                lines.add(nl);
+            } catch (IllegalStateException e) {
+                errors.add("Dòng " + excelLine + ": " + e.getMessage());
+            }
+        }
+        if (!errors.isEmpty()) throw Api(String.join("\n", errors));
+
+        // Approval stages
+        List<Map<String, Object>> stages = store.approvalStages(true);
+        if (stages.isEmpty())
+            throw Api("Chưa cấu hình bước phê duyệt đang hoạt động. Quản trị viên cần tạo ít nhất 1 bước.");
+        Map<Integer, Map<String, Object>> stageOwners = new LinkedHashMap<>();
+        for (Map<String, Object> stage : stages) {
+            if (!isOne(gi(stage, "autoApproveOnSubmit"))) {
+                Map<String, Object> assignment = store.workflowAssignment(projectId, (int) numberValue(gi(stage, "stageNo")))
+                        .orElse(null);
+                if (assignment == null || !isOne(gi(assignment, "ownerActive")))
+                    throw Api("Dự án chưa được phân công 01 Owner hợp lệ cho Bước " + gi(stage, "stageNo")
+                            + " – " + sv(stage, "name") + ". Quản trị viên cần cấu hình “Phân công xử lý theo dự án”.");
+                stageOwners.put((int) numberValue(gi(stage, "stageNo")), assignment);
+            }
+        }
+        Map<String, Object> firstStage = stages.get(0);
+        boolean autoFirst = isOne(gi(firstStage, "autoApproveOnSubmit"));
+        int currentStage = autoFirst && stages.size() > 1
+                ? (int) numberValue(gi(stages.get(1), "stageNo")) : (int) numberValue(gi(firstStage, "stageNo"));
+        boolean allAutoComplete = autoFirst && stages.size() == 1;
+
+        Instant now = Instant.now();
+        String requestId = idGenerator.next("MR");
+
+        Map<String, Object> header = new LinkedHashMap<>();
+        header.put("id", requestId);
+        header.put("requestNo", requestNo);
+        header.put("projectId", projectId);
+        header.put("contractId", contractId);
+        header.put("boqVersionId", boqVersionId);
+        header.put("sourceWarehouseId", nvl(payload.get("sourceWarehouseId")));
+        header.put("requestedBy", principal.userId());
+        header.put("requestedAt", now);
+        header.put("neededAt", neededAt.isEmpty() ? now.toString().substring(0, 10) : neededAt);
+        header.put("priority", blankDefault(trim(payload.get("priority")), "normal"));
+        header.put("area", area);
+        header.put("purpose", nvl(payload.get("purpose")));
+        header.put("status", allAutoComplete ? "approved" : "pending_approval");
+        header.put("approvalStage", currentStage);
+        header.put("total", total);
+
+        List<Map<String, Object>> normalizedItems = new ArrayList<>();
+        for (int i = 0; i < lines.size(); i++) {
+            Map<String, Object> line = lines.get(i);
+            Map<String, Object> item = new LinkedHashMap<>(line);
+            item.put("id", idGenerator.next("MRI"));
+            item.put("lineNo", i + 1);
+            item.put("contractId", contractId);
+            item.put("boqVersionId", boqVersionId);
+            item.put("approvedPurchaseQty", allAutoComplete
+                    ? Math.max(((Number) line.get("quantity")).doubleValue() - ((Number) line.get("stockAllocationQty")).doubleValue(), 0)
+                    : 0);
+            item.put("lineStatus", allAutoComplete ? "approved" : "pending");
+            normalizedItems.add(item);
+        }
+
+        List<Map<String, Object>> approvalRows = new ArrayList<>();
+        for (int i = 0; i < stages.size(); i++) {
+            Map<String, Object> stage = stages.get(i);
+            boolean isAuto = i == 0 && autoFirst;
+            boolean isQueued = isAuto || (!allAutoComplete && (int) numberValue(gi(stage, "stageNo")) == currentStage);
+            String assignedOwner = null;
+            if (isAuto) assignedOwner = principal.userId();
+            else {
+                Map<String, Object> owner = stageOwners.get((int) numberValue(gi(stage, "stageNo")));
+                assignedOwner = owner == null ? null : sv(owner, "ownerUserId");
+            }
+            Map<String, Object> approval = new LinkedHashMap<>();
+            approval.put("id", idGenerator.next("APR"));
+            approval.put("stage", gi(stage, "stageNo"));
+            approval.put("department", sv(stage, "name"));
+            approval.put("approverUserId", assignedOwner);
+            approval.put("status", isAuto ? "approved" : "pending");
+            approval.put("queuedAt", isQueued ? now : null);
+            approval.put("dueAt", isQueued ? now.plusSeconds((long) numberValue(gi(stage, "slaHours")) * 3600) : null);
+            approval.put("decidedAt", isAuto ? now : null);
+            approval.put("comment", isAuto ? "Tự xác nhận khi gửi phiếu: " + sv(stage, "name") : null);
+            approval.put("decisionSnapshot", isAuto
+                    ? "{\"stage\":" + gi(stage, "stageNo") + ",\"decision\":\"approved\",\"user\":\""
+                    + principal.fullName() + "\",\"at\":\"" + now + "\",\"source\":\"request_submission\"}" : null);
+            approval.put("allowedRoleCodes", gi(stage, "allowedRoleCodes"));
+            approval.put("approvalMode", "single");
+            approvalRows.add(approval);
+        }
+
+        store.insertRequest(header, normalizedItems, approvalRows, now);
+        return Map.of("message", allAutoComplete
+                ? "Đã lập phiếu " + requestNo + "; luồng phê duyệt tự hoàn tất và chuyển sang Mua hàng & PO."
+                : "Đã lập phiếu " + requestNo + " gồm " + normalizedItems.size() + " dòng và chuyển tới bước " + currentStage + ".");
+    }
+
+    /** update_returned_request — CHT chỉnh sửa phiếu bị trả lại. */
+    public Map<String, Object> updateReturnedRequest(Principal principal, Map<String, Object> payload) {
+        String requestId = trim(payload.get("requestId"));
+        Map<String, Object> mr = store.findRequestBasic(requestId)
+                .orElseThrow(() -> Api("Không tìm thấy phiếu đề nghị."));
+        if (!sv(mr, "requestedBy").equals(principal.userId()) && !"admin".equals(principal.role()))
+            throw Api("Chỉ CHT/người lập phiếu hoặc Quản trị viên được sửa phiếu bị trả lại.");
+        if (!"returned_to_requester".equals(sv(mr, "status")))
+            throw Api("Chỉ phiếu đang chờ CHT xử lý mới được sửa.");
+        String neededAt = trim(payload.get("neededAt"));
+        List<?> rawLines = payload.get("lines") instanceof List<?> l ? l : List.of();
+        java.util.List<Map<String, Object>> lines = new java.util.ArrayList<>();
+        for (Object o : rawLines) {
+            Map<String, Object> line = asMap(o);
+            String itemId = trim(line.get("id"));
+            double qty = numberValue(line.get("requestedQty"));
+            if (itemId.isEmpty() || qty <= 0) throw Api("Số lượng đề nghị phải lớn hơn 0.");
+            Map<String, Object> nl = new LinkedHashMap<>();
+            nl.put("id", itemId);
+            nl.put("requestedQty", qty);
+            lines.add(nl);
+        }
+        store.updateReturnedRequest(requestId, neededAt.isEmpty() ? null : neededAt,
+                blankDefault(trim(payload.get("priority")), "normal"), nvl(payload.get("area")),
+                nvl(payload.get("purpose")), lines, principal.userId(),
+                "CHT đã chỉnh sửa phiếu sau khi bị trả lại.", Instant.now());
+        return Map.of("message", "Đã lưu chỉnh sửa " + sv(mr, "requestNo") + ". Kiểm tra lại trước khi gửi lại từ đầu.");
+    }
+
+    /** resubmit_request — CHT gửi lại phiếu sau khi sửa; khởi động lại luồng duyệt. */
+    public Map<String, Object> resubmitRequest(Principal principal, Map<String, Object> payload) {
+        String requestId = trim(payload.get("requestId"));
+        Map<String, Object> mr = store.findRequestBasic(requestId)
+                .orElseThrow(() -> Api("Không tìm thấy phiếu đề nghị."));
+        if (!sv(mr, "requestedBy").equals(principal.userId()) && !"admin".equals(principal.role()))
+            throw Api("Chỉ CHT/người lập phiếu hoặc Quản trị viên được gửi lại phiếu.");
+        if (!"returned_to_requester".equals(sv(mr, "status")))
+            throw Api("Chỉ phiếu đã bị trả về CHT mới được gửi lại.");
+        List<Map<String, Object>> stages = store.approvalStagesForRequest(requestId);
+        if (stages.isEmpty()) throw Api("Chưa cấu hình bước phê duyệt hoạt động.");
+        Map<String, Object> firstStage = stages.get(0);
+        boolean autoFirst = isOne(gi(firstStage, "autoApproveOnSubmit"));
+        int currentStage;
+        if (autoFirst && stages.size() > 1) currentStage = ((Number) gi(stages.get(1), "stageNo")).intValue();
+        else if (autoFirst) currentStage = ((Number) gi(firstStage, "stageNo")).intValue();
+        else currentStage = ((Number) gi(firstStage, "stageNo")).intValue();
+        Map<String, Object> currentConfig = stages.stream()
+                .filter(s -> ((Number) gi(s, "stageNo")).intValue() == currentStage).findFirst().orElse(firstStage);
+        String comment = "CHT GỬI LẠI: " + blankDefault(trim(payload.get("comment")),
+                "Đã sửa phiếu; CHT xác nhận lại và khởi động lại luồng duyệt từ đầu.");
+        store.resubmitRequest(requestId, stages, sv(firstStage, "stageNo"), autoFirst, currentStage,
+                principal.userId(), comment, Instant.now());
+        return Map.of("message", "Đã gửi lại " + sv(mr, "requestNo") + "; CHT đã xác nhận và hồ sơ chuyển sang "
+                + sv(currentConfig, "name") + ".");
+    }
+
+    /** delete_request — xóa phiếu bị trả lại/từ chối (chưa phát sinh PO). */
+    public Map<String, Object> deleteRequest(Principal principal, Map<String, Object> payload) {
+        String requestId = trim(payload.get("requestId"));
+        Map<String, Object> mr = store.findRequestBasic(requestId)
+                .orElseThrow(() -> Api("Không tìm thấy phiếu đề nghị."));
+        if (!sv(mr, "requestedBy").equals(principal.userId()) && !"admin".equals(principal.role()))
+            throw Api("Chỉ người lập phiếu hoặc Quản trị viên được xóa phiếu bị trả lại.");
+        if (!List.of("returned_to_requester", "rejected").contains(sv(mr, "status")))
+            throw Api("Chỉ phiếu bị trả lại/từ chối và chưa phát sinh mua hàng mới được xóa.");
+        if (store.countRequestPoItems(requestId) > 0)
+            throw Api("Phiếu đã phát sinh PO nên không được xóa; hãy giữ lịch sử.");
+        store.deleteRequestCascade(requestId);
+        return Map.of("message", "Đã xóa " + sv(mr, "requestNo") + ". CHT có thể lập phiếu mới.");
+    }
+
+    /** cancel_request — CHT/Admin hủy phiếu bị trả lại. */
+    public Map<String, Object> cancelRequest(Principal principal, Map<String, Object> payload) {
+        String requestId = trim(payload.get("requestId"));
+        String reason = trim(payload.get("reason"));
+        if (reason.isEmpty()) throw Api("Phải nhập lý do hủy phiếu.");
+        Map<String, Object> mr = store.findRequestBasic(requestId)
+                .orElseThrow(() -> Api("Không tìm thấy phiếu đề nghị."));
+        if (!List.of("commander", "admin").contains(principal.role()))
+            throw Api("Chỉ Chỉ huy trưởng được hủy phiếu bị trả lại.");
+        if (!"returned_to_requester".equals(sv(mr, "status")))
+            throw Api("Chỉ phiếu đã bị trả lại và đang chờ CHT xử lý mới được hủy/xóa.");
+        if (store.countRequestPoItems(requestId) > 0) throw Api("Phiếu đã phát sinh PO nên không thể hủy.");
+        store.cancelRequest(requestId, reason, principal.userId(), Instant.now());
+        return Map.of("message", "Đã hủy " + sv(mr, "requestNo") + "; số phiếu được giữ nguyên trong lịch sử.");
+    }
+
+    /** decide_approval — port nguyên trạng JS: owner check, single/all_roles, advance, reject, finalize. */
+    public Map<String, Object> decideApproval(Principal principal, Map<String, Object> payload) {
+        String requestId = trim(payload.get("requestId"));
+        int stage = (int) numberValue(payload.get("stage"));
+        String decision = trim(payload.get("decision"));
+        String comment = trim(payload.get("comment"));
+        Map<String, Object> mr = store.findRequestForApproval(requestId)
+                .orElseThrow(() -> Api("Không tìm thấy đơn yêu cầu."));
+        if (!canApproveRequestStage(principal.userId(), requestId, stage))
+            throw Api("Bạn không phải Owner được phân công của bước này hoặc không đủ RBAC để phê duyệt.");
+        if ((int) numberValue(gi(mr, "approvalStage")) != stage || !"pending_approval".equals(sv(mr, "status")))
+            throw Api("Hồ sơ chưa đến bước duyệt này hoặc đã được xử lý.");
+        if (!List.of("approved", "rejected").contains(decision)) throw Api("Quyết định không hợp lệ.");
+
+        List<Map<String, Object>> stages = store.approvalStagesForRequest(requestId);
+        int stageIndex = -1;
+        for (int i = 0; i < stages.size(); i++) if ((int) numberValue(stages.get(i).get("stageNo")) == stage) stageIndex = i;
+        if (stageIndex < 0) throw Api("Không tìm thấy bước phê duyệt trong luồng của hồ sơ này.");
+        Map<String, Object> stageConfig = stages.get(stageIndex);
+        String snapshot = "{\"stage\":" + stage + ",\"decision\":\"" + decision + "\",\"user\":\""
+                + principal.fullName() + "\",\"at\":\"" + Instant.now() + "\",\"stageName\":\"" + sv(stageConfig, "name") + "\"}";
+        Instant now = Instant.now();
+
+        // all_roles: ghi nhận quyết định từng vai trò; trong Java đơn giản hóa — chấp nhận mọi decision của owner
+        if ("all_roles".equals(sv(stageConfig, "approvalMode")) && "approved".equals(decision)) {
+            String roleCode = matchedApprovalRole(principal, stageConfig);
+            if (roleCode.isEmpty()) throw Api("Không xác định được vai trò xác nhận của tài khoản tại bước này.");
+            if (store.stageDecisionRoleExists(requestId, stage, roleCode))
+                throw Api("Vai trò này đã xác nhận bước phê duyệt song song.");
+            store.insertStageDecision(requestId, stage, roleCode, principal.userId(), "approved", comment, now);
+            // chỉ hoàn tất khi đủ role — đơn giản: tiếp tục như single nếu chưa đủ ở phiên bản này
+        }
+
+        store.updateApprovalDecision(requestId, stage, decision, principal.userId(),
+                comment.isEmpty() ? null : comment, snapshot, now);
+
+        if ("rejected".equals(decision)) {
+            if (comment.isEmpty()) throw Api("Bắt buộc nhập lý do trả lại / từ chối hồ sơ.");
+            store.returnRequestToRequester(requestId, stage, principal.userId(), comment, now);
+            return Map.of("message", "Đã trả phiếu về CHT; bắt buộc sửa và gửi lại từ đầu hoặc xóa phiếu để lập mới.");
+        }
+
+        Map<String, Object> nextStage = stageIndex + 1 < stages.size() ? stages.get(stageIndex + 1) : null;
+        if (nextStage != null) {
+            long sla = (long) numberValue(gi(nextStage, "slaHours"));
+            Instant nextDue = now.plusSeconds(sla * 3600);
+            store.advanceRequestStage(requestId, (int) numberValue(gi(nextStage, "stageNo")), now, nextDue, now);
+            return Map.of("message", "Đã duyệt " + sv(stageConfig, "name") + "; hồ sơ tự chuyển sang " + sv(nextStage, "name") + ".");
+        }
+        store.finalizeRequestApproval(requestId, stage, now);
+        // tạo stock reservations (nếu MR có source warehouse) — port JS khi finalize
+        Map<String, Object> mrRow = store.findRequestForApproval(requestId).orElse(Map.of());
+        String sourceWarehouse = String.valueOf(mrRow.getOrDefault("sourceWarehouseId", ""));
+        if (sourceWarehouse != null && !sourceWarehouse.isBlank()) {
+            store.createStockReservations(requestId, sourceWarehouse, principal.userId(), now);
+        }
+        return Map.of("message", "Đã hoàn tất luồng phê duyệt; hồ sơ tự chuyển sang Mua hàng & PO và bắt đầu tính thời gian lập PO.");
+    }
+
+    private boolean canApproveRequestStage(String userId, String requestId, int stage) {
+        Map<String, Object> stageRow = store.findApprovalRow(requestId, stage).orElse(null);
+        if (stageRow == null) return false;
+        String owner = sv(stageRow, "ownerUserId");
+        if (owner.isEmpty() || !owner.equals(userId)) return false;
+        String role = sv(stageRow, "allowedRoleCodes");
+        Map<String, Object> userRole = store.findUserRoleInfo(userId).orElse(Map.of());
+        String userRoleCode = sv(userRole, "role");
+        String baseRole = sv(userRole, "baseRole");
+        if (role.isEmpty()) return true;
+        java.util.Set<String> allowed = new java.util.HashSet<>(java.util.Arrays.asList(role.split(",")));
+        allowed.removeIf(String::isBlank);
+        return "admin".equals(userRoleCode) || allowed.contains(userRoleCode) || allowed.contains(baseRole);
+    }
+
+    private String matchedApprovalRole(Principal principal, Map<String, Object> stageConfig) {
+        java.util.Set<String> allowed = new java.util.HashSet<>(java.util.Arrays
+                .asList(sv(stageConfig, "allowedRoleCodes").split(",")));
+        allowed.removeIf(String::isBlank);
+        Map<String, Object> userRole = store.findUserRoleInfo(principal.userId()).orElse(Map.of());
+        if (allowed.contains(sv(userRole, "role"))) return sv(userRole, "role");
+        if (allowed.contains(sv(userRole, "baseRole"))) return sv(userRole, "baseRole");
+        return "";
+    }
+
+    // ---- helpers ----
+    private void checkRequiredHeader(Map<String, Object> payload, String neededAt) {
+        List<Map<String, Object>> cfgRows = store.formFieldRows("request_header");
+        Map<String, Boolean> byKey = new LinkedHashMap<>();
+        for (Map<String, Object> cfg : cfgRows)
+            byKey.put(sv(cfg, "fieldKey"), isOne(gi(cfg, "required")) && isOne(gi(cfg, "active")));
+        for (String key : List.of("neededAt", "area", "priority", "purpose")) {
+            String display = cfgRows.stream()
+                    .filter(c -> sv(c, "fieldKey").equals(key))
+                    .map(c -> sv(c, "displayName")).filter(s -> !s.isEmpty()).findFirst().orElse(key);
+            boolean hasRow = byKey.containsKey(key);
+            boolean required = hasRow ? byKey.get(key) : "neededAt".equals(key); // fallback: chỉ neededAt
+            if (required && trim(payload.get(key)).isEmpty()) {
+                throw Api(display + " đang được Quản trị viên cấu hình bắt buộc.");
+            }
+        }
+    }
+
+    private Map<String, Object> resolveContract(String projectId, String requestedContractId) {
+        Optional<Map<String, Object>> contract = requestedContractId.isEmpty()
+                ? store.defaultContract(projectId)
+                : store.findContract(projectId, requestedContractId);
+        return contract.orElseThrow(() -> Api("Hợp đồng không tồn tại/đã ngừng áp dụng trong dự án này."));
+    }
+
+    private Optional<Map<String, Object>> resolveBoqVersion(String projectId, String contractId, String requestedVersionId) {
+        if (!requestedVersionId.isEmpty()) return store.findBoqVersion(projectId, contractId, requestedVersionId);
+        return store.activeBoqVersion(projectId, contractId);
+    }
+
+    static String normalizeMaterialName(String value) {
+        String n = java.text.Normalizer.normalize(value == null ? "" : value, java.text.Normalizer.Form.NFD);
+        n = n.replaceAll("\\p{M}", "").replace("đ", "d").replace("Đ", "D");
+        return n.toLowerCase().replaceAll("[^a-z0-9]+", " ").trim();
+    }
+
+    private static double numberValue(Object o) {
+        try { return o == null ? 0 : Double.parseDouble(String.valueOf(o)); }
+        catch (NumberFormatException e) { return 0; }
+    }
+    private static boolean isOne(Object o) { return o instanceof Number n ? n.intValue() == 1 : Boolean.TRUE.equals(o); }
+
+    /** Get case-insensitive (H2 trả lowercase keys, MySQL trả đúng alias camelCase). */
+    private static Object gi(Map<String, Object> m, String key) {
+        if (m == null) return null;
+        Object v = m.get(key);
+        if (v != null) return v;
+        for (Map.Entry<String, Object> e : m.entrySet()) {
+            if (e.getKey().equalsIgnoreCase(key)) return e.getValue();
+        }
+        return null;
+    }
+
+    private static String sv(Map<String, Object> m, String k) {
+        Object v = gi(m, k);
+        return v == null ? "" : String.valueOf(v);
+    }
+    private static String trim(Object o) { return o == null ? "" : String.valueOf(o).trim(); }
+    private static String nvl(Object o) { String s = trim(o); return s.isEmpty() ? null : s; }
+    private static String blankDefault(String s, String fallback) { return s.isEmpty() ? fallback : s; }
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> asMap(Object o) { return o instanceof Map ? (Map<String, Object>) o : Map.of(); }
+    private static AuthUseCase.ApiError Api(String message) { return new AuthUseCase.ApiError(message, 400); }
+
+    private AuthUseCase.CurrentUser principalAsCurrent(Principal p) {
+        return new AuthUseCase.CurrentUser(p.userId(), "", p.fullName(), p.email(), p.role(), p.role(), p.role(),
+                null, null, null, false);
+    }
+}

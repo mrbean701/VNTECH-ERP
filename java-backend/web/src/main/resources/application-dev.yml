@@ -1,0 +1,32 @@
+# Dev profile — H2 in-memory ở MySQL compatibility mode, không cần MySQL để demo.
+# Schema (114 bảng) lấy từ schema-h2.sql (bản H2-copy của Flyway baseline).
+spring:
+  datasource:
+    url: jdbc:h2:mem:vntech;MODE=MySQL;DATABASE_TO_LOWER=TRUE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    open-in-view: false
+  flyway:
+    enabled: false
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:db/demo/schema-h2.sql
+server:
+  port: 18080
+
+# Dev demo: chưa có SMTP/Redis thật → tắt các health indicator tương ứng để /actuator/health trả UP
+management:
+  health:
+    mail:
+      enabled: false
+    redis:
+      enabled: false
+  endpoints:
+    web:
+      exposure:
+        include: health,info

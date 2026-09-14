@@ -1,0 +1,33 @@
+{
+  "name": "bootstrap-shape-example",
+  "description": "Ví dụ shape bootstrap(user) theo scripts/system-route.mjs — bổ sung key thật khi Phase 1 port bootstrap.",
+  "input": {
+    "method": "GET",
+    "url": "/api/system"
+  },
+  "response": {
+    "ok": true,
+    "authenticated": true,
+    "data": {
+      "setup": false,
+      "user": {
+        "id": "u_example",
+        "fullName": "Nguyễn Văn A",
+        "role": "admin",
+        "createdAt": "2026-01-01T00:00:00.000Z"
+      },
+      "projects": [
+        {
+          "id": "p_1",
+          "code": "PRJ-01",
+          "name": "Dự án mẫu",
+          "status": "active",
+          "createdAt": "2026-01-01T00:00:00.000Z"
+        }
+      ],
+      "requests": [],
+      "materials": [],
+      "suppliers": []
+    }
+  }
+}

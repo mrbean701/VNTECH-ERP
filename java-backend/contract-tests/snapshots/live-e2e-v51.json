@@ -1,0 +1,208 @@
+{
+  "name": "live-e2e-v51",
+  "baseUrl": "http://127.0.0.1:18080",
+  "recordedAt": "2026-09-11T01:21:25.029Z",
+  "steps": [
+    {
+      "step": "pre-setup GET",
+      "status": 401,
+      "response": {
+        "ok": false,
+        "authenticated": false
+      }
+    },
+    {
+      "step": "setup",
+      "status": 409,
+      "response": {
+        "error": "Hệ thống đã được khởi tạo.",
+        "ok": false
+      }
+    },
+    {
+      "step": "login",
+      "status": 200,
+      "response": {
+        "mustChangePassword": false,
+        "ok": true
+      }
+    },
+    {
+      "step": "bootstrap",
+      "status": 200,
+      "response": {
+        "ok": true,
+        "authenticated": true,
+        "data": {
+          "projects": [],
+          "requests": [],
+          "teams": [],
+          "warehouses": [
+            {
+              "id": "WH-CENTRAL",
+              "code": "KHO-TONG",
+              "name": "Kho trung tâm",
+              "type": "central",
+              "projectid": null,
+              "parentwarehouseid": null
+            }
+          ],
+          "transferWarehouses": [
+            {
+              "id": "WH-CENTRAL",
+              "code": "KHO-TONG",
+              "name": "Kho trung tâm",
+              "type": "central",
+              "projectid": null,
+              "projectcode": null,
+              "projectname": null
+            }
+          ],
+          "materialCategories": [],
+          "materialSubcategories": [],
+          "materials": [],
+          "suppliers": [],
+          "adminSuppliers": [],
+          "inventory": [],
+          "purchaseOrders": [],
+          "receipts": [],
+          "issues": [],
+          "returns": [],
+          "stockCounts": [],
+          "transferOrders": [],
+          "boqItems": [],
+          "projectContracts": [],
+          "boqVersions": [],
+          "boqSourceItems": [],
+          "boqMappingCandidates": [],
+          "contractStockLedger": [],
+          "contractStockBalances": [],
+          "settings": {
+            "companyname": "CTY",
+            "stage1department": "BCH / Chỉ huy trưởng",
+            "stage2department": "Phòng Dự án",
+            "stage3department": "KH-MH / Tài chính",
+            "approvalslahours": 24,
+            "stage1slahours": 8,
+            "stage2slahours": 8,
+            "stage3slahours": 8,
+            "poslahours": 24,
+            "bchconfirmationslahours": 8,
+            "slowmovingdays": 60,
+            "negativestockblocked": 1
+          },
+          "approvalStageCatalog": [],
+          "roleCatalog": [],
+          "organizationUnits": [],
+          "menuGroups": [],
+          "moduleCatalog": [],
+          "modulePermissions": [],
+          "staffDirectory": [
+            {
+              "id": "USR_d8c26301-7c74-453d-97e4-77d5fec3c875",
+              "employeecode": "ADMIN-001",
+              "fullname": "ADMIN",
+              "email": null,
+              "role": "admin",
+              "rolename": "admin",
+              "department": "Công ty VNTECH",
+              "organizationunitid": null,
+              "organizationcode": null,
+              "organizationname": "Công ty VNTECH",
+              "avatarurl": null
+            }
+          ],
+          "users": [
+            {
+              "id": "USR_d8c26301-7c74-453d-97e4-77d5fec3c875",
+              "employeecode": "ADMIN-001",
+              "fullname": "ADMIN",
+              "username": "admin",
+              "email": null,
+              "role": "admin",
+              "rolename": "admin",
+              "rolebase": "admin",
+              "warehousescopekind": null,
+              "department": "Công ty VNTECH",
+              "organizationunitid": null,
+              "organizationcode": null,
+              "organizationname": "Công ty VNTECH",
+              "avatarurl": null,
+              "approvallimit": 999999999999,
+              "mustchangepassword": false,
+              "active": true
+            }
+          ],
+          "adminProjects": [],
+          "userScopes": [],
+          "activeSessions": [
+            {
+              "id": "SES_32dc3c89-4643-4990-93be-3de5d2eedf4e",
+              "userid": "USR_d8c26301-7c74-453d-97e4-77d5fec3c875",
+              "username": "ADMIN",
+              "ipaddress": "127.0.0.1",
+              "useragent": "node",
+              "createdat": "2026-09-11T01:21:25.251713Z",
+              "expiresat": "2026-09-12T01:21:25.251713Z"
+            },
+            {
+              "id": "SES_e252444d-0dac-47f9-8b62-d14cf8226a5e",
+              "userid": "USR_d8c26301-7c74-453d-97e4-77d5fec3c875",
+              "username": "ADMIN",
+              "ipaddress": "127.0.0.1",
+              "useragent": "Mozilla/5.0 (Windows NT; Windows NT 10.0; en-US) WindowsPowerShell/5.1.26100.8875",
+              "createdat": "2026-09-11T01:21:24.945463Z",
+              "expiresat": "2026-09-12T01:21:24.945463Z"
+            },
+            {
+              "id": "SES_e90a5f12-b525-45da-be69-7cc71a6d3c4c",
+              "userid": "USR_d8c26301-7c74-453d-97e4-77d5fec3c875",
+              "username": "ADMIN",
+              "ipaddress": null,
+              "useragent": null,
+              "createdat": "2026-09-11T01:21:24.332387Z",
+              "expiresat": "2026-09-12T01:21:24.332387Z"
+            }
+          ],
+          "audits": [],
+          "businessRoleEngineProfiles": [],
+          "businessRoleGroups": [],
+          "businessScopes": [],
+          "contractPayments": [],
+          "productionReports": [],
+          "capitalRecoveryRecords": [],
+          "teamSubcontracts": [],
+          "teamProductionRecords": [],
+          "teamPayments": [],
+          "paymentPlans": [],
+          "advanceRequests": [],
+          "siteExpenseClaims": [],
+          "bankAccounts": [],
+          "cashbookEntries": [],
+          "accountingVouchers": [],
+          "hrRecords": [],
+          "laborContracts": [],
+          "officialCorrespondence": [],
+          "legalDocuments": [],
+          "sealManagement": [],
+          "benefitRecords": [],
+          "materialNorms": [],
+          "workItems": [],
+          "taskNotifications": [],
+          "constructionDailyLogs": [],
+          "setup": false,
+          "user": {
+            "id": "USR_d8c26301-7c74-453d-97e4-77d5fec3c875",
+            "fullName": "ADMIN",
+            "username": "admin",
+            "role": "admin",
+            "roleBase": "admin",
+            "roleName": "admin",
+            "department": "Công ty VNTECH",
+            "avatarUrl": null
+          }
+        }
+      }
+    }
+  ]
+}

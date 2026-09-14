@@ -1,0 +1,2291 @@
+-- ============================================================
+-- VNTECH ERP — V1__baseline.sql (MySQL 8.4, utf8mb4)
+-- Sinh tự động từ DATA_MODEL_REFERENCE.json (nguồn: drizzle/0000..0075)
+-- Đừng sửa tay: chạy java-backend/tools/generate-flyway-baseline.mjs
+-- ============================================================
+
+SET NAMES utf8mb4;
+SET FOREIGN_KEY_CHECKS = 0;
+
+CREATE TABLE `accounting_vouchers` (
+  `id` VARCHAR(64) NOT NULL,
+  `voucher_no` VARCHAR(64) NOT NULL,
+  `voucher_date` DATE NOT NULL,
+  `voucher_type` TEXT NOT NULL,
+  `project_id` VARCHAR(64) NULL,
+  `description` TEXT NULL,
+  `total_amount` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `status` VARCHAR(255) NOT NULL DEFAULT 'draft',
+  `files_json` TEXT NULL,
+  `created_by` TEXT NOT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `accounting_vouchers_uidx_voucher_no` (`voucher_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `idx_accounting_vouchers_date` ON `accounting_vouchers` (`voucher_date`);
+
+CREATE INDEX `idx_accounting_vouchers_type` ON `accounting_vouchers` (`voucher_type`(191));
+
+CREATE TABLE `advance_requests` (
+  `id` VARCHAR(64) NOT NULL,
+  `request_no` VARCHAR(64) NOT NULL,
+  `project_id` VARCHAR(64) NULL,
+  `requester_id` VARCHAR(64) NOT NULL,
+  `amount` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `purpose` TEXT NOT NULL,
+  `category` VARCHAR(255) NOT NULL DEFAULT 'purchase',
+  `status` VARCHAR(255) NOT NULL DEFAULT 'draft',
+  `advance_paid` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `settlement_value` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `settled_at` DATETIME(3) NULL,
+  `note` TEXT NULL,
+  `created_by` TEXT NOT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `advance_requests_uidx_request_no` (`request_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `idx_advance_requests_project` ON `advance_requests` (`project_id`);
+
+CREATE INDEX `idx_advance_requests_status` ON `advance_requests` (`status`);
+
+CREATE INDEX `idx_advance_requests_requester` ON `advance_requests` (`requester_id`);
+
+CREATE TABLE `approval_email_recipients` (
+  `id` VARCHAR(64) NOT NULL,
+  `project_id` VARCHAR(64) NOT NULL,
+  `stage` INT NOT NULL,
+  `emails` TEXT NOT NULL,
+  `active` TINYINT(1) NOT NULL DEFAULT 1,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE UNIQUE INDEX `approval_email_recipients_scope_uidx` ON `approval_email_recipients` (`project_id`, `stage`);
+
+CREATE TABLE `approval_project_assignments` (
+  `id` VARCHAR(64) NOT NULL,
+  `project_id` VARCHAR(64) NOT NULL,
+  `stage` INT NOT NULL,
+  `owner_user_id` VARCHAR(64) NOT NULL,
+  `cc_emails` TEXT NULL,
+  `active` TINYINT(1) NOT NULL DEFAULT 1,
+  `updated_by` TEXT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `approval_project_assignments_uidx_project_id_stage` (`project_id`, `stage`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `approval_project_assignments_owner_idx` ON `approval_project_assignments` (`owner_user_id`, `active`);
+
+CREATE INDEX `approval_project_assignments_project_idx` ON `approval_project_assignments` (`project_id`, `stage`, `active`);
+
+CREATE TABLE `approval_stage_catalog` (
+  `id` VARCHAR(64) NOT NULL,
+  `stage_no` INT NOT NULL,
+  `name` TEXT NOT NULL,
+  `description` TEXT NULL,
+  `allowed_role_codes` VARCHAR(255) NOT NULL DEFAULT '',
+  `sla_hours` INT NOT NULL DEFAULT 8,
+  `auto_approve_on_submit` INT NOT NULL DEFAULT 0,
+  `active` TINYINT(1) NOT NULL DEFAULT 1,
+  `sort_order` INT NOT NULL DEFAULT 0,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  `approval_mode` VARCHAR(255) NOT NULL DEFAULT 'single',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `approval_stage_decisions` (
+  `id` VARCHAR(64) NOT NULL,
+  `request_id` VARCHAR(64) NOT NULL,
+  `stage` INT NOT NULL,
+  `role_code` VARCHAR(64) NOT NULL,
+  `user_id` VARCHAR(64) NOT NULL,
+  `decision` TEXT NOT NULL,
+  `comment` TEXT NULL,
+  `decided_at` DATETIME(3) NOT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `approval_stage_decisions_uidx_request_id_stage_role_code` (`request_id`, `stage`, `role_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `approvals` (
+  `id` VARCHAR(64) NOT NULL,
+  `request_id` VARCHAR(64) NOT NULL,
+  `stage` INT NOT NULL,
+  `department` TEXT NOT NULL,
+  `approver_user_id` VARCHAR(64) NULL,
+  `status` VARCHAR(255) NOT NULL DEFAULT 'pending',
+  `due_at` DATETIME(3) NULL,
+  `decided_at` DATETIME(3) NULL,
+  `comment` TEXT NULL,
+  `decision_snapshot` TEXT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  `queued_at` DATETIME(3) NULL,
+  `notified_at` DATETIME(3) NULL,
+  `reminder_sent_at` DATETIME(3) NULL,
+  `allowed_role_codes_snapshot` TEXT NULL,
+  `approval_mode_snapshot` VARCHAR(255) NOT NULL DEFAULT 'single',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE UNIQUE INDEX `approvals_request_stage_uidx` ON `approvals` (`request_id`, `stage`);
+
+CREATE INDEX `approvals_queue_idx` ON `approvals` (`status`, `stage`, `due_at`);
+
+CREATE TABLE `attachments` (
+  `id` VARCHAR(64) NOT NULL,
+  `entity_type` TEXT NOT NULL,
+  `entity_id` VARCHAR(64) NOT NULL,
+  `file_name` TEXT NOT NULL,
+  `storage_key` TEXT NOT NULL,
+  `mime_type` TEXT NOT NULL,
+  `uploaded_by` TEXT NOT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `attachments_entity_idx` ON `attachments` (`entity_type`(191), `entity_id`);
+
+CREATE TABLE `audit_logs` (
+  `id` VARCHAR(64) NOT NULL,
+  `user_id` VARCHAR(64) NULL,
+  `action` TEXT NOT NULL,
+  `entity_type` TEXT NOT NULL,
+  `entity_id` VARCHAR(64) NOT NULL,
+  `before_json` TEXT NULL,
+  `after_json` TEXT NULL,
+  `ip_address` TEXT NULL,
+  `occurred_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `audit_logs_entity_idx` ON `audit_logs` (`entity_type`(191), `entity_id`);
+
+CREATE INDEX `audit_logs_user_date_idx` ON `audit_logs` (`user_id`, `occurred_at`);
+
+CREATE TABLE `bank_accounts` (
+  `id` VARCHAR(64) NOT NULL,
+  `code` VARCHAR(64) NOT NULL,
+  `bank_name` TEXT NOT NULL,
+  `account_no` VARCHAR(64) NOT NULL,
+  `branch` TEXT NULL,
+  `currency` VARCHAR(255) NOT NULL DEFAULT 'VND',
+  `opening_balance` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `active` TINYINT(1) NOT NULL DEFAULT 1,
+  `created_by` TEXT NOT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `bank_accounts_uidx_code` (`code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `benefit_records` (
+  `id` VARCHAR(64) NOT NULL,
+  `benefit_no` VARCHAR(64) NOT NULL,
+  `user_id` VARCHAR(64) NOT NULL,
+  `benefit_type` TEXT NOT NULL,
+  `provider` TEXT NULL,
+  `start_date` DATE NULL,
+  `end_date` DATE NULL,
+  `monthly_amount` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `status` VARCHAR(255) NOT NULL DEFAULT 'active',
+  `note` TEXT NULL,
+  `created_by` TEXT NOT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `benefit_records_uidx_benefit_no` (`benefit_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `idx_benefit_user` ON `benefit_records` (`user_id`);
+
+CREATE TABLE `boq_change_history` (
+  `id` VARCHAR(64) NOT NULL,
+  `project_id` VARCHAR(64) NOT NULL,
+  `contract_id` VARCHAR(64) NULL,
+  `boq_version_id` VARCHAR(64) NULL,
+  `source_item_id` VARCHAR(64) NULL,
+  `project_boq_item_id` VARCHAR(64) NULL,
+  `action_type` TEXT NOT NULL,
+  `before_json` TEXT NULL,
+  `after_json` TEXT NULL,
+  `reason` TEXT NULL,
+  `actor_user_id` VARCHAR(64) NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `boq_change_history_scope_idx` ON `boq_change_history` (`project_id`, `contract_id`, `boq_version_id`, `created_at`);
+
+CREATE TABLE `boq_import_batches` (
+  `id` VARCHAR(64) NOT NULL,
+  `project_id` VARCHAR(64) NOT NULL,
+  `version_no` INT NOT NULL,
+  `source_file_name` TEXT NULL,
+  `active` TINYINT(1) NOT NULL DEFAULT 1,
+  `row_count` INT NOT NULL DEFAULT 0,
+  `imported_by` VARCHAR(64) NOT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  `contract_id` VARCHAR(64) NULL,
+  `boq_version_id` VARCHAR(64) NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE UNIQUE INDEX `boq_import_batches_project_version_uidx` ON `boq_import_batches` (`project_id`, `version_no`);
+
+CREATE INDEX `boq_import_batches_project_active_idx` ON `boq_import_batches` (`project_id`, `active`, `version_no`);
+
+CREATE UNIQUE INDEX `boq_import_batches_contract_version_uidx` ON `boq_import_batches` (`contract_id`, `version_no`);
+
+CREATE INDEX `boq_import_batches_boq_version_idx` ON `boq_import_batches` (`boq_version_id`, `active`);
+
+CREATE TABLE `boq_mapping_audit` (
+  `id` VARCHAR(64) NOT NULL,
+  `source_item_id` VARCHAR(64) NOT NULL,
+  `run_id` VARCHAR(64) NULL,
+  `old_material_id` VARCHAR(64) NULL,
+  `new_material_id` VARCHAR(64) NOT NULL,
+  `action_type` TEXT NOT NULL,
+  `final_score` DECIMAL(18,4) NULL,
+  `score_detail_json` TEXT NULL,
+  `provider` TEXT NULL,
+  `reason` TEXT NULL,
+  `save_alias` INT NOT NULL DEFAULT 0,
+  `actor_user_id` VARCHAR(64) NOT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `boq_mapping_audit_source_idx` ON `boq_mapping_audit` (`source_item_id`, `created_at`);
+
+CREATE TABLE `boq_mapping_candidates` (
+  `id` VARCHAR(64) NOT NULL,
+  `run_id` VARCHAR(64) NOT NULL,
+  `source_item_id` VARCHAR(64) NOT NULL,
+  `material_id` VARCHAR(64) NOT NULL,
+  `rank_no` INT NOT NULL,
+  `history_score` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `technical_score` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `system_score` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `uom_score` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `fuzzy_score` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `embedding_score` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `final_score` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `hard_conflict` INT NOT NULL DEFAULT 0,
+  `conflict_reason` TEXT NULL,
+  `provider` TEXT NULL,
+  `status` TEXT NOT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE UNIQUE INDEX `boq_mapping_candidates_run_source_rank_uidx` ON `boq_mapping_candidates` (`run_id`, `source_item_id`, `rank_no`);
+
+CREATE INDEX `boq_mapping_candidates_source_score_idx` ON `boq_mapping_candidates` (`source_item_id`, `final_score`);
+
+CREATE TABLE `boq_mapping_runs` (
+  `id` VARCHAR(64) NOT NULL,
+  `batch_id` VARCHAR(64) NOT NULL,
+  `project_id` VARCHAR(64) NOT NULL,
+  `scope` VARCHAR(255) NOT NULL DEFAULT 'unmapped',
+  `provider` TEXT NOT NULL,
+  `provider_fallback` INT NOT NULL DEFAULT 0,
+  `top_k` INT NOT NULL DEFAULT 5,
+  `thresholds_json` TEXT NOT NULL,
+  `weights_json` TEXT NOT NULL,
+  `run_by` VARCHAR(64) NOT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `contract_id` VARCHAR(64) NULL,
+  `boq_version_id` VARCHAR(64) NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `boq_mapping_runs_batch_idx` ON `boq_mapping_runs` (`batch_id`, `created_at`);
+
+CREATE TABLE `boq_material_components` (
+  `id` VARCHAR(64) NOT NULL,
+  `source_item_id` VARCHAR(64) NOT NULL,
+  `material_id` VARCHAR(64) NOT NULL,
+  `component_type` VARCHAR(255) NOT NULL DEFAULT 'main',
+  `quantity_ratio` DECIMAL(18,4) NOT NULL DEFAULT 1,
+  `component_uom` TEXT NULL,
+  `is_required` TINYINT(1) NOT NULL DEFAULT 1,
+  `source_method` VARCHAR(255) NOT NULL DEFAULT 'manual',
+  `approved_by` VARCHAR(64) NULL,
+  `approved_at` DATETIME(3) NULL,
+  `note` TEXT NULL,
+  `active` TINYINT(1) NOT NULL DEFAULT 1,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE UNIQUE INDEX `boq_material_components_uidx` ON `boq_material_components` (`source_item_id`, `material_id`, `component_type`);
+
+CREATE INDEX `boq_material_components_source_idx` ON `boq_material_components` (`source_item_id`, `active`);
+
+CREATE TABLE `boq_price_import_batches` (
+  `id` VARCHAR(64) NOT NULL,
+  `project_id` VARCHAR(64) NOT NULL,
+  `source_file_name` TEXT NULL,
+  `price_type` VARCHAR(255) NOT NULL DEFAULT 'contract',
+  `row_count` INT NOT NULL DEFAULT 0,
+  `changed_count` INT NOT NULL DEFAULT 0,
+  `unchanged_count` INT NOT NULL DEFAULT 0,
+  `updated_by` VARCHAR(64) NULL,
+  `created_at` DATETIME(3) NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `boq_price_import_items` (
+  `id` VARCHAR(64) NOT NULL,
+  `batch_id` VARCHAR(64) NOT NULL,
+  `boq_item_id` VARCHAR(64) NOT NULL,
+  `old_unit_price` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `new_unit_price` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `changed` INT NOT NULL DEFAULT 0,
+  `created_at` DATETIME(3) NOT NULL DEFAULT 'CURRENT_TIMESTAMP',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `boq_price_import_items_batch_idx` ON `boq_price_import_items` (`batch_id`);
+
+CREATE INDEX `boq_price_import_items_boq_idx` ON `boq_price_import_items` (`boq_item_id`);
+
+CREATE TABLE `boq_source_items` (
+  `id` VARCHAR(64) NOT NULL,
+  `batch_id` VARCHAR(64) NOT NULL,
+  `project_id` VARCHAR(64) NOT NULL,
+  `source_order` INT NOT NULL,
+  `source_row` INT NULL,
+  `contract_line_ref` TEXT NULL,
+  `row_role` VARCHAR(255) NOT NULL DEFAULT 'material',
+  `boq_code` VARCHAR(64) NULL,
+  `contract_code` VARCHAR(64) NULL,
+  `contract_material_code` VARCHAR(64) NULL,
+  `approved_material_code` VARCHAR(64) NULL,
+  `contract_material_name` TEXT NULL,
+  `unit` TEXT NULL,
+  `contract_qty` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `remeasured_qty` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `unit_price` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `item_type` VARCHAR(255) NOT NULL DEFAULT 'contract',
+  `note` TEXT NULL,
+  `source_system_code` VARCHAR(64) NULL,
+  `source_subgroup_name` TEXT NULL,
+  `raw_source_json` TEXT NULL,
+  `mapped_material_id` VARCHAR(64) NULL,
+  `standard_material_name_snapshot` TEXT NULL,
+  `mapping_status` VARCHAR(255) NOT NULL DEFAULT 'unmapped',
+  `project_boq_item_id` VARCHAR(64) NULL,
+  `mapped_by` VARCHAR(64) NULL,
+  `mapped_at` DATETIME(3) NULL,
+  `active` TINYINT(1) NOT NULL DEFAULT 1,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  `contract_id` VARCHAR(64) NULL,
+  `boq_version_id` VARCHAR(64) NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `boq_source_items_batch_order_idx` ON `boq_source_items` (`batch_id`, `source_order`);
+
+CREATE INDEX `boq_source_items_project_status_idx` ON `boq_source_items` (`project_id`, `mapping_status`, `active`);
+
+CREATE INDEX `boq_source_items_material_idx` ON `boq_source_items` (`mapped_material_id`, `active`);
+
+CREATE INDEX `boq_source_items_contract_version_idx` ON `boq_source_items` (`contract_id`, `boq_version_id`, `mapping_status`, `active`);
+
+CREATE TABLE `boq_versions` (
+  `id` VARCHAR(64) NOT NULL,
+  `project_id` VARCHAR(64) NOT NULL,
+  `contract_id` VARCHAR(64) NOT NULL,
+  `version_no` INT NOT NULL,
+  `version_code` VARCHAR(64) NOT NULL,
+  `version_name` TEXT NULL,
+  `revision_type` VARCHAR(255) NOT NULL DEFAULT 'original',
+  `source_file_name` TEXT NULL,
+  `status` VARCHAR(255) NOT NULL DEFAULT 'active',
+  `active` TINYINT(1) NOT NULL DEFAULT 1,
+  `effective_at` DATETIME(3) NULL,
+  `approved_at` DATETIME(3) NULL,
+  `created_by` VARCHAR(64) NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `boq_versions_uidx_contract_id_version_no` (`contract_id`, `version_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `boq_versions_project_contract_idx` ON `boq_versions` (`project_id`, `contract_id`, `active`, `version_no`);
+
+CREATE TABLE `business_role_engine_catalog` (
+  `id` VARCHAR(64) NOT NULL,
+  `engine_key` TEXT NOT NULL,
+  `company_code` VARCHAR(64) NOT NULL,
+  `display_name` TEXT NOT NULL,
+  `description` TEXT NULL,
+  `active` TINYINT(1) NOT NULL DEFAULT 1,
+  `sort_order` INT NOT NULL DEFAULT 100,
+  `system_locked` TINYINT(1) NOT NULL DEFAULT 1,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `business_role_group_catalog` (
+  `id` VARCHAR(64) NOT NULL,
+  `code` VARCHAR(64) NOT NULL,
+  `name` TEXT NOT NULL,
+  `description` TEXT NULL,
+  `engine_role` TEXT NOT NULL,
+  `active` TINYINT(1) NOT NULL DEFAULT 1,
+  `sort_order` INT NOT NULL DEFAULT 100,
+  `system_locked` TINYINT(1) NOT NULL DEFAULT 0,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `business_role_group_scopes` (
+  `id` VARCHAR(64) NOT NULL,
+  `business_group_id` VARCHAR(64) NOT NULL,
+  `business_scope_id` VARCHAR(64) NOT NULL,
+  `is_primary` TINYINT(1) NOT NULL DEFAULT 0,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `business_role_group_scopes_uidx_business_group_id_business_scope_id` (`business_group_id`, `business_scope_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `business_role_group_scopes_group_idx` ON `business_role_group_scopes` (`business_group_id`, `is_primary`);
+
+CREATE TABLE `business_scope_catalog` (
+  `id` VARCHAR(64) NOT NULL,
+  `code` VARCHAR(64) NOT NULL,
+  `name` TEXT NOT NULL,
+  `description` TEXT NULL,
+  `active` TINYINT(1) NOT NULL DEFAULT 1,
+  `sort_order` INT NOT NULL DEFAULT 100,
+  `system_locked` TINYINT(1) NOT NULL DEFAULT 0,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- MySQL 8.4 không hỗ trợ functional index; bỏ `business_scope_name_uq` (lower(trim(name)
+
+CREATE TABLE `capital_recovery_records` (
+  `id` VARCHAR(64) NOT NULL,
+  `project_id` VARCHAR(64) NOT NULL,
+  `period_key` TEXT NOT NULL,
+  `reference_no` VARCHAR(64) NULL,
+  `production_report_id` VARCHAR(64) NULL,
+  `submitted_value` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `approved_value` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `invoice_no` VARCHAR(64) NULL,
+  `invoice_value` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `due_date` DATE NULL,
+  `status` VARCHAR(255) NOT NULL DEFAULT 'preparing',
+  `note` TEXT NULL,
+  `created_by` VARCHAR(64) NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `capital_recovery_project_period_idx` ON `capital_recovery_records` (`project_id`, `period_key`(191));
+
+CREATE TABLE `cashbook_entries` (
+  `id` VARCHAR(64) NOT NULL,
+  `entry_no` VARCHAR(64) NOT NULL,
+  `entry_date` DATE NOT NULL,
+  `account_id` VARCHAR(64) NOT NULL,
+  `entry_type` TEXT NOT NULL,
+  `amount` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `counterparty` TEXT NULL,
+  `reference_type` TEXT NULL,
+  `reference_id` VARCHAR(64) NULL,
+  `note` TEXT NULL,
+  `created_by` TEXT NOT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `cashbook_entries_uidx_entry_no` (`entry_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `idx_cashbook_account` ON `cashbook_entries` (`account_id`, `entry_date`);
+
+CREATE INDEX `idx_cashbook_type` ON `cashbook_entries` (`entry_type`(191));
+
+CREATE TABLE `central_return_items` (
+  `id` VARCHAR(64) NOT NULL,
+  `central_return_id` VARCHAR(64) NOT NULL,
+  `material_id` VARCHAR(64) NOT NULL,
+  `proposed_qty` DECIMAL(18,4) NOT NULL,
+  `counted_qty` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `accepted_qty` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `rejected_qty` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `condition_status` VARCHAR(255) NOT NULL DEFAULT 'usable',
+  `unit_cost` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `rejection_reason` TEXT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  `contract_id` VARCHAR(64) NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `central_return_items_return_idx` ON `central_return_items` (`central_return_id`, `material_id`);
+
+CREATE TABLE `central_returns` (
+  `id` VARCHAR(64) NOT NULL,
+  `return_no` VARCHAR(64) NOT NULL,
+  `source_project_id` VARCHAR(64) NOT NULL,
+  `source_warehouse_id` VARCHAR(64) NOT NULL,
+  `central_warehouse_id` VARCHAR(64) NOT NULL,
+  `requested_by` VARCHAR(64) NOT NULL,
+  `requested_at` DATETIME(3) NOT NULL,
+  `approved_by` VARCHAR(64) NULL,
+  `approved_at` DATETIME(3) NULL,
+  `received_by` VARCHAR(64) NULL,
+  `received_at` DATETIME(3) NULL,
+  `status` VARCHAR(255) NOT NULL DEFAULT 'pending_approval',
+  `note` TEXT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `central_returns_status_idx` ON `central_returns` (`status`, `requested_at`);
+
+CREATE TABLE `company_settings` (
+  `id` VARCHAR(64) NOT NULL,
+  `company_name` TEXT NOT NULL,
+  `stage_1_department` VARCHAR(255) NOT NULL DEFAULT 'BCH / Chỉ huy trưởng',
+  `stage_2_department` VARCHAR(255) NOT NULL DEFAULT 'Phòng Dự án',
+  `stage_3_department` VARCHAR(255) NOT NULL DEFAULT 'KH-MH / Tài chính',
+  `approval_sla_hours` INT NOT NULL DEFAULT 24,
+  `slow_moving_days` INT NOT NULL DEFAULT 60,
+  `negative_stock_blocked` TINYINT(1) NOT NULL DEFAULT 1,
+  `updated_by` TEXT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  `stage_1_sla_hours` INT NOT NULL DEFAULT 8,
+  `stage_2_sla_hours` INT NOT NULL DEFAULT 8,
+  `stage_3_sla_hours` INT NOT NULL DEFAULT 8,
+  `po_sla_hours` INT NOT NULL DEFAULT 24,
+  `bch_confirmation_sla_hours` INT NOT NULL DEFAULT 8,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `construction_daily_log_items` (
+  `id` VARCHAR(64) NOT NULL,
+  `log_id` VARCHAR(64) NOT NULL,
+  `boq_item_id` VARCHAR(64) NULL,
+  `item_name` TEXT NOT NULL,
+  `location` TEXT NULL,
+  `planned_qty` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `completed_qty` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `unit` TEXT NULL,
+  `labor_hours` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `photo_attachment_id` VARCHAR(64) NULL,
+  `note` TEXT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `idx_cdli_log` ON `construction_daily_log_items` (`log_id`);
+
+CREATE TABLE `construction_daily_logs` (
+  `id` VARCHAR(64) NOT NULL,
+  `log_no` VARCHAR(64) NOT NULL,
+  `project_id` VARCHAR(64) NOT NULL,
+  `warehouse_id` VARCHAR(64) NULL,
+  `work_date` DATE NOT NULL,
+  `shift` VARCHAR(255) NOT NULL DEFAULT 'sang',
+  `weather` TEXT NULL,
+  `work_content` TEXT NULL,
+  `labor_count` INT NOT NULL DEFAULT 0,
+  `equipment_note` TEXT NULL,
+  `status` VARCHAR(255) NOT NULL DEFAULT 'draft',
+  `submitted_by` TEXT NULL,
+  `approved_by` TEXT NULL,
+  `approved_at` DATETIME(3) NULL,
+  `cancelled_by` TEXT NULL,
+  `cancelled_at` DATETIME(3) NULL,
+  `note` TEXT NULL,
+  `created_by` TEXT NOT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `construction_daily_logs_uidx_log_no` (`log_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `idx_cdl_project_date` ON `construction_daily_logs` (`project_id`, `work_date`);
+
+CREATE INDEX `idx_cdl_status` ON `construction_daily_logs` (`status`);
+
+CREATE TABLE `contract_ownership_transfers` (
+  `id` VARCHAR(64) NOT NULL,
+  `transfer_no` VARCHAR(64) NOT NULL,
+  `warehouse_id` VARCHAR(64) NOT NULL,
+  `material_id` VARCHAR(64) NOT NULL,
+  `source_project_id` VARCHAR(64) NOT NULL,
+  `source_contract_id` VARCHAR(64) NOT NULL,
+  `destination_project_id` VARCHAR(64) NOT NULL,
+  `destination_contract_id` VARCHAR(64) NOT NULL,
+  `quantity` DECIMAL(18,4) NOT NULL,
+  `reason` TEXT NOT NULL,
+  `source_reference_type` TEXT NULL,
+  `source_reference_id` VARCHAR(64) NULL,
+  `status` VARCHAR(255) NOT NULL DEFAULT 'posted',
+  `posted_by` VARCHAR(64) NOT NULL,
+  `posted_at` DATETIME(3) NOT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE UNIQUE INDEX `contract_ownership_transfers_no_uidx` ON `contract_ownership_transfers` (`transfer_no`);
+
+CREATE INDEX `contract_ownership_transfers_contract_idx` ON `contract_ownership_transfers` (`source_contract_id`, `destination_contract_id`, `posted_at`);
+
+CREATE TABLE `contract_payments` (
+  `id` VARCHAR(64) NOT NULL,
+  `project_id` VARCHAR(64) NOT NULL,
+  `payment_date` DATE NOT NULL,
+  `reference_no` VARCHAR(64) NULL,
+  `description` TEXT NOT NULL,
+  `amount` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `note` TEXT NULL,
+  `created_by` VARCHAR(64) NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  `recovery_record_id` VARCHAR(64) NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `contract_payments_project_date_idx` ON `contract_payments` (`project_id`, `payment_date`);
+
+CREATE INDEX `contract_payments_recovery_idx` ON `contract_payments` (`recovery_record_id`);
+
+CREATE TABLE `contract_stock_ledger` (
+  `id` VARCHAR(64) NOT NULL,
+  `project_id` VARCHAR(64) NOT NULL,
+  `contract_id` VARCHAR(64) NOT NULL,
+  `warehouse_id` VARCHAR(64) NOT NULL,
+  `material_id` VARCHAR(64) NOT NULL,
+  `movement_type` TEXT NOT NULL,
+  `quantity_delta` DECIMAL(18,4) NOT NULL,
+  `occurred_at` DATETIME(3) NOT NULL,
+  `reference_type` TEXT NOT NULL,
+  `reference_id` VARCHAR(64) NOT NULL,
+  `reference_item_id` VARCHAR(64) NULL,
+  `counterparty_contract_id` VARCHAR(64) NULL,
+  `actor_user_id` VARCHAR(64) NULL,
+  `note` TEXT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `contract_stock_ledger_balance_idx` ON `contract_stock_ledger` (`project_id`, `contract_id`, `warehouse_id`, `material_id`, `occurred_at`);
+
+CREATE INDEX `contract_stock_ledger_reference_idx` ON `contract_stock_ledger` (`reference_type`(191), `reference_id`, `reference_item_id`);
+
+CREATE TABLE `contract_stock_reconciliations` (
+  `id` VARCHAR(64) NOT NULL,
+  `project_id` VARCHAR(64) NOT NULL,
+  `warehouse_id` VARCHAR(64) NOT NULL,
+  `material_id` VARCHAR(64) NOT NULL,
+  `physical_qty` DECIMAL(18,4) NOT NULL,
+  `contract_qty` DECIMAL(18,4) NOT NULL,
+  `difference_qty` DECIMAL(18,4) NOT NULL,
+  `status` TEXT NOT NULL,
+  `checked_by` VARCHAR(64) NOT NULL,
+  `checked_at` DATETIME(3) NOT NULL,
+  `note` TEXT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `contract_stock_reconciliations_scope_idx` ON `contract_stock_reconciliations` (`project_id`, `warehouse_id`, `status`(191), `checked_at`);
+
+CREATE TABLE `custom_field_values` (
+  `id` VARCHAR(64) NOT NULL,
+  `form_key` TEXT NOT NULL,
+  `entity_id` VARCHAR(64) NOT NULL,
+  `field_key` TEXT NOT NULL,
+  `value_text` TEXT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `custom_field_values_uidx_form_key_entity_id_field_key` (`form_key`, `entity_id`, `field_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `custom_field_values_entity_idx` ON `custom_field_values` (`form_key`(191), `entity_id`);
+
+CREATE TABLE `document_sequences` (
+  `id` VARCHAR(64) NOT NULL,
+  `document_type` TEXT NOT NULL,
+  `project_id` VARCHAR(64) NOT NULL,
+  `year` INT NOT NULL,
+  `last_number` INT NOT NULL DEFAULT 0,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE UNIQUE INDEX `document_sequences_scope_uidx` ON `document_sequences` (`document_type`(191), `project_id`, `year`);
+
+CREATE TABLE `email_outbox` (
+  `id` VARCHAR(64) NOT NULL,
+  `request_id` VARCHAR(64) NULL,
+  `stage` INT NULL,
+  `event` TEXT NOT NULL,
+  `recipients` TEXT NOT NULL,
+  `subject` TEXT NOT NULL,
+  `text_body` TEXT NOT NULL,
+  `html_body` TEXT NOT NULL,
+  `status` VARCHAR(255) NOT NULL DEFAULT 'queued',
+  `attempt_count` INT NOT NULL DEFAULT 0,
+  `next_attempt_at` DATETIME(3) NULL,
+  `queued_at` DATETIME(3) NOT NULL,
+  `sent_at` DATETIME(3) NULL,
+  `last_error` TEXT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `email_outbox_queue_idx` ON `email_outbox` (`status`, `next_attempt_at`, `queued_at`);
+
+CREATE INDEX `email_outbox_request_idx` ON `email_outbox` (`request_id`, `stage`, `event`(191));
+
+CREATE TABLE `email_settings` (
+  `id` VARCHAR(64) NOT NULL,
+  `enabled` TINYINT(1) NOT NULL DEFAULT 0,
+  `smtp_host` TEXT NULL,
+  `smtp_port` INT NOT NULL DEFAULT 587,
+  `security` VARCHAR(255) NOT NULL DEFAULT 'starttls',
+  `username` TEXT NULL,
+  `password` TEXT NULL,
+  `sender_email` TEXT NULL,
+  `sender_name` VARCHAR(255) NOT NULL DEFAULT 'MEP Warehouse',
+  `base_url` TEXT NULL,
+  `updated_by` TEXT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `form_field_config` (
+  `id` VARCHAR(64) NOT NULL,
+  `form_key` TEXT NOT NULL,
+  `field_key` TEXT NOT NULL,
+  `display_name` TEXT NOT NULL,
+  `data_type` VARCHAR(255) NOT NULL DEFAULT 'text',
+  `source_kind` VARCHAR(255) NOT NULL DEFAULT 'core',
+  `visible` INT NOT NULL DEFAULT 1,
+  `required` INT NOT NULL DEFAULT 0,
+  `importable` INT NOT NULL DEFAULT 1,
+  `exportable` INT NOT NULL DEFAULT 1,
+  `editable` INT NOT NULL DEFAULT 1,
+  `sort_order` INT NOT NULL DEFAULT 0,
+  `options_json` TEXT NULL,
+  `system_locked` TINYINT(1) NOT NULL DEFAULT 0,
+  `active` TINYINT(1) NOT NULL DEFAULT 1,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `form_field_config_uidx_form_key_field_key` (`form_key`, `field_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `goods_receipt_items` (
+  `id` VARCHAR(64) NOT NULL,
+  `receipt_id` VARCHAR(64) NOT NULL,
+  `purchase_order_item_id` VARCHAR(64) NOT NULL,
+  `received_qty` DECIMAL(18,4) NOT NULL,
+  `accepted_qty` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `rejected_qty` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `lot_no` VARCHAR(64) NULL,
+  `qc_result` VARCHAR(255) NOT NULL DEFAULT 'pending',
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  `contract_id` VARCHAR(64) NULL,
+  `boq_version_id` VARCHAR(64) NULL,
+  `boq_item_id` VARCHAR(64) NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `goods_receipt_items_po_line_idx` ON `goods_receipt_items` (`purchase_order_item_id`);
+
+CREATE INDEX `goods_receipt_items_contract_boq_idx` ON `goods_receipt_items` (`contract_id`, `boq_version_id`, `boq_item_id`);
+
+CREATE TABLE `goods_receipts` (
+  `id` VARCHAR(64) NOT NULL,
+  `receipt_no` VARCHAR(64) NOT NULL,
+  `purchase_order_id` VARCHAR(64) NOT NULL,
+  `warehouse_id` VARCHAR(64) NOT NULL,
+  `received_by` TEXT NOT NULL,
+  `received_at` DATETIME(3) NOT NULL,
+  `delivery_note_no` VARCHAR(64) NULL,
+  `qc_status` VARCHAR(255) NOT NULL DEFAULT 'pending',
+  `document_status` VARCHAR(255) NOT NULL DEFAULT 'pending',
+  `posting_status` VARCHAR(255) NOT NULL DEFAULT 'unposted',
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  `certificate_status` VARCHAR(255) NOT NULL DEFAULT 'pending',
+  `delivery_document_status` VARCHAR(255) NOT NULL DEFAULT 'pending',
+  `bch_confirmation_status` VARCHAR(255) NOT NULL DEFAULT 'pending',
+  `bch_confirmed_by` TEXT NULL,
+  `bch_confirmed_at` DATETIME(3) NULL,
+  `bch_comment` TEXT NULL,
+  `contract_id` VARCHAR(64) NULL,
+  `boq_version_id` VARCHAR(64) NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE UNIQUE INDEX `goods_receipts_no_uidx` ON `goods_receipts` (`receipt_no`);
+
+CREATE INDEX `goods_receipts_po_idx` ON `goods_receipts` (`purchase_order_id`);
+
+CREATE TABLE `hr_records` (
+  `id` VARCHAR(64) NOT NULL,
+  `user_id` VARCHAR(64) NOT NULL,
+  `full_name` TEXT NOT NULL,
+  `identity_no` VARCHAR(64) NULL,
+  `identity_date` DATE NULL,
+  `identity_place` TEXT NULL,
+  `birth_date` DATE NULL,
+  `birthplace` TEXT NULL,
+  `permanent_address` TEXT NULL,
+  `phone` TEXT NULL,
+  `education_level` TEXT NULL,
+  `joined_date` DATE NULL,
+  `position` TEXT NULL,
+  `note` TEXT NULL,
+  `created_by` TEXT NOT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `hr_records_uidx_user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `idx_hr_records_name` ON `hr_records` (`full_name`(191));
+
+CREATE TABLE `labor_contracts` (
+  `id` VARCHAR(64) NOT NULL,
+  `contract_no` VARCHAR(64) NOT NULL,
+  `user_id` VARCHAR(64) NOT NULL,
+  `contract_type` TEXT NOT NULL,
+  `start_date` DATE NULL,
+  `end_date` DATE NULL,
+  `signing_date` DATE NULL,
+  `salary` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `status` VARCHAR(255) NOT NULL DEFAULT 'active',
+  `note` TEXT NULL,
+  `created_by` TEXT NOT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `labor_contracts_uidx_contract_no` (`contract_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `idx_labor_contracts_user` ON `labor_contracts` (`user_id`);
+
+CREATE INDEX `idx_labor_contracts_status` ON `labor_contracts` (`status`);
+
+CREATE TABLE `legal_documents` (
+  `id` VARCHAR(64) NOT NULL,
+  `doc_no` VARCHAR(64) NOT NULL,
+  `doc_type` TEXT NOT NULL,
+  `title` TEXT NOT NULL,
+  `issue_date` DATE NULL,
+  `issuer` TEXT NULL,
+  `effective_date` DATE NULL,
+  `expiry_date` DATE NULL,
+  `scope` TEXT NULL,
+  `attachment_id` VARCHAR(64) NULL,
+  `status` VARCHAR(255) NOT NULL DEFAULT 'active',
+  `created_by` TEXT NOT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `legal_documents_uidx_doc_no` (`doc_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `idx_legal_docs_type` ON `legal_documents` (`doc_type`(191));
+
+CREATE TABLE `material_aliases` (
+  `id` VARCHAR(64) NOT NULL,
+  `material_id` VARCHAR(64) NOT NULL,
+  `alias_name` TEXT NOT NULL,
+  `normalized_name` TEXT NOT NULL,
+  `verified` TINYINT(1) NOT NULL DEFAULT 1,
+  `active` TINYINT(1) NOT NULL DEFAULT 1,
+  `created_by` VARCHAR(64) NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `material_aliases_uidx_normalized_name` (`normalized_name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `material_aliases_material_idx` ON `material_aliases` (`material_id`, `active`);
+
+CREATE TABLE `material_categories` (
+  `id` VARCHAR(64) NOT NULL,
+  `code` VARCHAR(64) NOT NULL,
+  `name` TEXT NOT NULL,
+  `description` TEXT NULL,
+  `sort_order` INT NOT NULL DEFAULT 0,
+  `active` TINYINT(1) NOT NULL DEFAULT 1,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `material_code_history` (
+  `id` VARCHAR(64) NOT NULL,
+  `material_id` VARCHAR(64) NOT NULL,
+  `old_code` VARCHAR(64) NOT NULL,
+  `new_code` VARCHAR(64) NOT NULL,
+  `reason` TEXT NOT NULL,
+  `changed_by` VARCHAR(64) NOT NULL,
+  `changed_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `material_code_history_material_idx` ON `material_code_history` (`material_id`, `changed_at`);
+
+CREATE TABLE `material_embeddings` (
+  `id` VARCHAR(64) NOT NULL,
+  `material_id` VARCHAR(64) NOT NULL,
+  `provider` TEXT NOT NULL,
+  `model` TEXT NOT NULL,
+  `semantic_hash` TEXT NOT NULL,
+  `vector_json` TEXT NOT NULL,
+  `dimension` INT NOT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE UNIQUE INDEX `material_embeddings_provider_uidx` ON `material_embeddings` (`material_id`, `provider`(191), `model`(191));
+
+CREATE TABLE `material_external_codes` (
+  `id` VARCHAR(64) NOT NULL,
+  `material_id` VARCHAR(64) NOT NULL,
+  `code_type` TEXT NOT NULL,
+  `owner_key` VARCHAR(255) NOT NULL DEFAULT '',
+  `external_code` VARCHAR(64) NOT NULL,
+  `active` TINYINT(1) NOT NULL DEFAULT 1,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `material_external_codes_uidx_code_type_owner_key_external_code` (`code_type`, `owner_key`, `external_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `material_external_codes_material_idx` ON `material_external_codes` (`material_id`, `active`);
+
+CREATE TABLE `material_mapping_history` (
+  `id` VARCHAR(64) NOT NULL,
+  `material_id` VARCHAR(64) NOT NULL,
+  `source_normalized` TEXT NOT NULL,
+  `source_text` TEXT NOT NULL,
+  `system_code` VARCHAR(64) NULL,
+  `unit` TEXT NULL,
+  `confirm_count` INT NOT NULL DEFAULT 1,
+  `last_confirmed_by` VARCHAR(64) NOT NULL,
+  `last_confirmed_at` DATETIME(3) NOT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE UNIQUE INDEX `material_mapping_history_uidx` ON `material_mapping_history` (`material_id`, `source_normalized`(191));
+
+CREATE INDEX `material_mapping_history_source_idx` ON `material_mapping_history` (`source_normalized`(191), `confirm_count`);
+
+CREATE TABLE `material_mar_approvals` (
+  `id` VARCHAR(64) NOT NULL,
+  `project_id` VARCHAR(64) NOT NULL,
+  `material_id` VARCHAR(64) NOT NULL,
+  `approval_no` VARCHAR(64) NULL,
+  `status` VARCHAR(255) NOT NULL DEFAULT 'pending',
+  `approved_at` DATETIME(3) NULL,
+  `approved_by` TEXT NULL,
+  `note` TEXT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `material_mar_approvals_uidx_project_id_material_id` (`project_id`, `material_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `material_mar_approval_idx` ON `material_mar_approvals` (`project_id`, `material_id`, `status`);
+
+CREATE TABLE `material_norms` (
+  `id` VARCHAR(64) NOT NULL,
+  `norm_code` VARCHAR(64) NOT NULL,
+  `project_id` VARCHAR(64) NULL,
+  `subcategory_id` VARCHAR(64) NULL,
+  `item_name` TEXT NOT NULL,
+  `material_id` VARCHAR(64) NULL,
+  `base_uom` TEXT NULL,
+  `quantity_per_unit` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `unit` TEXT NULL,
+  `source_component_id` VARCHAR(64) NULL,
+  `source_type` VARCHAR(255) NOT NULL DEFAULT 'manual',
+  `notes` TEXT NULL,
+  `status` VARCHAR(255) NOT NULL DEFAULT 'active',
+  `active` TINYINT(1) NOT NULL DEFAULT 1,
+  `created_by` TEXT NOT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `material_norms_uidx_norm_code` (`norm_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `idx_material_norms_project` ON `material_norms` (`project_id`);
+
+CREATE INDEX `idx_material_norms_material` ON `material_norms` (`material_id`);
+
+CREATE INDEX `idx_material_norms_status` ON `material_norms` (`status`);
+
+CREATE TABLE `material_request_items` (
+  `id` VARCHAR(64) NOT NULL,
+  `request_id` VARCHAR(64) NOT NULL,
+  `line_no` INT NOT NULL,
+  `material_id` VARCHAR(64) NOT NULL,
+  `work_package_code` VARCHAR(64) NULL,
+  `boq_code` VARCHAR(64) NULL,
+  `route_tag` TEXT NULL,
+  `installation_area` TEXT NULL,
+  `requested_qty` DECIMAL(18,4) NOT NULL,
+  `stock_allocation_qty` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `approved_purchase_qty` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `ordered_qty` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `received_qty` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `issued_qty` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `installed_qty` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `line_status` VARCHAR(255) NOT NULL DEFAULT 'pending',
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  `estimated_unit_price` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `contract_line_no` INT NULL,
+  `origin` TEXT NULL,
+  `approved_supplier` TEXT NULL,
+  `note` TEXT NULL,
+  `delivered_qty` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `closed_qty` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `close_reason` TEXT NULL,
+  `boq_item_id` VARCHAR(64) NULL,
+  `contract_id` VARCHAR(64) NULL,
+  `boq_version_id` VARCHAR(64) NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE UNIQUE INDEX `request_items_line_uidx` ON `material_request_items` (`request_id`, `line_no`);
+
+CREATE INDEX `request_items_material_idx` ON `material_request_items` (`material_id`);
+
+CREATE INDEX `request_items_boq_item_idx` ON `material_request_items` (`boq_item_id`);
+
+CREATE INDEX `material_request_items_contract_boq_idx` ON `material_request_items` (`contract_id`, `boq_version_id`, `boq_item_id`);
+
+CREATE TABLE `material_requests` (
+  `id` VARCHAR(64) NOT NULL,
+  `request_no` VARCHAR(64) NOT NULL,
+  `project_id` VARCHAR(64) NOT NULL,
+  `team_id` VARCHAR(64) NULL,
+  `source_warehouse_id` VARCHAR(64) NULL,
+  `requested_by` TEXT NOT NULL,
+  `requested_at` DATETIME(3) NOT NULL,
+  `needed_at` DATETIME(3) NOT NULL,
+  `priority` VARCHAR(255) NOT NULL DEFAULT 'normal',
+  `area` TEXT NOT NULL,
+  `purpose` TEXT NULL,
+  `status` VARCHAR(255) NOT NULL DEFAULT 'draft',
+  `approval_stage` INT NOT NULL DEFAULT 0,
+  `total_estimated_value` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  `supply_status` VARCHAR(255) NOT NULL DEFAULT 'approval_pending',
+  `contract_id` VARCHAR(64) NULL,
+  `boq_version_id` VARCHAR(64) NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE UNIQUE INDEX `material_requests_no_uidx` ON `material_requests` (`request_no`);
+
+CREATE INDEX `material_requests_project_status_idx` ON `material_requests` (`project_id`, `status`);
+
+CREATE INDEX `material_requests_needed_idx` ON `material_requests` (`needed_at`);
+
+CREATE TABLE `material_return_items` (
+  `id` VARCHAR(64) NOT NULL,
+  `return_id` VARCHAR(64) NOT NULL,
+  `material_id` VARCHAR(64) NOT NULL,
+  `quantity` DECIMAL(18,4) NOT NULL,
+  `accepted_qty` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `rejected_qty` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `condition` VARCHAR(255) NOT NULL DEFAULT 'usable',
+  `reason` TEXT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  `contract_id` VARCHAR(64) NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `material_return_items_return_idx` ON `material_return_items` (`return_id`);
+
+CREATE TABLE `material_returns` (
+  `id` VARCHAR(64) NOT NULL,
+  `return_no` VARCHAR(64) NOT NULL,
+  `project_id` VARCHAR(64) NOT NULL,
+  `team_id` VARCHAR(64) NOT NULL,
+  `to_warehouse_id` VARCHAR(64) NOT NULL,
+  `returned_by_name` TEXT NOT NULL,
+  `received_by` TEXT NULL,
+  `returned_at` DATETIME(3) NOT NULL,
+  `status` VARCHAR(255) NOT NULL DEFAULT 'pending',
+  `note` TEXT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE UNIQUE INDEX `material_returns_no_uidx` ON `material_returns` (`return_no`);
+
+CREATE INDEX `material_returns_project_idx` ON `material_returns` (`project_id`, `returned_at`);
+
+CREATE INDEX `material_returns_team_idx` ON `material_returns` (`team_id`, `returned_at`);
+
+CREATE TABLE `material_subcategories` (
+  `id` VARCHAR(64) NOT NULL,
+  `category_id` VARCHAR(64) NOT NULL,
+  `code` VARCHAR(64) NOT NULL,
+  `name` TEXT NOT NULL,
+  `description` TEXT NULL,
+  `sort_order` INT NOT NULL DEFAULT 0,
+  `active` TINYINT(1) NOT NULL DEFAULT 1,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  `scope_examples` TEXT NULL,
+  `review_status` VARCHAR(255) NOT NULL DEFAULT 'approved',
+  `adjustment_note` TEXT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE UNIQUE INDEX `material_subcategories_category_code_uidx` ON `material_subcategories` (`category_id`, `code`);
+
+CREATE INDEX `material_subcategories_category_idx` ON `material_subcategories` (`category_id`, `sort_order`, `name`(191));
+
+CREATE TABLE `material_uom_conversions` (
+  `id` VARCHAR(64) NOT NULL,
+  `material_id` VARCHAR(64) NOT NULL,
+  `from_uom` TEXT NOT NULL,
+  `to_uom` TEXT NOT NULL,
+  `factor` DECIMAL(18,4) NOT NULL,
+  `active` TINYINT(1) NOT NULL DEFAULT 1,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `material_uom_conversions_uidx_material_id_from_uom_to_uom` (`material_id`, `from_uom`, `to_uom`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `materials` (
+  `id` VARCHAR(64) NOT NULL,
+  `code` VARCHAR(64) NOT NULL,
+  `name` TEXT NOT NULL,
+  `system` TEXT NOT NULL,
+  `specification` TEXT NULL,
+  `brand` TEXT NULL,
+  `unit` TEXT NOT NULL,
+  `standard_price` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `min_stock` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `requires_cocq` TINYINT(1) NOT NULL DEFAULT 0,
+  `requires_mar` TINYINT(1) NOT NULL DEFAULT 0,
+  `active` TINYINT(1) NOT NULL DEFAULT 1,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  `category_id` VARCHAR(64) NULL,
+  `subcategory_id` VARCHAR(64) NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE UNIQUE INDEX `materials_code_uidx` ON `materials` (`code`);
+
+CREATE INDEX `materials_system_idx` ON `materials` (`system`(191));
+
+CREATE INDEX `materials_subcategory_idx` ON `materials` (`subcategory_id`);
+
+CREATE TABLE `menu_group_catalog` (
+  `id` VARCHAR(64) NOT NULL,
+  `group_key` TEXT NOT NULL,
+  `name` TEXT NOT NULL,
+  `icon` VARCHAR(255) NOT NULL DEFAULT '▦',
+  `active` TINYINT(1) NOT NULL DEFAULT 1,
+  `sort_order` INT NOT NULL DEFAULT 0,
+  `collapsible` INT NOT NULL DEFAULT 1,
+  `system_locked` TINYINT(1) NOT NULL DEFAULT 0,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `module_catalog` (
+  `module_key` VARCHAR(64) NOT NULL,
+  `label` TEXT NOT NULL,
+  `icon` TEXT NOT NULL,
+  `group_name` TEXT NULL,
+  `active` TINYINT(1) NOT NULL DEFAULT 1,
+  `sort_order` INT NOT NULL DEFAULT 0,
+  `system_locked` TINYINT(1) NOT NULL DEFAULT 1,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  `group_key` TEXT NULL,
+  PRIMARY KEY (`module_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `official_correspondence` (
+  `id` VARCHAR(64) NOT NULL,
+  `doc_no` VARCHAR(64) NOT NULL,
+  `direction` TEXT NOT NULL,
+  `doc_type` TEXT NOT NULL,
+  `issue_date` DATE NULL,
+  `sender_name` TEXT NULL,
+  `receiver_name` TEXT NULL,
+  `summary` TEXT NULL,
+  `internal_handler` TEXT NULL,
+  `status` VARCHAR(255) NOT NULL DEFAULT 'received',
+  `result_note` TEXT NULL,
+  `created_by` TEXT NOT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `official_correspondence_uidx_doc_no` (`doc_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `idx_correspondence_status` ON `official_correspondence` (`status`);
+
+CREATE INDEX `idx_correspondence_date` ON `official_correspondence` (`issue_date`);
+
+CREATE TABLE `organization_units` (
+  `id` VARCHAR(64) NOT NULL,
+  `code` VARCHAR(64) NOT NULL,
+  `name` TEXT NOT NULL,
+  `unit_type` TEXT NOT NULL,
+  `parent_id` VARCHAR(64) NULL,
+  `project_id` VARCHAR(64) NULL,
+  `description` TEXT NULL,
+  `effective_from` TEXT NULL,
+  `effective_to` TEXT NULL,
+  `active` TINYINT(1) NOT NULL DEFAULT 1,
+  `archived_at` DATETIME(3) NULL,
+  `sort_order` INT NOT NULL DEFAULT 100,
+  `system_locked` TINYINT(1) NOT NULL DEFAULT 0,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- MySQL 8.4 không hỗ trợ functional index; bỏ `organization_units_name_uq` (lower(trim(name)
+
+CREATE INDEX `organization_units_parent_idx` ON `organization_units` (`parent_id`, `active`, `sort_order`);
+
+CREATE INDEX `organization_units_project_idx` ON `organization_units` (`project_id`, `unit_type`(191), `active`);
+
+CREATE TABLE `payment_plans` (
+  `id` VARCHAR(64) NOT NULL,
+  `plan_no` VARCHAR(64) NOT NULL,
+  `project_id` VARCHAR(64) NOT NULL,
+  `contract_id` VARCHAR(64) NULL,
+  `po_id` VARCHAR(64) NULL,
+  `milestone` TEXT NULL,
+  `planned_date` DATE NULL,
+  `planned_amount` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `paid_amount` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `status` VARCHAR(255) NOT NULL DEFAULT 'planned',
+  `note` TEXT NULL,
+  `created_by` TEXT NOT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `payment_plans_uidx_plan_no` (`plan_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `idx_payment_plans_project` ON `payment_plans` (`project_id`);
+
+CREATE INDEX `idx_payment_plans_status` ON `payment_plans` (`status`);
+
+CREATE TABLE `procurement_allocations` (
+  `id` VARCHAR(64) NOT NULL,
+  `project_id` VARCHAR(64) NOT NULL,
+  `contract_id` VARCHAR(64) NOT NULL,
+  `boq_version_id` VARCHAR(64) NULL,
+  `boq_item_id` VARCHAR(64) NULL,
+  `material_id` VARCHAR(64) NOT NULL,
+  `request_item_id` VARCHAR(64) NULL,
+  `purchase_order_item_id` VARCHAR(64) NULL,
+  `receipt_item_id` VARCHAR(64) NULL,
+  `stage` TEXT NOT NULL,
+  `quantity` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `reference_no` VARCHAR(64) NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `procurement_allocations_contract_boq_idx` ON `procurement_allocations` (`contract_id`, `boq_version_id`, `boq_item_id`, `stage`(191));
+
+CREATE INDEX `procurement_allocations_trace_idx` ON `procurement_allocations` (`request_item_id`, `purchase_order_item_id`, `receipt_item_id`);
+
+CREATE TABLE `production_reports` (
+  `id` VARCHAR(64) NOT NULL,
+  `project_id` VARCHAR(64) NOT NULL,
+  `report_period` TEXT NOT NULL,
+  `reference_no` VARCHAR(64) NULL,
+  `description` TEXT NULL,
+  `planned_value` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `actual_value` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `approved_value` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `status` VARCHAR(255) NOT NULL DEFAULT 'submitted',
+  `submitted_by` VARCHAR(64) NULL,
+  `approved_by` VARCHAR(64) NULL,
+  `approved_at` DATETIME(3) NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `production_reports_uidx_project_id_report_period` (`project_id`, `report_period`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `production_reports_project_period_idx` ON `production_reports` (`project_id`, `report_period`(191));
+
+CREATE TABLE `project_archives` (
+  `id` VARCHAR(64) NOT NULL,
+  `project_id` VARCHAR(64) NOT NULL,
+  `project_code` VARCHAR(64) NOT NULL,
+  `project_name` TEXT NOT NULL,
+  `file_name` TEXT NOT NULL,
+  `sha256` TEXT NOT NULL,
+  `byte_size` INT NOT NULL DEFAULT 0,
+  `record_count` INT NOT NULL DEFAULT 0,
+  `attachment_count` INT NOT NULL DEFAULT 0,
+  `schema_version` TEXT NOT NULL,
+  `status` VARCHAR(255) NOT NULL DEFAULT 'verified',
+  `generated_by` TEXT NOT NULL,
+  `generated_at` DATETIME(3) NOT NULL,
+  `downloaded_at` DATETIME(3) NULL,
+  `purged_at` DATETIME(3) NULL,
+  `purge_audit_id` VARCHAR(64) NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `project_archives_project_idx` ON `project_archives` (`project_id`, `generated_at`);
+
+CREATE INDEX `project_archives_status_idx` ON `project_archives` (`status`, `generated_at`);
+
+CREATE TABLE `project_boq_items` (
+  `id` VARCHAR(64) NOT NULL,
+  `project_id` VARCHAR(64) NOT NULL,
+  `line_no` INT NOT NULL,
+  `boq_code` VARCHAR(64) NULL,
+  `contract_code` VARCHAR(64) NULL,
+  `material_id` VARCHAR(64) NOT NULL,
+  `description` TEXT NULL,
+  `contract_qty` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `unit_price` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `note` TEXT NULL,
+  `active` TINYINT(1) NOT NULL DEFAULT 1,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  `item_type` VARCHAR(255) NOT NULL DEFAULT 'contract',
+  `remeasured_qty` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `variation_status` VARCHAR(255) NOT NULL DEFAULT 'none',
+  `variation_ref` TEXT NULL,
+  `variation_approved_at` DATETIME(3) NULL,
+  `contract_material_code` VARCHAR(64) NULL,
+  `approved_material_code` VARCHAR(64) NULL,
+  `source_order` INT NULL,
+  `contract_line_ref` TEXT NULL,
+  `row_role` VARCHAR(255) NOT NULL DEFAULT 'material',
+  `parent_source_order` INT NULL,
+  `outline_level` INT NOT NULL DEFAULT 0,
+  `source_sheet` TEXT NULL,
+  `source_row` INT NULL,
+  `contract_id` VARCHAR(64) NULL,
+  `boq_version_id` VARCHAR(64) NULL,
+  `source_item_id` VARCHAR(64) NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `project_boq_line_uidx` ON `project_boq_items` (`project_id`, `line_no`);
+
+CREATE INDEX `project_boq_material_idx` ON `project_boq_items` (`project_id`, `material_id`);
+
+CREATE INDEX `project_boq_source_order_idx` ON `project_boq_items` (`project_id`, `source_order`);
+
+CREATE INDEX `project_boq_items_contract_version_idx` ON `project_boq_items` (`project_id`, `contract_id`, `boq_version_id`, `source_order`);
+
+CREATE TABLE `project_close_checks` (
+  `id` VARCHAR(64) NOT NULL,
+  `project_id` VARCHAR(64) NOT NULL,
+  `check_key` TEXT NOT NULL,
+  `status` VARCHAR(255) NOT NULL DEFAULT 'pending',
+  `detail` TEXT NULL,
+  `checked_by` TEXT NULL,
+  `checked_at` DATETIME(3) NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `project_close_checks_uidx_project_id_check_key` (`project_id`, `check_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `project_contracts` (
+  `id` VARCHAR(64) NOT NULL,
+  `project_id` VARCHAR(64) NOT NULL,
+  `contract_no` VARCHAR(64) NOT NULL,
+  `contract_name` TEXT NOT NULL,
+  `contract_type` VARCHAR(255) NOT NULL DEFAULT 'main',
+  `parent_contract_id` VARCHAR(64) NULL,
+  `status` VARCHAR(255) NOT NULL DEFAULT 'active',
+  `is_primary` TINYINT(1) NOT NULL DEFAULT 0,
+  `signed_at` DATETIME(3) NULL,
+  `effective_from` TEXT NULL,
+  `effective_to` TEXT NULL,
+  `note` TEXT NULL,
+  `created_by` VARCHAR(64) NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `project_contracts_uidx_project_id_contract_no` (`project_id`, `contract_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `project_contracts_project_status_idx` ON `project_contracts` (`project_id`, `status`, `is_primary`);
+
+CREATE TABLE `projects` (
+  `id` VARCHAR(64) NOT NULL,
+  `code` VARCHAR(64) NOT NULL,
+  `name` TEXT NOT NULL,
+  `status` VARCHAR(255) NOT NULL DEFAULT 'active',
+  `manager_user_id` VARCHAR(64) NULL,
+  `start_date` DATE NULL,
+  `planned_end_date` DATE NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  `contract_no` VARCHAR(64) NULL,
+  `contract_name` TEXT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE UNIQUE INDEX `projects_code_uidx` ON `projects` (`code`);
+
+CREATE TABLE `purchase_order_items` (
+  `id` VARCHAR(64) NOT NULL,
+  `purchase_order_id` VARCHAR(64) NOT NULL,
+  `request_item_id` VARCHAR(64) NOT NULL,
+  `line_no` INT NOT NULL,
+  `ordered_qty` DECIMAL(18,4) NOT NULL,
+  `unit_price` DECIMAL(18,4) NOT NULL,
+  `received_qty` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `status` VARCHAR(255) NOT NULL DEFAULT 'ordered',
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  `system_code` VARCHAR(64) NULL,
+  `planned_delivery_at` DATETIME(3) NULL,
+  `delivered_qty` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `closed_qty` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `close_reason` TEXT NULL,
+  `closed_by` VARCHAR(64) NULL,
+  `closed_at` DATETIME(3) NULL,
+  `contract_id` VARCHAR(64) NULL,
+  `boq_version_id` VARCHAR(64) NULL,
+  `boq_item_id` VARCHAR(64) NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE UNIQUE INDEX `purchase_order_items_line_uidx` ON `purchase_order_items` (`purchase_order_id`, `line_no`);
+
+CREATE INDEX `purchase_order_items_request_idx` ON `purchase_order_items` (`request_item_id`);
+
+CREATE INDEX `purchase_order_items_contract_boq_idx` ON `purchase_order_items` (`contract_id`, `boq_version_id`, `boq_item_id`);
+
+CREATE TABLE `purchase_orders` (
+  `id` VARCHAR(64) NOT NULL,
+  `po_no` VARCHAR(64) NOT NULL,
+  `project_id` VARCHAR(64) NOT NULL,
+  `supplier_id` VARCHAR(64) NOT NULL,
+  `receiving_warehouse_id` VARCHAR(64) NOT NULL,
+  `buyer_user_id` VARCHAR(64) NOT NULL,
+  `ordered_at` DATETIME(3) NOT NULL,
+  `eta` TEXT NULL,
+  `status` VARCHAR(255) NOT NULL DEFAULT 'draft',
+  `total_value` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  `request_id` VARCHAR(64) NULL,
+  `delivery_queued_at` DATETIME(3) NULL,
+  `delivery_completed_at` DATETIME(3) NULL,
+  `contract_id` VARCHAR(64) NULL,
+  `boq_version_id` VARCHAR(64) NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE UNIQUE INDEX `purchase_orders_no_uidx` ON `purchase_orders` (`po_no`);
+
+CREATE INDEX `purchase_orders_project_status_idx` ON `purchase_orders` (`project_id`, `status`);
+
+CREATE INDEX `purchase_orders_eta_idx` ON `purchase_orders` (`eta`(191));
+
+CREATE TABLE `request_comments` (
+  `id` VARCHAR(64) NOT NULL,
+  `request_id` VARCHAR(64) NOT NULL,
+  `user_id` VARCHAR(64) NOT NULL,
+  `comment` TEXT NOT NULL,
+  `visibility` VARCHAR(255) NOT NULL DEFAULT 'internal',
+  `created_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `request_comments_request_idx` ON `request_comments` (`request_id`, `created_at`);
+
+CREATE TABLE `role_catalog` (
+  `id` VARCHAR(64) NOT NULL,
+  `code` VARCHAR(64) NOT NULL,
+  `name` TEXT NOT NULL,
+  `description` TEXT NULL,
+  `base_role` VARCHAR(255) NOT NULL DEFAULT 'engineer',
+  `active` TINYINT(1) NOT NULL DEFAULT 1,
+  `sort_order` INT NOT NULL DEFAULT 0,
+  `system_locked` TINYINT(1) NOT NULL DEFAULT 0,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  `business_group_id` VARCHAR(64) NULL,
+  `warehouse_scope_kind` TEXT NULL,
+  `default_organization_unit_id` VARCHAR(64) NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `seal_management` (
+  `id` VARCHAR(64) NOT NULL,
+  `seal_no` VARCHAR(64) NOT NULL,
+  `seal_name` TEXT NOT NULL,
+  `seal_type` TEXT NOT NULL,
+  `custodian` TEXT NULL,
+  `registered_date` DATE NULL,
+  `status` VARCHAR(255) NOT NULL DEFAULT 'active',
+  `usage_note` TEXT NULL,
+  `created_by` TEXT NOT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `seal_management_uidx_seal_no` (`seal_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `server_deployment_metadata` (
+  `id` VARCHAR(64) NOT NULL,
+  `deployment_mode` TEXT NOT NULL,
+  `database_engine` TEXT NOT NULL,
+  `storage_mode` TEXT NOT NULL,
+  `public_url` TEXT NULL,
+  `node_name` TEXT NULL,
+  `installed_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `sessions` (
+  `id` VARCHAR(64) NOT NULL,
+  `user_id` VARCHAR(64) NOT NULL,
+  `token_hash` TEXT NOT NULL,
+  `expires_at` DATETIME(3) NOT NULL,
+  `ip_address` TEXT NULL,
+  `user_agent` TEXT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `last_seen_at` DATETIME(3) NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE UNIQUE INDEX `sessions_token_uidx` ON `sessions` (`token_hash`(191));
+
+CREATE INDEX `sessions_user_idx` ON `sessions` (`user_id`);
+
+CREATE TABLE `site_expense_claims` (
+  `id` VARCHAR(64) NOT NULL,
+  `claim_no` VARCHAR(64) NOT NULL,
+  `project_id` VARCHAR(64) NOT NULL,
+  `cost_type` TEXT NOT NULL,
+  `amount` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `paid_by` TEXT NULL,
+  `claim_date` DATE NULL,
+  `description` TEXT NULL,
+  `voucher_attachment_id` VARCHAR(64) NULL,
+  `status` VARCHAR(255) NOT NULL DEFAULT 'draft',
+  `approved_by` TEXT NULL,
+  `approved_at` DATETIME(3) NULL,
+  `created_by` TEXT NOT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `site_expense_claims_uidx_claim_no` (`claim_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `idx_site_expense_project` ON `site_expense_claims` (`project_id`);
+
+CREATE INDEX `idx_site_expense_status` ON `site_expense_claims` (`status`);
+
+CREATE INDEX `idx_site_expense_type` ON `site_expense_claims` (`cost_type`(191));
+
+CREATE TABLE `stock_count_items` (
+  `id` VARCHAR(64) NOT NULL,
+  `stock_count_id` VARCHAR(64) NOT NULL,
+  `material_id` VARCHAR(64) NOT NULL,
+  `book_qty_snapshot` DECIMAL(18,4) NOT NULL,
+  `actual_qty` DECIMAL(18,4) NOT NULL,
+  `variance_qty` DECIMAL(18,4) NOT NULL,
+  `reason` TEXT NULL,
+  `approved_adjustment_qty` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE UNIQUE INDEX `stock_count_items_uidx` ON `stock_count_items` (`stock_count_id`, `material_id`);
+
+CREATE TABLE `stock_counts` (
+  `id` VARCHAR(64) NOT NULL,
+  `count_no` VARCHAR(64) NOT NULL,
+  `project_id` VARCHAR(64) NOT NULL,
+  `warehouse_id` VARCHAR(64) NOT NULL,
+  `count_type` TEXT NOT NULL,
+  `counted_at` DATETIME(3) NOT NULL,
+  `status` VARCHAR(255) NOT NULL DEFAULT 'draft',
+  `approved_by` TEXT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE UNIQUE INDEX `stock_counts_no_uidx` ON `stock_counts` (`count_no`);
+
+CREATE INDEX `stock_counts_warehouse_date_idx` ON `stock_counts` (`warehouse_id`, `counted_at`);
+
+CREATE TABLE `stock_issue_items` (
+  `id` VARCHAR(64) NOT NULL,
+  `issue_id` VARCHAR(64) NOT NULL,
+  `material_id` VARCHAR(64) NOT NULL,
+  `request_item_id` VARCHAR(64) NULL,
+  `quantity` DECIMAL(18,4) NOT NULL,
+  `installed_qty` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `work_package_code` VARCHAR(64) NULL,
+  `installation_area` TEXT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  `contract_id` VARCHAR(64) NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `stock_issue_items_issue_idx` ON `stock_issue_items` (`issue_id`);
+
+CREATE INDEX `stock_issue_items_material_idx` ON `stock_issue_items` (`material_id`);
+
+CREATE TABLE `stock_issues` (
+  `id` VARCHAR(64) NOT NULL,
+  `issue_no` VARCHAR(64) NOT NULL,
+  `project_id` VARCHAR(64) NOT NULL,
+  `from_warehouse_id` VARCHAR(64) NOT NULL,
+  `team_id` VARCHAR(64) NOT NULL,
+  `request_id` VARCHAR(64) NULL,
+  `issued_by` TEXT NOT NULL,
+  `received_by_name` TEXT NOT NULL,
+  `approved_by` TEXT NULL,
+  `issued_at` DATETIME(3) NOT NULL,
+  `status` VARCHAR(255) NOT NULL DEFAULT 'draft',
+  `signed_at` DATETIME(3) NULL,
+  `note` TEXT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE UNIQUE INDEX `stock_issues_no_uidx` ON `stock_issues` (`issue_no`);
+
+CREATE INDEX `stock_issues_project_idx` ON `stock_issues` (`project_id`, `issued_at`);
+
+CREATE INDEX `stock_issues_team_idx` ON `stock_issues` (`team_id`, `issued_at`);
+
+CREATE TABLE `stock_movements` (
+  `id` VARCHAR(64) NOT NULL,
+  `project_id` VARCHAR(64) NOT NULL,
+  `material_id` VARCHAR(64) NOT NULL,
+  `from_warehouse_id` VARCHAR(64) NULL,
+  `to_warehouse_id` VARCHAR(64) NULL,
+  `movement_type` TEXT NOT NULL,
+  `quantity` DECIMAL(18,4) NOT NULL,
+  `unit_cost` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `occurred_at` DATETIME(3) NOT NULL,
+  `reference_type` TEXT NOT NULL,
+  `reference_id` VARCHAR(64) NOT NULL,
+  `posted_by` TEXT NOT NULL,
+  `reversal_of_id` VARCHAR(64) NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  `contract_id` VARCHAR(64) NULL,
+  `destination_contract_id` VARCHAR(64) NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `stock_movements_balance_idx` ON `stock_movements` (`project_id`, `material_id`, `to_warehouse_id`);
+
+CREATE INDEX `stock_movements_reference_idx` ON `stock_movements` (`reference_type`(191), `reference_id`);
+
+CREATE INDEX `stock_movements_date_idx` ON `stock_movements` (`occurred_at`);
+
+-- index trùng tên `stock_movements_reference_idx` (bỏ lần tạo thứ 2)
+
+CREATE INDEX `stock_movements_warehouse_material_idx` ON `stock_movements` (`from_warehouse_id`, `to_warehouse_id`, `material_id`, `occurred_at`);
+
+CREATE TABLE `stock_reservations` (
+  `id` VARCHAR(64) NOT NULL,
+  `project_id` VARCHAR(64) NOT NULL,
+  `warehouse_id` VARCHAR(64) NOT NULL,
+  `material_id` VARCHAR(64) NOT NULL,
+  `request_id` VARCHAR(64) NULL,
+  `request_item_id` VARCHAR(64) NULL,
+  `quantity` DECIMAL(18,4) NOT NULL,
+  `status` VARCHAR(255) NOT NULL DEFAULT 'active',
+  `reserved_at` DATETIME(3) NOT NULL,
+  `released_at` DATETIME(3) NULL,
+  `created_by` TEXT NOT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `stock_reservation_balance_idx` ON `stock_reservations` (`warehouse_id`, `material_id`, `status`);
+
+CREATE INDEX `stock_reservation_request_idx` ON `stock_reservations` (`request_id`, `request_item_id`, `status`);
+
+CREATE TABLE `suppliers` (
+  `id` VARCHAR(64) NOT NULL,
+  `code` VARCHAR(64) NOT NULL,
+  `name` TEXT NOT NULL,
+  `tax_code` VARCHAR(64) NULL,
+  `contact_name` TEXT NULL,
+  `phone` TEXT NULL,
+  `lead_time_days` INT NOT NULL DEFAULT 0,
+  `rating` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `active` TINYINT(1) NOT NULL DEFAULT 1,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE UNIQUE INDEX `suppliers_code_uidx` ON `suppliers` (`code`);
+
+CREATE TABLE `supply_workflow_steps` (
+  `id` VARCHAR(64) NOT NULL,
+  `request_id` VARCHAR(64) NOT NULL,
+  `purchase_order_id` VARCHAR(64) NULL,
+  `receipt_id` VARCHAR(64) NULL,
+  `step` TEXT NOT NULL,
+  `status` VARCHAR(255) NOT NULL DEFAULT 'pending',
+  `queued_at` DATETIME(3) NOT NULL,
+  `due_at` DATETIME(3) NULL,
+  `completed_at` DATETIME(3) NULL,
+  `completed_by` TEXT NULL,
+  `comment` TEXT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `supply_workflow_request_idx` ON `supply_workflow_steps` (`request_id`, `step`(191), `queued_at`);
+
+CREATE INDEX `supply_workflow_status_idx` ON `supply_workflow_steps` (`status`, `due_at`);
+
+CREATE TABLE `task_notifications` (
+  `id` VARCHAR(64) NOT NULL,
+  `work_item_id` VARCHAR(64) NOT NULL,
+  `user_id` VARCHAR(64) NOT NULL,
+  `channel` VARCHAR(255) NOT NULL DEFAULT 'in_app',
+  `title` TEXT NOT NULL,
+  `body` TEXT NOT NULL,
+  `status` VARCHAR(255) NOT NULL DEFAULT 'PENDING',
+  `read_at` DATETIME(3) NULL,
+  `sent_at` DATETIME(3) NULL,
+  `last_error` TEXT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `task_notifications_user_idx` ON `task_notifications` (`user_id`, `read_at`, `created_at`);
+
+CREATE TABLE `task_sla_policies` (
+  `department_code` VARCHAR(64) NOT NULL,
+  `status` VARCHAR(64) NOT NULL,
+  `responsibility_clock_runs` INT NOT NULL DEFAULT 1,
+  `process_clock_runs` INT NOT NULL DEFAULT 1,
+  `requires_reason` TINYINT(1) NOT NULL DEFAULT 0,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`department_code`, `status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `team_payments` (
+  `id` VARCHAR(64) NOT NULL,
+  `project_id` VARCHAR(64) NOT NULL,
+  `team_id` VARCHAR(64) NOT NULL,
+  `subcontract_id` VARCHAR(64) NOT NULL,
+  `production_record_id` VARCHAR(64) NULL,
+  `payment_date` DATE NOT NULL,
+  `payment_type` VARCHAR(255) NOT NULL DEFAULT 'progress',
+  `reference_no` VARCHAR(64) NULL,
+  `description` TEXT NOT NULL,
+  `amount` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `note` TEXT NULL,
+  `created_by` VARCHAR(64) NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `team_payments_subcontract_idx` ON `team_payments` (`subcontract_id`, `payment_date`);
+
+CREATE TABLE `team_production_records` (
+  `id` VARCHAR(64) NOT NULL,
+  `project_id` VARCHAR(64) NOT NULL,
+  `team_id` VARCHAR(64) NOT NULL,
+  `subcontract_id` VARCHAR(64) NOT NULL,
+  `period_key` TEXT NOT NULL,
+  `reference_no` VARCHAR(64) NULL,
+  `description` TEXT NULL,
+  `submitted_value` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `approved_value` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `status` VARCHAR(255) NOT NULL DEFAULT 'submitted',
+  `submitted_by` VARCHAR(64) NULL,
+  `approved_by` VARCHAR(64) NULL,
+  `approved_at` DATETIME(3) NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `team_production_records_uidx_subcontract_id_period_key` (`subcontract_id`, `period_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `team_production_project_idx` ON `team_production_records` (`project_id`, `team_id`, `period_key`(191));
+
+CREATE TABLE `team_settlements` (
+  `id` VARCHAR(64) NOT NULL,
+  `project_id` VARCHAR(64) NOT NULL,
+  `team_id` VARCHAR(64) NOT NULL,
+  `subcontract_id` VARCHAR(64) NOT NULL,
+  `settlement_no` VARCHAR(64) NOT NULL,
+  `approved_production_value` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `adjustment_value` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `final_value` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `paid_value` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `remaining_value` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `status` VARCHAR(255) NOT NULL DEFAULT 'draft',
+  `settled_at` DATETIME(3) NULL,
+  `note` TEXT NULL,
+  `created_by` VARCHAR(64) NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `team_settlements_uidx_subcontract_id_settlement_no` (`subcontract_id`, `settlement_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `team_settlements_subcontract_idx` ON `team_settlements` (`subcontract_id`, `status`);
+
+CREATE TABLE `team_subcontracts` (
+  `id` VARCHAR(64) NOT NULL,
+  `project_id` VARCHAR(64) NOT NULL,
+  `team_id` VARCHAR(64) NOT NULL,
+  `contract_no` VARCHAR(64) NOT NULL,
+  `contract_name` TEXT NOT NULL,
+  `scope_text` TEXT NULL,
+  `contract_value` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `start_date` DATE NULL,
+  `end_date` DATE NULL,
+  `status` VARCHAR(255) NOT NULL DEFAULT 'draft',
+  `signed_at` DATETIME(3) NULL,
+  `note` TEXT NULL,
+  `created_by` VARCHAR(64) NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `team_subcontracts_uidx_project_id_contract_no` (`project_id`, `contract_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `team_subcontracts_team_idx` ON `team_subcontracts` (`team_id`, `status`);
+
+CREATE TABLE `teams` (
+  `id` VARCHAR(64) NOT NULL,
+  `code` VARCHAR(64) NOT NULL,
+  `name` TEXT NOT NULL,
+  `trade` TEXT NOT NULL,
+  `project_id` VARCHAR(64) NOT NULL,
+  `warehouse_id` VARCHAR(64) NOT NULL,
+  `leader_user_id` VARCHAR(64) NULL,
+  `active` TINYINT(1) NOT NULL DEFAULT 1,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE UNIQUE INDEX `teams_code_uidx` ON `teams` (`code`);
+
+CREATE INDEX `teams_project_idx` ON `teams` (`project_id`);
+
+CREATE INDEX `teams_project_active_idx` ON `teams` (`project_id`, `active`);
+
+CREATE TABLE `transfer_order_items` (
+  `id` VARCHAR(64) NOT NULL,
+  `transfer_order_id` VARCHAR(64) NOT NULL,
+  `material_id` VARCHAR(64) NOT NULL,
+  `requested_qty` DECIMAL(18,4) NOT NULL,
+  `approved_qty` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `shipped_qty` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `received_qty` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `rejected_qty` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `lost_qty` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `note` TEXT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  `source_contract_id` VARCHAR(64) NULL,
+  `destination_contract_id` VARCHAR(64) NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `transfer_order_items_order_idx` ON `transfer_order_items` (`transfer_order_id`, `material_id`);
+
+CREATE TABLE `transfer_orders` (
+  `id` VARCHAR(64) NOT NULL,
+  `transfer_no` VARCHAR(64) NOT NULL,
+  `source_warehouse_id` VARCHAR(64) NOT NULL,
+  `destination_warehouse_id` VARCHAR(64) NOT NULL,
+  `source_project_id` VARCHAR(64) NULL,
+  `destination_project_id` VARCHAR(64) NULL,
+  `transit_warehouse_id` VARCHAR(64) NOT NULL,
+  `requested_by` TEXT NOT NULL,
+  `requested_at` DATETIME(3) NOT NULL,
+  `approved_by` TEXT NULL,
+  `approved_at` DATETIME(3) NULL,
+  `shipped_by` TEXT NULL,
+  `shipped_at` DATETIME(3) NULL,
+  `received_by` TEXT NULL,
+  `received_at` DATETIME(3) NULL,
+  `status` VARCHAR(255) NOT NULL DEFAULT 'requested',
+  `reason` TEXT NULL,
+  `note` TEXT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `transfer_orders_uidx_transfer_no` (`transfer_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `transfer_orders_status_idx` ON `transfer_orders` (`status`, `requested_at`);
+
+CREATE INDEX `transfer_orders_source_idx` ON `transfer_orders` (`source_warehouse_id`, `status`);
+
+CREATE INDEX `transfer_orders_destination_idx` ON `transfer_orders` (`destination_warehouse_id`, `status`);
+
+CREATE TABLE `ui_display_settings` (
+  `id` VARCHAR(64) NOT NULL,
+  `scope_key` TEXT NOT NULL,
+  `settings_json` TEXT NOT NULL,
+  `updated_by` TEXT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `user_module_permissions` (
+  `id` VARCHAR(64) NOT NULL,
+  `user_id` VARCHAR(64) NOT NULL,
+  `module_key` TEXT NOT NULL,
+  `can_view` INT NOT NULL DEFAULT 0,
+  `can_use` INT NOT NULL DEFAULT 0,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  `can_create` INT NOT NULL DEFAULT 0,
+  `can_edit` INT NOT NULL DEFAULT 0,
+  `can_approve` INT NOT NULL DEFAULT 0,
+  `can_export` INT NOT NULL DEFAULT 0,
+  `permission_expires_at` DATETIME(3) NULL,
+  `permission_source` VARCHAR(255) NOT NULL DEFAULT 'manual_override',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE UNIQUE INDEX `user_module_permission_uidx` ON `user_module_permissions` (`user_id`, `module_key`(191));
+
+CREATE TABLE `user_project_scopes` (
+  `id` VARCHAR(64) NOT NULL,
+  `user_id` VARCHAR(64) NOT NULL,
+  `project_id` VARCHAR(64) NOT NULL,
+  `permission` VARCHAR(255) NOT NULL DEFAULT 'read',
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE UNIQUE INDEX `user_project_scope_uidx` ON `user_project_scopes` (`user_id`, `project_id`);
+
+CREATE TABLE `user_warehouse_scopes` (
+  `id` VARCHAR(64) NOT NULL,
+  `user_id` VARCHAR(64) NOT NULL,
+  `warehouse_id` VARCHAR(64) NOT NULL,
+  `permission` VARCHAR(255) NOT NULL DEFAULT 'read',
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `user_warehouse_scopes_uidx_user_id_warehouse_id` (`user_id`, `warehouse_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `user_warehouse_scope_user_idx` ON `user_warehouse_scopes` (`user_id`);
+
+CREATE TABLE `users` (
+  `id` VARCHAR(64) NOT NULL,
+  `employee_code` VARCHAR(64) NOT NULL,
+  `full_name` TEXT NOT NULL,
+  `username` TEXT NOT NULL,
+  `password_hash` TEXT NULL,
+  `role` TEXT NOT NULL,
+  `department` TEXT NOT NULL,
+  `approval_limit` DECIMAL(18,4) NOT NULL DEFAULT 0,
+  `active` TINYINT(1) NOT NULL DEFAULT 1,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  `email` TEXT NULL,
+  `avatar_url` TEXT NULL,
+  `organization_unit_id` VARCHAR(64) NULL,
+  `must_change_password` INT NOT NULL DEFAULT 0,
+  `password_reset_at` DATETIME(3) NULL,
+  `password_reset_by` TEXT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE UNIQUE INDEX `users_employee_code_uidx` ON `users` (`employee_code`);
+
+CREATE UNIQUE INDEX `users_username_uidx` ON `users` (`username`(191));
+
+CREATE UNIQUE INDEX `users_email_uidx` ON `users` (`email`(191));
+
+CREATE TABLE `vntech_attestation_events` (
+  `id` VARCHAR(64) NOT NULL,
+  `license_id` VARCHAR(64) NULL,
+  `machine_fingerprint` TEXT NULL,
+  `request_nonce` TEXT NULL,
+  `server_response_json` TEXT NULL,
+  `status` TEXT NOT NULL,
+  `attempted_at` DATETIME(3) NOT NULL,
+  `next_attempt_at` DATETIME(3) NULL,
+  `error_message` TEXT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `vntech_license_installations` (
+  `id` VARCHAR(64) NOT NULL,
+  `license_id` VARCHAR(64) NOT NULL,
+  `tenant_id` VARCHAR(64) NOT NULL,
+  `company_code` VARCHAR(64) NOT NULL,
+  `product_id` VARCHAR(64) NOT NULL,
+  `key_id` VARCHAR(64) NOT NULL,
+  `payload_json` TEXT NOT NULL,
+  `signature_base64` TEXT NOT NULL,
+  `status` TEXT NOT NULL,
+  `valid_from` TEXT NULL,
+  `valid_until` TEXT NULL,
+  `machine_fingerprint` TEXT NULL,
+  `verification_detail_json` TEXT NULL,
+  `installed_by` TEXT NULL,
+  `installed_at` DATETIME(3) NOT NULL,
+  `last_verified_at` DATETIME(3) NULL,
+  `revoked_at` DATETIME(3) NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `vntech_license_status_idx` ON `vntech_license_installations` (`status`(191), `valid_until`(191));
+
+CREATE TABLE `vntech_license_transfer_requests` (
+  `id` VARCHAR(64) NOT NULL,
+  `license_id` VARCHAR(64) NULL,
+  `source_machine_fingerprint` TEXT NULL,
+  `destination_machine_fingerprint` TEXT NULL,
+  `recovery_code_hash` TEXT NULL,
+  `reason` TEXT NOT NULL,
+  `status` VARCHAR(255) NOT NULL DEFAULT 'requested',
+  `requested_by` TEXT NULL,
+  `requested_at` DATETIME(3) NOT NULL,
+  `approved_at` DATETIME(3) NULL,
+  `completed_at` DATETIME(3) NULL,
+  `detail_json` TEXT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `vntech_product_identity` (
+  `id` VARCHAR(64) NOT NULL,
+  `legal_owner` TEXT NOT NULL,
+  `product_name` TEXT NOT NULL,
+  `product_description` TEXT NOT NULL,
+  `version` TEXT NOT NULL,
+  `source_fingerprint` TEXT NOT NULL,
+  `source_fingerprint_short` TEXT NOT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `vntech_release_signatures` (
+  `id` VARCHAR(64) NOT NULL,
+  `release_fingerprint` TEXT NOT NULL,
+  `manifest_sha256` TEXT NOT NULL,
+  `key_id` VARCHAR(64) NOT NULL,
+  `signature_base64` TEXT NULL,
+  `verification_status` VARCHAR(255) NOT NULL DEFAULT 'unsigned_development',
+  `verified_at` DATETIME(3) NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `vntech_trust_audit` (
+  `id` VARCHAR(64) NOT NULL,
+  `event_type` TEXT NOT NULL,
+  `actor_user_id` VARCHAR(64) NULL,
+  `trust_mode` TEXT NOT NULL,
+  `enforcement_enabled` INT NOT NULL,
+  `license_id` VARCHAR(64) NULL,
+  `machine_fingerprint` TEXT NULL,
+  `detail_json` TEXT NULL,
+  `occurred_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `vntech_trust_settings` (
+  `id` VARCHAR(64) NOT NULL,
+  `trust_mode` VARCHAR(255) NOT NULL DEFAULT 'development',
+  `enforcement_enabled` INT NOT NULL DEFAULT 0,
+  `tenant_id` VARCHAR(64) NOT NULL,
+  `company_code` VARCHAR(64) NOT NULL,
+  `key_id` VARCHAR(64) NOT NULL,
+  `algorithm` TEXT NOT NULL,
+  `public_key_pem` TEXT NOT NULL,
+  `brand_fingerprint` TEXT NOT NULL,
+  `release_fingerprint` TEXT NOT NULL,
+  `machine_fingerprint` TEXT NULL,
+  `hardware_binding_mode` VARCHAR(255) NOT NULL DEFAULT 'foundation',
+  `native_verifier_mode` VARCHAR(255) NOT NULL DEFAULT 'foundation',
+  `online_attestation_enabled` INT NOT NULL DEFAULT 0,
+  `license_server_url` TEXT NULL,
+  `last_attested_at` DATETIME(3) NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `warehouse_locations` (
+  `id` VARCHAR(64) NOT NULL,
+  `warehouse_id` VARCHAR(64) NOT NULL,
+  `code` VARCHAR(64) NOT NULL,
+  `name` TEXT NOT NULL,
+  `location_type` VARCHAR(255) NOT NULL DEFAULT 'bin',
+  `secure` INT NOT NULL DEFAULT 0,
+  `active` TINYINT(1) NOT NULL DEFAULT 1,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `warehouse_locations_uidx_warehouse_id_code` (`warehouse_id`, `code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `warehouses` (
+  `id` VARCHAR(64) NOT NULL,
+  `code` VARCHAR(64) NOT NULL,
+  `name` TEXT NOT NULL,
+  `type` TEXT NOT NULL,
+  `project_id` VARCHAR(64) NULL,
+  `parent_warehouse_id` VARCHAR(64) NULL,
+  `keeper_user_id` VARCHAR(64) NULL,
+  `active` TINYINT(1) NOT NULL DEFAULT 1,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE UNIQUE INDEX `warehouses_code_uidx` ON `warehouses` (`code`);
+
+CREATE INDEX `warehouses_project_idx` ON `warehouses` (`project_id`);
+
+CREATE TABLE `work_item_events` (
+  `id` VARCHAR(64) NOT NULL,
+  `work_item_id` VARCHAR(64) NOT NULL,
+  `event_type` TEXT NOT NULL,
+  `from_status` TEXT NULL,
+  `to_status` TEXT NULL,
+  `actor_user_id` VARCHAR(64) NOT NULL,
+  `previous_assignee` TEXT NULL,
+  `new_assignee` TEXT NULL,
+  `reason` TEXT NULL,
+  `detail_json` TEXT NULL,
+  `occurred_at` DATETIME(3) NOT NULL,
+  `created_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `work_item_events_task_idx` ON `work_item_events` (`work_item_id`, `occurred_at`);
+
+CREATE TABLE `work_items` (
+  `id` VARCHAR(64) NOT NULL,
+  `task_no` VARCHAR(64) NOT NULL,
+  `department_code` VARCHAR(64) NOT NULL,
+  `work_group` TEXT NOT NULL,
+  `title` TEXT NOT NULL,
+  `description` TEXT NULL,
+  `project_id` VARCHAR(64) NULL,
+  `source_module` TEXT NULL,
+  `source_type` TEXT NULL,
+  `source_id` VARCHAR(64) NULL,
+  `source_no` VARCHAR(64) NULL,
+  `work_step` TEXT NOT NULL,
+  `dedupe_key` TEXT NOT NULL,
+  `task_origin` VARCHAR(255) NOT NULL DEFAULT 'manual',
+  `assigned_to` TEXT NOT NULL,
+  `assigned_by` TEXT NOT NULL,
+  `assigned_at` DATETIME(3) NOT NULL,
+  `due_at` DATETIME(3) NULL,
+  `priority` VARCHAR(255) NOT NULL DEFAULT 'normal',
+  `status` VARCHAR(255) NOT NULL DEFAULT 'NEW',
+  `progress` INT NOT NULL DEFAULT 0,
+  `required_output` TEXT NULL,
+  `waiting_reason` TEXT NULL,
+  `waiting_started_at` DATETIME(3) NULL,
+  `submitted_at` DATETIME(3) NULL,
+  `completed_at` DATETIME(3) NULL,
+  `completed_by` TEXT NULL,
+  `cancelled_at` DATETIME(3) NULL,
+  `cancelled_by` TEXT NULL,
+  `active` TINYINT(1) NOT NULL DEFAULT 1,
+  `created_at` DATETIME(3) NOT NULL,
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `work_items_uidx_task_no` (`task_no`),
+  UNIQUE KEY `work_items_uidx_dedupe_key` (`dedupe_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX `work_items_department_idx` ON `work_items` (`department_code`, `status`, `assigned_to`(191), `due_at`);
+
+CREATE INDEX `work_items_project_idx` ON `work_items` (`project_id`, `department_code`, `status`);
+
+CREATE INDEX `work_items_source_idx` ON `work_items` (`source_type`(191), `source_id`, `work_step`(191));
+
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- Baseline tạo bởi generator — bảng: 114

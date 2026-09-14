@@ -1,0 +1,705 @@
+package com.vntech.erp.infrastructure.persistence;
+
+import com.vntech.erp.application.port.out.BootstrapDataPort;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Port bootstrap(user) từ monolith JS sang JdbcTemplate + native SQL.
+ * Mọi câu SQL giữ NGUYÊN alias camelCase từ scripts/system-route.mjs (bootstrap, dòng ~545)
+ * để shape JSON trả về khớp 100% với SPA hiện tại — không cần sửa UI.
+ *
+ * Phân quyền đơn giản: admin = toàn bộ; user thường = scope theo visibleProjectIds.
+ */
+@Component
+public class BootstrapDataAdapter implements BootstrapDataPort {
+
+    private final JdbcTemplate jdbcTemplate;
+
+    public BootstrapDataAdapter(JdbcTemplate jdbcTemplate) {
+        this.jdbcTemplate = jdbcTemplate;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> load(Context ctx) {
+        Map<String, Object> data = new LinkedHashMap<>();
+        boolean admin = ctx.admin();
+        List<String> pids = ctx.visibleProjectIds();
+        // JS dùng `${projectIds.map(()=>"?").join(",") || "NULL"}` -> khi rỗng là IN (NULL)
+        String pidSql = pids.isEmpty() ? "NULL" : inClause(pids);
+
+        // ---- projects (admin và non-admin khác scope) ----
+        List<Map<String, Object>> projects = query("""
+                SELECT id,code,name,status,contract_no AS contractNo,contract_name AS contractName,
+                       start_date AS startDate,planned_end_date AS plannedEndDate
+                FROM projects WHERE status='active' ORDER BY code""");
+        data.put("projects", projects);
+
+        // ---- requests + approvals/items/supplySteps (enrich 3 tầng) ----
+        List<Map<String, Object>> requests = query("""
+                SELECT mr.id,mr.request_no AS requestNo,mr.project_id AS projectId,p.code AS projectCode,
+                       p.name AS projectName,mr.contract_id AS contractId,pc.contract_no AS contractNo,
+                       mr.boq_version_id AS boqVersionId,bv.version_code AS boqVersionCode,mr.team_id AS teamId,
+                       t.name AS teamName,u.full_name AS requestedBy,mr.requested_at AS requestedAt,
+                       mr.needed_at AS neededAt,mr.priority,mr.area,mr.purpose,mr.status,mr.supply_status AS supplyStatus,
+                       mr.approval_stage AS approvalStage,mr.total_estimated_value AS totalEstimatedValue,
+                       COALESCE(ri.item_count,0) AS itemCount,COALESCE(ri.total_qty,0) AS totalQty,
+                       COALESCE(ri.received_qty,0) AS receivedQty,COALESCE(ri.issued_qty,0) AS issuedQty
+                FROM material_requests mr
+                JOIN projects p ON p.id=mr.project_id
+                LEFT JOIN project_contracts pc ON pc.id=mr.contract_id
+                LEFT JOIN boq_versions bv ON bv.id=mr.boq_version_id
+                LEFT JOIN teams t ON t.id=mr.team_id
+                JOIN users u ON u.id=mr.requested_by
+                LEFT JOIN (SELECT request_id,COUNT(*) AS item_count,COALESCE(SUM(requested_qty),0) AS total_qty,
+                                  COALESCE(SUM(received_qty),0) AS received_qty,COALESCE(SUM(issued_qty),0) AS issued_qty
+                           FROM material_request_items GROUP BY request_id) ri ON ri.request_id=mr.id
+                WHERE mr.project_id IN (%s)
+                ORDER BY mr.requested_at DESC LIMIT 500""".formatted(pidSql), params(pids));
+        List<String> requestIds = requests.stream().map(r -> String.valueOf(r.get("id"))).toList();
+        if (!requestIds.isEmpty()) {
+            String in = inClause(requestIds);
+            List<Map<String, Object>> approvalRows = query("""
+                    SELECT a.request_id AS requestId,a.stage,a.department,a.status,a.approver_user_id AS approverUserId,
+                           u.full_name AS approverName,a.queued_at AS queuedAt,a.due_at AS dueAt,a.notified_at AS notifiedAt,
+                           a.reminder_sent_at AS reminderSentAt,a.decided_at AS decidedAt,a.comment
+                    FROM approvals a
+                    LEFT JOIN users u ON u.id=a.approver_user_id
+                    WHERE a.request_id IN (%s) ORDER BY a.stage""".formatted(in), params(requestIds));
+            List<Map<String, Object>> itemRows = query("""
+                    SELECT mri.id,mri.request_id AS requestId,mri.line_no AS lineNo,mri.boq_item_id AS boqItemId,
+                           COALESCE(m.code,'[MẤT MÃ]') AS materialCode,
+                           COALESCE(m.name,'Vật tư không còn trong Danh mục vật tư gốc') AS materialName,
+                           COALESCE(m.unit,'') AS unit,m.brand AS manufacturer,mri.material_id AS materialId,
+                           mri.requested_qty AS requestedQty,mri.estimated_unit_price AS unitPrice,
+                           mri.approved_purchase_qty AS approvedPurchaseQty,mri.ordered_qty AS orderedQty,
+                           mri.delivered_qty AS actualDeliveredQty,mri.received_qty AS receivedQty,
+                           mri.closed_qty AS closedQty,mri.line_status AS lineStatus,mri.issued_qty AS issuedQty,
+                           mri.installed_qty AS installedQty,mri.stock_allocation_qty AS stockAllocationQty,
+                           mri.origin,mri.approved_supplier AS approvedSupplier,mri.note
+                    FROM material_request_items mri
+                    LEFT JOIN materials m ON m.id=mri.material_id
+                    WHERE mri.request_id IN (%s) ORDER BY mri.request_id,mri.line_no""".formatted(in), params(requestIds));
+            List<Map<String, Object>> customRows = query("""
+                    SELECT entity_id AS entityId,field_key AS fieldKey,value_text AS valueText
+                    FROM custom_field_values WHERE form_key='request_line' AND entity_id IN (%s)""".formatted(in), params(requestIds));
+            data.put("requests", requests.stream().map(r -> {
+                Map<String, Object> out = new LinkedHashMap<>(r);
+                String rid = String.valueOf(r.get("id"));
+                out.put("approvals", groupBy(approvalRows, "requestId", rid));
+                out.put("items", groupBy(itemRows, "requestId", rid));
+                Map<String, Object> cf = new LinkedHashMap<>();
+                for (Map<String, Object> c : customRows) {
+                    if (String.valueOf(c.get("entityId")).equals(rid))
+                        cf.put(String.valueOf(c.get("fieldKey")), String.valueOf(c.get("valueText")));
+                }
+                out.put("customFields", cf);
+                return out;
+            }).toList());
+        } else {
+            data.put("requests", List.of());
+        }
+
+        // ---- master data cho toàn hệ thống ----
+        data.put("teams", query("""
+                SELECT t.id,t.code,t.name,t.trade,t.project_id AS projectId,t.warehouse_id AS warehouseId
+                FROM teams t WHERE t.project_id IN (%s) AND t.active=1 ORDER BY t.code""".formatted(pidSql), params(pids)));
+        data.put("warehouses", query("""
+                SELECT id,code,name,type,project_id AS projectId,parent_warehouse_id AS parentWarehouseId
+                FROM warehouses WHERE active=1 AND (project_id IS NULL OR project_id IN (%s)) ORDER BY code""".formatted(pidSql), params(pids)));
+        data.put("transferWarehouses", query("""
+                SELECT w.id,w.code,w.name,w.type,w.project_id AS projectId,p.code AS projectCode,p.name AS projectName
+                FROM warehouses w LEFT JOIN projects p ON p.id=w.project_id
+                WHERE w.active=1 AND w.type<>'transit'
+                ORDER BY CASE WHEN w.type='central' THEN 0 ELSE 1 END,COALESCE(p.code,''),w.code"""));
+        data.put("materialCategories", query("""
+                SELECT id,code,name,description,sort_order AS sortOrder,active
+                FROM material_categories WHERE active=1 ORDER BY sort_order,name"""));
+        data.put("materialSubcategories", query("""
+                SELECT ms.id,ms.category_id AS categoryId,ms.code,ms.name,ms.description,
+                       ms.scope_examples AS scopeExamples,ms.review_status AS reviewStatus,
+                       ms.sort_order AS sortOrder,ms.active,mc.code AS categoryCode,mc.name AS categoryName
+                FROM material_subcategories ms JOIN material_categories mc ON mc.id=ms.category_id
+                WHERE ms.active=1 AND mc.active=1 ORDER BY mc.sort_order,ms.sort_order,ms.name"""));
+        List<Map<String, Object>> materials = new ArrayList<>(query("""
+                SELECT m.id,m.code,m.name,m.system,m.category_id AS categoryId,mc.code AS categoryCode,
+                       mc.name AS categoryName,m.subcategory_id AS subcategoryId,ms.code AS subcategoryCode,
+                       ms.name AS subcategoryName,m.specification,m.brand,m.unit,m.standard_price AS standardPrice,
+                       m.min_stock AS minStock,m.requires_cocq AS requiresCocq,m.requires_mar AS requiresMar
+                FROM materials m
+                LEFT JOIN material_categories mc ON mc.id=m.category_id
+                LEFT JOIN material_subcategories ms ON ms.id=m.subcategory_id
+                WHERE m.active=1 AND (m.category_id IS NULL OR mc.active=1)
+                  AND (m.subcategory_id IS NULL OR ms.active=1)
+                ORDER BY COALESCE(mc.sort_order,999),COALESCE(ms.sort_order,9999),m.code"""));
+        List<Map<String, Object>> aliases = query("""
+                SELECT id,material_id AS materialId,alias_name AS aliasName,normalized_name AS normalizedName,
+                       verified,active FROM material_aliases WHERE active=1 ORDER BY alias_name""");
+        Map<String, List<String>> aliasesByMaterial = new LinkedHashMap<>();
+        for (Map<String, Object> a : aliases) {
+            aliasesByMaterial.computeIfAbsent(String.valueOf(a.get("materialId")), k -> new ArrayList<>())
+                    .add(String.valueOf(a.get("aliasName")));
+        }
+        materials.forEach(m -> {
+            List<String> list = aliasesByMaterial.getOrDefault(String.valueOf(m.get("id")), List.of());
+            m.put("aliases", list);
+            m.put("aliasText", String.join("; ", list));
+        });
+        data.put("materials", materials);
+
+        data.put("suppliers", query("""
+                SELECT id,code,name,tax_code AS taxCode,contact_name AS contactName,phone,
+                       lead_time_days AS leadTimeDays,rating,active FROM suppliers WHERE active=1 ORDER BY code"""));
+        if (admin) data.put("adminSuppliers", query("""
+                SELECT id,code,name,tax_code AS taxCode,contact_name AS contactName,phone,
+                       lead_time_days AS leadTimeDays,rating,active FROM suppliers
+                ORDER BY CASE WHEN active=1 THEN 0 ELSE 1 END,code"""));
+
+        // ---- kho: inventory (CTE balances/reservations như JS) ----
+        data.put("inventory", pids.isEmpty() ? List.of() : query("""
+                WITH movements AS (SELECT sm.material_id AS material_id,sm.to_warehouse_id AS warehouse_id,sm.quantity AS qty
+                                   FROM stock_movements sm WHERE sm.to_warehouse_id IS NOT NULL
+                                   UNION ALL
+                                   SELECT sm.material_id,sm.from_warehouse_id,-sm.quantity
+                                   FROM stock_movements sm WHERE sm.from_warehouse_id IS NOT NULL),
+                     balances AS (SELECT material_id,warehouse_id,COALESCE(SUM(qty),0) AS balance
+                                  FROM movements GROUP BY material_id,warehouse_id),
+                     reservations AS (SELECT material_id,warehouse_id,COALESCE(SUM(quantity),0) AS reserved
+                                      FROM stock_reservations WHERE status='active' GROUP BY material_id,warehouse_id)
+                SELECT p.id AS projectId,p.code AS projectCode,p.name AS projectName,
+                       w.id AS warehouseId,w.code AS warehouseCode,w.name AS warehouseName,w.type,
+                       m.id AS materialId,m.code AS materialCode,m.name AS materialName,m.unit,m.min_stock AS minStock,
+                       COALESCE(mv.balance,0) AS balance,COALESCE(r.reserved,0) AS reserved,
+                       CASE WHEN COALESCE(mv.balance,0)-COALESCE(r.reserved,0)>0
+                            THEN COALESCE(mv.balance,0)-COALESCE(r.reserved,0) ELSE 0 END AS available
+                FROM projects p
+                JOIN warehouses w ON w.active=1 AND w.project_id=p.id AND w.type='site'
+                CROSS JOIN materials m
+                LEFT JOIN balances mv ON mv.warehouse_id=w.id AND mv.material_id=m.id
+                LEFT JOIN reservations r ON r.warehouse_id=w.id AND r.material_id=m.id
+                WHERE p.id IN (%s) AND (COALESCE(mv.balance,0)<>0 OR COALESCE(r.reserved,0)<>0 OR w.type='site')
+                ORDER BY p.code,w.code,m.code""".formatted(pidSql), params(pids)));
+
+        // ---- mua hàng: PO + items, receipts + items ----
+        List<Map<String, Object>> purchaseOrders = pids.isEmpty() ? List.of() : query("""
+                SELECT po.id,po.po_no AS poNo,po.request_id AS requestId,mr.request_no AS requestNo,
+                       po.project_id AS projectId,p.code AS projectCode,s.name AS supplierName,
+                       po.ordered_at AS orderedAt,po.eta,po.status,po.total_value AS totalValue,
+                       COALESCE(poa.item_count,0) AS itemCount,COALESCE(poa.ordered_qty,0) AS orderedQty,
+                       COALESCE(poa.received_qty,0) AS receivedQty,
+                       COALESCE(gra.actual_delivered_qty,0) AS actualDeliveredQty
+                FROM purchase_orders po
+                JOIN projects p ON p.id=po.project_id
+                JOIN suppliers s ON s.id=po.supplier_id
+                LEFT JOIN material_requests mr ON mr.id=po.request_id
+                LEFT JOIN (SELECT purchase_order_id,COUNT(*) AS item_count,COALESCE(SUM(ordered_qty),0) AS ordered_qty,
+                                  COALESCE(SUM(received_qty),0) AS received_qty
+                           FROM purchase_order_items GROUP BY purchase_order_id) poa ON poa.purchase_order_id=po.id
+                LEFT JOIN (SELECT actual_poi.purchase_order_id,COALESCE(SUM(gri.received_qty),0) AS actual_delivered_qty
+                           FROM goods_receipt_items gri
+                           JOIN purchase_order_items actual_poi ON actual_poi.id=gri.purchase_order_item_id
+                           GROUP BY actual_poi.purchase_order_id) gra ON gra.purchase_order_id=po.id
+                WHERE po.project_id IN (%s) ORDER BY po.ordered_at DESC LIMIT 300""".formatted(pidSql), params(pids));
+        data.put("purchaseOrders", purchaseOrders);
+
+        List<Map<String, Object>> receipts = pids.isEmpty() ? List.of() : query("""
+                SELECT gr.id,gr.receipt_no AS receiptNo,gr.purchase_order_id AS purchaseOrderId,
+                       po.request_id AS requestId,po.po_no AS poNo,p.id AS projectId,p.code AS projectCode,
+                       s.name AS supplierName,w.name AS warehouseName,gr.received_at AS receivedAt,
+                       gr.qc_status AS qcStatus,gr.document_status AS documentStatus,
+                       gr.certificate_status AS certificateStatus,gr.delivery_document_status AS deliveryDocumentStatus,
+                       gr.bch_confirmation_status AS bchConfirmationStatus,gr.posting_status AS postingStatus,
+                       COALESCE(gra.item_count,0) AS itemCount,COALESCE(gra.actual_delivered_qty,0) AS actualDeliveredQty,
+                       COALESCE(gra.accepted_qty,0) AS acceptedQty,COALESCE(gra.rejected_qty,0) AS rejectedQty
+                FROM goods_receipts gr
+                JOIN purchase_orders po ON po.id=gr.purchase_order_id
+                JOIN projects p ON p.id=po.project_id
+                JOIN suppliers s ON s.id=po.supplier_id
+                JOIN warehouses w ON w.id=gr.warehouse_id
+                LEFT JOIN (SELECT receipt_id,COUNT(*) AS item_count,COALESCE(SUM(received_qty),0) AS actual_delivered_qty,
+                                  COALESCE(SUM(accepted_qty),0) AS accepted_qty,COALESCE(SUM(rejected_qty),0) AS rejected_qty
+                           FROM goods_receipt_items GROUP BY receipt_id) gra ON gra.receipt_id=gr.id
+                WHERE po.project_id IN (%s) ORDER BY gr.received_at DESC LIMIT 300""".formatted(pidSql), params(pids));
+        data.put("receipts", receipts);
+
+        // ---- xuất kho + returns + stock counts ----
+        data.put("issues", pids.isEmpty() ? List.of() : query("""
+                SELECT si.id,si.issue_no AS issueNo,si.project_id AS projectId,si.team_id AS teamId,
+                       p.code AS projectCode,t.name AS teamName,si.issued_at AS issuedAt,si.status,
+                       COALESCE(sia.item_count,0) AS itemCount,COALESCE(sia.total_qty,0) AS totalQty
+                FROM stock_issues si
+                JOIN projects p ON p.id=si.project_id
+                JOIN teams t ON t.id=si.team_id
+                LEFT JOIN (SELECT issue_id,COUNT(*) AS item_count,COALESCE(SUM(quantity),0) AS total_qty
+                           FROM stock_issue_items GROUP BY issue_id) sia ON sia.issue_id=si.id
+                WHERE si.project_id IN (%s) ORDER BY si.issued_at DESC LIMIT 200""".formatted(pidSql), params(pids)));
+        data.put("returns", pids.isEmpty() ? List.of() : query("""
+                SELECT mr.id,mr.return_no AS returnNo,mr.project_id AS projectId,mr.team_id AS teamId,
+                       p.code AS projectCode,t.name AS teamName,mr.returned_at AS returnedAt,mr.status,
+                       COALESCE(mra.item_count,0) AS itemCount,COALESCE(mra.accepted_qty,0) AS acceptedQty
+                FROM material_returns mr
+                JOIN projects p ON p.id=mr.project_id
+                JOIN teams t ON t.id=mr.team_id
+                LEFT JOIN (SELECT return_id,COUNT(*) AS item_count,COALESCE(SUM(accepted_qty),0) AS accepted_qty
+                           FROM material_return_items GROUP BY return_id) mra ON mra.return_id=mr.id
+                WHERE mr.project_id IN (%s) ORDER BY mr.returned_at DESC LIMIT 200""".formatted(pidSql), params(pids)));
+        data.put("stockCounts", pids.isEmpty() ? List.of() : query("""
+                SELECT sc.id,sc.count_no AS countNo,sc.project_id AS projectId,p.code AS projectCode,
+                       sc.warehouse_id AS warehouseId,w.name AS warehouseName,sc.count_type AS countType,
+                       sc.counted_at AS countedAt,sc.status,
+                       COALESCE(sca.item_count,0) AS itemCount,COALESCE(sca.total_variance,0) AS totalVariance
+                FROM stock_counts sc
+                JOIN projects p ON p.id=sc.project_id
+                JOIN warehouses w ON w.id=sc.warehouse_id
+                LEFT JOIN (SELECT stock_count_id,COUNT(*) AS item_count,COALESCE(SUM(ABS(variance_qty)),0) AS total_variance
+                           FROM stock_count_items GROUP BY stock_count_id) sca ON sca.stock_count_id=sc.id
+                WHERE sc.project_id IN (%s) ORDER BY sc.counted_at DESC LIMIT 200""".formatted(pidSql), params(pids)));
+
+        // ---- chuyển kho ----
+        data.put("transferOrders", query("""
+                SELECT t.id,t.transfer_no AS transferNo,t.source_warehouse_id AS sourceWarehouseId,
+                       sw.code AS sourceWarehouseCode,sw.name AS sourceWarehouseName,
+                       t.destination_warehouse_id AS destinationWarehouseId,
+                       dw.code AS destinationWarehouseCode,dw.name AS destinationWarehouseName,
+                       t.status,t.reason,t.note,t.requested_at AS requestedAt,
+                       COALESCE(x.item_count,0) AS itemCount,COALESCE(x.requested_qty,0) AS requestedQty
+                FROM transfer_orders t
+                JOIN warehouses sw ON sw.id=t.source_warehouse_id
+                JOIN warehouses dw ON dw.id=t.destination_warehouse_id
+                LEFT JOIN (SELECT transfer_order_id,COUNT(*) AS item_count,SUM(requested_qty) AS requested_qty
+                           FROM transfer_order_items GROUP BY transfer_order_id) x ON x.transfer_order_id=t.id
+                ORDER BY t.requested_at DESC LIMIT 300"""));
+
+        // ---- BOQ: boqItems, contracts, versions, sourceItems, mapping candidates ----
+        data.put("boqItems", pids.isEmpty() ? List.of() : query("""
+                SELECT pbi.id,pbi.project_id AS projectId,pbi.contract_id AS contractId,
+                       pbi.boq_version_id AS boqVersionId,p.code AS projectCode,p.name AS projectName,
+                       pbi.line_no AS lineNo,pbi.source_order AS sourceOrder,pbi.row_role AS rowRole,
+                       pbi.boq_code AS boqCode,pbi.contract_material_code AS contractMaterialCode,
+                       pbi.approved_material_code AS approvedMaterialCode,pbi.material_id AS materialId,
+                       m.code AS materialCode,COALESCE(bsi.contract_material_name,pbi.description) AS materialName,
+                       COALESCE(bsi.unit,m.unit) AS unit,COALESCE(NULLIF(bsi.source_system_code,''),m.system,'KHAC') AS systemCode,
+                       bsi.source_subgroup_name AS subgroupName,mc.name AS categoryName,pbi.description,
+                       pbi.item_type AS itemType,bsi.id AS sourceItemId,
+                       COALESCE(bsi.mapping_status,'legacy_mapped') AS mappingStatus,
+                       pbi.contract_qty AS contractQty,pbi.remeasured_qty AS remeasuredQty,
+                       pbi.unit_price AS unitPrice,pbi.variation_status AS variationStatus,
+                       pbi.note,pbi.active
+                FROM project_boq_items pbi
+                JOIN projects p ON p.id=pbi.project_id
+                JOIN materials m ON m.id=pbi.material_id
+                LEFT JOIN material_categories mc ON mc.id=m.category_id
+                LEFT JOIN boq_source_items bsi ON bsi.project_boq_item_id=pbi.id AND bsi.active=1
+                LEFT JOIN boq_versions bv ON bv.id=pbi.boq_version_id
+                WHERE pbi.active=1 AND (pbi.boq_version_id IS NULL OR bv.active=1)
+                  AND pbi.project_id IN (%s)
+                ORDER BY p.code,COALESCE(pbi.source_order,pbi.line_no),pbi.id""".formatted(pidSql), params(pids)));
+        data.put("projectContracts", pids.isEmpty() ? List.of() : query("""
+                SELECT c.id,c.project_id AS projectId,c.contract_no AS contractNo,
+                       c.contract_name AS contractName,c.contract_type AS contractType,
+                       c.parent_contract_id AS parentContractId,c.status,c.is_primary AS isPrimary,
+                       c.signed_at AS signedAt,c.effective_from AS effectiveFrom,c.effective_to AS effectiveTo,
+                       c.note,c.created_at AS createdAt,c.updated_at AS updatedAt
+                FROM project_contracts c WHERE c.project_id IN (%s)
+                ORDER BY c.project_id,c.is_primary DESC,c.created_at,c.contract_no""".formatted(pidSql), params(pids)));
+        data.put("boqVersions", pids.isEmpty() ? List.of() : query("""
+                SELECT v.id,v.project_id AS projectId,v.contract_id AS contractId,v.version_no AS versionNo,
+                       v.version_code AS versionCode,v.version_name AS versionName,v.revision_type AS revisionType,
+                       v.source_file_name AS sourceFileName,v.status,v.active,v.effective_at AS effectiveAt,
+                       v.approved_at AS approvedAt,v.created_at AS createdAt,v.updated_at AS updatedAt
+                FROM boq_versions v WHERE v.project_id IN (%s)
+                ORDER BY v.project_id,v.contract_id,v.version_no DESC""".formatted(pidSql), params(pids)));
+        data.put("boqSourceItems", pids.isEmpty() ? List.of() : query("""
+                SELECT bsi.id AS sourceItemId,bsi.batch_id AS batchId,bsi.project_id AS projectId,
+                       bsi.contract_id AS contractId,bsi.boq_version_id AS boqVersionId,
+                       bsi.source_order AS sourceOrder,bsi.source_row AS sourceRow,bsi.row_role AS rowRole,
+                       bsi.boq_code AS boqCode,bsi.contract_material_code AS contractMaterialCode,
+                       bsi.approved_material_code AS approvedMaterialCode,
+                       bsi.contract_material_name AS materialName,bsi.unit,bsi.contract_qty AS contractQty,
+                       bsi.remeasured_qty AS remeasuredQty,bsi.unit_price AS unitPrice,bsi.item_type AS itemType,
+                       bsi.note,COALESCE(NULLIF(bsi.source_system_code,''),m.system,'KHAC') AS systemCode,
+                       bsi.source_subgroup_name AS subgroupName,bsi.mapping_status AS mappingStatus,
+                       bsi.mapped_material_id AS materialId,m.code AS materialCode,
+                       m.name AS standardMaterialName,bsi.project_boq_item_id AS projectBoqItemId,bsi.active
+                FROM boq_source_items bsi
+                JOIN boq_versions bv ON bv.id=bsi.boq_version_id
+                LEFT JOIN materials m ON m.id=bsi.mapped_material_id
+                WHERE bsi.project_id IN (%s)
+                ORDER BY bsi.project_id,bsi.contract_id,bv.version_no,bsi.source_order,bsi.id""".formatted(pidSql), params(pids)));
+        data.put("boqMappingCandidates", pids.isEmpty() ? List.of() : query("""
+                SELECT c.id,bsi.project_id AS projectId,bsi.contract_id AS contractId,
+                       bsi.contract_material_name AS sourceMaterialName,c.material_id AS materialId,
+                       m.code AS materialCode,m.name AS materialName,c.final_score AS score,c.rank_no AS candidateRank,
+                       CASE WHEN c.status IN ('exact','very_high','high') THEN 1 ELSE 0 END AS matched
+                FROM boq_mapping_candidates c
+                JOIN boq_source_items bsi ON bsi.id=c.source_item_id
+                LEFT JOIN materials m ON m.id=c.material_id
+                WHERE bsi.project_id IN (%s)
+                ORDER BY bsi.project_id,c.rank_no""".formatted(pidSql), params(pids)));
+        data.put("contractStockLedger", pids.isEmpty() ? List.of() : query("""
+                SELECT l.id,l.project_id AS projectId,l.contract_id AS contractId,c.contract_no AS contractNo,
+                       l.warehouse_id AS warehouseId,w.code AS warehouseCode,w.name AS warehouseName,
+                       l.material_id AS materialId,m.code AS materialCode,m.name AS materialName,m.unit,
+                       l.movement_type AS movementType,l.quantity_delta AS quantityDelta,
+                       l.occurred_at AS occurredAt,l.reference_type AS referenceType,l.reference_id AS referenceId,
+                       l.counterparty_contract_id AS counterpartyContractId,l.note
+                FROM contract_stock_ledger l
+                JOIN project_contracts c ON c.id=l.contract_id
+                JOIN warehouses w ON w.id=l.warehouse_id
+                JOIN materials m ON m.id=l.material_id
+                WHERE l.project_id IN (%s)
+                ORDER BY l.occurred_at DESC,l.id DESC LIMIT 2000""".formatted(pidSql), params(pids)));
+        data.put("contractStockBalances", pids.isEmpty() ? List.of() : query("""
+                SELECT l.project_id AS projectId,l.contract_id AS contractId,c.contract_no AS contractNo,
+                       l.warehouse_id AS warehouseId,w.code AS warehouseCode,
+                       l.material_id AS materialId,m.code AS materialCode,m.name AS materialName,m.unit,
+                       COALESCE(SUM(l.quantity_delta),0) AS balance
+                FROM contract_stock_ledger l
+                JOIN project_contracts c ON c.id=l.contract_id
+                JOIN warehouses w ON w.id=l.warehouse_id
+                JOIN materials m ON m.id=l.material_id
+                WHERE l.project_id IN (%s)
+                GROUP BY l.project_id,l.contract_id,c.contract_no,l.warehouse_id,w.code,l.material_id,m.code,m.name,m.unit
+                HAVING ABS(COALESCE(SUM(l.quantity_delta),0))>0.0000001
+                ORDER BY l.project_id,c.contract_no,w.code,m.code""".formatted(pidSql), params(pids)));
+
+        // ---- hệ thống: settings, role/org/menu/module, staff ----
+        data.put("settings", first("""
+                SELECT company_name AS companyName,stage_1_department AS stage1Department,
+                       stage_2_department AS stage2Department,stage_3_department AS stage3Department,
+                       approval_sla_hours AS approvalSlaHours,stage_1_sla_hours AS stage1SlaHours,
+                       stage_2_sla_hours AS stage2SlaHours,stage_3_sla_hours AS stage3SlaHours,
+                       po_sla_hours AS poSlaHours,bch_confirmation_sla_hours AS bchConfirmationSlaHours,
+                       slow_moving_days AS slowMovingDays,negative_stock_blocked AS negativeStockBlocked
+                FROM company_settings WHERE id='SETTINGS'"""));
+        data.put("approvalStageCatalog", query("""
+                SELECT id,stage_no AS stageNo,name,description,allowed_role_codes AS allowedRoleCodes,
+                       approval_mode AS approvalMode,sla_hours AS slaHours,
+                       auto_approve_on_submit AS autoApproveOnSubmit,active,sort_order AS sortOrder
+                FROM approval_stage_catalog ORDER BY stage_no"""));
+        data.put("roleCatalog", query("""
+                SELECT rc.id,rc.code,rc.name,rc.description,rc.base_role AS baseRole,
+                       rc.default_organization_unit_id AS defaultOrganizationUnitId,
+                       ou.code AS defaultOrganizationCode,ou.name AS defaultOrganizationName,
+                       rc.active,rc.sort_order AS sortOrder,rc.system_locked AS systemLocked
+                FROM role_catalog rc
+                LEFT JOIN organization_units ou ON ou.id=rc.default_organization_unit_id
+                %s ORDER BY rc.sort_order,rc.name""".formatted(admin ? "" : "WHERE rc.active=1")));
+        data.put("organizationUnits", query("""
+                SELECT ou.id,ou.code,ou.name,ou.unit_type AS unitType,ou.parent_id AS parentId,
+                       parent.name AS parentName,ou.project_id AS projectId,p.code AS projectCode,
+                       ou.description,ou.active,ou.archived_at AS archivedAt,ou.sort_order AS sortOrder,
+                       ou.system_locked AS systemLocked
+                FROM organization_units ou
+                LEFT JOIN organization_units parent ON parent.id=ou.parent_id
+                LEFT JOIN projects p ON p.id=ou.project_id
+                %s ORDER BY ou.sort_order,ou.name""".formatted(admin ? "" : "WHERE ou.active=1 AND ou.archived_at IS NULL")));
+        data.put("menuGroups", query("""
+                SELECT id,group_key AS groupKey,name,icon,active,sort_order AS sortOrder,
+                       collapsible,system_locked AS systemLocked
+                FROM menu_group_catalog %s ORDER BY sort_order,name""".formatted(admin ? "" : "WHERE active=1")));
+        List<Map<String, Object>> moduleCatalog = query("""
+                SELECT mc.module_key AS moduleKey,mc.label,mc.icon,mc.group_name AS groupName,
+                       mc.group_key AS groupKey,mc.active,mc.sort_order AS sortOrder,mc.system_locked AS systemLocked
+                FROM module_catalog mc %s ORDER BY mc.sort_order,mc.module_key""".formatted(
+                        admin ? "" : "LEFT JOIN menu_group_catalog mg ON mg.group_key=mc.group_key WHERE mc.active=1 AND (mc.group_key IS NULL OR mg.active=1)"));
+        data.put("moduleCatalog", moduleCatalog);
+        // modulePermissions: admin = toàn bộ module active (giống JS)
+        if (admin) {
+            List<Map<String, Object>> perms = new ArrayList<>();
+            for (Map<String, Object> mod : moduleCatalog) {
+                Object activeVal = mod.getOrDefault("active", 0);
+                if (activeVal instanceof Number num && num.intValue() == 1) {
+                    Map<String, Object> perm = new LinkedHashMap<>();
+                    perm.put("userId", ctx.userId());
+                    perm.put("moduleKey", mod.get("moduleKey"));
+                    perm.put("canView", 1); perm.put("canUse", 1); perm.put("canCreate", 1);
+                    perm.put("canEdit", 1); perm.put("canApprove", 1); perm.put("canExport", 1);
+                    perm.put("permissionSource", "admin");
+                    perms.add(perm);
+                }
+            }
+            data.put("modulePermissions", perms);
+        } else {
+            data.put("modulePermissions", query("""
+                    SELECT ump.user_id AS userId,ump.module_key AS moduleKey,ump.can_view AS canView,
+                           ump.can_use AS canUse,ump.can_create AS canCreate,ump.can_edit AS canEdit,
+                           ump.can_approve AS canApprove,ump.can_export AS canExport,
+                           COALESCE(ump.permission_source,'manual_override') AS permissionSource
+                    FROM user_module_permissions ump
+                    JOIN module_catalog mc ON mc.module_key=ump.module_key AND mc.active=1
+                    WHERE ump.user_id=? ORDER BY mc.sort_order,ump.module_key""", ctx.userId()));
+        }
+        data.put("staffDirectory", query("""
+                SELECT u.id,u.employee_code AS employeeCode,u.full_name AS fullName,u.email,u.role,
+                       COALESCE(rc.name,u.role) AS roleName,u.department,
+                       u.organization_unit_id AS organizationUnitId,ou.code AS organizationCode,
+                       COALESCE(ou.name,u.department) AS organizationName,u.avatar_url AS avatarUrl
+                FROM users u
+                LEFT JOIN role_catalog rc ON rc.code=u.role
+                LEFT JOIN organization_units ou ON ou.id=u.organization_unit_id
+                WHERE u.active=1 ORDER BY u.full_name"""));
+        if (admin) {
+            data.put("users", query("""
+                    SELECT u.id,u.employee_code AS employeeCode,u.full_name AS fullName,u.username,u.email,u.role,
+                           COALESCE(rc.name,u.role) AS roleName,COALESCE(rc.base_role,u.role) AS roleBase,
+                           rc.warehouse_scope_kind AS warehouseScopeKind,u.department,
+                           u.organization_unit_id AS organizationUnitId,ou.code AS organizationCode,
+                           COALESCE(ou.name,u.department) AS organizationName,u.avatar_url AS avatarUrl,
+                           u.approval_limit AS approvalLimit,u.must_change_password AS mustChangePassword,u.active
+                    FROM users u
+                    LEFT JOIN role_catalog rc ON rc.code=u.role
+                    LEFT JOIN organization_units ou ON ou.id=u.organization_unit_id
+                    ORDER BY u.full_name"""));
+            data.put("adminProjects", query("""
+                    SELECT id,code,name,status,contract_no AS contractNo,contract_name AS contractName,
+                           start_date AS startDate,planned_end_date AS plannedEndDate
+                    FROM projects WHERE status<>'purged'
+                    ORDER BY CASE WHEN status='active' THEN 0 ELSE 1 END,code"""));
+            data.put("userScopes", query("""
+                    SELECT ups.user_id AS userId,ups.project_id AS projectId,ups.permission,
+                           p.code AS projectCode,p.name AS projectName
+                    FROM user_project_scopes ups JOIN projects p ON p.id=ups.project_id
+                    ORDER BY ups.user_id,p.code"""));
+            data.put("activeSessions", query("""
+                    SELECT s.id,s.user_id AS userId,u.full_name AS userName,u.username,
+                           s.ip_address AS ipAddress,s.user_agent AS userAgent,s.created_at AS createdAt,
+                           s.expires_at AS expiresAt
+                    FROM sessions s JOIN users u ON u.id=s.user_id
+                    WHERE s.expires_at>? ORDER BY s.created_at DESC LIMIT 300""", java.time.Instant.now()));
+            data.put("audits", query("""
+                    SELECT al.id,al.action,al.entity_type AS entityType,al.entity_id AS entityId,
+                           al.occurred_at AS occurredAt,u.full_name AS userName
+                    FROM audit_logs al LEFT JOIN users u ON u.id=al.user_id
+                    ORDER BY al.occurred_at DESC LIMIT 100"""));
+            data.put("businessRoleEngineProfiles", query("""
+                    SELECT id,engine_key AS engineKey,company_code AS companyCode,display_name AS displayName,
+                           description,active,sort_order AS sortOrder,system_locked AS systemLocked
+                    FROM business_role_engine_catalog ORDER BY sort_order,display_name"""));
+            data.put("businessRoleGroups", query("""
+                    SELECT id,code,name,description,engine_role AS engineRole,active,
+                           sort_order AS sortOrder,system_locked AS systemLocked
+                    FROM business_role_group_catalog ORDER BY sort_order,name"""));
+            data.put("businessScopes", query("""
+                    SELECT id,code,name,description,active,sort_order AS sortOrder,system_locked AS systemLocked
+                    FROM business_scope_catalog ORDER BY sort_order,name"""));
+        }
+
+        // ---- tài chính / pháp chế / nhân sự (mảng đủ khối, UI không vỡ) ----
+        data.put("contractPayments", pids.isEmpty() ? List.of() : query("""
+                SELECT cp.id,cp.project_id AS projectId,p.code AS projectCode,p.name AS projectName,
+                       cp.recovery_record_id AS recoveryRecordId,cp.payment_date AS paymentDate,
+                       cp.reference_no AS referenceNo,cp.description,cp.amount,cp.note,
+                       cp.created_at AS createdAt,cp.updated_at AS updatedAt
+                FROM contract_payments cp JOIN projects p ON p.id=cp.project_id
+                WHERE cp.project_id IN (%s) ORDER BY cp.payment_date DESC,cp.created_at DESC""".formatted(pidSql), params(pids)));
+        data.put("productionReports", pids.isEmpty() ? List.of() : query("""
+                SELECT pr.id,pr.project_id AS projectId,p.code AS projectCode,p.name AS projectName,
+                       pr.report_period AS reportPeriod,pr.reference_no AS referenceNo,pr.description,
+                       pr.planned_value AS plannedValue,pr.actual_value AS actualValue,
+                       pr.approved_value AS approvedValue,pr.status,pr.submitted_by AS submittedBy,
+                       us.full_name AS submittedByName,pr.approved_by AS approvedBy,
+                       ua.full_name AS approvedByName,pr.approved_at AS approvedAt,
+                       pr.created_at AS createdAt,pr.updated_at AS updatedAt
+                FROM production_reports pr
+                JOIN projects p ON p.id=pr.project_id
+                LEFT JOIN users us ON us.id=pr.submitted_by
+                LEFT JOIN users ua ON ua.id=pr.approved_by
+                WHERE pr.project_id IN (%s) ORDER BY pr.report_period DESC,pr.updated_at DESC""".formatted(pidSql), params(pids)));
+        data.put("capitalRecoveryRecords", pids.isEmpty() ? List.of() : query("""
+                SELECT cr.id,cr.project_id AS projectId,p.code AS projectCode,p.name AS projectName,
+                       cr.period_key AS periodKey,cr.reference_no AS referenceNo,
+                       cr.production_report_id AS productionReportId,pr.approved_value AS productionApprovedValue,
+                       cr.submitted_value AS submittedValue,cr.approved_value AS approvedValue,
+                       cr.invoice_no AS invoiceNo,cr.invoice_value AS invoiceValue,cr.due_date AS dueDate,
+                       cr.status,cr.note,cr.created_at AS createdAt,cr.updated_at AS updatedAt,
+                       COALESCE((SELECT SUM(cp.amount) FROM contract_payments cp WHERE cp.recovery_record_id=cr.id),0) AS cashReceived
+                FROM capital_recovery_records cr
+                JOIN projects p ON p.id=cr.project_id
+                LEFT JOIN production_reports pr ON pr.id=cr.production_report_id
+                WHERE cr.project_id IN (%s) ORDER BY cr.period_key DESC,cr.updated_at DESC""".formatted(pidSql), params(pids)));
+        data.put("teamSubcontracts", pids.isEmpty() ? List.of() : query("""
+                SELECT sc.id,sc.project_id AS projectId,sc.team_id AS teamId,t.code AS teamCode,t.name AS teamName,
+                       sc.contract_no AS contractNo,sc.contract_name AS contractName,sc.scope_text AS scopeText,
+                       sc.contract_value AS contractValue,sc.start_date AS startDate,sc.end_date AS endDate,
+                       sc.status,sc.signed_at AS signedAt,sc.note,sc.created_at AS createdAt,sc.updated_at AS updatedAt
+                FROM team_subcontracts sc JOIN teams t ON t.id=sc.team_id
+                WHERE sc.project_id IN (%s) ORDER BY sc.created_at DESC""".formatted(pidSql), params(pids)));
+        data.put("teamProductionRecords", pids.isEmpty() ? List.of() : query("""
+                SELECT tp.id,tp.project_id AS projectId,tp.team_id AS teamId,t.name AS teamName,
+                       tp.subcontract_id AS subcontractId,sc.contract_no AS contractNo,tp.period_key AS periodKey,
+                       tp.reference_no AS referenceNo,tp.description,tp.submitted_value AS submittedValue,
+                       tp.approved_value AS approvedValue,tp.status,tp.approved_at AS approvedAt,
+                       tp.created_at AS createdAt
+                FROM team_production_records tp
+                JOIN teams t ON t.id=tp.team_id
+                JOIN team_subcontracts sc ON sc.id=tp.subcontract_id
+                WHERE tp.project_id IN (%s) ORDER BY tp.period_key DESC,tp.created_at DESC""".formatted(pidSql), params(pids)));
+        data.put("teamPayments", pids.isEmpty() ? List.of() : query("""
+                SELECT pay.id,pay.project_id AS projectId,pay.team_id AS teamId,t.name AS teamName,
+                       pay.subcontract_id AS subcontractId,sc.contract_no AS contractNo,
+                       pay.payment_date AS paymentDate,pay.payment_type AS paymentType,
+                       pay.reference_no AS referenceNo,pay.description,pay.amount,pay.note,
+                       pay.created_at AS createdAt
+                FROM team_payments pay
+                JOIN teams t ON t.id=pay.team_id
+                JOIN team_subcontracts sc ON sc.id=pay.subcontract_id
+                WHERE pay.project_id IN (%s) ORDER BY pay.payment_date DESC,pay.created_at DESC""".formatted(pidSql), params(pids)));
+        data.put("paymentPlans", pids.isEmpty() ? List.of() : query("""
+                SELECT pp.id,pp.plan_no AS planNo,pp.project_id AS projectId,p.code AS projectCode,
+                       p.name AS projectName,pp.contract_id AS contractId,pp.po_id AS poId,
+                       pp.milestone,pp.planned_date AS plannedDate,pp.planned_amount AS plannedAmount,
+                       pp.paid_amount AS paidAmount,pp.status,pp.note,pp.created_at AS createdAt,
+                       pp.updated_at AS updatedAt
+                FROM payment_plans pp JOIN projects p ON p.id=pp.project_id
+                WHERE pp.project_id IN (%s) ORDER BY pp.planned_date,pp.created_at DESC""".formatted(pidSql), params(pids)));
+        data.put("advanceRequests", pids.isEmpty() ? List.of() : query("""
+                SELECT ar.id,ar.request_no AS requestNo,ar.project_id AS projectId,p.code AS projectCode,
+                       p.name AS projectName,ar.requester_id AS requesterId,u.full_name AS requesterName,
+                       u.department AS requesterDepartment,ar.amount,ar.purpose,ar.category,ar.status,
+                       ar.advance_paid AS advancePaid,ar.settlement_value AS settlementValue,
+                       ar.settled_at AS settledAt,ar.note,ar.created_at AS createdAt,ar.updated_at AS updatedAt
+                FROM advance_requests ar
+                LEFT JOIN projects p ON p.id=ar.project_id
+                LEFT JOIN users u ON u.id=ar.requester_id
+                WHERE ar.project_id IS NULL OR ar.project_id IN (%s)
+                ORDER BY ar.created_at DESC""".formatted(pidSql), params(pids)));
+        data.put("siteExpenseClaims", pids.isEmpty() ? List.of() : query("""
+                SELECT sc.id,sc.claim_no AS claimNo,sc.project_id AS projectId,p.code AS projectCode,
+                       p.name AS projectName,sc.cost_type AS costType,sc.amount,sc.paid_by AS paidBy,
+                       pu.full_name AS paidByName,sc.claim_date AS claimDate,sc.description,
+                       sc.status,sc.approved_by AS approvedBy,au.full_name AS approvedByName,
+                       sc.approved_at AS approvedAt,sc.created_at AS createdAt,sc.updated_at AS updatedAt
+                FROM site_expense_claims sc
+                JOIN projects p ON p.id=sc.project_id
+                LEFT JOIN users pu ON pu.id=sc.paid_by
+                LEFT JOIN users au ON au.id=sc.approved_by
+                WHERE sc.project_id IN (%s) ORDER BY sc.claim_date DESC,sc.created_at DESC""".formatted(pidSql), params(pids)));
+        data.put("bankAccounts", query("""
+                SELECT b.id,b.code,b.bank_name AS bankName,b.account_no AS accountNo,b.branch,b.currency,
+                       b.opening_balance AS openingBalance,b.active,b.created_at AS createdAt
+                FROM bank_accounts b ORDER BY b.active DESC,b.code"""));
+        data.put("cashbookEntries", query("""
+                SELECT e.id,e.entry_no AS entryNo,e.entry_date AS entryDate,e.account_id AS accountId,
+                       b.code AS accountCode,b.bank_name AS bankName,e.entry_type AS entryType,e.amount,
+                       e.counterparty,e.reference_type AS referenceType,e.reference_id AS referenceId,
+                       e.note,e.created_by AS createdBy,u.full_name AS createdByName,e.created_at AS createdAt
+                FROM cashbook_entries e
+                LEFT JOIN bank_accounts b ON b.id=e.account_id
+                LEFT JOIN users u ON u.id=e.created_by
+                ORDER BY e.entry_date DESC,e.created_at DESC"""));
+        data.put("accountingVouchers", query("""
+                SELECT v.id,v.voucher_no AS voucherNo,v.voucher_date AS voucherDate,
+                       v.voucher_type AS voucherType,v.project_id AS projectId,p.code AS projectCode,
+                       p.name AS projectName,v.description,v.total_amount AS totalAmount,v.status,
+                       v.files_json AS filesJson,v.created_at AS createdAt,v.updated_at AS updatedAt
+                FROM accounting_vouchers v
+                LEFT JOIN projects p ON p.id=v.project_id
+                ORDER BY v.voucher_date DESC,v.created_at DESC"""));
+        data.put("hrRecords", query("""
+                SELECT h.id,h.user_id AS userId,u.full_name AS fullName,u.employee_code AS employeeCode,
+                       u.email,u.department,h.identity_no AS identityNo,h.birth_date AS birthDate,
+                       h.birthplace,h.permanent_address AS permanentAddress,h.phone,
+                       h.education_level AS educationLevel,h.joined_date AS joinedDate,h.position,h.note
+                FROM hr_records h LEFT JOIN users u ON u.id=h.user_id ORDER BY h.full_name"""));
+        data.put("laborContracts", query("""
+                SELECT lc.id,lc.contract_no AS contractNo,lc.user_id AS userId,u.full_name AS fullName,
+                       u.employee_code AS employeeCode,lc.contract_type AS contractType,
+                       lc.start_date AS startDate,lc.end_date AS endDate,lc.signing_date AS signingDate,
+                       lc.salary,lc.status,lc.note
+                FROM labor_contracts lc LEFT JOIN users u ON u.id=lc.user_id
+                ORDER BY lc.start_date DESC"""));
+        data.put("officialCorrespondence", query("""
+                SELECT c.id,c.doc_no AS docNo,c.direction,c.doc_type AS docType,c.issue_date AS issueDate,
+                       c.sender_name AS senderName,c.receiver_name AS receiverName,c.summary,
+                       c.internal_handler AS internalHandler,c.status,c.result_note AS resultNote,
+                       c.created_at AS createdAt
+                FROM official_correspondence c ORDER BY c.issue_date DESC,c.created_at DESC"""));
+        data.put("legalDocuments", query("""
+                SELECT d.id,d.doc_no AS docNo,d.doc_type AS docType,d.title,d.issue_date AS issueDate,
+                       d.issuer,d.effective_date AS effectiveDate,d.expiry_date AS expiryDate,d.scope,
+                       d.attachment_id AS attachmentId,d.status,d.created_at AS createdAt
+                FROM legal_documents d ORDER BY d.issue_date DESC,d.created_at DESC"""));
+        data.put("sealManagement", query("""
+                SELECT s.id,s.seal_no AS sealNo,s.seal_name AS sealName,s.seal_type AS sealType,
+                       s.custodian,s.registered_date AS registeredDate,s.status,s.usage_note AS usageNote
+                FROM seal_management s ORDER BY s.seal_no"""));
+        data.put("benefitRecords", query("""
+                SELECT b.id,b.benefit_no AS benefitNo,b.user_id AS userId,u.full_name AS fullName,
+                       b.benefit_type AS benefitType,b.provider,b.start_date AS startDate,
+                       b.end_date AS endDate,b.monthly_amount AS monthlyAmount,b.status,b.note
+                FROM benefit_records b LEFT JOIN users u ON u.id=b.user_id
+                ORDER BY b.start_date DESC"""));
+        data.put("materialNorms", query("""
+                SELECT mn.id,mn.norm_code AS normCode,mn.project_id AS projectId,p.code AS projectCode,
+                       p.name AS projectName,mn.subcategory_id AS subcategoryId,ms.name AS subcategoryName,
+                       mn.item_name AS itemName,mn.material_id AS materialId,m.code AS materialCode,
+                       m.name AS materialName,m.unit AS materialUnit,mn.base_uom AS baseUom,
+                       mn.quantity_per_unit AS quantityPerUnit,mn.unit,mn.notes,mn.status,mn.active,
+                       mn.created_at AS createdAt,mn.updated_at AS updatedAt
+                FROM material_norms mn
+                LEFT JOIN projects p ON p.id=mn.project_id
+                LEFT JOIN material_subcategories ms ON ms.id=mn.subcategory_id
+                LEFT JOIN materials m ON m.id=mn.material_id
+                ORDER BY mn.updated_at DESC,mn.norm_code"""));
+        data.put("workItems", query("""
+                SELECT w.id,w.task_no AS taskNo,w.project_id AS projectId,w.work_group AS workGroup,
+                       w.title,w.description,w.status,w.priority,w.progress,
+                       w.assigned_to AS assigneeUserId,u.full_name AS assigneeName,
+                       w.due_at AS dueAt,w.created_at AS createdAt
+                FROM work_items w LEFT JOIN users u ON u.id=w.assigned_to
+                ORDER BY w.created_at DESC LIMIT 500"""));
+        data.put("taskNotifications", query("""
+                SELECT n.id,n.user_id AS userId,n.work_item_id AS taskId,
+                       COALESCE(NULLIF(n.title,''),n.body) AS message,n.read_at AS readAt,
+                       n.sent_at AS sentAt,n.status,n.created_at AS createdAt
+                FROM task_notifications n WHERE n.user_id=? ORDER BY n.created_at DESC LIMIT 200""", ctx.userId()));
+        data.put("constructionDailyLogs", pids.isEmpty() ? List.of() : query("""
+                SELECT l.id,l.log_no AS logNo,l.project_id AS projectId,p.code AS projectCode,
+                       p.name AS projectName,l.warehouse_id AS warehouseId,l.work_date AS workDate,
+                       l.shift,l.weather,l.work_content AS workContent,l.labor_count AS laborCount,
+                       l.equipment_note AS equipmentNote,l.status,l.submitted_by AS submittedBy,
+                       us.full_name AS submittedByName,l.approved_by AS approvedBy,
+                       ua.full_name AS approvedByName,l.approved_at AS approvedAt,l.note,
+                       l.created_at AS createdAt,l.updated_at AS updatedAt
+                FROM construction_daily_logs l
+                JOIN projects p ON p.id=l.project_id
+                LEFT JOIN users us ON us.id=l.submitted_by
+                LEFT JOIN users ua ON ua.id=l.approved_by
+                WHERE l.project_id IN (%s) ORDER BY l.work_date DESC,l.created_at DESC""".formatted(pidSql), params(pids)));
+
+        return data;
+    }
+
+    // ---- helpers ----
+    private List<Map<String, Object>> query(String sql, Object... args) {
+        return jdbcTemplate.queryForList(sql, args);
+    }
+
+    private Map<String, Object> first(String sql, Object... args) {
+        List<Map<String, Object>> rows = query(sql, args);
+        return rows.isEmpty() ? Map.of() : rows.get(0);
+    }
+
+    private static List<Map<String, Object>> groupBy(List<Map<String, Object>> rows, String keyField, String keyValue) {
+        return rows.stream()
+                .filter(r -> String.valueOf(r.get(keyField)).equals(keyValue))
+                .map(r -> (Map<String, Object>) new LinkedHashMap<>(r))
+                .toList();
+    }
+
+    private static String inClause(List<String> ids) {
+        return String.join(",", java.util.Collections.nCopies(ids.size(), "?"));
+    }
+
+    private static Object[] params(List<String> ids) {
+        return ids.toArray();
+    }
+}

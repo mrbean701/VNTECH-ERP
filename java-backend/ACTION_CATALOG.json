@@ -1,0 +1,1635 @@
+{
+  "generatedFrom": "E:\\VNTECH\\VNTECH-ERP\\scripts\\system-route.mjs",
+  "count": 174,
+  "actions": [
+    {
+      "action": "approve_central_return",
+      "module": [
+        "central_warehouse"
+      ],
+      "capability": "canApprove",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "approve_construction_daily_log",
+      "module": [
+        "construction"
+      ],
+      "capability": "canApprove",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "approve_production_report",
+      "module": [
+        "production"
+      ],
+      "capability": "canApprove",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "approve_site_expense_claim",
+      "module": [
+        "dept_finance_site_cost"
+      ],
+      "capability": "canApprove",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "approve_stock_count",
+      "module": [
+        "stocktake"
+      ],
+      "capability": "canApprove",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "approve_team_production",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "approve_transfer_order",
+      "module": [
+        "inventory"
+      ],
+      "capability": "canApprove",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "bulk_boq_item_action",
+      "module": [
+        "boq"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "bulk_import_projects",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "bulk_import_users",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "bulk_material_subcategory_action",
+      "module": [
+        "material_catalog"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "cancel_request",
+      "module": [
+        "requests"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "change_password",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "check_material_alias_conflicts",
+      "module": [
+        "material_catalog"
+      ],
+      "capability": "canView",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "clear_boq_version",
+      "module": [
+        "boq"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "close_po_line",
+      "module": [
+        "purchasing"
+      ],
+      "capability": "canApprove",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "compare_boq_materials",
+      "module": [
+        "material_catalog",
+        "boq"
+      ],
+      "capability": "canUse",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "confirm_boq_material_mappings",
+      "module": [
+        "material_catalog",
+        "boq"
+      ],
+      "capability": "canApprove",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "confirm_delivery",
+      "module": [
+        "receiving",
+        "warehouse_receipt"
+      ],
+      "capability": "canApprove",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "confirm_installation",
+      "module": [
+        "teams"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "create_central_return",
+      "module": [
+        "central_warehouse"
+      ],
+      "capability": "canCreate",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "create_po",
+      "module": [
+        "purchasing"
+      ],
+      "capability": "canCreate",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "create_project",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "create_project_team",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "create_request",
+      "module": [
+        "requests"
+      ],
+      "capability": "canCreate",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "create_stock_count",
+      "module": [
+        "stocktake"
+      ],
+      "capability": "canCreate",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "create_transfer_order",
+      "module": [
+        "inventory"
+      ],
+      "capability": "canCreate",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "create_user",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "create_work_item",
+      "module": [
+        "dept_plan_assign",
+        "dept_project_assign"
+      ],
+      "capability": "canCreate",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "decide_approval",
+      "module": [
+        "approvals"
+      ],
+      "capability": "canApprove",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "delete_accounting_voucher",
+      "module": [
+        "dept_finance_documents"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "delete_advance_request",
+      "module": [
+        "dept_finance_advance"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "delete_approval_stage",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "delete_benefit_record",
+      "module": [
+        "dept_legal_benefits"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "delete_boq_item",
+      "module": [
+        "boq"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "delete_business_role_group",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "delete_business_scope",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "delete_capital_recovery",
+      "module": [
+        "capital_recovery"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "delete_cashbook_entry",
+      "module": [
+        "dept_finance_cashbank"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "delete_construction_daily_log",
+      "module": [
+        "construction"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "delete_contract_payment",
+      "module": [
+        "payments"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "delete_correspondence",
+      "module": [
+        "dept_legal_correspondence"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "delete_form_field_config",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "delete_labor_contract",
+      "module": [
+        "dept_legal_labor"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "delete_legal_document",
+      "module": [
+        "dept_legal_documents"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "delete_material",
+      "module": [
+        "material_catalog"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "delete_material_category",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "delete_material_norm",
+      "module": [
+        "material_norms"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "delete_material_subcategory",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "delete_menu_group",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "delete_payment_plan",
+      "module": [
+        "dept_finance_payment_plan"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "delete_project",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "delete_project_contract",
+      "module": [
+        "boq"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "delete_project_team",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "delete_request",
+      "module": [
+        "requests"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "delete_role_catalog",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "delete_seal",
+      "module": [
+        "dept_legal_seal"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "delete_selected_materials",
+      "module": [
+        "material_catalog"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "delete_site_expense_claim",
+      "module": [
+        "dept_finance_site_cost"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "delete_supplier",
+      "module": [
+        "supplier_catalog"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "delete_unused_materials",
+      "module": [
+        "material_catalog"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "delete_user",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "delete_user_module_override",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "estimate_material_norms",
+      "module": [
+        "material_norms"
+      ],
+      "capability": "canUse",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "factory_reset_execute",
+      "module": [
+        "admin"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "factory_reset_preview",
+      "module": [
+        "admin"
+      ],
+      "capability": "canView",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "import_contract_payments",
+      "module": [
+        "payments"
+      ],
+      "capability": "canCreate",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "import_material_catalog",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "install_license_foundation",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "issue_stock",
+      "module": [
+        "teams",
+        "warehouse_issue"
+      ],
+      "capability": "canCreate",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "login",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "logout",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "mark_task_notification_read",
+      "module": [
+        "dept_plan_tasks",
+        "dept_project_tasks"
+      ],
+      "capability": "canView",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "merge_material_master",
+      "module": [
+        "material_catalog"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "preview_material_dependencies",
+      "module": [
+        "material_catalog"
+      ],
+      "capability": "canView",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "preview_request_import",
+      "module": [
+        "requests"
+      ],
+      "capability": "canCreate",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "reassign_work_item",
+      "module": [
+        "dept_plan_assign",
+        "dept_project_assign"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "receive_central_return",
+      "module": [
+        "central_warehouse"
+      ],
+      "capability": "canApprove",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "receive_goods",
+      "module": [
+        "receiving",
+        "warehouse_receipt"
+      ],
+      "capability": "canCreate",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "receive_transfer_order",
+      "module": [
+        "inventory"
+      ],
+      "capability": "canApprove",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "reconcile_contract_stock",
+      "module": [
+        "inventory"
+      ],
+      "capability": "canApprove",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "reorder_form_fields",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "reorder_menu_layout",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "replace_boq_items",
+      "module": [
+        "boq"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "request_license_transfer",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "request_material_master_from_boq",
+      "module": [
+        "material_catalog",
+        "boq"
+      ],
+      "capability": "canCreate",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "reset_material_catalog_test",
+      "module": [
+        "material_catalog"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "reset_user_password",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "resubmit_request",
+      "module": [
+        "requests"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "retry_email",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "return_stock",
+      "module": [
+        "teams",
+        "stocktake"
+      ],
+      "capability": "canCreate",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "reverse_stock_movement",
+      "module": [
+        "inventory",
+        "stocktake"
+      ],
+      "capability": "canApprove",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "revoke_session",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "revoke_user_sessions",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "save_accounting_voucher",
+      "module": [
+        "dept_finance_documents"
+      ],
+      "capability": "canCreate",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "save_advance_request",
+      "module": [
+        "dept_finance_advance"
+      ],
+      "capability": "canCreate",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "save_approval_stage",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "save_bank_account",
+      "module": [
+        "dept_finance_cashbank"
+      ],
+      "capability": "canCreate",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "save_benefit_record",
+      "module": [
+        "dept_legal_benefits"
+      ],
+      "capability": "canCreate",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "save_boq_item",
+      "module": [
+        "boq"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "save_boq_version",
+      "module": [
+        "boq"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "save_business_role_group",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "save_business_scope",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "save_capital_recovery",
+      "module": [
+        "capital_recovery"
+      ],
+      "capability": "canCreate",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "save_cashbook_entry",
+      "module": [
+        "dept_finance_cashbank"
+      ],
+      "capability": "canCreate",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "save_construction_daily_log",
+      "module": [
+        "construction"
+      ],
+      "capability": "canCreate",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "save_contract_payment",
+      "module": [
+        "payments"
+      ],
+      "capability": "canCreate",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "save_correspondence",
+      "module": [
+        "dept_legal_correspondence"
+      ],
+      "capability": "canCreate",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "save_email_settings",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "save_engine_role_profile",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "save_form_field_config",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "save_hr_record",
+      "module": [
+        "dept_legal_hr"
+      ],
+      "capability": "canCreate",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "save_labor_contract",
+      "module": [
+        "dept_legal_labor"
+      ],
+      "capability": "canCreate",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "save_legal_document",
+      "module": [
+        "dept_legal_documents"
+      ],
+      "capability": "canCreate",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "save_mar_approval",
+      "module": [
+        "boq",
+        "purchasing"
+      ],
+      "capability": "canApprove",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "save_material",
+      "module": [
+        "material_catalog"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "save_material_category",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "save_material_external_code",
+      "module": [
+        "material_catalog"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "save_material_norm",
+      "module": [
+        "material_norms"
+      ],
+      "capability": "canCreate",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "save_material_subcategory",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "save_material_uom_conversion",
+      "module": [
+        "material_catalog"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "save_menu_group",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "save_module_catalog",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "save_organization_unit",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "save_payment_plan",
+      "module": [
+        "dept_finance_payment_plan"
+      ],
+      "capability": "canCreate",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "save_production_report",
+      "module": [
+        "production"
+      ],
+      "capability": "canCreate",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "save_project_contract",
+      "module": [
+        "boq"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "save_role_catalog",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "save_seal",
+      "module": [
+        "dept_legal_seal"
+      ],
+      "capability": "canCreate",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "save_site_expense_claim",
+      "module": [
+        "dept_finance_site_cost"
+      ],
+      "capability": "canCreate",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "save_supplier",
+      "module": [
+        "supplier_catalog"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "save_team_payment",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "save_team_production",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "save_team_subcontract",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "save_trust_development_settings",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "save_ui_display_settings",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "save_user_access",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "save_warehouse_location",
+      "module": [
+        "inventory",
+        "central_warehouse"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "set_approval_stage_status",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "set_benefit_record_status",
+      "module": [
+        "dept_legal_benefits"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "set_boq_item_status",
+      "module": [
+        "boq"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "set_business_role_group_status",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "set_business_scope_status",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "set_correspondence_status",
+      "module": [
+        "dept_legal_correspondence"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "set_labor_contract_status",
+      "module": [
+        "dept_legal_labor"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "set_legal_document_status",
+      "module": [
+        "dept_legal_documents"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "set_material_category_status",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "set_material_norm_status",
+      "module": [
+        "material_norms"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "set_material_status",
+      "module": [
+        "material_catalog"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "set_material_subcategory_status",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "set_menu_group_status",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "set_module_status",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "set_organization_unit_member",
+      "module": [
+        "site_command"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "set_organization_unit_status",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "set_payment_plan_status",
+      "module": [
+        "dept_finance_payment_plan"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "set_project_contract_status",
+      "module": [
+        "boq"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "set_project_status",
+      "module": [
+        "admin"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "set_project_team_status",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "set_role_status",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "set_seal_status",
+      "module": [
+        "dept_legal_seal"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "set_supplier_status",
+      "module": [
+        "supplier_catalog"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "set_user_status",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "settle_advance_request",
+      "module": [
+        "dept_finance_advance"
+      ],
+      "capability": "canApprove",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "settle_team_subcontract",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "setup",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "ship_transfer_order",
+      "module": [
+        "inventory"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "transfer_contract_ownership",
+      "module": [
+        "inventory"
+      ],
+      "capability": "canApprove",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "update_boq_contract_prices",
+      "module": [
+        "boq"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "update_profile_avatar",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "update_project",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "update_returned_request",
+      "module": [
+        "requests"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "update_user",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "update_work_item_progress",
+      "module": [
+        "dept_plan_tasks",
+        "dept_project_tasks"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    },
+    {
+      "action": "update_work_item_status",
+      "module": [
+        "dept_plan_tasks",
+        "dept_project_tasks",
+        "dept_plan_assign",
+        "dept_project_assign"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": true
+    }
+  ]
+}
