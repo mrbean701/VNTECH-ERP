@@ -43,6 +43,14 @@ public interface RequestStore {
     void finalizeRequestApproval(String requestId, int stage, Instant now); // approved + items + supply step
     void createStockReservations(String requestId, String warehouseId, String userId, Instant now);
     void returnRequestToRequester(String requestId, int stage, String userId, String comment, Instant now);
+
+    // ---- P4: người duyệt theo workflow đa luồng ----
+    /** Người duyệt đích danh của một bước trong quy trình đang áp dụng cho dự án. */
+    List<String> stageApproverUserIds(String projectId, int stageNo);
+    /** Cách xác nhận của bước theo workflow (single/any_of/all_of); rỗng nếu chưa cấu hình. */
+    Optional<String> stageApprovalMode(String projectId, int stageNo);
+    /** Những người đã ra quyết định ở bước này (dùng để chốt all_of). */
+    List<String> stageDecisionUsers(String requestId, int stage);
     boolean stageDecisionRoleExists(String requestId, int stage, String roleCode);
     void insertStageDecision(String requestId, int stage, String roleCode, String userId,
                              String decision, String comment, Instant now);

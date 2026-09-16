@@ -20,7 +20,7 @@ public class HealthController {
     private final String product = "VNTECH-KHO-MEP-001";
     private final String version = "java-0.1.0";
 
-    @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(produces = "application/json;charset=UTF-8")
     public Map<String, Object> health() {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("ok", true);

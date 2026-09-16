@@ -52,6 +52,15 @@ public class UserJpaEntity {
     @Column(name = "avatar_url", length = 500)
     private String avatarUrl;
 
+    /**
+     * P5 — mã cấp bậc trong `system_level_catalog`.
+     * PHẢI khai báo ở đây (không chỉ ở migration): test dùng H2 với
+     * `spring.jpa.hibernate.ddl-auto=create-drop`, Hibernate DROP + tạo lại bảng `users`
+     * SAU khi chạy schema-h2.sql, nên cột thêm bằng ALTER trong schema sẽ bị xoá.
+     */
+    @Column(name = "system_level_code", length = 64)
+    private String systemLevelCode;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -94,6 +103,8 @@ public class UserJpaEntity {
     public boolean isActive() { return active; }
     public boolean isMustChangePassword() { return mustChangePassword; }
     public String getAvatarUrl() { return avatarUrl; }
+    public String getSystemLevelCode() { return systemLevelCode; }
+    public void setSystemLevelCode(String systemLevelCode) { this.systemLevelCode = systemLevelCode; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
 

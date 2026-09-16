@@ -108,7 +108,15 @@ public class SystemController {
         this.excelTemplateService = excelTemplateService;
     }
 
-    @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
+    /**
+     * Khai báo charset tường minh cho JSON.
+     * Dù RFC 8259 quy định JSON luôn là UTF-8, nhiều công cụ/trình duyệt vẫn dựa vào
+     * charset trong Content-Type; thiếu nó gây hiển thị sai tiếng Việt. Khai báo rõ
+     * để loại bỏ hoàn toàn khả năng giải mã sai.
+     */
+    static final String JSON_UTF8 = "application/json;charset=UTF-8";
+
+    @GetMapping(produces = JSON_UTF8)
     public ResponseEntity<?> get(HttpServletRequest request) {
         String templateAction = request.getParameter("action");
         if ("template".equals(templateAction)) {
@@ -153,7 +161,7 @@ public class SystemController {
         return ResponseEntity.ok(body);
     }
 
-    @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(produces = JSON_UTF8, consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, Object>> post(@RequestBody Map<String, Object> payload,
                                                     HttpServletRequest request,
                                                     HttpServletResponse response) {
@@ -334,6 +342,47 @@ public class SystemController {
                     AuthUseCase.CurrentUser cu = requireRequireAdmin(request);
                     String message = userManagementUseCase.deleteUserModuleOverride(asUserPrincipal(cu), payload);
                     return ResponseEntity.ok(json(Map.of("ok", true, "message", message)));
+                }
+                // ---- P5: phân quyền phòng ban + cấp bậc hệ thống ----
+                case "save_department_permission" -> {
+                    AuthUseCase.CurrentUser cu = requireRequireAdmin(request);
+                    String message = userManagementUseCase.saveDepartmentPermission(asUserPrincipal(cu), payload);
+                    return ResponseEntity.ok(json(Map.of("ok", true, "message", message)));
+                }
+                case "delete_department_permission" -> {
+                    AuthUseCase.CurrentUser cu = requireRequireAdmin(request);
+                    String message = userManagementUseCase.deleteDepartmentPermission(asUserPrincipal(cu), payload);
+                    return ResponseEntity.ok(json(Map.of("ok", true, "message", message)));
+                }
+                case "rebuild_department_permissions" -> {
+                    AuthUseCase.CurrentUser cu = requireRequireAdmin(request);
+                    String message = userManagementUseCase.rebuildDepartmentPermissions(asUserPrincipal(cu), payload);
+                    return ResponseEntity.ok(json(Map.of("ok", true, "message", message)));
+                }
+                case "save_system_level" -> {
+                    AuthUseCase.CurrentUser cu = requireRequireAdmin(request);
+                    String message = userManagementUseCase.saveSystemLevel(asUserPrincipal(cu), payload);
+                    return ResponseEntity.ok(json(Map.of("ok", true, "message", message)));
+                }
+                case "set_system_level_status" -> {
+                    AuthUseCase.CurrentUser cu = requireRequireAdmin(request);
+                    String message = userManagementUseCase.setSystemLevelStatus(asUserPrincipal(cu), payload);
+                    return ResponseEntity.ok(json(Map.of("ok", true, "message", message)));
+                }
+                case "delete_system_level" -> {
+                    AuthUseCase.CurrentUser cu = requireRequireAdmin(request);
+                    String message = userManagementUseCase.deleteSystemLevel(asUserPrincipal(cu), payload);
+                    return ResponseEntity.ok(json(Map.of("ok", true, "message", message)));
+                }
+                case "set_user_system_level" -> {
+                    AuthUseCase.CurrentUser cu = requireRequireAdmin(request);
+                    String message = userManagementUseCase.setUserSystemLevel(asUserPrincipal(cu), payload);
+                    return ResponseEntity.ok(json(Map.of("ok", true, "message", message)));
+                }
+                case "system_level_impact" -> {
+                    AuthUseCase.CurrentUser cu = requireRequireAdmin(request);
+                    Map<String, Object> result = userManagementUseCase.systemLevelImpact(asUserPrincipal(cu), payload);
+                    return ResponseEntity.ok(jsonResult(result));
                 }
                 case "save_role_catalog" -> {
                     AuthUseCase.CurrentUser cu = requireRequireAdmin(request);
@@ -835,6 +884,11 @@ public class SystemController {
                     Map<String, Object> result = opsTaskManagementUseCase.createWorkItem(asOpsTaskPrincipal(cu), payload);
                     return ResponseEntity.ok(jsonResult(result));
                 }
+                                case "create_self_work_item" -> {
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                    Map<String, Object> result = opsTaskManagementUseCase.createSelfWorkItem(asOpsTaskPrincipal(cu), payload);
+                    return ResponseEntity.ok(jsonResult(result));
+                }
                                 case "update_work_item_progress" -> {
                     AuthUseCase.CurrentUser cu = requireCurrentUser(request);
                     Map<String, Object> result = opsTaskManagementUseCase.updateWorkItemProgress(asOpsTaskPrincipal(cu), payload);
@@ -883,6 +937,21 @@ public class SystemController {
                                 case "delete_approval_stage" -> {
                     AuthUseCase.CurrentUser cu = requireCurrentUser(request);
                     Map<String, Object> result = opsTaskManagementUseCase.deleteApprovalStage(asOpsTaskPrincipal(cu), payload);
+                    return ResponseEntity.ok(jsonResult(result));
+                }
+                                case "save_workflow" -> {
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                    Map<String, Object> result = opsTaskManagementUseCase.saveWorkflow(asOpsTaskPrincipal(cu), payload);
+                    return ResponseEntity.ok(jsonResult(result));
+                }
+                                case "set_workflow_status" -> {
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                    Map<String, Object> result = opsTaskManagementUseCase.setWorkflowStatus(asOpsTaskPrincipal(cu), payload);
+                    return ResponseEntity.ok(jsonResult(result));
+                }
+                                case "delete_workflow" -> {
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                    Map<String, Object> result = opsTaskManagementUseCase.deleteWorkflow(asOpsTaskPrincipal(cu), payload);
                     return ResponseEntity.ok(jsonResult(result));
                 }
                                 case "save_mar_approval" -> {

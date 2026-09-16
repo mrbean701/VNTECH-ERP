@@ -48,7 +48,7 @@ public class FileController {
         this.authUseCase = authUseCase;
     }
 
-    @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(produces = "application/json;charset=UTF-8")
     public ResponseEntity<?> upload(@RequestParam(value = "file", required = false) MultipartFile file,
                                     @RequestParam(value = "entityType", required = false) String entityType,
                                     @RequestParam(value = "entityId", required = false) String entityId,
@@ -109,7 +109,7 @@ public class FileController {
         }
     }
 
-    @DeleteMapping(produces = MediaType.APPLICATION_JSON_VALUE)
+    @DeleteMapping(produces = "application/json;charset=UTF-8")
     public ResponseEntity<?> delete(@RequestParam(value = "id", required = false) String id,
                                     HttpServletRequest request) {
         try {

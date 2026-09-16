@@ -19,9 +19,9 @@ type Row = Record<string, any>;
 type ModuleKey = "dashboard" | "dept_plan_tasks" | "dept_plan_assign" | "dept_plan_supply_plan" | "dept_plan_tender" | "dept_plan_rfq" | "dept_plan_purchasing" | "dept_plan_supply" | "dept_plan_contracts" | "dept_plan_suppliers" | "dept_plan_price_data" | "dept_plan_kpi" | "dept_plan_alerts" | "dept_project_tasks" | "dept_project_pda" | "dept_project_assign" | "dept_project_plan" | "dept_project_shop" | "dept_project_boq" | "dept_project_material" | "dept_project_issues" | "dept_project_asbuilt" | "dept_project_payment" | "dept_project_tender" | "dept_project_kpi" | "dept_project_alerts" | "dept_finance_payment_plan" | "dept_finance_recovery" | "dept_finance_advance" | "dept_finance_site_cost" | "dept_finance_cashbank" | "dept_finance_documents" | "dept_legal_hr" | "dept_legal_labor" | "dept_legal_correspondence" | "dept_legal_documents" | "dept_legal_seal" | "dept_legal_benefits" | "site_command" | "project_progress" | "construction" | "production" | "capital_recovery" | "requests" | "approvals" | "purchasing" | "supplier_catalog" | "receiving" | "delivered" | "warehouse_receipt" | "warehouse_issue" | "inventory" | "material_norms" | "central_warehouse" | "material_catalog" | "boq" | "payments" | "teams" | "stocktake" | "reports" | "admin";
 type AppData = {
   user: Row; settings: Row; productIdentity: Row; projects: Row[]; adminProjects: Row[]; teams: Row[]; warehouses: Row[]; transferWarehouses: Row[]; materials: Row[]; adminMaterials: Row[]; materialCategories: Row[]; adminMaterialCategories: Row[]; materialSubcategories: Row[]; adminMaterialSubcategories: Row[]; materialNorms: Row[]; suppliers: Row[]; adminSuppliers: Row[]; contractPayments: Row[]; productionReports: Row[]; capitalRecoveryRecords: Row[]; teamSubcontracts: Row[]; teamProductionRecords: Row[]; teamPayments: Row[]; teamSettlements: Row[];
-  requests: Row[]; inventory: Row[]; centralInventory: Row[]; centralReturns: Row[]; companyAvailability: Row[]; transferOrders: Row[]; materialAliases: Row[]; boqItems: Row[]; boqSourceItems: Row[]; boqImportBatches: Row[]; boqChangeHistory: Row[]; projectContracts: Row[]; boqVersions: Row[]; contractStockLedger: Row[]; contractStockBalances: Row[]; stockReconciliations: Row[]; purchaseOrders: Row[]; receipts: Row[]; issues: Row[]; returns: Row[]; stockCounts: Row[]; users: Row[]; staffDirectory: Row[]; userScopes: Row[]; userWarehouseScopes: Row[]; modulePermissions: Row[]; allModulePermissions: Row[]; audits: Row[]; constructionDailyLogs: Row[]; constructionDailyLogItems: Row[]; paymentPlans: Row[]; advanceRequests: Row[]; siteExpenseClaims: Row[]; bankAccounts: Row[]; cashbookEntries: Row[]; accountingVouchers: Row[]; hrRecords: Row[]; laborContracts: Row[]; officialCorrespondence: Row[]; legalDocuments: Row[]; sealManagement: Row[]; benefitRecords: Row[];
+  requests: Row[]; inventory: Row[]; centralInventory: Row[]; centralReturns: Row[]; companyAvailability: Row[]; transferOrders: Row[]; materialAliases: Row[]; boqItems: Row[]; boqSourceItems: Row[]; boqImportBatches: Row[]; boqChangeHistory: Row[]; projectContracts: Row[]; boqVersions: Row[]; contractStockLedger: Row[]; contractStockBalances: Row[]; stockReconciliations: Row[]; purchaseOrders: Row[]; receipts: Row[]; issues: Row[]; returns: Row[]; stockCounts: Row[]; users: Row[]; staffDirectory: Row[]; userScopes: Row[]; userWarehouseScopes: Row[]; modulePermissions: Row[]; allModulePermissions: Row[]; audits: Row[]; constructionDailyLogs: Row[]; constructionDailyLogItems: Row[]; paymentPlans: Row[]; advanceRequests: Row[]; siteExpenseClaims: Row[]; bankAccounts: Row[]; cashbookEntries: Row[]; accountingVouchers: Row[]; hrRecords: Row[]; laborContracts: Row[]; officialCorrespondence: Row[]; legalDocuments: Row[]; sealManagement: Row[]; benefitRecords: Row[]; workflowDefinitions: Row[]; workflowSteps: Row[]; workflowStepApprovers: Row[]; departmentModulePermissions: Row[]; systemLevelCatalog: Row[];
   emailSettings: Row | null; emailRecipients: Row[]; workflowAssignments: Row[]; emailOutbox: Row[]; supplySteps: Row[]; engineRoleProfiles: Row[]; businessScopes: Row[]; businessRoleGroupScopes: Row[]; businessRoleGroups: Row[]; roleCatalog: Row[]; organizationUnits: Row[]; approvalStages: Row[]; menuGroups: Row[]; moduleCatalog: Row[];
-  workItems: Row[]; workItemEvents: Row[]; taskNotifications: Row[];
+  workItems: Row[]; workItemEvents: Row[]; taskNotifications: Row[]; teamMembers?: Row[];
   activeSessions?: Row[]; serverInfo?: Row | null; trustStatus?: Row | null; formFieldConfigs?: FormFieldConfig[];
   uiDisplaySettings?: Row | null;
   projectAccessAll?: boolean;
@@ -37,14 +37,21 @@ const UI_NOW_MS = new Date().getTime();
 const UI_TODAY = new Date(UI_NOW_MS).toISOString().slice(0, 10);
 const DEFAULT_PO_ETA = new Date(UI_NOW_MS + 7 * 86400000).toISOString().slice(0, 10);
 
+// Menu 11 mục theo nghiệp vụ. Nhóm "department_management" cũ đã được tách thành
+// my_work / mep / finance / hr_legal / reports (xem migration V4__menu_restructure.sql).
 const defaultMenuGroups = [
   { groupKey: "overview", name: "TỔNG QUAN", icon: "OV", sortOrder: 10, active: true, collapsible: false },
-  { groupKey: "department_management", name: "QUẢN LÝ PHÒNG BAN", icon: "PB", sortOrder: 20, active: true, collapsible: true },
+  { groupKey: "my_work", name: "CÔNG VIỆC", icon: "NV", sortOrder: 15, active: true, collapsible: true },
   { groupKey: "site_command", name: "QUẢN LÝ DỰ ÁN", icon: "DA", sortOrder: 25, active: true, collapsible: true },
-  { groupKey: "purchasing", name: "MUA HÀNG", icon: "MH", sortOrder: 40, active: true, collapsible: true },
-  { groupKey: "warehouse", name: "KHO VẬT TƯ", icon: "KV", sortOrder: 50, active: true, collapsible: true },
-  { groupKey: "material_master", name: "DANH MỤC VẬT TƯ GỐC", icon: "MV", sortOrder: 55, active: true, collapsible: false },
-  { groupKey: "system_admin", name: "QUẢN TRỊ HỆ THỐNG", icon: "QT", sortOrder: 60, active: true, collapsible: true },
+  { groupKey: "mep", name: "MEP", icon: "MEP", sortOrder: 28, active: true, collapsible: true },
+  { groupKey: "purchasing", name: "MUA HÀNG & CUNG ỨNG", icon: "MH", sortOrder: 30, active: true, collapsible: true },
+  { groupKey: "warehouse", name: "KHO VẬT TƯ", icon: "KV", sortOrder: 40, active: true, collapsible: true },
+  { groupKey: "teams", name: "TỔ ĐỘI", icon: "TD", sortOrder: 45, active: true, collapsible: true },
+  { groupKey: "finance", name: "TÀI CHÍNH – KẾ TOÁN", icon: "TC", sortOrder: 50, active: true, collapsible: true },
+  { groupKey: "hr_legal", name: "HÀNH CHÍNH – PHÁP CHẾ", icon: "HC", sortOrder: 55, active: true, collapsible: true },
+  { groupKey: "reports", name: "BÁO CÁO", icon: "BC", sortOrder: 60, active: true, collapsible: true },
+  { groupKey: "material_master", name: "DANH MỤC VẬT TƯ GỐC", icon: "MV", sortOrder: 70, active: true, collapsible: false },
+  { groupKey: "system_admin", name: "QUẢN TRỊ HỆ THỐNG", icon: "QT", sortOrder: 80, active: true, collapsible: true },
 ];
 
 const modules: { key: ModuleKey; label: string; icon: string; groupKey?: string; subGroup?: string }[] = [
@@ -86,7 +93,7 @@ const modules: { key: ModuleKey; label: string; icon: string; groupKey?: string;
   { key: "dept_legal_documents", label: "Văn bản pháp lý", icon: "PL", groupKey: "department_management", subGroup: "Hành chính Pháp chế" },
   { key: "dept_legal_seal", label: "Con dấu / Ủy quyền", icon: "CD", groupKey: "department_management", subGroup: "Hành chính Pháp chế" },
   { key: "dept_legal_benefits", label: "Bảo hiểm & Chế độ", icon: "BH", groupKey: "department_management", subGroup: "Hành chính Pháp chế" },
-  { key: "site_command", label: "Quản lý Ban chỉ huy", icon: "BC", groupKey: "site_command" },
+  { key: "site_command", label: "Quản lý dự án", icon: "BC", groupKey: "site_command" },
   { key: "project_progress", label: "Tiến độ & sản lượng dự án", icon: "TD", groupKey: "project_management" },
   { key: "construction", label: "Thi công", icon: "TC", groupKey: "project_management" },
   { key: "production", label: "Sản lượng", icon: "SL", groupKey: "project_management" },
@@ -163,7 +170,7 @@ const titles: Record<ModuleKey, [string, string]> = {
   dept_legal_documents: ["Văn bản pháp lý", "Hợp đồng, phụ lục, quyết định, giấy phép; theo dõi hiệu lực và file đính kèm"],
   dept_legal_seal: ["Con dấu / Ủy quyền", "Đăng ký con dấu, người quản lý, trạng thái sử dụng"],
   dept_legal_benefits: ["Bảo hiểm & Chế độ", "Theo dõi BHXH/BHYT/BHTN và chế độ theo nhân sự; nhắc gia hạn theo thời hạn"],
-  site_command: ["Ban chỉ huy công trường", "BCH quản lý trực tiếp theo dự án đang hoạt động; thành viên, nhiệm vụ và trạng thái"],
+  site_command: ["Quản lý dự án", "Danh sách dự án được phân quyền: trạng thái, mốc thời gian, số ngày chậm tiến độ, nhân sự, tổ đội, kho và Ban chỉ huy của từng dự án"],
   project_progress: ["Tiến độ dự án", "Theo dõi kế hoạch, thực tế, chênh lệch và mốc tiến độ"],
   construction: ["Thi công", "Nhật ký thi công theo ngày, hạng mục/khối lượng, nhân công; duyệt làm cơ sở nghiệm thu"],
   production: ["Báo cáo sản lượng", "BCH báo cáo theo tháng; Phòng Dự án kiểm tra/phê duyệt và dùng dữ liệu đã duyệt để tính KPI"],
@@ -367,11 +374,14 @@ export default function Home() {
         menuGroups: Array.isArray(result.data?.menuGroups) ? result.data.menuGroups : [],
         moduleCatalog: Array.isArray(result.data?.moduleCatalog) ? result.data.moduleCatalog : [],
         materialCategories: Array.isArray(result.data?.materialCategories) ? result.data.materialCategories : [],
-        adminMaterialCategories: Array.isArray(result.data?.adminMaterialCategories) ? result.data.adminMaterialCategories : [],
+        adminMaterialCategories: Array.isArray(result.data?.adminMaterialCategories) ? result.data.adminMaterialCategories : (Array.isArray(result.data?.materialCategories) ? result.data.materialCategories : []),
         materialSubcategories: Array.isArray(result.data?.materialSubcategories) ? result.data.materialSubcategories : [],
-        adminMaterialSubcategories: Array.isArray(result.data?.adminMaterialSubcategories) ? result.data.adminMaterialSubcategories : [],
+        adminMaterialSubcategories: Array.isArray(result.data?.adminMaterialSubcategories) ? result.data.adminMaterialSubcategories : (Array.isArray(result.data?.materialSubcategories) ? result.data.materialSubcategories : []),
         materials: Array.isArray(result.data?.materials) ? result.data.materials : [],
-        adminMaterials: Array.isArray(result.data?.adminMaterials) ? result.data.adminMaterials : [],
+        // LƯU Ý: server chỉ gửi adminMaterials cho tài khoản quản trị. Với tài khoản thường key vắng mặt,
+        // nên phải fallback về materials TẠI ĐÂY. Nếu để [] thì mọi chỗ dùng `adminMaterials || materials`
+        // sẽ luôn nhận [] (mảng rỗng là truthy) và danh mục hiển thị 0 dòng dù API trả đủ dữ liệu.
+        adminMaterials: Array.isArray(result.data?.adminMaterials) ? result.data.adminMaterials : (Array.isArray(result.data?.materials) ? result.data.materials : []),
         centralInventory: Array.isArray(result.data?.centralInventory) ? result.data.centralInventory : [],
         centralReturns: Array.isArray(result.data?.centralReturns) ? result.data.centralReturns : [],
         companyAvailability: Array.isArray(result.data?.companyAvailability) ? result.data.companyAvailability : [],
@@ -391,6 +401,11 @@ export default function Home() {
         teamProductionRecords: Array.isArray(result.data?.teamProductionRecords) ? result.data.teamProductionRecords : [],
         teamPayments: Array.isArray(result.data?.teamPayments) ? result.data.teamPayments : [],
         teamSettlements: Array.isArray(result.data?.teamSettlements) ? result.data.teamSettlements : [],
+        workflowDefinitions: Array.isArray(result.data?.workflowDefinitions) ? result.data.workflowDefinitions : [],
+        workflowSteps: Array.isArray(result.data?.workflowSteps) ? result.data.workflowSteps : [],
+        workflowStepApprovers: Array.isArray(result.data?.workflowStepApprovers) ? result.data.workflowStepApprovers : [],
+        departmentModulePermissions: Array.isArray(result.data?.departmentModulePermissions) ? result.data.departmentModulePermissions : [],
+        systemLevelCatalog: Array.isArray(result.data?.systemLevelCatalog) ? result.data.systemLevelCatalog : [],
       } as AppData;
       setData(normalizedData); setState("ready");
     } catch (loadError) { setError(loadError instanceof Error ? loadError.message : "Không thể kết nối máy chủ."); setState("error"); }
@@ -454,10 +469,11 @@ const NAV_ICON_TYPE: Record<string,string> = {
   project_progress:"calendar", construction:"hardhat", production:"chart", capital_recovery:"coins", boq:"measure", payments:"wallet", teams:"users",
   requests:"clipboard", approvals:"check", supplier_catalog:"handshake", receiving:"truck", delivered:"deliver",
   warehouse_receipt:"receive", warehouse_issue:"issue", inventory:"transfer", stocktake:"stocktake", material_norms:"ruler", central_warehouse:"warehouse", material_catalog:"boxes",
-  admin:"gear", dept_personal:"user"
+  admin:"gear", dept_personal:"user",
+  my_work:"tasks", mep:"blueprint", finance:"coins", hr_legal:"briefcase", reports:"chart"
 };
 const NAV_ICON_TONE: Record<string,string> = {
-  overview:"blue",dashboard:"blue",department_management:"indigo",site_command:"orange","phòng kế hoạch":"green","phòng dự án":"blue","tài chính kế toán":"orange","hành chính pháp chế":"purple",project_management:"orange",
+  overview:"blue",dashboard:"blue",my_work:"green",mep:"blue",finance:"orange",hr_legal:"purple",reports:"slate",department_management:"indigo",site_command:"orange","phòng kế hoạch":"green","phòng dự án":"blue","tài chính kế toán":"orange","hành chính pháp chế":"purple",project_management:"orange",
   purchasing:"red",warehouse:"purple",system_admin:"slate",admin:"slate",
   project_progress:"orange",construction:"orange",production:"orange",capital_recovery:"orange",boq:"orange",payments:"orange",teams:"orange",
   requests:"red",approvals:"red",receiving:"red",delivered:"red",
@@ -529,7 +545,11 @@ function WarehouseApp({ data, refresh, action, logout, globalError, toast }: { d
   const linkedRequestId = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("request") : null; const linkedRequest = linkedRequestId ? data.requests.find((row) => row.id === linkedRequestId) || null : null;
   const menuGroups = configuredMenuGroups(data);
   const visibleGroupKeys = new Set(menuGroups.map((row) => String(row.groupKey)));
-  const allowedModules = configuredModules(data).filter((item) => (!item.groupKey || visibleGroupKeys.has(String(item.groupKey))));
+  // P2.4 — chỉ hiện chức năng người dùng có quyền XEM. Khi tài khoản chưa được cấu hình
+  // quyền chi tiết (user_module_permissions còn rỗng) thì giữ danh mục theo vai trò,
+  // tránh khoá nhầm toàn bộ người dùng khi hệ thống chưa seed quyền.
+  const permissionConfigured = isAdminUser(data.user) || (data.modulePermissions || []).length > 0;
+  const allowedModules = configuredModules(data).filter((item) => (!item.groupKey || visibleGroupKeys.has(String(item.groupKey))) && (!permissionConfigured || modulePermission(data, item.key).canView));
   const firstModule = allowedModules.find((item)=>item.key==="dashboard")?.key || allowedModules[0]?.key || "dashboard";
   const projectAccessAll=Boolean(data.projectAccessAll);
   const initialProject=data.projects.length===1?String(data.projects[0].id):"ALL";
@@ -607,7 +627,7 @@ function WarehouseApp({ data, refresh, action, logout, globalError, toast }: { d
   const selectedWorkspaceProject = lockedWorkspaceProject ? data.projects.find((item)=>String(item.id)===String(lockedWorkspaceProject)) : null;
   const activeWorkspaceItem = PROJECT_WORKSPACE_ITEMS.find((item)=>item.key===active||(item.related||[]).includes(active));
   const title: [string, string] = selectedWorkspaceProject&&activeWorkspaceItem ? [`${activeWorkspaceItem.label.replace(/^\d+\.\s*/,"")} · ${selectedWorkspaceProject.code}`, moduleUserDescription(active)] : [moduleMeta?.label || titles[active][0], moduleUserDescription(active)];
-  const activePermission = modulePermission(data, active); const canUseActive = activePermission.canUse; const accessDenied = active!=="admin" ? !activePermission.canView : !isAdminUser(data.user); const showDashboardTopbar = active==="dashboard"; const showTopbarSearch = active==="dashboard"; const topbarHasUtility = true; function open(name: string, row?: Row) { setSelected(row ?? null); setModal(name); }
+  const activePermission = modulePermission(data, active); const canUseActive = activePermission.canUse; const accessDenied = active!=="admin" ? (permissionConfigured && !activePermission.canView) : !isAdminUser(data.user); const showDashboardTopbar = active==="dashboard"; const showTopbarSearch = active==="dashboard"; const topbarHasUtility = true; function open(name: string, row?: Row) { setSelected(row ?? null); setModal(name); }
   function badgeFor(key: ModuleKey) { if(key==="dept_plan_tasks") return data.workItems.filter(r=>r.departmentCode==="KH"&&r.assignedTo===data.user.id&&!['COMPLETED','CANCELLED'].includes(String(r.status))).length; if(key==="dept_project_tasks") return data.workItems.filter(r=>r.departmentCode==="DA"&&r.assignedTo===data.user.id&&!['COMPLETED','CANCELLED'].includes(String(r.status))).length; return key === "approvals" ? pendingForRole(data.requests, data.user, data.approvalStages) : key === "purchasing" ? data.requests.filter((row) => row.supplyStatus === "awaiting_po").length : key === "receiving" ? data.receipts.filter((row) => row.bchConfirmationStatus === "pending").length : 0; }
   function toggleGroup(groupKey: string) { setOpenGroups((current) => current.includes(groupKey) ? current.filter((key) => key !== groupKey) : [groupKey]); }
   const projectWorkspaceItems = PROJECT_WORKSPACE_ITEMS.filter((item)=>allowedModules.some((module)=>module.key===item.key));
@@ -633,7 +653,7 @@ function WarehouseApp({ data, refresh, action, logout, globalError, toast }: { d
           {groupBadge > 0 && <b>{groupBadge}</b>}
           <em aria-hidden="true">{group.collapsible ? (opened ? "⌃" : "⌄") : ""}</em>
         </button>
-        {(opened || sidebarCollapsed) && groupKey!=="material_master" && <div className="nav-children" data-nav-label={group.name}>{groupKey === "department_management" ? ["Phòng Kế hoạch","Phòng Dự án","Tài chính Kế toán","Hành chính Pháp chế"].map((subGroup) => { const items=group.children.filter((item)=>item.subGroup===subGroup); if(!items.length)return null; const subOpen=openDeptSubgroups.includes(subGroup); const subActive=items.some(item=>item.key===active); const deptTone=subGroup==="Phòng Kế hoạch"?"plan":subGroup==="Phòng Dự án"?"project":subGroup==="Tài chính Kế toán"?"finance":"legal"; return <div className={`nav-subgroup nav-subgroup-${deptTone} ${subActive?"has-active":""} ${subOpen?"is-open":"is-closed"}`} data-dept={deptTone} key={subGroup}><button type="button" className="nav-parent nav-subgroup-toggle" aria-expanded={subOpen} aria-controls={`dept-submenu-${subGroup}`} onClick={(event)=>{event.preventDefault();event.stopPropagation();toggleDeptSubgroup(subGroup);}}><NavIcon name={subGroup} kind="group"/><span className="nav-subgroup-title"><strong>{subGroup}</strong></span><span className="dept-chevron" aria-hidden="true">{subOpen?"⌃":"⌄"}</span></button><div id={`dept-submenu-${subGroup}`} className="nav-subgroup-items" hidden={!subOpen&&!sidebarCollapsed}>{items.map((item)=>{const badge=badgeFor(item.key);return <button type="button" key={item.key} className={`nav-child nav-child-dept-${deptTone} ${active===item.key?"active":""} ${DEVELOPMENT_MODULES.has(item.key)?"is-development":""}`} onClick={()=>activateModule(item.key)}><NavIcon name={item.key}/><span>{item.label}</span>{badge>0&&<b>{badge}</b>}</button>;})}</div></div>; }) : groupKey==="site_command" ? data.projects.filter((p)=>String(p.status||"active")==="active").length===0?<div className="project-workspace-empty"><span className="muted">Chưa có dự án đang hoạt động — hãy tạo dự án đầu tiên qua Quản trị hệ thống để mở menu này.</span></div>:<>{data.projects.filter((p)=>String(p.status||"active")==="active").map((p)=>{const projectId=String(p.id);const projectOpen=openProjectNodeId===projectId||lockedWorkspaceProject===projectId;const projectActive=lockedWorkspaceProject===projectId&&PROJECT_WORKSPACE_CONTEXT_KEYS.has(active);return <div className={`nav-subgroup project-workspace-node ${projectActive?"has-active":""} ${projectOpen?"is-open":"is-closed"}`} key={`project-${p.id}`}><button type="button" className="nav-parent nav-subgroup-toggle project-workspace-toggle" aria-expanded={projectOpen} onClick={(event)=>{event.preventDefault();event.stopPropagation();setOpenProjectNodeId((current)=>current===projectId?null:projectId);}}><NavIcon name="site_command" kind="group"/><span className="nav-subgroup-title"><strong>{`${p.code} · ${p.name}`}</strong></span><span className="dept-chevron" aria-hidden="true">{projectOpen?"⌃":"⌄"}</span></button><div className="nav-subgroup-items project-workspace-items" hidden={!projectOpen}>{projectWorkspaceItems.map((item)=>{const itemActive=lockedWorkspaceProject===projectId&&(active===item.key||(item.related||[]).includes(active));return <button type="button" key={`${projectId}-${item.key}`} className={`nav-child nav-child-project-workspace ${itemActive?"active":""} ${DEVELOPMENT_MODULES.has(item.key)?"is-development":""}`} onClick={()=>activateProjectModule(projectId,item.key)}><NavIcon name={item.key}/><span>{item.label}</span></button>;})}</div></div>;})}</> : group.children.map((item) => { const badge = badgeFor(item.key); return <button type="button" key={item.key} className={`nav-child nav-child-${groupKey} ${active===item.key?"active":""} ${DEVELOPMENT_MODULES.has(item.key)?"is-development":""}`} onClick={() => activateModule(item.key)}><NavIcon name={item.key}/><span>{item.label}</span>{badge > 0 && <b>{badge}</b>}</button>; })}</div>}
+        {(opened || sidebarCollapsed) && groupKey!=="material_master" && <div className="nav-children" data-nav-label={group.name}>{groupKey === "department_management" ? ["Phòng Kế hoạch","Phòng Dự án","Tài chính Kế toán","Hành chính Pháp chế"].map((subGroup) => { const items=group.children.filter((item)=>item.subGroup===subGroup); if(!items.length)return null; const subOpen=openDeptSubgroups.includes(subGroup); const subActive=items.some(item=>item.key===active); const deptTone=subGroup==="Phòng Kế hoạch"?"plan":subGroup==="Phòng Dự án"?"project":subGroup==="Tài chính Kế toán"?"finance":"legal"; return <div className={`nav-subgroup nav-subgroup-${deptTone} ${subActive?"has-active":""} ${subOpen?"is-open":"is-closed"}`} data-dept={deptTone} key={subGroup}><button type="button" className="nav-parent nav-subgroup-toggle" aria-expanded={subOpen} aria-controls={`dept-submenu-${subGroup}`} onClick={(event)=>{event.preventDefault();event.stopPropagation();toggleDeptSubgroup(subGroup);}}><NavIcon name={subGroup} kind="group"/><span className="nav-subgroup-title"><strong>{subGroup}</strong></span><span className="dept-chevron" aria-hidden="true">{subOpen?"⌃":"⌄"}</span></button><div id={`dept-submenu-${subGroup}`} className="nav-subgroup-items" hidden={!subOpen&&!sidebarCollapsed}>{items.map((item)=>{const badge=badgeFor(item.key);return <button type="button" key={item.key} className={`nav-child nav-child-dept-${deptTone} ${active===item.key?"active":""} ${DEVELOPMENT_MODULES.has(item.key)?"is-development":""}`} onClick={()=>activateModule(item.key)}><NavIcon name={item.key}/><span>{item.label}</span>{badge>0&&<b>{badge}</b>}</button>;})}</div></div>; }) : groupKey==="__site_command_tree_disabled__" ? data.projects.filter((p)=>String(p.status||"active")==="active").length===0?<div className="project-workspace-empty"><span className="muted">Chưa có dự án đang hoạt động — hãy tạo dự án đầu tiên qua Quản trị hệ thống để mở menu này.</span></div>:<>{data.projects.filter((p)=>String(p.status||"active")==="active").map((p)=>{const projectId=String(p.id);const projectOpen=openProjectNodeId===projectId||lockedWorkspaceProject===projectId;const projectActive=lockedWorkspaceProject===projectId&&PROJECT_WORKSPACE_CONTEXT_KEYS.has(active);return <div className={`nav-subgroup project-workspace-node ${projectActive?"has-active":""} ${projectOpen?"is-open":"is-closed"}`} key={`project-${p.id}`}><button type="button" className="nav-parent nav-subgroup-toggle project-workspace-toggle" aria-expanded={projectOpen} onClick={(event)=>{event.preventDefault();event.stopPropagation();setOpenProjectNodeId((current)=>current===projectId?null:projectId);}}><NavIcon name="site_command" kind="group"/><span className="nav-subgroup-title"><strong>{`${p.code} · ${p.name}`}</strong></span><span className="dept-chevron" aria-hidden="true">{projectOpen?"⌃":"⌄"}</span></button><div className="nav-subgroup-items project-workspace-items" hidden={!projectOpen}>{projectWorkspaceItems.map((item)=>{const itemActive=lockedWorkspaceProject===projectId&&(active===item.key||(item.related||[]).includes(active));return <button type="button" key={`${projectId}-${item.key}`} className={`nav-child nav-child-project-workspace ${itemActive?"active":""} ${DEVELOPMENT_MODULES.has(item.key)?"is-development":""}`} onClick={()=>activateProjectModule(projectId,item.key)}><NavIcon name={item.key}/><span>{item.label}</span></button>;})}</div></div>;})}</> : group.children.map((item) => { const badge = badgeFor(item.key); return <button type="button" key={item.key} className={`nav-child nav-child-${groupKey} ${active===item.key?"active":""} ${DEVELOPMENT_MODULES.has(item.key)?"is-development":""}`} onClick={() => activateModule(item.key)}><NavIcon name={item.key}/><span>{item.label}</span>{badge > 0 && <b>{badge}</b>}</button>; })}</div>}
       </section>;
     })}
   <button type="button" className="sidebar-collapse-toggle" onClick={()=>setSidebarCollapsed(value=>!value)} aria-label={sidebarCollapsed?"Mở rộng menu":"Thu gọn menu"} title={sidebarCollapsed?"Mở rộng menu":"Thu gọn menu"}><span aria-hidden="true">{sidebarCollapsed?"»":"«"}</span><b>{sidebarCollapsed?"MỞ MENU":"THU GỌN MENU"}</b></button></nav><div className="server-status" title={VNTECH_BRAND.legalOwner}><span /><div><strong>Máy chủ công ty</strong><small>Hệ thống nội bộ</small></div></div></aside>{mobileNavOpen&&<><div className="mobile-nav-backdrop" onClick={()=>setMobileNavOpen(false)} aria-hidden="true"/><div className={`mobile-nav-panel ${mobileDepartmentExpanded?"mobile-nav-expanded":"mobile-nav-root"}`} data-contract="VNTECH_MOBILE_NAV_STATES_ROOT_EXPANDED VNTECH_FULL_W2_MOBILE_NAV VNTECH_FULL_MOBILE_NAV_INTERACTION"><div className="mobile-nav-head"><div><img src={VNTECH_BRAND.logoPath} alt="VNTECH"/></div><button onClick={()=>setMobileNavOpen(false)} aria-label="Đóng menu">×</button></div><div className="mobile-nav-list mobile-nav-tree"><button type="button" className={`mobile-nav-dashboard ${active==="dashboard"?"active":""}`} aria-current={active==="dashboard"?"page":undefined} onClick={()=>{activateModule("dashboard");setMobileNavOpen(false);}}><NavIcon name="dashboard"/><span>TỔNG QUAN ĐIỀU HÀNH</span><em>›</em></button>{groupTree.filter((group)=>String(group.groupKey)!=="overview").map((group)=>{
@@ -647,15 +667,16 @@ function WarehouseApp({ data, refresh, action, logout, globalError, toast }: { d
           if(groupKey==="material_master")return <button type="button" key={groupKey} className={`mobile-nav-parent mobile-nav-direct ${active==="material_catalog"?"active":""}`} aria-current={active==="material_catalog"?"page":undefined} onClick={()=>{activateModule("material_catalog");setMobileNavOpen(false);}}><NavIcon name={groupKey} kind="group"/><span>{group.name}</span><em>›</em></button>;
           if(directChild)return <button type="button" key={groupKey} className={`mobile-nav-parent mobile-nav-direct ${active===directChild.key?"active":""}`} aria-current={active===directChild.key?"page":undefined} onClick={()=>{activateModule(directChild.key);setMobileNavOpen(false);}}><NavIcon name={groupKey} kind="group"/><span>{group.name}</span>{groupBadge>0&&<b>{groupBadge}</b>}<em>›</em></button>;
           // Project management always stays expandable because each project owns its own workspace tree.
-          return <section key={groupKey} className={`mobile-nav-group ${childActive?"has-active":""}`} data-nav-action="expand"><button type="button" className="mobile-nav-parent mobile-nav-expand-only" onClick={()=>{if(groupKey==="department_management")setMobileDepartmentExpanded(value=>!value);else toggleGroup(groupKey);}} aria-expanded={opened} aria-label={`${opened?"Thu gọn":"Mở rộng"} ${group.name}`}><NavIcon name={groupKey} kind="group"/><span>{group.name}</span>{groupBadge>0&&<b>{groupBadge}</b>}<em>{opened?"⌃":"⌄"}</em></button>{opened&&<div className="mobile-nav-children">{groupKey==="department_management"?["Phòng Kế hoạch","Phòng Dự án","Tài chính Kế toán","Hành chính Pháp chế"].map((subGroup)=>{const items=group.children.filter((item)=>item.subGroup===subGroup);if(!items.length)return null;const subOpen=openDeptSubgroups.includes(subGroup);const subActive=items.some((item)=>item.key===active);return <section key={subGroup} className={`mobile-nav-subgroup ${subActive?"has-active":""}`} data-nav-action="expand"><button type="button" className="mobile-nav-subgroup-toggle mobile-nav-expand-only" onClick={()=>toggleDeptSubgroup(subGroup)} aria-expanded={subOpen} aria-label={`${subOpen?"Thu gọn":"Mở rộng"} ${subGroup}`}><NavIcon name={subGroup} kind="group"/><span>{subGroup}</span><em>{subOpen?"⌃":"⌄"}</em></button>{subOpen&&<div className="mobile-nav-grandchildren">{items.map((item)=>{const badge=badgeFor(item.key);return <button type="button" key={item.key} className={active===item.key?"active":""} aria-current={active===item.key?"page":undefined} data-nav-action="navigate" onClick={()=>{activateModule(item.key);setMobileNavOpen(false);}}><span>{item.label}</span>{badge>0&&<b>{badge}</b>}<em aria-hidden="true">›</em></button>;})}</div>}</section>;}) : groupKey==="site_command" ? activeSiteProjects.map((p)=>{const projectId=String(p.id);const projectOpen=openProjectNodeId===projectId||lockedWorkspaceProject===projectId;const projectActive=lockedWorkspaceProject===projectId&&PROJECT_WORKSPACE_CONTEXT_KEYS.has(active);return <section key={`mobile-project-${p.id}`} className={`mobile-nav-subgroup project-workspace-mobile ${projectActive?"has-active":""}`} data-nav-action="expand"><button type="button" className="mobile-nav-subgroup-toggle mobile-nav-expand-only" onClick={()=>setOpenProjectNodeId((current)=>current===projectId?null:projectId)} aria-expanded={projectOpen}><NavIcon name="site_command" kind="group"/><span>{`${p.code} · ${p.name}`}</span><em>{projectOpen?"⌃":"⌄"}</em></button>{projectOpen&&<div className="mobile-nav-grandchildren">{projectWorkspaceItems.map((item)=>{const itemActive=lockedWorkspaceProject===projectId&&(active===item.key||(item.related||[]).includes(active));return <button type="button" key={`${projectId}-${item.key}`} className={itemActive?"active":""} aria-current={itemActive?"page":undefined} data-nav-action="navigate" onClick={()=>{activateProjectModule(projectId,item.key);setMobileNavOpen(false);}}><span>{item.label}</span><em aria-hidden="true">›</em></button>;})}</div>}</section>;}) : group.children.map((item)=>{const badge=badgeFor(item.key);return <button type="button" key={item.key} className={active===item.key?"active":""} aria-current={active===item.key?"page":undefined} data-nav-action="navigate" onClick={()=>{activateModule(item.key);setMobileNavOpen(false);}}><span>{item.label}</span>{badge>0&&<b>{badge}</b>}<em aria-hidden="true">›</em></button>;})}</div>}</section>;
+          return <section key={groupKey} className={`mobile-nav-group ${childActive?"has-active":""}`} data-nav-action="expand"><button type="button" className="mobile-nav-parent mobile-nav-expand-only" onClick={()=>{if(groupKey==="department_management")setMobileDepartmentExpanded(value=>!value);else toggleGroup(groupKey);}} aria-expanded={opened} aria-label={`${opened?"Thu gọn":"Mở rộng"} ${group.name}`}><NavIcon name={groupKey} kind="group"/><span>{group.name}</span>{groupBadge>0&&<b>{groupBadge}</b>}<em>{opened?"⌃":"⌄"}</em></button>{opened&&<div className="mobile-nav-children">{groupKey==="department_management"?["Phòng Kế hoạch","Phòng Dự án","Tài chính Kế toán","Hành chính Pháp chế"].map((subGroup)=>{const items=group.children.filter((item)=>item.subGroup===subGroup);if(!items.length)return null;const subOpen=openDeptSubgroups.includes(subGroup);const subActive=items.some((item)=>item.key===active);return <section key={subGroup} className={`mobile-nav-subgroup ${subActive?"has-active":""}`} data-nav-action="expand"><button type="button" className="mobile-nav-subgroup-toggle mobile-nav-expand-only" onClick={()=>toggleDeptSubgroup(subGroup)} aria-expanded={subOpen} aria-label={`${subOpen?"Thu gọn":"Mở rộng"} ${subGroup}`}><NavIcon name={subGroup} kind="group"/><span>{subGroup}</span><em>{subOpen?"⌃":"⌄"}</em></button>{subOpen&&<div className="mobile-nav-grandchildren">{items.map((item)=>{const badge=badgeFor(item.key);return <button type="button" key={item.key} className={active===item.key?"active":""} aria-current={active===item.key?"page":undefined} data-nav-action="navigate" onClick={()=>{activateModule(item.key);setMobileNavOpen(false);}}><span>{item.label}</span>{badge>0&&<b>{badge}</b>}<em aria-hidden="true">›</em></button>;})}</div>}</section>;}) : groupKey==="__site_command_tree_disabled__" ? activeSiteProjects.map((p)=>{const projectId=String(p.id);const projectOpen=openProjectNodeId===projectId||lockedWorkspaceProject===projectId;const projectActive=lockedWorkspaceProject===projectId&&PROJECT_WORKSPACE_CONTEXT_KEYS.has(active);return <section key={`mobile-project-${p.id}`} className={`mobile-nav-subgroup project-workspace-mobile ${projectActive?"has-active":""}`} data-nav-action="expand"><button type="button" className="mobile-nav-subgroup-toggle mobile-nav-expand-only" onClick={()=>setOpenProjectNodeId((current)=>current===projectId?null:projectId)} aria-expanded={projectOpen}><NavIcon name="site_command" kind="group"/><span>{`${p.code} · ${p.name}`}</span><em>{projectOpen?"⌃":"⌄"}</em></button>{projectOpen&&<div className="mobile-nav-grandchildren">{projectWorkspaceItems.map((item)=>{const itemActive=lockedWorkspaceProject===projectId&&(active===item.key||(item.related||[]).includes(active));return <button type="button" key={`${projectId}-${item.key}`} className={itemActive?"active":""} aria-current={itemActive?"page":undefined} data-nav-action="navigate" onClick={()=>{activateProjectModule(projectId,item.key);setMobileNavOpen(false);}}><span>{item.label}</span><em aria-hidden="true">›</em></button>;})}</div>}</section>;}) : group.children.map((item)=>{const badge=badgeFor(item.key);return <button type="button" key={item.key} className={active===item.key?"active":""} aria-current={active===item.key?"page":undefined} data-nav-action="navigate" onClick={()=>{activateModule(item.key);setMobileNavOpen(false);}}><span>{item.label}</span>{badge>0&&<b>{badge}</b>}<em aria-hidden="true">›</em></button>;})}</div>}</section>;
         })}</div><button type="button" className="mobile-nav-collapse" onClick={()=>setMobileNavOpen(false)}><span aria-hidden="true">«</span><b>THU GỌN MENU</b></button><div className="mobile-display-settings"><button onClick={()=>setAppearance(value=>value==="dark"?"light":"dark")}><span>GIAO DIỆN</span><b>{appearance==="light"?"☀ SÁNG":"☾ TỐI"}</b></button><button onClick={()=>setUiDensity(v=>v==="normal"?"comfortable":v==="comfortable"?"compact":"normal")}><span>MẬT ĐỘ</span><b>{uiDensity==="comfortable"?"THOÁNG":uiDensity==="compact"?"CHẶT":"VỪA"}</b></button></div><div className="mobile-server-status"><i/><div><strong>Máy chủ công ty</strong><small>Hệ thống nội bộ</small></div></div></div></>}<main><header className={`topbar vntech-app-header ${showDashboardTopbar?"topbar-dashboard":"topbar-contextual"}`}><img className="topbar-city-art topbar-city-light" src="/vntech-header-city-light.webp" alt="" aria-hidden="true"/><img className="topbar-city-art topbar-city-dark" src="/vntech-header-city-dark.webp" alt="" aria-hidden="true"/><button className={`mobile-nav-toggle ${mobileNavOpen?"is-open":""}`} onClick={()=>setMobileNavOpen(value=>!value)} aria-label={mobileNavOpen?"Đóng menu":"Mở menu"}>{mobileNavOpen?"×":"☰"}</button><div className="mobile-brand-lockup"><img src={VNTECH_BRAND.logoPath} alt="VNTECH"/></div>{showTopbarSearch&&<form className="global-search" onSubmit={submitGlobalSearch}><button type="submit" className="global-search-icon" aria-label="Tìm kiếm" title="Tìm kiếm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg></button><input value={search} onFocus={()=>setSearchOpen(true)} onChange={(event) => {setSearch(event.target.value);setSearchOpen(true);}} placeholder="TÌM NHANH DỰ ÁN, PHIẾU, PO, VẬT TƯ…" />{searchOpen&&search.trim().length>=2&&<div className="global-search-results">{globalSearchResults.map((r,index)=><button type="button" key={`${r.type}-${r.id}-${index}`} onClick={()=>openSearchResult(r)}><b>{r.type}</b><span>{r.title}</span><small>{r.subtitle}</small></button>)}{!globalSearchResults.length&&<p>Không tìm thấy dữ liệu trong phạm vi quyền hiện tại.</p>}</div>}</form>}{!topbarHasUtility&&<div className="topbar-context-fill" aria-hidden="true"><i/><i/></div>}<div className="topbar-actions"><button className="theme-switch" onClick={()=>setAppearance(value=>value==="dark"?"light":"dark")} title={`Giao diện: ${appearance==="light"?"Sáng":"Tối"}`}><span>☀</span><i className={appearance==="dark"?"dark":"light"}></i><span>☾</span></button><div className="task-notify-wrap"><button className="notify-button" title="Thông báo" onClick={()=>setNotifyOpen(v=>!v)}><NavIcon name="dept_plan_alerts"/>{notificationCount>0&&<b>{notificationCount>99?"99+":notificationCount}</b>}</button>{notifyOpen&&<div className="task-notify-popover" role="dialog" aria-label="Thông báo công việc"><header><strong>Thông báo công việc</strong><span>{notificationCount} cần xử lý</span><button type="button" className="notify-close" aria-label="Đóng thông báo" onClick={()=>setNotifyOpen(false)}>×</button></header>{actionableApprovalNotifications.slice(0,5).map((r:Row)=><button key={`approval-${r.id}`} className="approval-notice" onClick={()=>{setNotifyOpen(false);setActive("approvals");open("detail",r);}}><b>Phiếu chờ duyệt · {r.requestNo}</b><span>{r.projectCode} · Bước {r.approvalStage} · {statusLabel(r)}</span><small>{date(r.requestedAt)}</small></button>)}{data.taskNotifications.slice(0,8).map(n=><button key={n.id} className={n.readAt?"read":""} onClick={async()=>{await action("mark_task_notification_read",{notificationId:n.id});setNotifyOpen(false);const task=data.workItems.find(t=>t.id===n.workItemId);if(task)setActive(task.departmentCode==="KH"?"dept_plan_tasks":"dept_project_tasks");}}><b>{n.title}</b><span>{n.body}</span><small>{date(n.createdAt)}</small></button>)}{notificationCount===0&&<p>Chưa có thông báo hoặc phiếu cần xử lý.</p>}</div>}</div></div><div className="user-menu"><button onClick={() => setMenuOpen((value) => !value)}><span className="header-user-avatar">{data.user.avatarUrl?<img src={String(data.user.avatarUrl)} alt="Ảnh đại diện"/>:initials(data.user.fullName)}</span><div><strong>{data.user.fullName}</strong><small>{roleLabel(data, data.user.role)}</small></div><i>⌄</i></button>{menuOpen && <div className="user-popover"><div className="popover-setting"><span>CỠ CHỮ</span><div><button className={fontScale===0.94?"active":""} onClick={()=>setFontScale(0.94)}>A−</button><button className={fontScale===1?"active":""} onClick={()=>setFontScale(1)}>A</button><button className={fontScale===1.12?"active":""} onClick={()=>setFontScale(1.12)}>A+</button></div></div><div className="popover-setting"><span>MẬT ĐỘ DỮ LIỆU</span><div><button className={uiDensity==="comfortable"?"active":""} onClick={()=>setUiDensity("comfortable")}>THOÁNG</button><button className={uiDensity==="normal"?"active":""} onClick={()=>setUiDensity("normal")}>VỪA</button><button className={uiDensity==="compact"?"active":""} onClick={()=>setUiDensity("compact")}>CHẶT</button></div></div><button onClick={() => { open("accountSettings"); setMenuOpen(false); }}>Cài đặt tài khoản</button><button onClick={logout}>Đăng xuất</button></div>}</div></header><div className={`main-content ${showDashboardTopbar?"main-content-dashboard":""}`}> <section className="page-heading"><div>{showDashboardTopbar&&<p>VNTECH ERP <span>/</span> {title[0]}</p>}<h1>{title[0]}</h1><small>{title[1]}</small></div></section>{isAdminUser(data.user)&&<AdminModuleGuide moduleKey={active}/>} {accessDenied?<AccessDeniedPanel/>:<>{!["material_catalog","central_warehouse","admin"].includes(active)&&(activeProjectWorkspace&&selectedWorkspaceProject?<div className="inline-alert project-context-lock"><strong>DỰ ÁN ĐANG LÀM VIỆC · {selectedWorkspaceProject.code} · {selectedWorkspaceProject.name}</strong><span>Phạm vi đã khóa theo workspace dự án; BOQ, nhu cầu, kho và tài chính dùng cùng projectId.</span></div>:<ProjectScopeSelect projects={data.projects} project={project} onChange={setProject} allowAll={data.projects.length>1}/>)} {activeProjectWorkspace&&selectedWorkspaceProject&&workspaceNeedTabs.includes(active)&&<div className="row-actions project-workspace-tabs" aria-label="Liên kết Đề xuất và Nhu cầu"><button className={active==="requests"?"primary":"secondary"} onClick={()=>activateProjectModule(String(lockedWorkspaceProject),"requests")}>Đề nghị mua hàng</button>{workspaceNeedTabs.includes("inventory")&&<button className={active==="inventory"?"primary":"secondary"} onClick={()=>activateProjectModule(String(lockedWorkspaceProject),"inventory")}>Tồn kho / Điều chuyển</button>}{workspaceNeedTabs.includes("warehouse_issue")&&<button className={active==="warehouse_issue"?"primary":"secondary"} onClick={()=>activateProjectModule(String(lockedWorkspaceProject),"warehouse_issue")}>Cấp phát kho</button>}{workspaceNeedTabs.includes("material_norms")&&<button className={active==="material_norms"?"primary":"secondary"} onClick={()=>activateProjectModule(String(lockedWorkspaceProject),"material_norms")}>Định mức dự án</button>}</div>}{activeProjectWorkspace&&selectedWorkspaceProject&&workspaceFinanceTabs.includes(active)&&<div className="row-actions project-workspace-tabs" aria-label="Tài chính và Thanh quyết toán"><button className={active==="capital_recovery"?"primary":"secondary"} onClick={()=>activateProjectModule(String(lockedWorkspaceProject),"capital_recovery")}>Thu hồi vốn</button>{workspaceFinanceTabs.includes("payments")&&<button className={active==="payments"?"primary":"secondary"} onClick={()=>activateProjectModule(String(lockedWorkspaceProject),"payments")}>Thanh toán HĐ</button>}</div>} {DEVELOPMENT_MODULES.has(active)&&active!=="boq"&&<DevelopmentNotice/>}{globalError && <div className="inline-alert danger">{globalError}</div>}
     
-    {active === "dashboard" && <Dashboard data={data} project={project} navigate={setActive} open={open} />}{active === "project_progress" && <ProjectProgress data={data} project={project} onProject={setProject} />}{active.startsWith("dept_plan_") && <DepartmentTaskWorkspace data={data} department="KH" moduleKey={active} project={project} onProject={setProject} action={action} navigate={setActive} />}{active.startsWith("dept_project_") && <DepartmentTaskWorkspace data={data} department="DA" moduleKey={active} project={project} onProject={setProject} action={action} navigate={setActive} />}{active === "construction" && <ConstructionScreen data={data} project={project} action={action} permission={activePermission} />}{active === "dept_finance_recovery" && <FinanceRecoveryScreen data={data} project={project} action={action} />}{active === "dept_legal_hr" && <HrScreen data={data} project={project} action={action} permission={activePermission} />}{active === "dept_legal_labor" && <LaborScreen data={data} project={project} action={action} permission={activePermission} />}{active === "dept_legal_correspondence" && <CorrespondenceScreen data={data} project={project} action={action} permission={activePermission} />}{active === "dept_legal_documents" && <LegalDocsScreen data={data} project={project} action={action} permission={activePermission} />}{active === "dept_legal_seal" && <SealScreen data={data} project={project} action={action} permission={activePermission} />}{active === "dept_legal_benefits" && <BenefitsScreen data={data} project={project} action={action} permission={activePermission} />}{active === "dept_finance_documents" && <DocumentsScreen data={data} project={project} action={action} permission={activePermission} />}{active === "dept_finance_cashbank" && <CashbankScreen data={data} project={project} action={action} permission={activePermission} />}{active === "dept_finance_site_cost" && <SiteCostScreen data={data} project={project} action={action} permission={activePermission} />}{active === "dept_finance_advance" && <AdvanceScreen data={data} project={project} action={action} permission={activePermission} />}{active === "dept_finance_payment_plan" && <PaymentPlanScreen data={data} project={project} action={action} permission={activePermission} />}{active === "material_norms" && <MaterialNormsScreen data={data} project={project} action={action} permission={activePermission} />}{active.startsWith("dept_finance_")||active.startsWith("dept_legal_") ? <DevelopmentModule title={title[0]} note={title[1]} /> : null}{active === "site_command" && <SiteCommandScreen data={data} project={project} action={action} />}{active === "production" && <ProductionReports data={data} project={project} action={action} permission={activePermission} />}{active === "capital_recovery" && <CapitalRecovery data={data} project={project} action={action} permission={activePermission} />}{active === "requests" && <Requests rows={filteredRequests} projects={data.projects} project={project} onProject={setProject} open={open} inventory={data.inventory} exportRows={() => exportRequestsXlsx(filteredRequests)} />}{active === "approvals" && <Approvals data={data} rows={data.requests.filter((row)=>(project==="ALL"||row.projectId===project))} projects={data.projects} project={project} onProject={setProject} user={data.user} action={action} open={open} canUse={canUseActive} refresh={refresh} />}{active === "purchasing" && <Purchasing data={data} project={project} open={open} action={action} canUse={canUseActive} />}{active === "supplier_catalog" && <SupplierManager data={data} action={action} />}{active === "receiving" && <Receiving data={data} project={project} open={open} canUse={canUseActive} />}{active === "delivered" && <Delivered data={data} project={project} open={open} />}{active === "warehouse_receipt" && <WarehouseReceipt data={data} project={project} open={open} canUse={canUseActive} />}{active === "warehouse_issue" && <WarehouseIssueTeams data={data} project={project} open={open} canUse={canUseActive} />}{active === "inventory" && <Inventory data={data} project={project} open={open} />}{active === "central_warehouse" && <CentralWarehouse data={data} open={open} action={action} permission={activePermission} />}{active === "material_catalog" && <MaterialCatalogPage data={data} open={open} action={action} permission={activePermission} />}{active === "boq" && <BoqControl data={data} project={project} open={open} action={action} canUse={canUseActive} />}{active === "payments" && <Payments data={data} project={project} action={action} canCreate={Boolean(activePermission.canCreate)} canEdit={Boolean(activePermission.canEdit)} refresh={refresh} />}{active === "teams" && <ProjectTeams data={data} project={project} open={open} action={action} />}{active === "stocktake" && <Stocktake data={data} open={open} action={action} canUse={canUseActive} />}{active === "reports" && <Reports data={data} project={project} />}{active === "admin" && isAdminUser(data.user) && <Admin data={data} open={open} action={action} />}</>}</div><footer className="vntech-product-footer" data-product-id={VNTECH_BRAND.productId}><span>{VNTECH_BRAND.copyright}</span><b>VNTECH ERP</b></footer></main>
-    {selected && modal === "detail" && <RequestDrawer data={data} request={selected} approvalStages={data.approvalStages} close={() => { setModal(null); if (new URLSearchParams(window.location.search).has("request")) window.history.replaceState({}, "", window.location.pathname); }} action={action} user={data.user} />}
+    {active === "dashboard" && <Dashboard data={data} project={project} navigate={setActive} open={open} />}{active === "site_command" && <ProjectManagement data={data} project={project} onProject={setProject} open={open} action={action} />}{active === "project_progress" && <ProjectProgress data={data} project={project} onProject={setProject} />}{/* GĐ4 — hai module "Nhiệm vụ nhân viên đang làm" nay dùng màn CÔNG VIỆC thống nhất */}
+    {(active === "dept_plan_tasks" || active === "dept_project_tasks") && <WorkCenter data={data} action={action} refresh={refresh} />}{active.startsWith("dept_plan_") && active !== "dept_plan_tasks" && <DepartmentTaskWorkspace data={data} department="KH" moduleKey={active} project={project} onProject={setProject} action={action} navigate={setActive} />}{active.startsWith("dept_project_") && active !== "dept_project_tasks" && <DepartmentTaskWorkspace data={data} department="DA" moduleKey={active} project={project} onProject={setProject} action={action} navigate={setActive} />}{active === "construction" && <ConstructionScreen data={data} project={project} action={action} permission={activePermission} />}{active === "dept_finance_recovery" && <FinanceRecoveryScreen data={data} project={project} action={action} />}{active === "dept_legal_hr" && <HrScreen data={data} project={project} action={action} permission={activePermission} open={open} />}{active === "dept_legal_labor" && <LaborScreen data={data} project={project} action={action} permission={activePermission} />}{active === "dept_legal_correspondence" && <CorrespondenceScreen data={data} project={project} action={action} permission={activePermission} />}{active === "dept_legal_documents" && <LegalDocsScreen data={data} project={project} action={action} permission={activePermission} />}{active === "dept_legal_seal" && <SealScreen data={data} project={project} action={action} permission={activePermission} />}{active === "dept_legal_benefits" && <BenefitsScreen data={data} project={project} action={action} permission={activePermission} />}{active === "dept_finance_documents" && <DocumentsScreen data={data} project={project} action={action} permission={activePermission} />}{active === "dept_finance_cashbank" && <CashbankScreen data={data} project={project} action={action} permission={activePermission} />}{active === "dept_finance_site_cost" && <SiteCostScreen data={data} project={project} action={action} permission={activePermission} />}{active === "dept_finance_advance" && <AdvanceScreen data={data} project={project} action={action} permission={activePermission} />}{active === "dept_finance_payment_plan" && <PaymentPlanScreen data={data} project={project} action={action} permission={activePermission} />}{active === "material_norms" && <MaterialNormsScreen data={data} project={project} action={action} permission={activePermission} />}{active.startsWith("dept_finance_")||active.startsWith("dept_legal_") ? <DevelopmentModule title={title[0]} note={title[1]} /> : null}{active === "site_command" && <SiteCommandScreen data={data} project={project} action={action} />}{active === "production" && <ProductionReports data={data} project={project} action={action} permission={activePermission} />}{active === "capital_recovery" && <CapitalRecovery data={data} project={project} action={action} permission={activePermission} />}{active === "requests" && <Requests rows={filteredRequests} projects={data.projects} project={project} onProject={setProject} open={open} inventory={data.inventory} exportRows={() => exportRequestsXlsx(filteredRequests)} />}{active === "approvals" && <Approvals data={data} rows={data.requests.filter((row)=>(project==="ALL"||row.projectId===project))} projects={data.projects} project={project} onProject={setProject} user={data.user} action={action} open={open} canUse={canUseActive} refresh={refresh} />}{active === "purchasing" && <Purchasing data={data} project={project} open={open} action={action} canUse={canUseActive} />}{active === "supplier_catalog" && <SupplierManager data={data} action={action} />}{active === "receiving" && <Receiving data={data} project={project} open={open} canUse={canUseActive} />}{active === "delivered" && <Delivered data={data} project={project} open={open} />}{active === "warehouse_receipt" && <WarehouseReceipt data={data} project={project} open={open} canUse={canUseActive} />}{active === "warehouse_issue" && <WarehouseIssueTeams data={data} project={project} open={open} canUse={canUseActive} />}{active === "inventory" && <Inventory data={data} project={project} open={open} />}{active === "central_warehouse" && <CentralWarehouse data={data} open={open} action={action} permission={activePermission} />}{active === "material_catalog" && <MaterialCatalogPage data={data} open={open} action={action} permission={activePermission} />}{active === "boq" && <BoqControl data={data} project={project} open={open} action={action} canUse={canUseActive} />}{active === "payments" && <Payments data={data} project={project} action={action} canCreate={Boolean(activePermission.canCreate)} canEdit={Boolean(activePermission.canEdit)} refresh={refresh} />}{active === "teams" && <TeamManagement data={data} open={open} />}{active === "stocktake" && <Stocktake data={data} open={open} action={action} canUse={canUseActive} />}{active === "reports" && <Reports data={data} project={project} />}{active === "admin" && isAdminUser(data.user) && <Admin data={data} open={open} action={action} />}</>}</div><footer className="vntech-product-footer" data-product-id={VNTECH_BRAND.productId}><span>{VNTECH_BRAND.copyright}</span><b>VNTECH ERP</b></footer></main>
+    {selected && modal === "detail" && <RequestDrawer variant="page" data={data} request={selected} approvalStages={data.approvalStages} close={() => { setModal(null); if (new URLSearchParams(window.location.search).has("request")) window.history.replaceState({}, "", window.location.pathname); }} action={action} user={data.user} />}
     {selected && modal === "receiptDetail" && <ReceiptDrawer data={data} receipt={selected} user={data.user} close={() => setModal(null)} action={action} />}
     {modal === "centralReturn" && <CentralReturnModal data={data} close={() => setModal(null)} submit={action} />}
     {modal === "transfer" && <TransferModal data={data} close={() => setModal(null)} submit={action} />}{modal === "centralReceive" && selected && <CentralReceiveModal row={selected} close={() => setModal(null)} submit={action} />}
-    {modal === "request" && <RequestModal data={data} contextProject={project} close={() => setModal(null)} submit={action} />}{modal === "po" && <PoModal data={data} initialRequestId={selected?.id} close={() => setModal(null)} submit={action} />}{modal === "receipt" && <ReceiptModal data={data} close={() => setModal(null)} submit={action} />}{modal === "teamCreate" && <TeamCreateModal data={data} close={() => setModal(null)} submit={action} />}{modal === "issue" && <IssueModal data={data} close={() => setModal(null)} submit={action} />}{modal === "install" && <InstallModal data={data} close={() => setModal(null)} submit={action} />}{modal === "return" && <ReturnModal data={data} close={() => setModal(null)} submit={action} />}{modal === "count" && <CountModal data={data} close={() => setModal(null)} submit={action} />}{modal === "user" && <UserModal data={data} close={() => setModal(null)} submit={action} />}{modal === "userEdit" && selected && <UserEditModal data={data} row={selected} close={() => setModal(null)} submit={action} />}{modal === "access" && selected && <UserAccessModal data={data} userRow={selected} close={() => setModal(null)} submit={action} />}{modal === "moduleMaster" && selected && <ModuleCatalogModal data={data} row={selected} close={() => setModal(null)} submit={action} />}{modal === "menuGroupMaster" && <MenuGroupModal data={data} row={selected} close={() => setModal(null)} submit={action} />}{modal === "roleMaster" && <RoleCatalogModal data={data} row={selected} close={() => setModal(null)} submit={action} />}{modal === "businessGroupMaster" && <BusinessGroupModal data={data} row={selected} close={() => setModal(null)} submit={action} />}{modal === "approvalStageMaster" && <ApprovalStageModal data={data} row={selected} close={() => setModal(null)} submit={action} />}{modal === "projectMaster" && <ProjectModal data={data} row={selected} close={() => setModal(null)} submit={action} />}{modal === "categoryMaster" && <CategoryModal row={selected} close={() => setModal(null)} submit={action} />}{modal === "materialSubcategoryMaster" && <MaterialSubcategoryModal data={data} row={selected} close={() => setModal(null)} submit={action} />}{modal === "materialMaster" && <MaterialModal data={data} row={selected} close={() => setModal(null)} submit={action} />}{modal === "materialMerge" && <MaterialMergeModal data={data} row={selected} close={() => setModal(null)} submit={action} />}{modal === "projectContract" && selected && <ProjectContractModal data={data} row={selected} close={() => setModal(null)} submit={action} />}{modal === "boqVersion" && selected && <BoqVersionModal data={data} row={selected} close={() => setModal(null)} submit={action} />}{modal === "boqItem" && <BoqItemModal data={data} row={selected} projectId={selected?.projectId || (project === "ALL" ? data.projects[0]?.id : project)} close={() => setModal(null)} submit={action} />}{modal === "email" && <EmailSettingsModal data={data} close={() => setModal(null)} submit={action} />}{modal === "accountSettings" && <AccountSettingsModal user={data.user} close={() => setModal(null)} submit={action} />}{modal === "forcePassword" && <ForcedPasswordModal user={data.user} submit={action} />}{toast && <div className="toast"><span>✓</span>{toast}</div>}</div>;
+    {modal === "request" && <RequestModal data={data} contextProject={project} close={() => setModal(null)} submit={action} />}{modal === "po" && <PoModal data={data} initialRequestId={selected?.id} close={() => setModal(null)} submit={action} />}{modal === "receipt" && <ReceiptModal data={data} close={() => setModal(null)} submit={action} />}{modal === "teamCreate" && <TeamCreateModal data={data} close={() => setModal(null)} submit={action} />}{modal === "issue" && <IssueModal data={data} close={() => setModal(null)} submit={action} />}{modal === "install" && <InstallModal data={data} close={() => setModal(null)} submit={action} />}{modal === "return" && <ReturnModal data={data} close={() => setModal(null)} submit={action} />}{modal === "count" && <CountModal data={data} close={() => setModal(null)} submit={action} />}{modal === "user" && <UserModal data={data} close={() => setModal(null)} submit={action} />}{modal === "systemLevelMaster" && <SystemLevelModal data={data} row={selected ?? undefined} close={() => setModal(null)} submit={action} />}{modal === "workflowMaster" && <WorkflowModal data={data} row={selected ?? undefined} close={() => setModal(null)} submit={action} />}{modal === "userProfile" && selected && <UserProfilePanel data={data} row={selected} close={() => setModal(null)} open={open} />}{modal === "userProfileHr" && selected && <UserProfilePanel data={data} row={selected} close={() => setModal(null)} open={open} showDocuments />}{modal === "userEdit" && selected && <UserEditModal data={data} row={selected} close={() => setModal(null)} submit={action} />}{modal === "access" && selected && <UserAccessModal data={data} userRow={selected} close={() => setModal(null)} submit={action} />}{modal === "moduleMaster" && selected && <ModuleCatalogModal data={data} row={selected} close={() => setModal(null)} submit={action} />}{modal === "menuGroupMaster" && <MenuGroupModal data={data} row={selected} close={() => setModal(null)} submit={action} />}{modal === "roleMaster" && <RoleCatalogModal data={data} row={selected} close={() => setModal(null)} submit={action} />}{modal === "businessGroupMaster" && <BusinessGroupModal data={data} row={selected} close={() => setModal(null)} submit={action} />}{modal === "approvalStageMaster" && <ApprovalStageModal data={data} row={selected} close={() => setModal(null)} submit={action} />}{modal === "projectMaster" && <ProjectModal data={data} row={selected} close={() => setModal(null)} submit={action} />}{modal === "categoryMaster" && <CategoryModal row={selected} close={() => setModal(null)} submit={action} />}{modal === "materialSubcategoryMaster" && <MaterialSubcategoryModal data={data} row={selected} close={() => setModal(null)} submit={action} />}{modal === "materialMaster" && <MaterialModal data={data} row={selected} close={() => setModal(null)} submit={action} />}{modal === "materialMerge" && <MaterialMergeModal data={data} row={selected} close={() => setModal(null)} submit={action} />}{modal === "projectContract" && selected && <ProjectContractModal data={data} row={selected} close={() => setModal(null)} submit={action} />}{modal === "boqVersion" && selected && <BoqVersionModal data={data} row={selected} close={() => setModal(null)} submit={action} />}{modal === "boqItem" && <BoqItemModal data={data} row={selected} projectId={selected?.projectId || (project === "ALL" ? data.projects[0]?.id : project)} close={() => setModal(null)} submit={action} />}{modal === "email" && <EmailSettingsModal data={data} close={() => setModal(null)} submit={action} />}{modal === "accountSettings" && <AccountSettingsModal user={data.user} close={() => setModal(null)} submit={action} />}{modal === "forcePassword" && <ForcedPasswordModal user={data.user} submit={action} />}{toast && <div className="toast"><span>✓</span>{toast}</div>}</div>;
 }
 
 
@@ -683,6 +704,685 @@ function DepartmentTaskWorkspace({data,department,moduleKey,project,onProject,ac
     <section className="card dept-filter-card"><div className="dept-filters"><span className="global-project-scope-chip">Dự án: {project==="ALL"?"Tất cả":data.projects.find(p=>p.id===project)?.code||project}</span><select value={status} onChange={e=>setStatus(e.target.value)}><option value="ALL">Tất cả trạng thái</option>{['NEW','IN_PROGRESS','WAITING_SUPPLIER','WAITING_CLIENT','WAITING_APPROVAL','WAITING_PROJECT','BLOCKED','ON_HOLD','SUBMITTED','REWORK','COMPLETED'].map(v=><option key={v} value={v}>{taskStatusLabel(v)}</option>)}</select><select value={assignee} onChange={e=>setAssignee(e.target.value)}><option value="ALL">Tất cả nhân viên</option>{departmentUsers.map(u=><option key={u.id} value={u.id}>{u.fullName}</option>)}</select><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Tìm nhiệm vụ, số phiếu, dự án..."/><button className="secondary" onClick={()=>downloadCsv(["Mã nhiệm vụ","Công việc","Dự án","Nhân viên","Hạn","Trạng thái","Tiến độ"],rows.map(r=>[r.taskNo,r.title,r.projectCode||"",r.assignedToName,r.dueAt||"",taskStatusLabel(r.status),r.progress]),`Nhiem_vu_${department}`)}>⇩ Xuất</button></div></section>
     <div className="dept-task-layout"><section className="card dept-task-table"><div className="dept-task-tabs"><span className="active">Tất cả ({rows.length})</span><span>Tự động từ nghiệp vụ ({rows.filter(r=>r.taskOrigin==='automatic').length})</span><span>Giao việc bổ sung ({rows.filter(r=>r.taskOrigin==='manual').length})</span></div><div className="table-wrap"><table><thead><tr><th>Mã nhiệm vụ</th><th>Nội dung công việc</th><th>Dự án</th><th>Nhóm công việc</th><th>Nguồn (Liên kết)</th><th>Nhân viên</th><th>Hạn hoàn thành</th><th>Trạng thái</th><th>Ưu tiên</th><th>%</th></tr></thead><tbody>{rows.map(r=>{const late=r.dueAt&&new Date(r.dueAt).getTime()<nowMs&&!['COMPLETED','CANCELLED'].includes(String(r.status));return <tr key={r.id} className={selected?.id===r.id?'selected-row':''} onClick={()=>setSelectedId(r.id)}><td><strong className="code">{r.taskNo}</strong></td><td>{r.title}</td><td>{r.projectCode||'—'}</td><td><span className="task-group-tag">{r.workGroup}</span></td><td>{r.sourceNo?<button className="link-button" onClick={e=>{e.stopPropagation();const target=(r.sourceModule||'') as ModuleKey;if(modules.some(m=>m.key===target))navigate(target);}}>{r.sourceNo}</button>:<span>MANUAL</span>}</td><td>{r.assignedToName}</td><td className={late?'red-text':''}>{date(r.dueAt)}</td><td><Pill value={taskStatusLabel(r.status)}/></td><td>{r.priority==='critical'?'Khẩn':r.priority==='high'?'Cao':r.priority==='low'?'Thấp':'Trung bình'}</td><td><div className="task-progress"><span>{r.progress}%</span><i><b style={{width:`${r.progress}%`}}/></i></div></td></tr>})}{!rows.length&&<tr><td colSpan={10}><Empty text="Chưa có nhiệm vụ phù hợp bộ lọc."/></td></tr>}</tbody></table></div></section>
     <aside className="card task-detail-panel">{selected?<><div className="task-detail-head"><div><small>{selected.sourceType||'TASK'} · {selected.taskOrigin==='automatic'?'TỰ ĐỘNG':'BỔ SUNG'}</small><h3>{selected.title}</h3></div><Pill value={taskStatusLabel(selected.status)}/></div><dl><dt>Dự án</dt><dd>{selected.projectCode?`${selected.projectCode} - ${selected.projectName}`:'—'}</dd><dt>Nhân viên phụ trách</dt><dd>{selected.assignedToName}</dd><dt>Người giao</dt><dd>{selected.assignedByName}</dd><dt>Ngày giao việc</dt><dd>{date(selected.assignedAt)}</dd><dt>Hạn hoàn thành</dt><dd>{date(selected.dueAt)}</dd><dt>Ưu tiên</dt><dd>{selected.priority}</dd><dt>% hoàn thành</dt><dd>{selected.progress}%</dd><dt>Đầu ra yêu cầu</dt><dd>{selected.requiredOutput||'—'}</dd><dt>Mô tả</dt><dd>{selected.description||'—'}</dd>{selected.waitingReason&&<><dt>Lý do chờ</dt><dd>{selected.waitingReason}</dd></>}</dl><div className="task-detail-actions">{selected.sourceModule&&<button className="secondary" onClick={()=>{const t=selected.sourceModule as ModuleKey;if(modules.some(m=>m.key===t))navigate(t)}}>Mở phiếu gốc</button>}{selected.status==='NEW'&&<button className="primary" onClick={()=>setTaskStatus('IN_PROGRESS')}>Bắt đầu làm</button>}{['NEW','IN_PROGRESS','REWORK'].includes(String(selected.status))&&<button className="secondary" onClick={()=>setTaskStatus('WAITING_PROJECT')}>Chuyển Chờ</button>}{['NEW','IN_PROGRESS','REWORK'].includes(String(selected.status))&&<button className="primary" onClick={()=>setTaskStatus('SUBMITTED')}>Gửi kiểm tra</button>}{selected.status==='SUBMITTED'&&<button className="primary" onClick={()=>setTaskStatus('COMPLETED')}>Xác nhận hoàn thành</button>}</div><div className="task-history"><h4>Lịch sử nhiệm vụ</h4>{events.slice(0,8).map(e=><p key={e.id}><b>{e.eventType}</b><span>{e.actorName||'Hệ thống'} · {date(e.occurredAt)}</span>{e.reason&&<small>{e.reason}</small>}</p>)}{!events.length&&<span>Chưa có lịch sử bổ sung.</span>}</div></>:<Empty text="Chọn một nhiệm vụ để xem chi tiết."/>}</aside></div>
+  </div>;
+}
+
+// =============================================================================
+// GĐ4 — MÀN "CÔNG VIỆC": việc của tôi · việc phòng ban/tổ đội · KPI & báo cáo
+// Yêu cầu người dùng:
+//   • user tự tạo task cho bản thân  → action create_self_work_item (mới, GĐ4)
+//   • tạo task cho nhân viên nếu có chức vụ phù hợp → create_work_item (backend chặn)
+//   • dashboard tỉ lệ hoàn thành để đánh giá năng lực nhân viên
+//   • báo cáo theo tiến độ công việc trong THÁNG của từng nhân viên
+//   • CEO/admin xem được toàn bộ KPI phòng ban và user
+// =============================================================================
+const WORK_STATUS_LABELS: Record<string, string> = {
+  NEW: "Mới", IN_PROGRESS: "Đang làm", WAITING_SUPPLIER: "Chờ NCC", WAITING_CLIENT: "Chờ khách hàng",
+  WAITING_APPROVAL: "Chờ duyệt", WAITING_PROJECT: "Chờ dự án", BLOCKED: "Bị chặn", ON_HOLD: "Tạm dừng",
+  SUBMITTED: "Đã trình", REWORK: "Làm lại", COMPLETED: "Hoàn thành", CANCELLED: "Đã huỷ",
+};
+const WORK_CLOSED = ["COMPLETED", "CANCELLED"];
+
+function workRate(rows: Row[]): number {
+  if (!rows.length) return 0;
+  return Math.round((rows.filter((r) => String(r.status) === "COMPLETED").length / rows.length) * 100);
+}
+function isTaskLate(row: Row): boolean {
+  if (WORK_CLOSED.includes(String(row.status))) return false;
+  const d = daysFromToday(row.dueAt);
+  return d !== null && d > 0;
+}
+
+function WorkCenter({ data, action, refresh }: { data: AppData; action: (name: string, payload: Row) => Promise<boolean>; refresh: () => void }) {
+  const [tab, setTab] = useState(0);
+  const [q, setQ] = useState("");
+  const [busy, setBusy] = useState(false);
+  const me = data.user || {};
+  const myId = String(me.id || "");
+  const items: Row[] = data.workItems || [];
+  const users: Row[] = data.users || [];
+
+  const canSelf = modulePermission(data, "dept_plan_tasks").canUse || modulePermission(data, "dept_project_tasks").canUse;
+  const canAssign = modulePermission(data, "dept_plan_assign").canCreate || modulePermission(data, "dept_project_assign").canCreate;
+  const isOverseer = isAdminUser(me) || ["director", "commander"].includes(roleBase(me));
+
+  const myDepts = [...new Set([String(me.organizationCode || ""), "CN"].filter(Boolean))];
+  const activeMemberIds = [...new Set((data.teamMembers || []).filter((m) => Number(m.active ?? 1) === 1).map((m) => String(m.userId)))];
+  const mine = items.filter((r) => String(r.assigneeUserId) === myId);
+  const deptWork = items.filter((r) => String(r.assigneeUserId) !== myId && myDepts.includes(String(r.departmentCode || "")));
+  const teamWork = items.filter((r) => String(r.assigneeUserId) !== myId && activeMemberIds.includes(String(r.assigneeUserId)));
+
+  const find = (rows: Row[]) => !q.trim() ? rows
+    : rows.filter((r) => `${r.taskNo || ""} ${r.title || ""} ${r.assigneeName || ""}`.toLocaleLowerCase("vi").includes(q.trim().toLocaleLowerCase("vi")));
+
+  async function send(name: string, payload: Row, form?: HTMLFormElement) {
+    setBusy(true);
+    const ok = await action(name, payload);
+    setBusy(false);
+    if (ok) { form?.reset(); refresh(); }
+  }
+  const projCode = (id: unknown) => (data.projects || []).find((p) => String(p.id) === String(id))?.code || "—";
+
+  function TaskTable({ rows, allowEdit }: { rows: Row[]; allowEdit: boolean }) {
+    return <div className="table-wrap"><table className="baseline-table">
+      <thead><tr>
+        <th>Mã việc</th><th>Nội dung</th><th>Người làm</th><th>Dự án</th><th>Hạn</th>
+        <th>Ưu tiên</th><th>Tiến độ</th><th>Trạng thái</th>{allowEdit && <th>Thao tác</th>}
+      </tr></thead>
+      <tbody>
+        {rows.map((r) => <tr key={String(r.id)} className={isTaskLate(r) ? "row-late" : ""}>
+          <td><strong className="code">{r.taskNo}</strong></td>
+          <td>{r.title}<small>{r.requiredOutput || r.workGroup || ""}</small></td>
+          <td>{r.assigneeName || "—"}</td>
+          <td>{projCode(r.projectId)}</td>
+          <td>{r.dueAt ? date(r.dueAt) : "—"}{isTaskLate(r) && <small className="red-text">Quá hạn</small>}</td>
+          <td>{r.priority === "urgent" ? "Khẩn" : r.priority === "high" ? "Cao" : "Thường"}</td>
+          <td><div className="task-bar"><span><i style={{ width: `${Number(r.progress || 0)}%` }} /></span><b>{Number(r.progress || 0)}%</b></div></td>
+          <td><Pill value={WORK_STATUS_LABELS[String(r.status)] || String(r.status || "—")}/></td>
+          {allowEdit && <td><div className="row-actions">
+            {[25, 50, 75, 100].map((p) => <button key={p} type="button" className="export-mini" disabled={busy || Number(r.progress || 0) >= p} onClick={() => void send("update_work_item_progress", { workItemId: r.id, progress: p })}>{p}%</button>)}
+            {String(r.status) !== "COMPLETED" && <button type="button" className="export-mini" disabled={busy} onClick={() => void send("update_work_item_status", { workItemId: r.id, status: "COMPLETED" })}>Xong</button>}
+          </div></td>}
+        </tr>)}
+        {!rows.length && <tr><td colSpan={allowEdit ? 9 : 8}><Empty text="Chưa có nhiệm vụ nào."/></td></tr>}
+      </tbody>
+    </table></div>;
+  }
+
+  const TABS = [`Việc của tôi (${mine.length})`, `Phòng ban / tổ đội (${deptWork.length + teamWork.length})`, "KPI & báo cáo"];
+
+  return <div className="stack work-center">
+    <section className="card">
+      <div className="table-toolbar">
+        <div><strong>CÔNG VIỆC</strong><span>{mine.length} việc của bạn · {deptWork.length + teamWork.length} việc phòng ban/tổ đội · {items.length} tổng</span></div>
+        <div className="row-actions"><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Tìm mã việc, nội dung, người làm…" aria-label="Tìm nhiệm vụ"/></div>
+      </div>
+      <div className="project-scope-tabs" role="tablist">
+        {TABS.map((label, i) => <button key={label} type="button" role="tab" aria-selected={tab === i} className={tab === i ? "active" : ""} onClick={() => setTab(i)}>{label}</button>)}
+      </div>
+    </section>
+
+    {tab === 0 && <div className="stack">
+      <div className="kpi-grid small">
+        <Kpi icon="CV" label="Việc của tôi" value={String(mine.length)} note={`${mine.filter((r) => String(r.status) === "COMPLETED").length} đã xong`} tone="blue"/>
+        <Kpi icon="QH" label="Quá hạn" value={String(mine.filter(isTaskLate).length)} note="Cần xử lý trước" tone="red"/>
+        <Kpi icon="TL" label="Tỉ lệ hoàn thành" value={`${workRate(mine)}%`} note="Trên việc được giao" tone="green"/>
+      </div>
+      {canSelf && <section className="card">
+        <CardHead title="Tự tạo việc cho bản thân" note="Việc cá nhân (mã CN) không gắn nghiệp vụ nguồn và không lẫn vào việc phòng ban"/>
+        <form onSubmit={(e) => { e.preventDefault(); const f = e.currentTarget; const fd = new FormData(f);
+          void send("create_self_work_item", { title: fd.get("title"), description: fd.get("description"), projectId: fd.get("projectId"),
+            dueAt: fd.get("dueAt"), priority: fd.get("priority"), requiredOutput: fd.get("requiredOutput") }, f); }}>
+          <div className="form-grid">
+            <label className="full"><span>Nội dung công việc *</span><input name="title" required placeholder="Ví dụ: Rà soát hồ sơ nghiệm thu đợt 2"/></label>
+            <label><span>Dự án</span><select name="projectId"><option value="">— Không gắn dự án —</option>{(data.projects || []).map((p) => <option key={String(p.id)} value={String(p.id)}>{p.code} · {p.name}</option>)}</select></label>
+            <label><span>Hạn hoàn thành</span><input name="dueAt" type="date"/></label>
+            <label><span>Ưu tiên</span><select name="priority"><option value="normal">Bình thường</option><option value="high">Cao</option><option value="urgent">Khẩn</option></select></label>
+            <label><span>Kết quả cần có</span><input name="requiredOutput" placeholder="Đầu ra mong đợi"/></label>
+            <label className="full"><span>Mô tả</span><textarea name="description" rows={2}/></label>
+          </div>
+          <div className="row-actions"><button className="primary" disabled={busy}>＋ Tạo việc cho tôi</button></div>
+        </form>
+      </section>}
+      <section className="card">
+        <CardHead title="Danh sách việc của tôi" note="Cập nhật tiến độ và đánh dấu hoàn thành ngay tại đây"/>
+        <TaskTable rows={find(mine)} allowEdit/>
+      </section>
+    </div>}
+
+    {tab === 1 && <div className="stack">
+      {canAssign && <section className="card">
+        <CardHead title="Giao việc cho nhân viên" note="Chỉ Trưởng phòng hoặc Quản trị viên giao được việc thủ công — backend chặn bằng userIsDepartmentManager"/>
+        <form onSubmit={(e) => { e.preventDefault(); const f = e.currentTarget; const fd = new FormData(f);
+          void send("create_work_item", { departmentCode: fd.get("departmentCode"), title: fd.get("title"), description: fd.get("description"),
+            projectId: fd.get("projectId"), assignedTo: fd.get("assignedTo"), dueAt: fd.get("dueAt"),
+            priority: fd.get("priority"), requiredOutput: fd.get("requiredOutput") }, f); }}>
+          <div className="form-grid">
+            <label><span>Phòng ban *</span><select name="departmentCode" required><option value="KH">Phòng Kế hoạch (KH)</option><option value="DA">Phòng Dự án (DA)</option></select></label>
+            <label><span>Giao cho *</span><select name="assignedTo" required><option value="">— Chọn nhân viên —</option>{users.filter((u) => u.active !== false).map((u) => <option key={String(u.id)} value={String(u.id)}>{u.fullName} · {u.roleName || u.role || ""}</option>)}</select></label>
+            <label className="full"><span>Nội dung công việc *</span><input name="title" required/></label>
+            <label><span>Dự án</span><select name="projectId"><option value="">— Không gắn dự án —</option>{(data.projects || []).map((p) => <option key={String(p.id)} value={String(p.id)}>{p.code} · {p.name}</option>)}</select></label>
+            <label><span>Hạn hoàn thành</span><input name="dueAt" type="date"/></label>
+            <label><span>Ưu tiên</span><select name="priority"><option value="normal">Bình thường</option><option value="high">Cao</option><option value="urgent">Khẩn</option></select></label>
+            <label><span>Kết quả cần có</span><input name="requiredOutput"/></label>
+          </div>
+          <div className="row-actions"><button className="primary" disabled={busy}>＋ Giao việc</button></div>
+        </form>
+      </section>}
+      <section className="card">
+        <CardHead title="Việc phòng ban của tôi" note="Nhiệm vụ thuộc phòng mà tài khoản trực thuộc"/>
+        <TaskTable rows={find(deptWork)} allowEdit={false}/>
+      </section>
+      <section className="card">
+        <CardHead title="Việc của tổ đội tôi tham gia" note="Thành viên tổ đội đang hoạt động"/>
+        <TaskTable rows={find(teamWork)} allowEdit={false}/>
+      </section>
+    </div>}
+
+    {tab === 2 && (() => {
+      // CEO/admin/ban lãnh đạo thấy TOÀN BỘ; người khác chỉ thấy phòng mình.
+      const scope = isOverseer ? users : users.filter((u) => myDepts.includes(String(u.organizationCode || "")));
+      const month = UI_TODAY.slice(0, 7);
+      const rows = scope.map((u) => {
+        const own = items.filter((r) => String(r.assigneeUserId) === String(u.id));
+        const inMonth = own.filter((r) => String(r.completedAt || r.createdAt || "").slice(0, 7) === month);
+        return { u, total: own.length, done: own.filter((r) => String(r.status) === "COMPLETED").length,
+          late: own.filter(isTaskLate).length, rate: workRate(own),
+          mTotal: inMonth.length, mDone: inMonth.filter((r) => String(r.status) === "COMPLETED").length };
+      }).filter((r) => isOverseer || r.total > 0).sort((a, b) => b.rate - a.rate || b.total - a.total);
+      const byDept = [...new Set(users.map((u) => String(u.organizationCode || u.department || "")).filter(Boolean))]
+        .map((code) => { const own = items.filter((r) => String(r.departmentCode || "") === code);
+          return { code, total: own.length, rate: workRate(own) }; })
+        .filter((r) => r.total > 0).sort((a, b) => b.total - a.total);
+      return <div className="stack">
+        <section className="card">
+          <CardHead title="Tỉ lệ hoàn thành theo nhân viên"
+            note={isOverseer ? "Phạm vi: TOÀN BỘ nhân sự (quyền CEO/Quản trị)" : "Phạm vi: phòng ban của bạn"}/>
+          <div className="kpi-grid small">
+            <Kpi icon="TC" label="Tỉ lệ chung" value={`${workRate(items)}%`} note={`${items.filter((r) => String(r.status) === "COMPLETED").length}/${items.length} nhiệm vụ`} tone="green"/>
+            <Kpi icon="QH" label="Đang quá hạn" value={String(items.filter(isTaskLate).length)} note="Trong phạm vi thấy được" tone="red"/>
+            <Kpi icon="NV" label="Nhân sự có việc" value={String(rows.filter((r) => r.total > 0).length)} note={`${rows.length} nhân sự trong phạm vi`} tone="blue"/>
+            <Kpi icon="TH" label={`Việc tháng ${month}`} value={String(rows.reduce((s, r) => s + r.mTotal, 0))} note={`${rows.reduce((s, r) => s + r.mDone, 0)} đã hoàn thành`} tone="violet"/>
+          </div>
+          <div className="table-wrap"><table className="baseline-table">
+            <thead><tr><th>Nhân viên</th><th>Phòng ban</th><th>Chức vụ</th><th>Tổng việc</th><th>Hoàn thành</th><th>Quá hạn</th><th>Tỉ lệ</th><th>Tháng này</th></tr></thead>
+            <tbody>{rows.map((r) => <tr key={String(r.u.id)}>
+              <td><strong>{r.u.fullName}</strong><small>{r.u.employeeCode || r.u.username || ""}</small></td>
+              <td>{r.u.organizationName || r.u.department || "—"}</td>
+              <td>{r.u.roleName || r.u.role || "—"}</td>
+              <td>{r.total}</td><td><strong>{r.done}</strong></td>
+              <td className={r.late ? "red-text" : ""}>{r.late}</td>
+              <td><div className="task-bar"><span><i style={{ width: `${r.rate}%` }} /></span><b>{r.rate}%</b></div></td>
+              <td>{r.mDone}/{r.mTotal}</td>
+            </tr>)}{!rows.length && <tr><td colSpan={8}><Empty text="Chưa có dữ liệu KPI."/></td></tr>}</tbody>
+          </table></div>
+        </section>
+        {isOverseer && <section className="card">
+          <CardHead title="KPI theo phòng ban" note="Chỉ CEO/Ban lãnh đạo/Quản trị hệ thống thấy toàn bộ"/>
+          <div className="table-wrap"><table className="baseline-table">
+            <thead><tr><th>Phòng ban</th><th>Tổng việc</th><th>Tỉ lệ hoàn thành</th></tr></thead>
+            <tbody>{byDept.map((d) => <tr key={d.code}><td><strong>{d.code}</strong></td><td>{d.total}</td>
+              <td><div className="task-bar"><span><i style={{ width: `${d.rate}%` }} /></span><b>{d.rate}%</b></div></td></tr>)}
+              {!byDept.length && <tr><td colSpan={3}><Empty text="Chưa có nhiệm vụ theo phòng ban."/></td></tr>}</tbody>
+          </table></div>
+        </section>}
+      </div>;
+    })()}
+  </div>;
+}
+
+// =============================================================================
+// GĐ5 — TỔ ĐỘI: DANH SÁCH + CHI TIẾT
+// Yêu cầu: danh sách tổ đội → chi tiết gồm dự án đang/đã tham gia, sĩ số, THỜI GIAN
+// THAM GIA VÀ RỜI ĐI của từng người, click user → hồ sơ, và tab ĐƠN TỪ tổng hợp.
+// Dữ liệu: data.teams + data.teamMembers (bảng mới ở migration V14) + chứng từ.
+// =============================================================================
+function TeamManagement({ data, open }: { data: AppData; open: (name: string, row?: Row) => void }) {
+  const [view, setView] = useState<"list" | "detail">("list");
+  const [detailId, setDetailId] = useState("");
+  const [tab, setTab] = useState(0);
+  const [q, setQ] = useState("");
+
+  const teams: Row[] = data.teams || [];
+  const members: Row[] = data.teamMembers || [];
+  const projOf = (id: unknown) => (data.projects || []).find((p) => String(p.id) === String(id));
+  const whOf = (id: unknown) => (data.warehouses || []).find((w) => String(w.id) === String(id));
+  const membersOf = (tid: string) => members.filter((m) => String(m.teamId) === String(tid));
+
+  const filtered = teams.filter((t) => !q.trim() ||
+    `${t.code || ""} ${t.name || ""} ${t.trade || ""} ${projOf(t.projectId)?.code || ""}`
+      .toLocaleLowerCase("vi").includes(q.trim().toLocaleLowerCase("vi")));
+
+  const detail = teams.find((t) => String(t.id) === String(detailId));
+
+  if (view === "detail" && detail) {
+    const tid = String(detail.id);
+    const all = membersOf(tid);
+    const activeMembers = all.filter((m) => Number(m.active ?? 1) === 1 && !m.leftAt);
+    const past = all.filter((m) => m.leftAt || Number(m.active ?? 1) === 0);
+    const proj = projOf(detail.projectId);
+    const wh = whOf(detail.warehouseId);
+    // Đơn từ của tổ đội: phiếu của dự án + phiếu xuất/hoàn gắn đúng teamId
+    const docs = [
+      { label: "Phiếu đề nghị mua hàng của dự án", noKey: "requestNo", statusKey: "status", whoKey: "requestedBy", atKey: "requestedAt",
+        rows: (data.requests || []).filter((r) => String(r.projectId) === String(detail.projectId)) },
+      { label: "Phiếu xuất kho cho tổ đội", noKey: "issueNo", statusKey: "status", whoKey: "receivedByName", atKey: "issuedAt",
+        rows: (data.issues || []).filter((r) => String(r.teamId) === tid) },
+      { label: "Phiếu hoàn trả vật tư", noKey: "returnNo", statusKey: "status", whoKey: "returnedByName", atKey: "returnedAt",
+        rows: (data.returns || []).filter((r) => String(r.teamId) === tid) },
+    ];
+    const totalDocs = docs.reduce((s, g) => s + g.rows.length, 0);
+    const TABS = ["Tổng quan", "Thành viên", `Đơn từ (${totalDocs})`];
+
+    return <div className="stack team-management">
+      <section className="card project-detail-head">
+        <div className="table-toolbar">
+          <div><strong>{detail.code} · {detail.name}</strong>
+            <span>{detail.trade || "Chưa ghi hạng mục"} · {activeMembers.length} thành viên đang hoạt động · {past.length} đã rời</span></div>
+          <div className="row-actions"><button type="button" className="page-back" onClick={() => setView("list")}>← Quay lại danh sách</button></div>
+        </div>
+        <div className="project-scope-tabs" role="tablist">
+          {TABS.map((label, i) => <button key={label} type="button" role="tab" aria-selected={tab === i} className={tab === i ? "active" : ""} onClick={() => setTab(i)}>{label}</button>)}
+        </div>
+      </section>
+
+      {tab === 0 && <div className="stack">
+        <div className="kpi-grid small">
+          <Kpi icon="DA" label="Dự án" value={proj?.code || "—"} note={proj?.name || "Chưa gắn dự án"} tone="blue"/>
+          <Kpi icon="K" label="Kho của tổ đội" value={wh?.code || "—"} note={wh?.name || "Chưa có kho riêng"} tone="violet"/>
+          <Kpi icon="TV" label="Thành viên" value={String(activeMembers.length)} note={`${past.length} người đã rời`} tone="green"/>
+          <Kpi icon="TT" label="Trạng thái" value={detail.active === 0 ? "Đã ngừng" : "Đang hoạt động"} note={detail.active === 0 ? "Không còn nhận việc" : "Đang nhận cấp phát vật tư"} tone={detail.active === 0 ? "red" : "green"}/>
+        </div>
+        <section className="card">
+          <CardHead title="Dự án tổ đội đang tham gia" note="Theo quy tắc nghiệp vụ hiện hành, mỗi tổ đội thuộc đúng một dự án"/>
+          <div className="table-wrap"><table className="baseline-table">
+            <thead><tr><th>Mã dự án</th><th>Tên dự án</th><th>Trạng thái</th><th>Bắt đầu</th><th>Kết thúc dự kiến</th><th>Vai trò tổ đội</th></tr></thead>
+            <tbody>{proj ? <tr>
+              <td><strong className="code">{proj.code}</strong></td><td>{proj.name}</td>
+              <td><Pill value={PROJECT_STATUS_LABELS[String(proj.status || "active")] || String(proj.status || "—")}/></td>
+              <td>{date(proj.startDate)}</td><td>{date(proj.plannedEndDate)}</td><td>Thi công / cấp phát vật tư</td>
+            </tr> : <tr><td colSpan={6}><Empty text="Tổ đội chưa gắn dự án nào."/></td></tr>}</tbody>
+          </table></div>
+        </section>
+      </div>}
+
+      {tab === 1 && <div className="stack">
+        <section className="card">
+          <CardHead title="Thành viên đang hoạt động" note="Sắp xếp theo NGÀY THAM GIA · bấm “Hồ sơ” để xem dự án / phòng ban / tổ đội của người đó"/>
+          <div className="table-wrap"><table className="baseline-table">
+            <thead><tr><th>Họ tên</th><th>Mã NV</th><th>Chức vụ</th><th>Phòng ban</th><th>Vai trò trong tổ đội</th><th>Ngày tham gia</th><th>Ngày rời</th><th></th></tr></thead>
+            <tbody>
+              {[...activeMembers].sort((a, b) => String(a.joinedAt || "").localeCompare(String(b.joinedAt || ""))).map((m) => <tr key={String(m.id)}>
+                <td><strong>{m.fullName || "—"}</strong></td><td>{m.employeeCode || "—"}</td>
+                <td>{m.roleName || m.role || "—"}</td><td>{m.department || "—"}</td>
+                <td>{m.roleInTeam || "Thành viên"}</td>
+                <td>{m.joinedAt ? date(m.joinedAt) : "—"}</td><td>—</td>
+                <td><button type="button" className="export-mini" onClick={() => open("userProfile", { ...m, id: m.userId })}>Hồ sơ ›</button></td>
+              </tr>)}
+              {!activeMembers.length && <tr><td colSpan={8}><Empty text="Tổ đội chưa ghi nhận thành viên. Bảng team_members đã sẵn sàng (migration V14) — cần bổ sung dữ liệu."/></td></tr>}
+            </tbody>
+          </table></div>
+        </section>
+        {past.length > 0 && <section className="card">
+          <CardHead title="Thành viên đã rời tổ đội" note="Lưu vết thời gian tham gia và rời đi"/>
+          <div className="table-wrap"><table className="baseline-table">
+            <thead><tr><th>Họ tên</th><th>Mã NV</th><th>Vai trò</th><th>Ngày tham gia</th><th>Ngày rời</th><th>Thời gian tham gia</th></tr></thead>
+            <tbody>{past.map((m) => {
+              const days = m.joinedAt && m.leftAt ? Math.max(0, Math.round((new Date(String(m.leftAt)).getTime() - new Date(String(m.joinedAt)).getTime()) / 86400000)) : null;
+              return <tr key={String(m.id)}>
+                <td><strong>{m.fullName || "—"}</strong></td><td>{m.employeeCode || "—"}</td><td>{m.roleInTeam || "Thành viên"}</td>
+                <td>{m.joinedAt ? date(m.joinedAt) : "—"}</td><td>{m.leftAt ? date(m.leftAt) : "—"}</td>
+                <td>{days === null ? "—" : `${days} ngày`}</td></tr>;
+            })}</tbody>
+          </table></div>
+        </section>}
+      </div>}
+
+      {tab === 2 && <div className="stack">
+        {docs.map((g) => <section className="card" key={g.label}>
+          <CardHead title={g.label} note={`${g.rows.length} chứng từ`}/>
+          <div className="table-wrap"><table className="baseline-table">
+            <thead><tr><th>Số chứng từ</th><th>Trạng thái</th><th>Người liên quan</th><th>Thời điểm</th></tr></thead>
+            <tbody>{g.rows.map((r, i) => <tr key={String(r.id || i)}>
+              <td><strong className="code">{String(r[g.noKey] || r.id || "—")}</strong></td>
+              <td><Pill value={String(r[g.statusKey] || "—")}/></td>
+              <td>{String(r[g.whoKey] || "—")}</td>
+              <td>{date(r[g.atKey] || r.createdAt)}</td>
+            </tr>)}{!g.rows.length && <tr><td colSpan={4}><Empty text="Không có chứng từ."/></td></tr>}</tbody>
+          </table></div>
+        </section>)}
+      </div>}
+    </div>;
+  }
+
+  return <div className="stack team-management">
+    <section className="card">
+      <div className="table-toolbar">
+        <div><strong>DANH SÁCH TỔ ĐỘI</strong><span>{filtered.length}/{teams.length} tổ đội · mỗi tổ đội thuộc đúng một dự án</span></div>
+        <div className="row-actions"><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Tìm mã, tên tổ đội, hạng mục, dự án…" aria-label="Tìm tổ đội"/></div>
+      </div>
+      <div className="table-wrap"><table className="baseline-table">
+        <thead><tr><th>Mã tổ đội</th><th>Tên tổ đội</th><th>Hạng mục</th><th>Dự án</th><th>Kho của tổ đội</th><th>Thành viên</th><th>Quyết toán</th><th>Trạng thái</th><th></th></tr></thead>
+        <tbody>
+          {filtered.map((t) => {
+            const tid = String(t.id);
+            const p = projOf(t.projectId); const wh = whOf(t.warehouseId);
+            const act = membersOf(tid).filter((m) => Number(m.active ?? 1) === 1 && !m.leftAt).length;
+            const settled = (data.teamSettlements || []).some((s) => String(s.teamId) === tid && String(s.status) === "closed");
+            return <tr key={tid}>
+              <td><strong className="code">{t.code}</strong></td><td>{t.name}</td><td>{t.trade || "—"}</td>
+              <td>{p ? `${p.code} · ${p.name}` : "—"}</td>
+              <td>{wh ? `${wh.code} · ${wh.name}` : "—"}</td>
+              <td>{act > 0 ? `${act} người` : <span className="muted">Chưa ghi nhận</span>}</td>
+              <td><Pill value={settled ? "Đã quyết toán" : "Chưa quyết toán"}/></td>
+              <td><Pill value={t.active === 0 ? "Đã ngừng" : "Đang hoạt động"}/></td>
+              <td><button type="button" className="export-mini" onClick={() => { setDetailId(tid); setView("detail"); setTab(0); }}>Chi tiết ›</button></td>
+            </tr>;
+          })}
+          {!filtered.length && <tr><td colSpan={9}><Empty text="Không có tổ đội phù hợp."/></td></tr>}
+        </tbody>
+      </table></div>
+    </section>
+  </div>;
+}
+
+const PROJECT_STATUS_LABELS: Record<string,string> = { active:"Đang hoạt động", paused:"Tạm dừng", closed:"Đã đóng", purged:"Đã xoá", pending:"Chờ khởi động" };
+
+/** Số ngày lệch giữa một mốc ISO và hôm nay (dương = đã quá mốc). */
+function daysFromToday(iso: unknown): number | null {
+  const s = String(iso ?? "").slice(0, 10);
+  if (!s) return null;
+  const t = new Date(s + "T00:00:00").getTime();
+  if (Number.isNaN(t)) return null;
+  return Math.floor((UI_NOW_MS - t) / 86400000);
+}
+
+/** Số ngày chậm tiến độ: chỉ tính khi dự án còn hoạt động và đã qua ngày kết thúc dự kiến. */
+function projectOverdueDays(row: Row): number {
+  if (String(row.status || "active") !== "active") return 0;
+  const late = daysFromToday(row.plannedEndDate);
+  return late !== null && late > 0 ? late : 0;
+}
+
+// =============================================================================
+// GĐ3 — QUẢN LÝ DỰ ÁN: DANH SÁCH + CHI TIẾT (thay cho dropdown chọn dự án)
+// Yêu cầu người dùng:
+//   • bỏ dropdown, hiển thị DANH SÁCH dự án; ưu tiên dự án ĐANG HOẠT ĐỘNG lên trên,
+//     mặc định sắp xếp mới nhất trước
+//   • click vào dự án → toàn bộ thông tin: ngày bắt đầu, kết thúc dự kiến, số ngày
+//     CHẬM TIẾN ĐỘ; tab Nhân sự (tên/chức vụ/phòng ban, ưu tiên đang hoạt động, sort
+//     theo ngày tham gia); tab Tổ đội; tab Kho (tồn kho, thủ kho, đơn chờ nhập/duyệt/xuất)
+// Dữ liệu lấy HOÀN TOÀN từ bootstrap — không cần API Java mới.
+// =============================================================================
+function ProjectManagement({ data, project, onProject, open, action }: { data: AppData; project: string; onProject: (value: string) => void; open: (name: string, row?: Row) => void; action: (name: string, payload: Row) => Promise<boolean> }) {
+  const [view, setView] = useState<"list" | "detail">("list");
+  const [detailId, setDetailId] = useState("");
+  const [tab, setTab] = useState(0);
+  const [q, setQ] = useState("");
+  const [status, setStatus] = useState("ALL");
+  const [sortBy, setSortBy] = useState("active_newest");
+  const [openWarehouse, setOpenWarehouse] = useState("");
+
+  const allProjects: Row[] = data.projects || [];
+  const users: Row[] = data.users || [];
+
+  // --- sắp xếp + lọc danh sách ------------------------------------------------
+  const filtered = allProjects
+    .filter((row) => status === "ALL" || String(row.status || "active") === status)
+    .filter((row) => {
+      if (!q.trim()) return true;
+      const hay = `${row.code || ""} ${row.name || ""} ${row.contractNo || ""} ${row.contractName || ""}`.toLocaleLowerCase("vi");
+      return hay.includes(q.trim().toLocaleLowerCase("vi"));
+    })
+    .sort((a, b) => {
+      if (sortBy === "name") return String(a.code || "").localeCompare(String(b.code || ""), "vi");
+      if (sortBy === "overdue") return projectOverdueDays(b) - projectOverdueDays(a);
+      // mặc định: ĐANG HOẠT ĐỘNG lên trước, trong nhóm thì MỚI NHẤT (ngày bắt đầu) trước
+      const ra = String(a.status || "active") === "active" ? 0 : 1;
+      const rb = String(b.status || "active") === "active" ? 0 : 1;
+      if (ra !== rb) return ra - rb;
+      return String(b.startDate || "").localeCompare(String(a.startDate || ""));
+    });
+
+  const detail = allProjects.find((row) => String(row.id) === String(detailId));
+
+  // --- dữ liệu con của một dự án ---------------------------------------------
+  const scopesOf = (pid: string) => (data.userScopes || []).filter((s) => String(s.projectId) === String(pid));
+  const staffOf = (pid: string) =>
+    scopesOf(pid)
+      .map((s) => {
+        const u = users.find((x) => String(x.id) === String(s.userId));
+        return u ? { ...u, _scope: s } : null;
+      })
+      .filter(Boolean) as Row[];
+  const teamsOf = (pid: string) => (data.teams || []).filter((t) => String(t.projectId) === String(pid));
+  const warehousesOf = (pid: string) => (data.warehouses || []).filter((w) => String(w.projectId) === String(pid));
+  const keepersOf = () =>
+    users.filter((u) => /kho|warehouse/i.test(`${u.role || ""} ${u.roleBase || ""} ${u.roleName || ""}`));
+
+  // --- chứng từ theo kho ------------------------------------------------------
+  function docsOfWarehouse(wh: Row) {
+    const wid = String(wh.id);
+    const pendingIn = (data.receipts || []).filter((r) => String(r.warehouseId) === wid && String(r.postingStatus || "") !== "posted");
+    const pendingOut = (data.issues || []).filter((r) => String(r.warehouseId) === wid || String(r.teamId) === wid);
+    const pendingApprove = (data.requests || []).filter((r) => String(r.projectId) === String(wh.projectId) && String(r.status) === "pending_approval");
+    const openPOs = (data.purchaseOrders || []).filter((r) => String(r.projectId) === String(wh.projectId) && !["completed", "received", "cancelled"].includes(String(r.status || "")));
+    return { pendingIn, pendingOut, pendingApprove, openPOs };
+  }
+
+  // =========================== DANH SÁCH =====================================
+  if (view === "list") {
+    return <div className="stack project-management">
+      <section className="card">
+        <div className="table-toolbar">
+          <div><strong>DANH SÁCH DỰ ÁN</strong><span>{filtered.length}/{allProjects.length} dự án · ưu tiên đang hoạt động, mới nhất trước</span></div>
+          <div className="row-actions">
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Tìm mã, tên, hợp đồng…" aria-label="Tìm dự án"/>
+            <select value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Lọc trạng thái">
+              <option value="ALL">Tất cả trạng thái</option>
+              <option value="active">Đang hoạt động</option>
+              <option value="paused">Tạm dừng</option>
+              <option value="closed">Đã đóng</option>
+            </select>
+            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} aria-label="Sắp xếp">
+              <option value="active_newest">Hoạt động trước · mới nhất</option>
+              <option value="name">Theo mã dự án</option>
+              <option value="overdue">Chậm tiến độ nhiều nhất</option>
+            </select>
+          </div>
+        </div>
+        <div className="table-wrap">
+          <table className="baseline-table">
+            <thead><tr>
+              <th>Mã dự án</th><th>Tên dự án</th><th>Trạng thái</th><th>Bắt đầu</th>
+              <th>Kết thúc dự kiến</th><th>Tiến độ</th><th>Nhân sự</th><th>Tổ đội</th><th></th>
+            </tr></thead>
+            <tbody>
+              {filtered.map((row) => {
+                const late = projectOverdueDays(row);
+                const staff = scopesOf(String(row.id)).length;
+                const teams = teamsOf(String(row.id)).length;
+                return <tr key={String(row.id)}>
+                  <td><strong className="code">{row.code}</strong></td>
+                  <td>{row.name}<small>{row.contractNo || "Chưa có hợp đồng"}</small></td>
+                  <td><Pill value={PROJECT_STATUS_LABELS[String(row.status || "active")] || String(row.status || "—")}/></td>
+                  <td>{date(row.startDate)}</td>
+                  <td>{date(row.plannedEndDate)}</td>
+                  <td>{late > 0
+                    ? <strong className="red-text">Chậm {late} ngày</strong>
+                    : <Pill value="Đúng tiến độ"/>}</td>
+                  <td>{staff} người</td>
+                  <td>{teams} tổ đội</td>
+                  <td><button type="button" className="export-mini" onClick={() => { setDetailId(String(row.id)); setView("detail"); setTab(0); setOpenWarehouse(""); }}>Chi tiết ›</button></td>
+                </tr>;
+              })}
+              {!filtered.length && <tr><td colSpan={9}><Empty text="Không có dự án phù hợp bộ lọc."/></td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>;
+  }
+
+  // =========================== CHI TIẾT ======================================
+  if (!detail) { setView("list"); return null; }
+  const pid = String(detail.id);
+  const late = projectOverdueDays(detail);
+  const staff = staffOf(pid).sort((a, b) => {
+    const aa = a.active === false ? 1 : 0, bb = b.active === false ? 1 : 0;
+    if (aa !== bb) return aa - bb;                      // đang hoạt động lên trước
+    return String(a._scope?.joinedAt || "").localeCompare(String(b._scope?.joinedAt || "")); // sort theo ngày tham gia
+  });
+  const teams = teamsOf(pid);
+  const warehouses = warehousesOf(pid);
+  const keepers = keepersOf();
+  const TABS = ["Tổng quan", "Nhân sự", "Tổ đội", "Kho", "Ban chỉ huy"];
+
+  return <div className="stack project-management">
+    <section className="card project-detail-head">
+      <div className="table-toolbar">
+        <div>
+          <strong>{detail.code} · {detail.name}</strong>
+          <span>{PROJECT_STATUS_LABELS[String(detail.status || "active")] || detail.status} · {staff.length} nhân sự · {teams.length} tổ đội · {warehouses.length} kho</span>
+        </div>
+        <div className="row-actions">
+          <button type="button" className="secondary" onClick={() => { onProject(pid); }} title="Đặt dự án này làm phạm vi làm việc">Đặt làm dự án hiện tại</button>
+          <button type="button" className="page-back" onClick={() => setView("list")}>← Quay lại danh sách</button>
+        </div>
+      </div>
+      <div className="project-scope-tabs" role="tablist">
+        {TABS.map((label, index) => <button key={label} type="button" role="tab" aria-selected={tab === index} className={tab === index ? "active" : ""} onClick={() => setTab(index)}>{label}</button>)}
+      </div>
+    </section>
+
+    {tab === 0 && <div className="stack">
+      <div className="kpi-grid">
+        <Kpi icon="BD" label="Ngày bắt đầu" value={date(detail.startDate)} note="Theo hợp đồng / khởi công" tone="blue"/>
+        <Kpi icon="KT" label="Kết thúc dự kiến" value={date(detail.plannedEndDate)} note="Mốc bàn giao theo kế hoạch" tone="blue"/>
+        <Kpi icon="TR" label="Chậm tiến độ" value={late > 0 ? `${late} ngày` : "Đúng hạn"} note={late > 0 ? "ĐÃ QUÁ ngày kết thúc dự kiến" : "Chưa vượt mốc kế hoạch"} tone={late > 0 ? "red" : "green"}/>
+        <Kpi icon="HD" label="Hợp đồng" value={detail.contractNo || "—"} note={detail.contractName || "Chưa gắn hợp đồng chính"} tone="violet"/>
+      </div>
+      <section className="card">
+        <CardHead title="Công việc cần hoàn thành" note="Danh sách đầu việc còn lại của dự án"/>
+        <div className="development-screen-notice"><b>ĐANG PHÁT TRIỂN</b><span>Khối này sẽ liên kết với BOQ, tiến độ thi công và nhiệm vụ nhân viên. Hiện chưa triển khai theo yêu cầu “phần này sẽ phát triển về sau”.</span></div>
+      </section>
+      <section className="card">
+        <CardHead title="Nhân sự & tổ đội tóm tắt" note="Bấm sang tab tương ứng để xem chi tiết"/>
+        <div className="table-wrap"><table className="baseline-table">
+          <thead><tr><th>Hạng mục</th><th>Số lượng</th><th>Ghi chú</th></tr></thead>
+          <tbody>
+            <tr><td>Nhân sự tham gia dự án</td><td><strong>{staff.length}</strong></td><td>{staff.filter((u) => u.active !== false).length} đang hoạt động</td></tr>
+            <tr><td>Tổ đội thuộc dự án</td><td><strong>{teams.length}</strong></td><td>{teams.map((t) => t.code).join(" · ") || "Chưa có tổ đội"}</td></tr>
+            <tr><td>Kho của dự án</td><td><strong>{warehouses.length}</strong></td><td>{warehouses.map((w) => w.code).join(" · ") || "Chưa có kho"}</td></tr>
+          </tbody>
+        </table></div>
+      </section>
+    </div>}
+
+    {tab === 1 && <section className="card">
+      <CardHead title="Nhân sự tham gia dự án" note="Ưu tiên người đang hoạt động · sắp xếp theo ngày tham gia dự án"/>
+      <div className="table-wrap"><table className="baseline-table">
+        <thead><tr><th>Họ tên</th><th>Mã NV</th><th>Chức vụ</th><th>Phòng ban</th><th>Ngày tham gia</th><th>Quyền trong dự án</th><th>Trạng thái</th><th></th></tr></thead>
+        <tbody>
+          {staff.map((u) => <tr key={String(u.id)}>
+            <td><strong>{u.fullName}</strong><small>{u.email || u.username || "—"}</small></td>
+            <td>{u.employeeCode || "—"}</td>
+            <td>{u.roleName || u.role || "—"}</td>
+            <td>{u.organizationName || u.department || "—"}</td>
+            <td>{u._scope?.joinedAt ? date(u._scope.joinedAt) : <span className="muted">Chưa ghi nhận</span>}</td>
+            <td>{u._scope?.positionName || u._scope?.permission || "—"}</td>
+            <td><Pill value={u.active === false ? "Đã khoá" : "Đang hoạt động"}/></td>
+            <td><button type="button" className="export-mini" onClick={() => open("userProfile", u)}>Hồ sơ ›</button></td>
+          </tr>)}
+          {!staff.length && <tr><td colSpan={8}><Empty text="Dự án chưa gán nhân sự nào."/></td></tr>}
+        </tbody>
+      </table></div>
+    </section>}
+
+    {tab === 2 && <section className="card">
+      <CardHead title="Tổ đội thuộc dự án" note="Mỗi tổ đội thuộc đúng một dự án và có kho riêng"/>
+      <div className="table-wrap"><table className="baseline-table">
+        <thead><tr><th>Mã tổ đội</th><th>Tên tổ đội</th><th>Hạng mục</th><th>Kho của tổ đội</th><th>Nhân sự</th><th>Trạng thái</th></tr></thead>
+        <tbody>
+          {teams.map((t) => {
+            const wh = (data.warehouses || []).find((w) => String(w.id) === String(t.warehouseId));
+            const members = (data.teamMembers || []).filter((m) => String(m.teamId) === String(t.id) && Number(m.active ?? 1) === 1);
+            return <tr key={String(t.id)}>
+              <td><strong className="code">{t.code}</strong></td>
+              <td>{t.name}</td>
+              <td>{t.trade || "—"}</td>
+              <td>{wh ? `${wh.code} · ${wh.name}` : "—"}</td>
+              <td>{members.length ? `${members.length} người` : <span className="muted">Chưa ghi nhận thành viên</span>}</td>
+              <td><Pill value={t.active === 0 ? "Đã ngừng" : "Đang dùng"}/></td>
+            </tr>;
+          })}
+          {!teams.length && <tr><td colSpan={6}><Empty text="Dự án chưa có tổ đội."/></td></tr>}
+        </tbody>
+      </table></div>
+    </section>}
+
+    {tab === 3 && <div className="stack">
+      <section className="card">
+        <CardHead title="Kho của dự án" note="Bấm một kho để xem tồn kho, thủ kho và đơn từ liên quan"/>
+        <div className="table-wrap"><table className="baseline-table">
+          <thead><tr><th>Mã kho</th><th>Tên kho</th><th>Loại</th><th>Thủ kho</th><th>Tồn kho</th><th>Chờ nhập</th><th>Chờ xuất</th><th>Chờ duyệt</th><th></th></tr></thead>
+          <tbody>
+            {warehouses.map((w) => {
+              const wid = String(w.id);
+              const bal = (data.inventory || []).filter((r) => String(r.warehouseId) === wid);
+              const total = bal.reduce((s, r) => s + Number(r.balance || 0), 0);
+              const d = docsOfWarehouse(w);
+              const keeper = keepers[0];
+              return <tr key={wid}>
+                <td><strong className="code">{w.code}</strong></td>
+                <td>{w.name}</td>
+                <td>{w.type === "site" ? "Kho công trường" : w.type === "central" ? "Kho tổng" : w.type === "team" ? "Kho tổ đội" : String(w.type || "—")}</td>
+                <td>{keeper ? keeper.fullName : <span className="muted">Chưa phân công</span>}</td>
+                <td>{bal.length} mã · {format.format(total)}</td>
+                <td>{d.pendingIn.length}</td>
+                <td>{d.pendingOut.length}</td>
+                <td>{d.pendingApprove.length}</td>
+                <td><button type="button" className="export-mini" onClick={() => setOpenWarehouse(openWarehouse === wid ? "" : wid)}>{openWarehouse === wid ? "Thu gọn" : "Xem kho ›"}</button></td>
+              </tr>;
+            })}
+            {!warehouses.length && <tr><td colSpan={9}><Empty text="Dự án chưa có kho."/></td></tr>}
+          </tbody>
+        </table></div>
+      </section>
+
+      {openWarehouse && (() => {
+        const w = warehouses.find((x) => String(x.id) === String(openWarehouse));
+        if (!w) return null;
+        const wid = String(w.id);
+        const d = docsOfWarehouse(w);
+        const bal = (data.inventory || []).filter((r) => String(r.warehouseId) === wid);
+        const keeper = keepers[0];
+        const docs: { label: string; rows: Row[]; noKey: string; statusKey: string }[] = [
+          { label: "Đơn chờ nhập kho", rows: d.pendingIn, noKey: "receiptNo", statusKey: "postingStatus" },
+          { label: "Đơn chờ xuất kho", rows: d.pendingOut, noKey: "issueNo", statusKey: "status" },
+          { label: "Phiếu chờ duyệt", rows: d.pendingApprove, noKey: "requestNo", statusKey: "status" },
+          { label: "Đơn mua hàng chưa hoàn thành", rows: d.openPOs, noKey: "poNo", statusKey: "status" },
+        ];
+        return <section className="card project-warehouse-detail">
+          <CardHead title={`Kho ${w.code} · ${w.name}`} note="Tồn kho, thủ kho và đơn từ liên quan"/>
+          <div className="kpi-grid small">
+            <Kpi icon="TK" label="Mã đang có tồn" value={format.format(bal.filter((r) => Number(r.balance || 0) !== 0).length)} note={`${bal.length} dòng tồn`} tone="green"/>
+            <Kpi icon="CN" label="Chờ nhập" value={String(d.pendingIn.length)} note="Phiếu chưa ghi sổ" tone="amber"/>
+            <Kpi icon="CX" label="Chờ xuất" value={String(d.pendingOut.length)} note="Phiếu cấp phát tổ đội" tone="amber"/>
+            <Kpi icon="TK" label="Thủ kho" value={keeper ? keeper.fullName : "Chưa phân công"} note={keeper ? (keeper.roleName || keeper.role || "") : "Cần gán người phụ trách"} tone={keeper ? "blue" : "red"}/>
+          </div>
+          <div className="table-wrap"><table className="baseline-table">
+            <thead><tr><th>Mã vật tư</th><th>Tên vật tư</th><th>ĐVT</th><th>Tồn kho</th></tr></thead>
+            <tbody>
+              {bal.filter((r) => Number(r.balance || 0) !== 0).map((r, i) => <tr key={`${r.materialId || i}`}>
+                <td><strong className="code">{r.materialCode || r.materialId}</strong></td>
+                <td>{r.materialName || "—"}</td>
+                <td>{r.unit || "—"}</td>
+                <td><strong>{format.format(Number(r.balance || 0))}</strong></td>
+              </tr>)}
+              {!bal.filter((r) => Number(r.balance || 0) !== 0).length && <tr><td colSpan={4}><Empty text="Kho chưa có tồn."/></td></tr>}
+            </tbody>
+          </table></div>
+          {docs.map((group) => <div key={group.label}>
+            <h3>{group.label} <small>({group.rows.length})</small></h3>
+            <div className="table-wrap"><table className="baseline-table">
+              <thead><tr><th>Số chứng từ</th><th>Trạng thái</th><th>Đối tượng</th><th>Thời điểm</th></tr></thead>
+              <tbody>
+                {group.rows.map((r, i) => <tr key={String(r.id || i)}>
+                  <td><strong className="code">{r[group.noKey] || r.id}</strong></td>
+                  <td><Pill value={String(r[group.statusKey] || "—")}/></td>
+                  <td>{r.supplierName || r.requestedBy || r.teamName || "—"}</td>
+                  <td>{date(r.receivedAt || r.requestedAt || r.createdAt)}</td>
+                </tr>)}
+                {!group.rows.length && <tr><td colSpan={4}><Empty text="Không có chứng từ."/></td></tr>}
+              </tbody>
+            </table></div>
+          </div>)}
+        </section>;
+      })()}
+    </div>}
+
+    {tab === 4 && <SiteCommandScreen data={data} project={pid} action={action} />}
   </div>;
 }
 
@@ -1016,18 +1716,120 @@ function MaterialMatchingWorkspace({data,permission}:{data:AppData;permission:Ro
   return <section className="card material-matching-v2" data-contract-scope="true"><CardHead title="SO SÁNH & MAPPING BOQ – AI/EMBEDDING" note="Chọn đúng Project → Contract → BOQ Version. AI chỉ gợi ý; không ghi đè mã đã có nếu chưa xác nhận remap."/><div className="matching-toolbar material-matching-toolbar"><label><span>Dự án</span><select value={projectId} onChange={(e)=>setProjectId(e.target.value)}><option value="">Chọn dự án</option>{projects.map((p)=><option key={p.id} value={p.id}>{p.code} · {p.name}</option>)}</select></label><label><span>Hợp đồng</span><select value={contractId} onChange={(e)=>setContractId(e.target.value)}><option value="">Chọn hợp đồng</option>{contracts.map((c)=><option key={c.id} value={c.id}>{c.contractNo} · {c.contractName}</option>)}</select></label><label><span>BOQ Version</span><select value={boqVersionId} onChange={(e)=>setBoqVersionId(e.target.value)}><option value="">Chọn BOQ Version</option>{versions.map((v)=><option key={v.id} value={v.id}>{v.versionCode||`V${v.versionNo}`} · {v.versionName}</option>)}</select></label><label><span>File/Batch nguồn</span><select value={batchId} onChange={(e)=>setBatchId(e.target.value)}><option value="">Chọn phiên bản import</option>{projectBatches.map((b)=><option key={b.id} value={b.id}>V{b.versionNo} · {b.sourceFileName||"BOQ"} · {b.rowCount} dòng</option>)}</select></label><label><span>Phạm vi</span><select value={scope} onChange={(e)=>setScope(e.target.value)}><option value="unmapped">CHỈ DÒNG CHƯA CÓ MÃ</option><option value="all">KIỂM TRA TOÀN BỘ</option></select></label><button className="primary" disabled={loading||!projectId||!contractId||!boqVersionId||!batchId} onClick={compare}>{loading?"ĐANG XỬ LÝ…":"SO SÁNH"}</button></div>{(!contracts.length&&projectId)&&<div className="inline-alert"><b>Chưa có Contract cho dự án.</b> Tạo Contract tại BOQ/HĐ trước khi chạy Matching.</div>}{result&&<><div className="matching-kpi-row"><span><b>{summary.exact}</b> Exact</span><span><b>{summary.high}</b> Khớp cao</span><span><b>{summary.review}</b> Cần kiểm tra</span><span><b>{summary.noMatch}</b> Không phù hợp</span><span><b>{summary.mapped}</b> Đã có mã</span><span><b>{Object.keys(selected).filter((k)=>selected[k]).length}</b> Đã chọn</span></div><div className="matching-summary"><strong>Provider: {String(result.run?.provider||"—")}</strong><button className="secondary" onClick={()=>selectWhere((_i,t)=>String(t?.status)==="exact")}>CHỌN TẤT CẢ EXACT</button><button className="secondary" onClick={()=>selectWhere((_i,t)=>Number(t?.finalScore||0)>=.95)}>CHỌN ≥95%</button><button className="secondary" onClick={()=>selectWhere((_i,t)=>Number(t?.finalScore||0)>=.80)}>CHỌN ≥80%</button><button className="secondary" onClick={()=>setSelected({})}>BỎ CHỌN</button><button className="secondary" onClick={exportReview}>⇩ XUẤT EXCEL KIỂM TRA</button><label className="secondary file-inline compact-file">⇧ NHẬP EXCEL ĐÃ DUYỆT<input type="file" accept=".xlsx,.csv" onChange={(e)=>{const f=e.target.files?.[0];e.target.value="";void importReview(f);}} /></label><label><input type="checkbox" checked={saveAlias} onChange={(e)=>setSaveAlias(e.target.checked)}/> Lưu tên HĐ thành alias sau khi xác nhận</label><button className="primary" disabled={loading||!permission.canApprove||!Object.values(selected).some(Boolean)} onClick={confirmSelected}>XÁC NHẬN GÁN CÁC MÃ GỐC VÀO BOQ</button></div>{reviewFile&&<div className="inline-alert"><b>File duyệt:</b> {reviewFile} · Preview đã nạp.</div>}<div className="table-wrap matching-table-wrap"><table className="baseline-table matching-table"><thead><tr><th>Chọn</th><th>STT HĐ</th><th>Tên vật tư theo HĐ</th><th>ĐVT</th><th>Mã gốc hiện tại</th><th>Ứng viên mã gốc</th><th>Tên vật tư chuẩn</th><th>AI</th><th>Kỹ thuật</th><th>Fuzzy</th><th>Score</th><th>Trạng thái / lý do</th></tr></thead><tbody>{items.map((item)=>{const candidates=item.candidates||[];const chosenId=selected[String(item.id)]||"";const chosen=candidates.find((c:Row)=>String(c.materialId)===String(chosenId))||candidates[0];const mapped=Boolean(item.mappedMaterialId);return <tr key={item.id} className={`mapping-status-${String(mapped?"already_mapped":chosen?.status||item.status||"not_found")}`}><td><input type="checkbox" disabled={mapped||!selectable(item)} checked={Boolean(chosenId)&&!mapped} onChange={(e)=>setSelected((v)=>({...v,[String(item.id)]:e.target.checked?String(chosen?.materialId||""):""}))}/></td><td>{item.contractLineRef||item.sourceOrder}</td><td><strong>{item.contractMaterialName||"—"}</strong></td><td>{item.unit||"—"}</td><td>{mapped?<strong>{item.standardMaterialNameSnapshot||"ĐÃ MAP"}</strong>:"—"}</td><td>{mapped?<strong>ĐÃ CÓ MÃ – KHÔNG GHI ĐÈ</strong>:candidates.length?<select value={chosenId||String(chosen?.materialId||"")} onChange={(e)=>setSelected((v)=>({...v,[String(item.id)]:e.target.value}))}><option value="">Chọn thủ công</option>{candidates.map((c:Row)=><option key={c.materialId} value={c.materialId}>{c.materialCode} · {(Number(c.finalScore||0)*100).toFixed(1)}%</option>)}</select>:<span>Không có ứng viên phù hợp</span>}</td><td>{chosen?.standardMaterialName||item.standardMaterialNameSnapshot||"—"}</td><td>{chosen?`${(Number(chosen.embeddingScore||0)*100).toFixed(0)}%`:"—"}</td><td>{chosen?`${(Number(chosen.technicalScore||0)*100).toFixed(0)}%`:"—"}</td><td>{chosen?`${(Number(chosen.fuzzyScore||0)*100).toFixed(0)}%`:"—"}</td><td><strong>{chosen?`${(Number(chosen.finalScore||0)*100).toFixed(1)}%`:"—"}</strong></td><td><span className="mapping-status-label">{statusLabel(mapped?"already_mapped":String(chosen?.status||item.status||"not_found"))}</span>{chosen?.conflictReason&&<small>{chosen.conflictReason}</small>}</td></tr>})}{!items.length&&<tr><td colSpan={12}><Empty text="Không có dòng vật tư BOQ trong phạm vi so sánh. Dòng tiêu đề/mô tả không đưa vào matching."/></td></tr>}</tbody></table></div></>}{message&&<div className="inline-alert">{message}</div>}</section>;
 }
 
+// =============================================================================
+// NỢ MỤC 5/8 — BẢNG DANH SÁCH VẬT TƯ ĐẦY ĐỦ (tab 1 của Danh mục vật tư gốc)
+// Yêu cầu: «Tab đầu tiên sẽ hiển thị danh sách vật tư (sắp xếp theo id), có đầy đủ các
+// thông tin cơ bản về vật tư đó BAO GỒM CẢ TÊN PHỤ ALIAS, hiển thị TẤT CẢ các nút crud
+// áp dụng với tất cả các user nhưng chỉ có các user có perm thì mới được sử dụng tính
+// năng của nút đó, thêm đầy đủ các search sort filter.»
+// =============================================================================
+function MaterialListTable({ data, open, permission }: { data: AppData; open: (name: string, row?: Row) => void; permission: Row }) {
+  const [q, setQ] = useState("");
+  const [system, setSystem] = useState("ALL");
+  const [group, setGroup] = useState("ALL");
+  const [status, setStatus] = useState("ALL");
+  const [sortBy, setSortBy] = useState("code");
+  const [showAlias, setShowAlias] = useState(true);
+
+  const materials: Row[] = data.adminMaterials || data.materials || [];
+  const aliases: Row[] = data.materialAliases || [];
+  const canEdit = Boolean(permission?.canEdit);
+  const canCreate = Boolean(permission?.canCreate);
+  const canMerge = Boolean(permission?.canEdit);
+  const canRetire = isAdminUser(data.user);
+
+  const aliasOf = (mid: unknown) => aliases
+    .filter((a) => String(a.materialId) === String(mid) && Number(a.active ?? 1) === 1)
+    .map((a) => String(a.aliasName || "")).filter(Boolean);
+
+  const systems = [...new Set(materials.map((m) => String(m.categoryName || "")).filter(Boolean))].sort((a, b) => a.localeCompare(b, "vi"));
+  const groups = [...new Set(materials.map((m) => String(m.subcategoryName || "")).filter(Boolean))].sort((a, b) => a.localeCompare(b, "vi"));
+
+  const rows = materials
+    .filter((m) => status === "ALL" || (status === "ACTIVE" ? Number(m.active) !== 0 : Number(m.active) === 0))
+    .filter((m) => system === "ALL" || String(m.categoryName || "") === system)
+    .filter((m) => group === "ALL" || String(m.subcategoryName || "") === group)
+    .filter((m) => {
+      if (!q.trim()) return true;
+      const hay = `${m.code} ${m.name} ${m.unit} ${m.specification} ${m.brand} ${aliasOf(m.id).join(" ")}`
+        .toLocaleLowerCase("vi");
+      return hay.includes(q.trim().toLocaleLowerCase("vi"));
+    })
+    .sort((a, b) => {
+      if (sortBy === "name") return String(a.name || "").localeCompare(String(b.name || ""), "vi");
+      if (sortBy === "system") return String(a.categoryName || "").localeCompare(String(b.categoryName || ""), "vi");
+      return String(a.code || "").localeCompare(String(b.code || ""));
+    });
+
+  return <section className="card material-list-card">
+    <CardHead title="Danh sách vật tư" note="Sắp xếp theo mã · có tên phụ (alias) · mọi nút CRUD đều hiển thị, nút nào thiếu quyền sẽ bị vô hiệu hoá"/>
+    <div className="material-list-filters">
+      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Tìm mã, tên chuẩn, tên phụ, thông số…" aria-label="Tìm vật tư"/>
+      <select value={system} onChange={(e) => setSystem(e.target.value)} aria-label="Lọc hệ vật tư"><option value="ALL">Tất cả hệ</option>{systems.map((s) => <option key={s} value={s}>{s}</option>)}</select>
+      <select value={group} onChange={(e) => setGroup(e.target.value)} aria-label="Lọc nhóm vật tư"><option value="ALL">Tất cả nhóm</option>{groups.map((s) => <option key={s} value={s}>{s}</option>)}</select>
+      <select value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Lọc trạng thái vật tư"><option value="ALL">Tất cả trạng thái</option><option value="ACTIVE">Đang dùng</option><option value="LOCKED">Đã ngừng</option></select>
+      <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} aria-label="Sắp xếp vật tư"><option value="code">Sắp xếp: Mã vật tư</option><option value="name">Sắp xếp: Tên</option><option value="system">Sắp xếp: Hệ</option></select>
+      <label className="material-list-toggle"><input type="checkbox" checked={showAlias} onChange={(e) => setShowAlias(e.target.checked)}/> Hiện tên phụ</label>
+      <button type="button" className="primary" disabled={!canCreate} title={canCreate ? "Thêm vật tư" : "Bạn không có quyền tạo vật tư"} onClick={() => open("material")}>＋ Thêm vật tư</button>
+    </div>
+    <div className="table-wrap"><table className="baseline-table material-list-table">
+      <thead><tr>
+        <th>Mã vật tư</th><th>Tên chuẩn</th>{showAlias && <th>Tên phụ (alias)</th>}
+        <th>Hệ M&amp;E</th><th>Nhóm</th><th>ĐVT</th><th>Thông số</th><th>Hãng</th><th>Tồn min</th><th>Trạng thái</th><th>Thao tác</th>
+      </tr></thead>
+      <tbody>
+        {rows.map((m) => {
+          const al = aliasOf(m.id);
+          return <tr key={String(m.id)}>
+            <td><strong className="code">{m.code}</strong></td>
+            <td><strong>{m.name}</strong></td>
+            {showAlias && <td>{al.length ? al.join(" · ") : <span className="muted">Chưa có</span>}</td>}
+            <td>{m.categoryName || "—"}</td>
+            <td>{m.subcategoryName || "—"}</td>
+            <td>{m.unit || "—"}</td>
+            <td>{m.specification || "—"}</td>
+            <td>{m.brand || "—"}</td>
+            <td>{Number(m.minStock || 0)}</td>
+            <td>{Number(m.active) === 0 ? <Pill value="Đã ngừng"/> : <Pill value="Đang dùng"/>}</td>
+            <td><div className="row-actions">
+              <button type="button" className="export-mini" disabled={!canEdit} title={canEdit ? "Sửa vật tư" : "Thiếu quyền Sửa"} onClick={() => open("material", m)}>Sửa</button>
+              <button type="button" className="export-mini" disabled={!canMerge} title={canMerge ? "Hợp nhất mã trùng" : "Thiếu quyền Hợp nhất"} onClick={() => open("materialMerge", m)}>Hợp nhất</button>
+              <button type="button" className="export-mini" disabled={!canRetire} title={canRetire ? "Ngừng dùng vật tư" : "Chỉ Quản trị hệ thống được ngừng vật tư"} onClick={() => open("material", { ...m, active: 0 })}>Ngừng</button>
+            </div></td>
+          </tr>;
+        })}
+        {!rows.length && <tr><td colSpan={showAlias ? 11 : 10}><Empty text="Không có vật tư phù hợp bộ lọc."/></td></tr>}
+      </tbody>
+    </table></div>
+    <div className="material-list-note">
+      <span>{rows.length}/{materials.length} vật tư</span>
+      <span>{canEdit ? "Bạn có quyền Sửa/Hợp nhất" : "Bạn chỉ có quyền xem — các nút đã bị vô hiệu hoá"}</span>
+    </div>
+  </section>;
+}
+
 function MaterialCatalogPage({ data, open, action, permission }: { data: AppData; open: (name: string, row?: Row) => void; action: (name: string, payload: Row) => Promise<boolean>; permission: Row }) {
   const materials=data.adminMaterials||data.materials||[];
   const [aliasReport,setAliasReport]=useState<Row|null>(null);
+  // GĐ5/mục 5 — chuyển từ khối <details> thu gọn sang TAB theo yêu cầu người dùng.
+  // Cách làm: giữ nguyên nội dung 3 khối, chỉ gắn data-tab và cho CSS ẩn/hiện theo
+  // tab đang chọn — tránh phải viết lại các chuỗi JSX rất dài (rủi ro cao).
+  const [tab,setTab]=useState(0);
+  const MATERIAL_TABS=["Danh mục vật tư","So sánh / Đối chiếu BOQ","Soát trùng Alias & chất lượng danh mục"];
   async function runAliasCheck(){try{const res=await fetch("/api/system",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"check_material_alias_conflicts"})});const json=await res.json();if(!res.ok)throw new Error(json?.error||"Kiểm tra thất bại");setAliasReport(json);}catch(error){window.alert(error instanceof Error?error.message:"Không thể kiểm tra alias.");}}
-  return <div className="stack module-screen material-catalog-screen baseline-screen">
-    <details className="module-section-collapse"><summary><span>SO SÁNH / ĐỐI CHIẾU BOQ</span><b>Ẩn / Hiện</b></summary><div className="module-section-collapse-body"><MaterialMatchingWorkspace data={data} permission={permission}/></div></details>
-    <details className="module-section-collapse"><summary><span>SOÁT TRÙNG ALIAS & CHẤT LƯỢNG DANH MỤC</span><b>Ẩn / Hiện</b></summary><div className="module-section-collapse-body"><section className="card"><CardHead title="Soát trùng tên tương đương (alias)" note="Rà soát alias trùng normalized hoặc xung đột với tên chuẩn mã khác. Quy trình lưu/hợp nhất hiện tại đã chặn trùng khi nhập; công cụ này phát hiện dữ liệu cũ hoặc trường hợp biên chưa được chặn."/><div className="row-actions"><button className="secondary" disabled={Boolean(aliasReport)} onClick={()=>void runAliasCheck()}>{aliasReport?"Đã soát":"Bắt đầu soát trùng"}</button>{aliasReport&&<button className="secondary" onClick={()=>setAliasReport(null)}>Đóng kết quả</button>}</div>
+  return <div className="stack module-screen material-catalog-screen baseline-screen" data-active-tab={tab}>
+    <section className="card">
+      <div className="project-scope-tabs" role="tablist">
+        {MATERIAL_TABS.map((label,i)=><button key={label} type="button" role="tab" aria-selected={tab===i} className={tab===i?"active":""} onClick={()=>setTab(i)}>{label}</button>)}
+      </div>
+    </section>
+    <details className="module-section-collapse" data-tab="1" open><summary><span>SO SÁNH / ĐỐI CHIẾU BOQ</span><b>Ẩn / Hiện</b></summary><div className="module-section-collapse-body"><MaterialMatchingWorkspace data={data} permission={permission}/></div></details>
+    <details className="module-section-collapse" data-tab="2" open><summary><span>SOÁT TRÙNG ALIAS & CHẤT LƯỢNG DANH MỤC</span><b>Ẩn / Hiện</b></summary><div className="module-section-collapse-body"><section className="card"><CardHead title="Soát trùng tên tương đương (alias)" note="Rà soát alias trùng normalized hoặc xung đột với tên chuẩn mã khác. Quy trình lưu/hợp nhất hiện tại đã chặn trùng khi nhập; công cụ này phát hiện dữ liệu cũ hoặc trường hợp biên chưa được chặn."/><div className="row-actions"><button className="secondary" disabled={Boolean(aliasReport)} onClick={()=>void runAliasCheck()}>{aliasReport?"Đã soát":"Bắt đầu soát trùng"}</button>{aliasReport&&<button className="secondary" onClick={()=>setAliasReport(null)}>Đóng kết quả</button>}</div>
     {aliasReport&&<div className="table-wrap"><table className="baseline-table"><thead><tr><th>Loại phát hiện</th><th>Số lượng</th></tr></thead><tbody><tr><td>Alias trùng chuẩn hóa</td><td><strong>{Number(aliasReport.totalDuplicate||0)}</strong></td></tr><tr><td>Alias xung đột tên chuẩn mã khác</td><td><strong>{Number(aliasReport.totalClash||0)}</strong></td></tr></tbody></table></div>}
     {aliasReport&&(Number(aliasReport.totalDuplicate)>0)&&<div className="table-wrap"><table className="baseline-table"><thead><tr><th>Alias chuẩn hóa</th><th>Số mã</th><th>Các mã</th></tr></thead><tbody>{(aliasReport.duplicateAlias||[]).map((row:Row,i:number)=><tr key={i}><td>{row.normalizedName}</td><td>{row.count}</td><td>{row.materials.map((m:Row)=>`${m.code} (${m.aliasName})`).join(" · ")}</td></tr>)}{!(aliasReport.duplicateAlias||[]).length&&<tr><td colSpan={3}><Empty text="Không có alias trùng."/></td></tr>}</tbody></table></div>}
     {aliasReport&&(Number(aliasReport.totalClash)>0)&&<div className="table-wrap"><table className="baseline-table"><thead><tr><th>Mã nguồn</th><th>Alias</th><th>Xung đột mã</th><th>Tên chuẩn mã xung đột</th></tr></thead><tbody>{(aliasReport.aliasClashWithName||[]).map((row:Row,i:number)=><tr key={i}><td>{row.code}</td><td>{row.aliasName}</td><td>{row.clashCode}</td><td>{row.clashName}</td></tr>)}{!(aliasReport.aliasClashWithName||[]).length&&<tr><td colSpan={4}><Empty text="Không có xung đột alias với tên chuẩn."/></td></tr>}</tbody></table></div>}
     </section></div></details>
-    <details className="module-section-collapse" open><summary><span>DANH MỤC NHÓM CON & MÃ VẬT TƯ</span><b>Ẩn / Hiện</b></summary><div className="module-section-collapse-body">{permission.canEdit?<MaterialCatalogManager data={data} open={open} action={action}/>:<section className="card"><CardHead title="Danh mục vật tư M&E" note="Tài khoản chỉ có quyền xem"/><div className="table-wrap"><table className="baseline-table"><thead><tr><th>Mã vật tư</th><th>Tên chuẩn</th><th>Hệ M&E</th><th>Nhóm</th><th>ĐVT</th><th>Thông số</th><th>Trạng thái</th></tr></thead><tbody>{materials.filter((row)=>row.active!==0).map((row)=><tr key={row.id}><td><strong className="code">{row.code}</strong></td><td>{row.name}</td><td>{row.categoryName||row.system||"—"}</td><td>{sanitizeUiText(row.subcategoryName||"—")||"—"}</td><td>{row.unit||"—"}</td><td>{sanitizeUiText(row.specification||"—")||"—"}</td><td><Pill value="Đang dùng"/></td></tr>)}{!materials.length&&<tr><td colSpan={7}><Empty text="Danh mục vật tư chưa có dữ liệu."/></td></tr>}</tbody></table></div></section>}</div></details>
+    <details className="module-section-collapse" data-tab="0" open><summary><span>DANH MỤC NHÓM CON & MÃ VẬT TƯ</span><b>Ẩn / Hiện</b></summary><div className="module-section-collapse-body"><MaterialListTable data={data} open={open} permission={permission}/>{permission.canEdit?<MaterialCatalogManager data={data} open={open} action={action}/>:<section className="card"><CardHead title="Danh mục vật tư M&E" note="Tài khoản chỉ có quyền xem"/><div className="table-wrap"><table className="baseline-table"><thead><tr><th>Mã vật tư</th><th>Tên chuẩn</th><th>Hệ M&E</th><th>Nhóm</th><th>ĐVT</th><th>Thông số</th><th>Trạng thái</th></tr></thead><tbody>{materials.filter((row)=>row.active!==0).map((row)=><tr key={row.id}><td><strong className="code">{row.code}</strong></td><td>{row.name}</td><td>{row.categoryName||row.system||"—"}</td><td>{sanitizeUiText(row.subcategoryName||"—")||"—"}</td><td>{row.unit||"—"}</td><td>{sanitizeUiText(row.specification||"—")||"—"}</td><td><Pill value="Đang dùng"/></td></tr>)}{!materials.length&&<tr><td colSpan={7}><Empty text="Danh mục vật tư chưa có dữ liệu."/></td></tr>}</tbody></table></div></section>}</div></details>
   </div>;
 }
 
@@ -1565,13 +2367,13 @@ function LaborScreen({data,project,action,permission}:{data:AppData;project:stri
   <div className="table-wrap"><table><thead><tr><th>Số HĐ</th><th>Nhân sự</th><th>Loại</th><th>Ký</th><th>Từ</th><th>Đến</th><th>Lương</th><th>Trạng thái</th><th></th></tr></thead><tbody>{rows.map((r)=><tr key={r.id}><td>{r.contractNo}</td><td><strong>{r.fullName}</strong></td><td>{r.contractType}</td><td>{r.signingDate||"—"}</td><td>{r.startDate||"—"}</td><td>{r.endDate||"—"}</td><td>{money(r.salary)}</td><td><Pill value={r.status==="active"?"Đang hiệu lực":r.status==="ended"?"Kết thúc":"Tạm ngừng"}/></td><td>{permission.canEdit&&<><button className="export-mini" onClick={()=>action("set_labor_contract_status",{contractId:r.id,status:r.status==="active"?"ended":"active"})}>{r.status==="active"?"Kết thúc":"Mở lại"}</button><button className="export-mini danger" onClick={()=>window.confirm("Xóa hợp đồng?")&&action("delete_labor_contract",{contractId:r.id})}>Xóa</button></>}</td></tr>)}{!rows.length&&<tr><td colSpan={9}><Empty text="Chưa có hợp đồng lao động."/></td></tr>}</tbody></table></div></section>
   </div>;
 }
-function HrScreen({data,project,action,permission}:{data:AppData;project:string;action:(name:string,payload:Row)=>Promise<boolean>;permission:Row}){
+function HrScreen({data,project,action,permission,open}:{data:AppData;project:string;action:(name:string,payload:Row)=>Promise<boolean>;permission:Row;open:(name:string,r?:Row)=>void}){
   const rows=data.hrRecords;
   async function saveHr(event:FormEvent<HTMLFormElement>){event.preventDefault();const fd=new FormData(event.currentTarget);const userId=String(fd.get("userId")||"");if(!userId)return window.alert("Chọn nhân sự.");if(await action("save_hr_record",Object.fromEntries(fd)))(event.currentTarget as HTMLFormElement).reset();}
   return <div className="stack module-screen"><div className="kpi-grid small"><Kpi icon="NS" label="Hồ sơ đã lập" value={String(rows.length)} note="Nhân sự đang theo dõi"/><Kpi icon="NB" label="Còn thiếu hồ sơ" value={String(data.staffDirectory.filter((u)=>!rows.some((r)=>String(r.userId)===String(u.id))).length)} note="Chưa có hồ sơ chi tiết" tone="amber"/></div>
-  <section className="card"><CardHead title="Hồ sơ nhân sự" note="Hồ sơ chi tiết (CCCD, địa chỉ, trình độ, ngày vào) liên kết tài khoản người dùng; do Hành chính - Pháp chế cập nhật."/>
+  <section className="card"><CardHead title="Hồ sơ nhân sự" note="Bấm vào một dòng để xem hồ sơ chi tiết (chức vụ, liên hệ, cá nhân, dự án đã/đang tham gia, đơn từ). Do Hành chính - Pháp chế cập nhật."/>
   {permission.canCreate&&<form className="payment-entry-inline hr-form" onSubmit={saveHr}><select name="userId" required defaultValue=""><option value="">Nhân sự *</option>{data.staffDirectory.map((u)=><option key={u.id} value={u.id}>{u.fullName} · {u.roleName||u.role||""}</option>)}</select><input name="fullName" placeholder="Họ tên (theo hồ sơ)"/><input name="identityNo" placeholder="Số CCCD/CMND"/><input name="identityDate" type="date"/><input name="birthDate" type="date"/><input name="birthplace" placeholder="Nơi sinh"/><input name="permanentAddress" placeholder="Địa chỉ thường trú"/><input name="phone" placeholder="Điện thoại"/><input name="educationLevel" placeholder="Trình độ học vấn"/><input name="joinedDate" type="date"/><input name="position" placeholder="Chức danh"/><input name="note" placeholder="Ghi chú"/><input name="identityPlace" hidden/><button className="primary">＋ Lập hồ sơ</button></form>}
-  <div className="table-wrap"><table><thead><tr><th>Họ tên</th><th>Mã NV</th><th>Phòng ban</th><th>CCCD</th><th>Ngày sinh</th><th>Địa chỉ</th><th>Trình độ</th><th>Ngày vào</th><th>Chức danh</th></tr></thead><tbody>{rows.map((r)=><tr key={r.id}><td><strong>{r.fullName}</strong></td><td>{r.employeeCode||"—"}</td><td>{r.department||"—"}</td><td>{r.identityNo||"—"}</td><td>{r.birthDate||"—"}</td><td>{r.permanentAddress||"—"}</td><td>{r.educationLevel||"—"}</td><td>{r.joinedDate||"—"}</td><td>{r.position||"—"}</td></tr>)}{!rows.length&&<tr><td colSpan={9}><Empty text="Chưa có hồ sơ nhân sự."/></td></tr>}</tbody></table></div></section>
+  <div className="table-wrap"><table><thead><tr><th>Họ tên</th><th>Mã NV</th><th>Phòng ban</th><th>CCCD</th><th>Ngày sinh</th><th>Địa chỉ</th><th>Trình độ</th><th>Ngày vào</th><th>Chức danh</th></tr></thead><tbody>{rows.map((r)=><tr key={r.id} onClick={()=>open("userProfileHr",r)} title="Xem hồ sơ chi tiết" style={{cursor:"pointer"}}><td><strong>{r.fullName}</strong></td><td>{r.employeeCode||"—"}</td><td>{r.department||"—"}</td><td>{r.identityNo||"—"}</td><td>{r.birthDate||"—"}</td><td>{r.permanentAddress||"—"}</td><td>{r.educationLevel||"—"}</td><td>{r.joinedDate||"—"}</td><td>{r.position||"—"}</td></tr>)}{!rows.length&&<tr><td colSpan={9}><Empty text="Chưa có hồ sơ nhân sự."/></td></tr>}</tbody></table></div></section>
   </div>;
 }
 function DocumentsScreen({data,project,action,permission}:{data:AppData;project:string;action:(name:string,payload:Row)=>Promise<boolean>;permission:Row}){
@@ -1786,7 +2588,797 @@ function OrganizationUnitManager({data,action}:{data:AppData;action:(name:string
     if(!window.confirm(`${row.active?"Lưu trữ":"Kích hoạt"} đơn vị ${row.code} · ${row.name}?`))return;
     if(await action("set_organization_unit_status",{organizationUnitId:row.id,active:row.active?0:1}))setSelected(null);
   }
-  return <section className="card"><CardHead title="Cơ cấu tổ chức canonical" note="Phòng ban và BCH dùng một danh mục gốc; hỗ trợ cấp trên, dự án, ngày hiệu lực và lưu trữ không mất lịch sử."/><form key={String(selected?.id||"new")} onSubmit={save}><div className="form-grid"><label><span>Mã đơn vị *</span><input name="code" required defaultValue={selected?.code||""}/></label><label><span>Tên đơn vị *</span><input name="name" required defaultValue={selected?.name||""}/></label><label><span>Loại *</span><select name="unitType" defaultValue={selected?.unitType||"department"}><option value="company">Công ty</option><option value="department">Phòng/Bộ phận</option><option value="site_command">Ban chỉ huy dự án</option></select></label><label><span>Đơn vị cấp trên</span><select name="parentId" defaultValue={selected?.parentId||""}><option value="">— Không có —</option>{parents.map((row)=><option key={row.id} value={row.id}>{row.code} · {row.name}</option>)}</select></label><label><span>Dự án (cho BCH)</span><select name="projectId" defaultValue={selected?.projectId||""}><option value="">— Danh mục cha —</option>{data.adminProjects.map((row)=><option key={row.id} value={row.id}>{row.code} · {row.name}</option>)}</select></label><label><span>Thứ tự</span><input name="sortOrder" type="number" defaultValue={selected?.sortOrder??100}/></label><label><span>Hiệu lực từ</span><input name="effectiveFrom" type="date" defaultValue={selected?.effectiveFrom||""}/></label><label><span>Hiệu lực đến</span><input name="effectiveTo" type="date" defaultValue={selected?.effectiveTo||""}/></label><label className="span-2"><span>Mô tả</span><input name="description" defaultValue={selected?.description||""}/></label></div><div className="row-actions"><button className="primary" type="submit">{selected?"Lưu đơn vị":"＋ Thêm đơn vị"}</button>{selected&&<button className="secondary" type="button" onClick={()=>setSelected(null)}>Hủy sửa</button>}</div></form><div className="table-wrap"><table><thead><tr><th>Mã</th><th>Đơn vị</th><th>Loại</th><th>Cấp trên / Dự án</th><th>Hiệu lực</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>{units.map((row)=><tr key={row.id}><td><strong>{row.code}</strong></td><td>{row.name}<small>{row.description||"—"}</small></td><td>{row.unitType}</td><td>{row.parentName||"—"}<small>{row.projectCode?`${row.projectCode} · ${row.projectName}`:""}</small></td><td>{row.effectiveFrom||"—"}<small>{row.effectiveTo?` đến ${row.effectiveTo}`:""}</small></td><td><Pill value={row.active?"Đang dùng":"Đã lưu trữ"}/></td><td><div className="row-actions"><button className="export-mini" onClick={()=>setSelected(row)}>Sửa</button><button className="export-mini" disabled={Boolean(row.systemLocked&&row.active)} onClick={()=>void toggle(row)}>{row.active?"Lưu trữ":"Kích hoạt"}</button></div></td></tr>)}</tbody></table></div></section>;
+  return <section className="card"><CardHead title="Cơ cấu tổ chức canonical" note="Phòng ban và BCH dùng một danh mục gốc; hỗ trợ cấp trên, dự án, ngày hiệu lực và lưu trữ không mất lịch sử."/><form key={String(selected?.id||"new")} onSubmit={save}><div className="form-grid"><label><span>Mã đơn vị *</span><input name="code" required defaultValue={selected?.code||""}/></label><label><span>Tên đơn vị *</span><input name="name" required defaultValue={selected?.name||""}/></label><label><span>Loại *</span><select name="unitType" defaultValue={selected?.unitType||"department"}><option value="company">Công ty</option><option value="department">Phòng/Bộ phận</option><option value="site_command">Ban chỉ huy dự án</option></select></label><label><span>Đơn vị cấp trên</span><select name="parentId" defaultValue={selected?.parentId||""}><option value="">— Không có —</option>{parents.map((row)=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label><label><span>Dự án (cho BCH)</span><select name="projectId" defaultValue={selected?.projectId||""}><option value="">— Danh mục cha —</option>{data.adminProjects.map((row)=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label><label><span>Thứ tự</span><input name="sortOrder" type="number" defaultValue={selected?.sortOrder??100}/></label><label><span>Hiệu lực từ</span><input name="effectiveFrom" type="date" defaultValue={selected?.effectiveFrom||""}/></label><label><span>Hiệu lực đến</span><input name="effectiveTo" type="date" defaultValue={selected?.effectiveTo||""}/></label><label className="span-2"><span>Mô tả</span><input name="description" defaultValue={selected?.description||""}/></label></div><div className="row-actions"><button className="primary" type="submit">{selected?"Lưu đơn vị":"＋ Thêm đơn vị"}</button>{selected&&<button className="secondary" type="button" onClick={()=>setSelected(null)}>Hủy sửa</button>}</div></form><div className="table-wrap"><table><thead><tr><th>Mã</th><th>Đơn vị</th><th>Loại</th><th>Cấp trên / Dự án</th><th>Hiệu lực</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>{units.map((row)=><tr key={row.id}><td><strong>{row.code}</strong></td><td>{row.name}<small>{row.description||"—"}</small></td><td>{row.unitType}</td><td>{row.parentName||"—"}<small>{row.projectCode?`${row.projectCode} · ${row.projectName}`:""}</small></td><td>{row.effectiveFrom||"—"}<small>{row.effectiveTo?` đến ${row.effectiveTo}`:""}</small></td><td><Pill value={row.active?"Đang dùng":"Đã lưu trữ"}/></td><td><div className="row-actions"><button className="export-mini" onClick={()=>setSelected(row)}>Sửa</button><button className="export-mini" disabled={Boolean(row.systemLocked&&row.active)} onClick={()=>void toggle(row)}>{row.active?"Lưu trữ":"Kích hoạt"}</button></div></td></tr>)}</tbody></table></div></section>;
+}
+
+// ---------------------------------------------------------------------------
+// ĐỢT P4 — WORKFLOW ĐA LUỒNG
+// Nhiều quy trình · mỗi quy trình nhiều bước · mỗi bước nhiều người duyệt đích danh.
+// approval_mode: single (1 người) · any_of (1 trong nhiều người là qua) · all_of (tất cả phải duyệt).
+// ---------------------------------------------------------------------------
+const APPROVAL_MODE_LABELS: Record<string, string> = {
+  single: "Một người duyệt",
+  any_of: "Một trong nhiều người duyệt là qua",
+  all_of: "Tất cả người duyệt phải xác nhận",
+};
+const APPROVAL_MODE_SHORT: Record<string, string> = { single: "1 người", any_of: "1 trong nhiều", all_of: "Tất cả" };
+
+/** Ứng viên người duyệt: ưu tiên người có quyền canApprove trên chức năng đang cấu hình. */
+function workflowApproverCandidates(data: AppData, moduleKey: string): Row[] {
+  return (data.users || [])
+    .filter((u) => Number(u.active ?? 1) === 1)
+    .map((u): Row => {
+      const perm = (data.allModulePermissions || []).find(
+        (p) => String(p.userId) === String(u.id) && String(p.moduleKey) === moduleKey);
+      const isAdmin = String(u.role) === "admin";
+      return { ...u, hasApprovePermission: isAdmin || Number(perm?.canApprove) === 1 };
+    })
+    .sort((a, b) => Number(b.hasApprovePermission) - Number(a.hasApprovePermission)
+      || String(a.fullName || "").localeCompare(String(b.fullName || ""), "vi"));
+}
+
+// ---------------------------------------------------------------------------
+// ĐỢT P5 — PHÂN QUYỀN PHÒNG BAN · PHÂN QUYỀN NGƯỜI DÙNG · CẤP BẬC HỆ THỐNG
+// ---------------------------------------------------------------------------
+// =============================================================================
+// MỤC 7/8 — DANH SÁCH NHÂN SỰ FULL MÀN
+// Yêu cầu: «danh sách nhân sự đang không hiển thị đúng danh sách mà bị chia đôi màn
+// hình ra rồi, tôi muốn nó phải hiển thị dạng danh sách full màn và có các chức năng
+// crud search sort fillter».
+// → Bảng toàn màn hình + tìm kiếm + lọc (phòng ban / chức danh / trạng thái) +
+//   sắp xếp + phân trang + nút CRUD (Hồ sơ / Sửa / Quyền) dùng chung modal với admin.
+// =============================================================================
+function AdminStaffList({ data, open, query, onQuery }: { data: AppData; open: (name: string, row?: Row) => void; query: string; onQuery: (v: string) => void }) {
+  const [dept, setDept] = useState("ALL");
+  const [role, setRole] = useState("ALL");
+  const [status, setStatus] = useState("ALL");
+  const [sortBy, setSortBy] = useState("name");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+
+  const users: Row[] = data.users || [];
+  const depts = [...new Set(users.map((u) => String(u.organizationName || u.department || "")).filter(Boolean))].sort((a, b) => a.localeCompare(b, "vi"));
+  const roles = [...new Set(users.map((u) => String(u.roleName || u.role || "")).filter(Boolean))].sort((a, b) => a.localeCompare(b, "vi"));
+
+  const rows = users
+    .filter((u) => status === "ALL" || (status === "ACTIVE" ? u.active !== false : u.active === false))
+    .filter((u) => dept === "ALL" || String(u.organizationName || u.department || "") === dept)
+    .filter((u) => role === "ALL" || String(u.roleName || u.role || "") === role)
+    .filter((u) => !query.trim() ||
+      `${u.fullName || ""} ${u.email || ""} ${u.username || ""} ${u.employeeCode || ""}`.toLocaleLowerCase("vi")
+        .includes(query.trim().toLocaleLowerCase("vi")))
+    .sort((a, b) => {
+      if (sortBy === "code") return String(a.employeeCode || "").localeCompare(String(b.employeeCode || ""));
+      if (sortBy === "dept") return String(a.organizationName || a.department || "").localeCompare(String(b.organizationName || b.department || ""), "vi");
+      if (sortBy === "role") return String(a.roleName || a.role || "").localeCompare(String(b.roleName || b.role || ""), "vi");
+      return String(a.fullName || "").localeCompare(String(b.fullName || ""), "vi");
+    });
+
+  const pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
+  const safePage = Math.min(page, pageCount);
+  const shown = rows.slice((safePage - 1) * pageSize, safePage * pageSize);
+  // Đổi bộ lọc thì quay về trang 1.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { setPage(1); }, [query, dept, role, status, sortBy, pageSize]);
+
+  return <div className="staff-full">
+    <div className="staff-full-filters">
+      <input value={query} onChange={(e) => onQuery(e.target.value)} placeholder="Tìm tên, mã NV, email, tài khoản…" aria-label="Tìm nhân sự"/>
+      <select value={dept} onChange={(e) => setDept(e.target.value)} aria-label="Lọc phòng ban"><option value="ALL">Tất cả phòng ban</option>{depts.map((d) => <option key={d} value={d}>{d}</option>)}</select>
+      <select value={role} onChange={(e) => setRole(e.target.value)} aria-label="Lọc chức danh"><option value="ALL">Tất cả chức danh</option>{roles.map((r) => <option key={r} value={r}>{r}</option>)}</select>
+      <select value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Lọc trạng thái"><option value="ALL">Tất cả trạng thái</option><option value="ACTIVE">Đang hoạt động</option><option value="LOCKED">Đã khoá</option></select>
+      <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} aria-label="Sắp xếp"><option value="name">Sắp xếp: Họ tên</option><option value="code">Sắp xếp: Mã NV</option><option value="dept">Sắp xếp: Phòng ban</option><option value="role">Sắp xếp: Chức danh</option></select>
+      <select value={String(pageSize)} onChange={(e) => setPageSize(Number(e.target.value))} aria-label="Số dòng mỗi trang"><option value="25">25/trang</option><option value="50">50/trang</option><option value="100">100/trang</option></select>
+    </div>
+    <div className="table-wrap"><table className="baseline-table staff-full-table">
+      <thead><tr>
+        <th>STT</th><th>Mã NV</th><th>Họ tên</th><th>Tài khoản</th><th>Chức danh</th>
+        <th>Phòng ban</th><th>Email</th><th>Trạng thái</th><th>Thao tác</th>
+      </tr></thead>
+      <tbody>
+        {shown.map((u, i) => <tr key={String(u.id)}>
+          <td>{(safePage - 1) * pageSize + i + 1}</td>
+          <td><strong className="code">{u.employeeCode || "—"}</strong></td>
+          <td><strong>{u.fullName}</strong></td>
+          <td>{u.username || "—"}</td>
+          <td>{u.roleName || u.role || "—"}</td>
+          <td>{u.organizationName || u.department || "—"}</td>
+          <td>{u.email || "—"}</td>
+          <td><Pill value={u.active === false ? "Đã khoá" : "Đang hoạt động"}/></td>
+          <td><div className="row-actions">
+            <button type="button" className="export-mini" onClick={() => open("userProfile", u)}>Hồ sơ</button>
+            <button type="button" className="export-mini" onClick={() => open("userEdit", u)}>Sửa</button>
+            <button type="button" className="export-mini" onClick={() => open("access", u)}>Quyền</button>
+          </div></td>
+        </tr>)}
+        {!shown.length && <tr><td colSpan={9}><Empty text="Không có nhân sự phù hợp bộ lọc."/></td></tr>}
+      </tbody>
+    </table></div>
+    <div className="table-pagination">
+      <span>{rows.length} nhân sự · trang {safePage}/{pageCount}</span>
+      <div>
+        <button type="button" disabled={safePage <= 1} onClick={() => setPage(1)}>«</button>
+        <button type="button" disabled={safePage <= 1} onClick={() => setPage(safePage - 1)}>‹</button>
+        <button type="button" disabled={safePage >= pageCount} onClick={() => setPage(safePage + 1)}>›</button>
+        <button type="button" disabled={safePage >= pageCount} onClick={() => setPage(pageCount)}>»</button>
+      </div>
+    </div>
+  </div>;
+}
+
+const PERM_CAPS: { key: string; label: string }[] = [
+  { key: "canView", label: "Xem" }, { key: "canUse", label: "Thao tác" },
+  { key: "canCreate", label: "Tạo" }, { key: "canEdit", label: "Sửa" },
+  { key: "canApprove", label: "Duyệt" }, { key: "canExport", label: "Xuất" },
+];
+const EMPTY_CAPS: Row = { canView: 0, canUse: 0, canCreate: 0, canEdit: 0, canApprove: 0, canExport: 0 };
+const capsCount = (row: Row) => PERM_CAPS.reduce((n, c) => n + (Number(row?.[c.key]) === 1 ? 1 : 0), 0);
+
+/** Tab "Phân quyền phòng ban" — cấp quyền HÀNG LOẠT cho cả phòng ban. */
+function DepartmentPermissionManager({ data, action }: { data: AppData; action: (name: string, payload: Row) => Promise<boolean> }) {
+  const depts = (data.organizationUnits || []).filter((o) => Number(o.active ?? 1) === 1 && o.unitType !== "company");
+  const [deptId, setDeptId] = useState(String(depts[0]?.id || ""));
+  const [draft, setDraft] = useState<Record<string, Row>>({});
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+  const modules = configuredModules(data).filter((m) => m.key !== "admin");
+  const savedRows = (data.departmentModulePermissions || []).filter((r) => String(r.organizationUnitId) === deptId);
+  // Đổi phòng ban thì bỏ bản nháp đang sửa của phòng trước.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { setDraft({}); setMsg(""); }, [deptId]);
+  const valueOf = (moduleKey: string): Row => {
+    if (draft[moduleKey]) return draft[moduleKey];
+    const row = savedRows.find((r) => String(r.moduleKey) === moduleKey);
+    return row
+      ? { canView: Number(row.canView), canUse: Number(row.canUse), canCreate: Number(row.canCreate), canEdit: Number(row.canEdit), canApprove: Number(row.canApprove), canExport: Number(row.canExport) }
+      : { ...EMPTY_CAPS };
+  };
+  const toggle = (moduleKey: string, cap: string) => {
+    const cur = valueOf(moduleKey);
+    const next: Row = { ...cur, [cap]: Number(cur[cap]) === 1 ? 0 : 1 };
+    if (cap === "canView" && Number(next.canView) === 0) {
+      PERM_CAPS.forEach((c) => { next[c.key] = 0; });
+    } else if (cap !== "canView" && Number(next[cap]) === 1) {
+      next.canView = 1;   // có thao tác thì tối thiểu phải được xem
+    }
+    setDraft((d) => ({ ...d, [moduleKey]: next }));
+  };
+  const applyPrefix = (prefix: string) => setDraft((d) => {
+    const next = { ...d };
+    modules.filter((m) => m.key.startsWith(prefix)).forEach((m) => {
+      next[m.key] = { canView: 1, canUse: 1, canCreate: 1, canEdit: 1, canApprove: 0, canExport: 1 };
+    });
+    return next;
+  });
+  const clearAll = () => setDraft(Object.fromEntries(modules.map((m) => [m.key, { ...EMPTY_CAPS }])));
+  const changed = Object.keys(draft);
+  async function save() {
+    if (!deptId) return setMsg("Hãy chọn phòng ban.");
+    if (!changed.length) return setMsg("Chưa có thay đổi nào để lưu.");
+    setBusy(true);
+    let ok = 0;
+    for (const moduleKey of changed) {
+      if (await action("save_department_permission", { organizationUnitId: deptId, moduleKey, ...draft[moduleKey] })) ok++;
+    }
+    setBusy(false);
+    setMsg(`Đã lưu ${ok}/${changed.length} chức năng và đồng bộ lại quyền của nhân sự trong phòng.`);
+    setDraft({});
+  }
+  const deptName = depts.find((d) => String(d.id) === deptId);
+  return <div className="stack">
+    <div className="kpi-grid small">
+      <Kpi icon="PB" label="Phòng ban đang cấu hình" value={String(((data.departmentModulePermissions || []).map((r) => String(r.organizationUnitId)).filter((v, i, a) => a.indexOf(v) === i)).length)} note="Số phòng đã được cấp quyền" />
+      <Kpi icon="CN" label="Lượt cấp quyền chức năng" value={String((data.departmentModulePermissions || []).length)} note="Tổng số dòng quyền phòng ban" tone="green" />
+      <Kpi icon="S" label="Thay đổi chưa lưu" value={String(changed.length)} note="Bấm “Lưu thay đổi” để áp dụng" tone={changed.length ? "amber" : "blue"} />
+    </div>
+    <section className="card dept-perm-card">
+      <CardHead title="Phân quyền theo phòng ban" note="Chọn phòng ở cột DANH SÁCH PHÒNG BAN bên trái. Quyền hiển thị dạng checkbox; nhân sự trong phòng hưởng quyền này." />
+      <div className="dept-perm-layout">
+        <aside className="dept-perm-list">
+          <div className="dept-perm-list-head"><strong>DANH SÁCH PHÒNG BAN</strong><span>{depts.length} phòng</span></div>
+          {depts.map((o) => {
+            const granted = (data.departmentModulePermissions || []).filter((r) => String(r.organizationUnitId) === String(o.id)).length;
+            return <button key={String(o.id)} type="button" className={String(o.id) === deptId ? "active" : ""} onClick={() => setDeptId(String(o.id))}>
+              <div><b>{o.code || "—"}</b><small>{o.name}</small></div>
+              <span>{granted} quyền</span>
+            </button>;
+          })}
+          {!depts.length && <div className="dept-perm-empty"><Empty text="Chưa có phòng ban nào."/></div>}
+        </aside>
+        <div className="dept-perm-main">
+          <div className="dept-perm-context">
+            <strong>{deptName ? deptName.name : "Chưa chọn phòng"}</strong>
+            <span>{deptName ? `${deptName.code} · ${savedRows.length} chức năng đã cấp · ${changed.length} thay đổi chưa lưu` : "Chọn một phòng ở cột bên trái"}</span>
+          </div>
+          <div className="dept-perm-actions">
+            <span>Cấp nhanh:</span>
+            <button className="secondary" onClick={() => applyPrefix("dept_plan_")}>Nhóm Kế hoạch</button>
+            <button className="secondary" onClick={() => applyPrefix("dept_project_")}>Nhóm Dự án</button>
+            <button className="secondary" onClick={() => applyPrefix("dept_finance_")}>Nhóm Tài chính</button>
+            <button className="secondary" onClick={() => applyPrefix("dept_legal_")}>Nhóm Hành chính</button>
+            <button className="secondary" onClick={clearAll}>Bỏ chọn tất cả</button>
+            <button className="primary" disabled={busy} onClick={save}>{busy ? "Đang lưu…" : "Lưu thay đổi"}</button>
+          </div>
+      {msg && <div className="inline-alert">{msg}</div>}
+      <div className="table-wrap"><table>
+        <thead><tr><th>Chức năng</th>{PERM_CAPS.map((c) => <th key={c.key}>{c.label}</th>)}<th></th></tr></thead>
+        <tbody>
+          {modules.map((m) => {
+            const v = valueOf(m.key);
+            const isDraft = Boolean(draft[m.key]);
+            return <tr key={m.key} style={isDraft ? { background: "#fff8e6" } : undefined}>
+              <td><strong>{m.label}</strong><small>{m.key}</small></td>
+              {PERM_CAPS.map((c) => <td key={c.key}>
+                <input type="checkbox" checked={Number(v[c.key]) === 1} onChange={() => toggle(m.key, c.key)} />
+              </td>)}
+              <td>{isDraft ? <Pill value="Chưa lưu" /> : (savedRows.some((r) => String(r.moduleKey) === m.key) ? <Pill value="Đã cấp" /> : "")}</td>
+            </tr>;
+          })}
+        </tbody>
+      </table></div>
+        </div>
+      </div>
+    </section>
+  </div>;
+}
+
+/** Tab "Phân quyền người dùng" — ma trận quyền của TẤT CẢ người dùng + ràng buộc phòng ban. */
+function UserPermissionMatrix({ data, open, action }: { data: AppData; open: (name: string, row?: Row) => void; action: (name: string, payload: Row) => Promise<boolean> }) {
+  const [query, setQuery] = useState("");
+  const [deptFilter, setDeptFilter] = useState("");
+  const [levelFilter, setLevelFilter] = useState("");
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [msg, setMsg] = useState("");
+  const levels = data.systemLevelCatalog || [];
+  const levelOf = (code: unknown) => levels.find((l) => String(l.code) === String(code)) || null;
+  const depts = (data.organizationUnits || []).filter((o) => o.unitType !== "company");
+  const rows = (data.users || []).filter((u) => {
+    if (deptFilter && String(u.organizationUnitId) !== deptFilter) return false;
+    if (levelFilter && String(u.systemLevelCode || "") !== levelFilter) return false;
+    if (!query) return true;
+    const hay = `${u.fullName || ""} ${u.employeeCode || ""} ${u.username || ""} ${u.organizationName || u.department || ""} ${u.roleName || ""}`.toLocaleLowerCase("vi");
+    return hay.includes(query.toLocaleLowerCase("vi"));
+  });
+  const permsOf = (userId: string) => (data.allModulePermissions || []).filter((p) => String(p.userId) === userId);
+  const deptPermsOf = (orgUnitId: unknown) => (data.departmentModulePermissions || []).filter((d) => String(d.organizationUnitId) === String(orgUnitId));
+  const moduleLabel = (key: string) => configuredModules(data, true).find((m) => m.key === key)?.label || key;
+  /** Quyền người dùng đang có nhưng phòng ban KHÔNG có ⇒ vi phạm ràng buộc P5.3. */
+  const violationsOf = (u: Row) => {
+    const level = levelOf(u.systemLevelCode);
+    if (String(u.role) === "admin" || Number(level?.autoGrantAll) === 1) return [];
+    const dp = deptPermsOf(u.organizationUnitId);
+    if (!dp.length) return [];
+    const allowed = new Set(dp.filter((d) => Number(d.active) === 1 && Number(d.canView) === 1).map((d) => String(d.moduleKey)));
+    return permsOf(String(u.id)).filter((p) => capsCount(p) > 0 && !allowed.has(String(p.moduleKey))).map((p) => String(p.moduleKey));
+  };
+  async function copyFromDepartment(u: Row) {
+    const dp = deptPermsOf(u.organizationUnitId);
+    if (!dp.length) return setMsg(`Phòng ban của ${u.fullName} chưa được cấu hình quyền nào.`);
+    if (!window.confirm(`Ghi đè quyền chức năng của ${u.fullName} bằng quyền của phòng ban? Phạm vi dự án và kho được giữ nguyên.`)) return;
+    const projectScopes = (data.userScopes || []).filter((s) => String(s.userId) === String(u.id))
+      .map((s) => ({ projectId: s.projectId, permission: s.permission || "read" }));
+    const warehouseScopes = (data.userWarehouseScopes || []).filter((s) => String(s.userId) === String(u.id))
+      .map((s) => ({ warehouseId: s.warehouseId, permission: s.permission || "read" }));
+    const modulePermissions = dp.filter((d) => Number(d.active) === 1).map((d) => ({
+      moduleKey: d.moduleKey, canView: Number(d.canView), canUse: Number(d.canUse), canCreate: Number(d.canCreate),
+      canEdit: Number(d.canEdit), canApprove: Number(d.canApprove), canExport: Number(d.canExport),
+    }));
+    const ok = await action("save_user_access", { userId: u.id, projectScopes, warehouseScopes, modulePermissions });
+    setMsg(ok ? `Đã sao chép ${modulePermissions.length} quyền từ phòng ban cho ${u.fullName}.` : "");
+  }
+  return <div className="stack">
+    <div className="kpi-grid small">
+      <Kpi icon="ND" label="Người dùng đang hoạt động" value={String((data.users || []).filter((u) => Number(u.active ?? 1) === 1).length)} note="Toàn bộ tài khoản trong hệ thống" />
+      <Kpi icon="Q" label="Lượt quyền đã cấp" value={String((data.allModulePermissions || []).length)} note="Quyền hiệu lực theo từng chức năng" tone="green" />
+      <Kpi icon="!" label="Tài khoản vượt quyền phòng ban" value={String(rows.filter((u) => violationsOf(u).length > 0).length)} note="Quyền không có ở phòng ban" tone="amber" />
+    </div>
+    <section className="card">
+      <CardHead title="Phân quyền người dùng" note="Tìm theo tên, mã nhân viên, phòng ban, chức danh hoặc cấp bậc. Quyền của người dùng không được vượt quá quyền của phòng ban." />
+      <div className="table-toolbar">
+        <div><strong>BỘ LỌC</strong><span>{rows.length}/{(data.users || []).length} tài khoản khớp</span></div>
+        <div className="row-actions">
+          <input className="admin-search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Tên, mã NV, chức danh…" />
+          <select value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)}>
+            <option value="">— Tất cả phòng ban —</option>
+            {depts.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+          </select>
+          <select value={levelFilter} onChange={(e) => setLevelFilter(e.target.value)}>
+            <option value="">— Tất cả cấp bậc —</option>
+            {levels.map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}
+          </select>
+        </div>
+      </div>
+      {msg && <div className="inline-alert">{msg}</div>}
+      <div className="table-wrap"><table>
+        <thead><tr><th>Mã NV</th><th>Họ tên</th><th>Phòng ban</th><th>Chức danh</th><th>Cấp bậc</th><th>Quyền</th><th>Cảnh báo</th><th></th></tr></thead>
+        <tbody>
+          {rows.flatMap((u) => {
+            const perms = permsOf(String(u.id));
+            const bad = violationsOf(u);
+            const level = levelOf(u.systemLevelCode);
+            const isOpen = expanded === String(u.id);
+            const mainRow = <tr key={u.id}>
+                <td><strong>{u.employeeCode || "—"}</strong></td>
+                <td>{u.fullName}<small>{u.username}</small></td>
+                <td>{u.organizationName || u.department || "—"}</td>
+                <td>{u.roleName || roleLabel(data, String(u.role || ""))}</td>
+                <td>{level ? level.name : <span className="muted">Chưa xếp</span>}{Number(level?.autoGrantAll) === 1 && <small>Tự động toàn quyền</small>}</td>
+                <td><strong>{perms.filter((p) => capsCount(p) > 0).length}</strong> chức năng</td>
+                <td>{bad.length ? <Pill value={`${bad.length} vượt phòng ban`} /> : <Pill value="Hợp lệ" />}</td>
+                <td><div className="row-actions">
+                  <button className="export-mini" onClick={() => setExpanded(isOpen ? null : String(u.id))}>{isOpen ? "Thu gọn" : "Chi tiết"}</button>
+                  <button className="export-mini" onClick={() => void copyFromDepartment(u)}>Sao chép từ phòng ban</button>
+                  <button className="export-mini" onClick={() => open("userEdit", u)}>Sửa</button>
+                </div></td>
+              </tr>;
+            if (!isOpen) return [mainRow];
+            return [mainRow, <tr key={`${u.id}-x`}><td colSpan={8}>
+                {!perms.length && <Empty text="Tài khoản chưa có quyền chức năng nào." />}
+                {perms.filter((p) => capsCount(p) > 0).map((p) => {
+                  const isBad = bad.includes(String(p.moduleKey));
+                  return <span key={p.moduleKey} className={`pill ${isBad ? "red" : "blue"}`} style={{ marginRight: 6, marginBottom: 6 }}>
+                    <i />{moduleLabel(String(p.moduleKey))} · {PERM_CAPS.filter((c) => Number(p[c.key]) === 1).map((c) => c.label).join("/")}
+                    {String(p.permissionSource) === "manual_override" ? " · ngoại lệ" : ""}
+                    {isBad ? " · ⚠ phòng ban chưa có" : ""}
+                  </span>;
+                })}
+                {bad.length > 0 && <div className="inline-alert" style={{ marginTop: 8 }}>
+                  Tài khoản đang có {bad.length} quyền mà phòng ban chưa được cấp. Hãy cấp cho phòng ban ở tab “Phân quyền phòng ban”, hoặc xếp cấp bậc đủ cao (tự động toàn quyền).
+                </div>}
+              </td></tr>];
+          })}
+          {!rows.length && <tr><td colSpan={8}><Empty text="Không có tài khoản nào khớp bộ lọc." /></td></tr>}
+        </tbody>
+      </table></div>
+    </section>
+  </div>;
+}
+
+/** Tab "Cấp bậc hệ thống" — thang cấp bậc + gán cho người dùng (P5.6–P5.8). */
+function SystemLevelManager({ data, open, action }: { data: AppData; open: (name: string, row?: Row) => void; action: (name: string, payload: Row) => Promise<boolean> }) {
+  const levels = [...(data.systemLevelCatalog || [])].sort((a, b) => Number(a.rank) - Number(b.rank));
+  const [userId, setUserId] = useState("");
+  const [levelCode, setLevelCode] = useState("");
+  const [msg, setMsg] = useState("");
+  const [busy, setBusy] = useState(false);
+  const usersOfLevel = (code: string) => (data.users || []).filter((u) => String(u.systemLevelCode) === String(code));
+  const levelLabel = (code: string) => levels.find((l) => String(l.code) === code) || null;
+  const chosen = levelLabel(levelCode);
+  const noLevel = (data.users || []).filter((u) => !u.systemLevelCode);
+  async function assign() {
+    if (!userId || !levelCode) return setMsg("Hãy chọn tài khoản và cấp bậc.");
+    setBusy(true);
+    const ok = await action("set_user_system_level", { userId, levelCode });
+    setBusy(false);
+    setMsg(ok ? "Đã xếp cấp bậc. Xem thông báo chi tiết ở góc trên màn hình." : "");
+    if (ok) { setUserId(""); setLevelCode(""); }
+  }
+  return <div className="stack">
+    <div className="kpi-grid small">
+      <Kpi icon="CB" label="Cấp bậc đang dùng" value={String(levels.filter((l) => Number(l.active) === 1).length)} note="Thang cấp bậc toàn hệ thống" />
+      <Kpi icon="ND" label="Tài khoản chưa xếp cấp bậc" value={String(noLevel.length)} note="Nên xếp để áp đúng quyền" tone={noLevel.length ? "amber" : "green"} />
+      <Kpi icon="★" label="Cấp bậc tự động toàn quyền" value={String(levels.filter((l) => Number(l.autoGrantAll) === 1).length)} note="Không cần cấu hình quyền thủ công" tone="green" />
+    </div>
+    <section className="card">
+      <CardHead title="Thang cấp bậc hệ thống" note="Cấp bậc cao tự động có quyền cao nhất và có thể duyệt vượt cấp mà không cần thêm tên vào từng quy trình." action="＋ Thêm cấp bậc" onClick={() => open("systemLevelMaster")} />
+      <div className="table-wrap"><table>
+        <thead><tr><th>Hạng</th><th>Mã</th><th>Tên cấp bậc</th><th>Tự động toàn quyền</th><th>Duyệt vượt cấp</th><th>Số tài khoản</th><th>Trạng thái</th><th></th></tr></thead>
+        <tbody>{levels.map((l) => <tr key={l.id}>
+          <td><strong>{l.rank}</strong></td>
+          <td>{l.code}</td>
+          <td>{l.name}<small>{l.description || "—"}</small></td>
+          <td>{Number(l.autoGrantAll) === 1 ? <Pill value="Có" /> : <span className="muted">Không</span>}</td>
+          <td>{Number(l.canSkipLevels) === 1 ? <Pill value="Có" /> : <span className="muted">Không</span>}</td>
+          <td>{usersOfLevel(String(l.code)).length}</td>
+          <td><Pill value={Number(l.active) === 1 ? "Đang dùng" : "Đã ngừng"} /></td>
+          <td><div className="row-actions">
+            <button className="export-mini" onClick={() => open("systemLevelMaster", l)}>Sửa</button>
+            <button className="export-mini" onClick={() => action("set_system_level_status", { levelId: l.id, active: Number(l.active) === 1 ? 0 : 1 })}>{Number(l.active) === 1 ? "Ngừng" : "Kích hoạt"}</button>
+            <button className="export-mini danger" onClick={() => action("delete_system_level", { levelId: l.id })}>Xóa</button>
+          </div></td>
+        </tr>)}
+        {!levels.length && <tr><td colSpan={8}><Empty text="Chưa có cấp bậc nào." /></td></tr>}
+        </tbody>
+      </table></div>
+    </section>
+    <section className="card">
+      <CardHead title="Xếp cấp bậc cho tài khoản" note="Khi chọn cấp bậc, hệ thống báo rõ cấp bậc đó có tự động cấp quyền hay được duyệt vượt cấp hay không." />
+      <div className="table-toolbar">
+        <div><strong>GÁN CẤP BẬC</strong><span>{chosen ? `${chosen.name} · ${usersOfLevel(String(chosen.code)).length} tài khoản đang giữ` : "Chưa chọn cấp bậc"}</span></div>
+        <div className="row-actions">
+          <select value={userId} onChange={(e) => setUserId(e.target.value)}>
+            <option value="">— Chọn tài khoản —</option>
+            {(data.users || []).filter((u) => Number(u.active ?? 1) === 1).map((u) => <option key={u.id} value={u.id}>{u.fullName} · {u.employeeCode || u.username}</option>)}
+          </select>
+          <select value={levelCode} onChange={(e) => setLevelCode(e.target.value)}>
+            <option value="">— Chọn cấp bậc —</option>
+            {levels.filter((l) => Number(l.active) === 1).map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}
+          </select>
+          <button className="primary" disabled={busy} onClick={assign}>{busy ? "Đang lưu…" : "Xếp cấp bậc"}</button>
+        </div>
+      </div>
+      {chosen && <div className="inline-alert">
+        <strong>{chosen.name}</strong>
+        {Number(chosen.autoGrantAll) === 1
+          ? <> — cấp bậc này <b>TỰ ĐỘNG có toàn quyền</b> trên mọi chức năng, không cần cấu hình từng quyền.</>
+          : <> — cấp bậc này <b>không</b> tự động cấp quyền; quyền lấy theo phòng ban.</>}
+        {Number(chosen.canSkipLevels) === 1
+          ? <> Cấp bậc này <b>được DUYỆT VƯỢT CẤP</b>, không cần thêm tên vào từng quy trình phê duyệt.</>
+          : <> Không được duyệt vượt cấp; phải nằm trong danh sách người duyệt của bước.</>}
+      </div>}
+      {msg && <div className="inline-alert">{msg}</div>}
+      <div className="admin-mini-list">
+        {levels.map((l) => <div key={l.id}>
+          <span className="group-icon">★</span>
+          <span><strong>{l.name}</strong><small>{usersOfLevel(String(l.code)).map((u) => u.fullName).join(", ") || "Chưa có ai"}</small></span>
+          <b>{usersOfLevel(String(l.code)).length} người</b>
+        </div>)}
+      </div>
+    </section>
+  </div>;
+}
+
+/** Tab "Audit log" — nhật ký kiểm toán mọi thay đổi dữ liệu (ĐỢT P6). */
+function AuditLogManager({ data }: { data: AppData }) {
+  const [query, setQuery] = useState("");
+  const [userFilter, setUserFilter] = useState("");
+  const [moduleFilter, setModuleFilter] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [openId, setOpenId] = useState<string | null>(null);
+  const all = data.audits || [];
+  const levelName = (code: unknown) => (data.systemLevelCatalog || []).find((l) => String(l.code) === String(code))?.name || "";
+  const moduleLabel = (key: unknown) => {
+    const k = String(key || "");
+    if (!k) return "";
+    return configuredModules(data, true).find((m) => m.key === k)?.label || k;
+  };
+  const users = Array.from(new Set(all.map((a) => String(a.userName || "").trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, "vi"));
+  const modules = Array.from(new Set(all.map((a) => String(a.moduleKey || "").trim()).filter(Boolean))).sort();
+  const CAP_LABEL: Record<string, string> = { canView: "Xem", canUse: "Thao tác", canCreate: "Tạo", canEdit: "Sửa", canApprove: "Duyệt", canExport: "Xuất" };
+  const dayOf = (value: unknown) => String(value || "").slice(0, 10);
+  const rows = all.filter((a) => {
+    if (userFilter && String(a.userName || "") !== userFilter) return false;
+    if (moduleFilter && String(a.moduleKey || "") !== moduleFilter) return false;
+    const day = dayOf(a.occurredAt);
+    if (fromDate && day && day < fromDate) return false;
+    if (toDate && day && day > toDate) return false;
+    if (!query) return true;
+    const hay = `${a.action || ""} ${a.changeDetail || ""} ${a.userName || ""} ${a.entityId || ""} ${a.moduleKey || ""} ${a.ipAddress || ""}`.toLocaleLowerCase("vi");
+    return hay.includes(query.toLocaleLowerCase("vi"));
+  });
+  const stats = {
+    total: all.length,
+    today: all.filter((a) => dayOf(a.occurredAt) === new Date().toISOString().slice(0, 10)).length,
+    people: new Set(all.map((a) => String(a.userName || "")).filter(Boolean)).size,
+    modules: new Set(all.map((a) => String(a.moduleKey || "")).filter(Boolean)).size,
+  };
+  const pretty = (raw: unknown) => { try { return JSON.stringify(JSON.parse(String(raw || "")), null, 2); } catch { return String(raw || ""); } };
+  return <div className="stack">
+    <div className="kpi-grid small">
+      <Kpi icon="NK" label="Lượt thay đổi được ghi" value={String(stats.total)} note="500 bản ghi gần nhất" />
+      <Kpi icon="H" label="Phát sinh hôm nay" value={String(stats.today)} note="Theo ngày trên máy chủ" tone="green" />
+      <Kpi icon="ND" label="Người đã thao tác" value={String(stats.people)} note="Số tài khoản khác nhau" tone="amber" />
+      <Kpi icon="CN" label="Chức năng bị tác động" value={String(stats.modules)} note="Phạm vi ảnh hưởng" />
+    </div>
+    <section className="card">
+      <CardHead title="Nhật ký kiểm toán" note="Ghi tự động MỌI thao tác thay đổi dữ liệu: ai làm, thuộc phòng nào, cấp bậc gì, dùng quyền nào, đổi cái gì, lúc nào." />
+      <div className="table-toolbar">
+        <div><strong>BỘ LỌC</strong><span>{rows.length}/{all.length} bản ghi khớp</span></div>
+        <div className="row-actions">
+          <input className="admin-search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Hành động, chi tiết, đối tượng, IP…" />
+          <select value={userFilter} onChange={(e) => setUserFilter(e.target.value)}>
+            <option value="">— Mọi người dùng —</option>
+            {users.map((u) => <option key={u} value={u}>{u}</option>)}
+          </select>
+          <select value={moduleFilter} onChange={(e) => setModuleFilter(e.target.value)}>
+            <option value="">— Mọi chức năng —</option>
+            {modules.map((m) => <option key={m} value={m}>{moduleLabel(m)}</option>)}
+          </select>
+          <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} title="Từ ngày" />
+          <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} title="Đến ngày" />
+          <button className="secondary" onClick={() => { setQuery(""); setUserFilter(""); setModuleFilter(""); setFromDate(""); setToDate(""); }}>Xóa lọc</button>
+        </div>
+      </div>
+      {!all.length && <Empty text="Chưa có bản ghi nào. Nhật ký sẽ tự đầy khi có thao tác thay đổi dữ liệu." />}
+      {all.length > 0 && <div className="table-wrap"><table>
+        <thead><tr><th>Thời gian</th><th>Người thực hiện</th><th>Phòng ban</th><th>Cấp bậc</th><th>Chức năng</th><th>Quyền dùng</th><th>Hành động</th><th>Chi tiết</th></tr></thead>
+        <tbody>
+          {rows.map((a) => {
+            const isOpen = openId === String(a.id);
+            const mainRow = <tr key={a.id}>
+              <td><strong>{date(a.occurredAt)}</strong><small>{String(a.ipAddress || "—")}</small></td>
+              <td>{a.userName || "Hệ thống"}<small>{a.userRole || ""}</small></td>
+              <td>{a.department || "—"}</td>
+              <td>{levelName(a.systemLevel) || <span className="muted">—</span>}</td>
+              <td>{moduleLabel(a.moduleKey) || "—"}</td>
+              <td>{CAP_LABEL[String(a.permissionUsed || "")] || a.permissionUsed || "—"}</td>
+              <td><strong>{a.action}</strong></td>
+              <td><button className="export-mini" onClick={() => setOpenId(isOpen ? null : String(a.id))}>{isOpen ? "Đóng" : "Xem"}</button></td>
+            </tr>;
+            if (!isOpen) return [mainRow];
+            return [mainRow, <tr key={`${a.id}-x`}><td colSpan={8}>
+              <div className="table-toolbar"><div><strong>CHI TIẾT THAY ĐỔI</strong><span>{a.changeDetail || ""}</span></div></div>
+              <div className="form-grid">
+                <label className="span-2"><span>Dữ liệu gửi lên (sau)</span>
+                  <textarea readOnly rows={6} value={pretty(a.afterJson)} style={{ width: "100%", fontFamily: "monospace", fontSize: 12 }} />
+                </label>
+                {a.beforeJson && <label className="span-2"><span>Dữ liệu trước</span>
+                  <textarea readOnly rows={5} value={pretty(a.beforeJson)} style={{ width: "100%", fontFamily: "monospace", fontSize: 12 }} />
+                </label>}
+              </div>
+              <div className="inline-alert">
+                Đối tượng: <b>{a.entityId || "—"}</b> · Loại: <b>{a.entityType || "—"}</b> · Mã bản ghi: <b>{a.id}</b>
+                {!a.beforeJson && <> · Bản ghi này chỉ lưu dữ liệu SAU thay đổi (nhật ký chung không chụp được giá trị trước).</>}
+              </div>
+            </td></tr>];
+          })}
+          {!rows.length && <tr><td colSpan={8}><Empty text="Không có bản ghi nào khớp bộ lọc." /></td></tr>}
+        </tbody>
+      </table></div>}
+    </section>
+  </div>;
+}
+
+function SystemLevelModal({ data, row, close, submit }: { data: AppData; row?: Row; close: () => void; submit: (name: string, payload: Row) => Promise<boolean> }) {
+  const [code, setCode] = useState(String(row?.code || ""));
+  const [name, setName] = useState(String(row?.name || ""));
+  const [description, setDescription] = useState(String(row?.description || ""));
+  const [rank, setRank] = useState(String(row?.rank ?? 10));
+  const [sortOrder, setSortOrder] = useState(String(row?.sortOrder ?? 10));
+  const [autoGrantAll, setAutoGrantAll] = useState(Number(row?.autoGrantAll) === 1);
+  const [canSkipLevels, setCanSkipLevels] = useState(Number(row?.canSkipLevels) === 1);
+  const [error, setError] = useState("");
+  async function save(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    if (!code.trim() || !name.trim()) return setError("Nhập mã và tên cấp bậc.");
+    const ok = await submit("save_system_level", {
+      levelId: row?.id, code: code.trim(), name: name.trim(), description,
+      rank: Number(rank || 0), sortOrder: Number(sortOrder || 0),
+      autoGrantAll: autoGrantAll ? 1 : 0, canSkipLevels: canSkipLevels ? 1 : 0,
+    });
+    if (ok) close();
+  }
+  return <BaseModal title={row ? `Sửa cấp bậc: ${row.name}` : "Thêm cấp bậc hệ thống"} note="Cấp bậc quyết định quyền tự động và khả năng duyệt vượt cấp." close={close}>
+    <form onSubmit={save}>
+      <div className="modal-body">
+        {error && <div className="inline-alert">{error}</div>}
+        <div className="form-grid">
+          <label><span>Mã cấp bậc *</span><input value={code} onChange={(e) => setCode(e.target.value)} placeholder="truong_phong" required /></label>
+          <label><span>Tên cấp bậc *</span><input value={name} onChange={(e) => setName(e.target.value)} placeholder="Trưởng phòng" required /></label>
+          <label><span>Hạng (số càng lớn càng cao)</span><input type="number" value={rank} onChange={(e) => setRank(e.target.value)} /></label>
+          <label><span>Thứ tự hiển thị</span><input type="number" value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} /></label>
+          <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <input type="checkbox" checked={autoGrantAll} onChange={(e) => setAutoGrantAll(e.target.checked)} />
+            <span style={{ margin: 0 }}>Tự động có toàn quyền</span>
+          </label>
+          <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <input type="checkbox" checked={canSkipLevels} onChange={(e) => setCanSkipLevels(e.target.checked)} />
+            <span style={{ margin: 0 }}>Được duyệt vượt cấp</span>
+          </label>
+          <label className="span-2"><span>Mô tả</span><input value={description} onChange={(e) => setDescription(e.target.value)} /></label>
+        </div>
+        <div className="inline-alert">
+          {autoGrantAll ? "Cấp bậc này sẽ TỰ ĐỘNG được cấp toàn quyền trên mọi chức năng khi lưu." : "Cấp bậc này không tự động cấp quyền; quyền lấy theo phòng ban."}
+          {" "}
+          {canSkipLevels ? "Người giữ cấp bậc này KHÔNG cần thêm tên vào từng quy trình phê duyệt." : "Người giữ cấp bậc này phải nằm trong danh sách người duyệt của bước."}
+        </div>
+      </div>
+      <footer className="modal-footer"><button className="secondary" type="button" onClick={close}>Hủy</button><button className="primary">{row ? "Lưu cấp bậc" : "Tạo cấp bậc"}</button></footer>
+    </form>
+  </BaseModal>;
+}
+
+function WorkflowManager({ data, open, action }: { data: AppData; open: (name: string, row?: Row) => void; action: (name: string, payload: Row) => Promise<boolean> }) {
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const workflows = data.workflowDefinitions || [];
+  const stepsOf = (id: string) => (data.workflowSteps || []).filter((s) => String(s.workflowId) === String(id));
+  const approversOf = (stepId: string) => (data.workflowStepApprovers || []).filter((a) => String(a.stepId) === String(stepId));
+  const moduleLabel = (key: string) => configuredModules(data, true).find((m) => m.key === key)?.label || (key || "Dùng chung");
+  const projectLabel = (id: string) => data.projects.find((p) => String(p.id) === String(id))?.code || "";
+  const totalSteps = workflows.reduce((n, w) => n + stepsOf(String(w.id)).length, 0);
+  const totalApprovers = (data.workflowStepApprovers || []).length;
+  return <div className="stack">
+    <div className="kpi-grid small">
+      <Kpi icon="WF" label="Quy trình đang cấu hình" value={String(workflows.length)} note="Nhiều quy trình song song theo chức năng/dự án" />
+      <Kpi icon="B" label="Tổng số bước duyệt" value={String(totalSteps)} note="Mỗi bước có cách xác nhận riêng" tone="amber" />
+      <Kpi icon="ND" label="Người duyệt được chỉ định" value={String(totalApprovers)} note="Chỉ định đích danh, không chỉ theo vai trò" tone="green" />
+    </div>
+    <section className="card">
+      <CardHead title="Quy trình phê duyệt" note="Mỗi quy trình gồm nhiều bước; mỗi bước chọn người duyệt đích danh theo quyền và cách xác nhận (một người / một trong nhiều / tất cả)." action="＋ Thêm quy trình" onClick={() => open("workflowMaster")} />
+      {!workflows.length && <Empty text="Chưa có quy trình nào. Bấm “＋ Thêm quy trình” để tạo." />}
+      {workflows.map((w) => {
+        const steps = stepsOf(String(w.id));
+        const isOpen = expanded === String(w.id);
+        return <div key={w.id} className="menu-layout-group" style={{ marginBottom: 10 }}>
+          <header>
+            <span className="drag-handle">≡</span>
+            <i>{w.isDefault ? "★" : "◆"}</i>
+            <div>
+              <strong>{w.name}</strong>
+              <small>
+                {w.code} · {moduleLabel(String(w.moduleKey || ""))}
+                {w.projectId ? ` · dự án ${projectLabel(String(w.projectId))}` : " · toàn công ty"}
+                {" · "}{steps.length} bước · {steps.reduce((n, s) => n + approversOf(String(s.id)).length, 0)} người duyệt
+              </small>
+            </div>
+            <div className="row-actions">
+              {Number(w.isDefault) === 1 && <Pill value="Mặc định" />}
+              <Pill value={Number(w.active) === 1 ? "Đang áp dụng" : "Đã ngừng"} />
+              <button className="export-mini" onClick={() => setExpanded(isOpen ? null : String(w.id))}>{isOpen ? "Thu gọn" : "Xem bước"}</button>
+              <button className="export-mini" onClick={() => open("workflowMaster", w)}>Sửa</button>
+              <button className="export-mini" onClick={() => action("set_workflow_status", { workflowId: w.id, active: Number(w.active) === 1 ? 0 : 1 })}>{Number(w.active) === 1 ? "Ngừng" : "Kích hoạt"}</button>
+              {Number(w.isDefault) !== 1 && <button className="export-mini danger" onClick={() => window.confirm(`Xóa quy trình “${w.name}” và toàn bộ ${steps.length} bước?`) && action("delete_workflow", { workflowId: w.id })}>Xóa</button>}
+            </div>
+          </header>
+          {isOpen && <div className="table-wrap"><table>
+            <thead><tr><th>Bước</th><th>Tên bước</th><th>Cách xác nhận</th><th>SLA</th><th>Người duyệt được chỉ định</th></tr></thead>
+            <tbody>
+              {steps.map((s) => {
+                const list = approversOf(String(s.id));
+                return <tr key={s.id}>
+                  <td><strong>Bước {s.stepNo}</strong></td>
+                  <td>{s.name}<small>{s.description || "—"}</small></td>
+                  <td><Pill value={APPROVAL_MODE_SHORT[String(s.approvalMode)] || String(s.approvalMode)} />
+                    <small>{APPROVAL_MODE_LABELS[String(s.approvalMode)] || ""}</small></td>
+                  <td>{s.slaHours} giờ</td>
+                  <td>{list.length ? list.map((a) => <span key={a.id} className="pill blue" style={{ marginRight: 4 }}><i />{a.fullName || a.userId}</span>) : <span className="muted">Chưa chỉ định</span>}</td>
+                </tr>;
+              })}
+              {!steps.length && <tr><td colSpan={5}><Empty text="Quy trình chưa có bước nào." /></td></tr>}
+            </tbody>
+          </table></div>}
+        </div>;
+      })}
+    </section>
+    <details className="card">
+      <summary style={{ cursor: "pointer", fontWeight: 600 }}>ⓘ Cấu hình bậc duyệt cũ (vẫn đang dùng cho luồng phê duyệt hiện hành)</summary>
+      <div className="table-wrap"><table>
+        <thead><tr><th>Bước</th><th>Tên bước</th><th>Vai trò được duyệt</th><th>Cách xác nhận</th><th>SLA</th><th>Trạng thái</th><th></th></tr></thead>
+        <tbody>{data.approvalStages.map((row) => <tr key={row.id}>
+          <td>Bước {row.stageNo}</td>
+          <td><strong>{row.name}</strong><small>{row.description || "—"}</small></td>
+          <td>{String(row.allowedRoleCodes || "").split(",").filter(Boolean).map((code) => roleLabel(data, code)).join(", ") || "Chưa gán"}</td>
+          <td>{row.approvalMode === "all_roles" ? <Pill value="Đủ tất cả (AND)" /> : "Một người"}</td>
+          <td>{row.slaHours} giờ</td>
+          <td><Pill value={row.active ? "Đang áp dụng" : "Ngừng áp dụng"} /></td>
+          <td><div className="row-actions">
+            <button className="export-mini" onClick={() => open("approvalStageMaster", row)}>Sửa</button>
+            <button className="export-mini danger" onClick={() => window.confirm(`Xóa bước ${row.name}? Chỉ xóa được khi bước chưa từng phát sinh hồ sơ.`) && action("delete_approval_stage", { stageId: row.id })}>Xóa</button>
+          </div></td>
+        </tr>)}</tbody>
+      </table></div>
+    </details>
+  </div>;
+}
+
+function WorkflowModal({ data, row, close, submit }: { data: AppData; row?: Row; close: () => void; submit: (name: string, payload: Row) => Promise<boolean> }) {
+  const [code, setCode] = useState(String(row?.code || ""));
+  const [name, setName] = useState(String(row?.name || ""));
+  const [description, setDescription] = useState(String(row?.description || ""));
+  const [moduleKey, setModuleKey] = useState(String(row?.moduleKey || "requests"));
+  const [projectId, setProjectId] = useState(String(row?.projectId || ""));
+  const [isDefault, setIsDefault] = useState(Number(row?.isDefault) === 1);
+  const [sortOrder, setSortOrder] = useState(String(row?.sortOrder ?? 10));
+  const [onlyPermitted, setOnlyPermitted] = useState(false);
+  const [error, setError] = useState("");
+  const existingSteps = (data.workflowSteps || []).filter((s) => String(s.workflowId) === String(row?.id))
+    .sort((a, b) => Number(a.stepNo) - Number(b.stepNo))
+    .map((s) => ({
+      key: String(s.id),
+      name: String(s.name || ""),
+      description: String(s.description || ""),
+      approvalMode: String(s.approvalMode || "single"),
+      slaHours: String(s.slaHours ?? 8),
+      approverUserIds: (data.workflowStepApprovers || []).filter((a) => String(a.stepId) === String(s.id)).map((a) => String(a.userId)),
+    }));
+  const [steps, setSteps] = useState<Row[]>(existingSteps.length ? existingSteps : [{
+    key: "new-1", name: "", description: "", approvalMode: "single", slaHours: "8", approverUserIds: [],
+  }]);
+  const candidates = workflowApproverCandidates(data, moduleKey);
+  const permittedCount = candidates.filter((c) => c.hasApprovePermission).length;
+  const shown = onlyPermitted ? candidates.filter((c) => c.hasApprovePermission) : candidates;
+  const moduleOptions = configuredModules(data).filter((m) => m.key !== "admin");
+  const patchStep = (index: number, patch: Row) => setSteps((list) => list.map((s, i) => (i === index ? { ...s, ...patch } : s)));
+  const toggleApprover = (index: number, userId: string) => setSteps((list) => list.map((s, i) => {
+    if (i !== index) return s;
+    const current: string[] = Array.isArray(s.approverUserIds) ? s.approverUserIds : [];
+    if (String(s.approvalMode) === "single") return { ...s, approverUserIds: current.includes(userId) ? [] : [userId] };
+    return { ...s, approverUserIds: current.includes(userId) ? current.filter((x) => x !== userId) : [...current, userId] };
+  }));
+  async function save(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    if (!code.trim() || !name.trim()) return setError("Nhập mã và tên quy trình.");
+    const stages: Row[] = [];
+    for (let i = 0; i < steps.length; i++) {
+      const s = steps[i];
+      const users: string[] = Array.isArray(s.approverUserIds) ? s.approverUserIds : [];
+      if (!String(s.name || "").trim()) return setError(`Bước ${i + 1} chưa có tên.`);
+      if (!users.length) return setError(`Bước ${i + 1} (“${s.name}”) chưa chỉ định người duyệt.`);
+      if (String(s.approvalMode) === "single" && users.length > 1)
+        return setError(`Bước ${i + 1} chọn “Một người duyệt” thì chỉ được chỉ định đúng một người.`);
+      stages.push({
+        stepNo: i + 1, name: String(s.name).trim(), description: s.description,
+        approvalMode: s.approvalMode, slaHours: Number(s.slaHours || 8),
+        approverUserIds: users,
+      });
+    }
+    const ok = await submit("save_workflow", {
+      workflowId: row?.id, code: code.trim(), name: name.trim(), description,
+      moduleKey, projectId, isDefault: isDefault ? 1 : 0, sortOrder: Number(sortOrder || 0), stages,
+    });
+    if (ok) close();
+  }
+  return <BaseModal title={row ? `Sửa quy trình: ${row.name}` : "Thêm quy trình phê duyệt"} note="Mỗi bước chọn cách xác nhận và chỉ định đích danh người duyệt." close={close}>
+    <form onSubmit={save}>
+      <div className="modal-body">
+        {error && <div className="inline-alert">{error}</div>}
+        <div className="form-grid">
+          <label><span>Mã quy trình *</span><input value={code} onChange={(e) => setCode(e.target.value)} placeholder="WF-MUAHANG-02" required /></label>
+          <label><span>Tên quy trình *</span><input value={name} onChange={(e) => setName(e.target.value)} placeholder="Quy trình mua hàng rút gọn" required /></label>
+          <label><span>Áp dụng cho chức năng</span><select value={moduleKey} onChange={(e) => { setModuleKey(e.target.value); }}>
+            <option value="">— Dùng chung —</option>
+            {moduleOptions.map((m) => <option key={m.key} value={m.key}>{m.label}</option>)}
+          </select></label>
+          <label><span>Áp dụng cho dự án</span><select value={projectId} onChange={(e) => setProjectId(e.target.value)}>
+            <option value="">— Toàn công ty —</option>
+            {data.projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select></label>
+          <label><span>Thứ tự hiển thị</span><input type="number" value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} /></label>
+          <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <input type="checkbox" checked={isDefault} onChange={(e) => setIsDefault(e.target.checked)} />
+            <span style={{ margin: 0 }}>Là quy trình mặc định</span>
+          </label>
+          <label className="span-2"><span>Mô tả</span><input value={description} onChange={(e) => setDescription(e.target.value)} /></label>
+        </div>
+        <div className="table-toolbar" style={{ marginTop: 14 }}>
+          <div><strong>CÁC BƯỚC DUYỆT</strong><span>{steps.length} bước · {candidates.length - permittedCount} người chưa có quyền duyệt trên chức năng này</span></div>
+          <div className="row-actions">
+            <label className="secondary" style={{ display: "flex", alignItems: "center", gap: 6, padding: "0 8px" }}>
+              <input type="checkbox" checked={onlyPermitted} onChange={(e) => setOnlyPermitted(e.target.checked)} />
+              <span style={{ margin: 0, fontSize: 12 }}>Chỉ hiện người có quyền duyệt</span>
+            </label>
+            <button type="button" className="primary" onClick={() => setSteps((list) => [...list, { key: `new-${Date.now()}`, name: "", description: "", approvalMode: "any_of", slaHours: "8", approverUserIds: [] }])}>＋ Thêm bước</button>
+          </div>
+        </div>
+        {onlyPermitted && !shown.length && <div className="inline-alert">Chưa có ai được cấp quyền duyệt (canApprove) trên chức năng này. Bỏ chọn “Chỉ hiện người có quyền duyệt” để chỉ định thủ công.</div>}
+        {steps.map((s, index) => {
+          const selected: string[] = Array.isArray(s.approverUserIds) ? s.approverUserIds : [];
+          return <section className="card" key={String(s.key)}>
+            <div className="table-toolbar">
+              <div><strong>BƯỚC {index + 1}</strong><span>{selected.length} người duyệt được chỉ định</span></div>
+              <div className="row-actions">
+                <button type="button" className="export-mini" disabled={index === 0} onClick={() => setSteps((list) => { const next = [...list]; [next[index - 1], next[index]] = [next[index], next[index - 1]]; return next; })}>↑</button>
+                <button type="button" className="export-mini" disabled={index === steps.length - 1} onClick={() => setSteps((list) => { const next = [...list]; [next[index + 1], next[index]] = [next[index], next[index + 1]]; return next; })}>↓</button>
+                {steps.length > 1 && <button type="button" className="export-mini danger" onClick={() => setSteps((list) => list.filter((_, i) => i !== index))}>Xóa bước</button>}
+              </div>
+            </div>
+            <div className="form-grid">
+              <label><span>Tên bước *</span><input value={String(s.name || "")} onChange={(e) => patchStep(index, { name: e.target.value })} placeholder="CHT xác nhận nhu cầu" /></label>
+              <label><span>Cách xác nhận *</span><select value={String(s.approvalMode || "single")} onChange={(e) => patchStep(index, { approvalMode: e.target.value, approverUserIds: e.target.value === "single" ? (Array.isArray(s.approverUserIds) ? s.approverUserIds.slice(0, 1) : []) : s.approverUserIds })}>
+                <option value="single">Một người duyệt</option>
+                <option value="any_of">Một trong nhiều người duyệt là qua</option>
+                <option value="all_of">Tất cả người duyệt phải xác nhận</option>
+              </select></label>
+              <label><span>SLA (giờ)</span><input type="number" min="1" value={String(s.slaHours ?? 8)} onChange={(e) => patchStep(index, { slaHours: e.target.value })} /></label>
+              <label><span>Mô tả bước</span><input value={String(s.description || "")} onChange={(e) => patchStep(index, { description: e.target.value })} /></label>
+            </div>
+            <div className="admin-mini-list">
+              {shown.map((u) => <button type="button" key={u.id} className={selected.includes(String(u.id)) ? "is-selected" : ""} onClick={() => toggleApprover(index, String(u.id))} style={selected.includes(String(u.id)) ? { outline: "2px solid #1769e0" } : undefined}>
+                <i className="mini-avatar">{initials(String(u.fullName || "NV"))}</i>
+                <span><strong>{u.fullName}</strong><small>{u.employeeCode || u.username} · {u.organizationName || u.department || "—"}</small></span>
+                <b>{selected.includes(String(u.id)) ? "✓ Đã chọn" : u.hasApprovePermission ? "Có quyền duyệt" : "Chưa có quyền duyệt"}</b>
+              </button>)}
+              {!shown.length && <div className="menu-drop-empty">Không có ứng viên nào.</div>}
+            </div>
+          </section>;
+        })}
+      </div>
+      <footer className="modal-footer"><button className="secondary" type="button" onClick={close}>Hủy</button><button className="primary">{row ? "Lưu quy trình" : "Tạo quy trình"}</button></footer>
+    </form>
+  </BaseModal>;
 }
 
 function Admin({ data, open, action }: { data: AppData; open: (name: string, row?: Row) => void; action: (name: string, payload: Row) => Promise<boolean> }) {
@@ -1828,19 +3420,25 @@ function Admin({ data, open, action }: { data: AppData; open: (name: string, row
       setBulkProjectMessage(`ARCHIVE VERIFIED · ${row.code} · ${records} bản ghi · ${attachments} tệp · SHA-256: ${sha} · Archive ID: ${archiveId}. Hãy lưu ZIP này ở nơi an toàn.`);
     }catch(error){setBulkProjectMessage(error instanceof Error?error.message:"Không thể tạo gói lưu trữ dự án.");}
   }
-  const steps=["Nhân sự & tổ chức","Chức danh / vai trò","Nhóm quyền nghiệp vụ","Phạm vi dự án & kho","Workflow phê duyệt","Ngoại lệ cá nhân","Cấu hình hệ thống"];
+  // Nhân sự và Tổ chức là hai tab RIÊNG (trước đây gộp chung "Nhân sự & tổ chức").
+  const steps=["Nhân sự","Tổ chức","Chức danh / vai trò","Nhóm quyền nghiệp vụ","Phân quyền phòng ban","Phân quyền người dùng","Cấp bậc hệ thống","Phạm vi dự án & kho","Workflow phê duyệt","Ngoại lệ cá nhân","Audit log","Cấu hình hệ thống"];
   return <div className="stack admin-approved-screen baseline-screen">
-    <div className="approved-module-head"><div><h2>PHÂN QUYỀN NGƯỜI DÙNG</h2><p>Nhân sự → Chức danh → Nhóm quyền → Phạm vi → Workflow → Ngoại lệ. Mọi thay đổi phải có hiệu lực thật ở backend.</p></div><div className="screen-actions"><button className="secondary" onClick={downloadUserBulkTemplate.bind(null,data)}>⇩ MẪU EXCEL TÀI KHOẢN</button><label className="secondary file-inline">⇧ NHẬP EXCEL TÀI KHOẢN<input type="file" accept=".xlsx,.csv" onChange={(e)=>{void importUsersFile(e.target.files?.[0]);e.target.value="";}}/></label><button className="secondary" onClick={()=>exportUsersBulkXlsx(data)}>⇩ XUẤT TÀI KHOẢN</button><button className="secondary" onClick={()=>setShowHelp(true)}>ⓘ Hướng dẫn phân quyền</button><button className="secondary" onClick={()=>open("roleMaster")}>⚙ Vai trò mặc định</button><button className="primary" onClick={()=>open("user")}>＋ Thêm người dùng</button></div></div>
+    <div className="approved-module-head"><div><h2>PHÂN QUYỀN NGƯỜI DÙNG</h2><p>Nhân sự → Tổ chức → Chức danh → Nhóm quyền → Quyền phòng ban → Quyền người dùng → Cấp bậc → Phạm vi → Workflow → Ngoại lệ → Audit log. Mọi thay đổi phải có hiệu lực thật ở backend.</p></div><div className="screen-actions"><button className="secondary" onClick={downloadUserBulkTemplate.bind(null,data)}>⇩ MẪU EXCEL TÀI KHOẢN</button><label className="secondary file-inline">⇧ NHẬP EXCEL TÀI KHOẢN<input type="file" accept=".xlsx,.csv" onChange={(e)=>{void importUsersFile(e.target.files?.[0]);e.target.value="";}}/></label><button className="secondary" onClick={()=>exportUsersBulkXlsx(data)}>⇩ XUẤT TÀI KHOẢN</button><button className="secondary" onClick={()=>setShowHelp(true)}>ⓘ Hướng dẫn phân quyền</button><button className="secondary" onClick={()=>open("roleMaster")}>⚙ Vai trò mặc định</button><button className="primary" onClick={()=>open("user")}>＋ Thêm người dùng</button></div></div>
     <div className="permission-steps">{steps.map((label,index)=><button type="button" key={label} className={step===index+1?"active":""} onClick={()=>setStep(index+1)}>{index+1}&nbsp; {label}</button>)}</div>
-    {showHelp&&<div className="overlay" onMouseDown={e=>e.target===e.currentTarget&&setShowHelp(false)}><div className="modal permission-help-modal"><header><div><strong>Hướng dẫn phân quyền chuẩn</strong><p>Thiết lập theo đúng thứ tự để tránh quyền chồng chéo.</p></div><button onClick={()=>setShowHelp(false)}>×</button></header><div className="modal-body"><ol className="permission-help-list"><li><b>Nhân sự:</b> tạo tài khoản và chọn chức danh.</li><li><b>Chức danh:</b> mỗi chức danh chỉ tồn tại một bản canonical, không trùng tên.</li><li><b>Nhóm quyền:</b> gom quyền theo nghiệp vụ, không dùng quyền nền kỹ thuật ở UI chính.</li><li><b>Phạm vi:</b> giới hạn dự án và kho; backend chặn truy cập ngoài scope.</li><li><b>Workflow:</b> cấu hình bước duyệt, vai trò, AND/OR và SLA.</li><li><b>Ngoại lệ:</b> chỉ cấp cá nhân khi thật sự cần và phải có thời hạn/audit.</li></ol></div><footer className="modal-footer"><button className="primary" onClick={()=>setShowHelp(false)}>Đã hiểu</button></footer></div></div>}
-    {step===1&&<div className="stack"><div className="admin-overview-grid"><section className="card admin-overview-card">{bulkUserMessage&&<div className="inline-alert" style={{whiteSpace:"pre-line"}}>{bulkUserMessage}</div>}<div className="table-toolbar"><div><strong>DANH SÁCH NHÂN SỰ / NGƯỜI DÙNG</strong><span>{activeUsers.length} tài khoản đang hoạt động</span></div><button className="icon-mini" onClick={()=>open("user")}>＋</button></div><input className="admin-search" value={adminQuery} onChange={e=>setAdminQuery(e.target.value)} placeholder="Tìm tên, email, SĐT..."/><div className="admin-mini-list">{filteredAdminUsers.slice(0,30).map(row=><button key={row.id} onClick={()=>open("userEdit",row)}><i className="mini-avatar">{initials(String(row.fullName||"NV"))}</i><span><strong>{row.fullName}</strong><small>{row.email||row.username} · {row.organizationCode||row.department||"—"}</small></span><b>{row.roleName||roleLabel(data,row.role)}</b></button>)}</div></section></div><OrganizationUnitManager data={data} action={action}/></div>}
-    {step===2&&<section className="card"><CardHead title="Chức danh / vai trò" note="Dropdown tài khoản chỉ dùng danh mục active canonical; backend chặn trùng mã và trùng tên." action="＋ Thêm vai trò" onClick={()=>open("roleMaster")}/><div className="table-wrap"><table><thead><tr><th>Mã</th><th>Chức danh</th><th>Nhóm nghiệp vụ</th><th>Số người</th><th>Trạng thái</th><th></th></tr></thead><tbody>{roles.map(row=><tr key={row.id}><td><strong>{row.code}</strong></td><td>{row.name}<small>{row.description||"—"}</small></td><td>{row.businessGroupName||"—"}</td><td>{roleCount(row.code)}</td><td><Pill value={row.active?"Đang dùng":"Đã ẩn"}/></td><td><button className="export-mini" onClick={()=>open("roleMaster",row)}>Sửa</button></td></tr>)}</tbody></table></div></section>}
-    {step===3&&<section className="card"><CardHead title="Nhóm quyền nghiệp vụ" note="Bộ quyền nghiệp vụ được dùng để cấu thành chức danh; quyền nền kỹ thuật được ẩn khỏi màn quản trị chính." action="＋ Thêm nhóm quyền" onClick={()=>open("businessGroupMaster")}/><div className="admin-mini-list groups">{groups.map(row=><div key={row.id}><span className="group-icon">▣</span><span><strong>{row.name}</strong><small>{row.description||"Nhóm quyền nghiệp vụ"}</small></span><b>{roles.filter(r=>String(r.businessGroupId)===String(row.id)).length} vai trò</b><button className="export-mini" onClick={()=>open("businessGroupMaster",row)}>Sửa</button></div>)}</div></section>}
-    {step===4&&<div className="stack"><section className="card"><div className="table-toolbar"><div><strong>DANH SÁCH DỰ ÁN</strong><span>Project Master; tạo dự án đồng thời tạo kho công trường riêng. Hỗ trợ Excel hàng loạt.</span></div><div className="row-actions"><button className="secondary" onClick={downloadProjectBulkTemplate}>⇩ MẪU EXCEL DỰ ÁN</button><label className="secondary file-inline">⇧ NHẬP EXCEL DỰ ÁN<input type="file" accept=".xlsx,.csv" onChange={(e)=>{void importProjectsFile(e.target.files?.[0]);e.target.value="";}}/></label><button className="secondary" onClick={()=>exportProjectsBulkXlsx(data)}>⇩ XUẤT DỰ ÁN</button><button className="primary" onClick={()=>open("projectMaster")}>＋ THÊM DỰ ÁN</button></div></div>{bulkProjectMessage&&<div className="inline-alert">{bulkProjectMessage}</div>}<div className="table-wrap"><table><thead><tr><th>Mã dự án</th><th>Tên dự án</th><th>Hợp đồng</th><th>Khởi công</th><th>Kế hoạch kết thúc</th><th>Trạng thái</th><th></th></tr></thead><tbody>{data.adminProjects.map(row=><tr key={row.id}><td><strong>{row.code}</strong></td><td>{row.name}</td><td>{row.contractNo||"—"}<small>{row.contractName||""}</small></td><td>{row.startDate?date(row.startDate):"—"}</td><td>{row.plannedEndDate?date(row.plannedEndDate):"—"}</td><td><Pill value={row.status||"active"}/></td><td><div className="row-actions"><button className="export-mini archive-project" onClick={()=>void downloadProjectArchive(row)}>⇩ Tải toàn bộ dữ liệu</button><button className="export-mini" onClick={()=>open("projectMaster",row)}>Sửa</button>{String(row.status)==="active"&&<><button className="export-mini" onClick={()=>window.confirm(`Đóng dự án ${row.code}? BẮT BUỘC đã tải gói TOÀN BỘ DỮ LIỆU dự án sau lần cập nhật gần nhất. Hệ thống sẽ kiểm tra archive VERIFIED + PO/kho/điều chuyển/tổ đội/số dư.`)&&void action("set_project_status",{projectId:row.id,status:"closed"})}>Đóng</button><button className="export-mini" onClick={()=>window.confirm(`Ẩn dự án ${row.code} khỏi nghiệp vụ hằng ngày? Dữ liệu lịch sử vẫn được giữ nguyên.`)&&void action("set_project_status",{projectId:row.id,status:"archived"})}>Ẩn</button></>}{String(row.status)!=="active"&&<button className="export-mini" onClick={()=>window.confirm(`Khôi phục/kích hoạt lại dự án ${row.code}?`)&&void action("set_project_status",{projectId:row.id,status:"active"})}>Khôi phục</button>}<button className="export-mini danger" onClick={()=>{if(!["closed","archived"].includes(String(row.status)))return window.alert("Chỉ dự án đã Đóng/Lưu trữ mới được xóa khỏi hệ thống vận hành.");const confirmCode=window.prompt(`XÓA/PURGE dự án ${row.code} khỏi dữ liệu vận hành. Hệ thống sẽ dùng gói TOÀN BỘ DỮ LIỆU đã VERIFIED khi đóng dự án; không bắt tải lại lần hai. Nhập chính xác mã dự án để xác nhận:`);if(confirmCode===null)return;void action("delete_project",{projectId:row.id,confirmCode});}}>Xóa/Purge</button></div></td></tr>)}{!data.adminProjects.length&&<tr><td colSpan={7}><Empty text="Chưa có dự án."/></td></tr>}</tbody></table></div></section><section className="card"><CardHead title="Phạm vi dự án & kho" note="Thủ kho dự án chỉ đúng dự án+kho được giao; Thủ kho Tổng chỉ Kho Tổng."/><div className="table-wrap"><table><thead><tr><th>Người dùng</th><th>Chức danh</th><th>Phạm vi dự án</th><th>Kho</th><th>Quyền chức năng</th><th>Thao tác</th></tr></thead><tbody>{data.users.map(row=>{const scopes=data.userScopes.filter(scope=>scope.userId===row.id);const perms=data.allModulePermissions.filter(perm=>perm.userId===row.id&&perm.canUse);return <tr key={row.id}><td><strong>{row.fullName}</strong><small>{row.username}</small></td><td>{row.roleName||roleLabel(data,row.role)}</td><td>{isAdminUser(row)?"Toàn công ty":scopes.map(s=>s.projectCode).join(", ")||"Chưa gán"}</td><td>{String(row.role).includes("kho_tong")?"Chỉ Kho Tổng":String(row.role).includes("thu_kho")?"Chỉ kho dự án được giao":"Theo phạm vi"}</td><td>{isAdminUser(row)?"Toàn bộ":perms.length+" chức năng"}</td><td><div className="row-actions"><button className="export-mini" onClick={()=>open("userEdit",row)}>Sửa</button><button className="mini-approve" onClick={()=>open("access",row)}>Phân quyền →</button></div></td></tr>})}</tbody></table></div></section></div>}
-    {step===5&&<section className="card"><CardHead title="Workflow phê duyệt" note="Thiết lập bước duyệt, vai trò, AND/OR và SLA." action="＋ Thêm bước duyệt" onClick={()=>open("approvalStageMaster")}/><div className="table-wrap"><table><thead><tr><th>Bước</th><th>Tên bước</th><th>Vai trò được duyệt</th><th>Cách xác nhận</th><th>SLA</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>{data.approvalStages.map(row=><tr key={row.id}><td>Bước {row.stageNo}</td><td><strong>{row.name}</strong><small>{row.description||"—"}</small></td><td>{String(row.allowedRoleCodes||"").split(",").filter(Boolean).map(code=>roleLabel(data,code)).join(", ")||"Chưa gán"}</td><td>{row.approvalMode==="all_roles"?<Pill value="Đủ tất cả (AND)"/>:"Một người"}</td><td>{row.slaHours} giờ</td><td><Pill value={row.active?"Đang áp dụng":"Ngừng áp dụng"}/></td><td><div className="row-actions"><button className="export-mini" onClick={()=>open("approvalStageMaster",row)}>Sửa</button><button className="export-mini" onClick={()=>window.confirm(`${row.active?"Ngừng":"Kích hoạt"} bước ${row.name}? Phiếu đang chạy giữ nguyên lịch sử.`)&&action("set_approval_stage_status",{stageId:row.id,active:row.active?0:1})}>{row.active?"Ngừng áp dụng":"Kích hoạt"}</button><button className="export-mini danger" onClick={()=>window.confirm(`Xóa bước ${row.name}? Chỉ xóa được khi bước chưa từng phát sinh hồ sơ.`)&&action("delete_approval_stage",{stageId:row.id})}>Xóa</button></div></td></tr>)}</tbody></table></div></section>}
-    {step===6&&<PersonalExceptionManager data={data} open={open} action={action}/>} 
-    {step===7&&<TrustLockAdmin data={data} action={action}/>} 
-    {step===7&&<div className="stack admin-system-config"><section className="card admin-config-intro"><CardHead title="CẤU HÌNH HỆ THỐNG" note="Tập trung các tác vụ quản trị thêm/bớt/đổi tên/ẩn hiện/sắp xếp/căn chỉnh dùng chung toàn hệ thống."/><div className="admin-config-cards"><button onClick={()=>document.getElementById("config-fields")?.scrollIntoView({behavior:"smooth"})}><NavIcon name="boq"/><strong>BOQ / HĐ & Lũy kế</strong><span>Cột, Import/Export, thứ tự, cho sửa</span></button><button onClick={()=>document.getElementById("config-fields")?.scrollIntoView({behavior:"smooth"})}><NavIcon name="requests"/><strong>Phiếu đề nghị</strong><span>Đầu phiếu & dòng vật tư</span></button><button onClick={()=>document.getElementById("config-display")?.scrollIntoView({behavior:"smooth"})}><NavIcon name="admin"/><strong>Tùy chỉnh giao diện</strong><span>Font, màu, mật độ</span></button><button onClick={()=>open("email")}><NavIcon name="dept_plan_alerts"/><strong>Email & SLA</strong><span>SMTP, người nhận, thời hạn</span></button></div></section><div id="config-fields"><FormFieldConfigManager data={data} action={action}/></div><div id="config-display"><UiDisplaySettingsManager data={data} action={action}/></div><FactoryResetAdmin data={data}/><section className="card"><CardHead title="Nhật ký cấu hình hệ thống" note="Theo dõi các thay đổi gần nhất; không ghi nội dung mật khẩu."/><div className="table-wrap"><table><thead><tr><th>Thời gian</th><th>Người thực hiện</th><th>Hạng mục</th><th>Hành động</th></tr></thead><tbody>{data.audits.slice(0,30).map(row=><tr key={row.id}><td>{date(row.occurredAt)}</td><td>{row.userName||"Hệ thống"}</td><td>{row.entityType}</td><td>{row.action}</td></tr>)}</tbody></table></div></section></div>}
+    {showHelp&&<div className="overlay" onMouseDown={e=>e.target===e.currentTarget&&setShowHelp(false)}><div className="modal permission-help-modal"><header><div><strong>Hướng dẫn phân quyền chuẩn</strong><p>Thiết lập theo đúng thứ tự để tránh quyền chồng chéo.</p></div><button onClick={()=>setShowHelp(false)}>×</button></header><div className="modal-body"><ol className="permission-help-list"><li><b>Nhân sự:</b> tạo tài khoản và chọn chức danh; bấm vào một dòng để xem hồ sơ chi tiết.</li><li><b>Tổ chức:</b> khai báo phòng ban, Ban chỉ huy và tổ đội theo dự án.</li><li><b>Chức danh:</b> mỗi chức danh chỉ tồn tại một bản canonical, không trùng tên.</li><li><b>Nhóm quyền:</b> gom quyền theo nghiệp vụ, không dùng quyền nền kỹ thuật ở UI chính.</li><li><b>Phạm vi:</b> giới hạn dự án và kho; backend chặn truy cập ngoài scope.</li><li><b>Workflow:</b> cấu hình bước duyệt, vai trò, AND/OR và SLA.</li><li><b>Ngoại lệ:</b> chỉ cấp cá nhân khi thật sự cần và phải có thời hạn/audit.</li></ol></div><footer className="modal-footer"><button className="primary" onClick={()=>setShowHelp(false)}>Đã hiểu</button></footer></div></div>}
+    {step===1&&<div className="stack"><section className="card admin-overview-card">{bulkUserMessage&&<div className="inline-alert" style={{whiteSpace:"pre-line"}}>{bulkUserMessage}</div>}<div className="table-toolbar"><div><strong>DANH SÁCH NHÂN SỰ / NGƯỜI DÙNG</strong><span>{filteredAdminUsers.length}/{activeUsers.length} tài khoản · danh sách toàn màn hình</span></div><button className="icon-mini" onClick={()=>open("user")}>＋</button></div><AdminStaffList data={data} open={open} query={adminQuery} onQuery={setAdminQuery}/></section></div>}
+    {step===2&&<div className="stack"><section className="card"><CardHead title="Tổ đội theo dự án" note="Tổ đội thuộc đúng một dự án và có kho tổ đội riêng; dùng để cấp phát vật tư và hoàn trả." action="＋ Thêm tổ đội" onClick={()=>open("teamCreate")}/><div className="admin-mini-list">{data.teams.slice(0,40).map(row=><div key={row.id}><span className="group-icon">▣</span><span><strong>{row.name}</strong><small>{row.code||"—"} · {row.projectCode||row.projectName||"Chưa gán dự án"} · {row.trade||"—"}</small></span><b>{row.active===0?"Đã ngừng":"Đang dùng"}</b></div>)}{!data.teams.length&&<div className="menu-drop-empty">Chưa có tổ đội nào. Bấm “＋ Thêm tổ đội” để tạo.</div>}</div></section><OrganizationUnitManager data={data} action={action}/></div>}
+    {step===3&&<section className="card"><CardHead title="Chức danh / vai trò" note="Dropdown tài khoản chỉ dùng danh mục active canonical; backend chặn trùng mã và trùng tên." action="＋ Thêm vai trò" onClick={()=>open("roleMaster")}/><div className="table-wrap"><table><thead><tr><th>Mã</th><th>Chức danh</th><th>Nhóm nghiệp vụ</th><th>Số người</th><th>Trạng thái</th><th></th></tr></thead><tbody>{roles.map(row=><tr key={row.id}><td><strong>{row.code}</strong></td><td>{row.name}<small>{row.description||"—"}</small></td><td>{row.businessGroupName||"—"}</td><td>{roleCount(row.code)}</td><td><Pill value={row.active?"Đang dùng":"Đã ẩn"}/></td><td><button className="export-mini" onClick={()=>open("roleMaster",row)}>Sửa</button></td></tr>)}</tbody></table></div></section>}
+    {step===4&&<section className="card"><CardHead title="Nhóm quyền nghiệp vụ" note="Bộ quyền nghiệp vụ được dùng để cấu thành chức danh; quyền nền kỹ thuật được ẩn khỏi màn quản trị chính." action="＋ Thêm nhóm quyền" onClick={()=>open("businessGroupMaster")}/><div className="admin-mini-list groups">{groups.map(row=><div key={row.id}><span className="group-icon">▣</span><span><strong>{row.name}</strong><small>{row.description||"Nhóm quyền nghiệp vụ"}</small></span><b>{roles.filter(r=>String(r.businessGroupId)===String(row.id)).length} vai trò</b><button className="export-mini" onClick={()=>open("businessGroupMaster",row)}>Sửa</button></div>)}</div></section>}
+    {step===5&&<DepartmentPermissionManager data={data} action={action}/>}
+    {step===6&&<UserPermissionMatrix data={data} open={open} action={action}/>}
+    {step===7&&<SystemLevelManager data={data} open={open} action={action}/>}
+    {step===8&&<div className="stack"><section className="card"><div className="table-toolbar"><div><strong>DANH SÁCH DỰ ÁN</strong><span>Project Master; tạo dự án đồng thời tạo kho công trường riêng. Hỗ trợ Excel hàng loạt.</span></div><div className="row-actions"><button className="secondary" onClick={downloadProjectBulkTemplate}>⇩ MẪU EXCEL DỰ ÁN</button><label className="secondary file-inline">⇧ NHẬP EXCEL DỰ ÁN<input type="file" accept=".xlsx,.csv" onChange={(e)=>{void importProjectsFile(e.target.files?.[0]);e.target.value="";}}/></label><button className="secondary" onClick={()=>exportProjectsBulkXlsx(data)}>⇩ XUẤT DỰ ÁN</button><button className="primary" onClick={()=>open("projectMaster")}>＋ THÊM DỰ ÁN</button></div></div>{bulkProjectMessage&&<div className="inline-alert">{bulkProjectMessage}</div>}<div className="table-wrap"><table><thead><tr><th>Mã dự án</th><th>Tên dự án</th><th>Hợp đồng</th><th>Khởi công</th><th>Kế hoạch kết thúc</th><th>Trạng thái</th><th></th></tr></thead><tbody>{data.adminProjects.map(row=><tr key={row.id}><td><strong>{row.code}</strong></td><td>{row.name}</td><td>{row.contractNo||"—"}<small>{row.contractName||""}</small></td><td>{row.startDate?date(row.startDate):"—"}</td><td>{row.plannedEndDate?date(row.plannedEndDate):"—"}</td><td><Pill value={row.status||"active"}/></td><td><div className="row-actions"><button className="export-mini archive-project" onClick={()=>void downloadProjectArchive(row)}>⇩ Tải toàn bộ dữ liệu</button><button className="export-mini" onClick={()=>open("projectMaster",row)}>Sửa</button>{String(row.status)==="active"&&<><button className="export-mini" onClick={()=>window.confirm(`Đóng dự án ${row.code}? BẮT BUỘC đã tải gói TOÀN BỘ DỮ LIỆU dự án sau lần cập nhật gần nhất. Hệ thống sẽ kiểm tra archive VERIFIED + PO/kho/điều chuyển/tổ đội/số dư.`)&&void action("set_project_status",{projectId:row.id,status:"closed"})}>Đóng</button><button className="export-mini" onClick={()=>window.confirm(`Ẩn dự án ${row.code} khỏi nghiệp vụ hằng ngày? Dữ liệu lịch sử vẫn được giữ nguyên.`)&&void action("set_project_status",{projectId:row.id,status:"archived"})}>Ẩn</button></>}{String(row.status)!=="active"&&<button className="export-mini" onClick={()=>window.confirm(`Khôi phục/kích hoạt lại dự án ${row.code}?`)&&void action("set_project_status",{projectId:row.id,status:"active"})}>Khôi phục</button>}<button className="export-mini danger" onClick={()=>{if(!["closed","archived"].includes(String(row.status)))return window.alert("Chỉ dự án đã Đóng/Lưu trữ mới được xóa khỏi hệ thống vận hành.");const confirmCode=window.prompt(`XÓA/PURGE dự án ${row.code} khỏi dữ liệu vận hành. Hệ thống sẽ dùng gói TOÀN BỘ DỮ LIỆU đã VERIFIED khi đóng dự án; không bắt tải lại lần hai. Nhập chính xác mã dự án để xác nhận:`);if(confirmCode===null)return;void action("delete_project",{projectId:row.id,confirmCode});}}>Xóa/Purge</button></div></td></tr>)}{!data.adminProjects.length&&<tr><td colSpan={7}><Empty text="Chưa có dự án."/></td></tr>}</tbody></table></div></section><section className="card"><CardHead title="Phạm vi dự án & kho" note="Thủ kho dự án chỉ đúng dự án+kho được giao; Thủ kho Tổng chỉ Kho Tổng."/><div className="table-wrap"><table><thead><tr><th>Người dùng</th><th>Chức danh</th><th>Phạm vi dự án</th><th>Kho</th><th>Quyền chức năng</th><th>Thao tác</th></tr></thead><tbody>{data.users.map(row=>{const scopes=data.userScopes.filter(scope=>scope.userId===row.id);const perms=data.allModulePermissions.filter(perm=>perm.userId===row.id&&perm.canUse);return <tr key={row.id}><td><strong>{row.fullName}</strong><small>{row.username}</small></td><td>{row.roleName||roleLabel(data,row.role)}</td><td>{isAdminUser(row)?"Toàn công ty":scopes.map(s=>s.projectCode).join(", ")||"Chưa gán"}</td><td>{String(row.role).includes("kho_tong")?"Chỉ Kho Tổng":String(row.role).includes("thu_kho")?"Chỉ kho dự án được giao":"Theo phạm vi"}</td><td>{isAdminUser(row)?"Toàn bộ":perms.length+" chức năng"}</td><td><div className="row-actions"><button className="export-mini" onClick={()=>open("userEdit",row)}>Sửa</button><button className="mini-approve" onClick={()=>open("access",row)}>Phân quyền →</button></div></td></tr>})}</tbody></table></div></section></div>}
+    {step===9&&<WorkflowManager data={data} open={open} action={action}/>}
+    {step===10&&<PersonalExceptionManager data={data} open={open} action={action}/>} 
+    {step===11&&<AuditLogManager data={data}/>}
+    {step===12&&<TrustLockAdmin data={data} action={action}/>} 
+    {step===12&&<div className="stack admin-system-config"><section className="card admin-config-intro"><CardHead title="CẤU HÌNH HỆ THỐNG" note="Tập trung các tác vụ quản trị thêm/bớt/đổi tên/ẩn hiện/sắp xếp/căn chỉnh dùng chung toàn hệ thống."/><div className="admin-config-cards"><button onClick={()=>document.getElementById("config-fields")?.scrollIntoView({behavior:"smooth"})}><NavIcon name="boq"/><strong>BOQ / HĐ & Lũy kế</strong><span>Cột, Import/Export, thứ tự, cho sửa</span></button><button onClick={()=>document.getElementById("config-fields")?.scrollIntoView({behavior:"smooth"})}><NavIcon name="requests"/><strong>Phiếu đề nghị</strong><span>Đầu phiếu & dòng vật tư</span></button><button onClick={()=>document.getElementById("config-display")?.scrollIntoView({behavior:"smooth"})}><NavIcon name="admin"/><strong>Tùy chỉnh giao diện</strong><span>Font, màu, mật độ</span></button><button onClick={()=>open("email")}><NavIcon name="dept_plan_alerts"/><strong>Email & SLA</strong><span>SMTP, người nhận, thời hạn</span></button></div></section><div id="config-fields"><FormFieldConfigManager data={data} action={action}/></div><div id="config-display"><UiDisplaySettingsManager data={data} action={action}/></div><FactoryResetAdmin data={data}/><section className="card"><CardHead title="Nhật ký cấu hình hệ thống" note="Theo dõi các thay đổi gần nhất; không ghi nội dung mật khẩu."/><div className="table-wrap"><table><thead><tr><th>Thời gian</th><th>Người thực hiện</th><th>Hạng mục</th><th>Hành động</th></tr></thead><tbody>{data.audits.slice(0,30).map(row=><tr key={row.id}><td>{date(row.occurredAt)}</td><td>{row.userName||"Hệ thống"}</td><td>{row.entityType}</td><td>{row.action}</td></tr>)}</tbody></table></div></section></div>}
   </div>;
 }
 
@@ -1898,7 +3496,7 @@ function receiptSupplyDocument(data: AppData, receipt: Row): SupplyExportDocumen
   };
 }
 
-function RequestDrawer({ data, request, approvalStages, close, action, user }: { data: AppData; request: Row; approvalStages: Row[]; close: () => void; action: (name: string, payload: Row) => Promise<boolean>; user: Row }) {
+function RequestDrawer({ data, request, approvalStages, close, action, user, variant = "drawer" }: { data: AppData; request: Row; approvalStages: Row[]; close: () => void; action: (name: string, payload: Row) => Promise<boolean>; user: Row; variant?: "drawer" | "page" }) {
   const stage = Number(request.approvalStage);
   const stageConfig = approvalStages.find((row) => Number(row.stageNo) === stage);
   const currentApproval = request.approvals?.find((row:Row)=>Number(row.stage)===stage);
@@ -1910,7 +3508,10 @@ function RequestDrawer({ data, request, approvalStages, close, action, user }: {
   async function updateReturned(event:FormEvent<HTMLFormElement>){event.preventDefault();const fd=new FormData(event.currentTarget);const lines=(request.items||[]).map((item:Row)=>({id:item.id,requestedQty:Number(fd.get(`qty-${item.id}`)||item.requestedQty||0)}));await action("update_returned_request",{requestId:request.id,neededAt:fd.get("neededAt"),priority:fd.get("priority"),area:fd.get("area"),purpose:fd.get("purpose"),lines});}
   async function resubmit(){if(!window.confirm("Bạn có chắc chắn muốn gửi lại phiếu này?\n\nSau khi gửi, phiếu được xem là CHT đã xác nhận và chuyển sang Chờ Thư ký TGĐ. Phiếu không thể tự thu hồi; muốn sửa phải được trả lại theo quy trình."))return;const note=window.prompt("Ghi chú gửi lại (có thể để trống):")||"";if(await action("resubmit_request",{requestId:request.id,comment:note}))close();}
   async function deleteReturned(){const reason=window.prompt(`Nhập lý do xóa ${request.requestNo} để lập phiếu mới:`)?.trim();if(!reason)return;if(!window.confirm("Xóa toàn bộ phiếu bị trả lại này? Thao tác chỉ được phép khi chưa phát sinh PO."))return;if(await action("delete_request",{requestId:request.id,reason}))close();}
-  return <div className="overlay" onMouseDown={(event) => event.target === event.currentTarget && close()}><aside className="drawer request-drawer"><header><div><small className="document-name">PHIẾU ĐỀ NGHỊ MUA HÀNG</small><strong>{request.requestNo}</strong><Pill value={statusLabel(request)} /><p>{request.projectCode} · {request.projectName}</p></div><button onClick={close}>×</button></header><div className="drawer-body"><section className="summary-grid request-summary"><div><small>Người đề nghị</small><strong>{request.requestedBy}</strong></div><div><small>Ngày lập phiếu</small><strong>{date(request.requestedAt)}</strong></div><div><small>Ngày cần hàng</small><strong>{date(request.neededAt)}</strong></div><div><small>Mức độ</small><strong>{request.priority === "urgent" ? "Khẩn" : request.priority === "high" ? "Cao" : "Bình thường"}</strong></div><div><small>Dự án</small><strong>{request.projectCode} · {request.projectName}</strong></div><div><small>Hợp đồng</small><strong>{request.contractNo || "Chưa xác định"}</strong></div><div><small>BOQ Version</small><strong>{request.boqVersionCode || "Chưa xác định"}</strong></div><div><small>Khu vực / Hạng mục</small><strong>{request.area || "—"}</strong></div><div><small>Số dòng vật tư</small><strong>{request.itemCount} dòng</strong></div><div><small>Tổng số lượng đề nghị</small><strong>{format.format(Number(request.totalQty||0))}</strong></div><div><small>Trạng thái hiện tại</small><strong>{statusLabel(request)}</strong></div><div><small>Người/Bộ phận đang xử lý</small><strong>{stageConfig?.name || (returned?"CHT xử lý lại":"—")}</strong></div></section><section className="drawer-section"><CardHead title="Tiến trình phê duyệt & thời gian xử lý" note="Đo từ lúc cấp nhận hồ sơ đến khi ra quyết định" /><div className="timeline">{[...(request.approvals || [])].sort((a: Row,b: Row) => Number(a.stage)-Number(b.stage)).map((approval: Row) => {
+  const isPage = variant === "page";
+  // Chế độ trang: cho phép thu gọn các khối để "ẩn bớt cho gọn" theo yêu cầu người dùng.
+  const [collapsed, setCollapsed] = useState(false);
+  return <div className={isPage ? "overlay page-mode" : "overlay"} onMouseDown={isPage ? undefined : (event) => event.target === event.currentTarget && close()}><aside className={isPage ? `drawer request-drawer is-page${collapsed ? " sections-collapsed" : ""}` : "drawer request-drawer"}><header><div><small className="document-name">PHIẾU ĐỀ NGHỊ MUA HÀNG</small><strong>{request.requestNo}</strong><Pill value={statusLabel(request)} /><p>{request.projectCode} · {request.projectName}</p></div>{isPage && <button type="button" className="page-collapse" onClick={() => setCollapsed((value) => !value)} title={collapsed ? "Mở rộng các khối" : "Thu gọn các khối"}>{collapsed ? "⌄ Mở rộng khối" : "⌃ Thu gọn khối"}</button>}<button className={isPage ? "page-back" : undefined} onClick={close} title={isPage ? "Quay lại danh sách" : "Đóng"}>{isPage ? "← Quay lại" : "×"}</button></header><div className="drawer-body"><section className="summary-grid request-summary"><div><small>Người đề nghị</small><strong>{request.requestedBy}</strong></div><div><small>Ngày lập phiếu</small><strong>{date(request.requestedAt)}</strong></div><div><small>Ngày cần hàng</small><strong>{date(request.neededAt)}</strong></div><div><small>Mức độ</small><strong>{request.priority === "urgent" ? "Khẩn" : request.priority === "high" ? "Cao" : "Bình thường"}</strong></div><div><small>Dự án</small><strong>{request.projectCode} · {request.projectName}</strong></div><div><small>Hợp đồng</small><strong>{request.contractNo || "Chưa xác định"}</strong></div><div><small>BOQ Version</small><strong>{request.boqVersionCode || "Chưa xác định"}</strong></div><div><small>Khu vực / Hạng mục</small><strong>{request.area || "—"}</strong></div><div><small>Số dòng vật tư</small><strong>{request.itemCount} dòng</strong></div><div><small>Tổng số lượng đề nghị</small><strong>{format.format(Number(request.totalQty||0))}</strong></div><div><small>Trạng thái hiện tại</small><strong>{statusLabel(request)}</strong></div><div><small>Người/Bộ phận đang xử lý</small><strong>{stageConfig?.name || (returned?"CHT xử lý lại":"—")}</strong></div></section><section className="drawer-section"><CardHead title="Tiến trình phê duyệt & thời gian xử lý" note="Đo từ lúc cấp nhận hồ sơ đến khi ra quyết định" /><div className="timeline">{[...(request.approvals || [])].sort((a: Row,b: Row) => Number(a.stage)-Number(b.stage)).map((approval: Row) => {
     const item = Number(approval.stage); const timing = approvalTiming(approval);
     return <div className={`${approval?.status || "pending"} ${timing.late ? "late" : ""}`} key={item}><span>{approval?.status === "approved" ? "✓" : approval?.status === "rejected" ? "×" : approval?.status === "cancelled" ? "–" : item}</span><div><strong>Bước {item} · {approval?.department || `Phê duyệt ${item}`}</strong>{approval?.queuedAt ? <><p>Nhận hồ sơ: <b>{date(approval.queuedAt)}</b> · Hạn: <b>{date(approval.dueAt)}</b></p><p className={timing.late ? "red-text" : ""}>{approval.decidedAt ? `${approval.status === "approved" ? "Đã duyệt" : "Đã xử lý"}: ${date(approval.decidedAt)} · ${approval.approverName || "Chưa rõ người duyệt"} · ${timing.text}` : `${timing.text} · ${approval.notifiedAt ? `Đã gửi email ${date(approval.notifiedAt)}` : "Email chưa gửi hoặc chưa cấu hình"}`}</p>{approval.comment && <p>Ý kiến: {approval.comment}</p>}</> : <p>Chờ bước trước hoàn tất</p>}</div></div>;
   })}</div></section>{request.supplySteps?.length > 0 && <section className="drawer-section"><CardHead title="Tiến trình mua và giao hàng" note="Hồ sơ tự chạy sang bước kế tiếp và bắt đầu tính giờ" /><div className="supply-timeline">{request.supplySteps.map((step: Row, index: number) => { const timing = workflowTiming(step); const name = step.step === "po_creation" ? "Lập và phát hành PO" : step.step === "delivery" ? "Nhà cung cấp giao hàng" : "BCH xác nhận chuyến giao"; return <div className={`${step.status} ${timing.late ? "late" : ""}`} key={step.id}><span>{step.completedAt ? "✓" : index + 1}</span><div><strong>{name}</strong><p>Nhận việc: {date(step.queuedAt)} · Hạn: {date(step.dueAt)}</p><p className={timing.late ? "red-text" : ""}>{timing.text}{step.completedByName ? ` · ${step.completedByName}` : ""}</p>{step.comment && <small>{step.comment}</small>}</div></div>; })}</div></section>}<section className="drawer-section"><CardHead title="Tổng hợp giao nhận về phiếu đề nghị gốc" note={`${request.items.length}/${request.itemCount||request.items.length} dòng đang hiển thị · mọi PO và chuyến giao đều cộng theo đúng dòng phiếu ban đầu`} />{Number(request.itemCount||0)!==Number(request.items?.length||0)&&<div className="inline-alert danger"><b>Cảnh báo dữ liệu:</b> Số dòng chi tiết tải về không khớp số dòng của phiếu. Không được duyệt cho tới khi tải đủ dữ liệu.</div>}<div className="table-wrap" data-contract="VNTECH_REQUEST_DETAIL_ALL_LINES_V1"><table><thead><tr><th>STT</th><th>Mã / Tên vật tư</th><th>BOQ / Đầu việc</th><th>Yêu cầu</th><th>Đã đặt</th><th>Thực giao</th><th>Chờ BCH</th><th>BCH xác nhận</th><th>Từ chối</th><th>Đóng thiếu</th><th>Còn lại</th><th>PO / Chuyến</th><th>Trạng thái</th></tr></thead><tbody>{request.items.map((item: Row) => <tr key={item.id}><td>{item.lineNo}</td><td><strong className="code">{item.materialCode}</strong><small>{item.materialName} · {item.unit}</small></td><td>{item.boqCode || "—"}<small>{item.workPackageCode || "—"}</small></td><td>{format.format(item.requestedQty)}</td><td>{format.format(item.orderedQty)}</td><td>{format.format(item.actualDeliveredQty)}</td><td>{format.format(item.pendingBchQty)}</td><td><strong>{format.format(item.receivedQty)}</strong></td><td>{format.format(item.rejectedQty)}</td><td>{format.format(item.closedQty)}{item.closeReason && <small>{item.closeReason}</small>}</td><td><strong>{format.format(item.remainingQty)}</strong></td><td>{item.linkedPoCount || 0} / {item.linkedReceiptCount || 0}</td><td><Pill value={item.missingDocumentCount > 0 && Number(item.remainingQty) <= 0 ? "Đủ hàng · thiếu hồ sơ" : item.lineStatus === "closed_shortage" ? "Đóng thiếu có lý do" : Number(item.remainingQty) <= 0 ? "Đã đủ" : Number(item.receivedQty) > 0 ? "Đã nhận một phần" : "Chờ giao"} /></td></tr>)}</tbody></table></div></section>{canReturnedEdit&&<form className="drawer-section returned-request-editor" onSubmit={updateReturned}><CardHead title="CHT sửa phiếu bị trả lại" note="Lưu chỉnh sửa trước khi gửi lại; luồng duyệt sẽ bắt đầu lại từ Thư ký TGĐ."/><div className="form-grid"><label><span>Ngày cần hàng</span><input type="date" name="neededAt" defaultValue={String(request.neededAt||"").slice(0,10)}/></label><label><span>Mức độ</span><select name="priority" defaultValue={request.priority||"normal"}><option value="normal">Bình thường</option><option value="high">Cao</option><option value="urgent">Khẩn</option></select></label><label><span>Khu vực / Hạng mục</span><input name="area" defaultValue={request.area||""}/></label><label><span>Ghi chú / Mục đích</span><input name="purpose" defaultValue={request.purpose||""}/></label></div><div className="table-wrap"><table><thead><tr><th>Mã vật tư</th><th>Tên vật tư</th><th>ĐVT</th><th>SL đề nghị sửa</th></tr></thead><tbody>{(request.items||[]).map((item:Row)=><tr key={item.id}><td>{item.materialCode}</td><td>{item.materialName}</td><td>{item.unit}</td><td><input name={`qty-${item.id}`} type="number" min="0.001" step="0.001" defaultValue={item.requestedQty}/></td></tr>)}</tbody></table></div><button className="secondary">Lưu chỉnh sửa</button></form>}{request.purpose && <section className="drawer-section document-note"><CardHead title="Mục đích / Ghi chú" /><p>{request.purpose}</p></section>}<section className="drawer-section request-special-files"><CardHead title="Ảnh / Hồ sơ vật tư đặc thù" note="Ảnh mẫu, catalog, thông số hoặc tài liệu giúp cấp duyệt và Phòng Kế hoạch nhận diện đúng vật tư cần mua." /><FileUpload entityType="material_request" entityId={request.id} canManage={canManageRequestFiles} /></section></div><footer>{canReturnedEdit&&<><button className="secondary reject-text" onClick={deleteReturned}>Xóa phiếu & lập mới</button><button className="primary" onClick={resubmit}>Gửi lại từ đầu →</button></>}<button className="secondary" onClick={() => downloadRequestXlsx(savedRequestDocument(data, request))}>⇩ Tải Excel</button><button className="secondary" onClick={() => downloadRequestPdf(savedRequestDocument(data, request))}>⇩ Tải PDF</button>{canDecide && <><button className="secondary reject-text" onClick={() => decide(request.id, stage, "rejected", action)}>Trả lại CHT</button><button className="primary" onClick={() => decide(request.id, stage, "approved", action)}>✓ Duyệt bước {stage}</button></>}</footer></aside></div>;
@@ -2139,6 +3740,166 @@ function ApprovalStageModal({ data, row, close, submit }: { data: AppData; row: 
   async function send(event: FormEvent<HTMLFormElement>) { event.preventDefault(); if (!selectedRoles.length) { window.alert("Chọn ít nhất một vai trò được phép duyệt."); return; } const payload = Object.fromEntries(new FormData(event.currentTarget)); if (await submit("save_approval_stage", { ...payload, stageId: row?.id, allowedRoleCodes: selectedRoles, autoApproveOnSubmit: new FormData(event.currentTarget).get("autoApproveOnSubmit") === "on" })) close(); }
   const roles = data.roleCatalog.filter((item) => item.active && item.code !== "admin");
   return <BaseModal title={row?.id ? `Sửa bước ${row.stageNo}` : "Thêm bước phê duyệt"} note="Có thể thêm/bớt bước, đổi tên, nội dung, vai trò duyệt và SLA. Phiếu đã tạo giữ nguyên chuỗi bước của thời điểm lập phiếu." close={close}><form onSubmit={send}><div className="modal-body"><div className="form-grid"><label><span>Số bước *</span><input name="stageNo" type="number" min="1" required defaultValue={row?.stageNo || nextStage} /></label><input type="hidden" name="sortOrder" value={row?.sortOrder ?? (row?.stageNo || nextStage) * 10} /><label className="span-2"><span>Tên bước *</span><input name="name" required defaultValue={row?.name || ""} placeholder="Ban giám đốc phê duyệt" /></label><label className="span-2"><span>Nội dung / mô tả</span><input name="description" defaultValue={row?.description || ""} placeholder="Kiểm soát ngân sách, tiến độ, điều kiện mua..." /></label><label><span>Thời hạn xử lý (giờ) *</span><input name="slaHours" type="number" min="1" required defaultValue={row?.slaHours || 8} /></label><label><span>Cách xác nhận</span><select name="approvalMode" defaultValue={row?.approvalMode||"single"}><option value="single">Một vai trò xác nhận là đủ</option><option value="all_roles">Bắt buộc đủ tất cả vai trò (AND)</option></select></label><label className="check-inline"><span>Tự xác nhận khi gửi phiếu</span><input name="autoApproveOnSubmit" type="checkbox" defaultChecked={Boolean(row?.autoApproveOnSubmit)} /><small>Thường chỉ dùng cho bước BCH/người lập xác nhận khi bấm gửi.</small></label></div><fieldset className="scope-select"><legend>Vai trò được phép duyệt bước này <HelpTip text="Chọn các vai trò được phép xử lý bước duyệt này. Quản trị hệ thống vẫn có quyền xử lý sự cố theo nguyên tắc hệ thống."/></legend><div className="bulk-select-actions"><button type="button" className="secondary" onClick={()=>setSelectedRoles(roles.map((role)=>String(role.code)))}>✓ Chọn tất cả</button><button type="button" className="secondary" onClick={()=>setSelectedRoles([])}>□ Bỏ chọn tất cả</button></div>{roles.map((role) => <label key={role.code}><input type="checkbox" checked={selectedRoles.includes(role.code)} onChange={(event) => setSelectedRoles((current) => event.target.checked ? [...new Set([...current, role.code])] : current.filter((code) => code !== role.code))} /> {role.name}<small> · {engineRoleLabel(data,role.baseRole)}</small></label>)}</fieldset><div className="inline-alert">Quản trị hệ thống luôn có quyền xử lý khi cần khắc phục sự cố. Nếu đổi luồng khi đang có phiếu chạy, các phiếu cũ vẫn theo chuỗi bước đã tạo để không mất lịch sử.</div></div><ModalFooter close={close} label="Lưu bước phê duyệt →" /></form></BaseModal>;
+}
+
+// ---------------------------------------------------------------------------
+// ĐỢT P3 — HỒ SƠ NHÂN SỰ CHI TIẾT
+// Bấm vào một dòng nhân sự (tab "Nhân sự" hoặc màn "Hồ sơ nhân sự") để mở panel:
+// chức vụ · phòng ban · liên hệ · cá nhân · dự án đã/đang tham gia.
+// Chỉ dùng class CSS có sẵn (không thêm CSS mới) để giữ CSS baseline canonical.
+// ---------------------------------------------------------------------------
+function userOf(data: AppData, row: Row): Row {
+  const id = String(row?.userId || row?.id || "");
+  return data.users.find((u) => String(u.id) === id)
+    || (data.staffDirectory || []).find((u) => String(u.id) === id)
+    || row || {};
+}
+function projectRecord(data: AppData, projectId: string): Row {
+  return data.projects.find((p) => String(p.id) === projectId)
+    || data.adminProjects.find((p) => String(p.id) === projectId)
+    || {};
+}
+/** Dự án đã/đang tham gia: đang hoạt động lên đầu (mới nhất trước), đã kết thúc/rời xuống dưới. */
+function userProjectHistory(data: AppData, userId: string): Row[] {
+  const stageByNo = new Map((data.approvalStages || []).map((s) => [Number(s.stageNo), s]));
+  const dutyText = (a: Row) => { const st = stageByNo.get(Number(a.stage)); return st ? `Bước ${a.stage} · ${st.name}` : `Bước ${a.stage}`; };
+  const assignments = (data.workflowAssignments || []).filter((a) => String(a.ownerUserId) === userId && a.active !== false && Number(a.active) !== 0);
+  const seen = new Set<string>();
+  const rows: Row[] = [];
+  for (const scope of (data.userScopes || [])) {
+    if (String(scope.userId) !== userId) continue;
+    const pid = String(scope.projectId);
+    seen.add(pid);
+    const project = projectRecord(data, pid);
+    rows.push({
+      projectId: pid, permission: scope.permission || "read",
+      code: project.code || scope.projectCode || "—", name: project.name || scope.projectName || "",
+      status: String(project.status || "active"), startDate: project.startDate, plannedEndDate: project.plannedEndDate,
+      duties: assignments.filter((a) => String(a.projectId) === pid).map(dutyText),
+    });
+  }
+  for (const a of assignments) {   // được phân công duyệt nhưng chưa nằm trong phạm vi truy cập
+    const pid = String(a.projectId);
+    if (seen.has(pid)) continue;
+    const project = projectRecord(data, pid);
+    rows.push({
+      projectId: pid, permission: "approval", code: project.code || "—", name: project.name || "",
+      status: String(project.status || "active"), startDate: project.startDate, plannedEndDate: project.plannedEndDate,
+      duties: [dutyText(a)],
+    });
+  }
+  const rank = (r: Row) => (String(r.status) === "active" ? 0 : 1);
+  return rows.sort((a, b) => rank(a) - rank(b) || String(b.startDate || "").localeCompare(String(a.startDate || "")));
+}
+function UserProfilePanel({ data, row, close, open, showDocuments = false }: { data: AppData; row: Row; close: () => void; open: (name: string, r?: Row) => void; showDocuments?: boolean }) {
+  const user = userOf(data, row);
+  const uid = String(user.id || "");
+  const staff = (data.staffDirectory || []).find((u) => String(u.id) === uid) || {};
+  const hr = (data.hrRecords || []).find((r) => String(r.userId) === uid) || {};
+  const org = (data.organizationUnits || []).find((o) => String(o.id) === String(user.organizationUnitId || staff.organizationUnitId)) || {};
+  const history = userProjectHistory(data, uid);
+  const current = history.filter((r) => String(r.status) === "active");
+  const past = history.filter((r) => String(r.status) !== "active");
+  const contracts = (data.laborContracts || []).filter((c) => String(c.userId) === uid);
+  const benefits = (data.benefitRecords || []).filter((b) => String(b.userId) === uid);
+  const requests = (data.requests || []).filter((r) => String(r.requestedBy || "") === uid);
+  const advances = (data.advanceRequests || []).filter((r) => String(r.requesterId || r.userId || "") === uid);
+  const audits = (data.audits || []).filter((a) => String(a.userName || "") === String(user.fullName || ""));
+  const fullName = String(user.fullName || staff.fullName || hr.fullName || "—");
+  const text = (value: unknown) => (value === null || value === undefined || value === "" ? "—" : String(value));
+  const money$ = (value: unknown) => (value === null || value === undefined || value === "" ? "—" : money(value));
+  const fieldRows = (pairs: [string, unknown][]) => {
+    const out: ReactNode[] = [];
+    for (let i = 0; i < pairs.length; i += 2) {
+      const a = pairs[i], b = pairs[i + 1];
+      out.push(<tr key={a[0]}>
+        <th>{a[0]}</th><td><strong>{text(a[1])}</strong></td>
+        {b ? <><th>{b[0]}</th><td><strong>{text(b[1])}</strong></td></> : <><th /><td /></>}
+      </tr>);
+    }
+    return out;
+  };
+  const projectRow = (p: Row, dimmed: boolean) => (
+    <div key={String(p.projectId)} style={dimmed ? { opacity: 0.55 } : undefined}>
+      <span className="group-icon">{dimmed ? "▨" : "▣"}</span>
+      <span>
+        <strong>{text(p.code)} · {text(p.name)}</strong>
+        <small>
+          {p.duties?.length ? `Chức vụ: ${p.duties.join(" · ")}` : "Thành viên dự án"}
+          {" · "}{String(p.permission) === "approval" ? "Người duyệt" : `Quyền: ${text(p.permission)}`}
+          {" · "}{projectPeriod(p.startDate, p.plannedEndDate)}
+          {dimmed ? " · đã kết thúc/rời dự án" : ""}
+        </small>
+      </span>
+      <b><Pill value={String(p.status) === "active" ? "Đang tham gia" : "Đã kết thúc"} /></b>
+    </div>
+  );
+  return <BaseModal title="Hồ sơ nhân sự chi tiết" note="Chức vụ · phòng ban · liên hệ · cá nhân · dự án đã và đang tham gia." close={close}>
+    <div className="modal-body">
+      <section className="card">
+        <div className="table-toolbar">
+          <div><strong>{fullName}</strong><span>{text(user.employeeCode || staff.employeeCode)} · {text(hr.position || user.roleName || staff.roleName || roleLabel(data, String(user.role || "")))}</span></div>
+          <div className="row-actions">
+            <Pill value={Number(user.active ?? 1) === 0 ? "Đã nghỉ" : "Đang làm việc"} />
+            <button className="export-mini" onClick={() => open("userEdit", user)}>Sửa tài khoản</button>
+          </div>
+        </div>
+        <div className="table-wrap"><table><tbody>
+          {fieldRows([
+            ["Mã nhân viên", user.employeeCode || staff.employeeCode],
+            ["Chức danh", hr.position || user.roleName || staff.roleName || roleLabel(data, String(user.role || ""))],
+            ["Phòng ban", org.name || user.organizationName || staff.organizationName || user.department || hr.department],
+            ["Mã đơn vị", org.code || user.organizationCode || staff.organizationCode],
+            ["Vai trò hệ thống", roleLabel(data, String(user.role || ""))],
+            ["Tên đăng nhập", user.username],
+            ["Email", user.email || hr.email],
+            ["Điện thoại", hr.phone],
+          ])}
+        </tbody></table></div>
+      </section>
+      <section className="card">
+        <CardHead title="Thông tin cá nhân" note="Do Hành chính - Pháp chế cập nhật trong hồ sơ nhân sự." />
+        {hr.id ? <div className="table-wrap"><table><tbody>
+          {fieldRows([
+            ["Số CCCD/CMND", hr.identityNo],
+            ["Ngày sinh", hr.birthDate ? date(hr.birthDate) : ""],
+            ["Nơi sinh", hr.birthplace],
+            ["Địa chỉ thường trú", hr.permanentAddress],
+            ["Trình độ học vấn", hr.educationLevel],
+            ["Ngày vào làm", hr.joinedDate ? date(hr.joinedDate) : ""],
+            ["Ghi chú", hr.note],
+          ])}
+        </tbody></table></div> : <Empty text="Chưa lập hồ sơ chi tiết cho nhân sự này." />}
+      </section>
+      <section className="card">
+        <CardHead title={`Dự án đã và đang tham gia (${history.length})`} note="Dự án gần nhất lên đầu; dự án đã kết thúc hoặc đã rời được làm mờ và xếp xuống dưới." />
+        {history.length ? <>
+          <div className="admin-mini-list">{current.map((p) => projectRow(p, false))}</div>
+          {past.length > 0 && <>
+            <div className="table-toolbar"><div><strong>Đã kết thúc / đã rời</strong><span>{past.length} dự án</span></div></div>
+            <div className="admin-mini-list">{past.map((p) => projectRow(p, true))}</div>
+          </>}
+        </> : <Empty text="Nhân sự chưa được gán vào dự án nào." />}
+      </section>
+      <section className="card">
+        <CardHead title="Thao tác gần đây" note="Lấy từ nhật ký hệ thống (audit log) theo tên người thực hiện." />
+        {audits.length ? <div className="table-wrap"><table><thead><tr><th>Thời gian</th><th>Hạng mục</th><th>Hành động</th></tr></thead><tbody>
+          {audits.slice(0, 15).map((a) => <tr key={a.id}><td>{date(a.occurredAt)}</td><td>{text(a.entityType)}</td><td>{text(a.action)}</td></tr>)}
+        </tbody></table></div> : <Empty text="Chưa ghi nhận thao tác nào (nhật ký hệ thống đang trống)." />}
+      </section>
+      {showDocuments && <section className="card">
+        <CardHead title="Đơn từ & giấy tờ liên quan" note="Hợp đồng lao động, bảo hiểm, phiếu đề nghị và tạm ứng của nhân sự này." />
+        <div className="table-wrap"><table><thead><tr><th>Loại</th><th>Số / nội dung</th><th>Thời gian</th><th>Trạng thái</th></tr></thead><tbody>
+          {contracts.map((c) => <tr key={c.id}><td>Hợp đồng lao động</td><td>{text(c.contractNo)} · {text(c.contractType)}<small>{money$(c.salary)}</small></td><td>{date(c.startDate)} → {date(c.endDate)}</td><td><Pill value={text(c.status)} /></td></tr>)}
+          {benefits.map((b) => <tr key={b.id}><td>Bảo hiểm & chế độ</td><td>{text(b.benefitNo)} · {text(b.benefitType)}<small>{text(b.provider)}</small></td><td>{date(b.startDate)} → {date(b.endDate)}</td><td><Pill value={text(b.status)} /></td></tr>)}
+          {requests.map((r) => <tr key={r.id}><td>Phiếu đề nghị</td><td>{text(r.requestNo)}<small>{text(r.area)}</small></td><td>{date(r.createdAt)}</td><td><Pill value={text(r.status)} /></td></tr>)}
+          {advances.map((r) => <tr key={r.id}><td>Tạm ứng / hoàn ứng</td><td>{text(r.requestNo || r.purpose)}</td><td>{date(r.createdAt)}</td><td><Pill value={text(r.status)} /></td></tr>)}
+          {!contracts.length && !benefits.length && !requests.length && !advances.length && <tr><td colSpan={4}><Empty text="Chưa có đơn từ hay giấy tờ nào." /></td></tr>}
+        </tbody></table></div>
+      </section>}
+    </div>
+    <footer className="modal-footer"><button className="primary" type="button" onClick={close}>Đóng</button></footer>
+  </BaseModal>;
 }
 
 function UserEditModal({ data, row, close, submit }: { data: AppData; row: Row; close: () => void; submit: (name: string, payload: Row) => Promise<boolean> }) {

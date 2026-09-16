@@ -7,6 +7,7 @@ import com.vntech.erp.application.rbac.RbacService;
 
 import java.security.SecureRandom;
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -179,6 +180,10 @@ public final class UserManagementUseCase {
         String targetUserId = trim(payload.get("userId"));
         Map<String, Object> target = store.findUser(targetUserId).orElse(null);
         if (target == null) throw new AuthUseCase.ApiError("Không tìm thấy tài khoản.", 400);
+        // P5.3 — BẮT BUỘC kiểm tra ràng buộc TRƯỚC khi xoá quyền cũ.
+        // Nếu đặt sau clearUserScopes(), một yêu cầu bị TỪ CHỐI vẫn xoá sạch phạm vi
+        // dự án / kho / quyền hiện có của người dùng ⇒ MẤT DỮ LIỆU.
+        assertDepartmentAllowsPermissions(targetUserId, target, payload);
         Instant now = Instant.now();
         store.clearUserScopes(targetUserId);
         for (Object o : listOf(payload.get("projectScopes"))) {
@@ -336,12 +341,217 @@ public final class UserManagementUseCase {
         store.deleteDepartmentDefaultPermissions(userId);
         if ("admin".equals(sv(target.get(), "role"))) return;
         Instant now = Instant.now();
+        // P5.7 — cấp bậc auto_grant_all (Giám đốc / Tổng giám đốc) tự động có quyền cao nhất,
+        // không cần cấu hình tay từng chức năng.
+        boolean autoAll = store.findUserSystemLevel(userId)
+                .map((l) -> intOf(l.get("autogrant")) == 1).orElse(false);
+        String orgUnitId = svAny(target.get(), "organizationUnitId", "organizationunitid");
         for (String moduleKey : store.listActiveModuleKeys()) {
-            Caps caps = defaultDepartmentPermission(target.get(), moduleKey);
+            if ("admin".equals(moduleKey)) continue;
+            Caps caps;
+            if (autoAll) {
+                caps = new Caps(1, 1, 1, 1, 1, 1);
+            } else {
+                // P5 — bảng department_module_permissions là nguồn chính; nếu phòng chưa được
+                // cấu hình thì giữ quy tắc mặc định cũ để không khoá nhầm người dùng.
+                Optional<Map<String, Object>> dep = orgUnitId.isEmpty()
+                        ? Optional.empty() : store.findDepartmentPermission(orgUnitId, moduleKey);
+                caps = dep.isPresent() ? capsOfDepartment(dep.get()) : defaultDepartmentPermission(target.get(), moduleKey);
+            }
             if (caps.any())
                 store.insertDepartmentDefaultPermission(idGenerator.next("UMP"), userId, moduleKey,
                         caps.canView, caps.canUse, caps.canCreate, caps.canEdit, caps.canApprove, caps.canExport, now);
         }
+    }
+
+    private Caps capsOfDepartment(Map<String, Object> row) {
+        if (intOf(row.get("active")) != 1) return new Caps(0, 0, 0, 0, 0, 0);
+        return new Caps(intOf(row.get("can_view")), intOf(row.get("can_use")), intOf(row.get("can_create")),
+                intOf(row.get("can_edit")), intOf(row.get("can_approve")), intOf(row.get("can_export")));
+    }
+
+    /**
+     * P5.3 — chặn cấp cho người dùng quyền mà PHÒNG BAN không có.
+     * Ngoại lệ (P5.8): tài khoản admin và cấp bậc có auto_grant_all.
+     * Nếu phòng ban CHƯA cấu hình quyền nào thì bỏ qua — tránh khoá nhầm toàn hệ thống
+     * khi chưa thiết lập tab "Phân quyền phòng ban".
+     * Hàm này chỉ ĐỌC, không ghi: phải gọi TRƯỚC mọi thao tác xoá quyền cũ.
+     */
+    private void assertDepartmentAllowsPermissions(String targetUserId, Map<String, Object> target,
+                                                   Map<String, Object> payload) {
+        boolean levelException = "admin".equals(sv(target, "role"))
+                || store.findUserSystemLevel(targetUserId)
+                        .map((l) -> intOf(l.get("autogrant")) == 1).orElse(false);
+        if (levelException) return;
+        String orgUnitId = svAny(target, "organizationUnitId", "organizationunitid");
+        if (orgUnitId.isEmpty()) return;
+        List<Map<String, Object>> allDeptPerms = store.departmentModulePermissions();
+        boolean deptConfigured = allDeptPerms.stream()
+                .anyMatch((d) -> orgUnitId.equals(sv(d, "orgunitid")) && intOf(d.get("active")) == 1);
+        if (!deptConfigured) return;
+        for (Object o : listOf(payload.get("modulePermissions"))) {
+            Map<?, ?> row = asMap(o);
+            String moduleKey = trim(row.get("moduleKey"));
+            if (moduleKey.isEmpty() || "admin".equals(moduleKey)) continue;
+            int want = intOf(row.get("canView")) + intOf(row.get("canUse")) + intOf(row.get("canCreate"))
+                    + intOf(row.get("canEdit")) + intOf(row.get("canApprove")) + intOf(row.get("canExport"));
+            if (want == 0) continue;
+            Optional<Map<String, Object>> dep = store.findDepartmentPermission(orgUnitId, moduleKey);
+            boolean allowed = dep.isPresent() && intOf(dep.get().get("active")) == 1
+                    && intOf(dep.get().get("can_view")) == 1;
+            if (!allowed) {
+                String deptName = allDeptPerms.stream()
+                        .filter((d) -> orgUnitId.equals(sv(d, "orgunitid")))
+                        .map((d) -> sv(d, "orgname")).findFirst().orElse("phòng ban");
+                throw new AuthUseCase.ApiError("Phòng ban “" + deptName + "” chưa được cấp quyền cho chức năng “"
+                        + moduleKey + "”. Hãy cấp ở tab “Phân quyền phòng ban” trước, hoặc xếp cho tài khoản "
+                        + "một cấp bậc đủ cao (tự động toàn quyền).", 400);
+            }
+        }
+    }
+
+    // ================= P5: phân quyền phòng ban =================
+
+    public String saveDepartmentPermission(Principal principal, Map<String, Object> payload) {
+        rbac.requireRole(principalAsCurrent(principal), List.of("admin"));
+        String organizationUnitId = trim(payload.get("organizationUnitId"));
+        String moduleKey = trim(payload.get("moduleKey"));
+        if (organizationUnitId.isEmpty() || moduleKey.isEmpty())
+            throw new AuthUseCase.ApiError("Cần chọn phòng ban và chức năng.", 400);
+        if ("admin".equals(moduleKey))
+            throw new AuthUseCase.ApiError("Chức năng quản trị chỉ dành cho tài khoản admin.", 400);
+        Instant now = Instant.now();
+        store.upsertDepartmentPermission(idGenerator.next("DMP"), organizationUnitId, moduleKey,
+                intOf(payload.get("canView")), intOf(payload.get("canUse")), intOf(payload.get("canCreate")),
+                intOf(payload.get("canEdit")), intOf(payload.get("canApprove")), intOf(payload.get("canExport")),
+                principal.userId(), now);
+        int synced = syncDepartmentUsers(now);
+        return "Đã lưu quyền phòng ban cho chức năng “" + moduleKey + "”; đồng bộ lại " + synced + " tài khoản.";
+    }
+
+    public String deleteDepartmentPermission(Principal principal, Map<String, Object> payload) {
+        rbac.requireRole(principalAsCurrent(principal), List.of("admin"));
+        String organizationUnitId = trim(payload.get("organizationUnitId"));
+        String moduleKey = trim(payload.get("moduleKey"));
+        if (organizationUnitId.isEmpty() || moduleKey.isEmpty())
+            throw new AuthUseCase.ApiError("Cần chọn phòng ban và chức năng.", 400);
+        store.deleteDepartmentPermission(organizationUnitId, moduleKey);
+        int synced = syncDepartmentUsers(Instant.now());
+        return "Đã thu hồi quyền của phòng ban; đồng bộ lại " + synced + " tài khoản (ngoại lệ cá nhân giữ nguyên).";
+    }
+
+    /** Sinh lại quyền department_default cho mọi tài khoản đang hoạt động (trừ admin). */
+    public String rebuildDepartmentPermissions(Principal principal, Map<String, Object> payload) {
+        rbac.requireRole(principalAsCurrent(principal), List.of("admin"));
+        int n = syncDepartmentUsers(Instant.now());
+        return "Đã đồng bộ lại quyền mặc định phòng ban cho " + n + " tài khoản.";
+    }
+
+    private int syncDepartmentUsers(Instant now) {
+        int n = 0;
+        for (String userId : store.activeUserIds()) {
+            Optional<Map<String, Object>> user = store.findUser(userId);
+            if (user.isEmpty() || "admin".equals(sv(user.get(), "role"))) continue;
+            replaceDepartmentDefaults(userId);
+            n++;
+        }
+        return n;
+    }
+
+    // ================= P5: cấp bậc hệ thống =================
+
+    public String saveSystemLevel(Principal principal, Map<String, Object> payload) {
+        rbac.requireRole(principalAsCurrent(principal), List.of("admin"));
+        String levelId = trim(payload.get("levelId"));
+        String code = trim(payload.get("code"));
+        String name = trim(payload.get("name"));
+        if (code.isEmpty() || name.isEmpty())
+            throw new AuthUseCase.ApiError("Cấp bậc cần mã và tên.", 400);
+        if (!code.matches("[A-Za-z0-9_]{2,64}"))
+            throw new AuthUseCase.ApiError("Mã cấp bậc chỉ gồm chữ, số và gạch dưới (2–64 ký tự).", 400);
+        Optional<Map<String, Object>> byCode = store.findSystemLevelByCode(code);
+        boolean exists = !levelId.isEmpty() && store.findSystemLevelById(levelId).isPresent();
+        if (byCode.isPresent() && !exists)
+            throw new AuthUseCase.ApiError("Mã cấp bậc “" + code + "” đã tồn tại.", 400);
+        if (byCode.isPresent() && exists && !trim(byCode.get().get("id")).equals(levelId))
+            throw new AuthUseCase.ApiError("Mã cấp bậc “" + code + "” đã được dùng cho cấp bậc khác.", 400);
+        Map<String, Object> level = new LinkedHashMap<>();
+        level.put("id", exists ? levelId : idGenerator.next("LVL"));
+        level.put("code", code);
+        level.put("name", name);
+        level.put("description", trim(payload.get("description")));
+        level.put("rank", (int) Math.round(numberOf(payload.get("rank"))));
+        level.put("autoGrantAll", truthy(payload.get("autoGrantAll")) ? 1 : 0);
+        level.put("canSkipLevels", truthy(payload.get("canSkipLevels")) ? 1 : 0);
+        level.put("sortOrder", (int) Math.round(numberOf(payload.get("sortOrder"))));
+        store.upsertSystemLevel(level, Instant.now());
+        int synced = truthy(payload.get("autoGrantAll")) ? syncDepartmentUsers(Instant.now()) : 0;
+        String extra = truthy(payload.get("autoGrantAll"))
+                ? " Cấp bậc này TỰ ĐỘNG có toàn quyền (đã đồng bộ " + synced + " tài khoản)." : "";
+        String skip = truthy(payload.get("canSkipLevels"))
+                ? " Được DUYỆT VƯỢT CẤP, không cần thêm tên vào từng quy trình." : "";
+        return "Đã lưu cấp bậc “" + name + "”." + extra + skip;
+    }
+
+    public String setSystemLevelStatus(Principal principal, Map<String, Object> payload) {
+        rbac.requireRole(principalAsCurrent(principal), List.of("admin"));
+        String levelId = trim(payload.get("levelId"));
+        store.findSystemLevelById(levelId)
+                .orElseThrow(() -> new AuthUseCase.ApiError("Không tìm thấy cấp bậc.", 400));
+        boolean active = truthy(payload.get("active"));
+        store.setSystemLevelStatus(levelId, active, Instant.now());
+        return active ? "Đã kích hoạt cấp bậc." : "Đã ngừng dùng cấp bậc (tài khoản đang giữ vẫn giữ nguyên).";
+    }
+
+    public String deleteSystemLevel(Principal principal, Map<String, Object> payload) {
+        rbac.requireRole(principalAsCurrent(principal), List.of("admin"));
+        String levelId = trim(payload.get("levelId"));
+        Map<String, Object> level = store.findSystemLevelById(levelId)
+                .orElseThrow(() -> new AuthUseCase.ApiError("Không tìm thấy cấp bậc.", 400));
+        int inUse = store.countUsersWithLevel(sv(level, "code"));
+        if (inUse > 0)
+            throw new AuthUseCase.ApiError("Còn " + inUse + " tài khoản đang giữ cấp bậc này. "
+                    + "Hãy chuyển họ sang cấp bậc khác trước khi xóa.", 400);
+        store.deleteSystemLevel(levelId);
+        return "Đã xóa cấp bậc.";
+    }
+
+    public String setUserSystemLevel(Principal principal, Map<String, Object> payload) {
+        rbac.requireRole(principalAsCurrent(principal), List.of("admin"));
+        String userId = trim(payload.get("userId"));
+        String levelCode = trim(payload.get("levelCode"));
+        Map<String, Object> user = store.findUser(userId)
+                .orElseThrow(() -> new AuthUseCase.ApiError("Không tìm thấy tài khoản.", 400));
+        Map<String, Object> level = null;
+        if (!levelCode.isEmpty()) {
+            level = store.findSystemLevelByCode(levelCode)
+                    .orElseThrow(() -> new AuthUseCase.ApiError("Cấp bậc “" + levelCode + "” không tồn tại.", 400));
+            if (intOf(level.get("active")) != 1)
+                throw new AuthUseCase.ApiError("Cấp bậc “" + sv(level, "name") + "” đang ngừng sử dụng.", 400);
+        }
+        store.setUserSystemLevel(userId, levelCode, Instant.now());
+        replaceDepartmentDefaults(userId);
+        StringBuilder msg = new StringBuilder("Đã xếp cấp bậc cho ").append(sv(user, "fullName")).append('.');
+        if (level != null) {
+            if (intOf(level.get("auto_grant_all")) == 1)
+                msg.append(" Cấp bậc này tự động có toàn quyền nên đã được cấp đủ quyền.")
+                   .append(" Bạn KHÔNG cần thêm người này vào từng quy trình phê duyệt.");
+            if (intOf(level.get("can_skip_levels")) == 1)
+                msg.append(" Cấp bậc này được phép DUYỆT VƯỢT CẤP.");
+        }
+        return msg.toString();
+    }
+
+    /** Thông tin cấp bậc để UI hiển thị cảnh báo trước khi lưu (P5.7). */
+    public Map<String, Object> systemLevelImpact(Principal principal, Map<String, Object> payload) {
+        String levelCode = trim(payload.get("levelCode"));
+        Map<String, Object> level = store.findSystemLevelByCode(levelCode).orElse(null);
+        if (level == null) return Map.of("found", false);
+        int users = store.countUsersWithLevel(levelCode);
+        return Map.of("found", true, "name", sv(level, "name"), "users", users,
+                "autoGrantAll", intOf(level.get("auto_grant_all")) == 1,
+                "canSkipLevels", intOf(level.get("can_skip_levels")) == 1,
+                "moduleCount", store.listActiveModuleKeys().size());
     }
 
     private record Caps(int canView, int canUse, int canCreate, int canEdit, int canApprove, int canExport) {
@@ -385,10 +595,31 @@ public final class UserManagementUseCase {
 
     private static boolean isActive(Object o) { return o instanceof Number n ? n.intValue() == 1 : Boolean.TRUE.equals(o); }
     private static String sv(Map<String, Object> m, String k) { Object v = m.get(k); return v == null ? "" : String.valueOf(v); }
+
+    /**
+     * Đọc theo camelCase, nếu rỗng thì thử bản viết thường.
+     * VÌ SAO CẦN: H2 (profile test) viết thường nhãn alias không có backtick, còn MySQL giữ
+     * nguyên văn — nên cùng một câu SELECT cho ra khoá khác nhau ở hai nơi. Hàm này giúp
+     * code chạy đúng ở cả hai mà không phải nhân đôi truy vấn.
+     */
+    private static String svAny(Map<String, Object> m, String camel, String lower) {
+        String v = sv(m, camel);
+        return v.isEmpty() ? sv(m, lower) : v;
+    }
     private static String trim(Object o) { return o == null ? "" : String.valueOf(o).trim(); }
     private static String blankDefault(String s, String fallback) { return s.isEmpty() ? (fallback == null ? "" : fallback) : s; }
     private static double numberValue(Object o) { try { return o == null ? 0 : Double.parseDouble(String.valueOf(o)); } catch (NumberFormatException e) { return 0; } }
     private static int intOf(Object o) { return o == null || "false".equalsIgnoreCase(String.valueOf(o)) || "0".equals(String.valueOf(o)) ? 0 : 1; }
+
+    /** P5 — cờ bật/tắt nhận cả boolean, 1/0 và "1"/"0"/"true"/"false". */
+    private static boolean truthy(Object o) { return intOf(o) == 1; }
+
+    /** P5 — đọc số (rank/sortOrder) từ payload JSON có thể là Number hoặc chuỗi. */
+    private static double numberOf(Object o) {
+        if (o == null) return 0;
+        if (o instanceof Number n) return n.doubleValue();
+        try { return Double.parseDouble(String.valueOf(o).trim()); } catch (NumberFormatException e) { return 0; }
+    }
     private static List<Object> listOf(Object o) { return o instanceof List<?> l ? (List<Object>) (List<?>) l : List.of(); }
     @SuppressWarnings("unchecked")
     private static Map<String, Object> asMap(Object o) { return o instanceof Map ? (Map<String, Object>) o : Map.of(); }

@@ -44,11 +44,30 @@ public interface UserAdminStore {
 
     // ---- department defaults (replaceDepartmentDefaults) ----
     List<String> listActiveModuleKeys();
+    List<String> activeUserIds();
     void deleteDepartmentDefaultPermissions(String userId);
     void insertDepartmentDefaultPermission(String permissionId, String userId, String moduleKey,
                                            int canView, int canUse, int canCreate, int canEdit,
                                            int canApprove, int canExport, Instant now);
     void deleteSessionsByUser(String userId);
+
+    // ---- P5: phân quyền phòng ban + cấp bậc hệ thống ----
+    List<Map<String, Object>> departmentModulePermissions();
+    Optional<Map<String, Object>> findDepartmentPermission(String organizationUnitId, String moduleKey);
+    void upsertDepartmentPermission(String id, String organizationUnitId, String moduleKey,
+                                    int canView, int canUse, int canCreate, int canEdit,
+                                    int canApprove, int canExport, String updatedBy, Instant now);
+    void deleteDepartmentPermission(String organizationUnitId, String moduleKey);
+
+    List<Map<String, Object>> systemLevelCatalog();
+    Optional<Map<String, Object>> findSystemLevelByCode(String code);
+    Optional<Map<String, Object>> findSystemLevelById(String id);
+    Optional<Map<String, Object>> findUserSystemLevel(String userId);   // cấp bậc của người dùng (join catalog)
+    void upsertSystemLevel(Map<String, Object> level, Instant now);
+    void setSystemLevelStatus(String id, boolean active, Instant now);
+    void deleteSystemLevel(String id);
+    void setUserSystemLevel(String userId, String levelCode, Instant now);
+    int countUsersWithLevel(String code);
 
     // ---- role_catalog (save_role_catalog/set_role_status/delete_role_catalog) ----
     Optional<Map<String, Object>> findRoleById(String roleId);

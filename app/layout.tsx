@@ -1,6 +1,16 @@
 // VNTECH PROPRIETARY SOURCE | Owner: CÔNG TY CỔ PHẦN THƯƠNG MẠI ĐẦU TƯ PHÁT TRIỂN CÔNG NGHỆ VIỆT (VNTECH) | Product: VNTECH-KHO-MEP-001 | Fingerprint: SSOT
 import type { Metadata } from "next";
+// Tầng TOKEN THIẾT KẾ (GĐ1) — PHẢI nạp ĐẦU TIÊN.
+// Một nguồn sự thật duy nhất cho màu sắc, cỡ chữ, khoảng cách, bo góc, đổ bóng,
+// lớp xếp chồng và điểm ngắt responsive. Xem app/styles/tokens.css.
+import "./styles/tokens.css";
 import "./globals.css";
+// Tầng chuẩn hoá giao diện — PHẢI nạp SAU globals.css để thắng khi cùng độ ưu tiên.
+// Xem app/styles/canonical.css (GĐ1: thanh cuộn, sàn cỡ chữ, nhịp dọc, responsive).
+import "./styles/canonical.css";
+// Sàn cỡ chữ — FILE SINH TỰ ĐỘNG từ globals.css (node tools/gen-font-floor.mjs).
+// Nạp SAU canonical.css vì dùng !important để thắng mọi khai báo 7–8.8px cũ.
+import "./styles/font-floor.css";
 import { VNTECH_BRAND } from "@/lib/vntech-brand";
 
 export const metadata: Metadata = {

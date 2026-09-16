@@ -35,12 +35,18 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
         // JS dùng `${projectIds.map(()=>"?").join(",") || "NULL"}` -> khi rỗng là IN (NULL)
         String pidSql = pids.isEmpty() ? "NULL" : inClause(pids);
 
-        // ---- projects (admin và non-admin khác scope) ----
-        List<Map<String, Object>> projects = query("""
+        // ---- projects: CHỈ dự án trong phạm vi được cấp ----
+        // LỖI BẢO MẬT đã sửa: trước đây trả TẤT CẢ dự án active cho mọi user, bỏ qua
+        // ctx.visibleProjectIds() (BootstrapUseCase đã tính đúng: admin = toàn bộ,
+        // user thường = chỉ dự án trong user_project_scopes). Hệ quả cũ: user không
+        // được gán dự án nào vẫn thấy toàn bộ dự án của công ty.
+        List<Map<String, Object>> projects = pids.isEmpty() ? List.of() : query("""
                 SELECT id,code,name,status,contract_no AS contractNo,contract_name AS contractName,
                        start_date AS startDate,planned_end_date AS plannedEndDate
-                FROM projects WHERE status='active' ORDER BY code""");
+                FROM projects WHERE status='active' AND id IN (%s) ORDER BY code""".formatted(pidSql), params(pids));
         data.put("projects", projects);
+        // JS trả projectAccessAll = isAdmin: UI dùng để quyết định có hiện "Tất cả dự án".
+        data.put("projectAccessAll", admin);
 
         // ---- requests + approvals/items/supplySteps (enrich 3 tầng) ----
         List<Map<String, Object>> requests = query("""
@@ -489,11 +495,200 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                 SELECT u.id,u.employee_code AS employeeCode,u.full_name AS fullName,u.email,u.role,
                        COALESCE(rc.name,u.role) AS roleName,u.department,
                        u.organization_unit_id AS organizationUnitId,ou.code AS organizationCode,
-                       COALESCE(ou.name,u.department) AS organizationName,u.avatar_url AS avatarUrl
+                       COALESCE(ou.name,u.department) AS organizationName,u.avatar_url AS avatarUrl,
+                       u.system_level_code AS systemLevelCode
                 FROM users u
                 LEFT JOIN role_catalog rc ON rc.code=u.role
                 LEFT JOIN organization_units ou ON ou.id=u.organization_unit_id
                 WHERE u.active=1 ORDER BY u.full_name"""));
+
+        // ════════════════════════════════════════════════════════════════════
+        // BÙ CÁC TRƯỜNG BOOTSTRAP MÀ UI YÊU CẦU (JS trả, Java trước đây thiếu).
+        // Thiếu chúng làm UI crash dạng "Cannot read properties of undefined":
+        //   • allModulePermissions  → PersonalExceptionManager (tab "Ngoại lệ cá nhân") + 5 chỗ
+        //   • userWarehouseScopes   → tab "Phạm vi dự án & kho"
+        //   • approvalStages        → tab "Workflow phê duyệt" (UI dùng tên này, không dùng
+        //                             approvalStageCatalog — 20 chỗ trong app/page.tsx)
+        // ════════════════════════════════════════════════════════════════════
+        // JS: `approvalStages: approvalStageCatalog` — CÙNG một dữ liệu, hai tên.
+        data.put("approvalStages", data.get("approvalStageCatalog"));
+
+        data.put("allModulePermissions", admin ? query("""
+                SELECT ump.user_id AS userId,ump.module_key AS moduleKey,ump.can_view AS canView,
+                       ump.can_use AS canUse,ump.can_create AS canCreate,ump.can_edit AS canEdit,
+                       ump.can_approve AS canApprove,ump.can_export AS canExport,
+                       ump.permission_expires_at AS permissionExpiresAt,
+                       COALESCE(ump.permission_source,'manual_override') AS permissionSource
+                FROM user_module_permissions ump
+                ORDER BY ump.user_id,ump.module_key""") : query("""
+                SELECT ump.user_id AS userId,ump.module_key AS moduleKey,ump.can_view AS canView,
+                       ump.can_use AS canUse,ump.can_create AS canCreate,ump.can_edit AS canEdit,
+                       ump.can_approve AS canApprove,ump.can_export AS canExport,
+                       ump.permission_expires_at AS permissionExpiresAt,
+                       COALESCE(ump.permission_source,'manual_override') AS permissionSource
+                FROM user_module_permissions ump
+                WHERE ump.user_id=? ORDER BY ump.module_key""", ctx.userId()));
+
+        data.put("userWarehouseScopes", admin ? query("""
+                SELECT uws.user_id AS userId,uws.warehouse_id AS warehouseId,uws.permission,
+                       w.code AS warehouseCode,w.name AS warehouseName,w.type,w.project_id AS projectId
+                FROM user_warehouse_scopes uws
+                JOIN warehouses w ON w.id=uws.warehouse_id
+                ORDER BY uws.user_id,w.code""") : query("""
+                SELECT uws.user_id AS userId,uws.warehouse_id AS warehouseId,uws.permission,
+                       w.code AS warehouseCode,w.name AS warehouseName,w.type,w.project_id AS projectId
+                FROM user_warehouse_scopes uws
+                JOIN warehouses w ON w.id=uws.warehouse_id
+                WHERE uws.user_id=? ORDER BY w.code""", ctx.userId()));
+
+        // JS: `workflowAssignments` = bảng approval_project_assignments (phân công người duyệt theo dự án+bước)
+        data.put("workflowAssignments", pids.isEmpty() ? List.of() : query("""
+                SELECT apa.id,apa.project_id AS projectId,apa.stage,apa.owner_user_id AS ownerUserId,
+                       u.full_name AS ownerName,apa.cc_emails AS ccEmails,apa.active
+                FROM approval_project_assignments apa
+                LEFT JOIN users u ON u.id=apa.owner_user_id
+                WHERE apa.project_id IN (%s) ORDER BY apa.project_id,apa.stage""".formatted(pidSql), params(pids)));
+
+        data.put("formFieldConfigs", query("""
+                SELECT id,form_key AS formKey,field_key AS fieldKey,display_name AS displayName,
+                       data_type AS dataType,source_kind AS sourceKind,visible,required,importable,
+                       exportable,editable,sort_order AS sortOrder,options_json AS optionsJson,
+                       system_locked AS systemLocked,active
+                FROM form_field_config %s ORDER BY form_key,sort_order,field_key""".formatted(
+                        admin ? "" : "WHERE active=1")));
+
+        // P4 — workflow đa luồng: quy trình · bước · người duyệt đích danh.
+        // Người duyệt chỉ trả về họ tên/mã/vai trò (không lộ email) để màn cấu hình hiển thị được.
+        data.put("workflowDefinitions", query("""
+                SELECT id,code,name,description,module_key AS moduleKey,project_id AS projectId,
+                       is_default AS isDefault,active,version,sort_order AS sortOrder,created_by AS createdBy
+                FROM workflow_definitions ORDER BY sort_order,code"""));
+        data.put("workflowSteps", query("""
+                SELECT id,workflow_id AS workflowId,step_no AS stepNo,name,description,
+                       approval_mode AS approvalMode,sla_hours AS slaHours,
+                       allow_skip_level AS allowSkipLevel,required_permission AS requiredPermission,active
+                FROM workflow_steps ORDER BY workflow_id,step_no"""));
+        data.put("workflowStepApprovers", query("""
+                SELECT a.id,a.step_id AS stepId,a.user_id AS userId,a.active,
+                       u.full_name AS fullName,u.employee_code AS employeeCode,u.role AS role
+                FROM workflow_step_approvers a
+                LEFT JOIN users u ON u.id=a.user_id
+                ORDER BY a.step_id,a.user_id"""));
+
+        // P5 — phân quyền phòng ban (nguồn chính) + thang cấp bậc hệ thống.
+        data.put("departmentModulePermissions", query("""
+                SELECT d.id,d.organization_unit_id AS organizationUnitId,o.code AS organizationCode,
+                       o.name AS organizationName,d.module_key AS moduleKey,
+                       d.can_view AS canView,d.can_use AS canUse,d.can_create AS canCreate,
+                       d.can_edit AS canEdit,d.can_approve AS canApprove,d.can_export AS canExport,d.active
+                FROM department_module_permissions d
+                LEFT JOIN organization_units o ON o.id=d.organization_unit_id
+                ORDER BY o.code,d.module_key"""));
+        data.put("systemLevelCatalog", query("""
+                SELECT id,code,name,description,level_rank AS `rank`,auto_grant_all AS autoGrantAll,
+                       can_skip_levels AS canSkipLevels,active,sort_order AS sortOrder
+                FROM system_level_catalog ORDER BY level_rank,sort_order,code"""));
+
+        List<Map<String, Object>> uiDisplay = query("""
+                SELECT id,scope_key AS scopeKey,settings_json AS settingsJson,updated_at AS updatedAt
+                FROM ui_display_settings WHERE scope_key='GLOBAL' LIMIT 1""");
+        data.put("uiDisplaySettings", uiDisplay.isEmpty() ? null : uiDisplay.get(0));
+
+        data.put("materialAliases", query("""
+                SELECT id,material_id AS materialId,alias_name AS aliasName,
+                       normalized_name AS normalizedName,verified,active
+                FROM material_aliases WHERE active=1 ORDER BY alias_name"""));
+
+        // productIdentity / trustStatus: JS trả hằng số + trạng thái trust lock
+        data.put("productIdentity", first("""
+                SELECT id,legal_owner AS legalOwner,product_name AS productName,
+                       product_description AS productDescription,version,
+                       source_fingerprint AS sourceFingerprint,
+                       source_fingerprint_short AS sourceFingerprintShort
+                FROM vntech_product_identity LIMIT 1"""));
+        Map<String, Object> trustSettings = first("""
+                SELECT trust_mode AS trustMode,enforcement_enabled AS enforcementEnabled,
+                       tenant_id AS tenantId,company_code AS companyCode,key_id AS keyId,
+                       algorithm,machine_fingerprint AS machineFingerprint,
+                       hardware_binding_mode AS hardwareBindingMode
+                FROM vntech_trust_settings LIMIT 1""");
+        Map<String, Object> trustStatus = new LinkedHashMap<>();
+        trustStatus.put("foundationReady", !trustSettings.isEmpty());
+        trustStatus.put("trustSettings", trustSettings);
+        trustStatus.put("privateKeyPresent", false);
+        data.put("trustStatus", trustStatus);
+
+        Map<String, Object> serverInfo = new LinkedHashMap<>();
+        serverInfo.put("product", "VNTECH-KHO-MEP-001");
+        serverInfo.put("backend", "java-clean-arch");
+        serverInfo.put("database", "mysql");
+        data.put("serverInfo", serverInfo);
+
+        // adminMaterials / adminMaterialCategories / adminMaterialSubcategories:
+        // JS trả bản "admin" (gồm cả bản ghi ẩn). Khi không phải admin thì không có.
+        if (admin) {
+            data.put("adminMaterials", query("""
+                    SELECT m.id,m.code,m.name,m.unit,`system`,m.standard_price AS standardPrice,
+                           m.category_id AS categoryId,m.subcategory_id AS subcategoryId,m.active,
+                           m.requires_mar AS requiresMar
+                    FROM materials m ORDER BY m.code"""));
+            data.put("adminMaterialCategories", query("""
+                    SELECT id,code,name,description,sort_order AS sortOrder,active
+                    FROM material_categories ORDER BY sort_order,code"""));
+            data.put("adminMaterialSubcategories", query("""
+                    SELECT id,code,name,category_id AS categoryId,description,
+                           sort_order AS sortOrder,active
+                    FROM material_subcategories ORDER BY sort_order,code"""));
+        }
+
+        // engineRoleProfiles: JS trả business_role_engine_catalog dưới tên này.
+        data.put("engineRoleProfiles", data.get("businessRoleEngineProfiles"));
+
+        data.put("supplySteps", pids.isEmpty() ? List.of() : query("""
+                SELECT s.id,s.request_id AS requestId,s.step,s.status,s.queued_at AS queuedAt,
+                       s.due_at AS dueAt,s.completed_at AS completedAt,s.completed_by AS completedBy,
+                       s.comment,s.purchase_order_id AS purchaseOrderId,s.receipt_id AS receiptId
+                FROM supply_workflow_steps s
+                JOIN material_requests r ON r.id=s.request_id
+                WHERE r.project_id IN (%s) ORDER BY s.request_id,s.step""".formatted(pidSql), params(pids)));
+
+        data.put("workItemEvents", query("""
+                SELECT e.id,e.work_item_id AS workItemId,e.event_type AS eventType,
+                       e.from_status AS fromStatus,e.to_status AS toStatus,
+                       e.actor_user_id AS actorUserId,e.reason,e.detail_json AS detailJson,
+                       e.occurred_at AS occurredAt
+                FROM work_item_events e ORDER BY e.occurred_at DESC LIMIT 500"""));
+
+        data.put("teamSettlements", pids.isEmpty() ? List.of() : query("""
+                SELECT id,project_id AS projectId,team_id AS teamId,subcontract_id AS subcontractId,
+                       settlement_no AS settlementNo,status,final_value AS finalValue,
+                       paid_value AS paidValue,remaining_value AS remainingValue,
+                       settled_at AS settledAt,created_at AS createdAt
+                FROM team_settlements WHERE project_id IN (%s) ORDER BY created_at DESC""".formatted(pidSql), params(pids)));
+
+        data.put("boqImportBatches", pids.isEmpty() ? List.of() : query("""
+                SELECT id,project_id AS projectId,contract_id AS contractId,
+                       boq_version_id AS boqVersionId,version_no AS versionNo,
+                       source_file_name AS sourceFileName,row_count AS rowCount,
+                       imported_by AS importedBy,created_at AS createdAt
+                FROM boq_import_batches WHERE project_id IN (%s) ORDER BY created_at DESC""".formatted(pidSql), params(pids)));
+
+        data.put("boqChangeHistory", pids.isEmpty() ? List.of() : query("""
+                SELECT id,project_id AS projectId,project_boq_item_id AS projectBoqItemId,
+                       action_type AS actionType,before_json AS beforeJson,after_json AS afterJson,
+                       reason,actor_user_id AS actorUserId,created_at AS createdAt
+                FROM boq_change_history WHERE project_id IN (%s) ORDER BY created_at DESC""".formatted(pidSql), params(pids)));
+
+        data.put("businessRoleGroupScopes", query("""
+                SELECT id,business_group_id AS businessGroupId,business_scope_id AS scopeId,
+                       is_primary AS isPrimary,created_at AS createdAt
+                FROM business_role_group_scopes ORDER BY business_group_id"""));
+
+        data.put("stockReconciliations", pids.isEmpty() ? List.of() : query("""
+                SELECT id,project_id AS projectId,warehouse_id AS warehouseId,material_id AS materialId,
+                       physical_qty AS physicalQty,contract_qty AS contractQty,
+                       difference_qty AS differenceQty,status,checked_at AS checkedAt,created_at AS createdAt
+                FROM contract_stock_reconciliations WHERE project_id IN (%s) ORDER BY created_at DESC""".formatted(pidSql), params(pids)));
         if (admin) {
             data.put("users", query("""
                     SELECT u.id,u.employee_code AS employeeCode,u.full_name AS fullName,u.username,u.email,u.role,
@@ -501,7 +696,8 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                            rc.warehouse_scope_kind AS warehouseScopeKind,u.department,
                            u.organization_unit_id AS organizationUnitId,ou.code AS organizationCode,
                            COALESCE(ou.name,u.department) AS organizationName,u.avatar_url AS avatarUrl,
-                           u.approval_limit AS approvalLimit,u.must_change_password AS mustChangePassword,u.active
+                           u.approval_limit AS approvalLimit,u.must_change_password AS mustChangePassword,u.active,
+                           u.system_level_code AS systemLevelCode
                     FROM users u
                     LEFT JOIN role_catalog rc ON rc.code=u.role
                     LEFT JOIN organization_units ou ON ou.id=u.organization_unit_id
@@ -513,9 +709,24 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                     ORDER BY CASE WHEN status='active' THEN 0 ELSE 1 END,code"""));
             data.put("userScopes", query("""
                     SELECT ups.user_id AS userId,ups.project_id AS projectId,ups.permission,
+                           ups.joined_at AS joinedAt,ups.left_at AS leftAt,
+                           ups.position_name AS positionName,
                            p.code AS projectCode,p.name AS projectName
                     FROM user_project_scopes ups JOIN projects p ON p.id=ups.project_id
                     ORDER BY ups.user_id,p.code"""));
+            // GĐ5 — thành viên tổ đội kèm thời gian tham gia/rời (bảng team_members, V14).
+            // LƯU Ý: `users` KHÔNG có cột role_name — tên chức danh nằm ở role_catalog,
+            // phải JOIN qua rc.code = u.role (giống query staffDirectory ở trên).
+            data.put("teamMembers", query("""
+                    SELECT tm.id,tm.team_id AS teamId,tm.user_id AS userId,
+                           tm.role_in_team AS roleInTeam,tm.joined_at AS joinedAt,
+                           tm.left_at AS leftAt,tm.active,
+                           u.full_name AS fullName,u.employee_code AS employeeCode,
+                           u.role AS role,COALESCE(rc.name,u.role) AS roleName,u.department
+                    FROM team_members tm
+                    LEFT JOIN users u ON u.id=tm.user_id
+                    LEFT JOIN role_catalog rc ON rc.code=u.role
+                    ORDER BY tm.team_id,tm.joined_at"""));
             data.put("activeSessions", query("""
                     SELECT s.id,s.user_id AS userId,u.full_name AS userName,u.username,
                            s.ip_address AS ipAddress,s.user_agent AS userAgent,s.created_at AS createdAt,
@@ -524,9 +735,13 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                     WHERE s.expires_at>? ORDER BY s.created_at DESC LIMIT 300""", java.time.Instant.now()));
             data.put("audits", query("""
                     SELECT al.id,al.action,al.entity_type AS entityType,al.entity_id AS entityId,
-                           al.occurred_at AS occurredAt,u.full_name AS userName
+                           al.occurred_at AS occurredAt,COALESCE(al.user_name,u.full_name) AS userName,
+                           al.user_id AS userId,al.user_role AS userRole,al.department,al.system_level AS systemLevel,
+                           al.module_key AS moduleKey,al.permission_used AS permissionUsed,
+                           al.change_detail AS changeDetail,al.before_json AS beforeJson,
+                           al.after_json AS afterJson,al.ip_address AS ipAddress
                     FROM audit_logs al LEFT JOIN users u ON u.id=al.user_id
-                    ORDER BY al.occurred_at DESC LIMIT 100"""));
+                    ORDER BY al.occurred_at DESC LIMIT 500"""));
             data.put("businessRoleEngineProfiles", query("""
                     SELECT id,engine_key AS engineKey,company_code AS companyCode,display_name AS displayName,
                            description,active,sort_order AS sortOrder,system_locked AS systemLocked
@@ -700,8 +915,11 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
         data.put("workItems", query("""
                 SELECT w.id,w.task_no AS taskNo,w.project_id AS projectId,w.work_group AS workGroup,
                        w.title,w.description,w.status,w.priority,w.progress,
+                       w.department_code AS departmentCode,w.work_step AS workStep,
+                       w.task_origin AS taskOrigin,w.required_output AS requiredOutput,
                        w.assigned_to AS assigneeUserId,u.full_name AS assigneeName,
-                       w.due_at AS dueAt,w.created_at AS createdAt
+                       w.due_at AS dueAt,w.assigned_at AS assignedAt,
+                       w.completed_at AS completedAt,w.created_at AS createdAt
                 FROM work_items w LEFT JOIN users u ON u.id=w.assigned_to
                 ORDER BY w.created_at DESC LIMIT 500"""));
         data.put("taskNotifications", query("""

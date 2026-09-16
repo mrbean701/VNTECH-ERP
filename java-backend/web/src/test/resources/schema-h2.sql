@@ -2165,3 +2165,112 @@ CREATE UNIQUE INDEX IF NOT EXISTS `users_employee_code_uidx` ON `users` (`employ
 CREATE UNIQUE INDEX IF NOT EXISTS `users_username_uidx` ON `users` (`username`);
 CREATE UNIQUE INDEX IF NOT EXISTS `users_email_uidx` ON `users` (`email`);
 CREATE UNIQUE INDEX IF NOT EXISTS `warehouses_code_uidx` ON `warehouses` (`code`);
+
+
+-- Bảng thêm bởi migration sau V1 (H2 không chạy Flyway).
+CREATE TABLE IF NOT EXISTS `department_module_permissions` (
+  `id`               varchar(64) NOT NULL,
+  `organization_unit_id` varchar(64) NOT NULL,
+  `module_key`       varchar(64) NOT NULL,
+  `can_view`         int NOT NULL DEFAULT 0,
+  `can_use`          int NOT NULL DEFAULT 0,
+  `can_create`       int NOT NULL DEFAULT 0,
+  `can_edit`         int NOT NULL DEFAULT 0,
+  `can_approve`      int NOT NULL DEFAULT 0,
+  `can_export`       int NOT NULL DEFAULT 0,
+  `active`           tinyint(1) NOT NULL DEFAULT 1,
+  `updated_by`       text NULL,
+  `created_at` TIMESTAMP(3) NOT NULL,
+  `updated_at` TIMESTAMP(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE (`organization_unit_id`,`module_key`)
+) ;
+
+CREATE TABLE IF NOT EXISTS `system_level_catalog` (
+  `id`               varchar(64) NOT NULL,
+  `code`             varchar(64) NOT NULL,
+  `name`             text NOT NULL,
+  `description`      text NULL,
+  `level_rank`             int NOT NULL DEFAULT 0 ,
+  `auto_grant_all`   tinyint(1) NOT NULL DEFAULT 0 ,
+  `can_skip_levels`  tinyint(1) NOT NULL DEFAULT 0 ,
+  `active`           tinyint(1) NOT NULL DEFAULT 1,
+  `sort_order`       int NOT NULL DEFAULT 0,
+  `created_at` TIMESTAMP(3) NOT NULL,
+  `updated_at` TIMESTAMP(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE (`code`)
+) ;
+
+CREATE TABLE IF NOT EXISTS `team_members` (
+  `id` varchar(64) NOT NULL,
+  `team_id` varchar(64) NOT NULL,
+  `user_id` varchar(64) NOT NULL,
+  `role_in_team` varchar(255) NULL,
+  `joined_at` TIMESTAMP(3) NOT NULL,
+  `left_at` TIMESTAMP(3) NULL,
+  `active` tinyint(1) NOT NULL DEFAULT 1,
+  `created_at` TIMESTAMP(3) NOT NULL,
+  `updated_at` TIMESTAMP(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE (`team_id`,`user_id`,`joined_at`)
+) ;
+
+CREATE TABLE IF NOT EXISTS `workflow_definitions` (
+  `id`          varchar(64)  NOT NULL,
+  `code`        varchar(64)  NOT NULL,
+  `name`        text         NOT NULL,
+  `description` text         NULL,
+  `module_key`  varchar(64)  NULL ,
+  `project_id`  varchar(64)  NULL ,
+  `is_default`  tinyint(1)   NOT NULL DEFAULT 0,
+  `active`      tinyint(1)   NOT NULL DEFAULT 1,
+  `version`     int          NOT NULL DEFAULT 1,
+  `sort_order`  int          NOT NULL DEFAULT 0,
+  `created_by`  text         NULL,
+  `created_at` TIMESTAMP(3)  NOT NULL,
+  `updated_at` TIMESTAMP(3)  NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE (`code`)
+) ;
+
+CREATE TABLE IF NOT EXISTS `workflow_steps` (
+  `id`           varchar(64)  NOT NULL,
+  `workflow_id`  varchar(64)  NOT NULL,
+  `step_no`      int          NOT NULL,
+  `name`         text         NOT NULL,
+  `description`  text         NULL,
+  `approval_mode` varchar(32) NOT NULL DEFAULT 'single' ,
+  `sla_hours`    int          NOT NULL DEFAULT 8,
+  `allow_skip_level` tinyint(1) NOT NULL DEFAULT 0 ,
+  `required_permission` varchar(128) NULL ,
+  `active`       tinyint(1)   NOT NULL DEFAULT 1,
+  `created_at` TIMESTAMP(3)  NOT NULL,
+  `updated_at` TIMESTAMP(3)  NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE (`workflow_id`,`step_no`)
+) ;
+
+CREATE TABLE IF NOT EXISTS `workflow_step_approvers` (
+  `id`         varchar(64) NOT NULL,
+  `step_id`    varchar(64) NOT NULL,
+  `user_id`    varchar(64) NOT NULL,
+  `active`     tinyint(1)  NOT NULL DEFAULT 1,
+  `created_at` TIMESTAMP(3) NOT NULL,
+  `updated_at` TIMESTAMP(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE (`step_id`,`user_id`)
+) ;
+
+-- Cột thêm bởi migration sau V1.
+ALTER TABLE `users` ADD COLUMN IF NOT EXISTS `system_level_code` varchar(64);
+ALTER TABLE `audit_logs` ADD COLUMN IF NOT EXISTS `user_name` text;
+ALTER TABLE `audit_logs` ADD COLUMN IF NOT EXISTS `user_role` varchar(64);
+ALTER TABLE `audit_logs` ADD COLUMN IF NOT EXISTS `department` text;
+ALTER TABLE `audit_logs` ADD COLUMN IF NOT EXISTS `system_level` varchar(64);
+ALTER TABLE `audit_logs` ADD COLUMN IF NOT EXISTS `module_key` varchar(64);
+ALTER TABLE `audit_logs` ADD COLUMN IF NOT EXISTS `permission_used` varchar(64);
+ALTER TABLE `audit_logs` ADD COLUMN IF NOT EXISTS `change_detail` text;
+ALTER TABLE `user_project_scopes` ADD COLUMN IF NOT EXISTS `joined_at` datetime(3);
+ALTER TABLE `user_project_scopes` ADD COLUMN IF NOT EXISTS `left_at` datetime(3);
+ALTER TABLE `user_project_scopes` ADD COLUMN IF NOT EXISTS `position_name` varchar(255);

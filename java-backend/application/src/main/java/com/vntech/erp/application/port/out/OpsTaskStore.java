@@ -54,4 +54,17 @@ public interface OpsTaskStore {
                            String note, String userId, Instant now);
     void updateMarApproval(String id, String approvalNo, String status, String note, String userId, Instant now);
     Optional<Map<String, Object>> findActiveMaterial(String materialId);
+
+    // ---- P4: workflow đa luồng (nhiều quy trình · nhiều bước · nhiều người duyệt) ----
+    List<Map<String, Object>> workflowDefinitions();
+    List<Map<String, Object>> workflowSteps();
+    List<Map<String, Object>> workflowStepApprovers();
+    Optional<Map<String, Object>> findWorkflow(String id);
+    Optional<Map<String, Object>> findWorkflowByCode(String code);
+    void upsertWorkflow(Map<String, Object> workflow, Instant now);
+    /** Ghi đè toàn bộ bước + người duyệt của một workflow trong một giao dịch. */
+    void replaceWorkflowSteps(String workflowId, List<Map<String, Object>> steps,
+                              List<Map<String, Object>> approvers, Instant now);
+    void setWorkflowStatus(String id, boolean active, Instant now);
+    void deleteWorkflowSafe(String id);
 }

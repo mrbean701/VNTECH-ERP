@@ -1,0 +1,32 @@
+{
+  "_doc": "Trần nợ CSS VNTECH ERP. Chỉ được GIẢM. Sinh bởi tools/probe-css-budget.mjs --init.",
+  "_fontFloorPx": 10,
+  "_ledgerFiles": ["app/styles/tokens.css"],
+  "_ledgerNote": "tokens.css là SỔ TOKEN — chỉ khai báo biến thiết kế, KHÔNG tạo quy tắc tạo hình. Số dòng của nó KHÔNG tính vào trần `lines` (xem LEDGER_FILES trong tools/probe-css-budget.mjs); sổ token lớn lên là từ vựng thiết kế phong phú hơn, không phải nợ CSS.",
+  "_countNote": "Mọi chỉ số được đếm trên bản ĐÃ BỎ COMMENT. Nhắc tới một từ khoá trong ghi chú giải thích không phải là nợ.",
+  "_gd1Note": "GĐ1 (16/09/2026): gom 16 token từ canonical.css :root và font-floor.css về một nguồn duy nhất app/styles/tokens.css — GIÁ TRỊ KHÔNG ĐỔI. Hệ quả lên chỉ số: canonical.css 761 -> 747 dòng (đã siết trần xuống 747 để khoá mức giảm); font-floor.css 262 -> 264 dòng do chú thích của bộ sinh dài hơn, KHÔNG có quy tắc mới (số quy tắc 2 -> 1); font-floor.css không còn tự khai báo :root.",
+  "ceilings": {
+    "important": 5014,
+    "tableWrap": 52,
+    "duplicateSelectors": 1219,
+    "fontSizeBelowFloor": 14,
+    "lines": 3747
+  },
+  "perFile": {
+    "app/globals.css": {
+      "lines": 2724,
+      "important": 4950,
+      "duplicateSelectorBlocks": 1183
+    },
+    "app/styles/canonical.css": {
+      "lines": 747,
+      "important": 63,
+      "duplicateSelectorBlocks": 27
+    },
+    "app/styles/font-floor.css": {
+      "lines": 264,
+      "important": 1,
+      "duplicateSelectorBlocks": 0
+    }
+  }
+}

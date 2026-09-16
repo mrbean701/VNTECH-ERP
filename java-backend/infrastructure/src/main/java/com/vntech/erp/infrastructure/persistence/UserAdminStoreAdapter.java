@@ -24,10 +24,10 @@ public class UserAdminStoreAdapter implements UserAdminStore {
     @Override
     public Optional<Map<String, Object>> findUser(String userId) {
         List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
-                SELECT u.id,u.employee_code AS employeeCode,u.full_name AS fullName,u.username,u.email,u.role,
-                       COALESCE(rc.base_role,u.role) AS roleBase,rc.warehouse_scope_kind AS warehouseScopeKind,
-                       u.department,u.organization_unit_id AS organizationUnitId,u.approval_limit AS approvalLimit,
-                       u.active,u.must_change_password AS mustChangePassword
+                SELECT u.id,u.employee_code AS `employeeCode`,u.full_name AS `fullName`,u.username,u.email,u.role,
+                       COALESCE(rc.base_role,u.role) AS `roleBase`,rc.warehouse_scope_kind AS `warehouseScopeKind`,
+                       u.department,u.organization_unit_id AS `organizationUnitId`,u.approval_limit AS `approvalLimit`,
+                       u.active,u.must_change_password AS `mustChangePassword`
                 FROM users u LEFT JOIN role_catalog rc ON rc.code=u.role WHERE u.id=?""", userId);
         return rows.isEmpty() ? Optional.empty() : Optional.of(firstToCamel(rows.get(0)));
     }
@@ -227,10 +227,135 @@ public class UserAdminStoreAdapter implements UserAdminStore {
                 "department_default", now, now);
     }
 
+    private Optional<Map<String, Object>> first(String sql, Object... args) {
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, args);
+        return rows.isEmpty() ? Optional.empty() : Optional.of(new LinkedHashMap<>(rows.get(0)));
+    }
+
+    @Override
+    public List<String> activeUserIds() {
+        return jdbcTemplate.queryForList("SELECT id FROM users WHERE active=1", String.class);
+    }
+
+    // ---- P5: phân quyền phòng ban ----
+    @Override
+    public List<Map<String, Object>> departmentModulePermissions() {
+        return jdbcTemplate.queryForList("""
+                SELECT d.id,d.organization_unit_id AS orgunitid,o.code AS orgcode,
+                       o.name AS orgname,d.module_key AS modulekey,
+                       d.can_view AS canview,d.can_use AS canuse,d.can_create AS cancreate,
+                       d.can_edit AS canedit,d.can_approve AS canapprove,d.can_export AS canexport,
+                       d.active
+                FROM department_module_permissions d
+                LEFT JOIN organization_units o ON o.id=d.organization_unit_id
+                ORDER BY o.code,d.module_key""");
+    }
+
+    @Override
+    public Optional<Map<String, Object>> findDepartmentPermission(String organizationUnitId, String moduleKey) {
+        return first("SELECT * FROM department_module_permissions WHERE organization_unit_id=? AND module_key=?",
+                organizationUnitId, moduleKey);
+    }
+
     @Override
     @Transactional
-    public void deleteSessionsByUser(String userId) {
-        jdbcTemplate.update("DELETE FROM sessions WHERE user_id=?", userId);
+    public void upsertDepartmentPermission(String id, String organizationUnitId, String moduleKey,
+                                           int canView, int canUse, int canCreate, int canEdit,
+                                           int canApprove, int canExport, String updatedBy, Instant now) {
+        jdbcTemplate.update("""
+                INSERT INTO department_module_permissions (id,organization_unit_id,module_key,can_view,can_use,
+                                                           can_create,can_edit,can_approve,can_export,active,
+                                                           updated_by,created_at,updated_at)
+                VALUES (?,?,?,?,?,?,?,?,?,1,?,?,?) ON DUPLICATE KEY UPDATE
+                       can_view=VALUES(can_view),can_use=VALUES(can_use),can_create=VALUES(can_create),
+                       can_edit=VALUES(can_edit),can_approve=VALUES(can_approve),can_export=VALUES(can_export),
+                       active=1,updated_by=VALUES(updated_by),updated_at=VALUES(updated_at)""",
+                id, organizationUnitId, moduleKey, canView, canUse, canCreate, canEdit, canApprove,
+                canExport, updatedBy, now, now);
+    }
+
+    @Override
+    @Transactional
+    public void deleteDepartmentPermission(String organizationUnitId, String moduleKey) {
+        jdbcTemplate.update(
+                "DELETE FROM department_module_permissions WHERE organization_unit_id=? AND module_key=?",
+                organizationUnitId, moduleKey);
+    }
+
+    // ---- P5: cấp bậc hệ thống ----
+    @Override
+    public List<Map<String, Object>> systemLevelCatalog() {
+        return jdbcTemplate.queryForList("""
+                SELECT id,code,name,description,level_rank AS rank,auto_grant_all AS autogrant,
+                       can_skip_levels AS canskip,active,sort_order AS sortorder
+                FROM system_level_catalog ORDER BY level_rank,sort_order,code""");
+    }
+
+    @Override
+    public Optional<Map<String, Object>> findSystemLevelByCode(String code) {
+        return first("SELECT * FROM system_level_catalog WHERE code=?", code);
+    }
+
+    @Override
+    public Optional<Map<String, Object>> findSystemLevelById(String id) {
+        return first("SELECT * FROM system_level_catalog WHERE id=?", id);
+    }
+
+    @Override
+    public Optional<Map<String, Object>> findUserSystemLevel(String userId) {
+        return first("""
+                SELECT l.code AS levelcode,l.name AS levelname,l.level_rank AS levelrank,
+                       l.auto_grant_all AS autogrant,l.can_skip_levels AS canskip
+                FROM users u JOIN system_level_catalog l ON l.code=u.system_level_code
+                WHERE u.id=?""", userId);
+    }
+
+    @Override
+    @Transactional
+    public void upsertSystemLevel(Map<String, Object> level, Instant now) {
+        jdbcTemplate.update("""
+                INSERT INTO system_level_catalog (id,code,name,description,level_rank,auto_grant_all,can_skip_levels,
+                                                  active,sort_order,created_at,updated_at)
+                VALUES (?,?,?,?,?,?,?,1,?,?,?) ON DUPLICATE KEY UPDATE
+                       code=VALUES(code),name=VALUES(name),description=VALUES(description),
+                       level_rank=VALUES(level_rank),
+                       auto_grant_all=VALUES(auto_grant_all),can_skip_levels=VALUES(can_skip_levels),
+                       sort_order=VALUES(sort_order),updated_at=VALUES(updated_at)""",
+                level.get("id"), level.get("code"), level.get("name"), level.get("description"),
+                level.get("rank"), level.get("autoGrantAll"), level.get("canSkipLevels"),
+                level.get("sortOrder"), now, now);
+    }
+
+    @Override
+    @Transactional
+    public void setSystemLevelStatus(String id, boolean active, Instant now) {
+        jdbcTemplate.update("UPDATE system_level_catalog SET active=?,updated_at=? WHERE id=?",
+                active ? 1 : 0, now, id);
+    }
+
+    @Override
+    @Transactional
+    public void deleteSystemLevel(String id) {
+        jdbcTemplate.update("DELETE FROM system_level_catalog WHERE id=?", id);
+    }
+
+    @Override
+    @Transactional
+    public void setUserSystemLevel(String userId, String levelCode, Instant now) {
+        jdbcTemplate.update("UPDATE users SET system_level_code=?,updated_at=? WHERE id=?",
+                levelCode == null || levelCode.isBlank() ? null : levelCode, now, userId);
+    }
+
+    @Override
+    public int countUsersWithLevel(String code) {
+        Integer n = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM users WHERE system_level_code=?", Integer.class, code);
+        return n == null ? 0 : n;
+    }
+
+    @Override
+    @Transactional
+    public void deleteSessionsByUser(String userId) {        jdbcTemplate.update("DELETE FROM sessions WHERE user_id=?", userId);
     }
 
     @Override

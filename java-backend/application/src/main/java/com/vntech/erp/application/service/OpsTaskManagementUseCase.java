@@ -4,10 +4,12 @@ import com.vntech.erp.application.port.out.IdGenerator;
 import com.vntech.erp.application.port.out.OpsTaskStore;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -71,6 +73,49 @@ public final class OpsTaskManagementUseCase {
         task.put("createdBy", principal.userId());
         store.insertWorkItem(task, now);
         return Map.of("message", "Đã giao " + taskNo + ". SLA/KPI tính ngay từ assigned_at và đã tạo thông báo cho nhân viên.");
+    }
+
+    /**
+     * GĐ4 — TỰ TẠO VIỆC CHO CHÍNH MÌNH.
+     *
+     * Khác {@link #createWorkItem} ở 3 điểm CỐT LÕI (có chủ đích, không phải sao chép):
+     *   1. KHÔNG đòi hỏi Trưởng phòng/Admin — mọi người dùng đều tự giao việc cho mình.
+     *   2. `assignedTo` LUÔN lấy từ principal, KHÔNG đọc từ payload ⇒ không thể lợi dụng
+     *      đường này để mạo danh giao việc cho người khác. Muốn giao cho người khác phải
+     *      dùng `create_work_item` (đã có kiểm tra Trưởng phòng/Admin).
+     *   3. `department_code` = "CN" (Cá nhân). Cột này NOT NULL và `createWorkItem` chỉ
+     *      nhận KH/DA; dùng mã riêng giúp việc cá nhân KHÔNG lẫn vào màn công việc
+     *      phòng ban (màn đó lọc theo KH/DA).
+     */
+    public Map<String, Object> createSelfWorkItem(Principal principal, Map<String, Object> payload) {
+        String title = trim(payload.get("title"));
+        if (title.isEmpty()) throw Api("Cần nhập nội dung công việc.");
+        if (!trim(payload.get("sourceId")).isEmpty() || !trim(payload.get("sourceType")).isEmpty()
+                || !trim(payload.get("sourceModule")).isEmpty())
+            throw Api("Việc tự tạo chỉ dùng cho công việc không có nghiệp vụ nguồn.");
+        Instant now = Instant.now();
+        long seq = java.util.concurrent.ThreadLocalRandom.current().nextLong(100000, 999999);
+        String taskNo = "CVCN-" + now.toString().substring(2, 10).replace("-", "") + "-" + String.format("%04d", seq % 10000);
+        Map<String, Object> task = new LinkedHashMap<>();
+        task.put("id", idGenerator.next("WI"));
+        task.put("department", "CN");
+        task.put("workGroup", blankDefault(trim(payload.get("workGroup")), "VIEC_CA_NHAN"));
+        task.put("title", title);
+        task.put("description", nvl(payload.get("description")));
+        task.put("projectId", nvl(payload.get("projectId")));
+        task.put("workStep", "MANUAL");
+        task.put("assignedTo", principal.userId());
+        task.put("assignedBy", principal.userId());
+        task.put("dueAt", nvl(payload.get("dueAt")));
+        task.put("priority", blankDefault(trim(payload.get("priority")), "normal"));
+        task.put("requiredOutput", nvl(payload.get("requiredOutput")));
+        task.put("sourceId", null);
+        task.put("sourceType", null);
+        task.put("sourceModule", null);
+        task.put("taskNo", taskNo);
+        task.put("createdBy", principal.userId());
+        store.insertWorkItem(task, now);
+        return Map.of("message", "Đã tạo " + taskNo + " cho chính bạn.");
     }
 
     public Map<String, Object> updateWorkItemProgress(Principal principal, Map<String, Object> payload) {
@@ -286,6 +331,142 @@ public final class OpsTaskManagementUseCase {
         store.findApprovalStage(stageId).orElseThrow(() -> Api("Không tìm thấy bước duyệt."));
         store.deleteApprovalStageSafe(stageId);
         return Map.of("message", "Đã xóa bước duyệt tùy chỉnh.");
+    }
+
+    // ============ P4: workflow đa luồng ============
+    private static final java.util.Set<String> APPROVAL_MODES = java.util.Set.of("single", "any_of", "all_of");
+
+    /**
+     * save_workflow — tạo/cập nhật MỘT quy trình kèm toàn bộ bước và người duyệt đích danh.
+     * Ghi đè bước trong một giao dịch để tránh trạng thái nửa vời.
+     * payload: { workflowId?, code, name, description?, moduleKey?, projectId?, isDefault?, sortOrder?, stages: [...] }
+     * mỗi phần tử stages: { stepNo, name, description?, approvalMode, slaHours, allowSkipLevel?, approverUserIds: [...] }
+     */
+    public Map<String, Object> saveWorkflow(Principal principal, Map<String, Object> payload) {
+        String workflowId = trim(payload.get("workflowId"));
+        String code = trim(payload.get("code"));
+        String name = trim(payload.get("name"));
+        String description = nvl(payload.get("description"));
+        String moduleKey = trim(payload.get("moduleKey"));
+        String projectId = trim(payload.get("projectId"));
+        boolean isDefault = payload.get("isDefault") == Boolean.TRUE || "1".equals(trim(payload.get("isDefault")));
+        int sortOrder = (int) Math.round(numberValue(payload.get("sortOrder")));
+        if (code.isEmpty() || name.isEmpty()) throw Api("Quy trình cần mã và tên.");
+        if (!code.matches("[A-Za-z0-9._-]{3,64}")) throw Api("Mã quy trình chỉ gồm chữ, số, dấu chấm, gạch ngang/gạch dưới (3–64 ký tự).");
+
+        // moduleKey phải tồn tại trong danh mục chức năng (nếu có khai báo)
+        if (!moduleKey.isEmpty() && store.workflowDefinitions() != null) {
+            // kiểm tra gián tiếp qua module_catalog đã được bootstrap kiểm chứng; ở đây chỉ chặn ký tự lạ
+            if (!moduleKey.matches("[A-Za-z0-9_]{2,64}")) throw Api("Mã chức năng không hợp lệ.");
+        }
+
+        Object rawStages = payload.get("stages");
+        List<Map<String, Object>> stageInputs = new ArrayList<>();
+        if (rawStages instanceof List<?> list) {
+            for (Object item : list) {
+                if (item instanceof Map<?, ?> m) {
+                    //noinspection unchecked
+                    stageInputs.add((Map<String, Object>) m);
+                }
+            }
+        }
+        if (stageInputs.isEmpty()) throw Api("Quy trình phải có ít nhất một bước duyệt.");
+
+        // Chuẩn hóa + kiểm tra từng bước
+        int autoNo = 0;
+        List<Map<String, Object>> steps = new ArrayList<>();
+        List<Map<String, Object>> approvers = new ArrayList<>();
+        java.util.Set<Integer> usedNo = new java.util.HashSet<>();
+        for (Map<String, Object> raw : stageInputs) {
+            autoNo++;
+            int stepNo = (int) Math.round(numberValue(raw.get("stepNo")));
+            if (stepNo <= 0) stepNo = autoNo;
+            if (!usedNo.add(stepNo)) throw Api("Số thứ tự bước bị trùng: " + stepNo + ".");
+            String stepName = trim(raw.get("name"));
+            if (stepName.isEmpty()) throw Api("Bước " + stepNo + " chưa có tên.");
+            String mode = trim(raw.get("approvalMode"));
+            if (mode.isEmpty()) mode = "single";
+            if (!APPROVAL_MODES.contains(mode)) throw Api("Cách xác nhận của bước " + stepNo + " không hợp lệ (single/any_of/all_of).");
+
+            List<String> userIds = new ArrayList<>();
+            Object rawUsers = raw.get("approverUserIds");
+            if (rawUsers instanceof List<?> users) {
+                for (Object u : users) {
+                    String id = trim(u);
+                    if (!id.isEmpty() && !userIds.contains(id)) userIds.add(id);
+                }
+            }
+            if (userIds.isEmpty()) throw Api("Bước " + stepNo + " (“" + stepName + "”) chưa chỉ định người duyệt.");
+            if ("single".equals(mode) && userIds.size() > 1)
+                throw Api("Bước " + stepNo + " chọn “một người duyệt” thì chỉ được chỉ định đúng một người.");
+
+            String stepId = idGenerator.next("WFS");
+            Map<String, Object> step = new LinkedHashMap<>();
+            step.put("id", stepId);
+            step.put("stepNo", stepNo);
+            step.put("name", stepName);
+            step.put("description", nvl(raw.get("description")));
+            step.put("approvalMode", mode);
+            int sla = (int) Math.round(numberValue(raw.get("slaHours")));
+            step.put("slaHours", sla <= 0 ? 8 : sla);
+            step.put("allowSkipLevel", raw.get("allowSkipLevel") == Boolean.TRUE || "1".equals(trim(raw.get("allowSkipLevel"))) ? 1 : 0);
+            step.put("requiredPermission", trim(raw.get("requiredPermission")));
+            steps.add(step);
+            for (String userId : userIds) {
+                Map<String, Object> ap = new LinkedHashMap<>();
+                ap.put("id", idGenerator.next("WFSA"));
+                ap.put("stepId", stepId);
+                ap.put("userId", userId);
+                approvers.add(ap);
+            }
+        }
+        steps.sort((a, b) -> Integer.compare((int) a.get("stepNo"), (int) b.get("stepNo")));
+
+        Instant now = Instant.now();
+        boolean exists = !workflowId.isEmpty() && store.findWorkflow(workflowId).isPresent();
+        if (exists) {
+            Optional<Map<String, Object>> byCode = store.findWorkflowByCode(code);
+            if (byCode.isPresent() && !trim(byCode.get().get("id")).equals(workflowId))
+                throw Api("Mã quy trình “" + code + "” đã được dùng cho quy trình khác.");
+        } else {
+            if (store.findWorkflowByCode(code).isPresent()) throw Api("Mã quy trình “" + code + "” đã tồn tại.");
+            workflowId = idGenerator.next("WF");
+        }
+
+        Map<String, Object> workflow = new LinkedHashMap<>();
+        workflow.put("id", workflowId);
+        workflow.put("code", code);
+        workflow.put("name", name);
+        workflow.put("description", description);
+        workflow.put("moduleKey", moduleKey.isEmpty() ? null : moduleKey);
+        workflow.put("projectId", projectId.isEmpty() ? null : projectId);
+        workflow.put("isDefault", isDefault ? 1 : 0);
+        workflow.put("sortOrder", sortOrder);
+        workflow.put("createdBy", principal.userId());
+        store.upsertWorkflow(workflow, now);
+        store.replaceWorkflowSteps(workflowId, steps, approvers, now);
+
+        int approverCount = approvers.size();
+        return Map.of("message", (exists ? "Đã cập nhật quy trình “" : "Đã tạo quy trình “") + name + "” với "
+                + steps.size() + " bước và " + approverCount + " người duyệt.", "workflowId", workflowId);
+    }
+
+    public Map<String, Object> setWorkflowStatus(Principal principal, Map<String, Object> payload) {
+        String workflowId = trim(payload.get("workflowId"));
+        store.findWorkflow(workflowId).orElseThrow(() -> Api("Không tìm thấy quy trình."));
+        boolean active = payload.get("active") == Boolean.TRUE || "1".equals(trim(payload.get("active")));
+        store.setWorkflowStatus(workflowId, active, Instant.now());
+        return Map.of("message", active ? "Đã kích hoạt quy trình." : "Đã ngừng áp dụng quy trình (hồ sơ đang chạy giữ nguyên).");
+    }
+
+    public Map<String, Object> deleteWorkflow(Principal principal, Map<String, Object> payload) {
+        String workflowId = trim(payload.get("workflowId"));
+        Map<String, Object> wf = store.findWorkflow(workflowId)
+                .orElseThrow(() -> Api("Không tìm thấy quy trình."));
+        if ("WF-MUAHANG".equals(workflowId) || "WF-MUAHANG-01".equals(trim(wf.get("code"))))
+            throw Api("Đây là quy trình mặc định của hệ thống — chỉ được ngừng áp dụng, không được xóa.");
+        store.deleteWorkflowSafe(workflowId);
+        return Map.of("message", "Đã xóa quy trình và toàn bộ bước của quy trình.");
     }
 
     // ============ MAR ============

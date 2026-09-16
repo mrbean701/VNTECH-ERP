@@ -8,4 +8,25 @@ public interface AuditLogPort {
 
     void log(String userId, String action, String entityType, String entityId,
              String beforeJson, String afterJson, String ipAddress);
+
+    /**
+     * P6 — ghi kèm ĐẦY ĐỦ ngữ cảnh người thực hiện và thay đổi.
+     * Khóa nhận trong `entry` (mọi khóa đều tùy chọn):
+     *   userId, userName, userRole, department, systemLevel, moduleKey, permissionUsed,
+     *   action, entityType, entityId, beforeJson, afterJson, changeDetail, ipAddress.
+     *
+     * Cố ý để `default` (không phải abstract) để AuditLogPort vẫn là FUNCTIONAL INTERFACE:
+     * nhiều test cũ và adapter rút gọn dùng lambda `(a,b,c,d,e,f,g) -> {}` cho port này.
+     * Thêm một phương thức abstract sẽ làm vỡ tất cả chúng.
+     * Mặc định chỉ ghi các trường cơ bản; AuditLogAdapter ghi đè để lưu đủ 16 cột.
+     */
+    default void logDetailed(java.util.Map<String, Object> entry) {
+        log(text(entry.get("userId")), text(entry.get("action")), text(entry.get("entityType")),
+                text(entry.get("entityId")), text(entry.get("beforeJson")), text(entry.get("afterJson")),
+                text(entry.get("ipAddress")));
+    }
+
+    private static String text(Object value) {
+        return value == null ? null : String.valueOf(value);
+    }
 }

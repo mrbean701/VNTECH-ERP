@@ -155,6 +155,41 @@ public class RequestStoreAdapter implements RequestStore {
         return rows.isEmpty() ? Optional.empty() : Optional.of(new LinkedHashMap<>(rows.get(0)));
     }
 
+    // ---- P4: người duyệt theo workflow đa luồng ----
+    @Override
+    public List<String> stageApproverUserIds(String projectId, int stageNo) {
+        return jdbcTemplate.queryForList("""
+                SELECT DISTINCT a.user_id
+                FROM workflow_step_approvers a
+                JOIN workflow_steps s ON s.id = a.step_id
+                JOIN workflow_definitions w ON w.id = s.workflow_id
+                WHERE a.active = 1 AND s.active = 1 AND w.active = 1 AND s.step_no = ?
+                  AND (w.project_id = ? OR (w.project_id IS NULL AND w.is_default = 1))""",
+                String.class, stageNo, projectId == null ? "" : projectId);
+    }
+
+    @Override
+    public Optional<String> stageApprovalMode(String projectId, int stageNo) {
+        String pid = projectId == null ? "" : projectId;
+        // Ưu tiên quy trình gán riêng cho dự án trước quy trình mặc định.
+        List<String> rows = jdbcTemplate.queryForList("""
+                SELECT s.approval_mode
+                FROM workflow_steps s
+                JOIN workflow_definitions w ON w.id = s.workflow_id
+                WHERE s.active = 1 AND w.active = 1 AND s.step_no = ?
+                  AND (w.project_id = ? OR (w.project_id IS NULL AND w.is_default = 1))
+                ORDER BY (w.project_id = ?) DESC
+                LIMIT 1""", String.class, stageNo, pid, pid);
+        return rows.isEmpty() ? Optional.empty() : Optional.ofNullable(rows.get(0));
+    }
+
+    @Override
+    public List<String> stageDecisionUsers(String requestId, int stage) {
+        return jdbcTemplate.queryForList(
+                "SELECT DISTINCT user_id FROM approval_stage_decisions WHERE request_id=? AND stage=?",
+                String.class, requestId, stage);
+    }
+
     @Override
     @Transactional
     public void insertRequest(Map<String, Object> header, List<Map<String, Object>> lines,

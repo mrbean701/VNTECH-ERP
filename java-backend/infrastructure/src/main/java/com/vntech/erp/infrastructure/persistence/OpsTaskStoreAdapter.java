@@ -292,6 +292,104 @@ public class OpsTaskStoreAdapter implements OpsTaskStore {
         jdbcTemplate.update("DELETE FROM approval_stage_catalog WHERE id=?", id);
     }
 
+    // ---- P4: workflow đa luồng ----
+    @Override
+    public List<Map<String, Object>> workflowDefinitions() {
+        return jdbcTemplate.queryForList("""
+                SELECT id,code,name,description,module_key AS moduleKey,project_id AS projectId,
+                       is_default AS isDefault,active,version,sort_order AS sortOrder,created_by AS createdBy
+                FROM workflow_definitions ORDER BY sort_order,code""");
+    }
+
+    @Override
+    public List<Map<String, Object>> workflowSteps() {
+        return jdbcTemplate.queryForList("""
+                SELECT id,workflow_id AS workflowId,step_no AS stepNo,name,description,
+                       approval_mode AS approvalMode,sla_hours AS slaHours,
+                       allow_skip_level AS allowSkipLevel,required_permission AS requiredPermission,active
+                FROM workflow_steps ORDER BY workflow_id,step_no""");
+    }
+
+    @Override
+    public List<Map<String, Object>> workflowStepApprovers() {
+        return jdbcTemplate.queryForList("""
+                SELECT a.id,a.step_id AS stepId,a.user_id AS userId,a.active,
+                       u.full_name AS fullName,u.employee_code AS employeeCode,u.role AS role
+                FROM workflow_step_approvers a
+                LEFT JOIN users u ON u.id=a.user_id
+                ORDER BY a.step_id,a.user_id""");
+    }
+
+    @Override
+    public Optional<Map<String, Object>> findWorkflow(String id) {
+        return first("SELECT id,code,name FROM workflow_definitions WHERE id=?", id);
+    }
+
+    @Override
+    public Optional<Map<String, Object>> findWorkflowByCode(String code) {
+        return first("SELECT id,code,name FROM workflow_definitions WHERE code=?", code);
+    }
+
+    @Override @Transactional
+    public void upsertWorkflow(Map<String, Object> wf, Instant now) {
+        Long n = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM workflow_definitions WHERE id=?", Long.class, wf.get("id"));
+        if (n != null && n > 0) {
+            jdbcTemplate.update("""
+                    UPDATE workflow_definitions SET code=?,name=?,description=?,module_key=?,project_id=?,
+                           is_default=?,sort_order=?,version=version+1,updated_at=? WHERE id=?""",
+                    wf.get("code"), wf.get("name"), wf.get("description"), wf.get("moduleKey"), wf.get("projectId"),
+                    wf.get("isDefault"), wf.get("sortOrder"), now, wf.get("id"));
+        } else {
+            jdbcTemplate.update("""
+                    INSERT INTO workflow_definitions (id,code,name,description,module_key,project_id,is_default,
+                                                      active,version,sort_order,created_by,created_at,updated_at)
+                    VALUES (?,?,?,?,?,?,?,1,1,?,?,?,?)""",
+                    wf.get("id"), wf.get("code"), wf.get("name"), wf.get("description"), wf.get("moduleKey"),
+                    wf.get("projectId"), wf.get("isDefault"), wf.get("sortOrder"), wf.get("createdBy"), now, now);
+        }
+    }
+
+    @Override @Transactional
+    public void replaceWorkflowSteps(String workflowId, List<Map<String, Object>> steps,
+                                     List<Map<String, Object>> approvers, Instant now) {
+        jdbcTemplate.update("""
+                DELETE FROM workflow_step_approvers
+                WHERE step_id IN (SELECT id FROM workflow_steps WHERE workflow_id=?)""", workflowId);
+        jdbcTemplate.update("DELETE FROM workflow_steps WHERE workflow_id=?", workflowId);
+        for (Map<String, Object> s : steps) {
+            jdbcTemplate.update("""
+                    INSERT INTO workflow_steps (id,workflow_id,step_no,name,description,approval_mode,sla_hours,
+                                                allow_skip_level,required_permission,active,created_at,updated_at)
+                    VALUES (?,?,?,?,?,?,?,?,?,1,?,?)""",
+                    s.get("id"), workflowId, s.get("stepNo"), s.get("name"), s.get("description"),
+                    s.get("approvalMode"), s.get("slaHours"), s.get("allowSkipLevel"),
+                    s.get("requiredPermission"), now, now);
+        }
+        for (Map<String, Object> a : approvers) {
+            jdbcTemplate.update("""
+                    INSERT IGNORE INTO workflow_step_approvers (id,step_id,user_id,active,created_at,updated_at)
+                    VALUES (?,?,?,1,?,?)""",
+                    a.get("id"), a.get("stepId"), a.get("userId"), now, now);
+        }
+    }
+
+    @Override @Transactional
+    public void setWorkflowStatus(String id, boolean active, Instant now) {
+        jdbcTemplate.update("UPDATE workflow_definitions SET active=?,updated_at=? WHERE id=?",
+                active ? 1 : 0, now, id);
+    }
+
+    @Override @Transactional
+    public void deleteWorkflowSafe(String id) {
+        jdbcTemplate.update("""
+                DELETE FROM workflow_step_approvers
+                WHERE step_id IN (SELECT id FROM workflow_steps WHERE workflow_id=?)""", id);
+        jdbcTemplate.update("DELETE FROM workflow_steps WHERE workflow_id=?", id);
+        // Quy trình mặc định không được xóa — chỉ được ẩn.
+        jdbcTemplate.update("DELETE FROM workflow_definitions WHERE id=? AND is_default=0", id);
+    }
+
     // ---- MAR ----
     @Override
     public Optional<Map<String, Object>> findMaterialMarApproval(String projectId, String materialId) {

@@ -16,11 +16,16 @@ const PNG_1X1 = Buffer.from(
 import { execFileSync } from "node:child_process";
 import { randomBytes, pbkdf2Sync } from "node:crypto";
 const MYSQL = "C:/Program Files/MySQL/MySQL Server 8.0/bin/mysql.exe";
+// BẮT BUỘC có --default-character-set=utf8mb4: nếu thiếu, mysql CLI dùng charset mặc định
+// (latin1) và mọi ký tự tiếng Việt ngoài latin1 bị đổi thành '?' ngay khi ĐỌC lẫn khi GHI.
+// Đây chính là nguyên nhân 8/16 chức danh trong role_catalog từng bị 'Ch? huy tr??ng'
+// (đã khôi phục bằng migration V6__fix_role_catalog_encoding.sql).
+const MYSQL_CHARSET = ["--default-character-set=utf8mb4"];
 function mysqlQuery(sql) {
-  return execFileSync(MYSQL, ["-h", "127.0.0.1", "-P", "3306", "-u", "vntech", "-pvntech", "-D", "vntech_erp", "-N", "-e", sql], { encoding: "utf8" }).trim();
+  return execFileSync(MYSQL, [...MYSQL_CHARSET, "-h", "127.0.0.1", "-P", "3306", "-u", "vntech", "-pvntech", "-D", "vntech_erp", "-N", "-e", sql], { encoding: "utf8" }).trim();
 }
 function mysqlExec(sql) {
-  execFileSync(MYSQL, ["-h", "127.0.0.1", "-P", "3306", "-u", "vntech", "-pvntech", "-D", "vntech_erp", "-e", sql], { encoding: "utf8" });
+  execFileSync(MYSQL, [...MYSQL_CHARSET, "-h", "127.0.0.1", "-P", "3306", "-u", "vntech", "-pvntech", "-D", "vntech_erp", "-e", sql], { encoding: "utf8" });
 }
 function pbkdf2(pass) {
   const salt = randomBytes(16);

@@ -1,5 +1,5 @@
 // Sinh schema-h2.sql (test) từ V1__baseline.sql — H2 MySQL-mode tương thích.
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, readdirSync } from "node:fs";
 import { dirname, resolve, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -49,7 +49,59 @@ let out = sql
 out += "\n\n-- Giữ ràng buộc UNIQUE rời của MySQL (bản trước bỏ sót nên H2 lỏng hơn MySQL).\n"
   + uniqueIndexes.join("\n") + "\n";
 
+// ---------------------------------------------------------------------------
+// BẢNG THÊM SAU V1 (V2, V3, ... — vd V8 workflow đa luồng).
+// VÌ SAO CẦN: baseline V1 chỉ chứa schema gốc. Trước đây generator chỉ đọc V1 nên
+// mọi bảng tạo thêm bằng migration sau này đều THIẾU trong H2 ⇒ test vỡ với
+// "Table not found" ngay khi BootstrapDataAdapter truy vấn bảng mới.
+// KHÔNG sửa V1 tại chỗ vì sẽ làm Flyway báo "checksum mismatch" trên DB đang chạy.
+// ---------------------------------------------------------------------------
+const migrationDir = join(repoRoot, "java-backend", "infrastructure", "src", "main", "resources", "db", "migration");
+const incremental = [];
+const alters = [];
+const renames = [];
+for (const name of readdirSync(migrationDir).filter((n) => /^V\d+__.+\.sql$/.test(n) && !/^V1__/.test(n)).sort()) {
+  const text = readFileSync(join(migrationDir, name), "utf8");
+  for (const m of text.matchAll(/CREATE TABLE IF NOT EXISTS `[^`]+` \([\s\S]*?\n\)[^;]*;/g)) {
+    incremental.push(m[0].trim());
+  }
+  // Cột thêm sau bằng ALTER TABLE ... ADD COLUMN (vd V10: users.system_level_code).
+  // H2 có hỗ trợ ADD COLUMN IF NOT EXISTS nên phát lại an toàn.
+  for (const m of text.matchAll(/ALTER TABLE `([^`]+)`\s+ADD COLUMN `([^`]+)`\s+([a-zA-Z0-9_]+(?:\([0-9,]+\))?)([^;]*);/g)) {
+    alters.push(`ALTER TABLE \`${m[1]}\` ADD COLUMN IF NOT EXISTS \`${m[2]}\` ${m[3]};`);
+  }
+  // Đổi tên cột (vd V11: system_level_catalog.rank → level_rank).
+  // H2 không hiểu cú pháp MySQL `CHANGE COLUMN old new type`, nên KHÔNG phát lại ALTER
+  // mà ghi nhận để đổi tên NGAY TRONG câu CREATE TABLE bên dưới.
+  for (const m of text.matchAll(/ALTER TABLE `([^`]+)`\s+CHANGE COLUMN `([^`]+)`\s+`([^`]+)`/g)) {
+    renames.push({ table: m[1], from: m[2], to: m[3] });
+  }
+}
+if (incremental.length || alters.length) {
+  const extra = incremental.join("\n\n")
+    .replace(/ENGINE=InnoDB DEFAULT CHARSET=utf8mb4( COLLATE=\w+)?/g, "")
+    .replace(/`\s+DATETIME\(3\)/gi, "` TIMESTAMP(3)")
+    .replace(/COMMENT '[^']*'/g, "")
+    .replace(/UNIQUE KEY `[^`]+` \(([^)]+)\)/g, "UNIQUE ($1)")
+    .replace(/,\s*\n\s*KEY `[^`]+` \([^)]*\)/g, "");
+  out += "\n\n-- Bảng thêm bởi migration sau V1 (H2 không chạy Flyway).\n" + extra + "\n";
+  if (alters.length) out += "\n-- Cột thêm bởi migration sau V1.\n" + alters.join("\n") + "\n";
+}
+
+// Áp dụng đổi tên cột NGAY TRONG câu CREATE TABLE tương ứng (H2 không hiểu CHANGE COLUMN).
+// Chỉ thay trong đúng khối CREATE TABLE của bảng đó để không đụng bảng khác.
+for (const r of renames) {
+  const block = new RegExp("(CREATE TABLE IF NOT EXISTS `" + r.table + "` \\([\\s\\S]*?\\n\\) ;)");
+  const found = out.match(block);
+  if (found) {
+    out = out.replace(found[1], found[1].split("`" + r.from + "`").join("`" + r.to + "`"));
+    console.log(`Đổi tên cột H2: ${r.table}.${r.from} → ${r.to}`);
+  } else {
+    console.warn(`⚠️ Không tìm thấy CREATE TABLE cho ${r.table} để đổi tên ${r.from} → ${r.to}`);
+  }
+}
+
 mkdirSync(dirname(outPath), { recursive: true });
 writeFileSync(outPath, out);
 console.log("schema-h2.sql written, lines:", out.split("\n").length,
-  "· unique indexes kept:", uniqueIndexes.length);
+  "· unique indexes kept:", uniqueIndexes.length, "· bảng thêm sau V1:", incremental.length);

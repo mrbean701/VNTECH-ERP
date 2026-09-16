@@ -41,7 +41,10 @@ public final class RequestManagementUseCase {
     }
 
     public Map<String, Object> createRequest(Principal principal, Map<String, Object> payload) {
-        rbac.requireRole(principalAsCurrent(principal), List.of("engineer", "commander", "admin"));
+        // SỬA LỖI VAI TRÒ: canonicalRoleCode LUÔN đổi "engineer"→"ksda" và "commander"→"cht" khi
+        // ghi vào DB, nên hai mã cũ không bao giờ tồn tại ⇒ phép kiểm này khoá chết thành
+        // admin-only, không ai lập được phiếu đề nghị mua. Dùng mã vai trò THẬT trong DB.
+        rbac.requireRole(principalAsCurrent(principal), List.of("ksda", "cht", "admin"));
         String projectId = trim(payload.get("projectId"));
         String neededAt = trim(payload.get("neededAt"));
         String area = trim(payload.get("area"));
@@ -400,6 +403,28 @@ public final class RequestManagementUseCase {
             // chỉ hoàn tất khi đủ role — đơn giản: tiếp tục như single nếu chưa đủ ở phiên bản này
         }
 
+        // P4 — all_of: MỌI người duyệt của bước phải xác nhận thì hồ sơ mới chuyển bước.
+        // (any_of/single đã được canApproveRequestStage chấp nhận: một người quyết định là qua.)
+        if ("all_of".equals(store.stageApprovalMode(sv(mr, "projectId"), stage).orElse("")) && "approved".equals(decision)) {
+            java.util.Set<String> pool = new java.util.LinkedHashSet<>(
+                    store.stageApproverUserIds(sv(mr, "projectId"), stage));
+            if (pool.size() > 1) {
+                String decisionKey = "user:" + principal.userId();
+                if (store.stageDecisionRoleExists(requestId, stage, decisionKey))
+                    throw Api("Bạn đã xác nhận bước “" + sv(stageConfig, "name") + "” rồi.");
+                store.insertStageDecision(requestId, stage, decisionKey, principal.userId(), "approved", comment, now);
+                store.updateApprovalDecision(requestId, stage, "pending", principal.userId(),
+                        comment.isEmpty() ? null : comment, snapshot, now);
+                java.util.Set<String> decided = new java.util.HashSet<>(store.stageDecisionUsers(requestId, stage));
+                decided.retainAll(pool);
+                if (decided.size() < pool.size()) {
+                    return Map.of("message", "Đã ghi nhận xác nhận của bạn ở bước “" + sv(stageConfig, "name")
+                            + "”. Còn " + (pool.size() - decided.size()) + "/" + pool.size()
+                            + " người duyệt chưa xác nhận nên hồ sơ chưa chuyển bước.");
+                }
+            }
+        }
+
         store.updateApprovalDecision(requestId, stage, decision, principal.userId(),
                 comment.isEmpty() ? null : comment, snapshot, now);
 
@@ -429,16 +454,37 @@ public final class RequestManagementUseCase {
     private boolean canApproveRequestStage(String userId, String requestId, int stage) {
         Map<String, Object> stageRow = store.findApprovalRow(requestId, stage).orElse(null);
         if (stageRow == null) return false;
+
+        // CÓ HAI ĐƯỜNG ĐỦ ĐIỀU KIỆN DUYỆT — chỉ cần MỘT trong hai:
+        //   (1) CHỈ ĐỊNH — có tên trong workflow của bước (∪ owner của bước);
+        //   (2) THEO VAI TRÒ — vai trò (hoặc vai trò gốc) nằm trong allowed_role_codes của bước.
+        // Mỗi bước CHỈ CẦN MỘT NGƯỜI duyệt là hồ sơ chuyển bước (xem decideApproval: single/any_of).
+        //
+        // LỖI ĐÃ SỬA: trước đây hàm `return false` ngay khi người dùng không nằm trong danh sách
+        // chỉ định, nên phép kiểm vai trò ở cuối hàm KHÔNG BAO GIỜ chạy tới. Hệ quả: những tài
+        // khoản có ĐÚNG vai trò của bước và có quyền `approvals.canApprove` vẫn bị chặn, trái với
+        // thiết kế "ai có quyền duyệt bước đó thì duyệt được".
+        Map<String, Object> req = store.findRequestForApproval(requestId).orElse(Map.of());
+        java.util.Set<String> pool = new java.util.LinkedHashSet<>(
+                store.stageApproverUserIds(sv(req, "projectId"), stage));
         String owner = sv(stageRow, "ownerUserId");
-        if (owner.isEmpty() || !owner.equals(userId)) return false;
+        if (!owner.isEmpty()) pool.add(owner);
+
         String role = sv(stageRow, "allowedRoleCodes");
+        java.util.Set<String> allowed = new java.util.HashSet<>(java.util.Arrays.asList(role.split(",")));
+        allowed.removeIf(String::isBlank);
+
         Map<String, Object> userRole = store.findUserRoleInfo(userId).orElse(Map.of());
         String userRoleCode = sv(userRole, "role");
         String baseRole = sv(userRole, "baseRole");
-        if (role.isEmpty()) return true;
-        java.util.Set<String> allowed = new java.util.HashSet<>(java.util.Arrays.asList(role.split(",")));
-        allowed.removeIf(String::isBlank);
-        return "admin".equals(userRoleCode) || allowed.contains(userRoleCode) || allowed.contains(baseRole);
+        boolean roleEligible = "admin".equals(userRoleCode)
+                || allowed.contains(userRoleCode) || allowed.contains(baseRole);
+
+        // (1) Được chỉ định đích danh: bước không giới hạn vai trò thì đương nhiên được duyệt;
+        //     nếu có giới hạn vai trò thì vẫn phải đúng vai trò.
+        if (pool.contains(userId)) return allowed.isEmpty() || roleEligible;
+        // (2) Không được chỉ định đích danh nhưng ĐÚNG VAI TRÒ của bước.
+        return !allowed.isEmpty() && roleEligible;
     }
 
     private String matchedApprovalRole(Principal principal, Map<String, Object> stageConfig) {

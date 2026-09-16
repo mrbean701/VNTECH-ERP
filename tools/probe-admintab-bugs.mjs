@@ -11,9 +11,11 @@ import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const URL_ = process.argv[2] || "http://127.0.0.1:9000";
+const USER = process.argv[3] || "admin";
+const PASS = process.argv[4] || "Admin123456@";
 const EDGE = ["C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
   "C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe"].find(existsSync);
-const profile = resolve(".probe-admintab-profile");
+const profile = resolve(process.env.TEMP || ".", "vntech-artifacts", "probe-admintab");
 rmSync(profile, { recursive: true, force: true }); mkdirSync(profile, { recursive: true });
 const PORT = 9341;
 const b = spawn(EDGE, ["--headless=new", "--disable-gpu", "--no-sandbox", "--no-first-run",
@@ -46,7 +48,7 @@ const ev = async (x) => (await send("Runtime.evaluate", { expression: x, awaitPr
 
 await send("Page.enable"); await send("Runtime.enable");
 await send("Page.navigate", { url: URL_ }); await sleep(7000);
-await ev(`(()=>{const i=[...document.querySelectorAll('input')];const u=i.find(x=>x.type!=='password'),p=i.find(x=>x.type==='password');const s=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set;s.call(u,'admin');u.dispatchEvent(new Event('input',{bubbles:true}));s.call(p,'Vntech@2026');p.dispatchEvent(new Event('input',{bubbles:true}));const b=[...document.querySelectorAll('button')].find(x=>/đăng nhập/i.test(x.innerText||''));b&&b.click();return 1})()`);
+await ev(`(()=>{const i=[...document.querySelectorAll('input')];const u=i.find(x=>x.type!=='password'),p=i.find(x=>x.type==='password');const s=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set;s.call(u,${JSON.stringify(USER)});u.dispatchEvent(new Event('input',{bubbles:true}));s.call(p,${JSON.stringify(PASS)});p.dispatchEvent(new Event('input',{bubbles:true}));const b=[...document.querySelectorAll('button')].find(x=>/đăng nhập/i.test(x.innerText||''));b&&b.click();return 1})()`);
 await sleep(9000);
 if ((await ev("document.body.innerText.length")) < 500) { console.log("❌ chưa đăng nhập được"); process.exit(1); }
 console.log("✅ đã đăng nhập");
@@ -86,7 +88,9 @@ if (Array.isArray(tabs) && tabs.length) {
     await ev(`(()=>{const bs=[...document.querySelectorAll('.permission-steps button')];bs[${i}]&&bs[${i}].click();return 1})()`);
     await sleep(3500);
     const len = await ev("document.body.innerText.length");
-    const onLogin = await ev(`!!document.querySelector('input[type="password"]')`);
+    // Phát hiện "bị đá về trang login" bằng TIÊU ĐỀ trang login, không phải bằng sự tồn tại
+    // của input[type=password] (các tab quản trị có ô mật khẩu SMTP/đổi mật khẩu nên dễ dương tính giả).
+    const onLogin = await ev(`/Đăng nhập hệ thống/.test(document.body.innerText) && !document.querySelector('.permission-steps')`);
     const e = errs.filter((x) => !/favicon|DevTools|Download the React/i.test(x));
     const bad = e.length > 0 || onLogin || len < 100;
     console.log(`\n  ${bad ? "❌" : "✅"} TAB ${i + 1}: ${tabs[i].slice(0, 38)}`);

@@ -29,6 +29,17 @@ spring:
     multipart:
       max-file-size: 50MB
       max-request-size: 60MB
+    # UTF-8 cho MỌI request/response (JSON, text, form). force=true ghi đè cả khi
+    # client không khai báo charset — tránh hiện tượng tiếng Việt bị hiển thị sai
+    # ở công cụ/trình duyệt không mặc định UTF-8 cho application/json.
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+      force-request: true
+      force-response: true
+  messages:
+    encoding: UTF-8
   mail:
     host: ${VNTECH_SMTP_HOST:localhost}
     port: ${VNTECH_SMTP_PORT:25}

@@ -1,0 +1,264 @@
+/* ============================================================================
+   VNTECH ERP — SÀN CỠ CHỮ (GĐ1)
+   ----------------------------------------------------------------------------
+   ⚠️  FILE SINH TỰ ĐỘNG — KHÔNG SỬA TAY.
+   Sinh bởi: node tools/gen-font-floor.mjs
+   Nguồn:    app/globals.css
+
+   Tìm thấy 120 selector đặt cỡ chữ < 9px (nguyên nhân lỗi
+   "quá nhiều thông tin phải thu nhỏ để nhét vừa"). Khối này nâng sàn lên
+   10px nhưng VẪN nhân var(--user-font-scale) để tôn trọng tuỳ chọn cỡ chữ.
+   ========================================================================== */
+
+/* Token sàn `--vt-font-floor` nay do app/styles/tokens.css khai báo (GĐ1) —
+   một nguồn sự thật duy nhất cho mọi giá trị thiết kế.
+   Tệp này chỉ DÙNG LẠI token đó, KHÔNG tự khai báo nữa. */
+
+/* gom theo nhóm selector để dễ đọc */
+.app-shell.vntech-full-ui .vntech-app-header .header-user-avatar,
+.app-shell.vntech-full-ui .vntech-app-header .user-menu>button small,
+.app-shell.vntech-full-ui .vntech-app-header .user-menu>button strong,
+.approval-attachment-hint p,
+.approval-attachment-hint strong,
+.approval-card dt,
+.approval-card footer button,
+.approval-card footer span,
+.approval-card>div:first-child small,
+.approval-detail-head b,
+.approval-detail-head p,
+.approval-detail-head>div:first-child small,
+.approval-dots span,
+.approval-files p small,
+.approval-files p strong,
+.approval-files>.approval-pane-head button,
+.approval-flow-step em,
+.approval-flow-step span,
+.approval-flow-step>b,
+.approval-flow>h3,
+.approval-history-mini strong,
+.approval-log p,
+.approval-meta-pane dd,
+.approval-meta-pane dt,
+.approval-pane-head span,
+.approval-person small,
+.approval-queue-list button small,
+.approval-queue-list button span,
+.approval-queue-list small,
+.approval-queue-list span,
+.approval-title p,
+.auth-brand em,
+.baseline-table td small,
+.business-group-row small,
+.check-grid small,
+.column-list label>input:not([type]),
+.column-list label>input[type=text],
+.column-list label>span,
+.contract-metric>div span,
+.contract-metric>div>span,
+.contract-recovery-columns span,
+.count-head,
+.count-line small,
+.dashboard-staff-badge,
+.dashboard-staff-info small,
+.dashboard-staff-info span,
+.delivery span,
+.delivery-timeline span,
+.delivery-timeline time,
+.density-options button,
+.density-options>span,
+.doc-icon,
+.document-name,
+.due-payments b,
+.due-payments em,
+.due-payments small,
+.due-payments strong,
+.dynamic-fields td small,
+.email-enable small,
+.excel-import p,
+.excel-import span,
+.export-mini,
+.factory-reset-counts span,
+.field-config-row label,
+.line-title button,
+.line-title span,
+.menu-drop-empty,
+.menu-layout-group>header small,
+.menu-layout-group>header>i,
+.menu-layout-item small,
+.menu-layout-item>i,
+.menu-layout-standalone>header small,
+.menu-layout-toolbar span,
+.mini-approve,
+.mini-avatar,
+.mobile-nav-list button b,
+.mobile-nav-panel .mobile-display-settings span,
+.mobile-nav-panel .mobile-server-status small,
+.nav-group,
+.payment-donut-card li,
+.payment-total,
+.pill,
+.po-bulk-toolbar span,
+.po-line small,
+.price-import-preview small,
+.purchase-cumulative-head p,
+.purchase-efficiency-columns span,
+.purchase-summary-metrics article span,
+.purchase-summary-metrics small,
+.qr-card p,
+.recipient-editor p,
+.report-grid button,
+.return-line small,
+.server-status small,
+.sidebar .tree-nav .nav-children button i,
+.sidebar .tree-nav .nav-parent>b,
+.sidebar .tree-nav .nav-parent>span,
+.sidebar nav button i,
+.simple-list p,
+.sla-big small,
+.sla-big span,
+.staff-avatar,
+.staff-directory-head>div:first-child>span,
+.staff-directory-head>div>span,
+.staff-email,
+.staff-hover dt,
+.staff-person small,
+.staff-status,
+.staff-summary small,
+.staff-table-head,
+.summary-grid small,
+.team-banner span,
+.test-email small,
+.timeline p,
+.user-menu>button small,
+.vntech-product-footer,
+.vntech-product-footer code,
+.workflow,
+td small,
+th {
+  font-size: calc(var(--vt-font-floor) * var(--user-font-scale, 1)) !important;
+}
+
+/* ---------------------------------------------------------------------------
+   Bảng đối chiếu selector → cỡ chữ GỐC (để tra khi cần hoàn tác)
+   ---------------------------------------------------------------------------
+      8px  .app-shell.vntech-full-ui .vntech-app-header .header-user-avatar
+    7.8px  .app-shell.vntech-full-ui .vntech-app-header .user-menu>button small
+   8.25px  .app-shell.vntech-full-ui .vntech-app-header .user-menu>button strong
+    8.7px  .approval-attachment-hint p
+    8.5px  .approval-attachment-hint strong
+      8px  .approval-card dt
+      8px  .approval-card footer button
+      8px  .approval-card footer span
+      8px  .approval-card>div:first-child small
+    8.5px  .approval-detail-head b
+    8.5px  .approval-detail-head p
+      8px  .approval-detail-head>div:first-child small
+      8px  .approval-dots span
+    7.5px  .approval-files p small
+    8.5px  .approval-files p strong
+      8px  .approval-files>.approval-pane-head button
+    7.5px  .approval-flow-step em
+      8px  .approval-flow-step span
+    7.7px  .approval-flow-step>b
+    8.5px  .approval-flow>h3
+    8.5px  .approval-history-mini strong
+    8.5px  .approval-log p
+    8.5px  .approval-meta-pane dd
+    8.5px  .approval-meta-pane dt
+      8px  .approval-pane-head span
+      8px  .approval-person small
+    8.5px  .approval-queue-list button small
+    8.5px  .approval-queue-list button span
+    8.5px  .approval-queue-list small
+    8.8px  .approval-queue-list span
+      8px  .approval-title p
+      8px  .auth-brand em
+    8.5px  .baseline-table td small
+      8px  .business-group-row small
+      8px  .check-grid small
+      8px  .column-list label>input:not([type])
+      8px  .column-list label>input[type=text]
+    8.5px  .column-list label>span
+    8.5px  .contract-metric>div span
+    8.5px  .contract-metric>div>span
+    7.5px  .contract-recovery-columns span
+      7px  .count-head
+      8px  .count-line small
+      8px  .dashboard-staff-badge
+    8.3px  .dashboard-staff-info small
+    8.7px  .dashboard-staff-info span
+      8px  .delivery span
+      8px  .delivery-timeline span
+      8px  .delivery-timeline time
+    8.5px  .density-options button
+    8.5px  .density-options>span
+      8px  .doc-icon
+      8px  .document-name
+      8px  .due-payments b
+      8px  .due-payments em
+      8px  .due-payments small
+      8px  .due-payments strong
+      8px  .dynamic-fields td small
+      8px  .email-enable small
+      8px  .excel-import p
+      8px  .excel-import span
+      8px  .export-mini
+    8.5px  .factory-reset-counts span
+      8px  .field-config-row label
+      8px  .line-title button
+      8px  .line-title span
+      8px  .menu-drop-empty
+      8px  .menu-layout-group>header small
+      8px  .menu-layout-group>header>i
+      7px  .menu-layout-item small
+      8px  .menu-layout-item>i
+      8px  .menu-layout-standalone>header small
+      8px  .menu-layout-toolbar span
+      8px  .mini-approve
+      8px  .mini-avatar
+      8px  .mobile-nav-list button b
+      8px  .mobile-nav-panel .mobile-display-settings span
+      8px  .mobile-nav-panel .mobile-server-status small
+      8px  .nav-group
+      8px  .payment-donut-card li
+    8.5px  .payment-total
+      8px  .pill
+      8px  .po-bulk-toolbar span
+      8px  .po-line small
+    8.5px  .price-import-preview small
+    8.5px  .purchase-cumulative-head p
+    7.5px  .purchase-efficiency-columns span
+      8px  .purchase-summary-metrics article span
+    8.5px  .purchase-summary-metrics small
+    8.5px  .qr-card p
+      8px  .recipient-editor p
+      8px  .report-grid button
+      8px  .return-line small
+    8.5px  .server-status small
+      7px  .sidebar .tree-nav .nav-children button i
+      8px  .sidebar .tree-nav .nav-parent>b
+      8px  .sidebar .tree-nav .nav-parent>span
+      8px  .sidebar nav button i
+      8px  .simple-list p
+      8px  .sla-big small
+      8px  .sla-big span
+      8px  .staff-avatar
+    8.5px  .staff-directory-head>div:first-child>span
+      8px  .staff-directory-head>div>span
+    8.5px  .staff-email
+    7.5px  .staff-hover dt
+      8px  .staff-person small
+    7.5px  .staff-status
+      8px  .staff-summary small
+    8.5px  .staff-table-head
+      8px  .summary-grid small
+      8px  .team-banner span
+      8px  .test-email small
+      8px  .timeline p
+    8.5px  .user-menu>button small
+      8px  .vntech-product-footer
+      7px  .vntech-product-footer code
+      8px  .workflow
+      8px  td small
+      8px  th
+   --------------------------------------------------------------------------- */
