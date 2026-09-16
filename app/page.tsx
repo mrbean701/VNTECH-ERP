@@ -12,6 +12,14 @@ import { VNTECH_BRAND } from "@/lib/vntech-brand";
 import { configuredFormFields, fieldConfig, mergedFormFields, type FormFieldConfig } from "@/lib/form-fields";
 import { downloadBlob, downloadCsv, downloadPublicTemplate, downloadSimpleXlsx, type TableCell } from "@/lib/tabular-export";
 import { mapProjectBulkSheet, mapUserBulkSheet, PROJECT_BULK_HEADERS, USER_BULK_HEADERS } from "@/lib/admin-bulk-import";
+// PHASE 1 — THƯ VIỆN THÀNH PHẦN DÙNG CHUNG (app/components/ui).
+// Một nguồn duy nhất cho các khuôn lặp lại: thanh công cụ danh sách, bảng dữ liệu, nhãn
+// trạng thái, chặn theo quyền, dải phê duyệt/hoạt động, và khung chi tiết thực thể.
+// Xem docs/24 §4 và docs/25 PHASE 1.
+import {
+  ActivityTimeline, ApprovalTimeline, DataTable, EntityDetailModal,
+  ListToolbar, PermissionGuard, StatusBadge,
+} from "@/app/components/ui";
 
 // Dynamic rows are normalized by the server API and intentionally remain flexible here.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1790,7 +1798,7 @@ function MaterialListTable({ data, open, permission }: { data: AppData; open: (n
             <td>{m.specification || "—"}</td>
             <td>{m.brand || "—"}</td>
             <td>{Number(m.minStock || 0)}</td>
-            <td>{Number(m.active) === 0 ? <Pill value="Đã ngừng"/> : <Pill value="Đang dùng"/>}</td>
+            <td>{Number(m.active) === 0 ? <StatusBadge value="Đã ngừng"/> : <StatusBadge value="Đang dùng"/>}</td>
             <td><div className="row-actions">
               <button type="button" className="export-mini" disabled={!canEdit} title={canEdit ? "Sửa vật tư" : "Thiếu quyền Sửa"} onClick={() => open("material", m)}>Sửa</button>
               <button type="button" className="export-mini" disabled={!canMerge} title={canMerge ? "Hợp nhất mã trùng" : "Thiếu quyền Hợp nhất"} onClick={() => open("materialMerge", m)}>Hợp nhất</button>

@@ -745,3 +745,197 @@ thead th {
   .material-list-filters select { flex: 1 1 auto; }
   .material-list-note { flex-direction: column; align-items: flex-start; }
 }
+
+/* ---------------------------------------------------------------------------
+   14. THÀNH PHẦN DÙNG CHUNG (PHASE 1)
+   ---------------------------------------------------------------------------
+   Kiểu dáng cho thư viện app/components/ui: ListToolbar · DataTable ·
+   StatusBadge · PermissionGuard · Timeline (phê duyệt + hoạt động) ·
+   EntityDetailModal.
+
+   Mục tiêu sửa các lỗi người dùng nêu ở §5:
+     • toolbar dồn một phía, có cột trống, nút bị đẩy ra ngoài
+     • modal vượt viewport
+     • bảng vỡ bố cục trên màn hẹp
+   Toàn bộ dùng token thiết kế ở tokens.css, không dùng giá trị cứng mới.
+
+   ⚠ QUY TẮC ĐẶT TÊN (bắt buộc cho mọi thành phần dùng chung thêm sau này):
+   Lớp của thư viện dùng chung PHẢI có tiền tố `vt-` (ví dụ .vt-timeline),
+   không được dùng tên trần như `.timeline`.
+
+   Lý do — lỗi thật đã xảy ra và bị cổng ảnh bắt được (U-08):
+   globals.css:161 đã định nghĩa `.timeline { display:grid;
+   grid-template-columns:repeat(3,1fr); padding:14px }` cho dải phê duyệt
+   3 cột đang chạy. Bản đầu của mục 14 dùng tên trần `.timeline` với
+   `display:flex` ⇒ đè toàn cục, làm lệch bố cục trên MỌI màn (28/28 ảnh).
+   Tiền tố `vt-` khiến xung đột như vậy không thể tái diễn.
+   --------------------------------------------------------------------------- */
+
+/* --- 14.1 ListToolbar — TIÊU ĐỀ + SỐ LƯỢNG ‖ TÌM · LỌC · SẮP XẾP · HÀNH ĐỘNG --- */
+.list-toolbar {
+  display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between;
+  gap: var(--vt-space-4); padding-bottom: var(--vt-space-3);
+  border-bottom: 1px solid var(--vt-c-line);
+  margin-bottom: var(--vt-space-4);
+}
+.list-toolbar-title { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 260px; }
+.list-toolbar-title strong {
+  font-size: calc(var(--vt-fs-sm) * var(--user-font-scale, 1)); font-weight: var(--vt-fw-bold);
+  letter-spacing: .3px; color: var(--vt-c-navy);
+}
+.list-toolbar-title span {
+  font-size: calc(var(--vt-font-min) * var(--user-font-scale, 1)); color: var(--vt-c-muted);
+}
+.list-toolbar-count {
+  font-style: normal; font-weight: var(--vt-fw-semibold);
+  font-size: calc(var(--vt-font-min) * var(--user-font-scale, 1));
+  color: var(--vt-c-accent);
+}
+.list-toolbar-controls {
+  display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--vt-space-3);
+  flex: 1 1 auto; justify-content: flex-end;
+}
+.list-toolbar-field { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.list-toolbar-field > span {
+  font-size: calc(var(--vt-font-min) * var(--user-font-scale, 1));
+  color: var(--vt-c-muted); font-weight: var(--vt-fw-medium);
+}
+.list-toolbar-field input, .list-toolbar-field select {
+  height: var(--vt-control-h); min-width: 140px; max-width: 260px;
+  border: 1px solid var(--vt-c-line); border-radius: var(--vt-radius-md);
+  padding: 0 var(--vt-space-3); background: var(--vt-c-white);
+  font-size: calc(var(--vt-fs-2xs) * var(--user-font-scale, 1));
+}
+.list-toolbar-search input { min-width: 220px; }
+.list-toolbar-actions { flex-wrap: wrap; }
+
+@media (max-width: 1024px) {
+  .list-toolbar-controls { justify-content: flex-start; }
+}
+@media (max-width: 768px) {
+  .list-toolbar { flex-direction: column; align-items: stretch; }
+  .list-toolbar-controls { flex-direction: column; align-items: stretch; }
+  .list-toolbar-field input, .list-toolbar-field select,
+  .list-toolbar-search input { max-width: none; width: 100%; }
+  .list-toolbar-actions { justify-content: flex-start; }
+}
+
+/* --- 14.2 DataTable — sắp xếp, dòng bấm được, trạng thái --- */
+.baseline-table th.dt-sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+.baseline-table th.dt-sortable:hover { color: var(--vt-c-accent); }
+.dt-sort-idle { opacity: .3; font-style: normal; margin-left: 4px; }
+.dt-sort-active { color: var(--vt-c-accent); font-style: normal; margin-left: 4px; font-weight: var(--vt-fw-bold); }
+.baseline-table tr.dt-clickable { cursor: pointer; }
+.baseline-table tr.dt-clickable:hover { background: var(--vt-c-accent-soft); }
+.dt-right { text-align: right; }
+.dt-center { text-align: center; }
+.dt-loading { padding: var(--vt-space-5) 0; }
+.dt-error { margin-bottom: var(--vt-space-3); }
+
+/* --- 14.3 Timeline — dải phê duyệt và dải hoạt động --- */
+.vt-timeline-card .card-head { margin-bottom: var(--vt-space-3); }
+.vt-timeline { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.vt-timeline-step {
+  position: relative; display: flex; gap: var(--vt-space-4);
+  padding: 0 0 var(--vt-space-4) 0;
+}
+/* Đường nối dọc giữa các bước */
+.vt-timeline-step:not(:last-child)::before {
+  content: ""; position: absolute; left: 13px; top: 28px; bottom: 0;
+  width: 2px; background: var(--vt-c-line-2);
+}
+.vt-timeline-marker {
+  flex: 0 0 auto; width: 28px; height: 28px; border-radius: var(--vt-radius-circle);
+  display: flex; align-items: center; justify-content: center;
+  background: var(--vt-c-surface-3); border: 2px solid var(--vt-c-line);
+  font-size: calc(var(--vt-font-min) * var(--user-font-scale, 1));
+  font-weight: var(--vt-fw-bold); color: var(--vt-c-muted);
+  position: relative; z-index: 1;
+}
+.vt-timeline-step.is-approved .vt-timeline-marker { background: #e7f7ee; border-color: #34a853; color: #1d7a3c; }
+.vt-timeline-step.is-rejected .vt-timeline-marker { background: #fdecec; border-color: var(--vt-c-danger); color: #b3261e; }
+.vt-timeline-step.is-pending .vt-timeline-marker { background: #fff6e5; border-color: #e8a33d; color: #94620a; }
+.vt-timeline-marker-dot { width: 14px; height: 14px; margin-top: 6px; }
+.vt-timeline-marker-dot span {
+  width: 6px; height: 6px; border-radius: var(--vt-radius-circle); background: var(--vt-c-accent);
+}
+.vt-timeline-body { flex: 1 1 auto; min-width: 0; }
+.vt-timeline-head {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--vt-space-3);
+  margin-bottom: var(--vt-space-2);
+}
+.vt-timeline-head strong {
+  font-size: calc(var(--vt-fs-xs) * var(--user-font-scale, 1));
+  font-weight: var(--vt-fw-semibold); color: var(--vt-c-ink);
+}
+.vt-timeline-meta {
+  display: flex; flex-wrap: wrap; gap: var(--vt-space-4);
+  font-size: calc(var(--vt-font-min) * var(--user-font-scale, 1)); color: var(--vt-c-muted);
+}
+.vt-timeline-meta b { font-weight: var(--vt-fw-medium); color: #42566f; }
+.vt-timeline-comment {
+  margin: var(--vt-space-2) 0 0; padding: var(--vt-space-2) var(--vt-space-3);
+  background: var(--vt-c-surface-1); border-left: 3px solid var(--vt-c-line);
+  border-radius: 0 var(--vt-radius-sm) var(--vt-radius-sm) 0;
+  font-size: calc(var(--vt-font-min) * var(--user-font-scale, 1)); color: #42566f;
+}
+.vt-timeline-detail { margin-top: var(--vt-space-2); font-size: calc(var(--vt-font-min) * var(--user-font-scale, 1)); }
+.vt-timeline-empty { list-style: none; }
+.vt-timeline-compact .vt-timeline-meta { gap: var(--vt-space-3); }
+
+@media (max-width: 768px) {
+  /* Màn hẹp: mỗi mục xếp dọc, bỏ đường nối ngang cho gọn */
+  .vt-timeline-step { gap: var(--vt-space-3); }
+  .vt-timeline-meta { flex-direction: column; gap: 2px; }
+}
+
+/* --- 14.4 EntityDetailModal — KHÔNG BAO GIỜ vượt viewport (U-10) --- */
+.entity-detail-modal {
+  display: flex; flex-direction: column;
+  /* Chừa lề trên/dưới để modal không bao giờ chạm mép màn hình */
+  max-height: min(88vh, 1000px);
+  width: min(760px, 94vw);
+  overflow: hidden;                 /* phần cuộn nằm ở .edm-body */
+}
+.entity-detail-modal.edm-wide { width: min(1180px, 96vw); }
+.entity-detail-modal > header { flex: 0 0 auto; }
+.edm-head-actions { display: flex; align-items: center; gap: var(--vt-space-3); }
+.edm-entity-id {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: calc(var(--vt-font-min) * var(--user-font-scale, 1));
+  color: var(--vt-c-muted); background: var(--vt-c-surface-3);
+  padding: 2px var(--vt-space-2); border-radius: var(--vt-radius-sm);
+  max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.edm-tabs {
+  flex: 0 0 auto; display: flex; flex-wrap: wrap; gap: 2px;
+  border-bottom: 1px solid var(--vt-c-line);
+  padding: 0 var(--vt-space-4);
+  overflow-x: auto;
+}
+.edm-tabs button {
+  border: 0; background: transparent; cursor: pointer;
+  padding: var(--vt-space-3) var(--vt-space-4);
+  font-size: calc(var(--vt-fs-2xs) * var(--user-font-scale, 1));
+  font-weight: var(--vt-fw-medium); color: var(--vt-c-muted);
+  border-bottom: 2px solid transparent; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: var(--vt-space-2);
+}
+.edm-tabs button:hover { color: var(--vt-c-accent); }
+.edm-tabs button.is-active { color: var(--vt-c-accent); border-bottom-color: var(--vt-c-accent); font-weight: var(--vt-fw-semibold); }
+.edm-tab-badge {
+  font-size: calc(var(--vt-font-min) * var(--user-font-scale, 1));
+  background: var(--vt-c-surface-3); color: var(--vt-c-muted);
+  border-radius: var(--vt-radius-pill); padding: 0 6px; font-weight: var(--vt-fw-semibold);
+}
+/* Vùng CUỘN duy nhất — đây là chỗ sửa lỗi "modal vượt viewport" */
+.edm-body { flex: 1 1 auto; overflow-y: auto; overflow-x: hidden; padding: var(--vt-space-4); min-height: 120px; }
+.edm-state { padding: var(--vt-space-6) 0; }
+.entity-detail-modal > .modal-footer { flex: 0 0 auto; }
+
+@media (max-width: 768px) {
+  .entity-detail-modal, .entity-detail-modal.edm-wide { width: 100vw; max-height: 100vh; }
+  .edm-tabs { padding: 0 var(--vt-space-3); }
+  .edm-body { padding: var(--vt-space-3); }
+  .edm-entity-id { display: none; }   /* màn hẹp: bỏ mã thực thể để tiêu đề không bị chèn */
+}

@@ -52,20 +52,35 @@ function countLines(text) {
 }
 
 // ---------- Bóc các khối quy tắc ----------
-// Trả về danh sách selector (chuẩn hoá) của MỌI quy tắc, kể cả lồng trong @media.
+// Trả về danh sách selector kèm NGỮ CẢNH (chuỗi các at-rule bao ngoài).
+//
+// VÌ SAO CẦN NGỮ CẢNH: ghi đè trong `@media` là CSS HỢP LỆ và có chủ đích — ví dụ
+// `.timeline-meta { flex-direction: column }` trong màn hẹp. Nếu tính những lần đó là
+// "selector định nghĩa trùng" thì chỉ số nợ phình theo mỗi lần thêm responsive, và trần
+// trở nên vô nghĩa. Nợ thật là selector bị định nghĩa lại NHIỀU LẦN TRONG CÙNG NGỮ CẢNH
+// (đúng thứ đang có ở globals.css: 1.183 khối trùng ở cùng cấp).
 function extractSelectors(cssText) {
   const noComments = cssText.replace(/\/\*[\s\S]*?\*\//g, " ");
   const selectors = [];
+  const atStack = [];    // [{ prelude, depth }] — at-rule đang mở và độ sâu lúc mở
   let depth = 0;
   let token = "";
   for (let i = 0; i < noComments.length; i++) {
     const ch = noComments[i];
     if (ch === "{") {
       const sel = token.trim();
-      if (sel && !sel.startsWith("@")) selectors.push(sel.replace(/\s+/g, " "));
-      depth++; token = "";
+      depth++;
+      if (sel.startsWith("@")) {
+        atStack.push({ prelude: sel.replace(/\s+/g, " "), depth });
+      } else if (sel) {
+        selectors.push({ selector: sel.replace(/\s+/g, " "), context: atStack.map((a) => a.prelude).join(" > ") });
+      }
+      token = "";
     } else if (ch === "}") {
-      depth--; token = "";
+      // Đóng khối ở độ sâu `depth`: mọi at-rule MỞ tại đúng độ sâu này cũng đóng theo.
+      while (atStack.length && atStack[atStack.length - 1].depth === depth) atStack.pop();
+      depth--;
+      token = "";
     } else if (ch === ";" && depth === 0) {
       token = ""; // at-rule không có khối, ví dụ @charset
     } else {
@@ -92,10 +107,12 @@ for (const file of cssFiles) {
   const important = (text.match(/!important/g) || []).length;
 
   const selectors = extractSelectors(text);
+  // Khoá đếm trùng = selector + NGỮ CẢNH, nên ghi đè trong @media không bị tính là nợ.
   const counts = new Map();
   for (const s of selectors) {
-    counts.set(s, (counts.get(s) || 0) + 1);
-    allSelectorCount.set(s, (allSelectorCount.get(s) || 0) + 1);
+    const key = s.context ? `${s.context} >> ${s.selector}` : s.selector;
+    counts.set(key, (counts.get(key) || 0) + 1);
+    allSelectorCount.set(key, (allSelectorCount.get(key) || 0) + 1);
   }
   const dups = [...counts.entries()].filter(([, n]) => n > 1);
   const dupCount = dups.reduce((a, [, n]) => a + (n - 1), 0);

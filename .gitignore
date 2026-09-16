@@ -56,3 +56,6 @@ next-env.d.ts
 java-backend/**/target/
 *.log
 
+
+# Thu muc artifact cua bo cong cu thi giac (khong phai ma nguon)
+/.dsh-vision-toolkit/

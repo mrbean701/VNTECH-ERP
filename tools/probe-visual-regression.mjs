@@ -7,7 +7,12 @@
 //   node tools/probe-visual-regression.mjs --update        # chụp lại ảnh chuẩn
 //   node tools/probe-visual-regression.mjs --selftest      # đo "nhiễu nền": chụp 2 lần rồi so
 //   node tools/probe-visual-regression.mjs --max-diff-pixels=100
+//   node tools/probe-visual-regression.mjs --max-diff-pixels=0     # nghiêm ngặt tuyệt đối
 //   node tools/probe-visual-regression.mjs --only=03-work
+//   node tools/probe-visual-regression.mjs --locate=1705,29        # phần tử tại toạ độ
+//   node tools/probe-visual-regression.mjs --crop=1685,15,50,50    # soi 1 vùng, phóng to 3×
+//
+// Ngưỡng mặc định 2 px = sàn nhiễu đo được của trình duyệt (xem chú thích ở MAX_DIFF_PIXELS).
 //
 // Vì sao có bộ giải mã PNG tự viết: dự án KHÔNG có thư viện ảnh nào (không sharp/pngjs/
 // pixelmatch). Chỉ có `fflate` nên ta tự bóc PNG (inflate + gỡ filter) rồi so từng điểm ảnh.
@@ -32,7 +37,21 @@ const argValue = (f) => { const a = args.find((x) => x.startsWith(f + "=")); ret
 
 const MODE_UPDATE = hasFlag("--update");
 const MODE_SELFTEST = hasFlag("--selftest");
-const MAX_DIFF_PIXELS = Number(argValue("--max-diff-pixels") ?? 0);
+// Ngưỡng mặc định = 2 điểm ảnh — ĐÃ ĐO bằng --selftest, không phải phỏng đoán.
+//
+// Bằng chứng (sau khi loại ký tự số của các bộ đếm dữ liệu ở FREEZE_CSS):
+//   03-work : desktop · laptop · tablet · phone = 0 px
+//   07-admin: desktop = 2 px — vùng 203×1 tại (22,824); ba kích thước còn lại = 0 px
+//   --locate=120,824 → <BUTTON class="sidebar-collapse-toggle"> rect=22,798,203,34
+//   ⇒ 2 điểm ảnh nằm ở HAI MÉP của nút: viền bo góc được vẽ lệch dưới một điểm ảnh.
+//     Không phải lệch bố cục, không phải đổi nội dung.
+//
+// Vì sao đặt mặc định bằng sàn nhiễu: đây là nhiễu của CHÍNH TRÌNH DUYỆT, không phải của sản
+// phẩm. Hồi quy THẬT nhỏ nhất từng gặp trong dự án đã là 405 px, nên ngưỡng 2 px vẫn bắt được
+// mọi thay đổi hình thức có ý nghĩa. (Nâng ngưỡng lên 21 px để né huy hiệu đếm sẽ bỏ lọt lỗi
+// nhỏ — nên huy hiệu đã được loại trừ riêng, còn ngưỡng giữ ở mức sàn nhiễu.)
+// Muốn nghiêm ngặt tuyệt đối: --max-diff-pixels=0
+const MAX_DIFF_PIXELS = Number(argValue("--max-diff-pixels") ?? 2);
 const ONLY = argValue("--only");
 const LOCATE = argValue("--locate"); // "x,y" — in ra chồng phần tử tại toạ độ đó
 const CROP = argValue("--crop");     // "x,y,w,h" — chụp 2 lần vùng này, phóng to, ghi ra tệp để soi
@@ -224,9 +243,30 @@ async function evaluate(expr) {
 //   #f9fafb/#4c657e/#8798a9 — tức là ĐỔI TRẠNG THÁI CHỦ ĐỀ, không phải lệch bố cục.
 //   Trong khi đó 27/28 ảnh còn lại lệch 0 px.
 // Dùng `visibility:hidden` (KHÔNG dùng `display:none`) để giữ nguyên bố cục topbar.
+//
+// BA BỘ ĐẾM DỮ LIỆU SỐNG — LOẠI TRỪ KÝ TỰ SỐ, KHÔNG LOẠI TRỪ PHẦN TỬ:
+//   .nav-parent b     — số đếm của nhóm menu (vd "CÔNG VIỆC 7")
+//   .nav-child b      — số đếm của từng mục menu
+//   .notify-button b  — số thông báo ở topbar (vd "7")
+//
+// Vì sao: đây là SỐ ĐẾM SINH RA TỪ DỮ LIỆU, không phải hình thức. Cổng này đo HÌNH THỨC,
+// nên chỉ cần một công việc đổi trạng thái là con số đổi và cổng báo lỗi giả — đúng như
+// lần 28/28 ảnh lệch khi PHASE 0B tạo dữ liệu kiểm chứng (xem drizzle/0103).
+//
+// Bằng chứng đo được (node tools/probe-visual-regression.mjs --only=03-work --selftest):
+//   desktop = 21 px nhiễu, vùng 6×7 tại (1702,26); laptop/tablet/phone = 0 px.
+//   --locate=1705,29 → <B> rect=1696,21,18,18 "7" nằm trong <BUTTON .notify-button>.
+//   --crop=1685,15,50,50 → cặp màu #ef2f8a→#f36464 · #fbf2ff→#fee9e9 · #f42f2f→#f25a5a
+//   tức chữ số được VẼ KHÁC ĐI giữa hai lần chụp CÙNG dữ liệu (khử răng cưa ở vị trí lệch
+//   dưới một điểm ảnh), KHÔNG phải số đổi giá trị và KHÔNG phải lệch bố cục.
+//   ⇒ Nếu cứ chụp lại ảnh chuẩn thì đóng băng luôn sự bất định và cổng mất khả năng bắt lỗi nhỏ.
+//
+// Chỉ ẩn KÝ TỰ SỐ trong các bộ đếm: nút, nền, biểu tượng và bố cục vẫn được đối chiếu bình
+// thường — không giấu lỗi giao diện nào.
 const FREEZE_CSS = `*{animation:none!important;transition:none!important;caret-color:transparent!important;}
 html{scroll-behavior:auto!important}
-.theme-switch,.user-menu{visibility:hidden!important}`;
+.theme-switch,.user-menu{visibility:hidden!important}
+.nav-parent b,.nav-child b,.notify-button b{visibility:hidden!important}`;
 
 async function freeze() {
   await evaluate(`(()=>{let s=document.getElementById('__vr_freeze');if(!s){s=document.createElement('style');s.id='__vr_freeze';document.head.appendChild(s);}s.textContent=${JSON.stringify(FREEZE_CSS)};window.scrollTo(0,0);document.querySelectorAll('.table-wrap,.stack,.main,.content').forEach(e=>{e.scrollTop=0;e.scrollLeft=0;});return 1;})()`);
@@ -409,6 +449,12 @@ for (const screen of SCREENS_TO_RUN) {
       const d2 = diffImages(decodePng(second.png), after, 0);
       const noise = d2.sizeMismatch ? "KÍCH THƯỚC KHÁC" : `${d2.diffPixels} px (${d2.diffPercent.toFixed(4)}%)`;
       console.log(`   ${d2.sizeMismatch || d2.diffPixels > 0 ? "⚠️ " : "✅"} ${vp.id.padEnd(8)} nhiễu nền giữa 2 lần chụp: ${noise}`);
+      // Chỉ thẳng ra CHỖ nhiễu: nếu không biết nó nằm ở đâu thì không thể sửa gốc, chỉ có thể
+      // nâng ngưỡng — mà nâng ngưỡng thì cổng mất khả năng bắt lỗi nhỏ.
+      if (!d2.sizeMismatch && d2.diffPixels > 0 && d2.bbox) {
+        console.log(`        vùng nhiễu ${d2.bbox.w}×${d2.bbox.h} tại (${d2.bbox.x},${d2.bbox.y})`
+          + (d2.topCells?.length ? ` · nặng nhất: ${d2.topCells.slice(0, 4).map((c) => `(${c.x},${c.y}) ${c.px}px`).join(" · ")}` : ""));
+      }
       results.push({ screen: screen.id, vp: vp.id, status: "selftest", diffPixels: d2.sizeMismatch ? -1 : d2.diffPixels });
       continue;
     }

@@ -75,14 +75,14 @@
 
 | ID | Module | Việc | Ưu tiên | Phụ thuộc | DB | API | UI | QUYỀN | TT |
 |---|---|---|---|---|---|---|---|---|---|
-| `U-01` | UI | `EntityDetailModal` — 1 khung cho User/Project/Warehouse/Team/Material/Supplier/Task | P1 | S-07 | - | - | REUSE | CHECK | TODO |
-| `U-02` | UI | `DataTable` dùng chung: cột, sắp xếp, lọc, phân trang, rỗng/đang tải/lỗi | P1 | — | - | - | REUSE | - | TODO |
-| `U-03` | UI | `ListToolbar`: TIÊU ĐỀ + SỐ LƯỢNG ‖ TÌM · LỌC · SẮP XẾP · HÀNH ĐỘNG | P1 | — | - | - | REUSE | - | TODO |
-| `U-04` | UI | `PermissionGuard` (ẩn/hiện theo quyền; backend vẫn kiểm) | P1 | S-07 | - | - | REUSE | CHECK | TODO |
-| `U-05` | UI | `StatusBadge` thống nhất toàn hệ | P1 | — | - | - | REUSE | - | TODO |
-| `U-06` | UI | `ApprovalTimeline`: số bước · người duyệt · phòng ban · thời gian · trạng thái · ý kiến | P1 | — | - | - | NEW | - | TODO |
-| `U-07` | UI | `ActivityTimeline` dùng cho mọi lịch sử | P1 | — | - | - | NEW | - | TODO |
-| `U-08` | UI | Kiểm responsive 4 kích thước cho mọi màn sau khi chuẩn hoá | P1 | U-02,U-03 | - | - | FIX | - | TODO |
+| `U-01` | UI | `EntityDetailModal` — 1 khung cho User/Project/Warehouse/Team/Material/Supplier/Task | P1 | S-07 | - | - | REUSE | CHECK | DONE |
+| `U-02` | UI | `DataTable` dùng chung: cột, sắp xếp, lọc, phân trang, rỗng/đang tải/lỗi | P1 | — | - | - | REUSE | - | DONE |
+| `U-03` | UI | `ListToolbar`: TIÊU ĐỀ + SỐ LƯỢNG ‖ TÌM · LỌC · SẮP XẾP · HÀNH ĐỘNG | P1 | — | - | - | REUSE | - | DONE |
+| `U-04` | UI | `PermissionGuard` (ẩn/hiện theo quyền; backend vẫn kiểm) | P1 | S-07 | - | - | REUSE | CHECK | DONE |
+| `U-05` | UI | `StatusBadge` thống nhất toàn hệ | P1 | — | - | - | REUSE | - | DONE |
+| `U-06` | UI | `ApprovalTimeline`: số bước · người duyệt · phòng ban · thời gian · trạng thái · ý kiến | P1 | — | - | - | NEW | - | DONE |
+| `U-07` | UI | `ActivityTimeline` dùng cho mọi lịch sử | P1 | — | - | - | NEW | - | DONE |
+| `U-08` | UI | Kiểm responsive 4 kích thước cho mọi màn sau khi chuẩn hoá | P1 | U-02,U-03 | - | - | FIX | - | DONE |
 | `U-09` | UI | Chuyển các danh sách sang khuôn Toolbar chuẩn (§5) | P1 | U-03 | - | - | FIX | - | TODO |
 | `U-10` | UI | Sửa modal vượt viewport | P1 | — | - | - | FIX | - | TODO |
 | `U-11` | Kiến trúc | Tách `page.tsx` (4.057 dòng) thành module theo màn hình | P1 | U-01…U-05 | - | - | - | - | TODO |
