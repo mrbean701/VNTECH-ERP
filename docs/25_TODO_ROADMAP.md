@@ -45,14 +45,29 @@
 
 | ID | Module | Việc | Ưu tiên | Phụ thuộc | DB | API | UI | QUYỀN | TT |
 |---|---|---|---|---|---|---|---|---|---|
-| `S-01` | Toàn hệ | Khai nốt **50 action còn thiếu** vào `ActionRbacRegistry` (224 − 174) | **P0** | A-03 | - | - | - | CHECK | TODO |
-| `S-02` | Toàn hệ | **Bật `requireActionModule`** tại một chỗ trong `SystemController` | **P0** | S-01 | - | - | - | CHECK | TODO |
-| `S-03` | Toàn hệ | Đổi mặc định thành **TỪ CHỐI** khi action chưa khai module (hiện đang CHO QUA) | **P0** | S-02 | - | - | - | CHECK | TODO |
-| `S-04` | Toàn hệ | Bật theo **danh sách trắng** để không khoá nhầm người dùng thật | **P0** | S-03 | - | - | - | CHECK | TODO |
-| `S-05` | Tệp | Kiểm quyền cho `/api/files` (hiện nằm ngoài mọi kiểm action) | **P0** | — | - | CHG | - | CHECK | TODO |
-| `S-06` | Toàn hệ | Bổ sung quyền phòng ban còn thiếu trước khi bật S-03 | **P0** | S-01 | - | - | - | MODEL | TODO |
-| `S-07` | Toàn hệ | Chạy lại `tools/probe-security-rbac.mjs` — kỳ vọng **15/15 bị chặn** | **P0** | S-04 | - | - | - | CHECK | TODO |
+| `S-01` | Toàn hệ | Điền module cho **29 action** khai rỗng trong `ActionRbacRegistry` (đo lại: 41 action rỗng đã được `requireRequireAdmin` che, 5 là hành động công khai) | **P0** | A-06 | - | - | - | CHECK | **DONE** |
+| `S-02` | Toàn hệ | **Bật `requireActionModule`** tại một điểm kiểm duy nhất trong `SystemController` | **P0** | S-01 | - | - | - | CHECK | **DONE** |
+| `S-03` | Toàn hệ | Đổi mặc định thành **TỪ CHỐI** khi action chưa khai module + `PUBLIC_ACTIONS` allowlist 5 hành động | **P0** | S-02 | - | - | - | CHECK | **DONE** |
+| `S-04` | Toàn hệ | Bật an toàn: thu hẹp phạm vi còn 29 action nghiệp vụ, không đụng 41 action đã che | **P0** | S-03 | - | - | - | CHECK | **DONE** |
+| `S-05` | Tệp | Kiểm quyền cho `/api/files` (endpoint riêng, không đi qua action) | **P0** | — | - | CHG | - | CHECK | TODO |
+| `S-06` | Phòng ban | Cấp `canApprove` cho BCH trên `receiving`/`warehouse_receipt` để bước "BCH xác nhận giao hàng" chạy được | **P0** | S-01 | - | - | - | MODEL | **DONE** |
+| `S-07` | Toàn hệ | Chạy `tools/probe-security-rbac.mjs` — viết lại để đo theo **quyền thật** của tài khoản | **P0** | S-04 | - | - | - | CHECK | **DONE** |
 | `S-08` | Workflow | Snapshot **danh sách người được chỉ định**, không đọc live | P1 | — | COL | - | - | - | TODO |
+| `S-09` | Toàn hệ | 🐛 Sửa lỗi có sẵn: `ModulePermissionStoreAdapter.canUseModule` dùng `queryForObject` → ném `EmptyResultDataAccessException` (500) khi người dùng không có dòng quyền. Đổi sang `queryForList` | **P0** | — | - | - | - | CHECK | **DONE** |
+| `S-10` | Toàn hệ | Chạy hồi quy sau khi bật RBAC: 13 probe + luồng mua hàng | **P0** | S-07 | - | - | - | - | **DONE** |
+
+**Kết quả PHASE 0B (16/09/2026):**
+
+| Chỉ số | Trước | **Sau** |
+|---|---:|---:|
+| ❌ Action LỘT QUA kiểm quyền | **15** | **0** ✅ |
+| ⚠️ Action KHOÁ NHẦM người có quyền | — | **0** ✅ |
+| ✅ Hành xử đúng | 5/20 | **20/20** ✅ |
+| 13 probe hồi quy | 13/13 | **13/13** ✅ |
+| Luồng mua hàng | 28/31 | **28/31** ✅ |
+
+**File đã sửa:** `ActionRbacRegistry.java` · `RbacService.java` · `SystemController.java` · `ModulePermissionStoreAdapter.java`
+**Công cụ:** `tools/patch-rbac-registry.mjs` · `tools/probe-security-rbac.mjs`
 
 ---
 

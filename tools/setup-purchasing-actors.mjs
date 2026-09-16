@@ -87,8 +87,11 @@ const GRANTS = [
   ["KH", "supplier_catalog", 1, 1, 1, 1, 0, 1],
   // Ban chỉ huy công trường: CHT xác nhận nhu cầu (cha.ht) + thủ kho nhập hàng (tkhodemo)
   ["BCH", "approvals",    1, 1, 0, 0, 1, 0],
-  ["BCH", "receiving",    1, 1, 1, 1, 0, 1],
-  ["BCH", "warehouse_receipt", 1, 1, 1, 1, 0, 1],
+  // can_approve=1 cho receiving/warehouse_receipt: action `confirm_delivery` đòi quyền
+  // canApprove — đây chính là "BCH xác nhận giao hàng". Thiếu quyền này thì sau khi bật
+  // RBAC ở PHASE 0B, BCH sẽ bị chặn 403 dù nghiệp vụ vẫn cần họ làm bước đó.
+  ["BCH", "receiving",    1, 1, 1, 1, 1, 1],
+  ["BCH", "warehouse_receipt", 1, 1, 1, 1, 1, 1],
   // Thư ký Tổng giám đốc (thukydemo) — bước 2
   ["VNTECH", "approvals", 1, 1, 0, 0, 1, 0],
   // Tài chính Kế toán — theo dõi mua hàng/thanh toán
@@ -128,7 +131,9 @@ for (const [orgCode, moduleKey, v, u, c, e, a, x] of GRANTS) {
 if (missingOrg) console.log(`  ⚠️  ${missingOrg} dòng bị bỏ vì thiếu đơn vị tổ chức`);
 
 console.log(`\n▸ Tạo tài khoản còn thiếu (${NEED_USERS.length}):`);
-const existing = new Set((data.staffDirectory || data.users || []).map((u) => u.username));
+// ⚠️ Phải dùng `data.users` — `data.staffDirectory` là bản rút gọn KHÔNG có `username`,
+// nên kiểm tra trùng ở đó luôn trả về "chưa có" và gây HTTP 409 khi tạo lại.
+const existing = new Set((data.users || data.staffDirectory || []).map((u) => u.username));
 for (const u of NEED_USERS) {
   console.log(`  ${existing.has(u.username) ? "đã có " : "TẠO   "} ${u.username} · ${u.fullName} · vai trò ${u.role} · đơn vị ${u.org}`);
   console.log(`          lý do: ${u.why}`);

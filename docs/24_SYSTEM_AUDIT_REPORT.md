@@ -529,3 +529,92 @@ Xem `docs/25_TODO_ROADMAP.md` — mỗi mục có ID, module, ưu tiên, phụ t
 | 4.950 `!important` · 1.183 selector trùng | `tools/probe-css-budget.mjs` |
 | Luồng mua hàng 5 bước chạy bằng đúng tài khoản từng vai trò | `tools/probe-purchasing-flow.mjs` |
 | 121 bảng · 174/224 action · 22 use case · 218 hàm UI | truy vấn DB + quét mã nguồn |
+
+---
+
+# PHỤ LỤC B — KẾT QUẢ PHASE 0B: ĐÃ BỊT LỖ HỔNG RBAC
+
+Ngày 16/09/2026. Thực hiện sau khi audit, theo yêu cầu "tiếp tục" của người dùng.
+
+## B.1 Vì sao phải làm trước mọi phase khác
+
+§6 đã chứng minh **15/15 action thuộc use case không có `requireRole` đều LỘT QUA kiểm quyền**,
+trong đó `create_self_work_item` **đã ghi vào DB**. Đây là lỗ hổng kiểm soát truy cập, không phải
+khiếm khuyết giao diện — nên phải bịt trước khi làm bất cứ việc gì khác.
+
+## B.2 Thu hẹp phạm vi trước khi sửa (quan trọng)
+
+Đo lại chính xác thay vì sửa mù:
+
+| Nhóm action khai module RỖNG | Số | Thực trạng |
+|---|---:|---|
+| Đã bị `SystemController` chặn bằng `requireRequireAdmin` | **41** | an toàn sẵn |
+| Chỉ có `requireCurrentUser`, use case KHÔNG có `requireRole` | **32** | **LỖ HỔNG** |
+| Trong đó: hành động công khai hợp lệ | 3 | `logout` · `change_password` · `update_profile_avatar` |
+| Trong đó: chạy trước khi xác thực | 2 | `login` · `setup` |
+
+⇒ Phạm vi sửa thực tế: **29 action nghiệp vụ**, không phải 75.
+
+## B.3 Đã sửa
+
+| # | Việc | Kết quả |
+|---|---|---|
+| `S-01` | Điền module cho **29 action** trong `ActionRbacRegistry` | 140 action có module (từ 111) |
+| `S-02` | Tiêm `RbacService` vào `SystemController`, gọi `requireActionModule` tại **một điểm kiểm duy nhất** ngay sau khi phân tích `action` | |
+| `S-03` | `RbacService`: thêm **`PUBLIC_ACTIONS`** (allowlist 5 hành động) và đổi mặc định thành **TỪ CHỐI** khi action chưa khai module (trước đây CHO QUA) | |
+| `S-06` | Cấp `canApprove` cho BCH trên `receiving`/`warehouse_receipt` — thiếu quyền này thì sau khi bật RBAC, BCH bị chặn 403 ở bước "xác nhận giao hàng" | |
+
+## B.4 🐛 SỬA MỘT LỖI CÓ SẴN BỊ CHE KÍN
+
+Ngay khi bật kiểm quyền, **11/15 action trả HTTP 500** kèm stack trace:
+
+```text
+EmptyResultDataAccessException: Incorrect result size: expected 1, actual 0
+    at ModulePermissionStoreAdapter.canUseModule(ModulePermissionStoreAdapter.java:36)
+```
+
+`canUseModule` dùng **`queryForObject`** — hàm này **NÉM NGOẠI LỆ khi truy vấn không có dòng nào**.
+Mà *"người dùng không có dòng quyền nào cho module"* là trường hợp **hoàn toàn bình thường**
+(nghĩa là KHÔNG có quyền) — đáng lẽ trả **403**, hệ thống lại trả **500**.
+
+**Vì sao lỗi này bị che kín tới nay:** `canUseModule` **chưa từng được gọi trong thực tế** vì
+`requireActionModule` không nơi nào gọi. Sửa sang `queryForList` + kiểm "có bất kỳ dòng nào = 1"
+(cách này còn xử lý đúng trường hợp một người có nhiều dòng cho cùng module —
+`department_default` và `manual_override` cùng tồn tại).
+
+## B.5 Kiểm chứng sau khi sửa — `tools/probe-security-rbac.mjs`
+
+Bản probe được **viết lại để đo chính xác**: so từng action với **quyền thật** của tài khoản
+đọc từ `allModulePermissions`, thay vì coi mọi phản hồi khác 403 là "lọt".
+
+| Chỉ số | Trước PHASE 0B | **Sau PHASE 0B** |
+|---|---:|---:|
+| ❌ LỘT QUA (lỗ hổng) | **15** | **0** ✅ |
+| ⚠️ KHOÁ NHẦM (chặn người có quyền) | — | **0** ✅ |
+| ✅ Hành xử đúng | 5/20 | **20/20** ✅ |
+
+Bốn loại kết quả đều đúng thiết kế:
+- Action thiếu quyền → **403**
+- Action đủ quyền → cho phép, đi tiếp tới kiểm dữ liệu
+- Action chưa khai module → **mặc định từ chối**
+- Hành động công khai → luôn cho phép
+
+## B.6 Hồi quy — không khoá nhầm người dùng thật
+
+| Bộ kiểm thử | Kết quả |
+|---|---|
+| **13 probe hồi quy** | **13/13 ĐẠT** ✅ |
+| **Luồng mua hàng 5 bước** | **28/31 bước** — 3 "lỗi" đều là **kết quả mong đợi** |
+
+Ba kết quả mong đợi:
+1. `trdademo` duyệt bước 5 lần hai → `400 Hồ sơ đã được xử lý` — **chứng minh chỉ cần 1 người duyệt**
+2. `cha.ht` xác nhận giao hàng → **đã qua kiểm quyền**, vướng `400 Phải tải ít nhất một ảnh giao hàng` (nghiệp vụ đúng)
+3. `admin` → cùng lý do
+
+## B.7 Còn lại của PHASE 0B
+
+| # | Việc | Trạng thái |
+|---|---|---|
+| `S-05` | Kiểm quyền cho `/api/files` (endpoint riêng, không đi qua action) | **TODO** |
+| `S-08` | Snapshot danh sách người được chỉ định của workflow | **TODO** (rủi ro §20.3) |
+| — | 46 action còn khai rỗng | **An toàn**: 41 đã `requireRequireAdmin` + 5 công khai. Mặc định TỪ CHỐI đã che nốt. |

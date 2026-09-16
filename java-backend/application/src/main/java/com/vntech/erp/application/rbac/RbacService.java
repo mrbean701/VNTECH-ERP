@@ -25,15 +25,38 @@ public final class RbacService {
         return "admin".equals(user.role());
     }
 
+    /**
+     * PHASE 0B — HÀNH ĐỘNG CÔNG KHAI, được miễn kiểm quyền module.
+     *   • login — chạy TRƯỚC khi có phiên đăng nhập.
+     *   • setup — khởi tạo hệ thống lần đầu, khi chưa có tài khoản nào.
+     *   • logout / change_password / update_profile_avatar — việc TỰ PHỤC VỤ của chính
+     *     người dùng: nếu bắt buộc phải có quyền module thì một tài khoản bị thu hồi
+     *     hết quyền cũng không thể đổi mật khẩu hay thoát ra được.
+     * Đây là danh sách ĐÓNG (allowlist) — mọi action khác đều phải qua kiểm quyền.
+     */
+    public static final java.util.Set<String> PUBLIC_ACTIONS = java.util.Set.of(
+            "login", "setup", "logout", "change_password", "update_profile_avatar");
+
     public boolean isCompanyLeadership(AuthUseCase.CurrentUser user) {
         return List.of("director", "accountant").contains(user.role());
     }
 
     /** requireActionModule(user, action) — ném ApiError(403) nếu thiếu quyền. */
     public void requireActionModule(AuthUseCase.CurrentUser user, String action) {
+        if (PUBLIC_ACTIONS.contains(action)) return;
         List<String> required = ActionRbacRegistry.modulesFor(action);
-        if (required.isEmpty() || isAdmin(user)) return;
+        if (isAdmin(user)) return;
         if (isCompanyLeadership(user) && !required.contains("admin")) return;
+        if (required.isEmpty()) {
+            // PHASE 0B (S-03) — MẶC ĐỊNH TỪ CHỐI.
+            // Trước đây nhánh này CHO QUA (return) nên mọi action chưa khai module đều hở.
+            // Nay: action chưa khai module thì KHÔNG có cơ sở nào để kiểm quyền ⇒ từ chối.
+            // An toàn vì 46 action còn khai rỗng đều nằm trong 2 nhóm đã được xử lý:
+            //   41 action đã bị SystemController chặn bằng requireRequireAdmin
+            //    5 action là hành động công khai (đã miễn ở đầu hàm)
+            throw new AuthUseCase.ApiError(
+                    "Thao tác chưa được khai báo quyền trong hệ thống. Liên hệ quản trị viên.", 403);
+        }
         String capability = ActionRbacRegistry.capabilityFor(action);
         for (String moduleKey : required) {
             if (modulePermissionStore.canUseModule(user.id(), moduleKey, capability)) return;

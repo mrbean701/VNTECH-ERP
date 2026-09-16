@@ -66,6 +66,11 @@ public class SystemController {
     private final StockManagementUseCase stockManagementUseCase;
     private final SystemSettingsUseCase systemSettingsUseCase;
     private final com.vntech.erp.infrastructure.excel.ExcelTemplateService excelTemplateService;
+    /**
+     * PHASE 0B (S-02) — kiểm quyền ở tầng action.
+     * Trước đây KHÔNG được tiêm vào đây, nên ActionRbacRegistry chỉ dùng để ghi log.
+     */
+    private final com.vntech.erp.application.rbac.RbacService rbacService;
 
     public SystemController(AuthUseCase authUseCase, SessionCookieFactory sessionCookieFactory,
                             BootstrapUseCase bootstrapUseCase,
@@ -85,7 +90,8 @@ public class SystemController {
                             SupplierManagementUseCase supplierManagementUseCase,
                             StockManagementUseCase stockManagementUseCase,
                             SystemSettingsUseCase systemSettingsUseCase,
-                            com.vntech.erp.infrastructure.excel.ExcelTemplateService excelTemplateService) {
+                            com.vntech.erp.infrastructure.excel.ExcelTemplateService excelTemplateService,
+                            com.vntech.erp.application.rbac.RbacService rbacService) {
         this.authUseCase = authUseCase;
         this.sessionCookieFactory = sessionCookieFactory;
         this.bootstrapUseCase = bootstrapUseCase;
@@ -106,6 +112,7 @@ public class SystemController {
         this.stockManagementUseCase = stockManagementUseCase;
         this.systemSettingsUseCase = systemSettingsUseCase;
         this.excelTemplateService = excelTemplateService;
+        this.rbacService = rbacService;
     }
 
     /**
@@ -167,6 +174,19 @@ public class SystemController {
                                                     HttpServletResponse response) {
         String action = trim(payload.get("action"));
         try {
+            // ================= PHASE 0B — KIỂM QUYỀN Ở TẦNG ACTION (ĐIỂM KIỂM DUY NHẤT) =====
+            // Trước đây ActionRbacRegistry (module + quyền của từng action) CHỈ được dùng
+            // trong AuditTrailFilter để GHI LOG, KHÔNG dùng để CHẶN. Hệ quả: 12 use case
+            // không có rbac.requireRole(...) bị hở hoàn toàn — bất kỳ tài khoản đã đăng nhập
+            // đều gọi được. Đã chứng minh bằng tools/probe-security-rbac.mjs: 15/15 action
+            // lọt qua kiểm quyền, trong đó create_self_work_item trả HTTP 200 và ghi vào DB.
+            //
+            // Hành động CÔNG KHAI được miễn: login/setup chạy trước khi có phiên; logout /
+            // đổi mật khẩu / tự đổi ảnh là việc tự phục vụ của chính người dùng.
+            if (!action.isEmpty()
+                    && !com.vntech.erp.application.rbac.RbacService.PUBLIC_ACTIONS.contains(action)) {
+                rbacService.requireActionModule(requireCurrentUser(request), action);
+            }
             switch (action) {
                 case "setup" -> {
                     AuthUseCase.SetupResult result = authUseCase.setup(
