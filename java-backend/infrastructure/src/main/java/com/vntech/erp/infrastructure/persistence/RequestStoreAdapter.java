@@ -191,6 +191,22 @@ public class RequestStoreAdapter implements RequestStore {
     }
 
     @Override
+    public List<String> stageDecisionRoles(String requestId, int stage) {
+        // TASK-054 — nguyên văn JS `system-route.mjs:1089`
+        return jdbcTemplate.queryForList(
+                "SELECT DISTINCT role_code FROM approval_stage_decisions WHERE request_id=? AND stage=? AND decision='approved'",
+                String.class, requestId, stage);
+    }
+
+    @Override
+    @Transactional
+    public void updateApprovalComment(String requestId, int stage, String comment, Instant now) {
+        // TASK-054 — nguyên văn JS `:1100`: CHỈ đổi comment, KHÔNG đụng status/decided_at
+        jdbcTemplate.update("UPDATE approvals SET comment=?,updated_at=? WHERE request_id=? AND stage=?",
+                comment, now, requestId, stage);
+    }
+
+    @Override
     @Transactional
     public void insertRequest(Map<String, Object> header, List<Map<String, Object>> lines,
                               List<Map<String, Object>> approvals, List<Map<String, Object>> customFields,

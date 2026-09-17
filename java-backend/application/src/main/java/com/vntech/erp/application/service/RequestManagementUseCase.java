@@ -524,14 +524,72 @@ public final class RequestManagementUseCase {
                 + principal.fullName() + "\",\"at\":\"" + Instant.now() + "\",\"stageName\":\"" + sv(stageConfig, "name") + "\"}";
         Instant now = Instant.now();
 
-        // all_roles: ghi nhận quyết định từng vai trò; trong Java đơn giản hóa — chấp nhận mọi decision của owner
+        // ══════════════════════════════════════════════════════════════════════════════════
+        // TASK-054 — port NGUYÊN VĂN nhánh duyệt SONG SONG `all_roles` của JS `:1087-1108`.
+        // TRƯỚC ĐÂY Java "đơn giản hoá": ghi 1 quyết định rồi **ĐI TIẾP như `single`** ⇒ với bước
+        // cấu hình 2 vai trò (dữ liệu thật: bước 5 `da_truong,kh_truong`) thì **MỘT vai trò xác nhận
+        // là hồ sơ chuyển bước** ⇒ ràng buộc "mọi vai trò phải xác nhận" bị VÔ HIỆU.
+        // JS:
+        //   :1088 const required = stageRoleCodes(stageConfig)
+        //   :1089 const approvedRows = await all(SELECT DISTINCT role_code … decision='approved')
+        //   :1091 const roleCode = matchedApprovalRole(user, stageConfig)
+        //                       || (isAdmin(user) ? required.find((c)=>!approved.has(c)) || "" : "")
+        //   :1092 if (!roleCode) throw "Không xác định được vai trò xác nhận của tài khoản tại bước này."
+        //   :1093-1094 chặn trùng vai trò
+        //   :1095 INSERT approval_stage_decisions … ; :1096 approved.add(roleCode)
+        //   :1097 const missing = required.filter((code)=>!approved.has(code))
+        //   :1100 UPDATE approvals SET comment=<tiến độ>
+        //   :1101 audit(user.id,"APPROVE_PARTIAL","material_request",requestId,mr,{stage,stageName,roleCode,missing})
+        //   :1102 return  ← KHÔNG chuyển bước
+        // ══════════════════════════════════════════════════════════════════════════════════
         if ("all_roles".equals(sv(stageConfig, "approvalMode")) && "approved".equals(decision)) {
+            List<String> required = new ArrayList<>();
+            for (String code : sv(stageConfig, "allowedRoleCodes").split(",")) {
+                String trimmed = code.trim();
+                if (!trimmed.isEmpty()) required.add(trimmed);
+            }
+            java.util.Set<String> approved = new java.util.LinkedHashSet<>(
+                    store.stageDecisionRoles(requestId, stage));
             String roleCode = matchedApprovalRole(principal, stageConfig);
+            // (JS :1091) QUẢN TRỊ VIÊN được điền vai trò còn thiếu — Java trước đây thiếu hẳn nhánh này.
+            boolean isAdminUser = "admin".equals(principal.role()) || "admin".equals(principal.roleBase());
+            if (roleCode.isEmpty() && isAdminUser) {
+                for (String code : required) {
+                    if (!approved.contains(code)) { roleCode = code; break; }
+                }
+            }
             if (roleCode.isEmpty()) throw Api("Không xác định được vai trò xác nhận của tài khoản tại bước này.");
             if (store.stageDecisionRoleExists(requestId, stage, roleCode))
                 throw Api("Vai trò này đã xác nhận bước phê duyệt song song.");
             store.insertStageDecision(requestId, stage, roleCode, principal.userId(), "approved", comment, now);
-            // chỉ hoàn tất khi đủ role — đơn giản: tiếp tục như single nếu chưa đủ ở phiên bản này
+            approved.add(roleCode);
+            List<String> missing = new ArrayList<>();
+            for (String code : required) {
+                if (!approved.contains(code)) missing.add(code);
+            }
+            if (!missing.isEmpty()) {
+                String progress = "Đã xác nhận " + approved.size() + "/" + required.size()
+                        + "; còn chờ: " + String.join(", ", missing);
+                store.updateApprovalComment(requestId, stage, progress, now);
+                Map<String, Object> partialAfter = new LinkedHashMap<>();
+                partialAfter.put("stage", stage);
+                partialAfter.put("stageName", sv(stageConfig, "name"));
+                partialAfter.put("roleCode", roleCode);
+                partialAfter.put("missing", missing);
+                auditLog.log(principal.userId(), "APPROVE_PARTIAL", "material_request", requestId,
+                        MiniJson.stringify(mr), MiniJson.stringify(partialAfter), null);
+                return Map.of("message", "Đã ghi nhận xác nhận của " + principal.fullName()
+                        + "; " + progress + ".");
+            }
+        }
+        // JS :1105-1108 — bước `all_roles` bị TỪ CHỐI vẫn phải ghi 1 dòng quyết định cho vai trò
+        // (JS: `INSERT OR IGNORE`). Trước đây Java bỏ qua ⇒ mất dấu vết vai trò nào đã từ chối.
+        if ("all_roles".equals(sv(stageConfig, "approvalMode")) && "rejected".equals(decision)) {
+            String roleCode = matchedApprovalRole(principal, stageConfig);
+            if (roleCode.isEmpty()) roleCode = trim(principal.role());
+            if (roleCode.isEmpty()) roleCode = trim(principal.roleBase());
+            if (!roleCode.isEmpty() && !store.stageDecisionRoleExists(requestId, stage, roleCode))
+                store.insertStageDecision(requestId, stage, roleCode, principal.userId(), "rejected", comment, now);
         }
 
         // P4 — all_of: MỌI người duyệt của bước phải xác nhận thì hồ sơ mới chuyển bước.

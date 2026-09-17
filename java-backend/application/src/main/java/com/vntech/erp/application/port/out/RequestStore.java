@@ -58,6 +58,18 @@ public interface RequestStore {
     Optional<String> stageApprovalMode(String projectId, int stageNo);
     /** Những người đã ra quyết định ở bước này (dùng để chốt all_of). */
     List<String> stageDecisionUsers(String requestId, int stage);
+    /**
+     * TASK-054 — những VAI TRÒ đã xác nhận (`decision='approved'`) ở bước này, DISTINCT.
+     * Tương đương JS `system-route.mjs:1089`:
+     * {@code SELECT DISTINCT role_code AS roleCode FROM approval_stage_decisions WHERE request_id=? AND stage=? AND decision='approved'}.
+     */
+    List<String> stageDecisionRoles(String requestId, int stage);
+    /**
+     * TASK-054 — CHỈ cập nhật `comment` của dòng `approvals` ở bước này (giữ nguyên trạng thái).
+     * Tương đương JS `:1100`: {@code UPDATE approvals SET comment=?,updated_at=? WHERE request_id=? AND stage=?}
+     * — dùng cho nhánh xác nhận MỘT PHẦN của bước duyệt song song (KHÔNG được coi là đã quyết định).
+     */
+    void updateApprovalComment(String requestId, int stage, String comment, Instant now);
     boolean stageDecisionRoleExists(String requestId, int stage, String roleCode);
     void insertStageDecision(String requestId, int stage, String roleCode, String userId,
                              String decision, String comment, Instant now);

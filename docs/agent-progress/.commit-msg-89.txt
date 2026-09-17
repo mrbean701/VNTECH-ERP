@@ -1,0 +1,35 @@
+TASK-054: port nguyen van nhanh duyet SONG SONG all_roles (JS :1087-1108) + audit APPROVE_PARTIAL - va SUA LAI mot ket luan SAI cua chinh toi o #88 ve nguyen nhan
+
+MA NGUON (java-backend):
+- RequestStore: them `stageDecisionRoles(requestId, stage)` (DISTINCT role_code decision='approved'
+  - nguyen van JS :1089) va `updateApprovalComment(requestId, stage, comment, now)` (CHI doi comment,
+  dung nhu JS :1100 - KHONG duoc coi la da quyet dinh).
+- RequestStoreAdapter: cai dat 2 phuong thuc tren (SQL nguyen van JS).
+- RequestManagementUseCase.decideApproval: thay khoi "don gian hoa" bang ban port day du:
+  required (tu allowed_role_codes) + approved (DISTINCT role_code) + nhanh ADMIN dien vai tro con thieu
+  (JS :1091 - Java truoc day THIEU HAN) + chan trung vai tro + ghi approval_stage_decisions +
+  tinh `missing` + cap nhat comment tien do + RETURN SOM (khong chuyen buoc) + audit APPROVE_PARTIAL
+  voi dung 4 khoa {stage, stageName, roleCode, missing}; va nhanh all_roles + rejected ghi 1 dong
+  quyet dinh cho vai tro (JS :1105-1108, `INSERT OR IGNORE`).
+
+KIEM CHUNG LUC CHAY - cong moi tools/probe-task054-all-roles.mjs 20/20 DAT (node exit 0):
+lai THAT tren du lieu that: tao phieu -> duyet 4 buoc single -> toi buoc 5 (all_roles,
+da_truong,kh_truong) -> xac nhan LAN 1: ho so VAN `pending_approval`, VAN o buoc 5, dung 1 dong
+quyet dinh (da_truong - nhanh ADMIN dien vai tro thieu), comment "Da xac nhan 1/2; con cho: kh_truong",
+audit APPROVE_PARTIAL voi after_json {"stage":5,"stageName":"...","roleCode":"da_truong","missing":["kh_truong"]}
+-> xac nhan LAN 2: du 2/2 vai tro moi hoan tat + sinh buoc cho lap PO.
+Don sach co kiem chung: moi bang nghiep vu ve dung so dong ban dau (ke ca supply_workflow_steps,
+stock_reservations). audit_logs giu lai lam bang chung.
+
+DINH CHINH KET LUAN SAI CUA CHINH TOI (ghi o #88): toi da ghi "Java chuyen buoc som con JS thi khong"
+nhu mot lech Java-vs-JS. SU THAT DO DUOC:
+- Lan chay probe DAU TIEN (chua co fixture) do dung hanh vi THAT: mot lan xac nhan o buoc 5 la ho so
+  HOAN TAT - va do KHONG phai loi Java: JS :1080 dung DUNG cau truy van uu tien snapshot nhu Java
+  (COALESCE(NULLIF(a.approval_mode_snapshot,''),cfg.approval_mode,'single')).
+- Nguyen nhan that (DUNG CHUNG CA HAI LOI): JS :976 ghi snapshot `assignedOwner ? "single" : (...)` =>
+  ho buoc CO owner phan cong la snapshot = 'single'; doc lai thi uu tien snapshot => nhanh all_roles
+  KHONG BAO GIO CHAY. Do tren toan bo du lieu: 21/21 dong buoc `all_roles` deu bi dong bang 'single'
+  => buoc 5 ("Truong phong Du an + Ke hoach xac nhan cuoi") CHI CAN MOT trong hai vai tro xac nhan.
+- Vi vay probe phai TU DUNG dung ca can kiem (fixture: dat approval_mode_snapshot='all_roles' tren
+  CHINH dong cua phieu probe, se bi xoa o finally) moi kiem duoc nhanh ma vua port.
+=> Day la loi THIET KE DUNG CHUNG, sua no se LECH so voi JS => can nguoi dung quyet dinh (D6, TASK-055).
