@@ -75,7 +75,7 @@
 
 | ID | Module | Việc | Ưu tiên | Phụ thuộc | DB | API | UI | QUYỀN | TT |
 |---|---|---|---|---|---|---|---|---|---|
-| `U-01` | UI | `EntityDetailModal` — 1 khung cho User/Project/Warehouse/Team/Material/Supplier/Task | P1 | S-07 | - | - | REUSE | CHECK | KHUNG-XONG / AP-DUNG 0 |
+| `U-01` | UI | `EntityDetailModal` — 1 khung cho User/Project/Warehouse/Team/Material/Supplier/Task | P1 | S-07 | - | - | REUSE | CHECK | DONE / AP-DUNG 1 |
 | `U-02` | UI | `DataTable` dùng chung: cột, sắp xếp, lọc, phân trang, rỗng/đang tải/lỗi | P1 | — | - | - | REUSE | - | KHUNG-XONG / AP-DUNG 0 |
 | `U-03` | UI | `ListToolbar`: TIÊU ĐỀ + SỐ LƯỢNG ‖ TÌM · LỌC · SẮP XẾP · HÀNH ĐỘNG | P1 | — | - | - | REUSE | - | DONE / AP-DUNG 10 |
 | `U-04` | UI | `PermissionGuard` (ẩn/hiện theo quyền; backend vẫn kiểm) | P1 | S-07 | - | - | REUSE | CHECK | KHUNG-XONG / AP-DUNG 0 |
@@ -106,7 +106,7 @@
 | `P-02` | Mua hàng | Sắp xếp mặc định `created DESC`; Completed/Rejected xuống cuối | P2 | P-01 | - | - | FIX | - | TODO |
 | `P-03` | Mua hàng | Lọc theo Trạng thái · Ngày · Phòng ban · Người tạo · NCC · Dự án | P2 | P-01 | - | - | FIX | - | TODO |
 | `P-04` | Phiếu | **Approval Timeline** trong chi tiết phiếu (§8.1) | P2 | U-06 | - | - | NEW | - | DONE |
-| `P-05` | Phiếu | **Tổng hợp giao nhận** → modal riêng (§8.2) | P2 | U-01 | - | - | NEW | - | TODO |
+| `P-05` | Phiếu | **Tổng hợp giao nhận** → modal riêng (§8.2) | P2 | U-01 | - | - | NEW | - | DONE |
 | `P-06` | Phiếu | Hồ sơ vật tư đặc thù: ảnh/tệp xem được, không tràn khung (§8.3) | P2 | — | - | - | FIX | - | TODO |
 | `P-07` | NCC | Tách **Nhà cung cấp / Đối tác** thành menu độc lập (§17) | P2 | S-07 | - | - | NEW | CHECK | TODO |
 | `P-08` | NCC | Liên kết Supplier ↔ MR/PR/PO ↔ Material | P3 | P-07 | - | - | NEW | - | TODO |
