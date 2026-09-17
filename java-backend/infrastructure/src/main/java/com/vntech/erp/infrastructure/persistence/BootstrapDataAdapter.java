@@ -407,29 +407,203 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
         data.put("transferOrders", transferOrders);
 
         // ---- BOQ: boqItems, contracts, versions, sourceItems, mapping candidates ----
-        data.put("boqItems", pids.isEmpty() ? List.of() : query("""
-                SELECT pbi.id,pbi.project_id AS projectId,pbi.contract_id AS contractId,
-                       pbi.boq_version_id AS boqVersionId,p.code AS projectCode,p.name AS projectName,
-                       pbi.line_no AS lineNo,pbi.source_order AS sourceOrder,pbi.row_role AS rowRole,
-                       pbi.boq_code AS boqCode,pbi.contract_material_code AS contractMaterialCode,
-                       pbi.approved_material_code AS approvedMaterialCode,pbi.material_id AS materialId,
-                       m.code AS materialCode,COALESCE(bsi.contract_material_name,pbi.description) AS materialName,
-                       COALESCE(bsi.unit,m.unit) AS unit,COALESCE(NULLIF(bsi.source_system_code,''),m.`system`,'KHAC') AS systemCode,
-                       bsi.source_subgroup_name AS subgroupName,mc.name AS categoryName,pbi.description,
-                       pbi.item_type AS itemType,bsi.id AS sourceItemId,
-                       COALESCE(bsi.mapping_status,'legacy_mapped') AS mappingStatus,
-                       pbi.contract_qty AS contractQty,pbi.remeasured_qty AS remeasuredQty,
-                       pbi.unit_price AS unitPrice,pbi.variation_status AS variationStatus,
-                       pbi.note,pbi.active
-                FROM project_boq_items pbi
-                JOIN projects p ON p.id=pbi.project_id
-                JOIN materials m ON m.id=pbi.material_id
-                LEFT JOIN material_categories mc ON mc.id=m.category_id
-                LEFT JOIN boq_source_items bsi ON bsi.project_boq_item_id=pbi.id AND bsi.active=1
-                LEFT JOIN boq_versions bv ON bv.id=pbi.boq_version_id
-                WHERE pbi.active=1 AND (pbi.boq_version_id IS NULL OR bv.active=1)
-                  AND pbi.project_id IN (%s)
-                ORDER BY p.code,COALESCE(pbi.source_order,pbi.line_no),pbi.id""".formatted(pidSql), params(pids)));
+        // TASK-062 — port ĐỦ khoá `boqItems` như JS `:624-655`. Bản cũ chỉ có 30 cột của CÂU CHÍNH và thiếu
+        // hẳn 4 phần mà JS làm ở tầng ứng dụng (đây là lý do UI hiện 0/trống ở nhiều cột BOQ):
+        //   (1) 13 cột vô hướng (contractLineRef, parentSourceOrder, outlineLevel, sourceSheet, sourceRow,
+        //       contractCode, contractMaterialName, standardMaterialName, variationRef, variationApprovedAt…);
+        //   (2) 7 cột TỔNG HỢP bằng truy vấn con (requestedQty/approvedQty/orderedQty/receivedQty/issuedQty/
+        //       installedQty/stockQty) — UI hiển thị trực tiếp các cột khối lượng này;
+        //   (3) 3 trường DẪN XUẤT (orderedNotReceivedQty, varianceContract, varianceRemeasured) — JS `:638-643`;
+        //   (4) `customFields` (form_key='boq', tra bằng id DÒNG) + các DÒNG NGUỒN CHƯA ÁNH XẠ
+        //       (`project_boq_item_id IS NULL`) được GỘP VÀO CÙNG mảng `boqItems` với khối lượng = 0 — JS `:653-654`.
+        // Giới hạn đã biết: sắp xếp dùng `String.compareTo` thay `localeCompare` (khác nhau với ký tự ngoài ASCII;
+        // mã dự án thực tế là ASCII) và JS sắp SAU khi gộp nên thứ tự cuối do Java quyết định bằng cùng quy tắc.
+        List<Map<String, Object>> boqItems = new ArrayList<>();
+        if (!pids.isEmpty()) {
+            List<Map<String, Object>> boqMainRows = query("""
+                    SELECT pbi.id,pbi.project_id AS projectId,pbi.contract_id AS contractId,
+                           pbi.boq_version_id AS boqVersionId,p.code AS projectCode,p.name AS projectName,
+                           pbi.line_no AS lineNo,pbi.source_order AS sourceOrder,
+                           pbi.contract_line_ref AS contractLineRef,pbi.row_role AS rowRole,
+                           pbi.parent_source_order AS parentSourceOrder,pbi.outline_level AS outlineLevel,
+                           pbi.source_sheet AS sourceSheet,pbi.source_row AS sourceRow,
+                           pbi.boq_code AS boqCode,pbi.contract_code AS contractCode,
+                           pbi.contract_material_code AS contractMaterialCode,
+                           pbi.approved_material_code AS approvedMaterialCode,pbi.material_id AS materialId,
+                           m.code AS materialCode,COALESCE(bsi.contract_material_name,pbi.description) AS materialName,
+                           COALESCE(bsi.contract_material_name,pbi.description) AS contractMaterialName,
+                           m.name AS standardMaterialName,COALESCE(bsi.unit,m.unit) AS unit,
+                           COALESCE(NULLIF(bsi.source_system_code,''),m.`system`,'KHAC') AS systemCode,
+                           bsi.source_subgroup_name AS subgroupName,mc.name AS categoryName,pbi.description,
+                           pbi.item_type AS itemType,bsi.id AS sourceItemId,
+                           COALESCE(bsi.mapping_status,'legacy_mapped') AS mappingStatus,
+                           pbi.contract_qty AS contractQty,pbi.remeasured_qty AS remeasuredQty,
+                           pbi.unit_price AS unitPrice,pbi.variation_status AS variationStatus,
+                           pbi.variation_ref AS variationRef,pbi.variation_approved_at AS variationApprovedAt,
+                           pbi.note,
+                           COALESCE((SELECT SUM(mri.requested_qty) FROM material_request_items mri
+                                     JOIN material_requests mr2 ON mr2.id=mri.request_id
+                                     WHERE mr2.project_id=pbi.project_id AND mr2.contract_id=pbi.contract_id
+                                       AND mr2.status<>'cancelled'
+                                       AND (mri.boq_item_id=pbi.id OR (mri.boq_item_id IS NULL
+                                            AND mri.material_id=pbi.material_id
+                                            AND (COALESCE(mri.boq_code,'')='' OR COALESCE(pbi.boq_code,'')=COALESCE(mri.boq_code,''))
+                                            AND 1=(SELECT COUNT(*) FROM project_boq_items p2 WHERE p2.active=1
+                                                   AND p2.project_id=pbi.project_id AND p2.contract_id=pbi.contract_id
+                                                   AND (pbi.boq_version_id IS NULL OR p2.boq_version_id=pbi.boq_version_id)
+                                                   AND p2.material_id=mri.material_id
+                                                   AND (COALESCE(mri.boq_code,'')='' OR COALESCE(p2.boq_code,'')=COALESCE(mri.boq_code,'')))))),0) AS requestedQty,
+                           COALESCE((SELECT SUM(mri.approved_purchase_qty) FROM material_request_items mri
+                                     JOIN material_requests mr2 ON mr2.id=mri.request_id
+                                     WHERE mr2.project_id=pbi.project_id AND mr2.contract_id=pbi.contract_id
+                                       AND mr2.status<>'cancelled'
+                                       AND (mri.boq_item_id=pbi.id OR (mri.boq_item_id IS NULL
+                                            AND mri.material_id=pbi.material_id
+                                            AND (COALESCE(mri.boq_code,'')='' OR COALESCE(pbi.boq_code,'')=COALESCE(mri.boq_code,''))
+                                            AND 1=(SELECT COUNT(*) FROM project_boq_items p2 WHERE p2.active=1
+                                                   AND p2.project_id=pbi.project_id AND p2.contract_id=pbi.contract_id
+                                                   AND (pbi.boq_version_id IS NULL OR p2.boq_version_id=pbi.boq_version_id)
+                                                   AND p2.material_id=mri.material_id
+                                                   AND (COALESCE(mri.boq_code,'')='' OR COALESCE(p2.boq_code,'')=COALESCE(mri.boq_code,'')))))),0) AS approvedQty,
+                           COALESCE((SELECT SUM(mri.ordered_qty) FROM material_request_items mri
+                                     JOIN material_requests mr2 ON mr2.id=mri.request_id
+                                     WHERE mr2.project_id=pbi.project_id AND mr2.contract_id=pbi.contract_id
+                                       AND mr2.status<>'cancelled'
+                                       AND (mri.boq_item_id=pbi.id OR (mri.boq_item_id IS NULL
+                                            AND mri.material_id=pbi.material_id
+                                            AND (COALESCE(mri.boq_code,'')='' OR COALESCE(pbi.boq_code,'')=COALESCE(mri.boq_code,''))
+                                            AND 1=(SELECT COUNT(*) FROM project_boq_items p2 WHERE p2.active=1
+                                                   AND p2.project_id=pbi.project_id AND p2.contract_id=pbi.contract_id
+                                                   AND (pbi.boq_version_id IS NULL OR p2.boq_version_id=pbi.boq_version_id)
+                                                   AND p2.material_id=mri.material_id
+                                                   AND (COALESCE(mri.boq_code,'')='' OR COALESCE(p2.boq_code,'')=COALESCE(mri.boq_code,'')))))),0) AS orderedQty,
+                           COALESCE((SELECT SUM(gri.accepted_qty) FROM goods_receipt_items gri
+                                     JOIN goods_receipts gr ON gr.id=gri.receipt_id AND gr.bch_confirmation_status='confirmed'
+                                     JOIN purchase_order_items poi ON poi.id=gri.purchase_order_item_id
+                                     JOIN material_request_items mri ON mri.id=poi.request_item_id
+                                     JOIN material_requests mr2 ON mr2.id=mri.request_id
+                                     WHERE mr2.project_id=pbi.project_id AND mr2.contract_id=pbi.contract_id
+                                       AND mr2.status<>'cancelled'
+                                       AND (mri.boq_item_id=pbi.id OR (mri.boq_item_id IS NULL
+                                            AND mri.material_id=pbi.material_id
+                                            AND (COALESCE(mri.boq_code,'')='' OR COALESCE(pbi.boq_code,'')=COALESCE(mri.boq_code,''))
+                                            AND 1=(SELECT COUNT(*) FROM project_boq_items p2 WHERE p2.active=1
+                                                   AND p2.project_id=pbi.project_id AND p2.contract_id=pbi.contract_id
+                                                   AND (pbi.boq_version_id IS NULL OR p2.boq_version_id=pbi.boq_version_id)
+                                                   AND p2.material_id=mri.material_id
+                                                   AND (COALESCE(mri.boq_code,'')='' OR COALESCE(p2.boq_code,'')=COALESCE(mri.boq_code,'')))))),0) AS receivedQty,
+                           COALESCE((SELECT SUM(mri.issued_qty) FROM material_request_items mri
+                                     JOIN material_requests mr2 ON mr2.id=mri.request_id
+                                     WHERE mr2.project_id=pbi.project_id AND mr2.contract_id=pbi.contract_id
+                                       AND mr2.status<>'cancelled'
+                                       AND (mri.boq_item_id=pbi.id OR (mri.boq_item_id IS NULL
+                                            AND mri.material_id=pbi.material_id
+                                            AND (COALESCE(mri.boq_code,'')='' OR COALESCE(pbi.boq_code,'')=COALESCE(mri.boq_code,''))
+                                            AND 1=(SELECT COUNT(*) FROM project_boq_items p2 WHERE p2.active=1
+                                                   AND p2.project_id=pbi.project_id AND p2.contract_id=pbi.contract_id
+                                                   AND (pbi.boq_version_id IS NULL OR p2.boq_version_id=pbi.boq_version_id)
+                                                   AND p2.material_id=mri.material_id
+                                                   AND (COALESCE(mri.boq_code,'')='' OR COALESCE(p2.boq_code,'')=COALESCE(mri.boq_code,'')))))),0) AS issuedQty,
+                           COALESCE((SELECT SUM(mri.installed_qty) FROM material_request_items mri
+                                     JOIN material_requests mr2 ON mr2.id=mri.request_id
+                                     WHERE mr2.project_id=pbi.project_id AND mr2.contract_id=pbi.contract_id
+                                       AND mr2.status<>'cancelled'
+                                       AND (mri.boq_item_id=pbi.id OR (mri.boq_item_id IS NULL
+                                            AND mri.material_id=pbi.material_id
+                                            AND (COALESCE(mri.boq_code,'')='' OR COALESCE(pbi.boq_code,'')=COALESCE(mri.boq_code,''))
+                                            AND 1=(SELECT COUNT(*) FROM project_boq_items p2 WHERE p2.active=1
+                                                   AND p2.project_id=pbi.project_id AND p2.contract_id=pbi.contract_id
+                                                   AND (pbi.boq_version_id IS NULL OR p2.boq_version_id=pbi.boq_version_id)
+                                                   AND p2.material_id=mri.material_id
+                                                   AND (COALESCE(mri.boq_code,'')='' OR COALESCE(p2.boq_code,'')=COALESCE(mri.boq_code,'')))))),0) AS installedQty,
+                           COALESCE((SELECT SUM(CASE WHEN sm.to_warehouse_id IN (SELECT w.id FROM warehouses w
+                                                       WHERE w.project_id=pbi.project_id AND w.type='site')
+                                                     THEN sm.quantity ELSE 0 END)
+                                           -SUM(CASE WHEN sm.from_warehouse_id IN (SELECT w.id FROM warehouses w
+                                                       WHERE w.project_id=pbi.project_id AND w.type='site')
+                                                     THEN sm.quantity ELSE 0 END)
+                                     FROM stock_movements sm
+                                     WHERE sm.project_id=pbi.project_id AND sm.material_id=pbi.material_id),0) AS stockQty,
+                           pbi.active
+                    FROM project_boq_items pbi
+                    JOIN projects p ON p.id=pbi.project_id
+                    JOIN materials m ON m.id=pbi.material_id
+                    LEFT JOIN material_categories mc ON mc.id=m.category_id
+                    LEFT JOIN boq_source_items bsi ON bsi.project_boq_item_id=pbi.id AND bsi.active=1
+                    LEFT JOIN boq_versions bv ON bv.id=pbi.boq_version_id
+                    WHERE pbi.active=1 AND (pbi.boq_version_id IS NULL OR bv.active=1)
+                      AND pbi.project_id IN (%s)
+                    ORDER BY p.code,COALESCE(pbi.source_order,pbi.line_no),pbi.id""".formatted(pidSql), params(pids));
+            // (4a) `customFields` của từng dòng BOQ — JS `:636` tra `custom_field_values` bằng id DÒNG, form_key='boq'.
+            List<String> boqIds = boqMainRows.stream().map(r -> String.valueOf(r.get("id"))).toList();
+            Map<String, Map<String, Object>> customByBoq = new LinkedHashMap<>();
+            if (!boqIds.isEmpty()) {
+                for (Map<String, Object> c : query("""
+                        SELECT entity_id AS entityId,field_key AS fieldKey,value_text AS valueText
+                        FROM custom_field_values WHERE form_key='boq' AND entity_id IN (%s)"""
+                        .formatted(inClause(boqIds)), params(boqIds))) {
+                    customByBoq.computeIfAbsent(String.valueOf(c.get("entityId")), k -> new LinkedHashMap<>())
+                            .put(String.valueOf(c.get("fieldKey")), String.valueOf(c.get("valueText")));
+                }
+            }
+            // (3) ba trường dẫn xuất — JS `:638-643` (numberValue(null)=0).
+            for (Map<String, Object> row : boqMainRows) {
+                Map<String, Object> out = new LinkedHashMap<>(row);
+                out.put("customFields", customByBoq.getOrDefault(String.valueOf(row.get("id")), new LinkedHashMap<>()));
+                double ordered = num(row.get("orderedQty"));
+                double received = num(row.get("receivedQty"));
+                out.put("orderedNotReceivedQty", Math.max(0d, ordered - received));
+                out.put("varianceContract", received - num(row.get("contractQty")));
+                out.put("varianceRemeasured", received - num(row.get("remeasuredQty")));
+                boqItems.add(out);
+            }
+            // (4b) dòng NGUỒN CHƯA ÁNH XẠ — JS `:653-654` gộp vào CÙNG mảng, mọi khối lượng = 0.
+            // (Tách thành BIẾN riêng, không nhúng thẳng vào vòng lặp: cổng `probe-column-parity.mjs` phải
+            //  đọc được câu SQL này, nếu không nó sẽ ÂM THẦM mất độ phủ khoá `boqItems` — bài học ở #103.)
+            List<Map<String, Object>> unmappedBoqRows = query("""
+                    SELECT bsi.id AS sourceItemId,bsi.id,bsi.project_id AS projectId,
+                           bsi.contract_id AS contractId,bsi.boq_version_id AS boqVersionId,
+                           p.code AS projectCode,p.name AS projectName,bsi.source_order AS sourceOrder,
+                           bsi.contract_line_ref AS contractLineRef,bsi.row_role AS rowRole,
+                           bsi.boq_code AS boqCode,bsi.contract_code AS contractCode,
+                           bsi.contract_material_code AS contractMaterialCode,
+                           bsi.approved_material_code AS approvedMaterialCode,
+                           bsi.contract_material_name AS materialName,
+                           bsi.contract_material_name AS contractMaterialName,bsi.unit,
+                           bsi.contract_qty AS contractQty,bsi.remeasured_qty AS remeasuredQty,
+                           bsi.unit_price AS unitPrice,bsi.item_type AS itemType,bsi.note,
+                           bsi.source_system_code AS systemCode,bsi.source_subgroup_name AS subgroupName,
+                           bsi.mapping_status AS mappingStatus,bsi.mapped_material_id AS materialId,
+                           bsi.standard_material_name_snapshot AS standardMaterialName
+                    FROM boq_source_items bsi
+                    JOIN boq_import_batches bib ON bib.id=bsi.batch_id AND bib.active=1
+                    JOIN projects p ON p.id=bsi.project_id
+                    WHERE bsi.active=1 AND bsi.project_boq_item_id IS NULL
+                      AND bsi.project_id IN (%s)
+                    ORDER BY p.code,bsi.source_order,bsi.id""".formatted(pidSql), params(pids));
+            for (Map<String, Object> row : unmappedBoqRows) {
+                Map<String, Object> out = new LinkedHashMap<>(row);
+                out.put("materialCode", null);
+                out.put("categoryName", null);
+                for (String zeroKey : List.of("requestedQty", "approvedQty", "orderedQty", "receivedQty",
+                        "issuedQty", "installedQty", "stockQty", "orderedNotReceivedQty")) {
+                    out.put(zeroKey, 0);
+                }
+                out.put("varianceContract", -num(row.get("contractQty")));
+                out.put("varianceRemeasured", -num(row.get("remeasuredQty")));
+                Map<String, Object> custom = new LinkedHashMap<>();
+                if (!cleanText(row.get("systemCode")).isEmpty()) custom.put("systemCode", cleanText(row.get("systemCode")));
+                if (!cleanText(row.get("subgroupName")).isEmpty()) custom.put("subgroupName", cleanText(row.get("subgroupName")));
+                out.put("customFields", custom);
+                boqItems.add(out);
+            }
+            // (5) sắp xếp — JS `:655`: theo mã dự án rồi theo `sourceOrder`.
+            boqItems.sort((a, b) -> {
+                int byProject = cleanText(a.get("projectCode")).compareTo(cleanText(b.get("projectCode")));
+                return byProject != 0 ? byProject : Double.compare(num(a.get("sourceOrder")), num(b.get("sourceOrder")));
+            });
+        }
+        data.put("boqItems", boqItems);
         data.put("projectContracts", pids.isEmpty() ? List.of() : query("""
                 SELECT c.id,c.project_id AS projectId,c.contract_no AS contractNo,
                        c.contract_name AS contractName,c.contract_type AS contractType,
@@ -445,18 +619,28 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                        v.approved_at AS approvedAt,v.created_at AS createdAt,v.updated_at AS updatedAt
                 FROM boq_versions v WHERE v.project_id IN (%s)
                 ORDER BY v.project_id,v.contract_id,v.version_no DESC""".formatted(pidSql), params(pids)));
+        // TASK-062 — thiếu 9 cột so với JS `:649`: `id` (không alias — JS trả CẢ `sourceItemId` lẫn `id`),
+        // `contractLineRef`, `contractCode`, `contractMaterialName`, `specification` (từ `materials`) và
+        // 4 cột phiên bản BOQ `versionActive`/`versionStatus`/`versionNo`/`versionCode` (từ `boq_versions`).
         data.put("boqSourceItems", pids.isEmpty() ? List.of() : query("""
-                SELECT bsi.id AS sourceItemId,bsi.batch_id AS batchId,bsi.project_id AS projectId,
+                SELECT bsi.id AS sourceItemId,bsi.id,bsi.batch_id AS batchId,bsi.project_id AS projectId,
                        bsi.contract_id AS contractId,bsi.boq_version_id AS boqVersionId,
-                       bsi.source_order AS sourceOrder,bsi.source_row AS sourceRow,bsi.row_role AS rowRole,
-                       bsi.boq_code AS boqCode,bsi.contract_material_code AS contractMaterialCode,
+                       bsi.source_order AS sourceOrder,bsi.source_row AS sourceRow,
+                       bsi.contract_line_ref AS contractLineRef,bsi.row_role AS rowRole,
+                       bsi.boq_code AS boqCode,bsi.contract_code AS contractCode,
+                       bsi.contract_material_code AS contractMaterialCode,
                        bsi.approved_material_code AS approvedMaterialCode,
-                       bsi.contract_material_name AS materialName,bsi.unit,bsi.contract_qty AS contractQty,
-                       bsi.remeasured_qty AS remeasuredQty,bsi.unit_price AS unitPrice,bsi.item_type AS itemType,
+                       bsi.contract_material_name AS materialName,
+                       bsi.contract_material_name AS contractMaterialName,bsi.unit,
+                       bsi.contract_qty AS contractQty,bsi.remeasured_qty AS remeasuredQty,
+                       bsi.unit_price AS unitPrice,bsi.item_type AS itemType,
                        bsi.note,COALESCE(NULLIF(bsi.source_system_code,''),m.`system`,'KHAC') AS systemCode,
                        bsi.source_subgroup_name AS subgroupName,bsi.mapping_status AS mappingStatus,
                        bsi.mapped_material_id AS materialId,m.code AS materialCode,
-                       m.name AS standardMaterialName,bsi.project_boq_item_id AS projectBoqItemId,bsi.active
+                       m.name AS standardMaterialName,m.specification,
+                       bsi.project_boq_item_id AS projectBoqItemId,bsi.active,
+                       bv.active AS versionActive,bv.status AS versionStatus,
+                       bv.version_no AS versionNo,bv.version_code AS versionCode
                 FROM boq_source_items bsi
                 JOIN boq_versions bv ON bv.id=bsi.boq_version_id
                 LEFT JOIN materials m ON m.id=bsi.mapped_material_id
@@ -696,13 +880,16 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                 FROM approval_email_recipients ORDER BY project_id,stage""") : List.of());
 
         // JS: `workflowAssignments` = bảng approval_project_assignments (phân công người duyệt theo dự án+bước)
-        data.put("workflowAssignments", pids.isEmpty() ? List.of() : query("""
+        // TASK-062 — SỬA LỖI RÒ RỈ: JS `:723` là `isAdmin(user) ? await all(…) : []` và **KHÔNG lọc theo dự án**.
+        // Bản cũ trả khoá này cho MỌI vai trò (kèm lọc `project_id IN (…)`) ⇒ tài khoản thường đọc được
+        // "ai duyệt bước nào của dự án nào" — thông tin mà lõi JS không hề cấp cho họ.
+        data.put("workflowAssignments", admin ? query("""
                 SELECT apa.id,apa.project_id AS projectId,apa.stage,apa.owner_user_id AS ownerUserId,
-                       u.full_name AS ownerName,u.email AS ownerEmail,u.role AS ownerRole,
-                       apa.cc_emails AS ccEmails,apa.active
+                       apa.cc_emails AS ccEmails,apa.active,
+                       u.full_name AS ownerName,u.email AS ownerEmail,u.role AS ownerRole
                 FROM approval_project_assignments apa
                 LEFT JOIN users u ON u.id=apa.owner_user_id
-                WHERE apa.project_id IN (%s) ORDER BY apa.project_id,apa.stage""".formatted(pidSql), params(pids)));
+                ORDER BY apa.project_id,apa.stage""") : List.of());
 
         data.put("formFieldConfigs", query("""
                 SELECT id,form_key AS formKey,field_key AS fieldKey,display_name AS displayName,
@@ -858,7 +1045,8 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                        boq_version_id AS boqVersionId,version_no AS versionNo,
                        source_file_name AS sourceFileName,row_count AS rowCount,
                        imported_by AS importedBy,active,created_at AS createdAt
-                FROM boq_import_batches WHERE project_id IN (%s) ORDER BY created_at DESC""".formatted(pidSql), params(pids)));
+                FROM boq_import_batches WHERE project_id IN (%s)
+                ORDER BY project_id,contract_id,version_no DESC""".formatted(pidSql), params(pids)));
 
         // TASK-061 — JS `:757` trả thêm `contractId`,`boqVersionId`,`sourceItemId` và `actorName` (JOIN users).
         data.put("boqChangeHistory", pids.isEmpty() ? List.of() : query("""
@@ -868,7 +1056,7 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                        h.before_json AS beforeJson,h.after_json AS afterJson,h.reason,
                        h.actor_user_id AS actorUserId,u.full_name AS actorName,h.created_at AS createdAt
                 FROM boq_change_history h LEFT JOIN users u ON u.id=h.actor_user_id
-                WHERE h.project_id IN (%s) ORDER BY h.created_at DESC""".formatted(pidSql), params(pids)));
+                WHERE h.project_id IN (%s) ORDER BY h.created_at DESC,h.id DESC LIMIT 1000""".formatted(pidSql), params(pids)));
 
         // TASK-059 — JS `:675` trả `businessScopeId` + `scopeCode` + `scopeName` (JOIN business_scope_catalog)
         // và sắp theo `is_primary DESC, bs.sort_order, bs.name`; bản Java trả `scopeId` + `createdAt`
@@ -1511,6 +1699,25 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
     }
 
     // ── helpers của bộ lọc `workItems` (TASK-058) — port nguyên văn 2 hàm của JS ─────────────
+    /**
+     * TASK-062 — tương đương {@code numberValue(...)} của JS: null hoặc không phải số ⇒ 0.
+     * Dùng cho 3 trường dẫn xuất của `boqItems` (JS `:640-642`) vì MySQL trả `BigDecimal` còn JS nhận number.
+     */
+    private static double num(Object value) {
+        if (value == null) return 0d;
+        if (value instanceof Number number) return number.doubleValue();
+        try {
+            return Double.parseDouble(String.valueOf(value).trim());
+        } catch (NumberFormatException e) {
+            return 0d;
+        }
+    }
+
+    /** TASK-062 — tương đương {@code clean(...)} của JS: null ⇒ "" (không phải "null"), còn lại thì trim. */
+    private static String cleanText(Object value) {
+        return value == null ? "" : String.valueOf(value).trim();
+    }
+
     /** JS `:246` — {@code departmentForRole(user)}: chỉ hai mã base_role ánh xạ sang phòng ban. */
     private static String departmentForRole(String roleBase) {
         String base = roleBase == null ? "" : roleBase.trim();
