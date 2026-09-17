@@ -474,3 +474,80 @@ Cách duy nhất không bịa là port đầy đủ — tức một hạng mục
 4. **Khi phép kiểm của chính mình báo ĐẠT, phải nghi phép kiểm** — 3 lần trong dự án, lỗi nằm ở phép đo
    (`Number(false)===0`; `active===1` vs boolean; lọc theo "VẬT TƯ"/"THIẾT BỊ" nhiễu).
 5. **Công cụ luôn báo "sạch" thì vô dụng** — mọi cổng mới phải có **đối chứng dương** trên một lỗi đã biết.
+
+---
+
+# 20. KIỂM CHỨNG LÚC CHẠY NHÓM 4 + 5 (và MỘT LỖI CỦA CHÍNH TÔI)
+
+**Ngày:** 17/09/2026 · jar **90.886.009 bytes** (14:55:00) · API PID **2872** · Flyway `validated 16 migrations` · log **0 ERROR**
+
+## 20.1 Tầng SQL — chạy trong TRANSACTION rồi ROLLBACK (`tools/probe-task040-nhom45.sql`)
+
+Hai action này **ghi dữ liệu kho/quyết toán thật**, nên thay vì gọi thẳng qua HTTP (phải tạo phiếu thật rồi dọn),
+tôi chứng minh đúng thứ đã gây HTTP 500 và đúng nghĩa cộng dồn — mà **không đổi một dòng dữ liệu nào**:
+
+| Phép kiểm | Kết quả |
+|---|---|
+| Câu CŨ `UPDATE stock_issue_items SET status='installed'` | ❌ `ERROR 1054: Unknown column 'status'` — **đúng nguyên nhân 500** |
+| Câu CŨ `SET …,settlement_id=?,settled_at=?` | ❌ `ERROR 1054: Unknown column 'settlement_id'` — **đúng nguyên nhân 500** |
+| Câu MỚI cộng dồn hai lần (3 rồi 4) trên dòng thật `SMII_01f4e94b…` (đầu 0, sl 5) | ✅ **7.0000** |
+| Mô phỏng cách GHI ĐÈ của bản cũ trên cùng dòng | ✅ **4.0000** — chứng minh bản cũ **mất** phần 3 |
+| Câu MỚI `settle_team_subcontract` | ✅ `status = settled` |
+| Sau `ROLLBACK` | ✅ **5 dòng / 0 dòng · installed về 0.0000** — nguyên trạng |
+
+> ⚠ **GIỚI HẠN nói rõ:** đây KHÔNG phải phép kiểm end-to-end. Nó chứng minh SQL đúng lược đồ + đúng ngữ nghĩa,
+> **không** chứng minh đường GHI chạy hết vòng. Việc bấm nút với dữ liệu thật vẫn cần người dùng test thủ công.
+
+## 20.2 Tầng HTTP (`tools/probe-task040-nhom45.mjs`) — **9/9 ĐẠT, exit 0**
+
+Mọi nhánh dưới đây **dừng TRƯỚC khi ghi**:
+
+* `confirm_installation` dòng không tồn tại / `quantity=0` → 400 *"Dòng xác nhận lắp đặt không hợp lệ."*
+* `quantity` vượt số lượng đã nhận → 400 *"Số lượng xác nhận lắp vượt số lượng tổ đội đã nhận."* (đúng nguyên văn JS)
+* `settle_team_subcontract` mã sai → 400 *"Không có quyền quyết toán hợp đồng này."* (đúng nguyên văn JS)
+* `nvdademo` (engine role `project`) gọi `confirm_installation` → **HTTP 403** (§7)
+
+## 20.3 LỖI CỦA CHÍNH TÔI — tên action do tôi TỰ ĐOÁN
+
+Bản đầu của probe gọi `settle_subcontract` — **tên này KHÔNG tồn tại**. Tôi suy nó từ tên phương thức
+`settleSubcontract`. Java trả *"Action … chưa được triển khai trên backend Java (Strangler Fig)"* và tôi **suýt
+kết luận sai** rằng nhóm 5 là **mã chết**.
+
+Điều bắt được mâu thuẫn: công cụ mới `tools/probe-action-coverage-controller.mjs` báo **0 action thiếu `case`** —
+trái hẳn với kết luận "chưa triển khai". Đối chiếu lại thì tên đúng là **`settle_team_subcontract`**
+(JS `system-route.mjs:1249`, Java `SystemController:637`).
+
+**Đã sửa:** chú thích sai trong `ProductionStoreAdapter`/`ProductionStore`, tên action trong probe, và ghi lại ở đây.
+Commit **#50 đã ghi tên sai trong thông điệp** — không sửa lịch sử, mà ghi bản đính chính ở commit sau.
+
+> **Bài học:** không suy TÊN ACTION từ tên phương thức. Tên action là dữ liệu giao kèo giữa UI ↔ API, phải tra
+> trong `SystemController` (`case "…"`) hoặc JS (`action === "…"`).
+
+## 20.4 Công cụ mới: `tools/probe-action-coverage-controller.mjs`
+
+Đối chiếu ba tập: **Java phục vụ** (`case "…"` trong controller) · **JS có mã** (`action === "…"`) ·
+**UI gọi** (`action("…")`).
+
+```
+Java phục vụ : 224   ·   JS có mã : 174   ·   UI gọi : 119
+UI gọi mà Java THIẾU case      : 0   ✅
+JS có mã mà Java THIẾU case    : 0   ✅
+Java có case mà JS không có mã : 50  (trong đó 38 là tên chỉ mục SQL hợp lệ + 12 action Java-only đã biết)
+```
+
+⇒ **Không có action nào của UI bị thiếu ở backend Java** — củng cố kết luận TASK-038, nhưng lần này đo bằng
+chính các nhánh `case` đang phục vụ request (các cổng cũ chỉ so với danh mục/thanh ghi RBAC).
+
+## 20.5 PHÁT HIỆN DỮ LIỆU MỚI: 3/5 dòng xuất kho trỏ tới TỔ ĐỘI KHÔNG TỒN TẠI
+
+Khi probe báo "dòng không hợp lệ" cho một dòng CÓ THẬT, tôi truy nguyên:
+
+```
+stock_issue_items: 5 dòng · join được stock_issues: 5 · join được teams: CHỈ 2
+teams hiện có: 1 dòng (TEAM_8c1fecd9-…)
+stock_issues đang trỏ tới 4 team khác nhau ⇒ 3 team không còn tồn tại
+```
+
+`findIssueItem` dùng `JOIN teams` (giống y JS) nên các dòng mồ côi bị loại ⇒ `confirm_installation` trả
+*"Dòng xác nhận lắp đặt không hợp lệ."* **Mã đúng, dữ liệu sai.** Bảng `stock_issue_items` **không có khoá ngoại**
+(nên không có gì chặn tham chiếu mồ côi). ⇒ Ghi thành **known issue**, KHÔNG tự xoá/sửa dữ liệu.

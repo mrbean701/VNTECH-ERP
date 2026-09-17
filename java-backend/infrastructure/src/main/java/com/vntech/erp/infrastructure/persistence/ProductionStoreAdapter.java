@@ -309,9 +309,11 @@ public class ProductionStoreAdapter implements ProductionStore {
         // SỬA LỖI (TASK-040 nhóm 5): câu lệnh cũ ghi thêm `settlement_id=?` và `settled_at=?` — HAI CỘT NÀY
         // KHÔNG TỒN TẠI trong `team_subcontracts` (15 cột thật: id, project_id, team_id, contract_no,
         // contract_name, scope_text, contract_value, start_date, end_date, status, signed_at, note,
-        // created_by, created_at, updated_at) ⇒ MySQL "Unknown column" ⇒ HTTP 500 ở action `settle_subcontract`.
+        // created_by, created_at, updated_at) ⇒ MySQL "Unknown column" ⇒ HTTP 500.
         // Cột `settled_at` thật ra thuộc bảng `team_settlements` (đã ghi đúng ở `insertTeamSettlement`).
-        // JS `settle_subcontract` (scripts/system-route.mjs:1250) chỉ đặt `status='settled'` + `updated_at`.
+        // Tên action là `settle_team_subcontract` (KHÔNG phải `settle_subcontract` — tên đó không tồn tại):
+        // JS scripts/system-route.mjs:1249-1250, Java `SystemController` `case "settle_team_subcontract"`.
+        // JS chỉ đặt `status='settled'` + `updated_at`.
         jdbcTemplate.update("UPDATE team_subcontracts SET status='settled',updated_at=? WHERE id=?", now, subcontractId);
     }
 

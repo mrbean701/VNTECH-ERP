@@ -65,8 +65,9 @@ public interface ProductionStore {
      *
      * <p><b>SỬA LỖI (TASK-040 nhóm 5):</b> bản cũ nhận thêm {@code settlementId} và ghi
      * {@code settlement_id}/{@code settled_at} — hai cột <b>KHÔNG tồn tại</b> trong `team_subcontracts`
-     * ⇒ HTTP 500 ở action `settle_subcontract`. JS (scripts/system-route.mjs:1250) chỉ ghi {@code status} +
-     * {@code updated_at}; liên kết tới phiếu quyết toán nằm ở phía `team_settlements.subcontract_id`.
+     * ⇒ HTTP 500 ở action <b>`settle_team_subcontract`</b> (JS scripts/system-route.mjs:1249-1250).
+     * JS chỉ ghi {@code status} + {@code updated_at}; liên kết tới phiếu quyết toán nằm ở phía
+     * `team_settlements.subcontract_id`.
      */
     void settleSubcontract(String subcontractId, Instant now);
 

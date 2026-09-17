@@ -14,11 +14,11 @@
 | Mục | Giá trị |
 |---|---|
 | CURRENT PHASE | PHASE 1 — hạ tầng UI dùng chung. Song song: hoàn thiện tầng phân quyền Java |
-| CURRENT TASK | **TASK-040 nhóm 2 → 6** — sửa 5 nhóm còn lại của **26 câu lệnh SQL ghi cột không tồn tại** (nhóm 1+1b đã xong ở #47) |
-| LAST COMPLETED | **TASK-040 nhóm 1 + 1b (#47)** — `save_email_settings`: sửa SQL + **vá 2 đường ĐỌC thiếu** (`emailSettings`, `emailRecipients`) + **4 mặc định JS bị port sai**; probe **13/13** · authz **9/9** · regression **59/61** · **khôi phục dữ liệu bị lỗi ghi đè**. Trước đó: **TASK-039 (#45)** · **TASK-038 (#44)** |
-| NEXT TASK | TASK-040 nhóm 2 (`level_rank`→`rank`) → nhóm 3–6 → TASK-034 (gỡ chặn dựng bundle) → chứng minh render §8.1 → **§8.2** → **§8.3** |
-| BLOCKED ITEMS | **TASK-034** (`npm run build` không dựng lại được UI: dấu vân tay nguồn lệch + bảng identity có **trigger chặn UPDATE** ⇒ phải viết migration) · **TASK-035 mục 7** · **TASK-036 mục 7** · **TASK-037 mục 5** · **TASK-031** · **TASK-032** · **TASK-029** · **TASK-024** · **dữ liệu `user_module_permissions`** · **số SLA thật (24h/8h)** |
-| USER CONFIRMATION REQUIRED | **YES** — **10 câu hỏi**, ghi ở mục riêng bên dưới |
+| CURRENT TASK | **TASK-040 nhóm 3b + 6** — nhóm 3b: port hành vi `import_material_catalog`; nhóm 6: lệch **cấu trúc** hệ license (cần quyết định) |
+| LAST COMPLETED | **TASK-040 nhóm 4 + 5 (#50)** — `confirm_installation` (bỏ cột `status` không tồn tại + **sửa lỗi NGỮ NGHĨA ghi đè → cộng dồn**) và `settle_team_subcontract`; SQL chứng minh bằng transaction + ROLLBACK, HTTP **9/9**. Trước đó: **nhóm 1+1b (#47)** · **nhóm 3 (#49)** |
+| NEXT TASK | TASK-040 nhóm 3b (port `import_material_catalog`) → nhóm 6 (chờ quyết định) → TASK-034 (gỡ chặn dựng bundle) → chứng minh render §8.1 → **§8.2** → **§8.3** |
+| BLOCKED ITEMS | **TASK-040 nhóm 6** (lệch cấu trúc: `vntech_license_*` cần port cả hệ license + xác minh chữ ký số — thuộc phần **bảo mật** đã yêu cầu tạm hoãn) · **TASK-034** (`npm run build` không dựng lại được UI: dấu vân tay nguồn lệch + bảng identity có **trigger chặn UPDATE** ⇒ phải viết migration) · **TASK-035 mục 7** · **TASK-036 mục 7** · **TASK-037 mục 5** · **TASK-031** · **TASK-032** · **TASK-029** · **TASK-024** · **dữ liệu `user_module_permissions`** · **số SLA thật (24h/8h)** |
+| USER CONFIRMATION REQUIRED | **YES** — **11 câu hỏi**, ghi ở mục riêng bên dưới |
 | CURRENT BRANCH | `unity` |
 | LATEST COMMIT | `d1e0b52` (#47) · **39 commit local CHƯA PUSH** (theo quyết định của người dùng) |
 
@@ -29,8 +29,8 @@
 * **Database**: MySQL 8.0.46; Flyway V1–V16 + drizzle tới `0108`; 121 bảng
 * **API**: 2 route (`app/api/system`, `app/api/files`); Java phục vụ **186 action**; JS tham chiếu 174 · Java **không thiếu action nào** · Java có **thêm 12**
 * **Tầng Java chỉ phục vụ action GHI** — action ĐỌC do SSR/RSC đảm nhiệm. Đây là lý do phép kiểm quyền sống phải dùng payload rỗng.
-* **Infrastructure**: MySQL **3306** · Java API **18081** (PID 13800, background job `pwsh-58`) · Node SSR **8787** · cutover proxy **9000** (người dùng mở `:9000`)
-* **JAR**: đã đóng gói lại **thành công** — `vntech-erp-web-0.1.0-SNAPSHOT.jar` **90.885.239 bytes** (17/09 14:04); **mọi sửa đổi backend ĐÃ có hiệu lực lúc chạy**
+* **Infrastructure**: MySQL **3306** · Java API **18081** (PID 2872, background job `pwsh-64`) · Node SSR **8787** · cutover proxy **9000** (người dùng mở `:9000`)
+* **JAR**: đã đóng gói lại **thành công** — `vntech-erp-web-0.1.0-SNAPSHOT.jar` **90.886.009 bytes** (17/09 14:55); **mọi sửa đổi backend ĐÃ có hiệu lực lúc chạy**
 * **TODO hiện tại**: xem mục CURRENT TODO cuối tệp
 
 ## Authentication
@@ -97,7 +97,11 @@ Mặc định của interface là `return role()` = **mã chuẩn** ⇒ thiếu 
 17. ~~Cổng ảnh + `test:regression` không chạy được~~ **ĐÃ RÕ NGUYÊN NHÂN GỐC** — Edge sập khi khởi động: `FATAL:mojo\...\platform_channel.cc:183 Check failed: Access is denied (0x5)` (mojo channel = **named pipe**, sandbox chặn). Node test runner cũng lỗi `spawn EPERM` vì spawn con qua pipe. ⇒ **ràng buộc MÔI TRƯỜNG, không phải lỗi mã**; chạy được khi cấp `danger-full-access`. Chẩn đoán mẫu: `tools/diag-edge-cdp.mjs`. **ĐÃ XÁC NHẬN LẠI ở #47**: chạy `test:regression` có full access ⇒ **59/61 pass** (trước chỉ 58/61 khi bị chặn) — đúng test từng đỏ nay xanh, chứng minh kết luận "dương tính giả do môi trường" là đúng.
 18. **TASK-040 nhóm 1 ĐÃ ĐÓNG (#47)** — nhưng khi sửa nhóm này phát hiện **lớp lỗi thứ hai đi kèm lớp SQL**: *port không nguyên trạng* làm **mặc định bị sai âm thầm**. Cụ thể Java kẹp sàn `max(1, …)` **trước** rồi mới so `== 0` ⇒ nhánh mặc định của JS (`|| 587` / `|| 24` / `|| 8`) trở thành **mã chết** ⇒ lưu 1 thay vì 587/24/8. ⇒ **Khi port từ JS, phải đối chiếu cả THỨ TỰ TOÁN HẠNG, không chỉ tên cột.**
 19. **Lỗi port đã GHI HỎNG dữ liệu thật** (`smtp_port=1`, `po_sla_hours=1`, `bch_confirmation_sla_hours=1`) — phát hiện vì probe đọc lại DB; đã khôi phục về 587/24/8. Không phải do seed (seed ghi 587, DDL default 24/8). ⇒ **Bài học: "biên dịch sạch" và "HTTP 200" đều KHÔNG chứng minh dữ liệu đúng — phải đối chiếu tầng DB.**
-20. **TASK-040 — 5 nhóm còn lại** (`level_rank`→`rank`, `material_norms`, `stock_issue_items`, `team_subcontracts`, `vntech_license_*`) vẫn đang là **chức năng ghi bị hỏng HTTP 500** cho tới khi vá xong. Khi vá từng nhóm phải **kiểm cả đường ĐỌC** — nhóm 1 cho thấy UI có thể thiếu hẳn khoá bootstrap.
+20. **TASK-040 — 3 nhóm còn lại**: nhóm 3b (`import_material_catalog`: UI gửi `categoryCode`, Java đọc `categoryId` ⇒ vật tư nhập vào **mất nhóm**; JS còn tự tạo category/subcategory) và nhóm 6 (`vntech_license_*` — **lệch cấu trúc**, xem mục BLOCKED).
+21. **DỮ LIỆU MỒ CÔI (mới, TASK-040 vòng 4)**: `stock_issue_items` **3/5 dòng** trỏ tới `team_id` **không còn tồn tại** (`teams` chỉ có 1 dòng). `findIssueItem` dùng `JOIN teams` (giống y JS) nên các dòng đó bị loại ⇒ `confirm_installation` trả *"Dòng xác nhận lắp đặt không hợp lệ."* **Mã đúng, dữ liệu sai.** Bảng **không có khoá ngoại** nên không gì chặn tham chiếu mồ côi. **KHÔNG tự sửa dữ liệu.**
+22. **KHÔNG SUY TÊN ACTION TỪ TÊN PHƯƠNG THỨC** (lỗi của chính tôi ở vòng 4): tôi gọi thử `settle_subcontract` — tên **không tồn tại** — rồi suýt kết luận nhóm 5 là **mã chết**. Tên đúng là **`settle_team_subcontract`** (`SystemController:637`, JS `system-route.mjs:1249`). Bắt được nhờ cổng mới `probe-action-coverage-controller.mjs` báo **0 action thiếu `case`** — mâu thuẫn với kết luận "chưa triển khai".
+23. **Cổng đối chiếu với chính các nhánh `case`**: `tools/probe-action-coverage-controller.mjs` → Java phục vụ **224** · JS có mã **174** · UI gọi **119** · **UI gọi mà Java thiếu: 0** · **JS có mã mà Java thiếu: 0** · Java-only **50** (38 tên chỉ mục SQL hợp lệ + 12 action Java-only đã biết). Các cổng cũ chỉ so với danh mục/thanh ghi RBAC, **không** so với nhánh `case` đang phục vụ request.
+24. **LỚP LỖI THỨ HAI ĐÃ ĐƯỢC PHỦ CỔNG**: `tools/probe-increment-drift.mjs` săn trường hợp JS **cộng dồn** (`col=col+?`) nhưng Java **ghi đè** (`col=?`) — lớp lỗi mà cổng lược đồ **không thể** bắt. Kết quả: 10 cột JS cộng dồn · **0 ứng viên** trên toàn kho Java, **có đối chứng dương** (`tools/_old-adapter-positive-control.java.txt`).
 
 ## Important Decisions
 
@@ -122,8 +126,12 @@ Mặc định của interface là `return role()` = **mã chuẩn** ⇒ thiếu 
 19. **Khi sửa một cặp GHI/ĐỌC, phải kiểm CẢ HAI CHIỀU.** TASK-039 và TASK-040 nhóm 1 đều cho thấy lỗi nằm ở **đường đọc thiếu** (khoá bootstrap không tồn tại) chứ không chỉ ở SQL ghi.
 20. **Probe gọi action GHI phải tự chứng minh tính không phá hoại**: sao lưu 2 bảng ra `tools/_backup-*.sql` (đã gitignore), gửi LẠI đúng dữ liệu đang có, chỉ tạo bản ghi tạm rồi xoá, và in ra mọi thay đổi thật.
 21. **Probe phải tự nói rõ giới hạn của nó.** `probe-task040-nhom1.mjs` in thẳng dòng *"script KHÔNG tự kiểm DB"* — vì "13/13 ĐẠT" mới chỉ chứng minh tầng HTTP; thiếu bước đối chiếu MySQL là chưa đủ kết luận.
+22. **KHÔNG suy tên action từ tên phương thức.** Tên action là **dữ liệu giao kèo** UI ↔ API: phải tra `case "…"` trong `SystemController` hoặc `action === "…"` trong JS. (Bài học vòng 4: `settle_subcontract` không tồn tại ⇒ suýt kết luận sai rằng nhóm 5 là mã chết.)
+23. **Với action GHI dữ liệu thật, chứng minh tầng SQL bằng TRANSACTION + ROLLBACK** thay vì tạo/huỷ dữ liệu thật: chạy đúng câu lệnh, đọc kết quả, `ROLLBACK`, rồi khẳng định dữ liệu **nguyên trạng** (`tools/probe-task040-nhom45.sql`). Vẫn phải nói rõ đây **không** phải phép kiểm end-to-end.
+24. **Cổng đối chiếu với CHÍNH các nhánh `case` đang phục vụ request** (`probe-action-coverage-controller.mjs`), không chỉ so với danh mục/thanh ghi RBAC — vì một action có thể có SQL + có trong thanh ghi mà **thiếu `case`** ⇒ không bao giờ chạy.
+25. **Mọi cổng mới phải có ĐỐI CHỨNG DƯƠNG trên một lỗi đã biết.** Công cụ luôn báo "sạch" thì vô dụng: `probe-increment-drift.mjs` được kiểm bằng tệp chứa nguyên văn câu lệnh cũ (`--extra-file`).
 
-## USER CONFIRMATION REQUIRED (10 câu hỏi)
+## USER CONFIRMATION REQUIRED (11 câu hỏi)
 
 1. **TASK-029** — 6 action (`save_team_subcontract`, `save_team_production`, `approve_team_production`, `save_team_payment`, `settle_team_subcontract`, `create_project_team`): JS cho phép theo vai trò, Java bắt buộc module `teams` (**0 dòng quyền**) nên **chỉ admin làm được**. Chọn **(A)** khôi phục đúng JS, hay **(B)** giữ Java + nạp đủ dữ liệu quyền module?
 2. **Dữ liệu `user_module_permissions`** (484/732; 5 module 0 dòng: `boq`, `stocktake`, `inventory`, `teams`, `warehouse_issue`) — (a) chạy lại cơ chế cấp mặc định theo phòng ban, (b) cấu hình thủ công, hay (c) giữ nguyên?
@@ -135,16 +143,20 @@ Mặc định của interface là `return role()` = **mã chuẩn** ⇒ thiếu 
 8. **TASK-036 mục 7** — `required_permission` (quyền cần để làm người duyệt) và `allow_skip_level` (vượt cấp) hiện **không được thi hành ở đâu**: có cần **thi hành** không, hay **gỡ** khỏi lược đồ/payload để tránh bẫy cấu hình về sau?
 9. **TASK-037 mục 5** — 3 action quản trị workflow chỉ cần **đăng nhập** + quyền module `admin` (hiện **0 dòng**): **(A)** thêm chặn **vai trò admin** cho nhất quán, hay **(B)** giữ nguyên (coi quản trị workflow là một quyền module — đúng thiết kế)?
 10. **Số SLA thật của nghiệp vụ** — lỗi port TASK-040 đã ghi đè `po_sla_hours=1` và `bch_confirmation_sla_hours=1` vào DB thật; probe đã khôi phục về **mặc định do mã JS quy định là 24 giờ (PO)** và **8 giờ (BCH)**. Đây là *mặc định của mã*, **không phải con số nghiệp vụ do bạn công bố**. Hỏi: **24h/8h có đúng không**, hay SLA thật khác để tôi ghi lại đúng? (Nếu khác, sửa qua giao diện Quản trị → Cấu hình email.)
+11. **TASK-040 nhóm 6 — hệ license lệch CẤU TRÚC** giữa Java và JS. UI gửi `{licenseEnvelope}` (chuỗi JSON) và JS **xác minh chữ ký số** (`verifyLicenseEnvelope` với public key) rồi ghi theo `claims`; Java lại nhận `licenseKey/companyName/edition` và ghi **6 cột không tồn tại** trong `vntech_license_installations`. Không có cột nào để ánh xạ `edition`/`license_key` ⇒ ánh xạ sẽ là **bịa nghiệp vụ**. Hỏi: **(A)** port đầy đủ hệ license + xác minh chữ ký (thuộc phần bảo mật bạn đã yêu cầu tạm hoãn), hay **(B)** giữ nguyên trạng thái hỏng (HTTP 500) và ghi vào roadmap, hay **(C)** tạm **gỡ** 2 action này khỏi danh mục để người dùng không bấm vào chỗ hỏng?
 
 ## CURRENT TODO
 
 * [x] TASK-025 · Sửa `SlaComplianceWorker` hỏng âm thầm mỗi giờ (cột `overdue_at` không tồn tại) — #34
 * [x] **TASK-040 nhóm 1+1b · `save_email_settings`** — #47: SQL sai 3 cột ⇒ 500; bootstrap **thiếu 2 khoá đọc**; **4 mặc định JS bị port sai**; khôi phục dữ liệu `smtp_port=587`/`po_sla=24`/`bch_sla=8`. Probe **13/13** · authz **9/9** · regression **59/61**
-* [ ] **TASK-040 nhóm 2** · `UserAdminStoreAdapter` — `level_rank` → `rank`
-* [ ] **TASK-040 nhóm 3** · `MaterialCatalogStoreAdapter` — 6 cột `material_norms` + `materials.is_component`/`created_by`
-* [ ] **TASK-040 nhóm 4** · `WarehouseStockStoreAdapter` — `stock_issue_items` `SET status` → `installed_qty=installed_qty+?`
-* [ ] **TASK-040 nhóm 5** · `ProductionStoreAdapter` — `team_subcontracts.settlement_id`/`settled_at`
-* [ ] **TASK-040 nhóm 6** · `SystemSettingsStoreAdapter` — `vntech_license_installations` (6 cột) + `vntech_license_transfer_requests` (2 cột)
+* [x] **TASK-040 nhóm 2 · `level_rank`** — **ĐÓNG: DƯƠNG TÍNH GIẢ.** Công cụ của tôi bỏ sót `CHANGE COLUMN` nên tố oan `UserAdminStoreAdapter`; DB đang chạy **đúng là `level_rank`**. Đã vá công cụ + thêm cổng đối chiếu lược đồ đang chạy.
+* [x] **TASK-040 nhóm 3 · `material_norms` + `materials`** — #49: SQL 6 cột + hợp đồng payload + nghiệp vụ + **đường ĐỌC thiếu `source_type`**; probe **25/25**
+* [x] **TASK-040 nhóm 4 · `confirm_installation`** — #50: bỏ cột `status` không tồn tại + **sửa lỗi NGỮ NGHĨA ghi đè → cộng dồn**; SQL chứng minh bằng transaction + ROLLBACK; HTTP **9/9**
+* [x] **TASK-040 nhóm 5 · `settle_team_subcontract`** — #50: bỏ `settlement_id`/`settled_at`; probe HTTP **9/9**
+* [ ] **TASK-040 nhóm 3b** · port hành vi `import_material_catalog` (UI gửi `categoryCode`/`subcategoryCode`, Java đọc `categoryId`/`subcategoryId` ⇒ vật tư nhập vào **mất nhóm**)
+* [!] **TASK-040 nhóm 6 · CHỜ QUYẾT ĐỊNH** — `vntech_license_*` lệch **cấu trúc** (câu hỏi #11)
+* [x] **Cổng mới**: `probe-java-sql-live.mjs` (lược đồ đang chạy) · `probe-schema-drift.mjs` (tệp migration ↔ DB: **0 lệch**) · `probe-increment-drift.mjs` (SET vs cộng dồn, **có đối chứng dương**) · `probe-action-coverage-controller.mjs` (UI ↔ nhánh `case`: **0 thiếu**) · `show-js-lines.mjs`
+* [!] **DỮ LIỆU MỒ CÔI** — `stock_issue_items` 3/5 dòng trỏ tới tổ đội không tồn tại (known issue #21) — **KHÔNG tự sửa dữ liệu**
 * [!] **SỐ SLA THẬT · CHỜ XÁC NHẬN** — 24h (PO) / 8h (BCH) là mặc định của mã JS, không phải con số nghiệp vụ do người dùng công bố (câu hỏi #10)
 * [x] TASK-027 · Kiểm chứng SỐNG bằng tài khoản thật; vá **2 lỗi P0** — #35
 * [x] TASK-030 · 43 ca chặn tầng module là **ĐÚNG DỮ LIỆU** — #36
@@ -175,4 +187,6 @@ Mặc định của interface là `return role()` = **mã chuẩn** ⇒ thiếu 
 7. **Đóng gói**: `JAVA_HOME=C:\Users\PC\.jdks\openjdk-26.0.2.1`; maven wrapper `apache-maven-3.9.16`; `java-backend/.mvn/maven.config` chứa `-Dmaven.repo.local=<workspace>\_m2-repo` (PowerShell làm hỏng `-D` vì đường dẫn có dấu cách). Fat jar phải ≈ **90 MB**; 68 KB nghĩa là `repackage` thất bại.
 8. **Thứ tự chẩn đoán**: 4 cổng → `/actuator/health` → `tools/probe-live-stack.mjs` → cổng ảnh.
 9. **Vá TASK-040 theo nhóm — quy trình 5 bước bắt buộc** (đúc từ nhóm 1): (1) đọc SQL tương ứng của JS; (2) sửa Java theo JS **kể cả thứ tự toán hạng của mặc định**; (3) **kiểm cả đường ĐỌC** (khoá bootstrap có tồn tại không, tên khoá UI dùng là gì); (4) build lại jar + khởi động lại + gọi thật + **đối chiếu MySQL** (không chỉ HTTP 200); (5) chạy `probe-java-sql-schema.mjs` lại để chắc không còn cột sai.
-10. **Jar đang chạy**: nếu sửa mã Java mà KHÔNG build lại + khởi động lại thì mọi probe sẽ đo **bản cũ** — PID hiện tại **13800** (job `pwsh-58`) đang chạy jar có nhóm 1+1b. Trước khi `mvn package` phải dừng **đúng PID đang giữ cổng 18081**.
+10. **Jar đang chạy**: nếu sửa mã Java mà KHÔNG build lại + khởi động lại thì mọi probe sẽ đo **bản cũ** — PID hiện tại **2872** (job `pwsh-64`) đang chạy jar có nhóm 1+1b, 3, 4, 5. Trước khi `mvn package` phải dừng **đúng PID đang giữ cổng 18081**.
+11. **Bốn cổng phải chạy trước khi kết luận về SQL/ngữ nghĩa** (đúc từ TASK-040): `probe-java-sql-live.mjs` (cột có tồn tại?) → `probe-increment-drift.mjs` (ghi đúng cách?) → đọc lại qua bootstrap (**đường ĐỌC có không?**) → `probe-action-coverage-controller.mjs` (action có `case` không?). Thiếu một cổng là còn một lớp lỗi không nhìn thấy.
+12. **Khi chứng minh action GHI**: dùng `transaction + ROLLBACK` cho tầng SQL và chỉ gọi HTTP vào các **nhánh chặn**; luôn ghi rõ giới hạn "chưa test end-to-end".
