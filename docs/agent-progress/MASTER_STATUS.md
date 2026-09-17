@@ -132,7 +132,7 @@ Mặc định của interface là `return role()` = **mã chuẩn** ⇒ thiếu 
 * [!] **TASK-008 phần 2 · Quét hồi quy rộng** — **DONE** (#38): vá lỗi lint chặn cả chuỗi `npm test`; cổng ảnh ĐẠT 28/28 · 0 px; `test:regression` 61 test / 58 PASS; 3 test đỏ **đã phân loại**; tìm ra nguyên nhân gốc rào cản cổng ảnh
 * [!] **TASK-031 · CHỜ QUYẾT ĐỊNH** — cây dự án trong menu bị tắt ở cả hai nav
 * [!] **TASK-032 · CHỜ QUYẾT ĐỊNH** — 0/16 vai trò trỏ đơn vị mặc định (lỗ hổng liên kết dữ liệu)
-* [ ] TASK-022b · Bổ sung 12 action chỉ có ở Java vào `ACTION_CATALOG` (ưu tiên thấp)
+* [ ] ~~TASK-022b · Bổ sung 12 action chỉ có ở Java vào `ACTION_CATALOG`~~ **ĐÓNG — KHÔNG cần sửa** (#41): danh mục có hợp đồng "sinh từ nguồn JS" và đang đúng hợp đồng (174 mục, khớp JS 0 lệch); 12 action Java-only đã khai đầy đủ trong bản thi hành. Thêm vào sẽ phá `probe-action-parity`. Cổng mới: `tools/probe-catalog-drift.mjs`
 * [ ] TASK-009 · U-09 đợt 6 — 13 màn còn lại
 * [ ] TASK-010/011/012/013 · Áp dụng `EntityDetailModal` / `DataTable` / `PermissionGuard` / `ApprovalTimeline`
 * [ ] TASK-014 · U-11 — tách `page.tsx`
