@@ -177,6 +177,9 @@ const SCREENS = [
   { id: "05-material",  label: "Danh mục vật tư gốc", steps: [{ group: "material_master", child: 0 }] },
   { id: "06-warehouse", label: "Kho Tổng",            steps: [{ group: "warehouse",     child: 0 }] },
   { id: "07-admin",     label: "Danh mục & phân quyền", steps: [{ group: "system_admin", child: 0 }] },
+  // 08-requests: màn Phiếu đề nghị mua hàng — nhóm MUA HÀNG & CUNG ỨNG, module đầu tiên.
+  // Thêm 18/09/2026 (TASK-083 bảng 15) vì màn này gồm bảng chọn dòng `selected-row` mà 7 màn trên KHÔNG phủ.
+  { id: "08-requests",  label: "Phiếu đề nghị mua hàng", steps: [{ group: "purchasing",   child: 0 }] },
 ];
 
 const SCREENS_TO_RUN = ONLY ? SCREENS.filter((s) => s.id.includes(ONLY)) : SCREENS;

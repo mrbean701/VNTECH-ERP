@@ -43,7 +43,7 @@ export type Column<T> = {
 
 export function DataTable<T>({
   columns, rows, rowKey, sort, onRowClick, emptyText = "Chưa có dữ liệu.",
-  loading, error, footer, toolbar, rowStyle, tableClassName,
+  loading, error, footer, toolbar, rowStyle, rowClassName, tableClassName,
 }: {
   columns: Column<T>[];
   rows: T[];
@@ -62,6 +62,13 @@ export function DataTable<T>({
    * (vd bảng ma trận quyền phòng ban tô nền vàng dòng "chưa lưu" bằng `style` trên `<tr>`).
    */
   rowStyle?: (row: T, index: number) => CSSProperties | undefined;
+  /**
+   * Lớp CSS cho CẢ DÒNG theo từng dòng — TASK-083. Cần để giữ dấu **dòng đang chọn**
+   * (`selected-row` ở bảng Phiếu đề nghị) mà `rowStyle` không diễn đạt được, vì luật đó là
+   * `globals.css:1217` `.selected-row td { background:#eef6ff!important }` — **có `!important`** nên
+   * không thể thay bằng style nội tuyến trên `<tr>`.
+   */
+  rowClassName?: (row: T, index: number) => string | undefined;
   /**
    * Lớp CSS THÊM cho chính thẻ `<table>` — TASK-083. Cần cho các bảng cũ mang lớp định dạng riêng
    * (vd `resizable-data-table` trong `globals.css` đặt `table-layout:fixed` + quy tắc ngắt dòng;
@@ -106,7 +113,7 @@ export function DataTable<T>({
             {!loading && rows.map((row, i) => (
               <tr
                 key={rowKey ? rowKey(row, i) : i}
-                className={onRowClick ? "dt-clickable" : undefined}
+                className={[onRowClick ? "dt-clickable" : "", rowClassName ? rowClassName(row, i) : ""].filter(Boolean).join(" ") || undefined}
                 style={rowStyle ? rowStyle(row, i) : undefined}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
               >
