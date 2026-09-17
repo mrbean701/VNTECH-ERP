@@ -196,6 +196,10 @@ const SCREENS = [
   { id: "11-modal-request", label: "Phiếu đề nghị — modal lập phiếu (rộng nhất)", steps: [{ group: "purchasing", child: 0 }, { click: ".list-toolbar-actions button.primary" }] },
   { id: "12-drawer-request-detail", label: "Phiếu đề nghị — drawer chi tiết", steps: [{ group: "purchasing", child: 0 }, { click: ".request-list-card .icon-mini" }] },
   { id: "13-modal-material", label: "Danh mục vật tư — modal thêm/sửa vật tư", steps: [{ group: "material_master", child: 0 }, { click: ".material-list-filters button.primary" }] },
+  { id: "16-modal-receipt", label: "Nhập kho — modal tạo phiếu nhập", steps: [{ group: "warehouse", child: 0 }, { click: ".list-toolbar-actions button.primary" }] },
+  // ⚠️ CHƯA PHỦ ĐƯỢC 2 khung (ghi lại để vòng sau làm, KHÔNG đoán selector):
+  //   • `open("po")`     — màn Mua hàng & PO không có `.list-toolbar-actions button.primary` (cổng báo NO_CLICK_TARGET).
+  //   • `open("teamCreate")` — màn Tổ đội cũng vậy.
 ];
 
 const SCREENS_TO_RUN = ONLY ? SCREENS.filter((s) => s.id.includes(ONLY)) : SCREENS;
