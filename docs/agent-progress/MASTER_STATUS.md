@@ -7,8 +7,8 @@
 * Master Task: MASTER TASK — ERP/MIS SYSTEM AUDIT, REFACTOR & FEATURE UPGRADE (46 mục)
 * Overall status: **IN PROGRESS** — PHASE 1 chưa xong
 * Current phase: PHASE 1 — HẠ TẦNG UI DÙNG CHUNG. Song song: hoàn thiện tầng phân quyền phía Java (P0/P1)
-* Current task: **TASK-027** — kiểm chứng SỐNG bằng tài khoản thật (`da_truong`/`kho_tong`/`cht`) cho các sửa đổi vai trò + phạm vi
-* Last completed task: **TASK-025 (DONE)** — sửa `SlaComplianceWorker` hỏng âm thầm mỗi giờ; bằng chứng: log đổi từ WARN lỗi sang `INFO SLA worker: 29 supply steps quá hạn…`. Trước đó: TASK-023 (64/64) · TASK-023b · TASK-028 · TASK-026
+* Current task: **TASK-030** — xác định 43 ca bị chặn ở tầng MODULE là thiếu dữ liệu `user_module_permissions` hay hành vi đúng. Chờ người dùng: **TASK-029** (Java chặt hơn JS trên 30 action) + **TASK-024** (`isCompanyLeadership`)
+* Last completed task: **TASK-027 (DONE)** — kiểm chứng sống bằng tài khoản thật: vai trò 10/10 đúng mã engine, chặn đúng 351/351 lọt 0, **403 tầng vai trò = 0**; tìm và vá **2 lỗi P0** (`create_request`/`decide_approval` thiếu `roleBase()` ⇒ chỉ admin lập được phiếu đề nghị mua; nhánh phạm vi kho là mã chết). Trước đó: TASK-025 (SLA worker) · TASK-023 (64/64) · TASK-023b · TASK-028 · TASK-026
 * Next task: TASK-025 (worker SLA) → TASK-027 (kiểm chứng sống) → TASK-022b (catalog) → TASK-009 (U-09 đợt 6)
 * Blocked task: **KHÔNG CÒN BLOCKER CỨNG.** Lưu ý vận hành: cổng ảnh và các probe cần `spawn mysql`/Edge headless phải chạy với sandbox mở rộng; **KHÔNG dùng `Start-Process` cho Java API** (tiến trình chết theo cửa sổ PowerShell) — xem `docs/29` mục 6
 * User confirmation required: **YES** — 2 việc: (1) **quyết định về `isCompanyLeadership`** (TASK-024: Java cấp thừa cho `accountant`, cấp thiếu cho `thuky`/`hcpc_truong` so với JS); (2) xác nhận đã hết cần tên màn Receiving — **đã tự giải quyết** = "Kế hoạch giao hàng" (TASK-B01)

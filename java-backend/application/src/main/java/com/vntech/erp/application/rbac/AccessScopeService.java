@@ -52,6 +52,11 @@ public final class AccessScopeService {
         return "admin".equals(role);
     }
 
+    /** Vai trò kho: mã ENGINE "warehouse" hoặc mã CHUẨN thu_kho/kho_tong (ánh xạ nhiều-về-một). */
+    private static boolean isWarehouseRole(String role) {
+        return "warehouse".equals(role) || "thu_kho".equals(role) || "kho_tong".equals(role);
+    }
+
     private static String clean(Object value) {
         return value == null ? "" : String.valueOf(value).trim();
     }
@@ -74,7 +79,12 @@ public final class AccessScopeService {
         String type = clean(warehouse.get("type"));
         String projectId = clean(warehouse.get("projectId"));
 
-        if ("warehouse".equals(role)) {
+        // SỬA LỖI PHẠM VI KHO (TASK-027): JS so với effectiveRole(user) = MÃ ENGINE
+        // (scripts/system-route.mjs:229). Các nơi gọi trong Java truyền principal.role() = MÃ CHUẨN
+        // (thu_kho/kho_tong) nên nhánh này trước đây KHÔNG BAO GIỜ chạy ⇒ người dùng kho thật bị
+        // đánh giá sai: hoặc chặn oan (thiếu user_project_scopes), hoặc lọt vào kho central qua
+        // module material_catalog. Nhận cả hai mã, đúng quy ước của RbacService.requireRole.
+        if (isWarehouseRole(role)) {
             String kind = clean(warehouseScopeKind);
             if (kind.isEmpty()) kind = DEFAULT_WAREHOUSE_SCOPE_KIND;
             if ("site".equals(kind) && !"site".equals(type)) return false;

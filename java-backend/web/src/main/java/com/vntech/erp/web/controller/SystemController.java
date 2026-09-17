@@ -1034,13 +1034,7 @@ public class SystemController {
                 }
                                 case "create_request" -> {
                     AuthUseCase.CurrentUser cu = requireCurrentUser(request);
-                    Map<String, Object> result = requestManagementUseCase.createRequest(
-                            new RequestManagementUseCase.Principal() {
-                                @Override public String userId() { return cu.id(); }
-                                @Override public String role() { return cu.role(); }
-                                @Override public String fullName() { return cu.fullName(); }
-                                @Override public String email() { return cu.email(); }
-                            }, payload);
+                    Map<String, Object> result = requestManagementUseCase.createRequest(asReqPrincipal(cu), payload);
                     Map<String, Object> resp = new LinkedHashMap<>();
                     resp.put("ok", true);
                     resp.putAll(result);
@@ -1048,13 +1042,7 @@ public class SystemController {
                 }
                 case "decide_approval" -> {
                     AuthUseCase.CurrentUser cu = requireCurrentUser(request);
-                    Map<String, Object> result = requestManagementUseCase.decideApproval(
-                            new RequestManagementUseCase.Principal() {
-                                @Override public String userId() { return cu.id(); }
-                                @Override public String role() { return cu.role(); }
-                                @Override public String fullName() { return cu.fullName(); }
-                                @Override public String email() { return cu.email(); }
-                            }, payload);
+                    Map<String, Object> result = requestManagementUseCase.decideApproval(asReqPrincipal(cu), payload);
                     Map<String, Object> resp = new LinkedHashMap<>();
                     resp.put("ok", true);
                     resp.putAll(result);

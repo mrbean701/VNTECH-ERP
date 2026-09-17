@@ -1,0 +1,78 @@
+#35 TASK-027: kiểm chứng sống bằng tài khoản thật - tìm và vá 2 lỗi P0
+
+PHƯƠNG PHÁP (an toàn, không ghi dữ liệu): tầng Java chỉ phục vụ action GHI, và mọi chốt
+quyền chạy TRƯỚC validate. Gọi action với payload RỖNG nên trả 403 khi bị chặn (không ghi gì)
+hoặc 400 khi được phép (validate chặn, cũng không ghi gì). Các action nguy hiểm
+(factory_reset_*, rebuild_department_permissions, bulk_import_*, install_license_foundation,
+retry_email, reorder_*) bị loại trừ tường minh.
+Công cụ: tools/probe-task027-live.mjs, chạy trên đường chạy thật của người dùng (:9000).
+
+KẾT QUẢ
+- Pha 0 (bảng vai trò, 10 tài khoản thật): 10/10 roleBase ĐÚNG mã engine.
+  Xác nhận ánh xạ nhiều-về-một trên dữ liệu sống: da_nv & da_truong -> project,
+  kh_nv & kh_truong -> procurement, ksda -> engineer, thu_kho -> warehouse,
+  cht -> commander, thuky -> director.
+- Pha 1 (chống hở): 39 action admin-only x 9 tài khoản thường = 351/351 -> 403, lọt 0.
+- Pha 2: 403 ở tầng VAI TRÒ = 0 (đây chính là lỗi P0).
+
+LỖI #1 (P0) - create_request / decide_approval hỏng với MỌI người dùng không phải admin
+  Bằng chứng trước khi vá:
+    ksda.demo / engineer.demo (engineer) và cha.ht (commander):
+      create_request -> 403 "Tài khoản không có quyền thực hiện nghiệp vụ này."
+  Thông điệp này của requireRole (tầng 2), nhưng danh sách vai trò là
+  [engineer, commander, admin] (RequestManagementUseCase.java:57) — CÓ engineer. Mâu thuẫn.
+  Nguyên nhân gốc: nhánh case tự dựng lớp vô danh Principal TẠI CHỖ thay vì dùng helper
+  asReqPrincipal(cu), và THIẾU override roleBase(). Mặc định roleBase() trả role() = MÃ CHUẨN
+  "ksda", không có trong danh sách -> 403. Hệ quả nghiệp vụ: CHỈ admin lập được phiếu đề nghị
+  mua vật tư, chặn đứng nghiệp vụ cốt lõi.
+  Vì sao các đợt vá trước bỏ sót: các bản vá cũ sửa các helper asXxxPrincipal, nhưng 2 nhánh
+  này KHÔNG dùng helper, nên phép quét tĩnh theo helper không bao giờ thấy chúng. Chỉ kiểm
+  chứng sống mới lộ ra.
+  Rà soát phạm vi: controller có 18 khối Principal vô danh, 12 khối thiếu roleBase(). Đã đối
+  chiếu từng khối với tập UseCase THẬT SỰ đọc roleBase() (AdminOpsManagement, OpsTaskManagement,
+  ProductionManagement, PurchaseManagement, RequestManagement, StockManagement): chỉ 2 khối của
+  RequestManagement là nguy hiểm; 10 khối còn lại thuộc UseCase không đọc roleBase() (hoặc chỉ
+  kiểm [admin], đã được controller chặn trước bằng requireRequireAdmin). Vậy không còn khối vô
+  danh nào khác gây lỗi - kết luận CÓ KIỂM CHỨNG, không suy đoán.
+  Bản vá: dùng lại helper sẵn có asReqPrincipal(cu) (đã cấp roleBase/fullName/email).
+  Xác nhận sau vá: 403 chuyển từ tầng 2 (vai trò) sang tầng 3 (phạm vi):
+    TRƯỚC: "Tài khoản không có quyền thực hiện nghiệp vụ này."   (tầng vai trò - SAI)
+    SAU  : "Tài khoản không được lập đơn cho dự án này."          (tầng phạm vi - ĐÚNG)
+  Đúng như thiết kế với payload rỗng (projectId trống); JS cũng từ chối trong cùng tình huống
+  (canAccessProject không tìm thấy dòng user_project_scopes nào cho project_id='').
+
+LỖI #2 (P0) - nhánh phạm vi KHO là MÃ CHẾT
+  AccessScopeService.java:77 so "warehouse".equals(role) với mã ENGINE, nhưng mọi nơi gọi đều
+  truyền principal.role() = MÃ CHUẨN (thu_kho / kho_tong), nên nhánh này KHÔNG BAO GIỜ chạy với
+  người dùng kho thật. JS dùng effectiveRole(user) nên chạy được (scripts/system-route.mjs:229).
+  Hệ quả hai chiều, đều sai:
+    - chặn oan: thu_kho có user_warehouse_scopes hợp lệ nhưng thiếu user_project_scopes
+      -> Java từ chối, JS cho phép;
+    - lọt quyền (nghiêm trọng hơn): thu_kho vào KHO CENTRAL qua module central_warehouse /
+      material_catalog, trong khi JS bắt buộc đúng nhánh warehouse + kiểm kind site/central +
+      bắt buộc có dòng user_warehouse_scopes.
+  Bản vá: isWarehouseRole(role) nhận CẢ mã engine lẫn mã chuẩn, đúng quy ước đã dùng ở
+  RbacService.requireRole, kèm chú thích dẫn nguồn JS.
+  Lưu ý: đã thử thêm roleBase() vào asAdminPrincipal và BIÊN DỊCH HỎNG -
+  AdminSystemUseCase.Principal KHÔNG khai báo roleBase() và UseCase này không đọc nó.
+  Đã hoàn nguyên: chỉ giữ thay đổi có bằng chứng.
+
+KIỂM CHỨNG
+  - verify-java-compile.ps1 -> compile SUCCEEDED: 102 source files, 0 error, 155 .class
+  - mvn -DskipTests package -> fat jar 90.884.012 bytes
+  - Java API khởi động lại bằng background job pwsh-48 (PID 16256); /actuator/health = 200
+  - probe-task027-live.mjs chạy lại: 403 tầng vai trò = 0, chặn đúng 351/351, lọt 0
+
+VIỆC TIẾP NỐI ĐÃ PHÂN LOẠI (KHÔNG suy đoán)
+  - TASK-029 (CHỜ người dùng): Java CHẶT HƠN JS trên 30 action.
+    tools/probe-action-module-parity.mjs (đã chuẩn hoá theo đúng ngữ nghĩa JS: thiếu trong
+    ACTION_MODULE = không kiểm; thiếu trong ACTION_CAPABILITY = mặc định canUse):
+    MODULE khớp 156/186, 30 lệch TẤT CẢ cùng chiều JS=[] -> Java=[module];
+    CAPABILITY khớp 185/186 (system_level_impact: JS canUse vs Java canView).
+    Người dùng mất quyền so với hành vi JS. Cần người dùng quyết định.
+  - TASK-030 (PENDING): 43 ca bị chặn ở tầng module. Chỉ 6/43 thuộc nhóm chặt hơn ở trên;
+    37 ca còn lại có bản đồ module GIỐNG JS nên JS cũng chặn, nghi THIẾU dòng
+    user_module_permissions (JS có replaceDepartmentDefaults tự cấp quyền mặc định theo phòng
+    ban khi lưu người dùng). Chưa kết luận khi chưa có bằng chứng dữ liệu.
+
+Tài liệu: docs/agent-progress/TASK-027.md, TASK_INDEX.md, MASTER_STATUS.md
