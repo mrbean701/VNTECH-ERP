@@ -107,7 +107,7 @@
 | `P-03` | Mua hàng | Lọc theo Trạng thái · Ngày · Phòng ban · Người tạo · NCC · Dự án | P2 | P-01 | - | - | FIX | - | TODO |
 | `P-04` | Phiếu | **Approval Timeline** trong chi tiết phiếu (§8.1) | P2 | U-06 | - | - | NEW | - | DONE |
 | `P-05` | Phiếu | **Tổng hợp giao nhận** → modal riêng (§8.2) | P2 | U-01 | - | - | NEW | - | DONE |
-| `P-06` | Phiếu | Hồ sơ vật tư đặc thù: ảnh/tệp xem được, không tràn khung (§8.3) | P2 | — | - | - | FIX | - | TODO |
+| `P-06` | Phiếu | Hồ sơ vật tư đặc thù: ảnh/tệp xem được, không tràn khung (§8.3) | P2 | — | - | - | FIX | - | DONE |
 | `P-07` | NCC | Tách **Nhà cung cấp / Đối tác** thành menu độc lập (§17) | P2 | S-07 | - | - | NEW | CHECK | TODO |
 | `P-08` | NCC | Liên kết Supplier ↔ MR/PR/PO ↔ Material | P3 | P-07 | - | - | NEW | - | TODO |
 | `P-09` | Mua hàng | Sửa **5 chỗ `requireRole` dùng mã vai trò cũ** ở `ProductionManagementUseCase` | P2 | S-07 | - | - | - | CHECK | TODO |

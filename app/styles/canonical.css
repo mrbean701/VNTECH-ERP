@@ -943,3 +943,16 @@ thead th {
   .edm-body { padding: var(--vt-space-3); }
   .edm-entity-id { display: none; }   /* màn hẹp: bỏ mã thực thể để tiêu đề không bị chèn */
 }
+
+/* TASK-075 (§8.3) — Ảnh / hồ sơ vật tư đặc thù: ẢNH XEM ĐƯỢC và KHÔNG TRÀN KHUNG.
+   - .attachment-photos: lưới ảnh xem trước, tự co theo bề rộng khung (auto-fill) nên không đẩy ngang.
+   - ảnh bị chặn cứng chiều cao + object-fit:cover ⇒ ảnh dọc/ngang/ảnh lớn đều nằm trong khung.
+   - tên tệp dài (không có dấu cách) được ngắt bằng overflow-wrap:anywhere ⇒ không tràn cột. */
+.attachment-photos{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(132px,1fr))!important;gap:9px!important;margin-bottom:9px!important}
+.attachment-photo{display:block!important;min-width:0!important;border:1px solid #e1e8f1!important;border-radius:10px!important;overflow:hidden!important;background:#f9fbfe!important;text-decoration:none!important}
+.attachment-photo img{display:block!important;width:100%!important;height:118px!important;object-fit:cover!important;background:#eef3f9!important}
+.attachment-photo span{display:block!important;max-width:100%!important;padding:6px 8px!important;font-size:11px!important;font-weight:600!important;color:#395679!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+.attachment-thumb{display:block!important;width:42px!important;height:42px!important;object-fit:cover!important;border:1px solid #e1e8f1!important;border-radius:7px!important;background:#eef3f9!important}
+.attachment-row>a{overflow:hidden!important}
+.attachment-row>a>div{min-width:0!important}
+.attachment-row>a>div>strong{display:block!important;max-width:100%!important;overflow-wrap:anywhere!important;word-break:break-word!important}
