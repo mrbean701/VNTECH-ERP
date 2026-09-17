@@ -14,10 +14,10 @@
 | Mục | Giá trị |
 |---|---|
 | CURRENT PHASE | PHASE 1 — hạ tầng UI dùng chung. Song song: hoàn thiện tầng phân quyền Java |
-| CURRENT TASK | **TASK-009** — U-09 đợt 6 (13 màn còn lại). *(Đính chính: `TASK-008` là "U-09 đợt 5 — 3 màn tab Quản trị", lượt "quét hồi quy" chỉ là bước còn lại của nó — đã hoàn thành ở #38)* |
-| LAST COMPLETED | **TASK-008 phần 2 (#38)** — quét hồi quy rộng: vá lỗi lint chặn cả chuỗi `npm test`, cổng ảnh ĐẠT 28/28 · 0 px, `test:regression` 61 test/58 PASS, 3 test đỏ đã **phân loại**; tìm ra **nguyên nhân gốc** rào cản cổng ảnh. Trước đó: TASK-030 (#36, #37) · TASK-027 (#35) · TASK-025 (#34) |
-| NEXT TASK | TASK-009 (U-09 đợt 6) → TASK-022b → MASTER TASK §2.1/2.2/2.3 → TASK-010…015 |
-| BLOCKED ITEMS | **TASK-031** (cây dự án trong menu bị tắt — chủ ý hay nhầm?) · **TASK-032** (0/16 vai trò trỏ đơn vị mặc định) · **TASK-029** (Java chặt hơn JS trên 30 action) · **TASK-024** (`isCompanyLeadership`) · **dữ liệu `user_module_permissions`** · **TASK-017** (bất định của cổng ảnh — nay đã rõ là ràng buộc môi trường) |
+| CURRENT TASK | **TASK-033** — MASTER TASK §8.1 (dải phê duyệt thiếu PHÒNG BAN); đang chờ dựng lại bundle để chứng minh render |
+| LAST COMPLETED | **TASK-008 phần 2 (#38)** — quét hồi quy rộng. Trước đó: TASK-030 (#36, #37) · TASK-027 (#35) · TASK-025 (#34) |
+| NEXT TASK | TASK-034 (gỡ chặn dựng bundle) → chứng minh TASK-033 render → TASK-009 (U-09 đợt 6) → §8.2/§8.3 |
+| BLOCKED ITEMS | **TASK-034 — `npm run build` KHÔNG dựng lại được UI** (dấu vân tay nguồn lệch, không có công cụ ghi lại) ⇒ mọi thay đổi UI không thể kiểm chứng lúc chạy và **bạn sẽ test thủ công trên bundle cũ** · **TASK-031** (cây dự án trong menu bị tắt) · **TASK-032** (0/16 vai trò trỏ đơn vị mặc định) · **TASK-029** (Java chặt hơn JS trên 30 action) · **TASK-024** (`isCompanyLeadership`) · **dữ liệu `user_module_permissions`** |
 | USER CONFIRMATION REQUIRED | **YES** — **5 câu hỏi**, ghi ở mục riêng bên dưới |
 | CURRENT BRANCH | `unity` |
 | LATEST COMMIT | `f2cd1bc` (#36) · **28 commit local CHƯA PUSH** (theo quyết định của người dùng) |

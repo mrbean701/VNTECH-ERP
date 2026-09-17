@@ -175,6 +175,36 @@ if (!m.found) {
   check("Đầu trang dính (sticky)", m.headSticky === "sticky", m.headSticky);
 }
 
+// 3b) §8.1 — KHỐI PHÊ DUYỆT phải có đủ: số bước · người duyệt · PHÒNG BAN · thời gian · trạng thái · ý kiến
+//
+// Phép kiểm bám ĐÚNG bản vá U-06: với MỌI bước đã có người duyệt quyết định, bước đó BẮT BUỘC phải
+// hiển thị "Phòng ban:" (suy từ approval.approverUserId -> data.staffDirectory[].department).
+// Kiểm theo TỪNG bước nên không phụ thuộc việc probe mở phiếu nào.
+console.log("\n▸ Khối phê duyệt (§8.1)");
+const appr = await ev(`(()=>{
+  const secs=[...document.querySelectorAll('.request-drawer.is-page .drawer-section')];
+  const s=secs.find((el)=>/Tiến trình phê duyệt/.test(el.innerText||''));
+  if(!s) return JSON.stringify({found:false});
+  const steps=[...s.querySelectorAll('.timeline > div')];
+  const missing=[]; let decided=0;
+  for(const st of steps){
+    const t=(st.innerText||'');
+    if(!/Đã duyệt:|Đã xử lý:/.test(t)) continue;
+    decided++;
+    if(!/Phòng ban:/.test(t)) missing.push(t.replace(/\\n/g,' | ').slice(0,120));
+  }
+  return JSON.stringify({found:true, steps:steps.length, decided, missing,
+    sample:(s.innerText||'').replace(/\\s+/g,' ').slice(0,240)});
+})()`);
+const ap = JSON.parse(appr);
+check("Tìm thấy khối 'Tiến trình phê duyệt'", ap.found === true, ap.found ? `${ap.steps} bước` : "không thấy");
+if (ap.found) {
+  check("Có ít nhất 1 bước phê duyệt", Number(ap.steps) > 0, `${ap.steps} bước`);
+  check(`Mọi bước ĐÃ có người duyệt đều hiển thị PHÒNG BAN (${ap.decided} bước đã quyết)`,
+    Number(ap.decided) > 0 && ap.missing.length === 0,
+    ap.missing.length ? "THIẾU ở: " + ap.missing.join(" // ") : ap.sample);
+}
+
 // 4) thu gọn / mở rộng khối
 console.log("\n▸ Thu gọn khối");
 const before = await ev(`(()=>{const s=document.querySelector('.request-drawer.is-page .drawer-section');return s?Math.round(s.getBoundingClientRect().height):null;})()`);

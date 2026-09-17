@@ -202,7 +202,15 @@ if (VNTECH_IDENTITY_DATA.trust.mode !== "development" || VNTECH_IDENTITY_DATA.tr
 
 const privateKeyPattern = /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/;
 const forbiddenKeyExtension = /\.(?:key|p12|pfx|jks|keystore)$/i;
-const ignoredDirectories = new Set(["node_modules", "dist", ".next", ".wrangler", ".sites-runtime"]);
+// `.local-data` là thư mục DỮ LIỆU RUNTIME do CHÍNH ỨNG DỤNG tạo khi chạy cục bộ, và ĐÃ bị gitignore
+// (`.gitignore:43` = `/.local-data/`; `git ls-files .local-data` trả về RỖNG ⇒ không tệp nào thuộc
+// kho mã). Ứng dụng tự sinh `.local-data/email-secret.key` để mã hoá cấu hình email.
+//
+// Bỏ qua thư mục này là BẮT BUỘC: nếu không, bước tiền kiểm nguồn CHẶN CỨNG `npm run build`
+// (đã xảy ra thật — xem docs/agent-progress/TASK-033.md), khiến giao diện KHÔNG BAO GIỜ được dựng lại
+// và mọi phép kiểm UI đều chạy trên bundle cũ. Bộ quét vẫn giữ nguyên mục đích: không có khoá bí mật
+// trong MÃ NGUỒN. Xoá tệp runtime cũng không phải giải pháp vì ứng dụng sẽ tạo lại ngay lần chạy sau.
+const ignoredDirectories = new Set(["node_modules", "dist", ".next", ".wrangler", ".sites-runtime", ".local-data"]);
 function walk(directory) {
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
     if (entry.isDirectory() && ignoredDirectories.has(entry.name)) continue;

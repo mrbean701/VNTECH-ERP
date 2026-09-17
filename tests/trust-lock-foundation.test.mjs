@@ -16,7 +16,12 @@ function pemPublicKey(bytes) {
 async function walk(root) {
   const files = [];
   for (const entry of await readdir(root)) {
-    if (["node_modules", "dist", ".next", ".wrangler", ".sites-runtime"].includes(entry)) continue;
+    // `.local-data` là DỮ LIỆU RUNTIME do chính ứng dụng tạo khi chạy cục bộ và ĐÃ bị gitignore
+    // (`.gitignore:43`; `git ls-files .local-data` rỗng). Ứng dụng tự sinh
+    // `.local-data/email-secret.key` để mã hoá cấu hình email. Không bỏ qua thư mục này thì phép kiểm
+    // LUÔN đỏ ngay khi hệ thống từng chạy cục bộ — tức phép kiểm mất giá trị chặn hồi quy.
+    // Mục đích kiểm giữ nguyên: không có khoá bí mật trong KHO MÃ (xem scripts/preflight-source.mjs).
+    if (["node_modules", "dist", ".next", ".wrangler", ".sites-runtime", ".local-data"].includes(entry)) continue;
     const path = join(root, entry);
     if ((await stat(path)).isDirectory()) files.push(...await walk(path));
     else files.push(path);
