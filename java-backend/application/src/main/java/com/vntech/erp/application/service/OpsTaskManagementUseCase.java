@@ -419,11 +419,28 @@ public final class OpsTaskManagementUseCase {
                 : "Đã ẩn bước khỏi luồng của các phiếu mới; lịch sử phiếu cũ vẫn giữ nguyên.");
     }
 
+    /**
+     * Port nguyên trạng JS `delete_approval_stage` — scripts/system-route.mjs:2200-2215.
+     *
+     * <p><b>SỬA LỖI (TASK-041 phần 2):</b> bản cũ chỉ {@code findApprovalStage} + XOÁ, <b>thiếu cả hai chốt</b>
+     * của JS ⇒ trên đường Java, quản trị viên có thể:
+     * <ul>
+     *   <li>xoá một bước <b>đã có lịch sử hồ sơ</b> (bước 1 hiện có 100 bản ghi `approvals`) ⇒ lịch sử duyệt
+     *       trỏ vào một bước không còn tồn tại;</li>
+     *   <li>xoá <b>bước hoạt động cuối cùng</b> ⇒ luồng duyệt không còn bước nào.</li>
+     * </ul>
+     * Hai chốt này bổ sung cho hai chốt đã port ở `set_approval_stage_status`.
+     */
     public Map<String, Object> deleteApprovalStage(Principal principal, Map<String, Object> payload) {
         String stageId = trim(payload.get("stageId"));
-        store.findApprovalStage(stageId).orElseThrow(() -> Api("Không tìm thấy bước duyệt."));
+        Map<String, Object> stage = store.findApprovalStage(stageId)
+                .orElseThrow(() -> Api("Không tìm thấy bước phê duyệt."));
+        if (store.countApprovalsByStageNo((int) Math.round(numberValue(stage.get("stage_no")))) > 0)
+            throw Api("Bước đã có lịch sử hồ sơ nên không được xóa. Hãy dùng Ẩn để ngừng áp dụng cho phiếu mới.");
+        if (store.countActiveStages() <= 1)
+            throw Api("Không thể xóa bước hoạt động cuối cùng.");
         store.deleteApprovalStageSafe(stageId);
-        return Map.of("message", "Đã xóa bước duyệt tùy chỉnh.");
+        return Map.of("message", "Đã xóa bước phê duyệt chưa từng sử dụng.");
     }
 
     // ============ P4: workflow đa luồng ============

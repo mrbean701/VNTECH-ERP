@@ -29,8 +29,8 @@
 * **Database**: MySQL 8.0.46; Flyway V1–V16 + drizzle tới `0108`; 121 bảng
 * **API**: 2 route (`app/api/system`, `app/api/files`); Java phục vụ **186 action**; JS tham chiếu 174 · Java **không thiếu action nào** · Java có **thêm 12**
 * **Tầng Java chỉ phục vụ action GHI** — action ĐỌC do SSR/RSC đảm nhiệm. Đây là lý do phép kiểm quyền sống phải dùng payload rỗng.
-* **Infrastructure**: MySQL **3306** · Java API **18081** (PID 34524, background job `pwsh-70`) · Node SSR **8787** · cutover proxy **9000** (người dùng mở `:9000`)
-* **JAR**: đã đóng gói lại **thành công** — `vntech-erp-web-0.1.0-SNAPSHOT.jar` **90.891.156 bytes** (17/09 16:01); **mọi sửa đổi backend ĐÃ có hiệu lực lúc chạy**
+* **Infrastructure**: MySQL **3306** · Java API **18081** (PID 9096, background job `pwsh-72`) · Node SSR **8787** · cutover proxy **9000** (người dùng mở `:9000`)
+* **JAR**: đã đóng gói lại **thành công** — `vntech-erp-web-0.1.0-SNAPSHOT.jar` **90.891.257 bytes** (17/09 16:10); **mọi sửa đổi backend ĐÃ có hiệu lực lúc chạy**
 * **TODO hiện tại**: xem mục CURRENT TODO cuối tệp
 
 ## Authentication
@@ -161,7 +161,7 @@ Mặc định của interface là `return role()` = **mã chuẩn** ⇒ thiếu 
 * [x] **`canonicalMeCode` gom về một nguồn** — #52: vá **7/28 đầu vào lệch** với JS; unit test **5/5** · domain **19/19**
 * [x] **TASK-041 · DONE (#57)** · `save_approval_stage` + `set_approval_stage_status` — bỏ yêu cầu `code` UI không gửi, ghi đủ **5 trường** (**SLA nay lưu thật**), port **3 quy tắc chặn**; probe **21/21** + chốt bước cuối **7/7**. Chi tiết: `docs/agent-progress/TASK-041.md` mục 6
 * [ ] **Rà tiếp 16 bảng lệch BẢN ĐỒ GHI** — cổng `tools/probe-write-map-drift.mjs`; đáng nghi: `material_subcategories` (`adjustment_note`/`review_status`/`scope_examples`), `project_archives.purge_audit_id`
-* [ ] `delete_approval_stage` (JS `:2200+`) **chưa rà** — cần đối chiếu riêng vì có thể chứa chốt tương tự như TASK-041
+* [x] **`delete_approval_stage` DONE (#58)** — phần 2 của TASK-041: Java cũ cho **xoá bước đã có 20 bản ghi lịch sử** và **xoá bước hoạt động cuối cùng**; nay port đủ **2 chốt** + thông điệp nguyên văn, probe **12/12**; cấu hình duyệt **nguyên trạng** (5 dòng khớp bản sao lưu ở mọi trường nghiệp vụ)
 * [!] **TASK-040 nhóm 6 · CHỜ QUYẾT ĐỊNH** — `vntech_license_*` lệch **cấu trúc** (câu hỏi #11)
 * [x] **Cổng mới**: `probe-java-sql-live.mjs` (lược đồ đang chạy) · `probe-schema-drift.mjs` (tệp migration ↔ DB: **0 lệch**) · `probe-increment-drift.mjs` (SET vs cộng dồn, **có đối chứng dương**) · `probe-action-coverage-controller.mjs` (UI ↔ nhánh `case`: **0 thiếu**) · `show-js-lines.mjs`
 * [!] **DỮ LIỆU MỒ CÔI** — `stock_issue_items` 3/5 dòng trỏ tới tổ đội không tồn tại (known issue #21) — **KHÔNG tự sửa dữ liệu**

@@ -1,6 +1,6 @@
 # TASK-041 — `save_approval_stage` / `set_approval_stage_status`: SAI CẢ HỢP ĐỒNG PAYLOAD LẪN 3 QUY TẮC NGHIỆP VỤ
 
-**Trạng thái:** CONFIRMED — đã xác định nguồn sự thật, **CHƯA sửa** (chờ lượt kế tiếp, không cần quyết định của người dùng)
+**Trạng thái:** **DONE** — đã sửa + kiểm chứng lúc chạy: phần 1 **21/21** · chốt bước cuối **7/7** · phần 2 (`delete_approval_stage`) **12/12**
 **Nguồn phát hiện:** công cụ mới `tools/probe-write-map-drift.mjs` (so bản đồ GHI JS ↔ Java)
 **Ngày:** 17/09/2026
 
@@ -219,3 +219,56 @@ rồi tự bật lại). **Mọi trường nghiệp vụ nguyên vẹn**; không
   ⇒ giữ nguyên cơ chế hiện có (thuộc nhóm quyết định TASK-029).
 * `delete_approval_stage` (JS `:2200+`) **chưa rà** trong lượt này — cần đối chiếu riêng vì có thể chứa chốt
   tương tự.
+
+---
+
+# 7. PHẦN 2 — `delete_approval_stage`: LỖ HỔNG XOÁ (ĐÃ SỬA)
+
+**Ngày:** 17/09/2026 · **Trạng thái:** **DONE** · jar **90.891.257 bytes** (16:10:32) · API PID **9096** ·
+log **0 ERROR** · regression **59/61**
+
+## 7.1 Lỗ hổng: Java cho xoá mà không có chốt nào
+
+JS `delete_approval_stage` (`system-route.mjs:2200-2215`) có **hai chốt**:
+
+```js
+const history = COUNT(*) FROM approvals WHERE stage=stage.stageNo;
+if (history > 0) throw "Bước đã có lịch sử hồ sơ nên không được xóa. Hãy dùng Ẩn để ngừng áp dụng cho phiếu mới.";
+const activeCount = COUNT(*) FROM approval_stage_catalog WHERE active=1;
+if (activeCount <= 1) throw "Không thể xóa bước hoạt động cuối cùng.";
+```
+
+Bản Java cũ chỉ `findApprovalStage` + xoá. Trên đường Java, quản trị viên có thể:
+
+* **xoá bước đã có lịch sử** — bước 1 hiện có **20 bản ghi `approvals`** (đo lúc chạy) ⇒ lịch sử duyệt trỏ vào
+  một bước **không còn tồn tại**;
+* **xoá bước hoạt động cuối cùng** ⇒ luồng duyệt **không còn bước nào**.
+
+Thông điệp thành công cũng lệch: Java *"Đã xóa bước duyệt tùy chỉnh."* vs JS *"Đã xóa bước phê duyệt chưa từng
+sử dụng."*
+
+## 7.2 Đã sửa
+
+`OpsTaskManagementUseCase.deleteApprovalStage` nay port đủ 2 chốt + thông điệp (dùng lại đúng 2 port method
+đã thêm ở phần 1: `countApprovalsByStageNo`, `countActiveStages`) ⇒ **không phải thêm phương thức nào mới**.
+
+## 7.3 Kiểm chứng — `tools/probe-task041-delete.mjs`: **12/12 ĐẠT, exit 0**
+
+| Phép kiểm | Kết quả |
+|---|---|
+| Xoá bước 1 (có **20** bản ghi lịch sử) | **400** nguyên văn *"Bước đã có lịch sử hồ sơ nên không được xóa…"*; bước 1 **vẫn còn** |
+| Xoá bước hoạt động **cuối cùng** | **400** nguyên văn *"Không thể xóa bước hoạt động cuối cùng."*; bước đó **vẫn còn** |
+| Xoá bước tạm chưa từng dùng | **200** nguyên văn *"Đã xóa bước phê duyệt chưa từng sử dụng."* |
+| Xoá bước không tồn tại | **400** *"Không tìm thấy bước phê duyệt."* |
+| Trạng thái cuối | `1:1,2:1,3:1,4:1,5:1` = trạng thái đầu; số bước 5 → 5 |
+
+**Đối chiếu dữ liệu:** so **từng trường nghiệp vụ** của cả 5 dòng với bản sao lưu ⇒ **giống hệt**; không còn
+bước tạm nào (901/902 đã dọn).
+
+## 7.4 LỖI CỦA CHÍNH TÔI (lần thứ hai trong TASK-041)
+
+Bản đầu của probe lấy **bước 5** làm "bước cuối cùng" để kiểm chốt — nhưng bước 5 **có 20 bản ghi lịch sử** nên
+**chốt lịch sử chặn trước** (đúng thứ tự JS) và chốt cuối **không tới lượt**. Kết quả 9/10 với 1 mục HỎNG.
+Đã sửa kịch bản: tạo **bước tạm 902 (chưa có lịch sử)**, tắt bước 1–5 để 902 thành bước hoạt động cuối, rồi
+mới gọi xoá ⇒ chốt cuối hiện ra đúng. **Bài học: khi một hàm có NHIỀU chốt theo thứ tự, phải dựng dữ liệu để
+chốt cần kiểm KHÔNG bị chốt trước đó che mất.**
