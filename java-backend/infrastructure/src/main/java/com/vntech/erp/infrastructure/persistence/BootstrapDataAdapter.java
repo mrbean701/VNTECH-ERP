@@ -646,11 +646,30 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
         // adminMaterials / adminMaterialCategories / adminMaterialSubcategories:
         // JS trả bản "admin" (gồm cả bản ghi ẩn). Khi không phải admin thì không có.
         if (admin) {
-            data.put("adminMaterials", query("""
-                    SELECT m.id,m.code,m.name,m.unit,`system`,m.standard_price AS standardPrice,
-                           m.category_id AS categoryId,m.subcategory_id AS subcategoryId,m.active,
-                           m.requires_mar AS requiresMar
-                    FROM materials m ORDER BY m.code"""));
+            // SỬA LỖI (TASK-040 nhóm 3b — lần thứ NĂM gặp dạng "đường ĐỌC thiếu trường"): truy vấn cũ chỉ trả
+            // 10 trường, THIẾU `specification`, `brand`, `minStock`, `requiresCocq` và cả mã/tên nhóm
+            // (`categoryCode`/`categoryName`/`subcategoryCode`/`subcategoryName`) so với JS
+            // `system-route.mjs:696`. Hệ quả: màn Quản trị danh mục vật tư hiển thị thiếu hãng/ĐVT/tồn tối thiểu
+            // dù DB có dữ liệu (đã kiểm chứng bằng MySQL: `brand='brand probe'`, `min_stock=7`).
+            // Nay khớp nguyên trạng JS: giữ cả bản ghi đã ẩn (KHÔNG lọc active), LEFT JOIN nhóm,
+            // sắp xếp theo active rồi thứ tự nhóm, và kèm danh sách alias như khối `materials`.
+            List<Map<String, Object>> adminMaterials = new ArrayList<>(query("""
+                    SELECT m.id,m.code,m.name,m.`system`,m.category_id AS categoryId,mc.code AS categoryCode,
+                           mc.name AS categoryName,m.subcategory_id AS subcategoryId,ms.code AS subcategoryCode,
+                           ms.name AS subcategoryName,m.specification,m.brand,m.unit,
+                           m.standard_price AS standardPrice,m.min_stock AS minStock,
+                           m.requires_cocq AS requiresCocq,m.requires_mar AS requiresMar,m.active
+                    FROM materials m
+                    LEFT JOIN material_categories mc ON mc.id=m.category_id
+                    LEFT JOIN material_subcategories ms ON ms.id=m.subcategory_id
+                    ORDER BY CASE WHEN m.active=1 THEN 0 ELSE 1 END,
+                             COALESCE(mc.sort_order,999),COALESCE(ms.sort_order,9999),m.code"""));
+            adminMaterials.forEach(m -> {
+                List<String> list = aliasesByMaterial.getOrDefault(String.valueOf(m.get("id")), List.of());
+                m.put("aliases", list);
+                m.put("aliasText", String.join("; ", list));
+            });
+            data.put("adminMaterials", adminMaterials);
             data.put("adminMaterialCategories", query("""
                     SELECT id,code,name,description,sort_order AS sortOrder,active
                     FROM material_categories ORDER BY sort_order,code"""));

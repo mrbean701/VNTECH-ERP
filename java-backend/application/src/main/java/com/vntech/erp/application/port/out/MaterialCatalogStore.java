@@ -24,6 +24,14 @@ public interface MaterialCatalogStore {
     Optional<Map<String, Object>> findCategory(String id);
     Optional<Map<String, Object>> findCategoryByCode(String code);
     List<Map<String, Object>> categories();
+    /**
+     * Đổi tên nhóm vật tư và BẬT lại ({@code active=1}) — đúng JS `scripts/system-route.mjs:2585`.
+     *
+     * <p><b>THÊM Ở TASK-040 nhóm 3b:</b> nhập danh mục vật tư phải tự cập nhật tên nhóm theo tệp, nhưng
+     * {@code updateCategory} ghi đè cả {@code code}/{@code description}/{@code sort_order} và không bật
+     * {@code active} ⇒ cần một câu lệnh đúng như JS thay vì lạm dụng hàm cũ.
+     */
+    void renameCategoryActive(String id, String name, Instant now);
     void insertCategory(String id, String code, String name, String description, String parentId,
                         int sortOrder, String createdBy, Instant now);
     void updateCategory(String id, String code, String name, String description, String parentId,
@@ -33,6 +41,11 @@ public interface MaterialCatalogStore {
     Optional<Map<String, Object>> findSubcategory(String id);
     Optional<Map<String, Object>> findSubcategoryByCode(String code, String categoryId);
     List<Map<String, Object>> subcategories();
+    /**
+     * Đổi tên nhóm con và BẬT lại ({@code active=1}) — đúng JS `scripts/system-route.mjs:2598`.
+     * Xem {@link #renameCategoryActive} để hiểu vì sao không dùng {@code updateSubcategory}.
+     */
+    void renameSubcategoryActive(String id, String name, Instant now);
     void insertSubcategory(String id, String categoryId, String code, String name, String description,
                            int sortOrder, String createdBy, Instant now);
     void updateSubcategory(String id, String categoryId, String code, String name, String description,

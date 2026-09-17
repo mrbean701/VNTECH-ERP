@@ -153,7 +153,29 @@ public class MaterialCatalogStoreAdapter implements MaterialCatalogStore {
     // ---- subcategories ----
     @Override public Optional<Map<String, Object>> findSubcategory(String id) { return first("SELECT * FROM material_subcategories WHERE id=?", id); }
     @Override public Optional<Map<String, Object>> findSubcategoryByCode(String code, String categoryId) { return first("SELECT * FROM material_subcategories WHERE code=? AND category_id=?", code, categoryId); }
-    @Override public List<Map<String, Object>> subcategories() { return jdbcTemplate.queryForList("SELECT * FROM material_subcategories ORDER BY sort_order,code"); }
+    /**
+     * SỬA (TASK-040 nhóm 3b): bản cũ dùng {@code SELECT *} nên khoá trả về là TÊN CỘT THẬT
+     * ({@code category_id}), không phải {@code categoryId} — và điều này khác nhau giữa MySQL và H2.
+     * Nay alias TƯỜNG MINH đúng như {@code RequestStoreAdapter:120} đang làm, để nơi dùng đọc được
+     * {@code categoryId} ở cả hai môi trường.
+     */
+    @Override public List<Map<String, Object>> subcategories() {
+        return jdbcTemplate.queryForList("""
+                SELECT id,category_id AS categoryId,code,name,description,sort_order AS sortOrder,active
+                FROM material_subcategories ORDER BY sort_order,code""");
+    }
+
+    /**
+     * Đổi tên nhóm vật tư — đúng câu lệnh JS `system-route.mjs:2585`
+     * ({@code UPDATE material_categories SET name=?,active=1,updated_at=? WHERE id=?}).
+     *
+     * <p>Không dùng {@link #updateCategory} vì hàm đó ghi ĐÈ cả {@code code}/{@code description}/{@code sort_order}
+     * và KHÔNG bật {@code active=1}; gọi nó ở đây sẽ làm mất dữ liệu cột khác.
+     */
+    @Override @Transactional
+    public void renameCategoryActive(String id, String name, Instant now) {
+        jdbcTemplate.update("UPDATE material_categories SET name=?,active=1,updated_at=? WHERE id=?", name, now, id);
+    }
 
     @Override @Transactional
     public void insertSubcategory(String id, String categoryId, String code, String name, String description,
@@ -170,6 +192,17 @@ public class MaterialCatalogStoreAdapter implements MaterialCatalogStore {
         jdbcTemplate.update("""
                 UPDATE material_subcategories SET category_id=?,code=?,name=?,description=?,sort_order=?,updated_at=?
                 WHERE id=?""", categoryId, code, name, description, sortOrder, now, id);
+    }
+
+    /**
+     * Đổi tên nhóm con — đúng câu lệnh JS `system-route.mjs:2598`
+     * ({@code UPDATE material_subcategories SET name=?,active=1,updated_at=? WHERE id=?}).
+     * Không dùng {@link #updateSubcategory} vì hàm đó ghi đè cả {@code category_id}/{@code code}/
+     * {@code description}/{@code sort_order} và KHÔNG bật {@code active=1}.
+     */
+    @Override @Transactional
+    public void renameSubcategoryActive(String id, String name, Instant now) {
+        jdbcTemplate.update("UPDATE material_subcategories SET name=?,active=1,updated_at=? WHERE id=?", name, now, id);
     }
 
     @Override @Transactional

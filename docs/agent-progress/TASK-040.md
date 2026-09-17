@@ -551,3 +551,93 @@ stock_issues đang trỏ tới 4 team khác nhau ⇒ 3 team không còn tồn t�
 `findIssueItem` dùng `JOIN teams` (giống y JS) nên các dòng mồ côi bị loại ⇒ `confirm_installation` trả
 *"Dòng xác nhận lắp đặt không hợp lệ."* **Mã đúng, dữ liệu sai.** Bảng `stock_issue_items` **không có khoá ngoại**
 (nên không có gì chặn tham chiếu mồ côi). ⇒ Ghi thành **known issue**, KHÔNG tự xoá/sửa dữ liệu.
+
+---
+
+# 21. NHÓM 3b PHẦN 2 — `import_material_catalog` (ĐÃ SỬA + ĐÃ KIỂM CHỨNG LÚC CHẠY 17/17)
+
+**Ngày:** 17/09/2026 · **Trạng thái:** DONE
+
+## 21.1 Lỗi: UI gửi `categoryCode`, Java đọc `categoryId`
+
+UI (`app/page.tsx:1909-1921` hàm `mapMaterialCatalogRows`) gửi mỗi dòng:
+
+```
+categoryCode, categoryName, subcategoryCode, subcategoryName,
+code, name, unit, specification, brand, standardPrice, minStock, requiresCocq, requiresMar
+```
+
+Bản Java cũ đọc `row.get("categoryId")` / `row.get("subcategoryId")` — **hai khoá UI KHÔNG BAO GIỜ GỬI**
+⇒ mọi vật tư nhập vào đều **MẤT NHÓM** (`category_id`/`subcategory_id` = NULL); và `system` lấy từ khoá
+`"system"` cũng không được gửi ⇒ **luôn rơi về `"KHAC"`**.
+
+JS (`system-route.mjs:2550-2606`) còn **tự tạo** nhóm/nhóm con từ mã trong tệp và cập nhật lại tên nhóm nếu khác.
+
+## 21.2 Đã port (đúng JS)
+
+| Việc | JS | Java sau khi sửa |
+|---|---|---|
+| Yêu cầu đầu vào | Mã + Tên + **ĐVT** | thêm kiểm `unit`, thông điệp *"Dòng N: cần đủ Mã vật tư, Tên vật tư và ĐVT."* |
+| Thông điệp rỗng | *"File danh mục vật tư không có dòng dữ liệu."* | nguyên văn |
+| Giới hạn | 5.000 dòng, *"Mỗi lần nhập tối đa 5.000 mã vật tư."* | nguyên văn |
+| Hệ M&E | `system = canonicalMeCode(category.code)` | dùng `MaterialSystemCodes` (**dùng chung**, xem #52) |
+| Nhóm mới | `sort_order=999`, mô tả `"Tạo từ file danh mục vật tư V5.0.0"` | nguyên trạng |
+| Nhóm con mới | `sort_order=999`; riêng `CHUA_PHAN_NHOM` là `9999` + mô tả `"Nhóm mặc định"` | nguyên trạng |
+| Đổi tên nhóm | `UPDATE … SET name=?,active=1,updated_at=? WHERE id=?` | 2 port method mới `renameCategoryActive`/`renameSubcategoryActive` |
+| Thông điệp | `Đã nhập/cập nhật N mã vật tư[; tạo mới X hệ M&E và Y nhóm con].` | nguyên trạng |
+
+**Vì sao thêm 2 port method mới thay vì dùng `updateCategory`/`updateSubcategory` có sẵn:** hai hàm cũ ghi
+**đè** cả `code`/`description`/`sort_order` và **không bật** `active=1`, trong khi JS chỉ đặt `name` + `active=1`.
+
+**Vì sao upsert vẫn đúng dù luôn sinh id mới:** JS dùng `ON CONFLICT(code)`; adapter dùng
+`ON DUPLICATE KEY UPDATE` trên bảng có `materials_code_uidx(code)` ⇒ khi mã đã tồn tại thì MySQL cập nhật
+**chính dòng cũ** (id mới bị bỏ qua) — đúng hành vi JS. Đã kiểm bằng probe: nhập lại cùng mã ⇒ **1 dòng**.
+
+## 21.3 LỖI ĐƯỜNG ĐỌC THỨ NĂM — `adminMaterials` thiếu 5 trường
+
+Probe báo 2 mục HỎNG (`brand`, `minStock` = `undefined`) **dù DB đã ghi đúng**
+(`brand='brand probe'`, `min_stock=7` — kiểm bằng MySQL). Truy nguyên: truy vấn `adminMaterials` của Java
+chỉ trả **10 trường**, thiếu `specification`, `brand`, `minStock`, `requiresCocq` và cả mã/tên nhóm
+(`categoryCode`/`categoryName`/`subcategoryCode`/`subcategoryName`) so với JS `system-route.mjs:696`.
+
+⇒ Màn Quản trị danh mục vật tư **hiển thị thiếu hãng / tồn tối thiểu / quy cách** dù dữ liệu có thật.
+Đã sửa khớp JS: LEFT JOIN nhóm, giữ cả bản ghi đã ẩn, sắp theo `active` rồi thứ tự nhóm, và kèm `aliases`.
+
+> Đây là **lần thứ năm** gặp dạng *"ghi được mà đọc không ra"* (trước: `scope_key='GLOBAL'`, khoá
+> `emailRecipients`, `source_type` của định mức, `settings_json`). **Mọi lần đều bị bắt bởi phép kiểm
+> "ghi xong ĐỌC LẠI", không lần nào bị bắt bởi "hết 500" hay "biên dịch sạch".**
+
+## 21.4 LỖI CỦA CHÍNH TÔI TRONG PROBE (lần thứ hai trong nhóm 3b)
+
+Bản đầu tôi đặt `categoryCode = "ZZPROBE040 DIEN LUC"` rồi kỳ vọng `system='DIEN'`. **Sai:**
+`canonicalMeCode` bỏ hết ký tự không phải chữ-số nên mã thành `ZZPROBE040DIENLUC`, **không** bắt đầu bằng
+`DIEN` ⇒ trả `KHAC` là **ĐÚNG** (JS cũng vậy). Đã đổi thành `DIENLUC-ZZPROBE040` để kiểm đúng **nhánh tiền tố**
+vừa vá ở #52 — và nó cho `DIEN` ✅.
+
+Ngoài ra một lệnh `mvn` của tôi chạy sai thư mục (workspace thay vì `java-backend`) ⇒ `no POM in this directory`;
+đã chạy lại đúng chỗ (jar **90.888.912 bytes**, 15:48:23).
+
+## 21.5 Kiểm chứng lúc chạy
+
+jar **90.888.912 bytes** · API PID **37180** · Flyway `validated 16 migrations` · log **0 ERROR** ·
+regression **59/61** (đúng 2 lỗi cũ TASK-031/TASK-032)
+
+| Phép kiểm | Kết quả |
+|---|---|
+| `node tools/probe-task040-nhom3b.mjs` | **17/17 ĐẠT — exit 0** |
+| DB thật sau khi nhập | `brand='brand probe'` · `min_stock=7` · `standard_price=0` · `requires_cocq=0` · `requires_mar=0` · `category_id`/`subcategory_id` **đã gán** |
+| Nhóm tự tạo | `DIENLUC-ZZPROBE040` · `sort_order=999` · `active=1` |
+| Nhóm con tự tạo | `ZZPROBE040_NHOMCON` · `sort_order=999` · `active=1` |
+| `system` | **`DIEN`** (nhánh tiền tố) |
+| Nhập lại cùng mã | **1 dòng**, không trùng; thông điệp **không** còn phần "tạo mới" |
+| 2 nhánh chặn | đúng **nguyên văn** thông điệp JS |
+| Dọn dẹp | `materials=14 · categories=6 · subcategories=8` — **nguyên trạng** |
+
+## 21.6 Ghi chú còn lại của nhóm 3b
+
+* JS có ghi `audit(...)` cho lần nhập này; bản Java **chưa** ghi audit (bản cũ cũng chưa) ⇒ ghi nhận là
+  khoảng trống, chưa bù vì cần thống nhất cơ chế audit cho cả nhóm action danh mục.
+* Phân quyền: JS `requireRole(user, ["admin"])`; Java để **cổng module** của `ActionRbacRegistry` quyết định
+  ⇒ **giữ nguyên cơ chế hiện có**, không tự đổi (thuộc nhóm quyết định TASK-029).
+* `existingIdByCode` trong use-case nay **không còn nơi dùng** (đã bỏ nhánh `exists`) — để lại chờ dọn cùng
+  các lần refactor sau, không xoá vội vì có thể còn đường gọi khác cần đối chiếu.

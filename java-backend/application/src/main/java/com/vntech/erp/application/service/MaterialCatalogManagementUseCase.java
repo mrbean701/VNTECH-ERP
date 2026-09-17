@@ -4,6 +4,7 @@ import com.vntech.erp.application.port.out.IdGenerator;
 import com.vntech.erp.application.port.out.MaterialCatalogStore;
 import com.vntech.erp.application.rbac.RbacService;
 import com.vntech.erp.domain.service.MaterialMatcherV2;
+import com.vntech.erp.domain.service.MaterialSystemCodes;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -359,40 +360,117 @@ public final class MaterialCatalogManagementUseCase {
     }
 
     // ============ import ============
+    /**
+     * Port nguyên trạng JS {@code import_material_catalog} — scripts/system-route.mjs:2550-2606.
+     *
+     * <p><b>SỬA LỖI (TASK-040 nhóm 3b):</b> UI ({@code app/page.tsx:1909-1921}) gửi mỗi dòng với các khoá
+     * {@code categoryCode}, {@code categoryName}, {@code subcategoryCode}, {@code subcategoryName},
+     * {@code code}, {@code name}, {@code unit}, {@code specification}, {@code brand}, {@code minStock}.
+     * Bản Java cũ lại đọc {@code row.get("categoryId")}/{@code row.get("subcategoryId")} — hai khoá UI
+     * <b>KHÔNG BAO GIỜ GỬI</b> ⇒ mọi vật tư nhập vào đều <b>MẤT NHÓM</b> ({@code category_id}/
+     * {@code subcategory_id} = NULL), và {@code system} lấy từ khoá {@code "system"} cũng không được gửi
+     * ⇒ luôn rơi về {@code "KHAC"}.
+     *
+     * <p>JS còn <b>tự tạo</b> nhóm/nhóm con từ mã trong tệp và cập nhật lại tên nhóm nếu khác. Nay port đủ:
+     * <ul>
+     *   <li>{@code system = canonicalMeCode(category.code)} — helper dùng chung ở tầng domain (đã có unit test)</li>
+     *   <li>nhóm mới: {@code sort_order=999}, mô tả {@code "Tạo từ file danh mục vật tư V5.0.0"}</li>
+     *   <li>nhóm con mới: {@code sort_order=999}, riêng {@code CHUA_PHAN_NHOM} là {@code 9999} và mô tả
+     *       {@code "Nhóm mặc định"}</li>
+     *   <li>yêu cầu đủ <b>Mã + Tên + ĐVT</b> với thông điệp riêng của JS</li>
+     * </ul>
+     */
     public Map<String, Object> importMaterialCatalog(Principal principal, Map<String, Object> payload) {
         List<?> rows = payload.get("rows") instanceof List<?> l ? l : List.of();
-        if (rows.isEmpty()) throw Api("File không có dữ liệu vật tư.");
-        if (rows.size() > 5000) throw Api("Mỗi lần nhập tối đa 5.000 dòng.");
+        if (rows.isEmpty()) throw Api("File danh mục vật tư không có dòng dữ liệu.");
+        if (rows.size() > 5000) throw Api("Mỗi lần nhập tối đa 5.000 mã vật tư.");
+
+        // Danh mục hiện có — có thể đã bị NULL ở tên/code nên tra bằng chuỗi đã trim + upper như JS.
+        Map<String, Map<String, Object>> categoryByCode = new LinkedHashMap<>();
+        for (Map<String, Object> c : store.categories()) {
+            categoryByCode.put(sv(c, "code").trim().toUpperCase(Locale.ROOT), c);
+        }
+        Map<String, Map<String, Object>> subcategoryByKey = new LinkedHashMap<>();
+        for (Map<String, Object> s : store.subcategories()) {
+            subcategoryByKey.put(sv(s, "categoryId") + ":" + sv(s, "code").trim().toUpperCase(Locale.ROOT), s);
+        }
+
         List<Map<String, Object>> prepared = new ArrayList<>();
-        int updated = 0, created = 0;
+        int createdCategories = 0;
+        int createdSubcategories = 0;
         Instant now = Instant.now();
         for (int i = 0; i < rows.size(); i++) {
             Map<String, Object> row = asMap(rows.get(i));
             int rowNo = i + 1;
             String code = trim(row.get("code")).toUpperCase(Locale.ROOT);
             String name = trim(row.get("name"));
-            if (code.isEmpty() || name.isEmpty()) throw Api("Dòng " + rowNo + ": thiếu mã hoặc tên vật tư.");
-            boolean exists = store.materialExistsByCodeCaseInsensitive(code);
+            String unit = trim(row.get("unit"));
+            // JS: `if (!code || !name || !unit) throw ... Dòng N: cần đủ Mã vật tư, Tên vật tư và ĐVT.`
+            if (code.isEmpty() || name.isEmpty() || unit.isEmpty())
+                throw Api("Dòng " + rowNo + ": cần đủ Mã vật tư, Tên vật tư và ĐVT.");
+            String categoryCode = blankDefault(trim(row.get("categoryCode")).toUpperCase(Locale.ROOT), "KHAC");
+            String categoryName = blankDefault(trim(row.get("categoryName")), categoryCode);
+            String subcategoryName = blankDefault(trim(row.get("subcategoryName")), "Chưa phân nhóm");
+            String subcategoryCode = blankDefault(trim(row.get("subcategoryCode")).toUpperCase(Locale.ROOT),
+                    MaterialSystemCodes.internalGroupCode(subcategoryName));
+
+            Map<String, Object> category = categoryByCode.get(categoryCode);
+            if (category == null) {
+                String categoryId = idGenerator.next("CAT");
+                category = new LinkedHashMap<>();
+                category.put("id", categoryId);
+                category.put("code", categoryCode);
+                category.put("name", categoryName);
+                categoryByCode.put(categoryCode, category);
+                createdCategories++;
+                store.insertCategory(categoryId, categoryCode, categoryName,
+                        "Tạo từ file danh mục vật tư V5.0.0", null, 999, principal.userId(), now);
+            } else if (!categoryName.isEmpty() && !categoryName.equals(sv(category, "name"))) {
+                category.put("name", categoryName);
+                store.renameCategoryActive(sv(category, "id"), categoryName, now);
+            }
+
+            String categoryId = sv(category, "id");
+            String subKey = categoryId + ":" + subcategoryCode;
+            Map<String, Object> subcategory = subcategoryByKey.get(subKey);
+            if (subcategory == null) {
+                String subcategoryId = idGenerator.next("SUB");
+                boolean ungrouped = "CHUA_PHAN_NHOM".equals(subcategoryCode);
+                subcategory = new LinkedHashMap<>();
+                subcategory.put("id", subcategoryId);
+                subcategory.put("categoryId", categoryId);
+                subcategory.put("code", subcategoryCode);
+                subcategory.put("name", subcategoryName);
+                subcategoryByKey.put(subKey, subcategory);
+                createdSubcategories++;
+                store.insertSubcategory(subcategoryId, categoryId, subcategoryCode, subcategoryName,
+                        ungrouped ? "Nhóm mặc định" : "Tạo từ file danh mục vật tư V5.0.0",
+                        ungrouped ? 9999 : 999, principal.userId(), now);
+            } else if (!subcategoryName.isEmpty() && !subcategoryName.equals(sv(subcategory, "name"))) {
+                subcategory.put("name", subcategoryName);
+                store.renameSubcategoryActive(sv(subcategory, "id"), subcategoryName, now);
+            }
+
             Map<String, Object> m = new LinkedHashMap<>();
-            m.put("id", exists ? existingIdByCode(code) : idGenerator.next("MAT"));
+            m.put("id", idGenerator.next("MAT"));
             m.put("code", code);
             m.put("name", name);
+            m.put("system", MaterialSystemCodes.canonicalMeCode(categoryCode));
+            m.put("categoryId", categoryId);
+            m.put("subcategoryId", sv(subcategory, "id"));
             m.put("specification", nvl(row.get("specification")));
-            m.put("unit", nvl(row.get("unit")));
-            m.put("system", blankDefault(trim(row.get("system")), "KHAC").toUpperCase(Locale.ROOT));
-            m.put("categoryId", nvl(row.get("categoryId")));
-            m.put("subcategoryId", nvl(row.get("subcategoryId")));
-            // SỬA LỖI (TASK-040 nhóm 3): bản cũ chuẩn bị các khoá `standardPrice`/`requiresMar`/`isComponent`
-            // để ghi vào `materials` — nhưng `is_component` KHÔNG tồn tại trong bảng đó ⇒ 500. JS
-            // (scripts/system-route.mjs:2600) ghi standard_price=0, requires_mar=0, requires_cocq=0 và lấy
-            // `min_stock` từ dòng nhập, `brand` từ dòng nhập ⇒ đổi sang đúng tập khoá JS.
             m.put("brand", nvl(row.get("brand")));
+            m.put("unit", unit);
             m.put("minStock", Math.max(0, numberValue(row.get("minStock"))));
             prepared.add(m);
-            if (exists) updated++; else created++;
         }
         store.importMaterialsBulk(prepared, now);
-        return Map.of("message", "Đã nhập " + rows.size() + " dòng: " + created + " mới, " + updated + " cập nhật.");
+
+        List<String> extra = new ArrayList<>();
+        if (createdCategories > 0) extra.add(createdCategories + " hệ M&E");
+        if (createdSubcategories > 0) extra.add(createdSubcategories + " nhóm con");
+        String suffix = extra.isEmpty() ? "" : "; tạo mới " + String.join(" và ", extra);
+        return Map.of("message", "Đã nhập/cập nhật " + rows.size() + " mã vật tư" + suffix + ".");
     }
 
     private String existingIdByCode(String code) {
