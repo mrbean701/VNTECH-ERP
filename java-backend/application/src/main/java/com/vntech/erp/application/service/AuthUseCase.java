@@ -207,9 +207,26 @@ public final class AuthUseCase {
     public Optional<CurrentUser> currentUser(String rawToken, Instant now) {
         if (rawToken == null || rawToken.isBlank()) return Optional.empty();
         return sessionStore.findActiveUserByValidToken(sha256Hex(rawToken), now)
-                .map(u -> new CurrentUser(u.id(), u.fullName(), u.username(), u.email(), u.role(),
-                        u.role() /* roleBase — refine qua role_catalog ở slice phân quyền */,
-                        u.role() /* roleName */, null, u.department(), u.avatarUrl(), u.mustChangePassword()));
+                .map(u -> {
+                    // Port nguyên trạng JS: roleBase/roleName/warehouseScopeKind lấy từ role_catalog
+                    // theo COALESCE(rc.<cột>,u.role); không có dòng role_catalog thì rơi về mã vai trò.
+                    UserRepository.RoleCatalogInfo info =
+                            userRepository.findRoleCatalogInfo(u.role()).orElse(null);
+                    String roleBase = firstNonBlank(info == null ? null : info.baseRole(), u.role());
+                    String roleName = firstNonBlank(info == null ? null : info.name(), u.role());
+                    String scopeKind = blankToNull(info == null ? null : info.warehouseScopeKind());
+                    return new CurrentUser(u.id(), u.fullName(), u.username(), u.email(), u.role(),
+                            roleBase, roleName, scopeKind, u.department(), u.avatarUrl(),
+                            u.mustChangePassword());
+                });
+    }
+
+    private static String firstNonBlank(String value, String fallback) {
+        return value == null || value.isBlank() ? fallback : value;
+    }
+
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value;
     }
 
     private SessionToken createSession(String userId, Instant now, String ipAddress, String userAgent) {

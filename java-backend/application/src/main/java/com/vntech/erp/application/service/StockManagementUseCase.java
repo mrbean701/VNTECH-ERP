@@ -35,7 +35,7 @@ public final class StockManagementUseCase {
     }
 
     public Map<String, Object> issueStock(Principal principal, Map<String, Object> payload) {
-        rbac.requireRole(principalAsCurrent(principal), List.of("thu_kho", "cht", "admin"));
+        rbac.requireRole(principalAsCurrent(principal), List.of("warehouse", "commander", "admin"));
         String projectId = trim(payload.get("projectId"));
         String fromWarehouseId = trim(payload.get("fromWarehouseId"));
         String teamId = trim(payload.get("teamId"));
@@ -139,7 +139,7 @@ public final class StockManagementUseCase {
     // ---- helpers ----
     /** return_stock — tổ đội hoàn trả kho dự án; Contract ownership bảo toàn. */
     public Map<String, Object> returnStock(Principal principal, Map<String, Object> payload) {
-        rbac.requireRole(principalAsCurrent(principal), List.of("thu_kho", "team", "admin"));
+        rbac.requireRole(principalAsCurrent(principal), List.of("warehouse", "team", "admin"));
         String projectId = trim(payload.get("projectId"));
         String teamId = trim(payload.get("teamId"));
         String toWarehouseId = trim(payload.get("toWarehouseId"));
@@ -203,7 +203,7 @@ public final class StockManagementUseCase {
 
     /** confirm_installation — tổ đội xác nhận đã lắp; giảm tồn Contract + movement INSTALL. */
     public Map<String, Object> confirmInstallation(Principal principal, Map<String, Object> payload) {
-        rbac.requireRole(principalAsCurrent(principal), List.of("team", "thu_kho", "cht", "admin"));
+        rbac.requireRole(principalAsCurrent(principal), List.of("team", "warehouse", "commander", "admin"));
         String issueItemId = trim(payload.get("issueItemId"));
         double quantity = numberValue(payload.get("quantity"));
         Map<String, Object> item = store.findIssueItem(issueItemId)
@@ -600,7 +600,7 @@ public final class StockManagementUseCase {
     // ============ Phase 6 còn lại ============
     /** reconcile_contract_stock — đối soát tồn vật lý vs tồn Contract theo từng vật tư. */
     public Map<String, Object> reconcileContractStock(Principal principal, Map<String, Object> payload) {
-        rbac.requireRole(principalAsCurrent(principal), List.of("thu_kho", "cht", "admin"));
+        rbac.requireRole(principalAsCurrent(principal), List.of("warehouse", "commander", "admin"));
         String projectId = trim(payload.get("projectId"));
         String warehouseId = trim(payload.get("warehouseId"));
         if (projectId.isEmpty() || warehouseId.isEmpty())
@@ -627,7 +627,7 @@ public final class StockManagementUseCase {
 
     /** transfer_contract_ownership — chuyển ownership vật tư 1 kho giữa 2 Contract. */
     public Map<String, Object> transferContractOwnership(Principal principal, Map<String, Object> payload) {
-        rbac.requireRole(principalAsCurrent(principal), List.of("cht", "da_nv", "admin"));
+        rbac.requireRole(principalAsCurrent(principal), List.of("commander", "project", "admin"));
         String projectId = trim(payload.get("projectId"));
         String warehouseId = trim(payload.get("warehouseId"));
         String materialId = trim(payload.get("materialId"));
@@ -691,7 +691,7 @@ public final class StockManagementUseCase {
 
     /** reverse_stock_movement — đảo giao dịch kho có lý do; chặn đảo giao dịch đã đảo. */
     public Map<String, Object> reverseStockMovement(Principal principal, Map<String, Object> payload) {
-        rbac.requireRole(principalAsCurrent(principal), List.of("thu_kho", "cht", "admin"));
+        rbac.requireRole(principalAsCurrent(principal), List.of("warehouse", "commander", "admin"));
         String movementId = trim(payload.get("movementId"));
         String reason = trim(payload.get("reason"));
         if (reason.isEmpty()) throw Api("Đảo giao dịch phải có lý do.");

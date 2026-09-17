@@ -46,6 +46,10 @@ class AuthUseCaseTest {
         }
         @Override public Optional<User> findById(String id) { return Optional.ofNullable(byId.get(id)); }
         @Override public User save(User user) { byId.put(user.id(), user); byUsername.put(user.username(), user); return user; }
+        @Override public Optional<RoleCatalogInfo> findRoleCatalogInfo(String roleCode) {
+            // Test double: không có bảng role_catalog nên base_role = chính mã vai trò.
+            return Optional.of(new RoleCatalogInfo(roleCode, roleCode, null));
+        }
     }
 
     private static final class InMemorySessionStore implements SessionStore {

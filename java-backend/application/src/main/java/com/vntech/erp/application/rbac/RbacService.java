@@ -65,9 +65,19 @@ public final class RbacService {
                 "Tài khoản chưa được quản trị viên cấp đúng quyền cho thao tác này.", 403);
     }
 
-    /** requireRole(user, ["admin"]) — ném ApiError(403) nếu không đúng vai trò. */
+    /**
+     * requireRole(user, roles) — port nguyên trạng JS {@code requireRole(user, roles)}:
+     * JS so với {@code effectiveRole(user) = clean(user.roleBase || user.role)}, tức mã ENGINE
+     * (base_role trong role_catalog), không phải mã vai trò chuẩn.
+     *
+     * <p>Vì mã chuẩn ánh xạ NHIỀU-VỀ-MỘT sang base_role (cht→commander, da_nv &amp; da_truong→project,
+     * kh_nv &amp; kh_truong→procurement, thu_kho &amp; kho_tong→warehouse, ksda→engineer, thuky→director)
+     * nên phải nhận CẢ HAI: mã vai trò của chính tài khoản VÀ mã engine. Nếu chỉ so mã chuẩn thì mọi
+     * chức danh cùng nhóm (da_truong, kh_truong, kho_tong, thuky...) và vai trò do quản trị viên tạo
+     * thêm đều bị 403 oan, trong khi JS cho phép.
+     */
     public void requireRole(AuthUseCase.CurrentUser user, java.util.Collection<String> roles) {
-        if (!roles.contains(user.role()) && !isAdmin(user)) {
+        if (!roles.contains(user.role()) && !roles.contains(user.roleBase()) && !isAdmin(user)) {
             throw new AuthUseCase.ApiError("Tài khoản không có quyền thực hiện nghiệp vụ này.", 403);
         }
     }

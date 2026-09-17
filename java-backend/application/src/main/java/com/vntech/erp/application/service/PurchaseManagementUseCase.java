@@ -41,7 +41,7 @@ public final class PurchaseManagementUseCase {
     public Map<String, Object> createPo(Principal principal, Map<String, Object> payload) {
         // SỬA LỖI VAI TRÒ: "procurement" bị canonicalRoleCode đổi thành "kh_nv" khi ghi vào DB
         // ⇒ mã cũ không bao giờ tồn tại ⇒ create_po bị khoá chết thành admin-only.
-        rbac.requireRole(principalAsCurrent(principal), List.of("kh_nv", "admin"));
+        rbac.requireRole(principalAsCurrent(principal), List.of("procurement", "admin"));
         String requestId = trim(payload.get("requestId"));
         String warehouseId = trim(payload.get("warehouseId"));
         String defaultEta = trim(payload.get("eta"));
@@ -180,7 +180,7 @@ public final class PurchaseManagementUseCase {
 
     /** close_po_line — đóng thiếu 1 dòng PO + shortage rollup lên MR/PO. */
     public Map<String, Object> closePoLine(Principal principal, Map<String, Object> payload) {
-        rbac.requireRole(principalAsCurrent(principal), List.of("kh_nv", "da_nv", "admin"));
+        rbac.requireRole(principalAsCurrent(principal), List.of("procurement", "project", "admin"));
         String poItemId = trim(payload.get("purchaseOrderItemId"));
         String reason = trim(payload.get("reason"));
         if (reason.isEmpty()) throw Api("Đóng thiếu phải có lý do được phê duyệt.");
@@ -201,7 +201,7 @@ public final class PurchaseManagementUseCase {
 
     /** receive_goods — ghi nhận giao hàng, chưa posting (chờ BCH xác nhận). */
     public Map<String, Object> receiveGoods(Principal principal, Map<String, Object> payload) {
-        rbac.requireRole(principalAsCurrent(principal), List.of("thu_kho", "admin"));
+        rbac.requireRole(principalAsCurrent(principal), List.of("warehouse", "admin"));
         String poId = trim(payload.get("purchaseOrderId"));
         List<?> rawLines = payload.get("lines") instanceof List<?> l ? l : List.of();
         Map<String, Object> po = store.findPoForReceiving(poId)
@@ -288,7 +288,7 @@ public final class PurchaseManagementUseCase {
 
     /** confirm_delivery — BCH xác nhận; posting nhập kho + contract ledger nếu QC accepted. */
     public Map<String, Object> confirmDelivery(Principal principal, Map<String, Object> payload) {
-        rbac.requireRole(principalAsCurrent(principal), List.of("cht", "da_nv", "admin"));
+        rbac.requireRole(principalAsCurrent(principal), List.of("commander", "project", "admin"));
         String receiptId = trim(payload.get("receiptId"));
         Map<String, Object> receipt = store.findReceiptInfo(receiptId)
                 .orElseThrow(() -> Api("Chuyến giao không tồn tại hoặc đã được BCH xác nhận."));

@@ -44,7 +44,7 @@ public final class RequestManagementUseCase {
         // SỬA LỖI VAI TRÒ: canonicalRoleCode LUÔN đổi "engineer"→"ksda" và "commander"→"cht" khi
         // ghi vào DB, nên hai mã cũ không bao giờ tồn tại ⇒ phép kiểm này khoá chết thành
         // admin-only, không ai lập được phiếu đề nghị mua. Dùng mã vai trò THẬT trong DB.
-        rbac.requireRole(principalAsCurrent(principal), List.of("ksda", "cht", "admin"));
+        rbac.requireRole(principalAsCurrent(principal), List.of("engineer", "commander", "admin"));
         String projectId = trim(payload.get("projectId"));
         String neededAt = trim(payload.get("neededAt"));
         String area = trim(payload.get("area"));
@@ -361,7 +361,7 @@ public final class RequestManagementUseCase {
         if (reason.isEmpty()) throw Api("Phải nhập lý do hủy phiếu.");
         Map<String, Object> mr = store.findRequestBasic(requestId)
                 .orElseThrow(() -> Api("Không tìm thấy phiếu đề nghị."));
-        if (!List.of("commander", "admin").contains(principal.role()))
+        if (!"commander".equals(cancelBaseRole(principal)) && !"admin".equals(principal.role()))
             throw Api("Chỉ Chỉ huy trưởng được hủy phiếu bị trả lại.");
         if (!"returned_to_requester".equals(sv(mr, "status")))
             throw Api("Chỉ phiếu đã bị trả lại và đang chờ CHT xử lý mới được hủy/xóa.");
@@ -498,6 +498,17 @@ public final class RequestManagementUseCase {
     }
 
     // ---- helpers ----
+
+    /**
+     * Mã ENGINE (role_catalog.base_role) của tài khoản — tương đương {@code effectiveRole(user)} trong JS.
+     * Mã chuẩn ánh xạ nhiều-về-một sang base_role (cht→commander, da_nv &amp; da_truong→project,
+     * kh_nv &amp; kh_truong→procurement, thu_kho &amp; kho_tong→warehouse, ksda→engineer, thuky→director),
+     * nên mọi so sánh vai trò kiểu JS phải dùng giá trị này. Không có dòng role_catalog thì rơi về mã vai trò.
+     */
+    private String cancelBaseRole(Principal principal) {
+        String baseRole = sv(store.findUserRoleInfo(principal.userId()).orElse(Map.of()), "baseRole");
+        return baseRole.isEmpty() ? principal.role() : baseRole;
+    }
     private void checkRequiredHeader(Map<String, Object> payload, String neededAt) {
         List<Map<String, Object>> cfgRows = store.formFieldRows("request_header");
         Map<String, Boolean> byKey = new LinkedHashMap<>();

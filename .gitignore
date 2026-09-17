@@ -56,6 +56,9 @@ next-env.d.ts
 java-backend/**/target/
 *.log
 
+# Thư mục tạm của tools/verify-java-compile.ps1 (fat JAR đã giải nén + .class biên dịch) — không phải mã nguồn
+/_javac-verify/
+
 
 # Thu muc artifact cua bo cong cu thi giac (khong phai ma nguon)
 /.dsh-vision-toolkit/
