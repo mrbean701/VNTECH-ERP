@@ -7,7 +7,7 @@
 * Master Task: MASTER TASK — ERP/MIS SYSTEM AUDIT, REFACTOR & FEATURE UPGRADE (46 mục)
 * Overall status: **IN PROGRESS** — PHASE 1 chưa xong
 * Current phase: PHASE 1 — HẠ TẦNG UI DÙNG CHUNG. Song song: hoàn thiện tầng phân quyền phía Java (P0/P1)
-* Current task: **TASK-023 (IN PROGRESS)** — kiểm PHẠM VI dự án/kho. Đã nối **47/64** action (**KHO, MUA HÀNG, SẢN LƯỢNG, BOQ đã phủ hết**); **còn 17** (Finance 7, OpsTask 3, ProjectContract 3, Request 2, AdminOps 1, AdminSystem 1)
+* Current task: **TASK-023 (IN PROGRESS)** — kiểm PHẠM VI dự án/kho. Đã nối **54/64** action (**KHO, MUA HÀNG, SẢN LƯỢNG, BOQ, TÀI CHÍNH đã phủ hết**); **còn 10** (OpsTask 3, ProjectContract 3, Request 2, AdminOps 1, AdminSystem 1)
 * Last completed task: TASK-022 + TASK-021b (#23) — thắt 5 cổng vai trò và sửa hồi quy đường ống `roleBase`. Trước đó: TASK-021 (#22) · TASK-020 (#21)
 * Next task: TASK-023 lô 2 — nối phạm vi cho `StockManagementUseCase` (13 action có kiểm cả kho)
 * Blocked task: **KHÔNG CÒN BLOCKER CỨNG.** TASK-B01/B02/B03 đều đã gỡ chặn ngày 18/09/2026. Lưu ý vận hành: cổng ảnh và các probe cần `spawn mysql`/Edge headless phải chạy với sandbox mở rộng (xem `docs/29`)

@@ -156,8 +156,9 @@ public class ApplicationBeansConfig {
     public FinanceManagementUseCase financeManagementUseCase(FinanceStore financeStore,
                                                              ProductionStore productionStore,
                                                              IdGenerator idGenerator,
-                                                             RbacService rbacService) {
-        return new FinanceManagementUseCase(financeStore, productionStore, idGenerator, rbacService);
+                                                             RbacService rbacService,
+                                                             AccessScopeService accessScopeService) {
+        return new FinanceManagementUseCase(financeStore, productionStore, idGenerator, rbacService, accessScopeService);
     }
 
     @Bean

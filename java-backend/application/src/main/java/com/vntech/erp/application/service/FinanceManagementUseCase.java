@@ -3,6 +3,7 @@ package com.vntech.erp.application.service;
 import com.vntech.erp.application.port.out.FinanceStore;
 import com.vntech.erp.application.port.out.IdGenerator;
 import com.vntech.erp.application.port.out.ProductionStore;
+import com.vntech.erp.application.rbac.AccessScopeService;
 import com.vntech.erp.application.rbac.RbacService;
 
 import java.time.Instant;
@@ -19,13 +20,15 @@ public final class FinanceManagementUseCase {
     private final ProductionStore productionStore;
     private final IdGenerator idGenerator;
     private final RbacService rbac;
+    private final AccessScopeService accessScope;
 
     public FinanceManagementUseCase(FinanceStore store, ProductionStore productionStore,
-                                    IdGenerator idGenerator, RbacService rbac) {
+                                    IdGenerator idGenerator, RbacService rbac, AccessScopeService accessScope) {
         this.store = store;
         this.productionStore = productionStore;
         this.idGenerator = idGenerator;
         this.rbac = rbac;
+        this.accessScope = accessScope;
     }
 
     public interface Principal {
@@ -36,6 +39,9 @@ public final class FinanceManagementUseCase {
     // ============ payment plans ============
     public Map<String, Object> savePaymentPlan(Principal principal, Map<String, Object> payload) {
         String projectId = trim(payload.get("projectId"));
+        // JS 1947.
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), projectId, true,
+                "Không có quyền cập nhật kế hoạch tại dự án này.");
         String planId = trim(payload.get("planId"));
         String contractId = nvl(payload.get("contractId"));
         String poId = nvl(payload.get("poId"));
@@ -72,6 +78,9 @@ public final class FinanceManagementUseCase {
         double paidAmount = strictNonNegative(payload.get("paidAmount"), "Số tiền đã thanh toán");
         Map<String, Object> old = store.findPaymentPlan(planId)
                 .orElseThrow(() -> Api("Không tìm thấy kế hoạch thanh toán."));
+        // JS 1952.
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), sv(old, "project_id"), true,
+                "Không có quyền tại dự án này.");
         if (paidAmount > num(old.get("planned_amount")) + 1e-9)
             throw Api("Số tiền đã thanh toán không được vượt kế hoạch.");
         store.setPaymentPlanStatus(planId, status, paidAmount, Instant.now());
@@ -82,6 +91,9 @@ public final class FinanceManagementUseCase {
         String planId = trim(payload.get("planId"));
         Map<String, Object> old = store.findPaymentPlan(planId)
                 .orElseThrow(() -> Api("Không tìm thấy kế hoạch thanh toán."));
+        // JS 1955.
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), sv(old, "project_id"), true,
+                "Không có quyền tại dự án này.");
         if (num(old.get("paid_amount")) > 0)
             throw Api("Kế hoạch đã phát sinh thanh toán nên không được xóa; hãy đóng kế hoạch.");
         store.deletePaymentPlan(planId);
@@ -92,6 +104,9 @@ public final class FinanceManagementUseCase {
     public Map<String, Object> saveAdvanceRequest(Principal principal, Map<String, Object> payload) {
         String requestId = trim(payload.get("requestId"));
         String projectId = nvl(payload.get("projectId"));
+        // JS 1959. projectId rỗng ⇒ canAccessProject trả false ⇒ 403, đúng như JS.
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), projectId, true,
+                "Không có quyền tại dự án này.");
         String requesterId = trim(payload.get("requesterId"));
         double amount = strictNonNegative(payload.get("amount"), "Số tiền tạm ứng");
         String purpose = trim(payload.get("purpose"));
@@ -150,6 +165,9 @@ public final class FinanceManagementUseCase {
     public Map<String, Object> saveSiteExpenseClaim(Principal principal, Map<String, Object> payload) {
         String claimId = trim(payload.get("claimId"));
         String projectId = trim(payload.get("projectId"));
+        // JS 1971.
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), projectId, true,
+                "Không có quyền tại dự án này.");
         String costType = trim(payload.get("costType"));
         double amount = strictNonNegative(payload.get("amount"), "Số chi phí");
         String paidBy = nvl(payload.get("paidBy"));
@@ -191,6 +209,9 @@ public final class FinanceManagementUseCase {
         String claimId = trim(payload.get("claimId"));
         Map<String, Object> old = store.findSiteExpenseClaim(claimId)
                 .orElseThrow(() -> Api("Không tìm thấy chi phí."));
+        // JS 1976.
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), sv(old, "project_id"), true,
+                "Không có quyền tại dự án này.");
         if ("approved".equals(sv(old, "status"))) throw Api("Chi phí đã duyệt.");
         store.approveSiteExpenseClaim(claimId, principal.userId(), Instant.now());
         return Map.of("message", "Đã duyệt chi phí hiện trường.");
@@ -200,6 +221,9 @@ public final class FinanceManagementUseCase {
         String claimId = trim(payload.get("claimId"));
         Map<String, Object> old = store.findSiteExpenseClaim(claimId)
                 .orElseThrow(() -> Api("Không tìm thấy chi phí."));
+        // JS 1979.
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), sv(old, "project_id"), true,
+                "Không có quyền tại dự án này.");
         if ("approved".equals(sv(old, "status")) && !"admin".equals(principal.role()))
             throw Api("Chi phí đã duyệt; chỉ Quản trị được xóa.");
         store.deleteSiteExpenseClaim(claimId);

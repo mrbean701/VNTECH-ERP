@@ -218,8 +218,6 @@ public final class OpsTaskManagementUseCase {
     public Map<String, Object> createProjectTeam(Principal principal, Map<String, Object> payload) {
         // JS 1484: requireRole(user,["commander","admin"]) — TASK-022 bổ sung.
         rbac.requireRole(principalAsCurrent(principal), List.of("commander", "admin"));
-        // JS 1484: requireRole(user,["commander","admin"]) — TASK-022 bổ sung.
-        rbac.requireRole(principalAsCurrent(principal), List.of("commander", "admin"));
         String projectId = trim(payload.get("projectId"));
         String code = trim(payload.get("code")).toUpperCase(Locale.ROOT);
         String name = trim(payload.get("name"));
@@ -491,8 +489,6 @@ public final class OpsTaskManagementUseCase {
 
     // ============ MAR ============
     public Map<String, Object> saveMarApproval(Principal principal, Map<String, Object> payload) {
-        // JS 1253: requireRole(user,["project","procurement","admin"]) — TASK-022 bổ sung.
-        rbac.requireRole(principalAsCurrent(principal), List.of("project", "procurement", "admin"));
         // JS 1253: requireRole(user,["project","procurement","admin"]) — TASK-022 bổ sung.
         rbac.requireRole(principalAsCurrent(principal), List.of("project", "procurement", "admin"));
         String projectId = trim(payload.get("projectId"));

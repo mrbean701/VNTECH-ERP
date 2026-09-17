@@ -111,8 +111,6 @@ public final class AdminOpsManagementUseCase {
     public Map<String, Object> previewRequestImport(Principal principal, Map<String, Object> payload) {
         // JS 861: requireRole(user,["engineer","commander","admin"]) — TASK-022 bổ sung.
         rbac.requireRole(principalAsCurrent(principal), List.of("engineer", "commander", "admin"));
-        // JS 861: requireRole(user,["engineer","commander","admin"]) — TASK-022 bổ sung.
-        rbac.requireRole(principalAsCurrent(principal), List.of("engineer", "commander", "admin"));
         String projectId = trim(payload.get("projectId"));
         List<?> rawLines = payload.get("lines") instanceof List<?> l ? l : List.of();
         if (projectId.isEmpty() || rawLines.isEmpty())

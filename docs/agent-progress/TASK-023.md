@@ -267,6 +267,43 @@ Từ lô này, script vá **kiểm số lần xuất hiện của neo TRƯỚC k
 (`NEO KHONG DUY NHAT`). Đây chính là lớp phòng ngừa cho lỗi đã xảy ra ở lô 5. Nhờ vậy lô 6 phát hiện được
 2 phép neo sai (Boq chưa có `RbacService`) mà **không ghi tệp** — tránh trạng thái nửa vời.
 
+## LÔ 7 — FinanceManagementUseCase (7 action)
+
+Tất cả chỉ kiểm **phạm vi DỰ ÁN**. Bảng đối chiếu:
+
+| Action | Nguồn giá trị |
+|---|---|
+| `save_payment_plan` | `projectId` (payload) |
+| `set_payment_plan_status`, `delete_payment_plan` | `old.project_id` (DB) |
+| `save_advance_request` | `projectId` — JS dùng `nvl`, **rỗng ⇒ 403**, giữ nguyên hành vi |
+| `save_site_expense_claim` | `projectId` (payload) |
+| `approve_site_expense_claim`, `delete_site_expense_claim` | `old.project_id` (DB) |
+
+### Lỗi thứ tư của công cụ vá — do script TASK-022 gây ra, đã gỡ xong
+
+Đọc lại code để viết lô 7 thì phát hiện các dòng `rbac.requireRole(...)` bị **nhân đôi** ở
+`OpsTaskManagementUseCase` (2 chỗ), `StockManagementUseCase` (2 chỗ), `AdminOpsManagementUseCase` (1 chỗ) —
+kèm cả chú thích bị lặp.
+
+**Nguyên nhân:** script `patch-task021b-022.mjs` kiểm "đã áp dụng chưa" bằng `includes(edit.from)`, mà
+`edit.from` là **dòng chữ ký phương thức** — dòng này **vẫn còn** sau khi chèn nội dung ngay sau nó.
+Vì script được chạy hai lần (lần đầu hỏng vì CRLF ở các phép khác), lần thứ hai đã **chèn lần nữa**.
+
+**Tác hại:** không sai nghiệp vụ (cùng một phép kiểm chạy hai lần) nhưng là mã bẩn, và chứng tỏ phép kiểm
+idempotency là **sai nguyên tắc**: với phép "chèn sau một dòng neo", không thể dùng chính dòng neo làm dấu
+hiệu đã-áp-dụng.
+
+**Đã xử lý:** `tools/cleanup-duplicate-requirerole.mjs` gỡ 5 khối lặp và **quét lại toàn bộ `java-backend`
+để khẳng định không còn khối lặp nào** (exit 0).
+
+**Bài học (bổ sung vào danh sách):** phép vá "chèn sau neo" phải kiểm idempotency bằng **nội dung được chèn**
+(không phải neo), hoặc chèn vào **vị trí tuyệt đối** đã tính trước.
+
+### Quy trình build/khởi động lại đã được chuẩn hoá
+
+Sau TASK-B03, mỗi lần đổi mã Java phải theo `docs/29`: dừng **đúng PID** trên cổng 18081 → `mvn -DskipTests package`
+→ kiểm jar béo ≈ 90 MB → khởi động lại → kiểm `/actuator/health` = UP. Đã áp dụng đúng quy trình này cho lô 7.
+
 ## LÔ 2 — StockManagementUseCase (4 action)
 
 Đã thêm đường ống `warehouseScopeKind` (nhánh kho của `canAccessWarehouse` cần giá trị này):

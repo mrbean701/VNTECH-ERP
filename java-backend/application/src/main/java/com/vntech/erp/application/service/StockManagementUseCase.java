@@ -612,8 +612,6 @@ public final class StockManagementUseCase {
     public Map<String, Object> createStockCount(Principal principal, Map<String, Object> payload) {
         // JS 1523: requireRole(user,["warehouse","commander","admin"]) — TASK-022 bổ sung.
         rbac.requireRole(principalAsCurrent(principal), List.of("warehouse", "commander", "admin"));
-        // JS 1523: requireRole(user,["warehouse","commander","admin"]) — TASK-022 bổ sung.
-        rbac.requireRole(principalAsCurrent(principal), List.of("warehouse", "commander", "admin"));
         String projectId = trim(payload.get("projectId"));
         String warehouseId = trim(payload.get("warehouseId"));
         List<?> rawLines = payload.get("lines") instanceof List<?> l ? l : List.of();
@@ -656,8 +654,6 @@ public final class StockManagementUseCase {
 
     /** approve_stock_count — duyệt; ghi sổ adjustment ADJ theo variance. */
     public Map<String, Object> approveStockCount(Principal principal, Map<String, Object> payload) {
-        // JS 1550: requireRole(user,["commander","project","admin"]) — TASK-022 bổ sung.
-        rbac.requireRole(principalAsCurrent(principal), List.of("commander", "project", "admin"));
         // JS 1550: requireRole(user,["commander","project","admin"]) — TASK-022 bổ sung.
         rbac.requireRole(principalAsCurrent(principal), List.of("commander", "project", "admin"));
         String countId = trim(payload.get("countId"));
