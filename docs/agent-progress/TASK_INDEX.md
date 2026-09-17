@@ -12,7 +12,7 @@ Trạng thái hợp lệ: `PENDING` · `IN PROGRESS` · `DONE` · `BLOCKED` · `
 | TASK-005 | U-09 đợt 2 — Màn Phân quyền người dùng + nâng ngưỡng cổng ảnh có bằng chứng | DONE | `426763c` (#13) | 16/09/2026 | docs/27 mục 7–9 |
 | TASK-006 | U-09 đợt 3 — WorkCenter · TeamManagement · ProjectManagement | DONE | `44c0a5e` (#14) | 17/09/2026 | docs/27 mục 10–11 |
 | TASK-007 | U-09 đợt 4 — Danh sách nhân sự + Danh bạ nội bộ + probe chặt hơn + cổng chống lỗi giả + phát hiện roadmap báo quá | DONE | `9148212` (#15) | 17/09/2026 | docs/26 mục 10; docs/27 mục 12–13 |
-| TASK-008 | U-09 đợt 5 — 3 màn tab Quản trị (UserPermissionMatrix · SystemLevelManager · AuditLogManager) | IN PROGRESS | — | 17/09/2026 | 3 màn KHÔNG có trong bộ ảnh chuẩn |
+| TASK-008 | U-09 đợt 5 — 3 màn tab Quản trị (UserPermissionMatrix · SystemLevelManager · AuditLogManager) | IN PROGRESS | `96c3aa8` (#16, PARTIAL) | 17/09/2026 | Code + probe riêng 11/11 ĐẠT; **còn thiếu lượt quét hồi quy rộng** vì cổng ảnh/probe cần mở rộng sandbox |
 | TASK-009 | U-09 đợt 6 — 13 màn còn lại | PENDING | — | — | Xem docs/25 |
 | TASK-010 | U-14 — ÁP DỤNG EntityDetailModal | PENDING | — | — | Dùng thật 0 lần |
 | TASK-011 | U-15 — ÁP DỤNG DataTable + StatusBadge | PENDING | — | — | 100 bảng + 100 rỗng; StatusBadge 2/88 |
@@ -20,6 +20,7 @@ Trạng thái hợp lệ: `PENDING` · `IN PROGRESS` · `DONE` · `BLOCKED` · `
 | TASK-013 | U-17 — ÁP DỤNG Approval/ActivityTimeline | PENDING | — | — | 3 dải tự viết |
 | TASK-014 | U-11 — Tách `page.tsx` thành module | PENDING | — | — | 4.140 dòng / 221 hàm |
 | TASK-015 | U-12 — Loại `!important` + gộp selector trùng | PENDING | — | — | Phụ thuộc U-11 |
-| TASK-016 | U-13 — Tách `TaskTable` khỏi thân render | PENDING | — | — | 3 lỗi eslint có sẵn |
+| TASK-016 | U-13 — Tách `TaskTable` khỏi thân render WorkCenter | DONE | #17 (cùng lượt) | 17/09/2026 | eslint 3 lỗi → **0** lỗi; làm trước TASK-009…015 vì kiểm được bằng kiểm tra tĩnh |
 | TASK-017 | Điều tra còn mở — nguyên nhân gốc bất định của cổng ảnh | PENDING | — | — | Đã khoanh vùng ô tìm kiếm topbar |
+| TASK-B02 | **Cổng ảnh + bộ probe KHÔNG chạy được** — cần mở rộng sandbox để khởi động Edge headless (named pipe) | BLOCKED | — | 17/09/2026 | Yêu cầu mở rộng quyền đã bị huỷ; chặn phần hồi quy quét rộng của TASK-008 và mọi việc UI tiếp theo |
 | TASK-B01 | Xác nhận tên màn Receiving từ menu | BLOCKED | — | 17/09/2026 | Cần người dùng; KHÔNG chặn tiến độ |

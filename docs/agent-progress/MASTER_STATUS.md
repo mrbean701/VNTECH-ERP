@@ -7,12 +7,12 @@
 * Master Task: MASTER TASK — ERP/MIS SYSTEM AUDIT, REFACTOR & FEATURE UPGRADE (46 mục)
 * Overall status: **IN PROGRESS** — PHASE 1 chưa xong
 * Current phase: PHASE 1 — HẠ TẦNG UI DÙNG CHUNG (chiếm phần lớn khối lượng còn lại)
-* Current task: TASK-008 — U-09 đợt 5 (3 màn trong tab Quản trị)
-* Last completed task: TASK-007 — U-09 đợt 4 (commit `9148212`)
+* Current task: TASK-009 — U-09 đợt 6 (13 màn còn lại); nếu chưa có quyền mở rộng sandbox thì chọn việc kiểm được bằng kiểm tra tĩnh
+* Last completed task: TASK-016 — U-13 tách `TaskTable` ra cấp module (commit #17 cùng lượt); TASK-008 đang ở trạng thái PARTIAL: `96c3aa8`
 * Next task: TASK-009 — U-09 đợt 6 (13 màn còn lại)
 * Blocked task: TASK-B01 — tên màn Receiving (chờ người dùng; **KHÔNG chặn tiến độ**)
-* User confirmation required: **YES** — 1 việc duy nhất: tên hiển thị màn `Receiving` (GIAO NHẬN) lấy từ menu
-* Last updated: 2026-09-17
+* User confirmation required: **YES** — 2 việc: (1) tên hiển thị màn `Receiving` (GIAO NHẬN) lấy từ menu; (2) **cho phép mở rộng sandbox** để chạy cổng ảnh + bộ probe (TASK-B02) — việc (2) đang chặn phần hồi quy của mọi thay đổi giao diện
+* Last updated: 2026-09-17 (sau TASK-016)
 
 ## System State
 
@@ -24,7 +24,8 @@
 * **Authorization**: 3 lớp — `admin` → tất cả; `isCompanyLeadership` = {director, accountant} → tất cả trừ admin; còn lại cần `user_module_permissions.can_<cap>=1`; kèm quy tắc P5.3 (không cấp quyền vượt phòng ban)
 * **Workflow**: `WF-MUAHANG` 5 bước tuần tự, mỗi bước cần 1 người duyệt; điều kiện hợp lệ = được gán HOẶC role nằm trong `allowed_role_codes`
 * **Infrastructure/server**: MySQL **3306** · Java API **18081** · Node SSR **8787** · cutover proxy **9000** (người dùng mở :9000)
-* **Tests**: 13 probe hồi quy + cổng ảnh 28 ảnh (7 màn × 4 kích thước) + `tsc` + eslint
+* **Tests**: 14 probe hồi quy + cổng ảnh 28 ảnh (7 màn × 4 kích thước) + `tsc` + eslint
+* **HẠN CHẾ HIỆN TẠI**: cổng ảnh và các probe KHÔNG chạy được vì cần mở rộng sandbox để khởi động Edge headless (named pipe); yêu cầu mở rộng quyền đã bị huỷ (xem TASK-B02)
 
 ## Important Decisions
 
@@ -43,11 +44,14 @@
 3. **`/api/files` chưa được bảo vệ** (S-05) — người dùng yêu cầu tạm bỏ qua phần bảo mật.
 4. **5 lỗi mã vai trò còn lại** trong `ProductionManagementUseCase` (dòng 186/205/228/243/267) — cố ý không sửa vì ngoài phạm vi mua hàng.
 5. **`team_members` = 0 dòng** ⇒ màn Tổ đội trống; **`approval_stage_decisions` = 0 dòng** (mã chết).
-6. **3 lỗi eslint có sẵn** `react-hooks/static-components` tại `page.tsx:774` (`TaskTable` trong thân render `WorkCenter`) → U-13.
+6. ~~3 lỗi eslint có sẵn `react-hooks/static-components`~~ **ĐÃ SỬA ở TASK-016 (U-13)**: `TaskTable` nay ở cấp module; eslint **0 lỗi** (74 cảnh báo).
+7. **Cổng ảnh + probe không chạy được** (TASK-B02) — cần mở rộng sandbox cho Edge headless; đây là rào cản lớn nhất cho mọi việc UI tiếp theo.
+8. **`ACTION_CATALOG.json` lệch ~50 action** so với 224 nhánh `case` trong SystemController — việc backend, kiểm được bằng script nên CÓ THỂ làm trong lúc chờ quyền.
 
 ## Current TODO
 
-* [ ] TASK-008 · U-09 đợt 5 — 3 màn tab Quản trị (code xong, đang build + xác minh)
+* [~] TASK-008 · U-09 đợt 5 — code xong, probe riêng 11/11 ĐẠT, đã commit `96c3aa8` (PARTIAL); còn lượt quét hồi quy rộng (chờ quyền)
+* [ ] TASK-018 (MỚI) · Đồng bộ `ACTION_CATALOG.json` với 224 action thật trong SystemController — việc backend, **kiểm được không cần trình duyệt**
 * [ ] TASK-009 · U-09 đợt 6 — 13 màn còn lại
 * [ ] TASK-010 · U-14 — ÁP DỤNG EntityDetailModal (dùng thật 0; còn 4 chỗ .overlay)
 * [ ] TASK-011 · U-15 — ÁP DỤNG DataTable + StatusBadge (100 bảng + 100 trạng thái rỗng; StatusBadge 2/88)
@@ -55,7 +59,7 @@
 * [ ] TASK-013 · U-17 — ÁP DỤNG Approval/ActivityTimeline (0 lần; còn 3 dải tự viết)
 * [ ] TASK-014 · U-11 — Tách `page.tsx` (4.140 dòng / 221 hàm) thành module theo màn hình
 * [ ] TASK-015 · U-12 — Loại `!important` + gộp selector trùng lặp CSS
-* [ ] TASK-016 · U-13 — Tách `TaskTable` ra khỏi thân render `WorkCenter`
+* [x] TASK-016 · U-13 — Tách `TaskTable` ra khỏi thân render `WorkCenter` (eslint 3 lỗi → 0 lỗi)
 * [ ] TASK-017 · Điều tra còn mở — nguyên nhân gốc hiện tượng bất định của cổng ảnh
 * [!] TASK-B01 — CHỜ XÁC NHẬN: tên màn Receiving (không tự đặt chữ; không chặn tiến độ)
 

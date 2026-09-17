@@ -741,6 +741,36 @@ function isTaskLate(row: Row): boolean {
   return d !== null && d > 0;
 }
 
+// U-13 — TaskTable khai báo ở CẤP MODULE (trước đây nằm trong thân render của WorkCenter).
+// Khai báo trong thân render tạo component MỚI mỗi lần render ⇒ state bên trong bị reset, và eslint
+// báo react-hooks/static-components. Nay nhận đủ dữ liệu qua props thay vì đóng kín vào WorkCenter:
+//   rows · allowEdit · projCode · busy · send
+function TaskTable({ rows, allowEdit, projCode, busy, send }: { rows: Row[]; allowEdit: boolean; projCode: (id: unknown) => string; busy: boolean; send: (name: string, payload: Row) => Promise<void> }) {
+  return <div className="table-wrap"><table className="baseline-table">
+    <thead><tr>
+      <th>Mã việc</th><th>Nội dung</th><th>Người làm</th><th>Dự án</th><th>Hạn</th>
+      <th>Ưu tiên</th><th>Tiến độ</th><th>Trạng thái</th>{allowEdit && <th>Thao tác</th>}
+    </tr></thead>
+    <tbody>
+      {rows.map((r) => <tr key={String(r.id)} className={isTaskLate(r) ? "row-late" : ""}>
+        <td><strong className="code">{r.taskNo}</strong></td>
+        <td>{r.title}<small>{r.requiredOutput || r.workGroup || ""}</small></td>
+        <td>{r.assigneeName || "—"}</td>
+        <td>{projCode(r.projectId)}</td>
+        <td>{r.dueAt ? date(r.dueAt) : "—"}{isTaskLate(r) && <small className="red-text">Quá hạn</small>}</td>
+        <td>{r.priority === "urgent" ? "Khẩn" : r.priority === "high" ? "Cao" : "Thường"}</td>
+        <td><div className="task-bar"><span><i style={{ width: `${Number(r.progress || 0)}%` }} /></span><b>{Number(r.progress || 0)}%</b></div></td>
+        <td><Pill value={WORK_STATUS_LABELS[String(r.status)] || String(r.status || "—")}/></td>
+        {allowEdit && <td><div className="row-actions">
+          {[25, 50, 75, 100].map((p) => <button key={p} type="button" className="export-mini" disabled={busy || Number(r.progress || 0) >= p} onClick={() => void send("update_work_item_progress", { workItemId: r.id, progress: p })}>{p}%</button>)}
+          {String(r.status) !== "COMPLETED" && <button type="button" className="export-mini" disabled={busy} onClick={() => void send("update_work_item_status", { workItemId: r.id, status: "COMPLETED" })}>Xong</button>}
+        </div></td>}
+      </tr>)}
+      {!rows.length && <tr><td colSpan={allowEdit ? 9 : 8}><Empty text="Chưa có nhiệm vụ nào."/></td></tr>}
+    </tbody>
+  </table></div>;
+}
+
 function WorkCenter({ data, action, refresh }: { data: AppData; action: (name: string, payload: Row) => Promise<boolean>; refresh: () => void }) {
   const [tab, setTab] = useState(0);
   const [q, setQ] = useState("");
@@ -771,31 +801,6 @@ function WorkCenter({ data, action, refresh }: { data: AppData; action: (name: s
   }
   const projCode = (id: unknown) => (data.projects || []).find((p) => String(p.id) === String(id))?.code || "—";
 
-  function TaskTable({ rows, allowEdit }: { rows: Row[]; allowEdit: boolean }) {
-    return <div className="table-wrap"><table className="baseline-table">
-      <thead><tr>
-        <th>Mã việc</th><th>Nội dung</th><th>Người làm</th><th>Dự án</th><th>Hạn</th>
-        <th>Ưu tiên</th><th>Tiến độ</th><th>Trạng thái</th>{allowEdit && <th>Thao tác</th>}
-      </tr></thead>
-      <tbody>
-        {rows.map((r) => <tr key={String(r.id)} className={isTaskLate(r) ? "row-late" : ""}>
-          <td><strong className="code">{r.taskNo}</strong></td>
-          <td>{r.title}<small>{r.requiredOutput || r.workGroup || ""}</small></td>
-          <td>{r.assigneeName || "—"}</td>
-          <td>{projCode(r.projectId)}</td>
-          <td>{r.dueAt ? date(r.dueAt) : "—"}{isTaskLate(r) && <small className="red-text">Quá hạn</small>}</td>
-          <td>{r.priority === "urgent" ? "Khẩn" : r.priority === "high" ? "Cao" : "Thường"}</td>
-          <td><div className="task-bar"><span><i style={{ width: `${Number(r.progress || 0)}%` }} /></span><b>{Number(r.progress || 0)}%</b></div></td>
-          <td><Pill value={WORK_STATUS_LABELS[String(r.status)] || String(r.status || "—")}/></td>
-          {allowEdit && <td><div className="row-actions">
-            {[25, 50, 75, 100].map((p) => <button key={p} type="button" className="export-mini" disabled={busy || Number(r.progress || 0) >= p} onClick={() => void send("update_work_item_progress", { workItemId: r.id, progress: p })}>{p}%</button>)}
-            {String(r.status) !== "COMPLETED" && <button type="button" className="export-mini" disabled={busy} onClick={() => void send("update_work_item_status", { workItemId: r.id, status: "COMPLETED" })}>Xong</button>}
-          </div></td>}
-        </tr>)}
-        {!rows.length && <tr><td colSpan={allowEdit ? 9 : 8}><Empty text="Chưa có nhiệm vụ nào."/></td></tr>}
-      </tbody>
-    </table></div>;
-  }
 
   const TABS = [`Việc của tôi (${mine.length})`, `Phòng ban / tổ đội (${deptWork.length + teamWork.length})`, "KPI & báo cáo"];
 
@@ -835,7 +840,7 @@ function WorkCenter({ data, action, refresh }: { data: AppData; action: (name: s
       </section>}
       <section className="card">
         <CardHead title="Danh sách việc của tôi" note="Cập nhật tiến độ và đánh dấu hoàn thành ngay tại đây"/>
-        <TaskTable rows={find(mine)} allowEdit/>
+        <TaskTable rows={find(mine)} allowEdit projCode={projCode} busy={busy} send={send}/>
       </section>
     </div>}
 
@@ -860,11 +865,11 @@ function WorkCenter({ data, action, refresh }: { data: AppData; action: (name: s
       </section>}
       <section className="card">
         <CardHead title="Việc phòng ban của tôi" note="Nhiệm vụ thuộc phòng mà tài khoản trực thuộc"/>
-        <TaskTable rows={find(deptWork)} allowEdit={false}/>
+        <TaskTable rows={find(deptWork)} allowEdit={false} projCode={projCode} busy={busy} send={send}/>
       </section>
       <section className="card">
         <CardHead title="Việc của tổ đội tôi tham gia" note="Thành viên tổ đội đang hoạt động"/>
-        <TaskTable rows={find(teamWork)} allowEdit={false}/>
+        <TaskTable rows={find(teamWork)} allowEdit={false} projCode={projCode} busy={busy} send={send}/>
       </section>
     </div>}
 
