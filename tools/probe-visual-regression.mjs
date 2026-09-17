@@ -190,6 +190,12 @@ const SCREENS = [
   // màn DA có **7 dòng** ⇒ phủ cả hai đường render (rỗng + có dữ liệu).
   { id: "09-dept-assign-kh", label: "Phòng Kế hoạch — Giao việc (trạng thái rỗng)", steps: [{ group: "my_work", child: 2 }], fullPage: true },
   { id: "10-dept-assign-da", label: "Phòng Dự án — Giao việc (7 việc thật)", steps: [{ group: "my_work", child: 3 }], fullPage: true },
+  // 11/12: KIỂM BẤT BIẾN "KHUNG KHÔNG VƯỢT VIEWPORT" (U-10). Bước `{ click: "<selector>" }` mở khung rồi mới chụp;
+  // cổng tự đo `getBoundingClientRect()` của `.modal`/`.drawer` và TỪ CHỐI ĐẠT nếu khung tràn khung nhìn,
+  // hoặc nếu nội dung cao hơn thân khung mà thân khung KHÔNG cuộn được (⇒ mất nội dung).
+  { id: "11-modal-request", label: "Phiếu đề nghị — modal lập phiếu (rộng nhất)", steps: [{ group: "purchasing", child: 0 }, { click: ".list-toolbar-actions button.primary" }] },
+  { id: "12-drawer-request-detail", label: "Phiếu đề nghị — drawer chi tiết", steps: [{ group: "purchasing", child: 0 }, { click: ".request-list-card .icon-mini" }] },
+  { id: "13-modal-material", label: "Danh mục vật tư — modal thêm/sửa vật tư", steps: [{ group: "material_master", child: 0 }, { click: ".material-list-filters button.primary" }] },
 ];
 
 const SCREENS_TO_RUN = ONLY ? SCREENS.filter((s) => s.id.includes(ONLY)) : SCREENS;
@@ -314,6 +320,19 @@ async function freeze() {
 
 async function clickSteps(steps) {
   for (const st of steps) {
+    // BƯỚC MỞ MODAL/DRAWER (U-10) — KHÔNG có `group` nên phải xử lý TRƯỚC khối điều hướng,
+    // nếu không `[data-nav-group="undefined"]` sẽ trả NO_GROUP (lỗi đã gặp thật 18/09).
+    if (st.click) {
+      // Chẩn đoán rõ: không tìm thấy · BỊ VÔ HIỆU (thiếu quyền) · nút không phải <button> ⇒ mỗi ca một kết luận khác nhau.
+      const hit = await evaluate(`(()=>{const el=document.querySelector(${JSON.stringify(st.click)});
+        if(!el)return 'NO_CLICK_TARGET';
+        if(el.disabled)return 'CLICK_TARGET_DISABLED';
+        el.click();return 'CLICKED_UI';})()`);
+      if (hit !== "CLICKED_UI") return hit;
+      await sleep(1600);
+      continue;
+    }
+    if (!st.group) continue;
     const expand = await evaluate(`(()=>{const s=document.querySelector('[data-nav-group="${st.group}"]');
       if(!s)return 'NO_GROUP('+[...document.querySelectorAll('[data-nav-group]')].map(e=>e.getAttribute('data-nav-group')).join('|')+')';
       const p=s.querySelector('.nav-parent');if(p&&p.getAttribute('aria-expanded')==='false')p.click();return 'OK';})()`);
@@ -349,8 +368,33 @@ async function capture(screen, vp) {
     // Màn nào đặt `fullPage: true` thì chụp TOÀN TRANG. Mặc định vẫn là khung nhìn, để 32 ảnh chuẩn cũ không đổi.
     captureBeyondViewport: screen.fullPage === true,
   });
-  return { png: Buffer.from(shot.data, "base64"), nav };
+  // U-10 — ĐO KHUNG MODAL/DRAWER (nếu màn có mở khung) để biến "modal vượt viewport" thành BẤT BIẾN ĐO ĐƯỢC.
+  const modal = await evaluate(`(()=>{const m=document.querySelector('.modal,.drawer');if(!m)return null;
+    const r=m.getBoundingClientRect();
+    const body=m.querySelector('.modal-body,.drawer-body');
+    const cs=body?getComputedStyle(body):null;
+    return { t:Math.round(r.top), b:Math.round(r.bottom), l:Math.round(r.left), r:Math.round(r.right),
+      vh:window.innerHeight, vw:window.innerWidth,
+      scrollH: body?Math.round(body.scrollHeight):0, clientH: body?Math.round(body.clientHeight):0,
+      overflowY: cs?cs.overflowY:"" };})()`);
+  return { png: Buffer.from(shot.data, "base64"), nav, modal };
 }
+
+/** U-10 — bất biến: khung modal/drawer PHẢI nằm TRỌN trong khung nhìn. Trả về chuỗi mô tả lỗi hoặc "". */
+function modalOverflow(m) {
+  if (!m) return "";
+  const bad = [];
+  if (m.t < -1) bad.push(`top=${m.t} < 0`);
+  if (m.l < -1) bad.push(`left=${m.l} < 0`);
+  if (m.b > m.vh + 1) bad.push(`bottom=${m.b} > khung nhìn ${m.vh}`);
+  if (m.r > m.vw + 1) bad.push(`right=${m.r} > khung nhìn ${m.vw}`);
+  // Nội dung cao hơn khung thì thân khung BẮT BUỘC phải cuộn được, nếu không là MẤT nội dung.
+  if (m.scrollH > m.clientH + 1 && !["auto", "scroll"].includes(String(m.overflowY))) {
+    bad.push(`nội dung ${m.scrollH}px > thân ${m.clientH}px mà overflow-y=${m.overflowY} ⇒ mất nội dung`);
+  }
+  return bad.join(" · ");
+}
+const modalText = (m) => (m ? `${m.l},${m.t} → ${m.r},${m.b} (khung nhìn ${m.vw}×${m.vh})` : "không mở khung");
 
 console.log("═".repeat(78));
 console.log(`  CỔNG CHẶN HỒI QUY THỊ GIÁC${MODE_UPDATE ? "  [CHỤP ẢNH CHUẨN]" : MODE_SELFTEST ? "  [ĐO NHIỄU NỀN]" : ""}`);
@@ -475,8 +519,18 @@ for (const screen of SCREENS_TO_RUN) {
 
     if (MODE_UPDATE) {
       writeFileSync(file, cap.png);
-      console.log(`   ✅ ${vp.id.padEnd(8)} đã ghi ảnh chuẩn (${Math.round(cap.png.length / 1024)} KB) · nav=${cap.nav}`);
+      const ov = modalOverflow(cap.modal);
+      console.log(`   ${ov ? "⚠️ " : "✅"} ${vp.id.padEnd(8)} đã ghi ảnh chuẩn (${Math.round(cap.png.length / 1024)} KB) · nav=${cap.nav} · khung=${modalText(cap.modal)}${ov ? ` · VƯỢT VIEWPORT: ${ov}` : ""}`);
       results.push({ screen: screen.id, vp: vp.id, status: "da-ghi" });
+      continue;
+    }
+
+    // U-10 — kiểm bất biến khung modal TRƯỚC khi so ảnh: khung vượt khung nhìn là LỖI, không phải "lệch ảnh".
+    const overflow = modalOverflow(cap.modal);
+    if (overflow) {
+      console.log(`   ❌ ${vp.id.padEnd(8)} KHUNG VƯỢT VIEWPORT: ${overflow} · khung=${modalText(cap.modal)}`);
+      failures++;
+      results.push({ screen: screen.id, vp: vp.id, status: "khung-vuot-viewport" });
       continue;
     }
 

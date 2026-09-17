@@ -1757,7 +1757,7 @@ function MaterialListTable({ data, open, permission }: { data: AppData; open: (n
       <select value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Lọc trạng thái vật tư"><option value="ALL">Tất cả trạng thái</option><option value="ACTIVE">Đang dùng</option><option value="LOCKED">Đã ngừng</option></select>
       <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} aria-label="Sắp xếp vật tư"><option value="code">Sắp xếp: Mã vật tư</option><option value="name">Sắp xếp: Tên</option><option value="system">Sắp xếp: Hệ</option></select>
       <label className="material-list-toggle"><input type="checkbox" checked={showAlias} onChange={(e) => setShowAlias(e.target.checked)}/> Hiện tên phụ</label>
-      <button type="button" className="primary" disabled={!canCreate} title={canCreate ? "Thêm vật tư" : "Bạn không có quyền tạo vật tư"} onClick={() => open("material")}>＋ Thêm vật tư</button>
+      <button type="button" className="primary" disabled={!canCreate} title={canCreate ? "Thêm vật tư" : "Bạn không có quyền tạo vật tư"} onClick={() => open("materialMaster")}>＋ Thêm vật tư</button>
     </div>
     <DataTable
       rows={rows}
@@ -1776,9 +1776,9 @@ function MaterialListTable({ data, open, permission }: { data: AppData; open: (n
         { key: "minStock", header: "Tồn min", render: (m) => <>{Number(m.minStock || 0)}</> },
         { key: "active", header: "Trạng thái", render: (m) => Number(m.active) === 0 ? <StatusBadge value="Đã ngừng"/> : <StatusBadge value="Đang dùng"/> },
         { key: "actions", header: "Thao tác", render: (m) => <div className="row-actions">
-          <button type="button" className="export-mini" disabled={!canEdit} title={canEdit ? "Sửa vật tư" : "Thiếu quyền Sửa"} onClick={() => open("material", m)}>Sửa</button>
+          <button type="button" className="export-mini" disabled={!canEdit} title={canEdit ? "Sửa vật tư" : "Thiếu quyền Sửa"} onClick={() => open("materialMaster", m)}>Sửa</button>
           <button type="button" className="export-mini" disabled={!canMerge} title={canMerge ? "Hợp nhất mã trùng" : "Thiếu quyền Hợp nhất"} onClick={() => open("materialMerge", m)}>Hợp nhất</button>
-          <button type="button" className="export-mini" disabled={!canRetire} title={canRetire ? "Ngừng dùng vật tư" : "Chỉ Quản trị hệ thống được ngừng vật tư"} onClick={() => open("material", { ...m, active: 0 })}>Ngừng</button>
+          <button type="button" className="export-mini" disabled={!canRetire} title={canRetire ? "Ngừng dùng vật tư" : "Chỉ Quản trị hệ thống được ngừng vật tư"} onClick={() => open("materialMaster", { ...m, active: 0 })}>Ngừng</button>
         </div> },
       ]}
     />
