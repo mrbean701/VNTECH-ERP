@@ -2939,20 +2939,21 @@ function UserPermissionMatrix({ data, open, action }: { data: AppData; open: (na
     </div>
     <section className="card">
       <CardHead title="Phân quyền người dùng" note="Tìm theo tên, mã nhân viên, phòng ban, chức danh hoặc cấp bậc. Quyền của người dùng không được vượt quá quyền của phòng ban." />
-      <div className="table-toolbar">
-        <div><strong>BỘ LỌC</strong><span>{rows.length}/{(data.users || []).length} tài khoản khớp</span></div>
-        <div className="row-actions">
-          <input className="admin-search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Tên, mã NV, chức danh…" />
-          <select value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)}>
-            <option value="">— Tất cả phòng ban —</option>
-            {depts.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
-          </select>
-          <select value={levelFilter} onChange={(e) => setLevelFilter(e.target.value)}>
-            <option value="">— Tất cả cấp bậc —</option>
-            {levels.map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}
-          </select>
-        </div>
-      </div>
+      <ListToolbar
+        title="BỘ LỌC"
+        note={`${rows.length}/${(data.users || []).length} tài khoản khớp`}
+        search={{ value: query, onChange: setQuery, placeholder: "Tên, mã NV, chức danh…" }}
+        filters={[
+          { key: "dept", label: "Phòng ban", value: deptFilter, onChange: setDeptFilter, options: [
+            { value: "", label: "— Tất cả phòng ban —" },
+            ...depts.map((o) => ({ value: String(o.id), label: String(o.name) })),
+          ] },
+          { key: "level", label: "Cấp bậc", value: levelFilter, onChange: setLevelFilter, options: [
+            { value: "", label: "— Tất cả cấp bậc —" },
+            ...levels.map((l) => ({ value: String(l.code), label: String(l.name) })),
+          ] },
+        ]}
+      />
       {msg && <div className="inline-alert">{msg}</div>}
       <div className="table-wrap"><table>
         <thead><tr><th>Mã NV</th><th>Họ tên</th><th>Phòng ban</th><th>Chức danh</th><th>Cấp bậc</th><th>Quyền</th><th>Cảnh báo</th><th></th></tr></thead>
@@ -3048,20 +3049,21 @@ function SystemLevelManager({ data, open, action }: { data: AppData; open: (name
     </section>
     <section className="card">
       <CardHead title="Xếp cấp bậc cho tài khoản" note="Khi chọn cấp bậc, hệ thống báo rõ cấp bậc đó có tự động cấp quyền hay được duyệt vượt cấp hay không." />
-      <div className="table-toolbar">
-        <div><strong>GÁN CẤP BẬC</strong><span>{chosen ? `${chosen.name} · ${usersOfLevel(String(chosen.code)).length} tài khoản đang giữ` : "Chưa chọn cấp bậc"}</span></div>
-        <div className="row-actions">
-          <select value={userId} onChange={(e) => setUserId(e.target.value)}>
-            <option value="">— Chọn tài khoản —</option>
-            {(data.users || []).filter((u) => Number(u.active ?? 1) === 1).map((u) => <option key={u.id} value={u.id}>{u.fullName} · {u.employeeCode || u.username}</option>)}
-          </select>
-          <select value={levelCode} onChange={(e) => setLevelCode(e.target.value)}>
-            <option value="">— Chọn cấp bậc —</option>
-            {levels.filter((l) => Number(l.active) === 1).map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}
-          </select>
-          <button className="primary" disabled={busy} onClick={assign}>{busy ? "Đang lưu…" : "Xếp cấp bậc"}</button>
-        </div>
-      </div>
+      <ListToolbar
+        title="GÁN CẤP BẬC"
+        note={chosen ? `${chosen.name} · ${usersOfLevel(String(chosen.code)).length} tài khoản đang giữ` : "Chưa chọn cấp bậc"}
+        filters={[
+          { key: "user", label: "Tài khoản", value: userId, onChange: setUserId, options: [
+            { value: "", label: "— Chọn tài khoản —" },
+            ...(data.users || []).filter((u) => Number(u.active ?? 1) === 1).map((u) => ({ value: String(u.id), label: `${u.fullName} · ${u.employeeCode || u.username}` })),
+          ] },
+          { key: "level", label: "Cấp bậc", value: levelCode, onChange: setLevelCode, options: [
+            { value: "", label: "— Chọn cấp bậc —" },
+            ...levels.filter((l) => Number(l.active) === 1).map((l) => ({ value: String(l.code), label: String(l.name) })),
+          ] },
+        ]}
+        actions={<button className="primary" disabled={busy} onClick={assign}>{busy ? "Đang lưu…" : "Xếp cấp bậc"}</button>}
+      />
       {chosen && <div className="inline-alert">
         <strong>{chosen.name}</strong>
         {Number(chosen.autoGrantAll) === 1
@@ -3128,23 +3130,26 @@ function AuditLogManager({ data }: { data: AppData }) {
     </div>
     <section className="card">
       <CardHead title="Nhật ký kiểm toán" note="Ghi tự động MỌI thao tác thay đổi dữ liệu: ai làm, thuộc phòng nào, cấp bậc gì, dùng quyền nào, đổi cái gì, lúc nào." />
-      <div className="table-toolbar">
-        <div><strong>BỘ LỌC</strong><span>{rows.length}/{all.length} bản ghi khớp</span></div>
-        <div className="row-actions">
-          <input className="admin-search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Hành động, chi tiết, đối tượng, IP…" />
-          <select value={userFilter} onChange={(e) => setUserFilter(e.target.value)}>
-            <option value="">— Mọi người dùng —</option>
-            {users.map((u) => <option key={u} value={u}>{u}</option>)}
-          </select>
-          <select value={moduleFilter} onChange={(e) => setModuleFilter(e.target.value)}>
-            <option value="">— Mọi chức năng —</option>
-            {modules.map((m) => <option key={m} value={m}>{moduleLabel(m)}</option>)}
-          </select>
-          <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} title="Từ ngày" />
-          <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} title="Đến ngày" />
-          <button className="secondary" onClick={() => { setQuery(""); setUserFilter(""); setModuleFilter(""); setFromDate(""); setToDate(""); }}>Xóa lọc</button>
-        </div>
-      </div>
+      <ListToolbar
+        title="BỘ LỌC"
+        note={`${rows.length}/${all.length} bản ghi khớp`}
+        search={{ value: query, onChange: setQuery, placeholder: "Hành động, chi tiết, đối tượng, IP…" }}
+        filters={[
+          { key: "user", label: "Người dùng", value: userFilter, onChange: setUserFilter, options: [
+            { value: "", label: "— Mọi người dùng —" },
+            ...users.map((u) => ({ value: String(u), label: String(u) })),
+          ] },
+          { key: "module", label: "Chức năng", value: moduleFilter, onChange: setModuleFilter, options: [
+            { value: "", label: "— Mọi chức năng —" },
+            ...modules.map((m) => ({ value: String(m), label: String(moduleLabel(m)) })),
+          ] },
+        ]}
+        extra={<>
+          <label className="list-toolbar-field"><span>Từ ngày</span><input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)}/></label>
+          <label className="list-toolbar-field"><span>Đến ngày</span><input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)}/></label>
+        </>}
+        actions={<button className="secondary" onClick={() => { setQuery(""); setUserFilter(""); setModuleFilter(""); setFromDate(""); setToDate(""); }}>Xóa lọc</button>}
+      />
       {!all.length && <Empty text="Chưa có bản ghi nào. Nhật ký sẽ tự đầy khi có thao tác thay đổi dữ liệu." />}
       {all.length > 0 && <div className="table-wrap"><table>
         <thead><tr><th>Thời gian</th><th>Người thực hiện</th><th>Phòng ban</th><th>Cấp bậc</th><th>Chức năng</th><th>Quyền dùng</th><th>Hành động</th><th>Chi tiết</th></tr></thead>
