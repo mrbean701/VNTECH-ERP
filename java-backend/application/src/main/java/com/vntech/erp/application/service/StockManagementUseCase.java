@@ -2,6 +2,7 @@ package com.vntech.erp.application.service;
 
 import com.vntech.erp.application.port.out.IdGenerator;
 import com.vntech.erp.application.port.out.WarehouseStockStore;
+import com.vntech.erp.application.rbac.AccessScopeService;
 import com.vntech.erp.application.rbac.RbacService;
 import com.vntech.erp.domain.service.StockLedgerEngine;
 
@@ -21,11 +22,13 @@ public final class StockManagementUseCase {
     private final WarehouseStockStore store;
     private final IdGenerator idGenerator;
     private final RbacService rbac;
+    private final AccessScopeService accessScope;
 
-    public StockManagementUseCase(WarehouseStockStore store, IdGenerator idGenerator, RbacService rbac) {
+    public StockManagementUseCase(WarehouseStockStore store, IdGenerator idGenerator, RbacService rbac, AccessScopeService accessScope) {
         this.store = store;
         this.idGenerator = idGenerator;
         this.rbac = rbac;
+        this.accessScope = accessScope;
     }
 
     public interface Principal {
@@ -38,12 +41,25 @@ public final class StockManagementUseCase {
          * tầng gọi chưa truyền giá trị này xuống.
          */
         default String roleBase() { return role(); }
+
+        /**
+         * Loại phạm vi kho của tài khoản (role_catalog.warehouse_scope_kind: "site" | "central").
+         * Nhánh kho của canAccessWarehouse dùng giá trị này để chặn thủ kho dự án thao tác Kho Tổng
+         * và ngược lại. Mặc định rỗng ⇒ AccessScopeService coi như "site" (đúng JS).
+         */
+        default String warehouseScopeKind() { return ""; }
     }
 
     public Map<String, Object> issueStock(Principal principal, Map<String, Object> payload) {
         rbac.requireRole(principalAsCurrent(principal), List.of("warehouse", "commander", "admin"));
         String projectId = trim(payload.get("projectId"));
         String fromWarehouseId = trim(payload.get("fromWarehouseId"));
+        // JS 1510: kiểm vai trò TRƯỚC, rồi mới kiểm phạm vi dự án/kho (TASK-023).
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), projectId, true,
+                "Tài khoản không có quyền cấp phát tại dự án này.");
+        accessScope.requireWarehouseAccess(principal.userId(), principal.role(),
+                principal.warehouseScopeKind(), fromWarehouseId, true,
+                "Tài khoản không có quyền xuất tại kho này.");
         String teamId = trim(payload.get("teamId"));
         String requestId = trim(payload.get("requestId"));
         List<?> rawLines = payload.get("lines") instanceof List<?> l ? l : List.of();
@@ -149,6 +165,12 @@ public final class StockManagementUseCase {
         String projectId = trim(payload.get("projectId"));
         String teamId = trim(payload.get("teamId"));
         String toWarehouseId = trim(payload.get("toWarehouseId"));
+        // JS 1515: kiểm vai trò TRƯỚC, rồi mới kiểm phạm vi dự án/kho (TASK-023).
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), projectId, true,
+                "Tài khoản không có quyền hoàn trả tại dự án này.");
+        accessScope.requireWarehouseAccess(principal.userId(), principal.role(),
+                principal.warehouseScopeKind(), toWarehouseId, true,
+                "Tài khoản không có quyền nhận hoàn trả tại kho này.");
         List<?> rawLines = payload.get("lines") instanceof List<?> l ? l : List.of();
         Map<String, Object> team = store.findTeam(teamId, projectId).orElse(null);
         if (team == null || rawLines.isEmpty()) throw Api("Phiếu hoàn trả cần đúng tổ đội và vật tư.");
@@ -557,9 +579,16 @@ public final class StockManagementUseCase {
         String projectId = trim(payload.get("projectId"));
         String warehouseId = trim(payload.get("warehouseId"));
         List<?> rawLines = payload.get("lines") instanceof List<?> l ? l : List.of();
+        // JS 1527: phạm vi DỰ ÁN kiểm trước khi tra kho.
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), projectId, true,
+                "Tài khoản không có quyền kiểm kê tại dự án này.");
         Map<String, Object> warehouse = store.findWarehouseById(warehouseId).orElse(null);
         if (warehouse == null || !sv(warehouse, "projectId").equals(projectId) || rawLines.isEmpty())
             throw Api("Phiếu kiểm kê phải đúng dự án, kho và có dữ liệu đếm.");
+        // JS 1532: phạm vi KHO kiểm sau khi đã xác nhận kho thuộc dự án.
+        accessScope.requireWarehouseAccess(principal.userId(), principal.role(),
+                principal.warehouseScopeKind(), warehouseId, true,
+                "Tài khoản không có quyền kiểm kê kho này.");
         Instant now = Instant.now();
         int year = java.time.LocalDate.now().getYear();
         long seq = store.nextSequenceNo("KK:" + projectId + ":" + year, "KK", projectId, year, now);
@@ -598,6 +627,12 @@ public final class StockManagementUseCase {
                 .orElseThrow(() -> Api("Phiếu kiểm kê không tồn tại hoặc đã xử lý."));
         if (!"pending_approval".equals(sv(count, "status")))
             throw Api("Phiếu kiểm kê không tồn tại hoặc đã xử lý.");
+        // JS 1555/1557: kiểm phạm vi theo chính phiếu kiểm kê (không theo payload).
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), sv(count, "projectId"), true,
+                "Tài khoản không có quyền duyệt kiểm kê tại dự án này.");
+        accessScope.requireWarehouseAccess(principal.userId(), principal.role(),
+                principal.warehouseScopeKind(), sv(count, "warehouseId"), true,
+                "Tài khoản không có quyền duyệt kiểm kê tại kho này.");
         List<Map<String, Object>> items = new ArrayList<>();
         for (Map<String, Object> it : store.stockCountItems(countId)) {
             Map<String, Object> item = new LinkedHashMap<>();
@@ -779,6 +814,6 @@ public final class StockManagementUseCase {
 
     private AuthUseCase.CurrentUser principalAsCurrent(Principal p) {
         return new AuthUseCase.CurrentUser(p.userId(), "", p.fullName(), null, p.role(), p.roleBase(), p.role(),
-                null, null, null, false);
+                p.warehouseScopeKind(), null, null, false);
     }
 }

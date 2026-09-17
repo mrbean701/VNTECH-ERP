@@ -141,10 +141,34 @@ tools/patch-task023-batch1.mjs       (mới)
 
 | Kiểm tra | Kết quả |
 |---|---|
-| `node tools/probe-action-scope-parity.mjs` (trước) | Java kiểm **0**/64 action |
-| `node tools/probe-action-scope-parity.mjs` (sau lô 1) | Java kiểm **2**/64; còn **62** |
-| `node tools/patch-task023-batch1.mjs` | 7 áp dụng · 0 bỏ qua · **0 lỗi** |
+| `node tools/probe-action-scope-parity.mjs` (trước lô 1) | Java kiểm **0**/64 action |
+| `node tools/probe-action-scope-parity.mjs` (sau lô 1) | Java kiểm **2**/64 |
+| `node tools/probe-action-scope-parity.mjs` (sau lô 2) | Java kiểm **6**/64 — còn **58** |
+| `node tools/patch-task023-batch1.mjs` | 7 áp dụng · 0 lỗi |
+| `node tools/patch-task023-batch2.mjs` | 10 áp dụng · 1 không khớp (Principal đã bị TASK-021b sửa trước) · 0 lỗi sau khi vá bổ sung |
+| `node tools/patch-task023-batch2b.mjs` | 1 áp dụng · 0 lỗi |
 | `tools/verify-java-compile.ps1` | **102 tệp nguồn · 0 dòng lỗi · 156 `.class` · exit 0** |
+
+## LÔ 2 — StockManagementUseCase (4 action)
+
+Đã thêm đường ống `warehouseScopeKind` (nhánh kho của `canAccessWarehouse` cần giá trị này):
+
+1. `Principal.warehouseScopeKind()` — `default String` trả rỗng ⇒ `AccessScopeService` coi như `"site"` (đúng JS).
+2. `principalAsCurrent` truyền giá trị này vào `CurrentUser.warehouseScopeKind`.
+3. `SystemController.asStockPrincipal` override trả `cu.warehouseScopeKind()`.
+4. `StockManagementUseCase` nhận `AccessScopeService` (trường + constructor + bean).
+
+Bốn action đã nối, **đúng thứ tự JS** (vai trò trước, phạm vi sau) và **đúng nguồn giá trị**:
+
+| Action | Phạm vi dự án | Phạm vi kho |
+|---|---|---|
+| `issue_stock` | `projectId` (payload) write · "Tài khoản không có quyền cấp phát tại dự án này." | `fromWarehouseId` write · "Tài khoản không có quyền xuất tại kho này." |
+| `return_stock` | `projectId` (payload) write · "Tài khoản không có quyền hoàn trả tại dự án này." | `toWarehouseId` write · "Tài khoản không có quyền nhận hoàn trả tại kho này." |
+| `create_stock_count` | `projectId` (payload) write — kiểm **TRƯỚC** khi tra kho | `warehouseId` write — kiểm **SAU** khi xác nhận kho thuộc dự án |
+| `approve_stock_count` | `count.projectId` (**tra từ DB**) write | `count.warehouseId` (**tra từ DB**) write |
+
+Công cụ mới hỗ trợ lô này: `tools/show-js-scope-checks.mjs` — trích **nguyên văn** lời gọi kiểm phạm vi của JS
+theo từng action (kèm số dòng và việc phạm vi được kiểm trước hay sau vai trò), để không phải suy đoán.
 
 ## Validation
 

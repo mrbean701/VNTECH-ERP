@@ -137,8 +137,9 @@ public class ApplicationBeansConfig {
     @Bean
     public StockManagementUseCase stockManagementUseCase(WarehouseStockStore warehouseStockStore,
                                                          IdGenerator idGenerator,
-                                                         RbacService rbacService) {
-        return new StockManagementUseCase(warehouseStockStore, idGenerator, rbacService);
+                                                         RbacService rbacService,
+                                                         AccessScopeService accessScopeService) {
+        return new StockManagementUseCase(warehouseStockStore, idGenerator, rbacService, accessScopeService);
     }
 
     @Bean
