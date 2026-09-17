@@ -310,6 +310,16 @@ public class RequestStoreAdapter implements RequestStore {
     }
 
     @Override
+    public boolean ownerHasProjectScope(String userId, String projectId) {
+        // TASK-049 — nguyên văn JS `system-route.mjs:448` (chỉ khác `SELECT 1 AS ok` → `COUNT(*)`)
+        Long n = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*) FROM user_project_scopes
+                WHERE user_id=? AND project_id=? AND permission IN ('read','write','approve','admin')""",
+                Long.class, userId, projectId);
+        return n != null && n > 0;
+    }
+
+    @Override
     public Optional<Map<String, Object>> findUserRoleInfo(String userId) {
         List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
                 SELECT u.role,COALESCE(rc.base_role,u.role) AS baseRole

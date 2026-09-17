@@ -44,6 +44,13 @@ public interface RequestStore {
     Optional<Map<String, Object>> findApprovalRow(String requestId, int stage); // ownerUserId, allowedRoleCodes, approvalMode
     List<Map<String, Object>> approvalStagesForRequest(String requestId);  // từ approvals left join catalog
     Optional<Map<String, Object>> findUserRoleInfo(String userId);          // role + baseRole
+    /**
+     * TASK-049 — Owner của bước duyệt có phạm vi dự án không? Nguyên văn JS `system-route.mjs:448`:
+     * {@code SELECT 1 AS ok FROM user_project_scopes WHERE user_id=? AND project_id=?
+     *        AND permission IN ('read','write','approve','admin') LIMIT 1}
+     * (JS bỏ qua phép kiểm này khi chính Owner là `admin` — xử lý ở tầng use-case).
+     */
+    boolean ownerHasProjectScope(String userId, String projectId);
     void updateApprovalDecision(String requestId, int stage, String decision, String userId,
                                 String comment, String snapshot, Instant now);
     void advanceRequestStage(String requestId, int nextStage, Instant queuedAt, Instant dueAt, Instant now);

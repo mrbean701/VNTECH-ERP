@@ -1,0 +1,43 @@
+TASK-049: port 2 phep kiem OWNER con thieu cua buoc duyet (vai tro Owner thuoc allowedRoleCodes + Owner phai co user_project_scopes) - Phat hien: sau khi port, luong lap phieu cua PRJ-DEMO-01 bi CHAN boi DU LIEU (D5)
+
+MA NGUON:
+- RequestStore + RequestStoreAdapter: them `ownerHasProjectScope(userId, projectId)` - nguyen van
+  JS :448 `SELECT 1 FROM user_project_scopes WHERE user_id=? AND project_id=? AND permission IN
+  ('read','write','approve','admin')`.
+- RequestManagementUseCase.createRequest: trong vong lap kiem phan cong tung buoc, them 2 phep kiem
+  nguyen van JS `requireWorkflowAssignment` (:445-450):
+  (1) vai tro Owner phai nam trong allowedRoleCodes cua buoc - so CA `users.role` LAN `base_role`
+      (dung lai `store.findUserRoleInfo`, khong viet truy van moi) => thong diep nguyen van
+      "Owner {ownerName} khong thuoc vai tro duoc phep cua Buoc {stageNo} – {stageName}.";
+  (2) Owner phai co pham vi du an, TRU khi chinh Owner la admin => thong diep nguyen van
+      "Owner {ownerName} chua duoc phan quyen du an nay."
+  Doc ca hai dang khoa `ownerName`/`owner_name` (bai hoc TASK-045).
+
+KIEM CHUNG LUC CHAY - cong moi tools/probe-task049-owner-checks.mjs 10/10 DAT (node exit 0):
+- Nhanh DUNG DIEU KIEN THAT (khong can fixture): Owner buoc 2 (`thukydemo`) KHONG co
+  user_project_scopes cho PRJ-DEMO-01 => create_request tra 400 voi DUNG NGUYEN VAN JS va
+  KHONG tao phieu nao.
+- Nhanh SAI VAI TRO (fixture doi owner buoc 1): 400 nguyen van + khong tao phieu + khoi phuc phan cong.
+- Nhanh DAT (fixture cap pham vi cho Owner thieu): 200 + phieu duoc ghi that (roi don sach).
+- Khoi phuc sach: moi bang ve dung so dong ban dau (ke ca user_project_scopes 18 va
+  approval_project_assignments 5).
+- DOI CHUNG DUONG: tren jar 19:00 (truoc khi port), CUNG loi goi do da tra 200 va tao phieu that
+  (probe TASK-048 18/18 va TASK-054 20/20 deu tao phieu) => 400 nay la he qua cua 2 phep kiem moi.
+
+PHAT HIEN QUAN TRONG (can nguoi dung xu ly - D5):
+- JS :966 GOI `requireWorkflowAssignment` cho MOI buoc trong `create_request` => ban JS cung CHAN
+  truong hop nay. Tuc day KHONG phai loi port: Java truoc day dang AM THAM BO QUA mot phep kiem
+  ma JS co, va du lieu phan cong hien tai vi pham phep kiem do.
+- Nguyen nhan goc: dong `user_project_scopes` cua `thukydemo` tro toi project KHONG TON TAI
+  (`PRJ_fdbfab20-bf1f-0000-0000-000000000000` - known issue #51 / D5).
+- HE QUA THUC TE: sau commit nay, lap phieu de nghi mua cho PRJ-DEMO-01 se bao 400 cho toi khi
+  duoc cap pham vi. Cach sua: cap 1 dong user_project_scopes cho Owner do (xem D5).
+
+CAP NHAT 2 PROBE CU (TASK-048, TASK-054) de khong bi do oan: ca hai deu tao phieu that cho
+PRJ-DEMO-01, nen nay phai tu CAP TAM pham vi con thieu roi XOA LAI trong finally; so dong
+`user_project_scopes` duoc them vao bang doi chieu nen phan fixture duoc kiem luon.
+Sau khi cap nhat: probe TASK-048 18/18 DAT, probe TASK-054 20/20 DAT.
+
+LOI CUA CHINH PROBE TASK-049 o luot chay dau: `mysql --batch --raw` in NULL thanh CHUOI "NULL"
+(khong phai chuoi rong) nen 2 nhanh pham vi bi BO QUA OAN (dung luc du lieu that dang vi pham);
+da sua va chay lai => 10/10.

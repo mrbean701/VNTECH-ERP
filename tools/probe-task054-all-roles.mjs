@@ -71,7 +71,8 @@ check("tiền điều kiện: bước `all_roles` có ≥2 vai trò bắt buộc
   `bước #${allRolesStage} “${stageName}” · vai trò: ${requiredRoles.join(", ")}`);
 
 const TBL = ["material_requests", "material_request_items", "approvals", "approval_stage_decisions",
-  "request_comments", "procurement_allocations", "custom_field_values", "supply_workflow_steps", "stock_reservations"];
+  "request_comments", "procurement_allocations", "custom_field_values", "supply_workflow_steps",
+  "stock_reservations", "user_project_scopes"];
 const counts = () => Object.fromEntries(TBL.map((t) => [t, Number(sqlOne(`SELECT COUNT(*) FROM ${t}`))]));
 const before = counts();
 console.log(`TRƯỚC: ${JSON.stringify(before)}\n`);
@@ -80,6 +81,26 @@ const cleanupFailures = [];
 function execSql(statement, label) {
   try { sql(statement); return true; }
   catch (e) { cleanupFailures.push(`${label}: ${String(e.stderr ?? e.message).trim().slice(0, 120)}`); return false; }
+}
+
+// ══ FIXTURE BẮT BUỘC SAU TASK-049 ══════════════════════════════════════════════════════════
+// Từ #92, `create_request` kiểm thêm 2 điều của JS `:445-450` (Owner phải thuộc vai trò bước + phải có
+// `user_project_scopes`). Dữ liệu hiện tại THIẾU phạm vi cho Owner bước 2 (D5) ⇒ probe này tự cấp TẠM
+// rồi xoá lại; số dòng `user_project_scopes` nằm trong `TBL` nên phần fixture được kiểm luôn.
+const fixtureScopes = [];
+function ensureOwnersScoped(projectId) {
+  const rows = sqlRows(`SELECT DISTINCT apa.owner_user_id FROM approval_project_assignments apa
+     JOIN users u ON u.id=apa.owner_user_id
+     WHERE apa.project_id=${q(projectId)} AND apa.active=1 AND u.role<>'admin'
+       AND NOT EXISTS (SELECT 1 FROM user_project_scopes ups WHERE ups.user_id=apa.owner_user_id
+                       AND ups.project_id=apa.project_id AND ups.permission IN ('read','write','approve','admin'))`);
+  for (const [userId] of rows) {
+    const id = `SCOPE_${crypto.randomUUID()}`;
+    sql(`INSERT INTO user_project_scopes (id,user_id,project_id,permission,created_at,updated_at,joined_at)
+         VALUES (${q(id)},${q(userId)},${q(projectId)},'read',NOW(3),NOW(3),NOW(3))`);
+    fixtureScopes.push(id);
+  }
+  return rows.length;
 }
 
 let requestId = null;
@@ -91,6 +112,8 @@ try {
   const data = await boot();
   const material = (data.materials ?? [])[0];
   if (!material?.id) throw new Error("bootstrap không có vật tư");
+  const fixtureCount = ensureOwnersScoped(PROJECT_ID);
+  console.log(`  (fixture) đã cấp TẠM phạm vi dự án cho ${fixtureCount} Owner còn thiếu (sẽ xoá ở finally)`);
   const created = await call("create_request", {
     projectId: PROJECT_ID, neededAt: "2026-12-31", priority: "normal",
     area: "Khu vực probe TASK-054", purpose: "probe TASK-054",
@@ -215,11 +238,15 @@ try {
       cleanupFailures.push(`phiếu ${requestNo} vẫn còn trong DB`);
   }
   const afterCounts = counts();
-  const drift = Object.keys(before).filter((t) => before[t] !== afterCounts[t]);
-  console.log(`\nSAU KHI DỌN: ${JSON.stringify(afterCounts)}`);
-  check("dọn sạch: mọi bảng nghiệp vụ về ĐÚNG số dòng ban đầu (audit_logs giữ lại làm bằng chứng)",
+  // xoá phạm vi TẠM của fixture TRƯỚC khi đối chiếu số dòng
+  for (const id of fixtureScopes) execSql(`DELETE FROM user_project_scopes WHERE id=${q(id)}`, "fixture scope");
+  const afterCounts2 = counts();
+  const drift = Object.keys(before).filter((t) => before[t] !== afterCounts2[t]);
+  console.log(`\nSAU KHI DỌN: ${JSON.stringify(afterCounts2)}`);
+  check("dọn sạch: mọi bảng nghiệp vụ về ĐÚNG số dòng ban đầu (kể cả phạm vi dự án TẠM của fixture)",
     drift.length === 0 && cleanupFailures.length === 0,
-    drift.length ? drift.map((t) => `${t} ${before[t]}→${afterCounts[t]}`).join(" · ") : (cleanupFailures.join(" · ") || "khớp toàn bộ"));
+    drift.length ? drift.map((t) => `${t} ${before[t]}→${afterCounts2[t]}`).join(" · ") : (cleanupFailures.join(" · ") || "khớp toàn bộ"));
+  void afterCounts;
   try {
     console.log(`  (bỏ qua) document_sequences DNMH: ${sqlOne("SELECT last_number FROM document_sequences WHERE document_type='DNMH' ORDER BY updated_at DESC LIMIT 1")}`);
   } catch { /* thông tin, không ảnh hưởng kết quả */ }

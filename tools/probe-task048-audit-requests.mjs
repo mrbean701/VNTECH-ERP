@@ -60,7 +60,7 @@ const auditActions = (requestId) => auditsOf(requestId).map((r) => r[0]);
 
 // ---------- trạng thái TRƯỚC ----------
 const TBL = ["material_requests", "material_request_items", "approvals", "approval_stage_decisions",
-  "request_comments", "procurement_allocations", "custom_field_values"];
+  "request_comments", "procurement_allocations", "custom_field_values", "user_project_scopes"];
 const counts = () => Object.fromEntries(TBL.map((t) => [t, Number(sqlOne(`SELECT COUNT(*) FROM ${t}`))]));
 const before = counts();
 console.log(`TRƯỚC: ${JSON.stringify(before)}`);
@@ -69,6 +69,26 @@ console.log(`audit_logs entity_type='material_request' TRƯỚC (đối chứng 
 
 const createdIds = [];
 const cleanupFailures = [];
+// ══ FIXTURE BẮT BUỘC SAU TASK-049 ══════════════════════════════════════════════════════════
+// Từ #92, `create_request` kiểm thêm 2 điều của JS `:445-450`: Owner của MỌI bước phải CÓ
+// `user_project_scopes` cho dự án (trừ admin). Dữ liệu hiện tại THIẾU phạm vi cho Owner bước 2
+// (known issue #51 / D5) ⇒ mọi probe tạo phiếu thật sẽ nhận 400. Probe này đo nhật ký kiểm toán,
+// KHÔNG đo cấu hình phân công, nên nó **tự cấp TẠM** phạm vi còn thiếu rồi **xoá lại** (ghi rõ là fixture).
+const fixtureScopes = [];
+function ensureOwnersScoped(projectId) {
+  const rows = sqlRows(`SELECT DISTINCT apa.owner_user_id FROM approval_project_assignments apa
+     JOIN users u ON u.id=apa.owner_user_id
+     WHERE apa.project_id=${q(projectId)} AND apa.active=1 AND u.role<>'admin'
+       AND NOT EXISTS (SELECT 1 FROM user_project_scopes ups WHERE ups.user_id=apa.owner_user_id
+                       AND ups.project_id=apa.project_id AND ups.permission IN ('read','write','approve','admin'))`);
+  for (const [userId] of rows) {
+    const id = `SCOPE_${crypto.randomUUID()}`;
+    sql(`INSERT INTO user_project_scopes (id,user_id,project_id,permission,created_at,updated_at,joined_at)
+         VALUES (${q(id)},${q(userId)},${q(projectId)},'read',NOW(3),NOW(3),NOW(3))`);
+    fixtureScopes.push(id);
+  }
+  return rows.length;
+}
 // ⚠️ BÀI HỌC CỦA CHÍNH PROBE NÀY (lượt chạy đầu, 17/09): bản đầu gộp 7 câu DELETE vào MỘT lần gọi
 // mysql CLI; câu thứ 5 sai tên cột (`procurement_allocations` KHÔNG có `request_id` — cột thật là
 // `request_item_id`) ⇒ mysql DỪNG ngay tại đó và **6 câu sau không chạy** ⇒ dữ liệu probe còn nằm lại
@@ -110,6 +130,8 @@ try {
   const data = await boot();
   const material = (data.materials ?? [])[0];
   if (!material?.id) throw new Error("bootstrap không có vật tư");
+  const fixtureCount = ensureOwnersScoped(PROJECT_ID);
+  console.log(`  (fixture) đã cấp TẠM phạm vi dự án cho ${fixtureCount} Owner còn thiếu (sẽ xoá ở finally)`);
   const lines = [{ materialId: material.id, materialCode: material.code, materialName: material.name,
     unit: material.unit, quantity: 2, unitPrice: 1000, itemType: "phat_sinh", outsideContract: true,
     note: "probe TASK-048" }];
@@ -221,10 +243,15 @@ try {
   }
   const after = counts();
   const drift = Object.keys(before).filter((t) => before[t] !== after[t]);
-  console.log(`\nSAU KHI DỌN: ${JSON.stringify(after)}`);
-  check("dọn sạch: mọi bảng nghiệp vụ trở về ĐÚNG số dòng ban đầu (trừ audit_logs — bảng ghi thêm, giữ làm bằng chứng)",
-    drift.length === 0 && cleanupFailures.length === 0,
-    drift.length ? `lệch: ${drift.map((t) => `${t} ${before[t]}→${after[t]}`).join(" · ")}` : "khớp toàn bộ");
+  // xoá phạm vi TẠM đã cấp cho fixture ở đầu probe (số dòng được đối chiếu ở chính phép kiểm dưới,
+  // vì `user_project_scopes` NẰM TRONG bảng `TBL` ⇒ tự động kiểm luôn phần fixture).
+  for (const id of fixtureScopes) execSql(`DELETE FROM user_project_scopes WHERE id=${q(id)}`, "fixture scope");
+  const after2 = counts();
+  const drift2 = Object.keys(before).filter((t) => before[t] !== after2[t]);
+  console.log(`\nSAU KHI DỌN: ${JSON.stringify(after2)}`);
+  check("dọn sạch: mọi bảng nghiệp vụ trở về ĐÚNG số dòng ban đầu (kể cả phạm vi dự án TẠM của fixture)",
+    drift2.length === 0 && cleanupFailures.length === 0,
+    drift2.length ? `lệch: ${drift2.map((t) => `${t} ${before[t]}→${after2[t]}`).join(" · ")}` : "khớp toàn bộ");
   try {
     console.log(`  (bỏ qua) document_sequences bị đẩy lên khi lập phiếu: ${sqlOne("SELECT last_number FROM document_sequences WHERE document_type='DNMH' ORDER BY updated_at DESC LIMIT 1")}`);
   } catch (e) {

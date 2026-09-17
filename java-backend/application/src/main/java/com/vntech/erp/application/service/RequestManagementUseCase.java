@@ -228,6 +228,44 @@ public final class RequestManagementUseCase {
                 if (assignment == null || !isOne(gi(assignment, "ownerActive")))
                     throw Api("Dự án chưa được phân công 01 Owner hợp lệ cho Bước " + gi(stage, "stageNo")
                             + " – " + sv(stage, "name") + ". Quản trị viên cần cấu hình “Phân công xử lý theo dự án”.");
+
+                // ══════════════════════════════════════════════════════════════════════════════
+                // TASK-049 — port 2 phép kiểm Owner còn THIẾU so với JS `requireWorkflowAssignment`
+                // (`scripts/system-route.mjs:442-452`). Bản Java trước đây chỉ kiểm "có phân công +
+                // ownerActive" ⇒ phiếu có thể được chuyển tới người **SAI VAI TRÒ của bước** hoặc
+                // **không được phân quyền dự án** (JS chặn 400 ở cả hai trường hợp).
+                //   :445-447 const allowed = stageRoleCodes(stage);
+                //           const ownerBase = SELECT u.role, COALESCE(rc.base_role,u.role) AS baseRole …
+                //           if (allowed.length && !allowed.includes(ownerBase.role)
+                //                              && !allowed.includes(ownerBase.baseRole))
+                //             throw `Owner ${ownerName} không thuộc vai trò được phép của Bước ${stageNo} – ${stage.name}.`
+                //   :448-450 const scoped = SELECT 1 FROM user_project_scopes
+                //                             WHERE user_id=? AND project_id=? AND permission IN ('read','write','approve','admin')
+                //           if (!scoped && clean(ownerBase?.role)!=='admin')
+                //             throw `Owner ${ownerName} chưa được phân quyền dự án này.`
+                // ══════════════════════════════════════════════════════════════════════════════
+                int stageNo = (int) numberValue(gi(stage, "stageNo"));
+                String stageName = sv(stage, "name");
+                String ownerUserId = sv(assignment, "ownerUserId");
+                // JS đọc `assignment.ownerName`; adapter trả alias camelCase, nhưng đọc CẢ HAI dạng khoá
+                // để không lặp lại bẫy `SELECT *` đã gặp ở TASK-045.
+                String ownerName = sv(assignment, "ownerName");
+                if (ownerName.isEmpty()) ownerName = sv(assignment, "owner_name");
+                Map<String, Object> ownerBase = store.findUserRoleInfo(ownerUserId).orElse(Map.of());
+                String ownerRole = trim(sv(ownerBase, "role"));
+                String ownerBaseRole = trim(sv(ownerBase, "baseRole"));
+                List<String> allowedRoles = new ArrayList<>();
+                for (String code : sv(stage, "allowedRoleCodes").split(",")) {
+                    String trimmedCode = code.trim();
+                    if (!trimmedCode.isEmpty()) allowedRoles.add(trimmedCode);
+                }
+                if (!allowedRoles.isEmpty() && !allowedRoles.contains(ownerRole)
+                        && !allowedRoles.contains(ownerBaseRole))
+                    throw Api("Owner " + ownerName + " không thuộc vai trò được phép của Bước "
+                            + stageNo + " – " + stageName + ".");
+                if (!"admin".equals(ownerRole) && !store.ownerHasProjectScope(ownerUserId, projectId))
+                    throw Api("Owner " + ownerName + " chưa được phân quyền dự án này.");
+
                 stageOwners.put((int) numberValue(gi(stage, "stageNo")), assignment);
             }
         }
