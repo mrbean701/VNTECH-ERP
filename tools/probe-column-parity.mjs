@@ -28,6 +28,15 @@ import { execFileSync } from "node:child_process";
 
 const JS_SRC = "scripts/system-route.mjs";
 const JAVA_SRC = "java-backend/infrastructure/src/main/java/com/vntech/erp/infrastructure/persistence/BootstrapDataAdapter.java";
+import { loadJsSqlByKey as sharedLoadJsSql, loadJavaSqlByKey as sharedLoadJavaSql } from "./lib/sql-parity-extract.mjs";
+
+/** Bản đọc nguồn của MÔ-ĐUN DÙNG CHUNG (TASK-063) — dùng cho phép ĐỐI CHIẾU CHÉO bên dưới. */
+function loadSharedSources(composed) {
+  const { jsByKey } = sharedLoadJsSql();
+  const { javaByKey } = sharedLoadJavaSql(composed);
+  return { jsByKey, javaByKey };
+}
+
 const MYSQL = "C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysql.exe";
 const js = readFileSync(JS_SRC, "utf8");
 const java = readFileSync(JAVA_SRC, "utf8");
@@ -302,6 +311,32 @@ function mysqlColumns(sql) {
   }
 }
 
+// ═════════ ĐỐI CHIẾU CHÉO HAI BẢN ĐỌC NGUỒN (mô-đun dùng chung ↔ bản nội tuyến của cổng này) ═════════
+// VÌ SAO: `probe-clause-parity.mjs` (TASK-063) dùng mô-đun chung `tools/lib/sql-parity-extract.mjs`;
+// cổng này còn bản đọc nội tuyến. Hai bản có thể TRÔI KHÁC NHAU và khi đó một cổng sẽ báo "khớp" trên
+// một tập khoá khác — đúng lớp lỗi "cổng mất độ phủ mà không báo" (#103). Thay vì viết lại cổng đang
+// chạy tốt (rủi ro), cổng này **TỰ SO hai bản đọc** và HỎNG NGAY nếu lệch → trôi dã bị chặn tự động.
+const sourceCrossCheck = [];
+{
+  const shared = loadSharedSources(JAVA_KEY_SQL_VARS);
+  const keys = new Set([...javaByKey.keys(), ...jsByKey.keys(), ...shared.javaByKey.keys(), ...shared.jsByKey.keys()]);
+  const norm = (arr) => JSON.stringify([...(arr ?? [])].map((s) => s.replace(/\s+/g, " ").trim()).sort());
+  for (const key of keys) {
+    const here = `${norm(javaByKey.get(key))}|${norm(jsByKey.get(key))}`;
+    const there = `${norm(shared.javaByKey.get(key))}|${norm(shared.jsByKey.get(key))}`;
+    if (here !== there) {
+      sourceCrossCheck.push({ key, here, there });
+    }
+  }
+}
+console.log("═══ ĐỐI CHIẾU CHÉO: bản đọc nội tuyến ↔ mô-đun dùng chung ═══");
+if (sourceCrossCheck.length) {
+  console.log(`  HỎNG  ${sourceCrossCheck.length} khoá đọc KHÁC NHAU giữa hai bản ⇒ MỌI KẾT LUẬN DƯỚI ĐÂY KHÔNG ĐÁNG TIN.`);
+  sourceCrossCheck.slice(0, 5).forEach((d) => console.log(`    • ${d.key}\n        nội tuyến: ${d.here.slice(0, 160)}\n        mô-đun  : ${d.there.slice(0, 160)}`));
+} else {
+  console.log("  ĐẠT  hai bản đọc cho KẾT QUẢ GIỐNG HỆT trên toàn bộ khoá ⇒ không trôi khác nhau.");
+}
+
 // Chỉ chọn các khoá có SQL **nội tuyến** trong `data.put(...)` (không phải biến trung gian).
 const CONTROLS = ["constructionDailyLogs", "transferOrders", "issues", "returns", "companyAvailability", "roleCatalog"];
 console.log("═══ ĐỐI CHỨNG DƯƠNG: bộ tách cột của cổng ↔ metadata THẬT của MySQL ═══");
@@ -411,4 +446,4 @@ console.log("         Cổng CHỈ so TẬP CỘT — KHÔNG kiểm `ORDER BY`/`
 const controlsOk = controlResults.length > 0 && controlResults.every(Boolean);
 console.log(`ĐỐI CHỨNG DƯƠNG: ${controlResults.filter(Boolean).length}/${controlResults.length} khoá kiểm được khớp HOÀN TOÀN với MySQL` +
   (controlsOk ? " ⇒ bộ tách cột đáng tin." : " ⇒ ⚠️ bộ tách có vấn đề, ĐỪNG kết luận từ danh sách trên."));
-process.exit(controlsOk && coverageProblems.length === 0 ? 0 : 1);
+process.exit(controlsOk && coverageProblems.length === 0 && sourceCrossCheck.length === 0 ? 0 : 1);

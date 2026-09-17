@@ -995,9 +995,14 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                 m.put("aliasText", String.join("; ", list));
             });
             data.put("adminMaterials", adminMaterials);
+            // TASK-063 — LỆCH THẬT do cổng `probe-clause-parity.mjs` bắt (Known Problems #63): bản cũ sắp
+            // `ORDER BY sort_order,code` trong khi JS `:695` sắp `ORDER BY CASE WHEN active=1 THEN 0 ELSE 1 END,
+            // sort_order,name` ⇒ nhóm CHƯA DÙNG (`active=0`) không bị đẩy xuống cuối và thứ tự cùng `sort_order`
+            // theo mã thay vì theo TÊN. Không ảnh hưởng tập cột nên cổng cột không thấy.
             data.put("adminMaterialCategories", query("""
                     SELECT id,code,name,description,sort_order AS sortOrder,active
-                    FROM material_categories ORDER BY sort_order,code"""));
+                    FROM material_categories
+                    ORDER BY CASE WHEN active=1 THEN 0 ELSE 1 END,sort_order,name"""));
             // SỬA LỖI (TASK-041 phần 3, đường ĐỌC thứ SÁU): bản cũ chỉ trả 7 trường, THIẾU
             // `scope_examples`/`review_status`/`adjustment_note` và cả `categoryCode`/`categoryName` so với JS
             // `system-route.mjs:695`. UI đọc `row.scopeExamples` (cột "Phạm vi / ví dụ gồm"),
@@ -1128,6 +1133,9 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                            s.expires_at AS expiresAt
                     FROM sessions s JOIN users u ON u.id=s.user_id
                     WHERE s.expires_at>? ORDER BY s.created_at DESC LIMIT 300""", java.time.Instant.now()));
+            // TASK-063 — LỆCH THẬT do cổng `probe-clause-parity.mjs` bắt: JS `:701` chặn `LIMIT 100`
+            // (Nhật ký kiểm toán trả 100 dòng gần nhất), bản cũ trả **500** ⇒ danh sách dài gấp 5 lần so với
+            // giao diện tham chiếu. Giữ nguyên phần cột mở rộng của Java (Java-only, có chủ ý).
             data.put("audits", query("""
                     SELECT al.id,al.action,al.entity_type AS entityType,al.entity_id AS entityId,
                            al.occurred_at AS occurredAt,COALESCE(al.user_name,u.full_name) AS userName,
@@ -1136,7 +1144,7 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                            al.change_detail AS changeDetail,al.before_json AS beforeJson,
                            al.after_json AS afterJson,al.ip_address AS ipAddress
                     FROM audit_logs al LEFT JOIN users u ON u.id=al.user_id
-                    ORDER BY al.occurred_at DESC LIMIT 500"""));
+                    ORDER BY al.occurred_at DESC LIMIT 100"""));
             data.put("businessRoleEngineProfiles", query("""
                     SELECT id,engine_key AS engineKey,company_code AS companyCode,display_name AS displayName,
                            description,active,sort_order AS sortOrder,system_locked AS systemLocked
