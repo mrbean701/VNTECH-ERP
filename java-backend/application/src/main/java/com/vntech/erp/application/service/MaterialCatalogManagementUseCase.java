@@ -206,25 +206,53 @@ public final class MaterialCatalogManagementUseCase {
     }
 
     // ============ subcategories ============
+    /**
+     * Port nguyên trạng JS `save_material_subcategory` — scripts/system-route.mjs:2499-2519.
+     *
+     * <p><b>SỬA LỖI (TASK-041 phần 3).</b> Bản cũ lệch ba điểm:
+     * <ol>
+     *   <li><b>Hợp đồng payload:</b> đòi {@code code} — nhưng form UI (`MaterialSubcategoryModal`,
+     *       `app/page.tsx:3758`) chỉ có {@code categoryId}, {@code name}, {@code sortOrder},
+     *       {@code description} ⇒ action **luôn HTTP 400** ("Nhóm con vật tư cần nhóm cha, mã và tên.").
+     *       JS tự sinh mã bằng {@code internalGroupCode(name)}.</li>
+     *   <li><b>Ghi thiếu 3 cột:</b> {@code scope_examples}, {@code review_status}, {@code adjustment_note}.
+     *       JS suy ra: {@code scopeExamples = payload.scopeExamples || payload.description || null};
+     *       {@code reviewStatus = hợp lệ ? payload.reviewStatus : (sửa ? "approved" : "proposed")}.</li>
+     *   <li><b>Không đồng bộ vật tư con</b> khi nhóm con đổi nhóm cha (JS `:2513`) ⇒ để lại
+     *       {@code materials.category_id} mâu thuẫn với nhóm con.</li>
+     * </ol>
+     */
     public Map<String, Object> saveMaterialSubcategory(Principal principal, Map<String, Object> payload) {
         String subcategoryId = trim(payload.get("subcategoryId"));
         String categoryId = trim(payload.get("categoryId"));
-        String code = trim(payload.get("code")).toUpperCase(Locale.ROOT);
         String name = trim(payload.get("name"));
-        if (categoryId.isEmpty() || code.isEmpty() || name.isEmpty())
-            throw Api("Nhóm con vật tư cần nhóm cha, mã và tên.");
-        if (store.findCategory(categoryId).isEmpty()) throw Api("Nhóm cha không tồn tại.");
+        // JS: `clean(payload.code).toUpperCase() || internalGroupCode(name)` — UI không gửi `code`.
+        String code = blankDefault(trim(payload.get("code")).toUpperCase(Locale.ROOT),
+                MaterialSystemCodes.internalGroupCode(name));
+        if (categoryId.isEmpty() || name.isEmpty())
+            throw Api("Hệ M&E và tên nhóm vật tư là bắt buộc.");
+        Map<String, Object> category = store.findCategory(categoryId)
+                .orElseThrow(() -> Api("Hệ M&E không tồn tại."));
+        String description = nvl(payload.get("description"));
+        String scopeExamples = blankDefault(trim(payload.get("scopeExamples")),
+                description == null ? "" : description);
+        if (scopeExamples.isEmpty()) scopeExamples = null;
+        String rawReview = trim(payload.get("reviewStatus"));
+        String reviewStatus = List.of("proposed", "pending", "approved", "rejected").contains(rawReview)
+                ? rawReview : (subcategoryId.isEmpty() ? "proposed" : "approved");
+        String adjustmentNote = nvl(payload.get("adjustmentNote"));
+        int sortOrder = (int) Math.round(numberValue(payload.get("sortOrder")));
         Instant now = Instant.now();
         if (!subcategoryId.isEmpty() && store.findSubcategory(subcategoryId).isPresent()) {
-            store.updateSubcategory(subcategoryId, categoryId, code, name, nvl(payload.get("description")),
-                    (int) Math.round(numberValue(payload.get("sortOrder"))), now);
-            return Map.of("message", "Đã cập nhật nhóm con vật tư.");
+            store.updateSubcategory(subcategoryId, categoryId, code, name, description, scopeExamples,
+                    reviewStatus, adjustmentNote, sortOrder, now);
+            store.updateMaterialsForSubcategory(subcategoryId, categoryId,
+                    MaterialSystemCodes.canonicalMeCode(sv(category, "code")), now);
+            return Map.of("message", "Đã lưu nhóm vật tư " + name + ".");
         }
-        if (store.findSubcategoryByCode(code, categoryId).isPresent())
-            throw Api("Mã nhóm con đã tồn tại trong nhóm cha.");
-        store.insertSubcategory(idGenerator.next("MSCAT"), categoryId, code, name, nvl(payload.get("description")),
-                (int) Math.round(numberValue(payload.get("sortOrder"))), principal.userId(), now);
-        return Map.of("message", "Đã tạo nhóm con " + code + ".");
+        store.insertSubcategory(idGenerator.next("SUB"), categoryId, code, name, description, scopeExamples,
+                reviewStatus, adjustmentNote, sortOrder, principal.userId(), now);
+        return Map.of("message", "Đã lưu nhóm vật tư " + name + ".");
     }
 
     public Map<String, Object> setMaterialSubcategoryStatus(Principal principal, Map<String, Object> payload) {
@@ -445,6 +473,9 @@ public final class MaterialCatalogManagementUseCase {
                 createdSubcategories++;
                 store.insertSubcategory(subcategoryId, categoryId, subcategoryCode, subcategoryName,
                         ungrouped ? "Nhóm mặc định" : "Tạo từ file danh mục vật tư V5.0.0",
+                        // 3 tham số này để null — ĐÚNG như JS `system-route.mjs:2593`: câu INSERT của luồng
+                        // NHẬP DANH MỤC VẬT TƯ không ghi scope_examples/review_status/adjustment_note.
+                        null, null, null,
                         ungrouped ? 9999 : 999, principal.userId(), now);
             } else if (!subcategoryName.isEmpty() && !subcategoryName.equals(sv(subcategory, "name"))) {
                 subcategory.put("name", subcategoryName);

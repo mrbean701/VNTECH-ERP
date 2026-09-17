@@ -179,19 +179,40 @@ public class MaterialCatalogStoreAdapter implements MaterialCatalogStore {
 
     @Override @Transactional
     public void insertSubcategory(String id, String categoryId, String code, String name, String description,
+                                  String scopeExamples, String reviewStatus, String adjustmentNote,
                                   int sortOrder, String createdBy, Instant now) {
+        // SỬA LỖI (TASK-041 phần 3): JS `system-route.mjs:2516` chèn đủ 12 cột gồm scope_examples /
+        // review_status / adjustment_note; bản cũ bỏ 3 cột này nên đường Java không bao giờ ghi được chúng.
         jdbcTemplate.update("""
-                INSERT INTO material_subcategories (id,category_id,code,name,description,sort_order,active,
+                INSERT INTO material_subcategories (id,category_id,code,name,description,scope_examples,
+                                                    review_status,adjustment_note,sort_order,active,
                                                     created_at,updated_at)
-                VALUES (?,?,?,?,?,?,1,?,?)""", id, categoryId, code, name, description, sortOrder, now, now);
+                VALUES (?,?,?,?,?,?,?,?,?,1,?,?)""",
+                id, categoryId, code, name, description, scopeExamples, reviewStatus, adjustmentNote,
+                sortOrder, now, now);
     }
 
     @Override @Transactional
     public void updateSubcategory(String id, String categoryId, String code, String name, String description,
+                                  String scopeExamples, String reviewStatus, String adjustmentNote,
                                   int sortOrder, Instant now) {
+        // SỬA LỖI (TASK-041 phần 3): JS `system-route.mjs:2512` ghi 9 trường, gồm 3 cột mà bản cũ bỏ sót.
         jdbcTemplate.update("""
-                UPDATE material_subcategories SET category_id=?,code=?,name=?,description=?,sort_order=?,updated_at=?
-                WHERE id=?""", categoryId, code, name, description, sortOrder, now, id);
+                UPDATE material_subcategories SET category_id=?,code=?,name=?,description=?,scope_examples=?,
+                                                  review_status=?,adjustment_note=?,sort_order=?,updated_at=?
+                WHERE id=?""",
+                categoryId, code, name, description, scopeExamples, reviewStatus, adjustmentNote, sortOrder, now, id);
+    }
+
+    /**
+     * Đồng bộ vật tư con khi nhóm con đổi nhóm cha — JS `system-route.mjs:2513`.
+     * Thiếu câu này thì `materials.category_id` sẽ mâu thuẫn với `material_subcategories.category_id`.
+     */
+    @Override @Transactional
+    public void updateMaterialsForSubcategory(String subcategoryId, String categoryId, String system, Instant now) {
+        jdbcTemplate.update("""
+                UPDATE materials SET category_id=?,`system`=?,updated_at=? WHERE subcategory_id=?""",
+                categoryId, system, now, subcategoryId);
     }
 
     /**

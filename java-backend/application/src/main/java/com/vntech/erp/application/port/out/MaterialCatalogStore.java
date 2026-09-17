@@ -46,10 +46,31 @@ public interface MaterialCatalogStore {
      * Xem {@link #renameCategoryActive} để hiểu vì sao không dùng {@code updateSubcategory}.
      */
     void renameSubcategoryActive(String id, String name, Instant now);
+    /**
+     * INSERT nhóm con — JS `scripts/system-route.mjs:2516` chèn đủ 12 cột, gồm {@code scope_examples},
+     * {@code review_status}, {@code adjustment_note}.
+     *
+     * <p><b>THÊM THAM SỐ Ở TASK-041 PHẦN 3:</b> bản cũ chỉ ghi {@code description}/{@code sort_order}
+     * ⇒ 3 cột kia **không bao giờ được ghi** từ đường Java: `review_status` của nhóm con **sửa** lẽ ra phải
+     * thành `'approved'` (JS) nhưng mãi giữ giá trị cũ nên UI hiện sai nhãn "Đề xuất/Đã duyệt".
+     * Nhánh NHẬP DANH MỤC VẬT TƯ truyền {@code null} cho 3 tham số này — đúng như JS `:2593` (câu INSERT của
+     * luồng nhập KHÔNG có 3 cột đó).
+     */
     void insertSubcategory(String id, String categoryId, String code, String name, String description,
+                           String scopeExamples, String reviewStatus, String adjustmentNote,
                            int sortOrder, String createdBy, Instant now);
+    /** UPDATE nhóm con — JS `:2512` ghi 9 trường (xem {@link #insertSubcategory} về 3 cột mới). */
     void updateSubcategory(String id, String categoryId, String code, String name, String description,
+                           String scopeExamples, String reviewStatus, String adjustmentNote,
                            int sortOrder, Instant now);
+    /**
+     * Đồng bộ vật tư con khi nhóm con ĐỔI nhóm cha — JS `scripts/system-route.mjs:2513`:
+     * {@code UPDATE materials SET category_id=?, system=canonicalMeCode(category.code), updated_at=? WHERE subcategory_id=?}.
+     *
+     * <p><b>THÊM Ở TASK-041 PHẦN 3:</b> thiếu câu này thì chuyển một nhóm con sang hệ M&amp;E khác sẽ để lại
+     * vật tư trỏ tới **nhóm cha cũ** ⇒ `materials.category_id` mâu thuẫn với `material_subcategories.category_id`.
+     */
+    void updateMaterialsForSubcategory(String subcategoryId, String categoryId, String system, Instant now);
     void setSubcategoryActive(String id, boolean active, Instant now);
     void deleteSubcategorySafe(String id);
     List<Map<String, Object>> materialAliases(String materialId);

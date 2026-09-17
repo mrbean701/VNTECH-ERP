@@ -14,8 +14,8 @@
 | Mục | Giá trị |
 |---|---|
 | CURRENT PHASE | PHASE 1 — hạ tầng UI dùng chung. Song song: hoàn thiện tầng phân quyền Java |
-| CURRENT TASK | **Rà tiếp 16 bảng lệch BẢN ĐỒ GHI** (ứng viên đáng nghi: `material_subcategories` — `adjustment_note`/`review_status`/`scope_examples`; `project_archives.purge_audit_id`) · nhóm 6 (chờ quyết định) |
-| LAST COMPLETED | **TASK-041 (#57)** — `save_approval_stage` + `set_approval_stage_status`: bỏ yêu cầu `code` mà UI không gửi (action trước đây **luôn 400**), ghi đủ 5 trường (**SLA nay lưu thật**), port **3 quy tắc chặn**; probe **21/21** + chốt bước cuối **7/7**; cấu hình duyệt **nguyên trạng** (chỉ `updated_at` dòng 5 đổi). Trước đó: **TASK-040 nhóm 3b phần 2 (#54)** · **nhóm 4+5 (#50, #51)** |
+| CURRENT TASK | **Rà tiếp 15 bảng lệch BẢN ĐỒ GHI** (đáng nghi: `project_archives.purge_audit_id`; 6 bảng JS-ghi-mà-Java-không cần phân loại) · nhóm 6 (chờ quyết định) |
+| LAST COMPLETED | **TASK-041 phần 3 (#59)** — `save_material_subcategory`: bỏ yêu cầu `code` (action trước đây **luôn 400**), ghi đủ **3 cột**, **đồng bộ vật tư con** khi đổi nhóm cha, vá **đường ĐỌC thứ SÁU** (`adminMaterialSubcategories` thiếu 5 trường); probe **19/19**; dữ liệu về `14/8/6`. Trước đó: **TASK-041 phần 2 (#58)** · **phần 1 (#57)** · **TASK-040 nhóm 3b phần 2 (#54)** |
 | NEXT TASK | Mở rộng audit sang **bản đồ GHI** (`insert`/`update` của JS so với Java theo từng cột) → TASK-034 (gỡ chặn dựng bundle) → render §8.1 → **§8.2** → **§8.3** |
 | BLOCKED ITEMS | **TASK-040 nhóm 6** (lệch cấu trúc: `vntech_license_*` cần port cả hệ license + xác minh chữ ký số — thuộc phần **bảo mật** đã yêu cầu tạm hoãn) · **TASK-034** (`npm run build` không dựng lại được UI: dấu vân tay nguồn lệch + bảng identity có **trigger chặn UPDATE** ⇒ phải viết migration) · **TASK-035 mục 7** · **TASK-036 mục 7** · **TASK-037 mục 5** · **TASK-031** · **TASK-032** · **TASK-029** · **TASK-024** · **dữ liệu `user_module_permissions`** · **số SLA thật (24h/8h)** |
 | USER CONFIRMATION REQUIRED | **YES** — **11 câu hỏi**, ghi ở mục riêng bên dưới |
@@ -29,8 +29,8 @@
 * **Database**: MySQL 8.0.46; Flyway V1–V16 + drizzle tới `0108`; 121 bảng
 * **API**: 2 route (`app/api/system`, `app/api/files`); Java phục vụ **186 action**; JS tham chiếu 174 · Java **không thiếu action nào** · Java có **thêm 12**
 * **Tầng Java chỉ phục vụ action GHI** — action ĐỌC do SSR/RSC đảm nhiệm. Đây là lý do phép kiểm quyền sống phải dùng payload rỗng.
-* **Infrastructure**: MySQL **3306** · Java API **18081** (PID 9096, background job `pwsh-72`) · Node SSR **8787** · cutover proxy **9000** (người dùng mở `:9000`)
-* **JAR**: đã đóng gói lại **thành công** — `vntech-erp-web-0.1.0-SNAPSHOT.jar` **90.891.257 bytes** (17/09 16:10); **mọi sửa đổi backend ĐÃ có hiệu lực lúc chạy**
+* **Infrastructure**: MySQL **3306** · Java API **18081** (PID 19860, background job `pwsh-74`) · Node SSR **8787** · cutover proxy **9000** (người dùng mở `:9000`)
+* **JAR**: đã đóng gói lại **thành công** — `vntech-erp-web-0.1.0-SNAPSHOT.jar` **90.891.898 bytes** (17/09 16:18); **mọi sửa đổi backend ĐÃ có hiệu lực lúc chạy**
 * **TODO hiện tại**: xem mục CURRENT TODO cuối tệp
 
 ## Authentication
@@ -105,7 +105,8 @@ Mặc định của interface là `return role()` = **mã chuẩn** ⇒ thiếu 
 25. ~~`canonicalMeCode` Java lệch JS~~ **ĐÃ VÁ ở #52**: Java chỉ so **đúng bằng** trong khi JS khớp **tiền tố** ⇒ đo được **7/28 đầu vào lệch** (`Điện lực`, `DIEN123`, `ELV-1`, `PCCC-01`, `DIEN.TU`… bị xếp `KHAC` thay vì đúng hệ M&E) ⇒ **vật tư nhập vào mang `system` sai** (cả nhập BOQ lẫn danh mục vật tư). Nay có `domain/service/MaterialSystemCodes.java` làm **một nguồn sự thật**, `BoqManagementUseCase` uỷ quyền cho nó, kèm **unit test 5 ca** ghi lại đúng 7 ca từng lệch. Cổng đo: `tools/probe-canonical-me-code-drift.mjs`.
 26. **Bẫy `(?i)` của Java (lỗi của chính tôi, unit test bắt được)**: `replaceAll("(?i)đ","d")` **KHÔNG** khớp `Đ` — cờ `(?i)` của Java chỉ case-fold ASCII trừ khi bật `UNICODE_CASE` ⇒ mọi đầu vào tiếng Việt rơi về `KHAC`. Phải thay **tường minh** `đ`→`d` và `Đ`→`D` (như `MaterialMatcherV2` đang làm).
 27. ~~TASK-041 — `save_approval_stage` lệch cả HỢP ĐỒNG PAYLOAD lẫn QUY TẮC~~ **ĐÃ VÁ ở #57**: Java **bắt buộc trường `code` mà UI không bao giờ gửi** ⇒ action **luôn 400**; cộng thêm **5 trường bị bỏ im lặng** (`description`, `sla_hours`, `approval_mode`, `auto_approve_on_submit`, `sort_order`) ⇒ **admin sửa SLA, hệ thống báo thành công nhưng SLA KHÔNG đổi**; và **3 quy tắc JS không được thi hành**. Nay đã port đủ + **gỡ 2 phương thức tự phát minh** (`findApprovalStageCatalog`, `stageCodeExists` — chúng coi `code` như `stage_no`). Bằng chứng: probe **21/21** (SLA 8→33 đọc lại đúng) + chốt bước cuối **7/7**; cấu hình duyệt **nguyên trạng**. Chi tiết: `TASK-041.md` mục 6.
-28. **LỖI LẶP LẠI CỦA CHÍNH TÔI (2 lần)**: chạy `mvn` từ **thư mục workspace** thay vì `java-backend` ⇒ `no POM in this directory`. Mọi lệnh `mvn` phải đặt `workdir = java-backend`.
+28. **LỖI LẶP LẠI CỦA CHÍNH TÔI (3 lần)**: (1)+(2) chạy `mvn` từ **thư mục workspace** thay vì `java-backend` ⇒ `no POM in this directory`; (3) dùng `Set-Content` của PowerShell để sửa tệp có tiếng Việt ⇒ tệp thành **UTF-8 không hợp lệ** (PowerShell mặc định ghi ANSI). **Quy tắc: `mvn` phải đặt `workdir = java-backend`; mọi tệp có tiếng Việt chỉ ghi bằng công cụ file (UTF-8), KHÔNG dùng `Set-Content`.**
+29. **MySQL CLI mặc định dùng charset `cp850`** ⇒ chuỗi **tiếng Việt** trong `WHERE` bị hỏng và **tra không ra dòng** (đã gây tạo 3 dòng rác trong probe TASK-041 phần 3). Phải thêm `--default-character-set=utf8mb4` khi kết xuất/đối chiếu dữ liệu có tiếng Việt, và ưu tiên **tra bằng khoá ASCII** (`code`, `id`).
 
 ## Important Decisions
 
@@ -160,7 +161,8 @@ Mặc định của interface là `return role()` = **mã chuẩn** ⇒ thiếu 
 * [x] **TASK-040 nhóm 3b phần 2** · port thân `import_material_catalog` — #54: nhóm tự tạo từ mã, `system=canonicalMeCode`, thông điệp JS; **vá đường ĐỌC thứ NĂM** (`adminMaterials` thiếu `specification`/`brand`/`minStock`/`requiresCocq`/mã-tên nhóm); probe **17/17**
 * [x] **`canonicalMeCode` gom về một nguồn** — #52: vá **7/28 đầu vào lệch** với JS; unit test **5/5** · domain **19/19**
 * [x] **TASK-041 · DONE (#57)** · `save_approval_stage` + `set_approval_stage_status` — bỏ yêu cầu `code` UI không gửi, ghi đủ **5 trường** (**SLA nay lưu thật**), port **3 quy tắc chặn**; probe **21/21** + chốt bước cuối **7/7**. Chi tiết: `docs/agent-progress/TASK-041.md` mục 6
-* [ ] **Rà tiếp 16 bảng lệch BẢN ĐỒ GHI** — cổng `tools/probe-write-map-drift.mjs`; đáng nghi: `material_subcategories` (`adjustment_note`/`review_status`/`scope_examples`), `project_archives.purge_audit_id`
+* [x] **`material_subcategories` DONE (#59)** — phần 3 của TASK-041: Java đòi `code` mà UI không gửi (⇒ **luôn 400**), **bỏ 3 cột** (`scope_examples`/`review_status`/`adjustment_note`), **không đồng bộ vật tư con** khi đổi nhóm cha (⇒ `materials.category_id` mâu thuẫn), và **đường ĐỌC thứ SÁU** (`adminMaterialSubcategories` thiếu 5 trường). Probe **19/19**; dữ liệu về nguyên trạng `14/8/6`
+* [ ] **Rà tiếp 15 bảng lệch BẢN ĐỒ GHI** — đáng nghi: `project_archives.purge_audit_id`; 6 bảng JS-ghi-mà-Java-không (`email_outbox`, `sessions`, `material_embeddings`, `custom_field_values`, `material_code_history`, `task_notifications`) cần xác nhận là **chủ ý của Strangler Fig** hay **thiếu port**
 * [x] **`delete_approval_stage` DONE (#58)** — phần 2 của TASK-041: Java cũ cho **xoá bước đã có 20 bản ghi lịch sử** và **xoá bước hoạt động cuối cùng**; nay port đủ **2 chốt** + thông điệp nguyên văn, probe **12/12**; cấu hình duyệt **nguyên trạng** (5 dòng khớp bản sao lưu ở mọi trường nghiệp vụ)
 * [!] **TASK-040 nhóm 6 · CHỜ QUYẾT ĐỊNH** — `vntech_license_*` lệch **cấu trúc** (câu hỏi #11)
 * [x] **Cổng mới**: `probe-java-sql-live.mjs` (lược đồ đang chạy) · `probe-schema-drift.mjs` (tệp migration ↔ DB: **0 lệch**) · `probe-increment-drift.mjs` (SET vs cộng dồn, **có đối chứng dương**) · `probe-action-coverage-controller.mjs` (UI ↔ nhánh `case`: **0 thiếu**) · `show-js-lines.mjs`

@@ -131,6 +131,7 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
         data.put("materialSubcategories", query("""
                 SELECT ms.id,ms.category_id AS categoryId,ms.code,ms.name,ms.description,
                        ms.scope_examples AS scopeExamples,ms.review_status AS reviewStatus,
+                       ms.adjustment_note AS adjustmentNote,
                        ms.sort_order AS sortOrder,ms.active,mc.code AS categoryCode,mc.name AS categoryName
                 FROM material_subcategories ms JOIN material_categories mc ON mc.id=ms.category_id
                 WHERE ms.active=1 AND mc.active=1 ORDER BY mc.sort_order,ms.sort_order,ms.name"""));
@@ -673,10 +674,18 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
             data.put("adminMaterialCategories", query("""
                     SELECT id,code,name,description,sort_order AS sortOrder,active
                     FROM material_categories ORDER BY sort_order,code"""));
+            // SỬA LỖI (TASK-041 phần 3, đường ĐỌC thứ SÁU): bản cũ chỉ trả 7 trường, THIẾU
+            // `scope_examples`/`review_status`/`adjustment_note` và cả `categoryCode`/`categoryName` so với JS
+            // `system-route.mjs:695`. UI đọc `row.scopeExamples` (cột "Phạm vi / ví dụ gồm"),
+            // `row.reviewStatus` (nhãn "Đã duyệt"/"Đề xuất") và `row.adjustmentNote` (cột "Ý kiến điều chỉnh")
+            // ⇒ thiếu trường thì các cột đó LUÔN trống/giữ mặc định dù DB có dữ liệu.
             data.put("adminMaterialSubcategories", query("""
-                    SELECT id,code,name,category_id AS categoryId,description,
-                           sort_order AS sortOrder,active
-                    FROM material_subcategories ORDER BY sort_order,code"""));
+                    SELECT ms.id,ms.category_id AS categoryId,ms.code,ms.name,ms.description,
+                           ms.scope_examples AS scopeExamples,ms.review_status AS reviewStatus,
+                           ms.adjustment_note AS adjustmentNote,
+                           ms.sort_order AS sortOrder,ms.active,mc.code AS categoryCode,mc.name AS categoryName
+                    FROM material_subcategories ms JOIN material_categories mc ON mc.id=ms.category_id
+                    ORDER BY CASE WHEN ms.active=1 THEN 0 ELSE 1 END,mc.sort_order,ms.sort_order,ms.name"""));
         }
 
         // engineRoleProfiles: JS trả business_role_engine_catalog dưới tên này.

@@ -272,3 +272,71 @@ Bản đầu của probe lấy **bước 5** làm "bước cuối cùng" để k
 Đã sửa kịch bản: tạo **bước tạm 902 (chưa có lịch sử)**, tắt bước 1–5 để 902 thành bước hoạt động cuối, rồi
 mới gọi xoá ⇒ chốt cuối hiện ra đúng. **Bài học: khi một hàm có NHIỀU chốt theo thứ tự, phải dựng dữ liệu để
 chốt cần kiểm KHÔNG bị chốt trước đó che mất.**
+
+---
+
+# 8. PHẦN 3 — `save_material_subcategory`: SAI HỢP ĐỒNG PAYLOAD + 3 CỘT BỊ BỎ + KHÔNG ĐỒNG BỘ VẬT TƯ CON
+
+**Ngày:** 17/09/2026 · **Trạng thái:** **DONE** · jar **90.891.898 bytes** (16:18:22) · API PID **19860** ·
+log **0 ERROR** · regression **59/61**
+
+## 8.1 Nguồn: cổng BẢN ĐỒ GHI
+
+`tools/probe-write-map-drift.mjs` báo `material_subcategories`: **JS ghi `adjustment_note`, `review_status`,
+`scope_examples` mà Java KHÔNG ghi**. Truy nguyên thì lộ ra **bốn** vấn đề, không phải một:
+
+| # | Vấn đề | Bằng chứng |
+|---|---|---|
+| 1 | Java **bắt buộc `code`** mà form UI không có trường đó ⇒ **luôn HTTP 400** | `app/page.tsx:3758` chỉ có `categoryId/name/sortOrder/description` |
+| 2 | Java **không ghi** `scope_examples`/`review_status`/`adjustment_note` | JS `system-route.mjs:2512,2516` |
+| 3 | Java **không đồng bộ vật tư con** khi nhóm con đổi nhóm cha | JS `:2513` `UPDATE materials SET category_id=?, system=canonicalMeCode(category.code) …` |
+| 4 | **Đường ĐỌC thứ SÁU**: bootstrap Java thiếu `adjustment_note`; riêng `adminMaterialSubcategories` thiếu **5 trường** (`scope_examples`, `review_status`, `adjustment_note`, `categoryCode`, `categoryName`) | UI đọc `row.scopeExamples`/`row.reviewStatus`/`row.adjustmentNote` (`app/page.tsx:2280,2302,2308`) |
+
+**Hệ quả nghiệp vụ của #3** (nặng nhất): chuyển một nhóm con sang hệ M&E khác sẽ để lại vật tư trỏ
+**nhóm cha cũ** ⇒ `materials.category_id` **mâu thuẫn** với `material_subcategories.category_id`.
+**Hệ quả của #2:** nhóm con SỬA xong lẽ ra `review_status='approved'` (JS) nhưng mãi giữ giá trị cũ ⇒ cột
+"Trạng thái" trong màn Quản trị hiển thị sai nhãn và bộ đếm `proposed` sai.
+
+## 8.2 Đã sửa (đúng JS)
+
+* `MaterialCatalogStore` (port): `insertSubcategory`/`updateSubcategory` mang thêm 3 tham số
+  (`scopeExamples`, `reviewStatus`, `adjustmentNote`); **thêm** `updateMaterialsForSubcategory`.
+* `MaterialCatalogStoreAdapter`: INSERT **12 cột**, UPDATE **9 trường**, + câu đồng bộ vật tư con.
+  Nhánh **nhập danh mục vật tư** truyền `null` cho 3 tham số — **đúng** như JS `:2593` (câu INSERT của luồng
+  nhập không có 3 cột đó).
+* `MaterialCatalogManagementUseCase.saveMaterialSubcategory`: bỏ yêu cầu `code` (tự sinh bằng
+  `internalGroupCode(name)`), thêm 3 cột với **đúng cách suy giá trị của JS**:
+  `scopeExamples = payload.scopeExamples || payload.description || null`;
+  `reviewStatus = hợp lệ ? payload.reviewStatus : (sửa ? "approved" : "proposed")`; thông điệp
+  *"Đã lưu nhóm vật tư {name}."*
+* `BootstrapDataAdapter`: `materialSubcategories` thêm `adjustment_note`; `adminMaterialSubcategories`
+  thêm **5 trường** còn thiếu + sắp xếp theo `active` như JS `:695`.
+
+## 8.3 Kiểm chứng — `tools/probe-task041-subcat.mjs`: **19/19 ĐẠT, exit 0**
+
+| Phép kiểm | Kết quả |
+|---|---|
+| A. Tạo bằng **đúng payload UI** (không `code`) | **200** + *"Đã lưu nhóm vật tư Nhóm tạm P3."* |
+| A. Mã tự sinh | `NHOM_TAM_P3` (từ `internalGroupCode(name)`) |
+| B. `scope_examples` khi TẠO | lấy **mặc định từ `description`** |
+| B. `review_status` khi TẠO | `proposed` |
+| B. **`review_status` khi SỬA** | **`approved`** (bản cũ không bao giờ ghi) |
+| B. `scope_examples` khi SỬA | theo `description` **mới** |
+| B. Sửa **không** lọt sang nhánh INSERT | vẫn **1** dòng trong nhóm cha |
+| C. Chuyển nhóm con sang hệ M&E khác | vật tư con đi theo: `CAT_ZZP3_A` → **`CAT_ZZP3_B`**, `system` tính lại = `KHAC` (đúng vì mã thử không khớp hệ M&E chuẩn) |
+| D. Bootstrap | có `scopeExamples`/`reviewStatus`/`adjustmentNote` **và** `categoryCode`/`categoryName` |
+| 2 nhánh chặn | *"Hệ M&E và tên nhóm vật tư là bắt buộc."* · *"Hệ M&E không tồn tại."* — **nguyên văn JS** |
+| Dọn dẹp | `14/8/6` → **`14/8/6`** |
+
+## 8.4 LỖI CỦA CHÍNH TÔI (hai lỗi trong cùng một probe)
+
+1. **Charset của MySQL CLI**: lần chạy đầu tra dòng tạm bằng `WHERE name='Nhóm tạm P3'`, nhưng CLI mặc định
+   dùng **cp850** nên chuỗi tiếng Việt bị hỏng ⇒ không tìm thấy dòng ⇒ script **tạo thêm 3 dòng rác** thay vì
+   sửa (thấy rõ: `material_subcategories` 8 → **11**). Đã sửa: thêm `--default-character-set=utf8mb4` và
+   **tra bằng khoá ASCII** (`code`), dọn theo nhóm cha; đã dọn sạch về `14/8/6` trước khi chạy lại.
+2. **`Set-Content` của PowerShell ghi ANSI**: dùng nó để sửa tệp probe có tiếng Việt ⇒ tệp thành **UTF-8 không
+   hợp lệ**, `read` báo lỗi. Phải viết lại toàn bộ tệp bằng công cụ ghi UTF-8 (bài học này **đã có trong bộ nhớ
+   dự án** mà tôi vẫn lặp lại ⇒ ghi vào known issue).
+
+> Hai lỗi này **không ảnh hưởng kết luận** (lần chạy lại sạch 19/19 và dữ liệu đã về nguyên trạng), nhưng đều là
+> lỗi của phép đo chứ không phải của mã — đúng loại lỗi tôi đã gặp nhiều lần trong dự án.
