@@ -172,7 +172,12 @@ public class WarehouseStockStoreAdapter implements WarehouseStockStore {
     @Override
     @Transactional
     public void updateIssueItemInstalled(String issueItemId, double installedQty, Instant now) {
-        jdbcTemplate.update("UPDATE stock_issue_items SET installed_qty=?,updated_at=? WHERE id=?", installedQty, now, issueItemId);
+        // SỬA LỖI (TASK-040 nhóm 4): bản cũ dùng `installed_qty=?` — GHI ĐÈ. JS
+        // (scripts/system-route.mjs:1520 action confirm_installation) dùng `installed_qty=installed_qty+?`
+        // — CỘNG DỒN. Xác nhận lắp nhiều lần: JS cho 3+4=7, bản cũ cho 4 ⇒ SAI SỐ LIỆU.
+        // Đây là lỗi NGỮ NGHĨA: cột có thật nên cổng lược đồ KHÔNG THỂ bắt được.
+        jdbcTemplate.update("UPDATE stock_issue_items SET installed_qty=installed_qty+?,updated_at=? WHERE id=?",
+                installedQty, now, issueItemId);
     }
 
     @Override
@@ -338,12 +343,13 @@ public class WarehouseStockStoreAdapter implements WarehouseStockStore {
                 "INSTALL", -quantity, now, "stock_issue", issueId, issueItemId, userId, "Đã lắp đặt tại hạng mục", now);
     }
 
-    @Override
-    @Transactional
-    public void updateIssueItemStatusInstalled(String issueItemId, Instant now) {
-        jdbcTemplate.update("UPDATE stock_issue_items SET status='installed',updated_at=? WHERE id=?",
-                now, issueItemId);
-    }
+    // ĐÃ XOÁ (TASK-040 nhóm 4): `updateIssueItemStatusInstalled` ghi `stock_issue_items.status='installed'`.
+    // Cột `status` KHÔNG tồn tại trong `stock_issue_items` (11 cột thật: id, issue_id, material_id,
+    // request_item_id, quantity, installed_qty, work_package_code, installation_area, created_at, updated_at,
+    // contract_id) ⇒ MySQL "Unknown column" ⇒ HTTP 500 đúng ở bước xác nhận lắp CUỐI CÙNG.
+    // Nghiêm trọng hơn: JS `confirm_installation` (scripts/system-route.mjs:1520) CHỈ có 2 câu cộng dồn
+    // `installed_qty` + 1 movement — **KHÔNG** đánh dấu trạng thái ở đâu cả. Nên đây là HÀNH VI TỰ THÊM,
+    // không phải thiếu sót cần bù: cách sửa đúng là bỏ hẳn, không phải thêm cột vào MySQL.
 
     // ---------- transfer orders ----------
     @Override

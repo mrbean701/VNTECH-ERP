@@ -326,7 +326,7 @@ public final class ProductionManagementUseCase {
         store.insertTeamSettlement(sid, projectId, sv(sc, "teamId"), subcontractId, settlementNo,
                 approved, adjustment, finalValue, paid, remaining, nvl(payload.get("note")),
                 principal.userId(), Instant.now());
-        store.settleSubcontract(subcontractId, sid, Instant.now());
+        store.settleSubcontract(subcontractId, Instant.now());
         return Map.of("message", "Đã quyết toán " + sv(sc, "contractNo") + "; còn " + remaining + " phải thanh toán tổ đội.");
     }
 

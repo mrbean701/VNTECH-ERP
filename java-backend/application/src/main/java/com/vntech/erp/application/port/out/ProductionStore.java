@@ -60,7 +60,15 @@ public interface ProductionStore {
     void insertTeamSettlement(String id, String projectId, String teamId, String subcontractId, String settlementNo,
                               double approvedProductionValue, double adjustmentValue, double finalValue,
                               double paidValue, double remainingValue, String note, String createdBy, Instant now);
-    void settleSubcontract(String subcontractId, String settlementId, Instant now);
+    /**
+     * Đánh dấu hợp đồng giao khoán đã quyết toán.
+     *
+     * <p><b>SỬA LỖI (TASK-040 nhóm 5):</b> bản cũ nhận thêm {@code settlementId} và ghi
+     * {@code settlement_id}/{@code settled_at} — hai cột <b>KHÔNG tồn tại</b> trong `team_subcontracts`
+     * ⇒ HTTP 500 ở action `settle_subcontract`. JS (scripts/system-route.mjs:1250) chỉ ghi {@code status} +
+     * {@code updated_at}; liên kết tới phiếu quyết toán nằm ở phía `team_settlements.subcontract_id`.
+     */
+    void settleSubcontract(String subcontractId, Instant now);
 
     // ---- construction daily logs ----
     Optional<Map<String, Object>> findDailyLog(String id);

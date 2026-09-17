@@ -1,0 +1,74 @@
+#50 TASK-040 nhom 4+5: confirm_installation (them mot LOP LOI MOI: ngu nghia SET vs CONG DON) + settle_subcontract
+
+Ba lop loi cua TASK-040, da gap du ca ba:
+  lop 1: cot KHONG TON TAI              -> cong luoc do bat duoc
+  lop 2: ghi sai CACH (SET thay vi cong don) -> cong luoc do KHONG the bat
+  lop 3: duong DOC thieu truong         -> chi phep kiem "ghi xong DOC LAI" moi bat duoc
+Vong nay phat hien va sua lop 2 - lan dau tien gap trong du an.
+
+=== NHOM 4: confirm_installation ===
+LOI 1 (lop 1): WarehouseStockStoreAdapter.updateIssueItemStatusInstalled ghi
+  UPDATE stock_issue_items SET status='installed',updated_at=? WHERE id=?
+  Cot `status` KHONG ton tai (11 cot that: id, issue_id, material_id, request_item_id, quantity,
+  installed_qty, work_package_code, installation_area, created_at, updated_at, contract_id) => HTTP 500.
+  Te hon: no chi chay o nhanh `installedQty + quantity >= issueQty` - tuc CHI NO O LAN XAC NHAN LAP CUOI CUNG.
+  JS confirm_installation (system-route.mjs:1520) KHONG danh dau trang thai o dau ca => day la HANH VI TU THEM
+  => cach sua dung la XOA, KHONG phai them cot vao MySQL cho khop.
+
+LOI 2 (lop 2 - nang nhat): cung mot phuong thuc khac
+  JS  : UPDATE stock_issue_items SET installed_qty=installed_qty+?   (CONG DON)
+  Java: UPDATE stock_issue_items SET installed_qty=?                  (GHI DE)
+  Cot co that nen cong luoc do KHONG BAO GI. Hau qua: xac nhan lap 3 roi 4 => JS ra 7, Java ra 4
+  => SAI SO LIEU AM THAM, khong loi HTTP, khong dong log.
+
+CONG CU MOI: tools/probe-increment-drift.mjs
+  Trich cac cot JS CONG DON (col = col + ? / col = COALESCE(col,0)+?), suy bang tu cau UPDATE ... SET gan nhat
+  phia truoc, roi giao voi cac cot Java GHI DE (col = ?).
+  Ket qua toan kho Java: JS cong don 10 cot - Java ghi de 485 cot - GIAO = 0 UNG VIEN.
+  => khong con cho nao lech ngu nghia kieu nay trong toan bo Java.
+  DOI CHUNG DUONG (bat buoc, de cong cu khong phai "luon bao sach"): tep
+  tools/_old-adapter-positive-control.java.txt chua NGUYEN VAN cau lenh cu; quet kem bang --extra-file
+  => cong cu BAO `stock_issue_items.installed_qty`; quet cay hien tai => SACH.
+
+DA SUA
+  updateIssueItemInstalled -> SET installed_qty=installed_qty+? (+ Javadoc: tham so la PHAN TANG THEM)
+  XOA updateIssueItemStatusInstalled khoi port + adapter + loi goi trong use case
+  XOA loi goi thua updateIssueItemInstalled(item.id, 0, now) sau khi tao phieu xuat: insertStockIssue da ghi
+    installed_qty=0 ngay trong cau INSERT (dung nhu JS:1511), va voi nghia cong don thi goi voi 0 la vo nghia
+
+=== NHOM 5: settle_subcontract ===
+ProductionStoreAdapter.settleSubcontract ghi settlement_id=? va settled_at=? - CA HAI khong ton tai trong
+team_subcontracts (15 cot that) => HTTP 500. JS (system-route.mjs:1250) chi co:
+  UPDATE team_subcontracts SET status='settled',updated_at=? WHERE id=?
+Cot settled_at that ra thuoc bang team_settlements - va Java DA GHI DUNG o insertTeamSettlement (cung
+transaction). Lien ket toi phieu quyet toan nam o phia team_settlements.subcontract_id.
+=> Bo settlement_id/settled_at; bo luon tham so settlementId khoi port.
+
+=== NHOM 6: LECH CAU TRUC - KHONG TU SUA (BLOCKED, cho quyet dinh) ===
+Java mo hinh hoa license theo cach KHAC HAN JS:
+  Dau vao : Java nhan licenseKey/companyName/edition ; JS + UI (app/page.tsx:2642) nhan `licenseEnvelope`
+            (chuoi JSON)
+  Xu ly   : Java khong kiem gi ; JS JSON.parse (loi => "Noi dung license khong phai JSON hop le.") roi
+            verifyLicenseEnvelope(envelope,{keyId,publicKeyPem,productId,tenantId,companyCode,machineFingerprint})
+            - XAC MINH CHU KY SO; neu khong hop le thi ghi vntech_trust_audit event LICENSE_REJECTED va nem
+            "License khong hop le: <ly do>"
+  Ghi bang: Java ghi license_key/company_name/edition/activated_by/activated_at/created_at - 6 cot KHONG ton tai
+            trong 18 cot that cua vntech_license_installations
+Khong co cot nao "doi san" de anh xa `edition` hay `license_key` => anh xa se la BIA NGHIEP VU (vi pham GOAL muc 3).
+Tuong tu request_license_transfer: Java ghi to_company_name/created_at (khong ton tai) + status='pending';
+JS ghi destination_machine_fingerprint/recovery_code_hash/status='requested'/requested_at/detail_json.
+Sua dung nghia la PORT CA HE LICENSE (envelope + xac minh chu ky + claims + trust audit) - thuoc phan BAO MAT
+ma nguoi dung da yeu cau tam hoan. Da ghi vao cau hoi can nguoi dung xac nhan.
+Trong luc cho: 2 action nay GIU NGUYEN trang thai hong (HTTP 500) - hong ro rang tot hon hong am tham;
+KHONG them cot vao MySQL de hop thuc hoa mo hinh Java.
+
+KIEM CHUNG
+  mvn -q -DskipTests compile            : exit 0
+  probe-java-sql-live.mjs               : 11 -> 8 phat hien (con lai TAT CA la nhom 6)
+  probe-increment-drift.mjs             : 0 ung vien / co doi chung duong DAT
+  (nhom 4/5 chua build lai jar va chua goi that - se lam o vong sau truoc khi danh dau DONE)
+
+Tep: WarehouseStockStore.java - WarehouseStockStoreAdapter.java - StockManagementUseCase.java -
+ProductionStore.java - ProductionStoreAdapter.java - ProductionManagementUseCase.java -
+tools/{probe-increment-drift.mjs,_old-adapter-positive-control.java.txt,show-js-lines.mjs} (moi/bo sung) -
+docs/agent-progress/TASK-040.md (muc 16-19)

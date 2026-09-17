@@ -349,3 +349,128 @@ Lỗi cột đã hết, nhưng khi tra UI tôi phát hiện **lệch hành vi ch
 
 ⇒ Cần port đầy đủ `import_material_catalog` (kèm `canonicalMeCode`, `internalGroupCode`). **Chưa làm ở vòng này**
 để không trộn một thay đổi lớn vào bản vá lỗi cột; đã ghi thành mục riêng.
+
+---
+
+# 16. NHÓM 4 — `confirm_installation`: PHÁT HIỆN THÊM MỘT LỚP LỖI MỚI (NGỮ NGHĨA)
+
+**Ngày:** 17/09/2026 · **Trạng thái:** DONE
+
+## 16.1 Lỗi thứ nhất: ghi cột không tồn tại
+
+`WarehouseStockStoreAdapter.updateIssueItemStatusInstalled` ghi `stock_issue_items.status='installed'`.
+Cột `status` **không tồn tại** (11 cột thật: `id, issue_id, material_id, request_item_id, quantity,
+installed_qty, work_package_code, installation_area, created_at, updated_at, contract_id`) ⇒ HTTP 500.
+Tệ hơn: nó chỉ chạy ở nhánh `installedQty + quantity >= issueQty` — tức **chỉ nổ ở lần xác nhận lắp CUỐI CÙNG**,
+nên rất dễ lọt qua kiểm thử.
+
+**JS có câu này không?** `confirm_installation` (scripts/system-route.mjs:1520) chỉ có 2 câu cộng dồn
+`installed_qty` + 1 movement — **KHÔNG đánh dấu trạng thái ở đâu cả**. ⇒ Đây là **hành vi tự thêm**, nên cách
+sửa đúng là **XOÁ**, không phải thêm cột vào MySQL cho khớp.
+
+## 16.2 Lỗi thứ hai — lớp lỗi mà cổng lược đồ KHÔNG THỂ bắt
+
+```
+JS  (system-route.mjs:1520): UPDATE stock_issue_items SET installed_qty=installed_qty+?   ← CỘNG DỒN
+Java (cũ, dòng 175)        : UPDATE stock_issue_items SET installed_qty=?                  ← GHI ĐÈ
+```
+
+Cột có thật ⇒ `probe-java-sql-live.mjs` **không báo gì**. Hậu quả: xác nhận lắp 3 rồi 4 ⇒ JS ra **7**,
+Java ra **4** ⇒ **sai số liệu âm thầm**, không lỗi HTTP, không dòng log.
+
+## 16.3 Công cụ mới: `tools/probe-increment-drift.mjs`
+
+Săn đúng lớp lỗi này: trích các cột JS **cộng dồn** (`col = col + ?` / `col = COALESCE(col,0)+?`), suy ra bảng
+từ câu `UPDATE … SET` gần nhất phía trước, rồi giao với các cột Java **ghi đè** (`col = ?`).
+
+**Kết quả trên toàn kho Java:** JS cộng dồn **10 cột** · Java ghi đè 485 cột · **giao = 0 ứng viên** ⇒
+không còn chỗ nào lệch ngữ nghĩa kiểu này.
+
+**Đối chứng dương (bắt buộc, để công cụ không phải "luôn báo sạch"):** tệp
+`tools/_old-adapter-positive-control.java.txt` chứa **nguyên văn** câu lệnh cũ. Quét kèm tệp đó bằng
+`--extra-file` ⇒ công cụ **BÁO** `stock_issue_items.installed_qty`; quét cây hiện tại ⇒ **sạch**.
+Không có bước này thì "0 ứng viên" không chứng minh được gì.
+
+## 16.4 Đã sửa
+
+* `updateIssueItemInstalled` → `SET installed_qty=installed_qty+?` (cộng dồn), kèm Javadoc ghi rõ tham số là
+  **phần tăng thêm** chứ không phải giá trị mới.
+* **Xoá** `updateIssueItemStatusInstalled` khỏi port + adapter + lời gọi trong use case.
+* Xoá lời gọi thừa `updateIssueItemInstalled(item.id, 0, now)` sau khi tạo phiếu xuất — `insertStockIssue` đã ghi
+  `installed_qty=0` ngay trong câu INSERT (đúng như JS `system-route.mjs:1511`), và với nghĩa cộng dồn thì
+  gọi với `0` là vô nghĩa.
+
+---
+
+# 17. NHÓM 5 — `settle_subcontract` (ĐÃ SỬA)
+
+`ProductionStoreAdapter.settleSubcontract` ghi `settlement_id=?` và `settled_at=?` — **cả hai không tồn tại**
+trong `team_subcontracts` (15 cột thật) ⇒ HTTP 500.
+
+JS (system-route.mjs:1250) chỉ có:
+```sql
+UPDATE team_subcontracts SET status='settled',updated_at=? WHERE id=?
+```
+Cột `settled_at` thật ra thuộc bảng `team_settlements` — và Java **đã ghi đúng** ở `insertTeamSettlement`
+(cùng một transaction). Liên kết tới phiếu quyết toán nằm ở phía `team_settlements.subcontract_id`.
+
+⇒ Bỏ `settlement_id`/`settled_at`; bỏ luôn tham số `settlementId` khỏi port (cột không có thì tham số cũng vô nghĩa).
+
+---
+
+# 18. NHÓM 6 — LỆCH **CẤU TRÚC**, KHÔNG PHẢI LỖI CỘT ⇒ CẦN QUYẾT ĐỊNH
+
+**Trạng thái:** BLOCKED — cần người dùng quyết định (thuộc phần bảo mật đã yêu cầu tạm hoãn)
+
+## 18.1 Java mô hình hoá license theo cách KHÁC HẲN JS
+
+| | Java | JS |
+|---|---|---|
+| **Đầu vào** | `licenseKey`, `companyName`, `edition` | **`licenseEnvelope`** (chuỗi JSON) — UI `app/page.tsx:2642` gửi đúng tên này |
+| **Xử lý** | không kiểm gì | `JSON.parse` (lỗi ⇒ *"Nội dung license không phải JSON hợp lệ."*) → `verifyLicenseEnvelope(envelope, {keyId, publicKeyPem, productId, tenantId, companyCode, machineFingerprint})` — **xác minh chữ ký số** |
+| **Khi không hợp lệ** | — | ghi `vntech_trust_audit` event `LICENSE_REJECTED` rồi ném *"License không hợp lệ: &lt;lý do&gt;"* |
+| **Ghi bảng** | `id, license_key, company_name, edition, status, activated_by, activated_at, created_at` | `id, license_id, tenant_id, company_code, product_id, key_id, payload_json, signature_base64, status='verified_development', valid_from, valid_until, machine_fingerprint, verification_detail_json, installed_by, installed_at, updated_at` |
+
+`vntech_license_installations` có **18 cột thật**; **6 cột Java ghi không tồn tại** (`license_key`,
+`company_name`, `edition`, `activated_by`, `activated_at`, `created_at`). Không có cột nào "đợi sẵn" để ánh xạ
+`edition` hay `license_key` sang ⇒ **ánh xạ sẽ là bịa nghiệp vụ** (vi phạm GOAL §3).
+
+Tương tự `request_license_transfer`: Java ghi `to_company_name`/`created_at` (không tồn tại) và `status='pending'`;
+JS ghi `destination_machine_fingerprint`, `recovery_code_hash`, `status='requested'`, `requested_at`, `detail_json`.
+
+## 18.2 Vì sao không tự sửa
+
+Sửa đúng nghĩa là **port cả hệ license**: cấu trúc envelope, xác minh chữ ký bằng public key, trích `claims`,
+ghi `vntech_trust_audit`. Đây là **hệ bảo mật/license**, mà người dùng đã yêu cầu **tạm bỏ qua phần bảo mật**.
+Cách duy nhất không bịa là port đầy đủ — tức một hạng mục công việc riêng, không phải một dòng sửa.
+
+**Đã ghi vào mục câu hỏi cần người dùng xác nhận.** Trong lúc chờ: 2 action này **giữ nguyên trạng thái hỏng**
+(HTTP 500) — hỏng rõ ràng thì tốt hơn hỏng âm thầm; **KHÔNG** thêm cột vào MySQL để hợp thức hoá mô hình Java.
+
+---
+
+# 19. TỔNG KẾT TASK-040 ĐẾN ĐÂY
+
+| Nhóm | Nội dung | Trạng thái | Bằng chứng |
+|---|---|---|---|
+| 1 + 1b | `save_email_settings` | **DONE** | probe 13/13 · authz 9/9 · DB 587/24/8 |
+| 2 | `system_level_catalog.level_rank` | **ĐÓNG — dương tính giả** | hai công cụ hội tụ 22 |
+| 3 | `material_norms` + `materials` | **DONE** | probe 25/25 · cổng 22→11 |
+| 3b | `import_material_catalog` (hành vi) | **PENDING** — port lớn | UI gửi `categoryCode`, Java đọc `categoryId` |
+| 4 | `stock_issue_items` (+ lỗi cộng dồn) | **DONE** | cổng 11→8 · `probe-increment-drift` 0 (có đối chứng dương) |
+| 5 | `team_subcontracts` | **DONE** | cổng 11→8 |
+| 6 | `vntech_license_*` | **BLOCKED** — lệch cấu trúc | cổng còn 8, xem mục 18 |
+
+**Cổng lược đồ:** 26 → **8** (4 dương tính giả bị loại + 14 lỗi thật đã sửa).
+
+## Bài học rút ra trong cả TASK-040
+
+1. **Kiểm chính phép đo trước khi buộc tội mã nguồn** — một cú pháp SQL bị bỏ sót (`CHANGE COLUMN`) đủ để
+   biến mã đúng thành "lỗi" (nhóm 2).
+2. **Đo trên trạng thái ĐANG CHẠY khi có thể** — tệp migration và DB có thể lệch; DB mới là nguồn sự thật.
+3. **"Biên dịch sạch" + "HTTP 200" + "cột tồn tại" đều KHÔNG đủ.** Ba lớp lỗi riêng biệt đã gặp: cột không tồn tại
+   (bắt được bằng lược đồ), ghi sai cách (chỉ bắt được bằng đối chiếu ngữ nghĩa), và **đường ĐỌC thiếu** (chỉ bắt
+   được bằng phép kiểm "ghi xong ĐỌC LẠI").
+4. **Khi phép kiểm của chính mình báo ĐẠT, phải nghi phép kiểm** — 3 lần trong dự án, lỗi nằm ở phép đo
+   (`Number(false)===0`; `active===1` vs boolean; lọc theo "VẬT TƯ"/"THIẾT BỊ" nhiễu).
+5. **Công cụ luôn báo "sạch" thì vô dụng** — mọi cổng mới phải có **đối chứng dương** trên một lỗi đã biết.

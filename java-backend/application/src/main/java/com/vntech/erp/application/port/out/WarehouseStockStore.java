@@ -23,6 +23,15 @@ public interface WarehouseStockStore {
 
     // ---- ghi issue_stock (1 transaction) ----
     void insertStockIssue(Map<String, Object> header, List<Map<String, Object>> items, Instant now);
+    /**
+     * CỘNG DỒN số lượng đã lắp của MỘT dòng xuất kho.
+     *
+     * <p><b>SỬA LỖI (TASK-040 nhóm 4):</b> bản thi hành cũ dùng {@code SET installed_qty=?} — <b>GHI ĐÈ</b>,
+     * trong khi JS `confirm_installation` (scripts/system-route.mjs:1520) dùng
+     * {@code SET installed_qty=installed_qty+?} — <b>CỘNG DỒN</b> ⇒ xác nhận lắp nhiều lần sẽ ra sai số
+     * (JS: 3+4=7; bản cũ: 4). Tham số {@code installedQty} ở đây là <b>phần tăng thêm</b>, không phải giá trị mới.
+     * Đây là lỗi NGỮ NGHĨA nên cổng đối chiếu lược đồ không thể phát hiện (cột có thật).
+     */
     void updateIssueItemInstalled(String issueItemId, double installedQty, Instant now);
     void updateRequestItemIssued(String requestItemId, double qty, double installedQty, Instant now);
     void releaseReservationsForRequest(String requestId, String materialId, String warehouseId, Instant now);
@@ -38,7 +47,8 @@ public interface WarehouseStockStore {
     void updateRequestItemInstalledOnly(String requestItemId, double installedQty, Instant now);
     void insertInstallMovement(String issueId, String issueItemId, double quantity, String contractId,
                                String teamWarehouseId, String materialId, String projectId, String userId, Instant now);
-    void updateIssueItemStatusInstalled(String issueItemId, Instant now);
+    // ĐÃ XOÁ (TASK-040 nhóm 4): `updateIssueItemStatusInstalled` — ghi cột `stock_issue_items.status`
+    // KHÔNG tồn tại và cũng KHÔNG có trong JS ⇒ hành vi tự thêm, đã bỏ hẳn.
 
     // ---- transfer orders ----
     Optional<Map<String, Object>> findWarehouseFull(String warehouseId);       // type, projectId

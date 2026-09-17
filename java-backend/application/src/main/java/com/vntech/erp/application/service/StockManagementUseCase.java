@@ -140,7 +140,10 @@ public final class StockManagementUseCase {
         store.insertStockIssue(header, items, now);
         for (Map<String, Object> item : items) {
             store.updateRequestItemIssued(sv(item, "requestItemId"), (double) item.get("quantity"), 0, now);
-            store.updateIssueItemInstalled(sv(item, "id"), 0, now);
+            // ĐÃ XOÁ (TASK-040 nhóm 4): lệnh gọi cũ `updateIssueItemInstalled(item.id, 0, now)` ở đây là
+            // THỪA — `insertStockIssue` đã ghi `installed_qty=0` ngay trong câu INSERT (adapter dòng ~129),
+            // đúng như JS (system-route.mjs:1511 bind giá trị 0 cho cột installed_qty). JS không có câu ghi
+            // lại nào sau khi chèn. Nay phương thức đó mang nghĩa CỘNG DỒN nên gọi với 0 chỉ là vô nghĩa.
             store.releaseReservationsForRequest(requestId, sv(item, "materialId"), fromWarehouseId, now);
         }
         long sla = 24;
@@ -259,8 +262,10 @@ public final class StockManagementUseCase {
         store.updateRequestItemInstalledOnly(sv(item, "requestItemId"), quantity, now);
         store.insertInstallMovement(sv(item, "issueId"), issueItemId, quantity, contractId, teamWarehouseId,
                 sv(item, "materialId"), sv(item, "projectId"), principal.userId(), now);
-        if (installedQty + quantity + 1e-9 >= issueQty)
-            store.updateIssueItemStatusInstalled(issueItemId, now);
+        // ĐÃ XOÁ (TASK-040 nhóm 4): nhánh cũ gọi `store.updateIssueItemStatusInstalled(...)` khi lắp đủ số
+        // lượng — ghi cột `stock_issue_items.status` KHÔNG tồn tại ⇒ HTTP 500 đúng ở lần xác nhận CUỐI.
+        // JS `confirm_installation` (system-route.mjs:1520) KHÔNG đánh dấu trạng thái ở đâu ⇒ đây là hành vi
+        // tự thêm; cách đúng là bỏ, KHÔNG phải thêm cột vào MySQL cho khớp.
         return Map.of("message", "Đã xác nhận lắp đặt " + quantity + "; tồn kho và sổ Contract đã cập nhật.");
     }
 
