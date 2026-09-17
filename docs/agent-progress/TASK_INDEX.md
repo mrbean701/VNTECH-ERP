@@ -23,5 +23,6 @@ Trạng thái hợp lệ: `PENDING` · `IN PROGRESS` · `DONE` · `BLOCKED` · `
 | TASK-016 | U-13 — Tách `TaskTable` khỏi thân render WorkCenter | DONE | #17 (cùng lượt) | 17/09/2026 | eslint 3 lỗi → **0** lỗi; làm trước TASK-009…015 vì kiểm được bằng kiểm tra tĩnh |
 | TASK-017 | Điều tra còn mở — nguyên nhân gốc bất định của cổng ảnh | PENDING | — | — | Đã khoanh vùng ô tìm kiếm topbar |
 | TASK-018 | Đối chiếu action giữa bản JS tham chiếu và bản Java đã port (đính chính audit) | DONE | #18 (cùng lượt) | 17/09/2026 | Cáo buộc "catalog lệch 50 action" là **SAI**; Java **không thiếu action nào** |
+| TASK-019 | Sửa 5 lỗi mã vai trò còn sót trong `ProductionManagementUseCase` (commander→cht, project→da_nv) | DONE | #19 (cùng lượt) | 17/09/2026 | Người dùng `cht`/`da_nv` hết bị 403 oan; javac **exit 0**; chưa đóng gói lại JAR |
 | TASK-B02 | **Cổng ảnh + bộ probe KHÔNG chạy được** — cần mở rộng sandbox để khởi động Edge headless (named pipe) | BLOCKED | — | 17/09/2026 | Yêu cầu mở rộng quyền đã bị huỷ; chặn phần hồi quy quét rộng của TASK-008 và mọi việc UI tiếp theo |
 | TASK-B01 | Xác nhận tên màn Receiving từ menu | BLOCKED | — | 17/09/2026 | Cần người dùng; KHÔNG chặn tiến độ |

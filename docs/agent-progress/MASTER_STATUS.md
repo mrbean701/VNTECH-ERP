@@ -8,11 +8,11 @@
 * Overall status: **IN PROGRESS** — PHASE 1 chưa xong
 * Current phase: PHASE 1 — HẠ TẦNG UI DÙNG CHUNG (chiếm phần lớn khối lượng còn lại)
 * Current task: TASK-009 — U-09 đợt 6 (13 màn còn lại); nếu chưa có quyền mở rộng sandbox thì chọn việc kiểm được bằng kiểm tra tĩnh
-* Last completed task: TASK-018 — đối chiếu action JS ↔ Java, đính chính báo cáo audit (commit #18 cùng lượt). Trước đó: TASK-016 (#17) · TASK-008 PARTIAL (`96c3aa8`)
+* Last completed task: TASK-019 — sửa 5 lỗi mã vai trò (commit #19 cùng lượt). Trước đó: TASK-018 (#18) · TASK-016 (#17) · TASK-008 PARTIAL (`96c3aa8`)
 * Next task: TASK-009 — U-09 đợt 6 (13 màn còn lại)
 * Blocked task: TASK-B01 — tên màn Receiving (chờ người dùng; **KHÔNG chặn tiến độ**)
 * User confirmation required: **YES** — 2 việc: (1) tên hiển thị màn `Receiving` (GIAO NHẬN) lấy từ menu; (2) **cho phép mở rộng sandbox** để chạy cổng ảnh + bộ probe (TASK-B02) — việc (2) đang chặn phần hồi quy của mọi thay đổi giao diện
-* Last updated: 2026-09-17 (sau TASK-018)
+* Last updated: 2026-09-17 (sau TASK-019)
 
 ## System State
 
@@ -42,7 +42,7 @@
 1. **Điều tra CÒN MỞ** — cổng ảnh có hiện tượng bất định giữa các phiên (đã đo 0 px · 20 px · 0 px trên cùng một màn). Đã khoanh vùng tới ô tìm kiếm topbar và loại trừ nó, **chưa tìm ra nguyên nhân gốc**.
 2. **Roadmap từng báo quá** — U-01/U-02/U-04/U-06/U-07 đánh DONE nhưng số lần DÙNG THẬT = 0. Đã sửa và tách thành U-14…U-17.
 3. **`/api/files` chưa được bảo vệ** (S-05) — người dùng yêu cầu tạm bỏ qua phần bảo mật.
-4. **5 lỗi mã vai trò còn lại** trong `ProductionManagementUseCase` (dòng 186/205/228/243/267) — cố ý không sửa vì ngoài phạm vi mua hàng.
+4. ~~5 lỗi mã vai trò còn lại trong `ProductionManagementUseCase`~~ **ĐÃ SỬA ở TASK-019**: `commander` → `cht`, `project` → `da_nv` cho 5 use case sản lượng/tổ đội. javac **exit 0**. **CHƯA đóng gói lại JAR** (sandbox chặn ghi `.m2`, và offline thiếu artifact plugin) nên sửa **chưa có hiệu lực lúc chạy**.
 5. **`team_members` = 0 dòng** ⇒ màn Tổ đội trống; **`approval_stage_decisions` = 0 dòng** (mã chết).
 6. ~~3 lỗi eslint có sẵn `react-hooks/static-components`~~ **ĐÃ SỬA ở TASK-016 (U-13)**: `TaskTable` nay ở cấp module; eslint **0 lỗi** (74 cảnh báo).
 7. **Cổng ảnh + probe không chạy được** (TASK-B02) — cần mở rộng sandbox cho Edge headless; đây là rào cản lớn nhất cho mọi việc UI tiếp theo.

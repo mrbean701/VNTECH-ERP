@@ -183,7 +183,7 @@ public final class ProductionManagementUseCase {
 
     /** save_team_subcontract — HĐ giao khoán độc lập với HĐ chính dự án. */
     public Map<String, Object> saveTeamSubcontract(Principal principal, Map<String, Object> payload) {
-        rbac.requireRole(principalAsCurrent(principal), List.of("admin", "commander", "project"));
+        rbac.requireRole(principalAsCurrent(principal), List.of("admin", "cht", "da_nv"));
         String projectId = trim(payload.get("projectId"));
         String teamId = trim(payload.get("teamId"));
         String contractNo = trim(payload.get("contractNo")).toUpperCase();
@@ -202,7 +202,7 @@ public final class ProductionManagementUseCase {
 
     /** save_team_production — ghi sản lượng tổ đội; chống vượt lũy kế HĐ giao khoán. */
     public Map<String, Object> saveTeamProduction(Principal principal, Map<String, Object> payload) {
-        rbac.requireRole(principalAsCurrent(principal), List.of("admin", "commander", "project"));
+        rbac.requireRole(principalAsCurrent(principal), List.of("admin", "cht", "da_nv"));
         String projectId = trim(payload.get("projectId"));
         String subcontractId = trim(payload.get("subcontractId"));
         String periodKey = trim(payload.get("periodKey"));
@@ -225,7 +225,7 @@ public final class ProductionManagementUseCase {
 
     /** approve_team_production — duyệt; kiểm lại lũy kế (trừ record hiện tại). */
     public Map<String, Object> approveTeamProduction(Principal principal, Map<String, Object> payload) {
-        rbac.requireRole(principalAsCurrent(principal), List.of("admin", "commander", "project"));
+        rbac.requireRole(principalAsCurrent(principal), List.of("admin", "cht", "da_nv"));
         String productionId = trim(payload.get("productionId"));
         Map<String, Object> rec = store.findTeamProduction(productionId).orElse(null);
         if (rec == null || !"submitted".equals(sv(rec, "status")))
@@ -240,7 +240,7 @@ public final class ProductionManagementUseCase {
 
     /** save_team_payment — thanh toán tổ đội (progress/advance); chặn vượt sản lượng duyệt. */
     public Map<String, Object> saveTeamPayment(Principal principal, Map<String, Object> payload) {
-        rbac.requireRole(principalAsCurrent(principal), List.of("admin", "commander", "accountant", "project"));
+        rbac.requireRole(principalAsCurrent(principal), List.of("admin", "cht", "accountant", "da_nv"));
         String projectId = trim(payload.get("projectId"));
         String subcontractId = trim(payload.get("subcontractId"));
         double amount = strictNonNegative(payload.get("amount"), "Số tiền thanh toán");
@@ -264,7 +264,7 @@ public final class ProductionManagementUseCase {
 
     /** settle_team_subcontract — quyết toán: chặn khi tổ đội còn giữ vật tư; close HĐ. */
     public Map<String, Object> settleTeamSubcontract(Principal principal, Map<String, Object> payload) {
-        rbac.requireRole(principalAsCurrent(principal), List.of("admin", "commander", "accountant"));
+        rbac.requireRole(principalAsCurrent(principal), List.of("admin", "cht", "accountant"));
         String subcontractId = trim(payload.get("subcontractId"));
         Map<String, Object> sc = store.findSubcontract(subcontractId)
                 .orElseThrow(() -> Api("Không có quyền quyết toán hợp đồng này."));
