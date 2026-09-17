@@ -2,6 +2,7 @@ package com.vntech.erp.application.service;
 
 import com.vntech.erp.application.port.out.IdGenerator;
 import com.vntech.erp.application.port.out.ProjectAdminStore;
+import com.vntech.erp.application.rbac.AccessScopeService;
 import com.vntech.erp.application.rbac.RbacService;
 
 import java.time.Instant;
@@ -16,10 +17,12 @@ public final class ProjectContractUseCase {
 
     private final ProjectAdminStore store;
     private final IdGenerator idGenerator;
+    private final AccessScopeService accessScope;
 
-    public ProjectContractUseCase(ProjectAdminStore store, IdGenerator idGenerator) {
+    public ProjectContractUseCase(ProjectAdminStore store, IdGenerator idGenerator, AccessScopeService accessScope) {
         this.store = store;
         this.idGenerator = idGenerator;
+        this.accessScope = accessScope;
     }
 
     public interface Principal {
@@ -56,9 +59,12 @@ public final class ProjectContractUseCase {
         return Map.of("message", "Đã tạo hợp đồng cho dự án.", "contractId", newId);
     }
 
-    public String setProjectContractStatus(String contractId, boolean active) {
+    public String setProjectContractStatus(Principal principal, String contractId, boolean active) {
         Map<String, Object> row = store.findContract(contractId);
         if (row == null) throw Api("Không tìm thấy hợp đồng.");
+        // JS 809: phạm vi dự án của CHÍNH hợp đồng (tra từ DB, không lấy từ payload).
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), sv(row, "project_id"), true,
+                "Không có quyền tại dự án này.");
         if (!active) {
             double residual = store.contractStockResidual(contractId);
             if (residual > 0)
@@ -68,9 +74,12 @@ public final class ProjectContractUseCase {
         return active ? "Đã kích hoạt hợp đồng." : "Đã ngừng áp dụng hợp đồng.";
     }
 
-    public String deleteProjectContract(String contractId, Map<String, Object> payload) {
+    public String deleteProjectContract(Principal principal, String contractId, Map<String, Object> payload) {
         Map<String, Object> row = store.findContract(contractId);
         if (row == null) throw Api("Không tìm thấy hợp đồng.");
+        // JS 813: phạm vi dự án của CHÍNH hợp đồng.
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), sv(row, "project_id"), true,
+                "Không có quyền tại dự án này.");
         String expected = "XOA " + sv(row, "contract_no");
         if (!expected.equals(trim(payload.get("confirmText"))))
             throw Api("Xác nhận chưa đúng. Hãy nhập \u201c" + expected + "\u201d.");

@@ -139,3 +139,12 @@ Kết quả lần chạy cổng ảnh gần nhất (có mở rộng sandbox): **
 4. **Phải dừng đúng tiến trình đang giữ tệp** trước khi đóng gói lại; dừng xong nhớ **khởi động lại và kiểm tra health**.
 5. **Log server là nguồn phát hiện lỗi quý** — lỗi `SlaComplianceWorker` lặp mỗi giờ đã bị bỏ qua suốt nhiều giờ
    nhưng lộ ra ngay khi đọc log khởi động.
+6. **KHÔNG dùng `Start-Process` để chạy Java API** — tiến trình này **không tồn tại bền**: sau khi cửa sổ
+   PowerShell gọi nó kết thúc, tiến trình Java chết theo. Triệu chứng rất dễ chẩn đoán nhầm: proxy :9000 trả
+   **502** *"Không kết nối được Java API (127.0.0.1:18081)"*, và cổng ảnh báo **28/28 ảnh lệch ~96%**
+   (vì cả giao diện không có dữ liệu) — trông như hồi quy giao diện nhưng thực chất chỉ là tiến trình đã chết.
+   **Cách đúng:** chạy Java API bằng **background job do công cụ quản lý**, hoặc một tiến trình thật sự tách rời.
+7. **Trước khi kết luận "hồi quy giao diện", hãy kiểm chuỗi sống trước**:
+   `node tools/probe-live-stack.mjs` (proxy :9000 → Node SSR → Java :18081 → MySQL). Nếu nó báo
+   `LOGIN FAILED ... Không kết nối được Java API` thì vấn đề là tiến trình, không phải mã nguồn.
+   Thứ tự chẩn đoán đúng: **4 cổng → health → chuỗi sống → cổng ảnh**.

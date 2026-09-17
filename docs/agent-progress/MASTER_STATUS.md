@@ -7,12 +7,12 @@
 * Master Task: MASTER TASK — ERP/MIS SYSTEM AUDIT, REFACTOR & FEATURE UPGRADE (46 mục)
 * Overall status: **IN PROGRESS** — PHASE 1 chưa xong
 * Current phase: PHASE 1 — HẠ TẦNG UI DÙNG CHUNG. Song song: hoàn thiện tầng phân quyền phía Java (P0/P1)
-* Current task: **TASK-023 (IN PROGRESS)** — kiểm PHẠM VI dự án/kho. Đã nối **61/64** action; **còn 3** đều thuộc `ProjectContractUseCase` — lớp này **không nhận `Principal`** nên phải đổi chữ ký 3 phương thức + thêm helper controller + bean (TASK-023b) trước khi nối
-* Last completed task: TASK-022 + TASK-021b (#23) — thắt 5 cổng vai trò và sửa hồi quy đường ống `roleBase`. Trước đó: TASK-021 (#22) · TASK-020 (#21)
-* Next task: TASK-023 lô 2 — nối phạm vi cho `StockManagementUseCase` (13 action có kiểm cả kho)
-* Blocked task: **KHÔNG CÒN BLOCKER CỨNG.** TASK-B01/B02/B03 đều đã gỡ chặn ngày 18/09/2026. Lưu ý vận hành: cổng ảnh và các probe cần `spawn mysql`/Edge headless phải chạy với sandbox mở rộng (xem `docs/29`)
-* User confirmation required: **YES** — 3 việc: (1) tên hiển thị màn `Receiving` (GIAO NHẬN) lấy từ menu; (2) **cho phép mở rộng sandbox** để chạy cổng ảnh + bộ probe (TASK-B02); (3) **quyết định về `isCompanyLeadership`** (TASK-024)
-* Last updated: 2026-09-18 (sau TASK-023 lô 1 — PARTIAL)
+* Current task: **TASK-025** — điều tra `SlaComplianceWorker` lỗi `bad SQL grammar` lặp mỗi giờ (worker SLA chưa bao giờ chạy được). Song song: TASK-027 kiểm chứng sống bằng tài khoản `da_truong`/`kho_tong`/`cht`
+* Last completed task: **TASK-023 (DONE — 64/64 action)** · TASK-023b · TASK-028 · TASK-026. Trước đó: TASK-022 + TASK-021b (#23) · TASK-021 (#22)
+* Next task: TASK-025 (worker SLA) → TASK-027 (kiểm chứng sống) → TASK-022b (catalog) → TASK-009 (U-09 đợt 6)
+* Blocked task: **KHÔNG CÒN BLOCKER CỨNG.** Lưu ý vận hành: cổng ảnh và các probe cần `spawn mysql`/Edge headless phải chạy với sandbox mở rộng; **KHÔNG dùng `Start-Process` cho Java API** (tiến trình chết theo cửa sổ PowerShell) — xem `docs/29` mục 6
+* User confirmation required: **YES** — 2 việc: (1) **quyết định về `isCompanyLeadership`** (TASK-024: Java cấp thừa cho `accountant`, cấp thiếu cho `thuky`/`hcpc_truong` so với JS); (2) xác nhận đã hết cần tên màn Receiving — **đã tự giải quyết** = "Kế hoạch giao hàng" (TASK-B01)
+* Last updated: 2026-09-18 (sau TASK-023 DONE — 64/64)
 
 ## System State
 

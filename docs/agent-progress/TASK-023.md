@@ -1,8 +1,77 @@
 # TASK-023 — KIỂM PHẠM VI DỰ ÁN/KHO (PROJECT & WAREHOUSE SCOPE)
 
-> **TRẠNG THÁI: IN PROGRESS — CHƯA HOÀN THÀNH.**
-> Hạ tầng dùng chung đã xong và đã kiểm chứng biên dịch; mới nối được **2/64** action.
-> **Không được đánh DONE** cho tới khi cổng `tools/probe-action-scope-parity.mjs` trả exit 0.
+> **TRẠNG THÁI: DONE — 64/64 action.**
+> Cổng `tools/probe-action-scope-parity.mjs` **exit 0**; hồi quy **cổng ảnh 28/28 ĐẠT (0 px)**;
+> `tools/probe-live-stack.mjs` **ALL PASS**; jar béo **BUILD SUCCESS** và `/actuator/health` = UP.
+
+## LÔ 8 — 10 action cuối (8a: 7 action · 8b: 3 action)
+
+### Lô 8a — OpsTask (3) + Request (2) + AdminOps (1) + AdminSystem (1 kiểm KHO)
+
+| Action | Ghi chú |
+|---|---|
+| `create_work_item` | JS viết `if(projectId && …)` ⇒ kiểm **CÓ ĐIỀU KIỆN**; công việc phòng ban không gắn dự án vẫn hợp lệ. **Không được** biến thành kiểm vô điều kiện (sẽ chặn oan toàn bộ luồng giao việc nội bộ) |
+| `create_project_team` | "CHT chỉ được tạo tổ đội trong dự án được phân quyền." |
+| `save_mar_approval` | dự án từ payload |
+| `create_request` / `decide_approval` | `decide_approval` lấy `mr.projectId` tra từ DB |
+| `preview_request_import` | dự án từ payload |
+| `save_warehouse_location` | **kiểm KHO** — cần thêm đường ống `warehouseScopeKind` cho `AdminSystemUseCase` (Principal + principalAsCurrent + `asAdminPrincipal`) |
+
+### Lô 8b — ProjectContractUseCase (3)
+
+Lớp này có chú thích ghi rõ: *"quyền theo canAccessProject — **check ở web**"* ⇒ thiết kế gốc **chủ đích**
+kiểm ở tầng web. Đã làm đúng thiết kế đó:
+
+| Action | Cách kiểm |
+|---|---|
+| `save_project_contract` | kiểm **ngay ở controller** (`projectId` có sẵn trong payload) — JS L801 |
+| `set_project_contract_status` | phải tra bản ghi để lấy `row.project_id` (JS L809) ⇒ đưa `Principal` vào phương thức |
+| `delete_project_contract` | như trên (JS L813) |
+
+`ProjectContractUseCase` nhận thêm `AccessScopeService`; `SystemController` nhận thêm `AccessScopeService`
+ở constructor + helper `asProjectContractPrincipal`.
+
+### Cổng đối chiếu được mở rộng đúng lúc
+
+Sau lô 8b cổng vẫn báo **63/64** vì nó chỉ soi **thân use-case**, mà `save_project_contract` kiểm **ở controller**.
+Đã bổ sung: nếu **chính case của controller** có dấu vết kiểm phạm vi thì tính là đã kiểm
+(ghi rõ trong mã cổng là để phản ánh thiết kế "check ở web"). Kết quả: **64/64, exit 0**.
+
+## LỖI THỨ NĂM CỦA CÔNG CỤ VÁ — cùng gốc "neo không duy nhất / kiểm quá rộng"
+
+1. **Dương tính giả lần thứ hai** ở `asAdminPrincipal`: phép kiểm "đã có override chưa" dùng **cửa sổ 900 ký tự**
+   kể từ chữ ký helper, mà helper liền sau (`asPurchasePrincipal`) có override đó ⇒ cửa sổ bắt sang helper khác
+   ⇒ bỏ qua nhầm. **Phát hiện bằng cách đọc lại code**, không tin kết quả "bỏ qua".
+   Đã vá bằng neo gồm **cả chữ ký hàm** + **kiểm chứng sau khi sửa** (override phải nằm trong đúng thân hàm).
+2. **Thứ tự kiểm idempotency bị sai** (nguyên nhân của cả 4 lỗi trước): với phép "chèn sau dòng neo",
+   `from` (dòng neo) **vẫn còn** sau khi chèn ⇒ kiểm `from` trước làm lần chạy thứ hai **chèn lặp**.
+   **Đã sửa gốc:** kiểm `to` (nội dung đã-áp-dụng) **TRƯỚC** `from`.
+3. Nhờ sửa (2) đã phát hiện và gỡ thêm **1 import bị lặp** (`RbacService` trong OpsTask) —
+   script dọn `tools/cleanup-duplicate-requirerole.mjs` nay xử lý **cả import lặp**.
+
+## BÀI HỌC VẬN HÀNH (TASK-028)
+
+Cổng ảnh từng báo **28/28 lệch ~96%** — trông như hồi quy giao diện nhưng **không phải**: tiến trình Java
+khởi động bằng `Start-Process` **đã chết**, proxy :9000 trả **502**, nên cả UI không có dữ liệu.
+**Thứ tự chẩn đoán đúng: 4 cổng → health → `probe-live-stack` → cổng ảnh.**
+Đã ghi vào `docs/29` mục 6.6–6.7: **không dùng `Start-Process` cho Java API**; dùng background job có quản lý.
+
+## CỔNG NGHIỆM THU (theo §11)
+
+| Bước | Bằng chứng |
+|---|---|
+| Yêu cầu đã hiểu | đối chiếu nguyên văn 64 lời gọi JS |
+| Kiến trúc đã kiểm | `AccessScopeService` + port `AccessScopeStore` dùng chung, không vá rải rác |
+| Implementation | **64/64** action |
+| Frontend tested | **cổng ảnh 28/28 ĐẠT, 0 px** |
+| Backend tested | `verify-java-compile.ps1` 102 tệp · 0 lỗi; `mvn package` **BUILD SUCCESS** |
+| API tested | `probe-live-stack.mjs` **ALL PASS** |
+| Database validated | probe-live-stack: 61 module · 5 bước duyệt · 484 quyền |
+| Permission validated | `probe-action-scope-parity` **exit 0** · `probe-action-role-parity` **exit 0** |
+| Workflow validated | 5 bước duyệt đọc được từ DB |
+| Regression checked | cổng ảnh 28/28 ĐẠT |
+| Git diff reviewed + commit | #24…#33 |
+| Tài liệu | `TASK-023.md` · `TASK_INDEX.md` · `MASTER_STATUS.md` · `docs/29` |
 
 ## Objective
 

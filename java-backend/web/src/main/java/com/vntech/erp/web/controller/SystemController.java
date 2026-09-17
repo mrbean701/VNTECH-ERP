@@ -71,6 +71,8 @@ public class SystemController {
      * Trước đây KHÔNG được tiêm vào đây, nên ActionRbacRegistry chỉ dùng để ghi log.
      */
     private final com.vntech.erp.application.rbac.RbacService rbacService;
+    /** TASK-023b — kiểm PHẠM VI dự án ở tầng web (đúng chú thích của ProjectContractUseCase). */
+    private final com.vntech.erp.application.rbac.AccessScopeService accessScopeService;
 
     public SystemController(AuthUseCase authUseCase, SessionCookieFactory sessionCookieFactory,
                             BootstrapUseCase bootstrapUseCase,
@@ -80,6 +82,7 @@ public class SystemController {
                             HrManagementUseCase hrManagementUseCase,
                             ProjectManagementUseCase projectManagementUseCase,
                             ProjectContractUseCase projectContractUseCase,
+                            com.vntech.erp.application.rbac.AccessScopeService accessScopeService,
                             ProductionManagementUseCase productionManagementUseCase,
                             OpsTaskManagementUseCase opsTaskManagementUseCase,
                             PurchaseManagementUseCase purchaseManagementUseCase,
@@ -113,6 +116,7 @@ public class SystemController {
         this.systemSettingsUseCase = systemSettingsUseCase;
         this.excelTemplateService = excelTemplateService;
         this.rbacService = rbacService;
+        this.accessScopeService = accessScopeService;
     }
 
     /**
@@ -261,8 +265,11 @@ public class SystemController {
                 }
                 case "save_project_contract" -> {
                     AuthUseCase.CurrentUser cu = requireCurrentUser(request);
-                    Map<String, Object> result = projectContractUseCase.saveProjectContract(
-                            trim(payload.get("projectId")), payload);
+                    String projectId = trim(payload.get("projectId"));
+                    // JS 801.
+                    accessScopeService.requireProjectAccess(cu.id(), cu.role(), projectId, true,
+                            "Không có quyền sửa hợp đồng dự án này.");
+                    Map<String, Object> result = projectContractUseCase.saveProjectContract(projectId, payload);
                     Map<String, Object> resp = new LinkedHashMap<>();
                     resp.put("ok", true);
                     resp.putAll(result);
@@ -271,13 +278,14 @@ public class SystemController {
                 case "set_project_contract_status" -> {
                     AuthUseCase.CurrentUser cu = requireCurrentUser(request);
                     String m = projectContractUseCase.setProjectContractStatus(
-                            trim(payload.get("contractId")), toActiveFlag(payload.get("active")));
+                            asProjectContractPrincipal(cu), trim(payload.get("contractId")),
+                            toActiveFlag(payload.get("active")));
                     return ResponseEntity.ok(json(Map.of("ok", true, "message", m)));
                 }
                 case "delete_project_contract" -> {
                     AuthUseCase.CurrentUser cu = requireCurrentUser(request);
                     String m = projectContractUseCase.deleteProjectContract(
-                            trim(payload.get("contractId")), payload);
+                            asProjectContractPrincipal(cu), trim(payload.get("contractId")), payload);
                     return ResponseEntity.ok(json(Map.of("ok", true, "message", m)));
                 }
                 case "save_engine_role_profile" -> {
@@ -1350,6 +1358,13 @@ public class SystemController {
             @Override public String roleBase() { return cu.roleBase(); }
             @Override public String fullName() { return cu.fullName(); }
             @Override public String email() { return cu.email(); }
+        };
+    }
+
+    private static ProjectContractUseCase.Principal asProjectContractPrincipal(AuthUseCase.CurrentUser cu) {
+        return new ProjectContractUseCase.Principal() {
+            @Override public String userId() { return cu.id(); }
+            @Override public String role() { return cu.role(); }
         };
     }
 

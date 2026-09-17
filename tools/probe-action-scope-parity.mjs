@@ -68,6 +68,11 @@ for (let m; (m = reCase.exec(ctrl)); ) {
   const prev = javaCases.get(m[1]);
   javaCases.set(m[1], {
     adminGated: /requireRequireAdmin\s*\(/.test(help) || (prev?.adminGated ?? false),
+    // Có action kiểm phạm vi NGAY TRONG case của controller (đúng thiết kế ghi trong chú thích
+    // ProjectContractUseCase: "quyền theo canAccessProject — check ở web"). Phải tính cả trường hợp này,
+    // nếu không cổng sẽ báo thiếu oan.
+    scopeInCase: /requireProjectAccess|requireWarehouseAccess|canAccessProject|canAccessWarehouse|accessScopeService\./
+      .test(help) || (prev?.scopeInCase ?? false),
     calls: [...(prev?.calls ?? []), ...calls],
   });
 }
@@ -102,6 +107,8 @@ for (const [action, scope] of [...jsScope].sort()) {
         ?? methodBodies.get(c.method);
     return body ? SCOPE_MARKERS.test(body) : false;
   });
+  // Hoặc chính case của controller đã kiểm phạm vi (thiết kế "check ở web").
+  if (jc.scopeInCase) hit.push({ useCase: "(controller)", method: "case-block" });
   const row = { action, scope, calls: jc.calls.map((c) => `${c.useCase}.${c.method}`), adminGated: jc.adminGated };
   if (hit.length) covered.push(row); else missing.push(row);
 }

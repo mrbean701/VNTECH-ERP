@@ -104,8 +104,9 @@ public class ApplicationBeansConfig {
 
     @Bean
     public ProjectContractUseCase projectContractUseCase(ProjectAdminStore projectAdminStore,
-                                                         IdGenerator idGenerator) {
-        return new ProjectContractUseCase(projectAdminStore, idGenerator);
+                                                         IdGenerator idGenerator,
+                                                         AccessScopeService accessScopeService) {
+        return new ProjectContractUseCase(projectAdminStore, idGenerator, accessScopeService);
     }
 
     @Bean
