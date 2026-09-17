@@ -1,0 +1,71 @@
+══════════════════════════════════════════════════════════════════════════════
+  CỔNG CHẶN HỒI QUY THỊ GIÁC
+  7 màn × 4 kích thước = 28 ảnh
+  Ngưỡng cho phép: 8 điểm ảnh lệch
+══════════════════════════════════════════════════════════════════════════════
+  Đăng nhập admin: HTTP 200
+
+▸ 01-dashboard  —  Tổng quan điều hành
+   ❌ desktop  lệch 8913 px (0.4298%) · vùng lệch 1661×976 tại (259,104) · đã chụp lại (lần đầu 8913 px)
+        vùng lệch nặng nhất: (1344,256) 274px · (448,704) 255px · (448,768) 238px · (1600,1024) 224px
+   ❌ laptop   lệch 3653 px (0.3482%) · vùng lệch 1107×634 tại (259,134) · đã chụp lại (lần đầu 3653 px)
+        vùng lệch nặng nhất: (768,448) 361px · (384,448) 125px · (704,512) 92px · (320,512) 66px
+   ❌ tablet   lệch 1623 px (0.2064%) · vùng lệch 768×853 tại (0,166) · đã chụp lại (lần đầu 1623 px)
+        vùng lệch nặng nhất: (192,896) 354px · (448,448) 151px · (448,576) 148px · (512,448) 142px
+   ❌ phone    lệch 752 px (0.2285%) · vùng lệch 390×734 tại (0,110) · đã chụp lại (lần đầu 752 px)
+        vùng lệch nặng nhất: (64,704) 122px · (64,640) 116px · (128,832) 102px · (64,832) 102px
+
+▸ 02-project  —  Quản lý dự án
+   ✅ desktop  lệch 0 px (0.0000%)
+   ✅ laptop   lệch 0 px (0.0000%)
+   ✅ tablet   lệch 0 px (0.0000%)
+   ✅ phone    lệch 0 px (0.0000%)
+
+▸ 03-work  —  Công việc
+   ❌ desktop  lệch 132 px (0.0064%) · vùng lệch 30×9 tại (506,459) · đã chụp lại (lần đầu 132 px)
+        vùng lệch nặng nhất: (512,448) 93px · (448,448) 39px
+   ❌ laptop   lệch 132 px (0.0126%) · vùng lệch 30×9 tại (506,453) · đã chụp lại (lần đầu 132 px)
+        vùng lệch nặng nhất: (512,448) 93px · (448,448) 39px
+   ❌ tablet   lệch 180 px (0.0229%) · vùng lệch 31×13 tại (244,537) · đã chụp lại (lần đầu 180 px)
+        vùng lệch nặng nhất: (256,512) 134px · (192,512) 46px
+   ❌ phone    lệch 180 px (0.0547%) · vùng lệch 31×13 tại (244,616) · đã chụp lại (lần đầu 180 px)
+        vùng lệch nặng nhất: (256,576) 134px · (192,576) 46px
+
+▸ 04-team  —  Tổ đội
+   ❌ desktop  lệch 8566 px (0.4131%) · vùng lệch 1357×79 tại (464,437) · đã chụp lại (lần đầu 8566 px)
+        vùng lệch nặng nhất: (1024,384) 450px · (1152,448) 419px · (1024,448) 411px · (1216,448) 387px
+   ❌ laptop   lệch 36144 px (3.4453%) · vùng lệch 1107×203 tại (259,431) · đã chụp lại (lần đầu 36144 px)
+        vùng lệch nặng nhất: (1216,512) 1166px · (960,448) 1142px · (1088,448) 1068px · (960,512) 1024px
+   ✅ tablet   lệch 0 px (0.0000%)
+   ✅ phone    lệch 0 px (0.0000%)
+
+▸ 05-material  —  Danh mục vật tư gốc
+   ❌ desktop  lệch 91983 px (4.4359%) · vùng lệch 1661×922 tại (259,158) · đã chụp lại (lần đầu 91983 px)
+        vùng lệch nặng nhất: (1728,704) 1932px · (1600,704) 1931px · (1600,768) 1880px · (1600,640) 1863px
+   ❌ laptop   lệch 118302 px (11.2767%) · vùng lệch 1107×638 tại (259,130) · đã chụp lại (lần đầu 118302 px)
+        vùng lệch nặng nhất: (448,512) 4096px · (384,512) 3928px · (1216,512) 3648px · (1152,512) 3399px
+   ❌ tablet   lệch 11281 px (1.4345%) · vùng lệch 668×587 tại (58,413) · đã chụp lại (lần đầu 11281 px)
+        vùng lệch nặng nhất: (640,832) 565px · (640,576) 556px · (64,448) 526px · (320,384) 475px
+   ❌ phone    lệch 41878 px (12.7227%) · vùng lệch 390×747 tại (0,80) · đã chụp lại (lần đầu 41878 px)
+        vùng lệch nặng nhất: (128,640) 4096px · (128,576) 4010px · (192,640) 3993px · (64,640) 3692px
+
+▸ 06-warehouse  —  Kho Tổng
+   ❌ desktop  lệch 252408 px (12.1725%) · vùng lệch 1661×988 tại (259,92) · đã chụp lại (lần đầu 252408 px)
+        vùng lệch nặng nhất: (960,448) 2221px · (1472,448) 2221px · (1216,448) 2218px · (832,448) 2216px
+   ❌ laptop   lệch 102598 px (9.7797%) · vùng lệch 1107×676 tại (259,92) · đã chụp lại (lần đầu 102598 px)
+        vùng lệch nặng nhất: (320,448) 1512px · (960,448) 1506px · (832,448) 1504px · (896,448) 1504px
+   ❌ tablet   lệch 119121 px (15.1470%) · vùng lệch 768×966 tại (0,58) · đã chụp lại (lần đầu 119121 px)
+        vùng lệch nặng nhất: (704,704) 1679px · (448,704) 1665px · (256,704) 1656px · (320,704) 1656px
+   ❌ phone    lệch 26210 px (7.9627%) · vùng lệch 390×774 tại (0,70) · đã chụp lại (lần đầu 26210 px)
+        vùng lệch nặng nhất: (256,704) 856px · (320,704) 856px · (256,640) 768px · (320,640) 768px
+
+▸ 07-admin  —  Danh mục & phân quyền
+   ❌ desktop  lệch 1344 px (0.0648%) · vùng lệch 102×283 tại (1315,763) · đã chụp lại (lần đầu 1344 px)
+        vùng lệch nặng nhất: (1344,768) 392px · (1344,1024) 305px · (1280,768) 197px · (1344,704) 168px
+   ✅ laptop   lệch 0 px (0.0000%)
+   ✅ tablet   lệch 0 px (0.0000%)
+   ✅ phone    lệch 0 px (0.0000%)
+
+══════════════════════════════════════════════════════════════════════════════
+KẾT LUẬN: KHÔNG ĐẠT ❌ — 19/28 ảnh lệch
+══════════════════════════════════════════════════════════════════════════════
