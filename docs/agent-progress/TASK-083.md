@@ -1,9 +1,10 @@
 # TASK-083 — `U-15` ĐỢT 2: CHUYỂN BẢNG PHẲNG SANG `DataTable`
 
-- **Mã:** TASK-083 · **Ngày:** 18/09/2026 · **Commit:** `#151` … `#169` (16 bảng)
-- **Định danh nguồn:** head `drizzle/0125_phase1_ui_datatable11_identity.sql` ⇒ **`VNTECH-FP-6341C996591D3DD3`**
-- **Trạng thái:** đang làm — **16 bảng phẳng đã chuyển** (`DataTable` **13 → 29** · bảng tự viết **87 → 71** ·
-  trạng thái rỗng tự viết **88 → 74**); còn **bảng "cần cân nhắc"** + **~71 bảng KHÔNG chuyển được** (xem mục 3)
+- **Mã:** TASK-083 · **Ngày:** 18/09/2026 · **Commit:** `#151` … `#171` (17 bảng)
+- **Định danh nguồn:** head `drizzle/0126_phase1_ui_datatable12_identity.sql` ⇒ **`VNTECH-FP-492A1077DA6CEC86`**
+- **Trạng thái:** đang làm — **17 bảng phẳng đã chuyển** (`DataTable` **13 → 30** · bảng tự viết **87 → 70** ·
+  trạng thái rỗng tự viết **88 → 73**); ⚠️ **bảng `<table>` TRẦN khi chuyển sẽ LỆCH BỀ RỘNG CỘT** (xem mục 2f)
+  ⇒ **cần anh quyết** trước khi chuyển tiếp nhóm này
 
 ## 1. Vì sao có task này
 
@@ -31,9 +32,44 @@ Số đo bằng `tools/probe-ui-adoption.mjs`: **bảng tự viết 87 chỗ** �
 | 14 | `ProjectManagement` | **danh sách dự án (9 cột)** | mã · tên (+`<small>` hợp đồng) · trạng thái · bắt đầu · kết thúc dự kiến · tiến độ · nhân sự · tổ đội · nút `Chi tiết ›`; giữ nguyên `projectOverdueDays(row)` cho `red-text`, `scopesOf().length`, `teamsOf().length`; `emptyText` **nguyên văn** *"Không có dự án phù hợp bộ lọc."* |
 | 15 | `Requests` | **danh sách Phiếu đề nghị (9 cột)** | bảng **ĐẦU TIÊN cần CHỌN DÒNG** ⇒ phải mở rộng `DataTable` lần thứ 4: thêm **`rowClassName`**. Giữ `tableClassName="data-table"` (con trỏ dòng), ô `radio readOnly`, 2 nút `icon-mini` có `stopPropagation`, và dải phân trang **ở ngoài** bảng; `emptyText` **nguyên văn** *"Không có phiếu phù hợp bộ lọc."* |
 | 16 | `MaterialCatalogPage` | **danh mục vật tư** (`material-list-table`) | 10/11 cột; ⚠️ **GIỮ lớp `material-list-table`** qua `tableClassName` (`canonical.css:732` chặn ngắt dòng + `:734` nút `disabled`) — bỏ là **mất định dạng**. Cột **"Tên phụ (alias)" ĐỘNG** nay là một `Column` với **`hidden: !showAlias`** (tiêu đề và dữ liệu biến mất cùng nhau; `colSpan` dòng rỗng tự đúng). Giữ 3 nút `export-mini` (Sửa/Hợp nhất/Ngừng) **nguyên văn** `title`/`disabled`; `emptyText` **nguyên văn** *"Không có vật tư phù hợp bộ lọc."* |
+| 17 | `DepartmentTaskWorkspace` | **bảng nhiệm vụ phòng ban (10 cột)** | Bảng thứ **HAI chọn dòng** (`rowClassName` — **không phải sửa component nữa**). Ô **"Hạn hoàn thành"** tô đỏ theo hạn ⇒ **`cellClassName`** đúng biểu thức cũ `r.dueAt && … < nowMs && !['COMPLETED','CANCELLED'].includes(status)`. Giữ `link-button` + `stopPropagation` + `navigate(target)` ở cột Nguồn, `span.task-group-tag`, `div.task-progress` với bề rộng nội tuyến; `emptyText` **nguyên văn** *"Chưa có nhiệm vụ phù hợp bộ lọc."* ⚠️ **Bảng này là `<table>` TRẦN** ⇒ **lệch bề rộng cột** — xem **mục 2f** |
 
-**Đo lại sau khi chuyển:** `DataTable` **13 → 29 lần** · bảng tự viết **87 → 71 chỗ** · trạng thái rỗng tự viết **88 → 74 chỗ**.
-`app/page.tsx` **4019 dòng** / 221 hàm top-level.
+**Đo lại sau khi chuyển:** `DataTable` **13 → 30 lần** · bảng tự viết **87 → 70 chỗ** · trạng thái rỗng tự viết **88 → 73 chỗ**.
+`app/page.tsx` **4037 dòng** / 221 hàm top-level.
+
+### 2f. 🛑 BẢNG `<table>` **TRẦN** KHÔNG CHUYỂN ĐƯỢC "Y HỆT" — BẰNG CHỨNG ĐO ĐƯỢC (bảng 17)
+
+Chứng minh cũ ở mục 3b (`canonical.css:103-113` style **cùng một danh sách selector** cho `.table-wrap table th/td`
+và `.baseline-table th/td`) **CHỈ nói về `th`/`td` — KHÔNG nói về chính thẻ `<table>`**. Luật thật còn thiếu:
+`app/globals.css:1055` — **`.baseline-table { width:100%; border-collapse:separate!important; border-spacing:0!important }`**.
+Bảng trần **không có** `width:100%` ⇒ khi `DataTable` gắn lớp `baseline-table`, trình duyệt **phân bổ lại bề rộng cột**
+(nội dung dàn đều hơn, chữ xuống dòng ở chỗ khác). **Đo thật** (màn `10-dept-assign-da`, ảnh toàn trang 2166×1894):
+
+| Phép đo | Kết quả |
+|---|---|
+| Lệch tổng thể toàn ảnh | **0,72 %** |
+| Vùng lệch nặng nhất | **6,35 %** — ô 271×236 trong **đúng vùng bảng** (y 1184–1657) |
+| Chiều cao ảnh (laptop/tablet/phone) | **giảm đúng 1 px** (2233→2232 · 2767→2766 · 3425→3424) |
+| Số dòng dữ liệu | **7 → 7 (không đổi)** |
+| Thanh tiến độ `%` | **còn nguyên** |
+| Chữ đỏ | **không có ở cả hai bản** (dữ liệu chưa tới hạn) |
+| Mép phải của bảng | **không đổi**; chỉ **bề rộng cột bên trong** đổi |
+
+⇒ **KẾT LUẬN TRUNG THỰC:** chuyển bảng `<table>` trần sang `DataTable` **KHÔNG thể trùng byte**; nó **dàn lại bề rộng
+cột theo khuôn dùng chung**. Đây **không phải lỗi** (không mất dòng, không mất phần tử, không mất định dạng) nhưng là
+**thay đổi giao diện thật** ⇒ **GIỮ ảnh chuẩn CŨ làm mốc** để cổng tiếp tục báo lệch **cho tới khi anh duyệt**.
+⚠️ **Bảng 17 vì vậy đang được coi là "CHUYỂN XONG nhưng CHỜ DUYỆT GIAO DIỆN" — KHÔNG được tự ý `--update` ảnh chuẩn.**
+
+### 2g. 🔍 CỔNG ẢNH CÓ **ĐIỂM MÙ "DƯỚI NẾP GẤP"** — ĐÃ VÁ BẰNG CỜ `fullPage`
+
+Khi thêm 2 màn phòng ban vào cổng ảnh, lần chụp đầu báo `✅ 0 px` **nhưng ảnh KHÔNG HỀ CHỨA BẢNG**: màn phòng ban có
+page-head + **6 thẻ KPI** + form giao việc + card lọc ⇒ bảng nằm **dưới 1080 px** mà `captureBeyondViewport:false`
+chỉ chụp khung nhìn ⇒ **cổng "xanh" trong khi chưa đo cái cần đo**. Đã thêm cờ **`fullPage: true`** cho từng màn
+(mặc định vẫn `false` để **32 ảnh chuẩn cũ không đổi**) — 2 màn phòng ban nay chụp **toàn trang**, ảnh `10-dept-assign-da`
+cao **1894 px** và thấy đủ **10 cột + 7 dòng** (đã kiểm bằng mắt qua `vision_glance`: đúng 7 dòng, đủ 10 tiêu đề, cột `%` = 0 %).
+**Quy tắc từ nay:** màn nào có **bảng nằm dưới nếp gấp** thì **bắt buộc** đặt `fullPage: true`, nếu không thì
+"ĐẠT 0 px" **không có giá trị chứng minh** cho bảng đó.
+
 
 ### 2c. ⚠️ VÌ SAO `rowClassName` PHẢI LÀ **LỚP CSS**, KHÔNG THỂ DÙNG `rowStyle` (bảng 15)
 
@@ -188,15 +224,15 @@ bảng nhóm dòng, bảng tổng hợp tĩnh, lưới nhập liệu).
    ~~`cellClassName`~~ ✅ **XONG** (TASK-081) · ~~`rowClassName`~~ ✅ **XONG** (bảng 15).
 2. ~~Chuyển các bảng có `colSpan` **chỉ ở dòng rỗng**~~ ✅ **XONG** · ~~bảng chọn dòng `selected-row`~~ ✅ **XONG** (bảng 15) ·
    ~~`material-list-table` cột alias ĐỘNG~~ ✅ **XONG** (bảng 16).
-3. **Kế tiếp — `WorkCenter` bảng nhiệm vụ phòng ban** (10 cột, có `selected?.id` **chọn dòng** ⇒ nay đã có `rowClassName`,
-   cột "Hạn hoàn thành" có `red-text` theo hạn, cột "Nguồn" là `link-button`) — bảng này **không** dùng `baseline-table`
-   ⇒ **bắt buộc so cổng ảnh trước/sau** rồi mới kết luận (màn `03-work` **đã được cổng ảnh phủ** nên chỉ cần so hash báo cáo).
+3. ~~**`WorkCenter` bảng nhiệm vụ phòng ban**~~ ✅ **ĐÃ CHUYỂN (bảng 17)** — nhưng **CHỜ DUYỆT GIAO DIỆN** (mục 2f).
 4. **Rồi — rà lại danh sách "cần cân nhắc" còn lại** trên **89 khối `<table>`** (bộ quét ở mục 3) để tìm bảng nào
    vừa **an toàn** vừa **là danh sách phẳng**; bảng nhập liệu/nhóm dòng/bảng in thì **giữ nguyên**.
-5. Chỉ chuyển bảng `<table>` trần **khi** đã chứng minh CSS tương đương (`canonical.css:103-113` đã chứng minh cho
-   `.table-wrap table` — nhưng mỗi bảng **vẫn phải so cổng ảnh trước/sau**, xem mục 2b và 2e).
+5. ⚠️ **Bảng `<table>` TRẦN: PHẢI CÓ QUYẾT ĐỊNH CỦA ANH TRƯỚC KHI CHUYỂN TIẾP** — chuyển là **lệch bề rộng cột**
+   (mục 2f) vì `globals.css:1055` `.baseline-table{width:100%}`. Ba lựa chọn: (a) **chấp nhận** dàn lại cột và
+   cập nhật ảnh chuẩn cho màn đó; (b) **thêm luật `width:auto`** vào `app/styles/canonical.css` cho bảng cần giữ
+   nguyên khuôn cột (thêm CSS = phải qua cổng CSS); (c) **giữ nguyên bảng cũ**, không chuyển nữa.
 
-## 4b. Lịch sử head định danh nguồn (16 bảng = 11 head)
+## 4b. Lịch sử head định danh nguồn (17 bảng = 12 head)
 
 | Head | Bảng đã chuyển | Fingerprint |
 |---|---|---|
@@ -206,7 +242,8 @@ bảng nhóm dòng, bảng tổng hợp tĩnh, lưới nhập liệu).
 | `0122_phase1_ui_datatable8_identity.sql` | 13 | `VNTECH-FP-30EE365D549AD7D4` |
 | `0123_phase1_ui_datatable9_identity.sql` | 14 (danh sách dự án 9 cột) | `VNTECH-FP-ADA2358D8EFD995C` |
 | `0124_phase1_ui_datatable10_identity.sql` | 15 (Phiếu đề nghị 9 cột + `rowClassName`) | `VNTECH-FP-10606747FB52F138` |
-| `0125_phase1_ui_datatable11_identity.sql` | **16 (danh mục vật tư `material-list-table`)** | **`VNTECH-FP-6341C996591D3DD3`** |
+| `0125_phase1_ui_datatable11_identity.sql` | 16 (danh mục vật tư `material-list-table`) | `VNTECH-FP-6341C996591D3DD3` |
+| `0126_phase1_ui_datatable12_identity.sql` | **17 (bảng nhiệm vụ phòng ban — `<table>` TRẦN)** | **`VNTECH-FP-492A1077DA6CEC86`** |
 
 ⚠️ **Bắt buộc mỗi lần đổi `app/page.tsx`:** head mới → `node tools/refresh-phase-identity.mjs <head.sql> "<NHÃN>"`
 → `UPDATE vntech_product_identity` trên **MySQL** **và** đồng bộ `.local-data/warehouse.sqlite` (`node tools/set-local-identity.mjs`)
@@ -218,24 +255,26 @@ source_fingerprint`); nó còn giá trị cũ từ `0049_master_baseline_identit
 `source_fingerprint_short` của SQLite để kết luận định danh** — hãy đọc `source_fingerprint`, hoặc đọc banner khởi động.
 (`tools/set-local-identity.mjs` có cập nhật cả cột short cho nhất quán khi ta chủ động chạy.)
 
-## 5. Tệp thay đổi (đợt này — bảng 16)
+## 5. Tệp thay đổi (đợt này — bảng 17)
 
 | Tệp | Nội dung |
 |---|---|
-| `app/page.tsx` | bảng **danh mục vật tư** (`material-list-table`) → `<DataTable>` + `tableClassName="material-list-table"` + cột alias **`hidden: !showAlias`** (4025 → 4019 dòng) |
-| `drizzle/0125_phase1_ui_datatable11_identity.sql` | **MỚI** — head định danh nguồn (fixed point `VNTECH-FP-6341C996591D3DD3`) |
+| `app/page.tsx` | bảng **nhiệm vụ phòng ban 10 cột** (`DepartmentTaskWorkspace`) → `<DataTable>` + `rowClassName` (chọn dòng) + `cellClassName` (ô hạn tô đỏ) (4019 → 4037 dòng) |
+| `drizzle/0126_phase1_ui_datatable12_identity.sql` | **MỚI** — head định danh nguồn (fixed point `VNTECH-FP-492A1077DA6CEC86`) |
+| `tools/probe-visual-regression.mjs` | thêm **cờ `fullPage`** (chống điểm mù dưới nếp gấp) + **2 màn mới** `09-dept-assign-kh` / `10-dept-assign-da` + thông báo `NO_GROUP(...)` liệt kê nhóm có thật |
+| `tools/baseline/09-dept-assign-kh__*.png` · `10-dept-assign-da__*.png` | **MỚI** — 8 ảnh chuẩn chụp từ **bản CŨ** (trước khi đổi bảng) làm mốc đối chiếu |
 | `lib/vntech-identity-data.mjs` · `VNTECH_*.txt` · `VNTECH_FINGERPRINT.json` · `MANIFEST_SHA256.txt` | đồng bộ định danh + manifest |
 | `docs/agent-progress/TASK-083.md` | hồ sơ này |
 
-**Bằng chứng kiểm chứng lượt bảng 16:** `tsc --noEmit` **EXIT 0** · eslint **0 error** (72 warning, đều có trước) ·
+**Bằng chứng kiểm chứng lượt bảng 17:** `tsc --noEmit` **EXIT 0** · eslint **0 error** (72 warning, đều có trước) ·
 `master-baseline-gate` **ĐẠT** (`!important=4950` · `css=400643B`) · `npm run build` **EXIT 0** +
 `BUILT ARTIFACT VALIDATION: ĐẠT` · `npm run test:regression` **61 test / 59 pass / 2 fail (đúng 2 ca đã biết)** ·
-🔬 **cổng ảnh 32 ảnh TRÙNG NHAU TỪNG BYTE với lượt trước** (`FF18686D…967C`) — trong đó màn `05-material`
-(**chính màn vừa chuyển**) **không đổi một điểm ảnh** · `probe-column-parity` **KHÔNG khoá nào thiếu cột**
-(đối chứng dương **5/5**) · `probe-money-consistency` **14/14** · `probe-row-duplication` **15/15** ·
-UI `:8787` và proxy `:9000` **HTTP 200**, định danh phục vụ **`VNTECH-FP-6341C996591D3DD3`**.
-⚠️ **Cổng ảnh tổng thể vẫn ghi "KHÔNG ĐẠT ❌ — 19/32"** — 19 ảnh lệch đó là **19 ảnh có từ trước** do **đổi dữ liệu thật**
-(17–18/09) và **không** thuộc lượt này; muốn đưa về ĐẠT phải chạy `--update` **sau khi anh xác nhận dữ liệu mới**.
+`probe-column-parity` **KHÔNG khoá nào thiếu cột** (đối chứng dương **5/5**) · `probe-money-consistency` **14/14** ·
+`probe-row-duplication` **15/15** · UI `:8787` và proxy `:9000` **HTTP 200**, định danh phục vụ **`VNTECH-FP-492A1077DA6CEC86`** ·
+🔬 **cổng ảnh TRƯỚC/SAU cho 2 màn phòng ban (màn MỚI, trước đây không cổng nào phủ): 8/8 ảnh LỆCH** — **lệch có đo, có giải thích**
+ở mục 2f (dàn lại bề rộng cột), **7 dòng và 10 cột và thanh tiến độ vẫn nguyên** (đã kiểm bằng mắt).
+⚠️ **8 ảnh này CỐ Ý để ❌** để cổng tiếp tục nhắc cho tới khi anh duyệt giao diện mới — **không** tự chạy `--update`.
+
 
 
 
