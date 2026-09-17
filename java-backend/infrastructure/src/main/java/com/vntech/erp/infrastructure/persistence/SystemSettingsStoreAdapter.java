@@ -28,31 +28,51 @@ public class SystemSettingsStoreAdapter implements SystemSettingsStore {
 
     @Override @Transactional
     public void upsertUiDisplaySettings(String json, String updatedBy, Instant now) {
+        // SỬA LỖI 500 (TASK-039): câu lệnh cũ dùng id='UI' và THIẾU `scope_key` + `created_at`,
+        // mà hai cột đó là NOT NULL không có giá trị mặc định ⇒ MySQL trả error 1364
+        // "Field 'scope_key' doesn't have a default value".
+        // Port lại ĐÚNG JS: id='UI-company', scope_key='company_default', có created_at.
         jdbcTemplate.update("""
-                INSERT INTO ui_display_settings (id,settings_json,updated_by,updated_at)
-                VALUES ('UI',?,?,?)
+                INSERT INTO ui_display_settings (id,scope_key,settings_json,updated_by,created_at,updated_at)
+                VALUES ('UI-company','company_default',?,?,?,?)
                 ON DUPLICATE KEY UPDATE settings_json=VALUES(settings_json),updated_by=VALUES(updated_by),
-                    updated_at=VALUES(updated_at)""", json, updatedBy, now);
+                    updated_at=VALUES(updated_at)""", json, updatedBy, now, now);
     }
 
     @Override
     public Map<String, Object> readUiDisplaySettings() {
-        Optional<Map<String, Object>> row = first("SELECT settings_json AS settingsJson FROM ui_display_settings WHERE id='UI'");
+        // JS đọc theo scope_key (KHÔNG phải theo id) — xem scripts/system-route.mjs
+        Optional<Map<String, Object>> row = first(
+                "SELECT settings_json AS settingsJson FROM ui_display_settings WHERE scope_key='company_default'");
         return row.orElseGet(Map::of);
     }
 
     @Override @Transactional
-    public void upsertTrustSettings(String json, String updatedBy, Instant now) {
+    public void updateTrustDevelopmentSettings(String auditId, String licenseServerUrl,
+                                               String actorUserId, Instant now) {
+        // SỬA LỖI 500 (TASK-039): câu lệnh cũ INSERT cột `settings_json` KHÔNG tồn tại trong bảng
+        // và dùng id='TRUST' trong khi hàng thật là 'TRUST-ROOT'.
+        // Port nguyên trạng JS: UPDATE đúng các cột có thật, rồi ghi 1 dòng audit.
         jdbcTemplate.update("""
-                INSERT INTO vntech_trust_settings (id,settings_json,updated_by,updated_at)
-                VALUES ('TRUST',?,?,?)
-                ON DUPLICATE KEY UPDATE settings_json=VALUES(settings_json),updated_by=VALUES(updated_by),
-                    updated_at=VALUES(updated_at)""", json, updatedBy, now);
+                UPDATE vntech_trust_settings
+                   SET trust_mode='development',enforcement_enabled=0,online_attestation_enabled=0,
+                       license_server_url=?,updated_at=?
+                 WHERE id='TRUST-ROOT'""", licenseServerUrl, now);
+        jdbcTemplate.update("""
+                INSERT INTO vntech_trust_audit
+                    (id,event_type,actor_user_id,trust_mode,enforcement_enabled,license_id,
+                     machine_fingerprint,detail_json,occurred_at)
+                VALUES (?,?,?,?,?,?,?,?,?)""",
+                auditId, "DEVELOPMENT_SETTINGS_UPDATED", actorUserId, "development", 0, null, null,
+                "{\"licenseServerUrl\":" + (licenseServerUrl == null ? "null" : "\"" + licenseServerUrl + "\"")
+                        + ",\"onlineAttestationEnabled\":false}", now);
     }
 
     @Override
     public Map<String, Object> readTrustSettings() {
-        Optional<Map<String, Object>> row = first("SELECT settings_json AS settingsJson FROM vntech_trust_settings WHERE id='TRUST'");
+        // JS đọc license_server_url theo id='TRUST-ROOT'
+        Optional<Map<String, Object>> row = first(
+                "SELECT license_server_url AS licenseServerUrl FROM vntech_trust_settings WHERE id='TRUST-ROOT'");
         return row.orElseGet(Map::of);
     }
 

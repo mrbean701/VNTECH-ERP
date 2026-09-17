@@ -1,0 +1,88 @@
+#45 TASK-039: va 3 cho lech lam 2 action admin loi HTTP 500 + 1 cau hinh ghi duoc ma khong doc ra
+
+NGUON PHAT HIEN: doc LOG CUA JAVA DANG CHAY (cung cach da tim ra TASK-025).
+
+BANG CHUNG TU LOG (khong suy doan)
+  ERROR ... Field 'scope_key' doesn't have a default value
+    INSERT INTO ui_display_settings (id,settings_json,updated_by,updated_at) VALUES ('UI',?,?,?)
+    <- SystemSettingsStoreAdapter.upsertUiDisplaySettings:31 -> SystemController:1027
+  ERROR ... Unknown column 'settings_json' in 'field list'
+    INSERT INTO vntech_trust_settings (id,settings_json,updated_by,updated_at) VALUES ('TRUST',?,?,?)
+    <- SystemSettingsStoreAdapter.upsertTrustSettings:46 -> SystemController:1032
+  => Hai action admin save_ui_display_settings va save_trust_development_settings tra HTTP 500
+     moi lan duoc goi. (Log ghi nhan dung luc probe TASK-027 goi chung - tuc probe da LAM LO loi nay.)
+
+LUOC DO THAT (doc ma, khong doan)
+  ui_display_settings (drizzle 0020): id - scope_key NOT NULL UNIQUE - settings_json NOT NULL
+    - updated_by - created_at NOT NULL - updated_at NOT NULL
+  vntech_trust_settings (V1__baseline:2173-2193): id - trust_mode - enforcement_enabled - tenant_id
+    - company_code - key_id - algorithm - public_key_pem - brand_fingerprint - release_fingerprint
+    - machine_fingerprint - hardware_binding_mode - native_verifier_mode - online_attestation_enabled
+    - license_server_url - last_attested_at - created_at - updated_at
+    => KHONG co cot settings_json
+  vntech_trust_audit (V1__baseline:2160-2171): id - event_type - actor_user_id - trust_mode
+    - enforcement_enabled - license_id - machine_fingerprint - detail_json - occurred_at
+
+BA CHO LECH - JAVA KHONG KHOP JS (nguon su that)
+  1. ui_display_settings ghi : JS dung id='UI-company', scope_key='company_default', co created_at
+                              Java dung id='UI', THIEU scope_key + created_at => error 1364
+  2. ui_display_settings doc bootstrap: JS doc scope_key='company_default'
+                              Java doc scope_key='GLOBAL' => GHI DUOC MA KHONG BAO GIO DOC RA
+  3. vntech_trust_settings   : JS UPDATE trust_mode/enforcement_enabled/online_attestation_enabled/
+                              license_server_url WHERE id='TRUST-ROOT' + 1 dong audit
+                              Java INSERT cot settings_json KHONG TON TAI va dung id='TRUST'
+  Nghiep vu cung sai: JS nhan payload licenseServerUrl, CHAN bat enforcementEnabled, BAT BUOC HTTPS;
+  Java nhan {developerMode, allowTestData, debugLogging, apiSandbox} va khong kiem gi.
+  => Khong chi sai cu phap SQL: Java port sai ca NGUON DU LIEU lan NGHIEP VU (vi pham quyet dinh #9).
+
+BAN VA (port lai dung JS)
+  - SystemSettingsStore (port): doi chu ky thanh
+      void updateTrustDevelopmentSettings(String auditId, String licenseServerUrl,
+                                          String actorUserId, Instant now);
+  - SystemSettingsStoreAdapter: 4 phuong thuc
+      INSERT INTO ui_display_settings (id,scope_key,settings_json,updated_by,created_at,updated_at)
+      VALUES ('UI-company','company_default',?,?,?,?) ON DUPLICATE KEY UPDATE ...
+      UPDATE vntech_trust_settings SET trust_mode='development',enforcement_enabled=0,
+        online_attestation_enabled=0,license_server_url=?,updated_at=? WHERE id='TRUST-ROOT'
+      INSERT INTO vntech_trust_audit (...) VALUES (?...)
+      + 2 ham doc sua theo JS (scope_key='company_default'; license_server_url WHERE id='TRUST-ROOT')
+  - SystemSettingsUseCase.saveTrustDevelopmentSettings: port nghiep vu JS (chan enforcement, bat buoc
+    HTTPS, idGenerator.next("TA") cho id audit, tra NGUYEN VAN thong diep cua JS)
+  - BootstrapDataAdapter: scope_key='GLOBAL' -> 'company_default'
+
+CHO LECH THU BA DO CHINH PHEP KIEM CUA TOI BAT DUOC
+  Sau khi va 2 loi 500, probe bao 9/10: hai action tra 200 nhung uiDisplaySettings doc lai ra null.
+  Neu chi kiem "het 500" thi da ket luan xong va BO SOT viec cau hinh GHI DUOC NHUNG KHONG HIEN RA.
+  Chung minh cho lech nay la duy nhat: quet toan kho Java + drizzle, chi co MOT noi dung 'GLOBAL'.
+
+KIEM CHUNG
+  Hau kiem ban va (tools/patch-task039-settings-500.mjs) : 11/11 DAT
+  verify-java-compile.ps1                                : SUCCEEDED - 102 tep, 0 loi, 155 .class
+  mvn -DskipTests package                                : thanh cong - fat jar 90.884.756 bytes
+  Java khoi dong lai                                     : /actuator/health 200 (PID 18504)
+  Probe luc chay (tools/probe-settings-fix.mjs)          : 10/10 DAT - exit 0
+    save_ui_display_settings        -> HTTP 200
+    save_ui_display_settings #2     -> HTTP 200 (upsert chay duoc)
+    save_trust_development_settings -> HTTP 200 + nguyen van thong diep JS
+      - co bat enforcementEnabled   -> HTTP 400 dung thong diep JS
+      - URL http:// (khong HTTPS)   -> HTTP 400 dung thong diep JS
+    uiDisplaySettings doc lai       -> {"id":"UI-company","scopeKey":"company_default",...}
+
+AN TOAN DU LIEU KHI KIEM CHUNG
+  Ca hai action deu GHI cau hinh. De khong doi cau hinh/giao dien that, probe DOC gia tri hien tai roi
+  GHI LAI DUNG gia tri do, va goi trust o trang thai dang co. Nho vay chung minh duoc duong ghi ma
+  KHONG thay doi cau hinh.
+
+KHONG doi luoc do, khong them/bot action, khong doi cong quyen. Chi sua cau lenh SQL cho khop luoc do
+san co va port lai nghiep vu JS. Khong them cot settings_json vao vntech_trust_settings vi lam vay la
+mo rong luoc do de chieu theo mot port sai.
+
+Bai hoc: (1) bien dich sach KHONG chung minh SQL dung - phai goi that va doc phan hoi.
+(2) Phep kiem "ghi xong DOC LAI" moi la du; chi kiem "het 500" se bo sot.
+(3) Khi thay mot cap ghi/doc cung bang, LUON so KHOA ma hai ben dung (id vs scope_key,
+    'TRUST' vs 'TRUST-ROOT', 'GLOBAL' vs 'company_default').
+
+Tep: SystemSettingsStore.java - SystemSettingsStoreAdapter.java - SystemSettingsUseCase.java -
+BootstrapDataAdapter.java - tools/{patch-task039-settings-500,probe-settings-fix}.mjs (moi) -
+docs/agent-progress/{TASK-039.md (moi), TASK_INDEX.md, MASTER_STATUS.md}
+Tai lieu: docs/agent-progress/TASK-039.md

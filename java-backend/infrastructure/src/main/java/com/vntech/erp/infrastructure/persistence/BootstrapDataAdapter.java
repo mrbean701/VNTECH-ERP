@@ -591,7 +591,7 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
 
         List<Map<String, Object>> uiDisplay = query("""
                 SELECT id,scope_key AS scopeKey,settings_json AS settingsJson,updated_at AS updatedAt
-                FROM ui_display_settings WHERE scope_key='GLOBAL' LIMIT 1""");
+                FROM ui_display_settings WHERE scope_key='company_default' LIMIT 1""");
         data.put("uiDisplaySettings", uiDisplay.isEmpty() ? null : uiDisplay.get(0));
 
         data.put("materialAliases", query("""

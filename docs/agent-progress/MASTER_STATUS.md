@@ -15,7 +15,7 @@
 |---|---|
 | CURRENT PHASE | PHASE 1 — hạ tầng UI dùng chung. Song song: hoàn thiện tầng phân quyền Java |
 | CURRENT TASK | **TASK-033** — MASTER TASK §8.1 (dải phê duyệt thiếu PHÒNG BAN); chờ dựng lại bundle để chứng minh render |
-| LAST COMPLETED | **TASK-038 (#44)** — GOAL §6: đối chiếu action **UI GỌI** ↔ backend Java (**0 điểm lệch**, 155/155; tự sửa 2 lỗi làm phép đo yếu đi). Trước đó: **TASK-037 (#43)** · **TASK-036 (#42)** · **TASK-022b (#41)** |
+| LAST COMPLETED | **TASK-039 (#45)** — vá **3 chỗ lệch** làm 2 action admin lỗi **HTTP 500** + 1 cấu hình ghi được mà không đọc ra; kiểm chứng lúc chạy **10/10** (đọc từ **log Java đang chạy**, cùng cách đã tìm ra TASK-025). Trước đó: **TASK-038 (#44)** · **TASK-037 (#43)** · **TASK-036 (#42)** |
 | NEXT TASK | TASK-034 (gỡ chặn dựng bundle) → chứng minh TASK-033 render → **§8.2** (modal "Tổng hợp giao nhận") → **§8.3** (ảnh/hồ sơ vật tư) → TASK-009 |
 | BLOCKED ITEMS | **TASK-034 — `npm run build` KHÔNG dựng lại được UI** (dấu vân tay nguồn lệch; tái lập định danh còn phải sửa **dòng `vntech_product_identity` trong DB** vì `local-runtime.mjs:177` ném lỗi nếu lệch ⇒ có tác động dữ liệu) · **TASK-035 mục 7** (hành vi khi đổi workflow giữa chừng) · **TASK-036 mục 7** (có thi hành `required_permission`/`allow_skip_level` không) · **TASK-031** (cây dự án bị tắt ở cả 2 nav) · **TASK-032** (0/16 vai trò trỏ đơn vị mặc định) · **TASK-029** (Java chặt/rộng hơn JS) · **TASK-024** (`isCompanyLeadership`) · **dữ liệu `user_module_permissions`** |
 | USER CONFIRMATION REQUIRED | **YES** — **5 câu hỏi**, ghi ở mục riêng bên dưới |

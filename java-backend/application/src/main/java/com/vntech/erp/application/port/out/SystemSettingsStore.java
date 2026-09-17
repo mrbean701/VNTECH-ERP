@@ -10,7 +10,20 @@ public interface SystemSettingsStore {
 
     void upsertUiDisplaySettings(String json, String updatedBy, Instant now);
     Map<String, Object> readUiDisplaySettings();
-    void upsertTrustSettings(String json, String updatedBy, Instant now);
+    /**
+     * Ghi cấu hình Development Mode — port nguyên trạng JS {@code save_trust_development_settings}.
+     *
+     * <p><b>Vì sao đổi chữ ký (TASK-039):</b> chữ ký cũ {@code upsertTrustSettings(json, …)} giả định
+     * bảng {@code vntech_trust_settings} có cột {@code settings_json} để chứa một khối JSON. Lược đồ
+     * thật (V1__baseline:2173-2193) <b>KHÔNG có cột đó</b> ⇒ câu lệnh ném
+     * "Unknown column 'settings_json'" ⇒ action trả HTTP 500. JS cũng KHÔNG lưu JSON ở bảng này mà
+     * {@code UPDATE} đúng các cột có thật. Nay port theo JS.
+     *
+     * @param auditId          id dòng audit (JS dùng {@code id("TA")})
+     * @param licenseServerUrl URL máy chủ license, đã kiểm HTTPS ở tầng use case; null = không đặt
+     * @param actorUserId      người thực hiện (ghi vào audit)
+     */
+    void updateTrustDevelopmentSettings(String auditId, String licenseServerUrl, String actorUserId, Instant now);
     Map<String, Object> readTrustSettings();
     List<Map<String, Object>> factoryResetPreview();
     int factoryResetExecute(String confirmText, String userId, Instant now);

@@ -250,15 +250,33 @@ public final class SystemSettingsUseCase {
         return Map.of("message", "Đã lưu giao diện hiển thị.");
     }
 
+    /**
+     * save_trust_development_settings — port nguyên trạng JS (scripts/system-route.mjs:1823-1833).
+     *
+     * <p><b>SỬA LỖI (TASK-039):</b> bản cũ nhận payload {developerMode, allowTestData, debugLogging,
+     * apiSandbox} và ghi một khối JSON vào cột `settings_json` KHÔNG tồn tại ⇒ HTTP 500. JS không
+     * làm vậy: nó chỉ đặt lại trust_mode='development', tắt enforcement/attestation và ghi
+     * licenseServerUrl — kèm hai phép kiểm (chặn bật enforcement, bắt buộc HTTPS).
+     */
     public Map<String, Object> saveTrustDevelopmentSettings(Principal principal, Map<String, Object> payload) {
         rbac.requireRole(principalAsCurrent(principal), List.of("admin"));
-        Map<String, Object> settings = new LinkedHashMap<>();
-        settings.put("developerMode", payload.get("developerMode") == Boolean.TRUE);
-        settings.put("allowTestData", payload.get("allowTestData") == Boolean.TRUE);
-        settings.put("debugLogging", payload.get("debugLogging") == Boolean.TRUE);
-        settings.put("apiSandbox", payload.get("apiSandbox") == Boolean.TRUE);
-        store.upsertTrustSettings(svJson(settings), principal.userId(), Instant.now());
-        return Map.of("message", "Đã lưu cấu hình môi trường phát triển.");
+        // JS 1825: bản W2 khóa ở Development Mode, KHÔNG cho bật Production Enforcement.
+        Object enforcement = payload.get("enforcementEnabled");
+        if (enforcement == Boolean.TRUE
+                || List.of("1", "true", "on").contains(trim(enforcement).toLowerCase())) {
+            throw Api("Bản W2 đang khóa ở Development Mode. Chỉ được bật Production Enforcement "
+                    + "bằng quy trình phát hành riêng sau khi chủ sản phẩm chốt.");
+        }
+        // JS 1826-1827: URL máy chủ license — rỗng thì null, có thì BẮT BUỘC HTTPS.
+        String licenseServerUrl = trim(payload.get("licenseServerUrl"));
+        if (!licenseServerUrl.isEmpty() && !licenseServerUrl.toLowerCase(Locale.ROOT).startsWith("https://")) {
+            throw Api("License Server URL phải dùng HTTPS.");
+        }
+        store.updateTrustDevelopmentSettings(idGenerator.next("TA"),
+                licenseServerUrl.isEmpty() ? null : licenseServerUrl, principal.userId(), Instant.now());
+        // JS 1833: nguyên văn thông điệp trả về.
+        return Map.of("message",
+                "Đã lưu cấu hình nền; License Enforcement và Online Attestation vẫn tắt theo thiết kế.");
     }
 
     // ---- helpers ----
