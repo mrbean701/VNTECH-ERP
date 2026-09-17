@@ -35,8 +35,10 @@ export type Column<T> = {
   width?: string;
   /** Ẩn cột này khi đang xem (dùng cho ô bật/tắt cột). */
   hidden?: boolean;
-  /** Lớp CSS thêm cho ô — hữu ích khi cần style riêng mà không phải sửa component. */
+  /** Lớp CSS thêm cho ô TIÊU ĐỀ — hữu ích khi cần style riêng mà không phải sửa component. */
   className?: string;
+  /** Lớp CSS cho Ô DỮ LIỆU theo TỪNG DÒNG (vd tô đỏ dòng quá hạn) — TASK-081. */
+  cellClassName?: (row: T, index: number) => string | undefined;
 };
 
 export function DataTable<T>({
@@ -96,7 +98,7 @@ export function DataTable<T>({
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
               >
                 {visible.map((c) => (
-                  <td key={c.key} className={c.align ? `dt-${c.align}` : undefined}>{c.render(row, i)}</td>
+                  <td key={c.key} className={[c.align ? `dt-${c.align}` : "", c.cellClassName ? c.cellClassName(row, i) : ""].filter(Boolean).join(" ") || undefined}>{c.render(row, i)}</td>
                 ))}
               </tr>
             ))}
