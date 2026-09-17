@@ -1,0 +1,57 @@
+#44 TASK-038 (GOAL §6): doi chieu action UI GOI voi backend Java
+
+VI SAO CHIEU NAY CHUA TUNG DUOC KIEM
+  Cac cong hien co so JS <-> Java <-> danh muc (probe-action-parity, probe-action-module-parity,
+  probe-catalog-drift) - tuc chi so HAI BACKEND voi nhau. CHUA cong nao so voi chinh ma GIAO DIEN.
+  Neu lech: UI goi action khong ton tai o backend => nguoi dung bam nut an loi (Java tra 400
+  "chua duoc trien khai" hoac 403 do thieu khai bao quyen).
+
+CACH DO
+  UI goi API qua helper requestApi(action, payload) (app/page.tsx:356) va qua cac ham nhan ten roi goi
+  no (submit, action, ...), cung cac cho fetch("/api/system", ... { action: "..." }).
+  Doi chieu voi 186 action that cua Java (da loai 38 ten chi muc SQL *_uidx).
+
+KET QUA (exit 0)
+  Backend Java (action that)                     : 186
+  Tep giao dien da quet                          : 12
+  Action UI GOI (co bang chung loi goi)          : 155
+  Chuoi chi NHAC TOI ten action (khong tinh)     : 2
+  UI GOI VA Java co                              : 155/155
+  UI GOI, Java KHONG co nhung JS co              : 0
+  UI GOI ma KHONG backend nao co (bam se loi)    : 0
+  => Moi action UI goi deu co o Java. Chieu UI -> API KHOP.
+
+TU PHAT HIEN 2 LOI TRONG CONG CU (loai lam phep do YEU di ma van bao DAT - nguy hiem hon bao HONG
+vi tao cam giac an toan gia)
+
+  4.1 Ban dau tron "GOI" voi "chi NHAC TOI" => thoi phong ket qua.
+      Phien ban dau gom MOI chuoi trung ten action backend nen bao 157 action "UI goi". Nhung khi dem
+      loi goi that thi chi co 15 loi goi requestApi(. Tuc 144/157 la suy doan theo trung chuoi, khong
+      phai bang chung goi (mot cai ten co the nam trong chu thich hoac nhan hien thi).
+      Da sua: tach han hai tap - called (co bang chung loi goi) va mentioned (chi nhac toi, KHONG dung
+      de ket luan). Ket luan nay dua CHI tren tap called.
+
+  4.2 Ban hai bo sot loi goi co doi so la BIEU THUC.
+      Regex cu doi chuoi nam NGAY SAU dau mo ngoac: submit\s*\(\s*["'] . Nhung ma that co:
+        await submit(editing ? "update_project" : "create_project", { ...payload, projectId: row?.id });
+      => bo sot CA HAI action. Phat hien duoc vi danh sach "action Java khong thay UI goi" chua
+      create_project - mot viec ma giao dien CHAC CHAN lam duoc (tao du an) => dau hieu phep do sai,
+      khong phai he thong sai.
+      Da sua: quet tron DOI SO THU NHAT (ton trong ngoac long va chuoi) roi lay moi chuoi dang ten
+      action ben trong. So action phat hien: 153 -> 155; ca create_project va update_project da bat.
+
+  Bai hoc chung: khi mot phep kiem cho ket qua "qua sach", phai kiem CA DO NHẠY cua phep do -
+  khong chi kiem ket luan. Mot phep do yeu van co the in ra "DAT".
+
+GIOI HAN - DAY LA CAN DUOI, KHONG PHAI CHUNG MINH DAY DU
+  Con 31 action Java chua thay UI goi, trong do MOT SO RO RANG LA CO DUNG (vi du cancel_request,
+  save_mar_approval, ship_transfer_order, approve_transfer_order). Nghia la van con loi goi ma phan
+  tich tinh KHONG giai duoc (ten dung luc chay, truyen qua prop nhieu tang, hoac nam ngoai app/**).
+  => Ket luan dung phai phat bieu hep: KHONG TIM THAY loi goi UI nao tro toi action khong ton tai,
+     tren 155 loi goi CO BANG CHUNG. KHONG khang dinh "moi loi goi trong UI da duoc kiem" va KHONG
+     khang dinh 31 action kia la chet.
+
+Khong sua ma nguon trong commit nay.
+Tep: tools/probe-ui-action-coverage.mjs (moi) · docs/agent-progress/{TASK-038.md (moi), TASK_INDEX.md,
+MASTER_STATUS.md}
+Tai lieu: docs/agent-progress/TASK-038.md
