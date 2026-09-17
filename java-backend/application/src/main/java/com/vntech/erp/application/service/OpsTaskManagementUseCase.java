@@ -2,6 +2,8 @@ package com.vntech.erp.application.service;
 
 import com.vntech.erp.application.port.out.IdGenerator;
 import com.vntech.erp.application.port.out.OpsTaskStore;
+import com.vntech.erp.application.rbac.RbacService;
+import com.vntech.erp.application.rbac.RbacService;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -24,10 +26,18 @@ public final class OpsTaskManagementUseCase {
 
     private final OpsTaskStore store;
     private final IdGenerator idGenerator;
+    private final RbacService rbac;
 
-    public OpsTaskManagementUseCase(OpsTaskStore store, IdGenerator idGenerator) {
+    public OpsTaskManagementUseCase(OpsTaskStore store, IdGenerator idGenerator, RbacService rbac) {
         this.store = store;
         this.idGenerator = idGenerator;
+        this.rbac = rbac;
+    }
+
+    /** Dựng CurrentUser cho tầng RBAC — roleBase là mã ENGINE do controller truyền xuống. */
+    private AuthUseCase.CurrentUser principalAsCurrent(Principal p) {
+        return new AuthUseCase.CurrentUser(p.userId(), "", p.fullName(), p.email(), p.role(),
+                p.roleBase(), p.role(), null, null, null, false);
     }
 
     public interface Principal {
@@ -35,6 +45,12 @@ public final class OpsTaskManagementUseCase {
         String role();
         String fullName();
         String email();
+        /**
+         * Mã ENGINE (`role_catalog.base_role`) — giá trị THẬT SỰ dùng để phân quyền, đúng như
+         * `effectiveRole(user)` của JS. Mặc định rơi về `role()` để tương thích ngược với mọi
+         * tầng gọi chưa truyền giá trị này xuống.
+         */
+        default String roleBase() { return role(); }
     }
 
     // ============ work items ============
@@ -200,6 +216,10 @@ public final class OpsTaskManagementUseCase {
      * trỏ tới kho đó — teams.warehouse_id là NOT NULL nên thiếu kho sẽ lỗi ràng buộc.
      */
     public Map<String, Object> createProjectTeam(Principal principal, Map<String, Object> payload) {
+        // JS 1484: requireRole(user,["commander","admin"]) — TASK-022 bổ sung.
+        rbac.requireRole(principalAsCurrent(principal), List.of("commander", "admin"));
+        // JS 1484: requireRole(user,["commander","admin"]) — TASK-022 bổ sung.
+        rbac.requireRole(principalAsCurrent(principal), List.of("commander", "admin"));
         String projectId = trim(payload.get("projectId"));
         String code = trim(payload.get("code")).toUpperCase(Locale.ROOT);
         String name = trim(payload.get("name"));
@@ -471,6 +491,10 @@ public final class OpsTaskManagementUseCase {
 
     // ============ MAR ============
     public Map<String, Object> saveMarApproval(Principal principal, Map<String, Object> payload) {
+        // JS 1253: requireRole(user,["project","procurement","admin"]) — TASK-022 bổ sung.
+        rbac.requireRole(principalAsCurrent(principal), List.of("project", "procurement", "admin"));
+        // JS 1253: requireRole(user,["project","procurement","admin"]) — TASK-022 bổ sung.
+        rbac.requireRole(principalAsCurrent(principal), List.of("project", "procurement", "admin"));
         String projectId = trim(payload.get("projectId"));
         String materialId = trim(payload.get("materialId"));
         String status = trim(payload.get("status"));

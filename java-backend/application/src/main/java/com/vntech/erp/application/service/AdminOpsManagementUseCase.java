@@ -34,6 +34,12 @@ public final class AdminOpsManagementUseCase {
     public interface Principal {
         String userId();
         String role();
+        /**
+         * Mã ENGINE (`role_catalog.base_role`) — giá trị THẬT SỰ dùng để phân quyền, đúng như
+         * `effectiveRole(user)` của JS. Mặc định rơi về `role()` để tương thích ngược với mọi
+         * tầng gọi chưa truyền giá trị này xuống.
+         */
+        default String roleBase() { return role(); }
     }
 
     // ============ save_email_settings ============
@@ -103,6 +109,10 @@ public final class AdminOpsManagementUseCase {
 
     // ============ preview_request_import ============
     public Map<String, Object> previewRequestImport(Principal principal, Map<String, Object> payload) {
+        // JS 861: requireRole(user,["engineer","commander","admin"]) — TASK-022 bổ sung.
+        rbac.requireRole(principalAsCurrent(principal), List.of("engineer", "commander", "admin"));
+        // JS 861: requireRole(user,["engineer","commander","admin"]) — TASK-022 bổ sung.
+        rbac.requireRole(principalAsCurrent(principal), List.of("engineer", "commander", "admin"));
         String projectId = trim(payload.get("projectId"));
         List<?> rawLines = payload.get("lines") instanceof List<?> l ? l : List.of();
         if (projectId.isEmpty() || rawLines.isEmpty())
@@ -296,7 +306,7 @@ public final class AdminOpsManagementUseCase {
     private static String nvl(Object o) { String s = trim(o); return s.isEmpty() ? null : s; }
     private static String blankDefault(String s, String fallback) { return s.isEmpty() ? fallback : s; }
     private AuthUseCase.CurrentUser principalAsCurrent(Principal p) {
-        return new AuthUseCase.CurrentUser(p.userId(), "", "", null, p.role(), p.role(), p.role(), null, null, null, false);
+        return new AuthUseCase.CurrentUser(p.userId(), "", "", null, p.role(), p.roleBase(), p.role(), null, null, null, false);
     }
     private static AuthUseCase.ApiError Api(String message) { return new AuthUseCase.ApiError(message, 400); }
 }

@@ -28,6 +28,12 @@ public final class ProductionManagementUseCase {
     public interface Principal {
         String userId();
         String role();
+        /**
+         * Mã ENGINE (`role_catalog.base_role`) — giá trị THẬT SỰ dùng để phân quyền, đúng như
+         * `effectiveRole(user)` của JS. Mặc định rơi về `role()` để tương thích ngược với mọi
+         * tầng gọi chưa truyền giá trị này xuống.
+         */
+        default String roleBase() { return role(); }
     }
 
     // ============ production reports ============
@@ -379,7 +385,7 @@ public final class ProductionManagementUseCase {
     private static String blankDefault(String s, String fallback) { return s.isEmpty() ? fallback : s; }
 
     private AuthUseCase.CurrentUser principalAsCurrent(Principal p) {
-        return new AuthUseCase.CurrentUser(p.userId(), "", "", null, p.role(), p.role(), p.role(),
+        return new AuthUseCase.CurrentUser(p.userId(), "", "", null, p.role(), p.roleBase(), p.role(),
                 null, null, null, false);
     }
 

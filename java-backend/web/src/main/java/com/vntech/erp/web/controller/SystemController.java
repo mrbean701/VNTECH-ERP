@@ -1293,6 +1293,7 @@ public class SystemController {
         return new ProductionManagementUseCase.Principal() {
             @Override public String userId() { return cu.id(); }
             @Override public String role() { return cu.role(); }
+            @Override public String roleBase() { return cu.roleBase(); }
         };
     }
 
@@ -1307,6 +1308,7 @@ public class SystemController {
         return new AdminOpsManagementUseCase.Principal() {
             @Override public String userId() { return cu.id(); }
             @Override public String role() { return cu.role(); }
+            @Override public String roleBase() { return cu.roleBase(); }
         };
     }
 
@@ -1321,6 +1323,7 @@ public class SystemController {
         return new OpsTaskManagementUseCase.Principal() {
             @Override public String userId() { return cu.id(); }
             @Override public String role() { return cu.role(); }
+            @Override public String roleBase() { return cu.roleBase(); }
             @Override public String fullName() { return cu.fullName(); }
             @Override public String email() { return cu.email(); }
         };
@@ -1344,6 +1347,7 @@ public class SystemController {
         return new RequestManagementUseCase.Principal() {
             @Override public String userId() { return cu.id(); }
             @Override public String role() { return cu.role(); }
+            @Override public String roleBase() { return cu.roleBase(); }
             @Override public String fullName() { return cu.fullName(); }
             @Override public String email() { return cu.email(); }
         };
@@ -1360,6 +1364,7 @@ public class SystemController {
         return new PurchaseManagementUseCase.Principal() {
             @Override public String userId() { return cu.id(); }
             @Override public String role() { return cu.role(); }
+            @Override public String roleBase() { return cu.roleBase(); }
             @Override public String fullName() { return cu.fullName(); }
             @Override public String email() { return cu.email(); }
         };
@@ -1369,6 +1374,7 @@ public class SystemController {
         return new StockManagementUseCase.Principal() {
             @Override public String userId() { return cu.id(); }
             @Override public String role() { return cu.role(); }
+            @Override public String roleBase() { return cu.roleBase(); }
             @Override public String fullName() { return cu.fullName(); }
         };
     }

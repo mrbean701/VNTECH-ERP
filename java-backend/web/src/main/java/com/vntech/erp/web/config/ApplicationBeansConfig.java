@@ -167,8 +167,9 @@ public class ApplicationBeansConfig {
     }
 
     @Bean
-    public OpsTaskManagementUseCase opsTaskManagementUseCase(OpsTaskStore opsTaskStore, IdGenerator idGenerator) {
-        return new OpsTaskManagementUseCase(opsTaskStore, idGenerator);
+    public OpsTaskManagementUseCase opsTaskManagementUseCase(OpsTaskStore opsTaskStore, IdGenerator idGenerator,
+                                                              RbacService rbacService) {
+        return new OpsTaskManagementUseCase(opsTaskStore, idGenerator, rbacService);
     }
 
     @Bean

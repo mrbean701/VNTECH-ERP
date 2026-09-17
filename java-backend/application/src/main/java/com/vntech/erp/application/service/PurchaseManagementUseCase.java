@@ -34,6 +34,12 @@ public final class PurchaseManagementUseCase {
         String role();
         String fullName();
         String email();
+        /**
+         * Mã ENGINE (`role_catalog.base_role`) — giá trị THẬT SỰ dùng để phân quyền, đúng như
+         * `effectiveRole(user)` của JS. Mặc định rơi về `role()` để tương thích ngược với mọi
+         * tầng gọi chưa truyền giá trị này xuống.
+         */
+        default String roleBase() { return role(); }
     }
 
     private static final double EPS = 1e-9;
@@ -374,7 +380,7 @@ public final class PurchaseManagementUseCase {
     private static AuthUseCase.ApiError Api(String message) { return new AuthUseCase.ApiError(message, 400); }
 
     private AuthUseCase.CurrentUser principalAsCurrent(Principal p) {
-        return new AuthUseCase.CurrentUser(p.userId(), "", p.fullName(), p.email(), p.role(), p.role(), p.role(),
+        return new AuthUseCase.CurrentUser(p.userId(), "", p.fullName(), p.email(), p.role(), p.roleBase(), p.role(),
                 null, null, null, false);
     }
 }

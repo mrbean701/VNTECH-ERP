@@ -32,6 +32,12 @@ public final class StockManagementUseCase {
         String userId();
         String role();
         String fullName();
+        /**
+         * Mã ENGINE (`role_catalog.base_role`) — giá trị THẬT SỰ dùng để phân quyền, đúng như
+         * `effectiveRole(user)` của JS. Mặc định rơi về `role()` để tương thích ngược với mọi
+         * tầng gọi chưa truyền giá trị này xuống.
+         */
+        default String roleBase() { return role(); }
     }
 
     public Map<String, Object> issueStock(Principal principal, Map<String, Object> payload) {
@@ -544,6 +550,10 @@ public final class StockManagementUseCase {
     // ============ stocktake ============
     /** create_stock_count — lập phiếu kiểm kê; variance = actual - book. */
     public Map<String, Object> createStockCount(Principal principal, Map<String, Object> payload) {
+        // JS 1523: requireRole(user,["warehouse","commander","admin"]) — TASK-022 bổ sung.
+        rbac.requireRole(principalAsCurrent(principal), List.of("warehouse", "commander", "admin"));
+        // JS 1523: requireRole(user,["warehouse","commander","admin"]) — TASK-022 bổ sung.
+        rbac.requireRole(principalAsCurrent(principal), List.of("warehouse", "commander", "admin"));
         String projectId = trim(payload.get("projectId"));
         String warehouseId = trim(payload.get("warehouseId"));
         List<?> rawLines = payload.get("lines") instanceof List<?> l ? l : List.of();
@@ -579,6 +589,10 @@ public final class StockManagementUseCase {
 
     /** approve_stock_count — duyệt; ghi sổ adjustment ADJ theo variance. */
     public Map<String, Object> approveStockCount(Principal principal, Map<String, Object> payload) {
+        // JS 1550: requireRole(user,["commander","project","admin"]) — TASK-022 bổ sung.
+        rbac.requireRole(principalAsCurrent(principal), List.of("commander", "project", "admin"));
+        // JS 1550: requireRole(user,["commander","project","admin"]) — TASK-022 bổ sung.
+        rbac.requireRole(principalAsCurrent(principal), List.of("commander", "project", "admin"));
         String countId = trim(payload.get("countId"));
         Map<String, Object> count = store.findStockCount(countId)
                 .orElseThrow(() -> Api("Phiếu kiểm kê không tồn tại hoặc đã xử lý."));
@@ -764,7 +778,7 @@ public final class StockManagementUseCase {
     private static AuthUseCase.ApiError Api(String message) { return new AuthUseCase.ApiError(message, 400); }
 
     private AuthUseCase.CurrentUser principalAsCurrent(Principal p) {
-        return new AuthUseCase.CurrentUser(p.userId(), "", p.fullName(), null, p.role(), p.role(), p.role(),
+        return new AuthUseCase.CurrentUser(p.userId(), "", p.fullName(), null, p.role(), p.roleBase(), p.role(),
                 null, null, null, false);
     }
 }
