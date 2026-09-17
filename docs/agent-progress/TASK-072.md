@@ -1,6 +1,6 @@
 # TASK-072 (P-04 / MASTER TASK §2.1) — Áp dụng `ApprovalTimeline` vào chi tiết phiếu đề nghị (§8.1)
 
-**Trạng thái:** ✅ DONE — mã đã sửa, **4 cổng kiểm chứng đều xanh**, đã commit
+**Trạng thái:** ✅ DONE — mã đã sửa, **5 cổng kiểm chứng đều xanh**, đã commit (**#115** · `39493ad`)
 **Ngày:** 17/09/2026 · **Nhánh:** `unity`
 **Nguồn đặc tả:** `docs/24_SYSTEM_AUDIT_REPORT.md` §15 mục 3 (*"Phiếu: phần duyệt thiếu thông tin (người duyệt/phòng ban/thời gian) → cần Approval Timeline"*, nguồn §8.1) + `docs/25_TODO_ROADMAP.md` dòng **`P-04`**.
 
@@ -42,6 +42,7 @@ Kèm chú thích trong mã nêu rõ nguồn §8.1 và lý do ánh xạ `cancelle
 | 2 | **`npx tsc --noEmit`** (cổng kiểu của dự án, thuộc `npm test`) | — | **exit 0** |
 | 3 | **UI phục vụ được** (`GET :8787/` và qua proxy `:9000/`) | — | **HTTP 200**, **không** có marker lỗi biên dịch |
 | 4 | **`probe-visual-regression.mjs`** (Edge headless qua CDP, 28 ảnh chuẩn) | — | **8/28 ảnh lệch — ĐÃ CHỨNG MINH LÀ CÓ SẴN, không do thay đổi này** |
+| 5 | **`npm run test:regression`** (bộ hồi quy 8 tệp) | — | **61 test · 59 PASS · 2 FAIL — đúng 2 ca ĐÃ BIẾT** (`TASK-031` sentinel cây dự án · `TASK-032` `defaultOrganizationCode`), **không phát sinh ca mới** |
 
 ### 4.1 Cách chứng minh 8 ảnh lệch là **có sẵn** (đối chứng bằng THỰC NGHIỆM)
 

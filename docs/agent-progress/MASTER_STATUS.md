@@ -46,7 +46,7 @@ Nói cách khác: *audit đã xong về khảo sát (A-01…A-12 DONE) nhưng vi
 
 **Cổng đã xanh** (riêng các cổng ở dòng cuối ĐO LẠI trong phiên TASK-072 — 17/09; các số còn lại ghi kèm task đo gần nhất, **KHÔNG chép lại như thể vừa đo**): bootstrap `100/100` · work-items `18/18` ·
 audit-requests `18/18` · owner-checks `10/10` · all-roles `20/20` · schema-drift **0 lệch** ·
-đối chiếu **TẬP CỘT** **73 khoá · 0 khoá thiếu cột** (độ phủ: so được 73 ≥ sàn 65, đủ 20 khoá bắt buộc ⇒ cổng KHÔNG mất độ phủ; **đối chứng dương 5/5 khớp metadata THẬT của MySQL**; đối chiếu chéo hai bản đọc nguồn cho kết quả giống hệt) · đối chiếu **MỆNH ĐỀ** `ORDER BY`/`LIMIT`/kiểu `JOIN` **73 khoá · 0 lệch** (**đối chứng dựng sẵn 6/6**, gồm 1 cặp phải IM và 5 cặp phải BẮT) · `probe-roadmap-progress.mjs` đọc đủ **110 mục** · `probe-ui-adoption.mjs` chạy được.
+đối chiếu **TẬP CỘT** **73 khoá · 0 khoá thiếu cột** (độ phủ: so được 73 ≥ sàn 65, đủ 20 khoá bắt buộc ⇒ cổng KHÔNG mất độ phủ; **đối chứng dương 5/5 khớp metadata THẬT của MySQL**; đối chiếu chéo hai bản đọc nguồn cho kết quả giống hệt) · đối chiếu **MỆNH ĐỀ** `ORDER BY`/`LIMIT`/kiểu `JOIN` **73 khoá · 0 lệch** (**đối chứng dựng sẵn 6/6**, gồm 1 cặp phải IM và 5 cặp phải BẮT) · `probe-roadmap-progress.mjs` đọc đủ **110 mục** · `probe-ui-adoption.mjs` chạy được · hồi quy `npm run test:regression` **61 test · 59 PASS · 2 FAIL** — **đúng 2 ca ĐÃ BIẾT** (`TASK-031` sentinel `__site_command_tree_disabled__` · `TASK-032` `defaultOrganizationCode`), **không phát sinh ca mới**.
 
 **Lớp lỗi lệch `ORDER BY` / `LIMIT` / kiểu `JOIN` — ĐÃ VÁ (TASK-062/063) và nay CÓ CỔNG RIÊNG** (`tools/probe-clause-parity.mjs`):
 `JOIN`. Đã thấy 3 ca khi đọc JS: `boqImportBatches` (JS sắp `project_id,contract_id,version_no DESC`;
@@ -64,7 +64,7 @@ Java sắp `created_at DESC`) · `boqChangeHistory` (JS có `LIMIT 1000` + tiebr
 | BLOCKED ITEMS | **TASK-040 nhóm 6** (lệch cấu trúc: `vntech_license_*` cần port cả hệ license + xác minh chữ ký số — thuộc phần **bảo mật** đã yêu cầu tạm hoãn) · **TASK-034** (`npm run build` không dựng lại được UI: dấu vân tay nguồn lệch + bảng identity có **trigger chặn UPDATE** ⇒ phải viết migration) · **TASK-035 mục 7** · **TASK-036 mục 7** · **TASK-037 mục 5** · **TASK-031** · **TASK-032** · **TASK-029** · **TASK-024** · **dữ liệu `user_module_permissions`** · **số SLA thật (24h/8h)** |
 | USER CONFIRMATION REQUIRED | **YES** — **11 câu hỏi**, ghi ở mục riêng bên dưới |
 | CURRENT BRANCH | `unity` |
-| LATEST COMMIT | `6c8604c` (#113 · TASK-070) · **105 commit CHƯA PUSH** (đo bằng `git rev-list --count origin/unity..HEAD`) · **KHÔNG PUSH** theo quyết định của người dùng (chờ anh test thủ công xong) |
+| LATEST COMMIT | `39493ad` (#115 · TASK-072) · **108 commit CHƯA PUSH** (đo bằng `git rev-list --count origin/unity..HEAD`) · **KHÔNG PUSH** theo quyết định của người dùng (chờ anh test thủ công xong) |
 
 ## System State
 
