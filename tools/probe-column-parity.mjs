@@ -116,17 +116,84 @@ function columnsOf(sql) {
 }
 
 // ─────────────────────────── ĐỌC HAI PHÍA ───────────────────────────
-/** JS: `const|let|var KEY = await all(`SQL`)` (SQL trong backtick, có thể nhiều dòng). */
-const jsByKey = new Map();
+/**
+ * JS: mọi biến được gán bằng `all(...)`/`first(...)` với SQL trong backtick.
+ * ⚠️ SỬA Ở #100 (TASK-060): bản cũ đòi `= await all(` NGAY SAU dấu `=`, nên **bỏ sót** dạng phổ biến
+ * `const X = <điều kiện> ? await all(`SQL`) : []` và dạng 2 nhánh `isAdmin ? await all(A) : await all(B)`
+ * (đó là lý do cổng chỉ so được 29/78 khoá). Nay: lấy TRỌN câu lệnh của khai báo rồi gom **mọi** khối SQL.
+ */
+const jsByVar = new Map();
 {
-  const re = /(?:const|let|var)\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(?:await\s+)?(?:all|first)\(\s*`([\s\S]*?)`/g;
+  const declRe = /(?:const|let|var)\s+([A-Za-z_][A-Za-z0-9_]*)\s*=/g;
   let m;
-  while ((m = re.exec(js)) !== null) {
-    // nhiều câu SQL cho cùng biến: hợp các cột lại
-    const prev = jsByKey.get(m[1]) ?? [];
-    prev.push(m[2]);
-    jsByKey.set(m[1], prev);
+  while ((m = declRe.exec(js)) !== null) {
+    const name = m[1];
+    const from = m.index + m[0].length;
+    // quét tới hết câu lệnh (`;` ở mức ngoài cùng, bỏ qua chuỗi/backtick)
+    let quote = null;
+    let end = from;
+    for (let i = from; i < js.length && i < from + 8000; i++) {
+      const ch = js[i];
+      if (quote) {
+        if (ch === quote && js[i - 1] !== "\\") quote = null;
+        continue;
+      }
+      if (ch === "'" || ch === '"' || ch === "`") { quote = ch; continue; }
+      if (ch === ";") { end = i; break; }
+    }
+    const stmt = js.slice(from, end);
+    const sqls = [...stmt.matchAll(/(?:all|first)\(\s*`([\s\S]*?)`/g)].map((x) => x[1]);
+    if (!sqls.length) continue;
+    const prev = jsByVar.get(name) ?? [];
+    jsByVar.set(name, prev.concat(sqls));
   }
+}
+
+// ══════════ TASK-060 — ÁNH XẠ KHOÁ KẾT QUẢ → BIẾN CỦA JS (`const result = { key: value, … }`) ══════════
+// Trước #100 cổng chỉ so các khoá mà JS **đặt tên biến TRÙNG tên khoá** ⇒ bỏ qua 49/78 khoá.
+// JS dựng `result` ở `:727` dạng `{ staffDirectory, requests: enrichedRequests, projects: visibleProjects, … }`
+// ⇒ parse chính object literal đó để lấy `khoá → biểu thức`, rồi lấy định danh ĐẦU TIÊN trong biểu thức.
+function extractResultEntries(src) {
+  const start = src.search(/const\s+result\s*=\s*\{/);
+  if (start < 0) return [];
+  const open = src.indexOf("{", start);
+  let depth = 0;
+  let quote = null;
+  let end = -1;
+  for (let i = open; i < src.length; i++) {
+    const ch = src[i];
+    if (quote) {
+      if (ch === quote && src[i - 1] !== "\\") quote = null;
+      continue;
+    }
+    if (ch === "'" || ch === '"' || ch === "`") { quote = ch; continue; }
+    if (ch === "{") depth++;
+    else if (ch === "}") { depth--; if (depth === 0) { end = i; break; } }
+  }
+  if (end < 0) return [];
+  const body = src.slice(open + 1, end);
+  return splitTopLevel(body).map((entry) => {
+    const idx = entry.indexOf(":");
+    // `key: value` hoặc shorthand `value`
+    const key = (idx > 0 ? entry.slice(0, idx) : entry).trim();
+    const valueExpr = idx > 0 ? entry.slice(idx + 1).trim() : entry.trim();
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) return null;
+    const ident = valueExpr.match(/^([A-Za-z_][A-Za-z0-9_]*)/);
+    return { key, variable: ident ? ident[1] : null };
+  }).filter(Boolean);
+}
+const resultEntries = extractResultEntries(js);
+
+/** Khoá → danh sách SQL của JS (theo tên khoá, hoặc theo BIẾN mà khoá trỏ tới). */
+const jsByKey = new Map();
+for (const [varName, sqls] of jsByVar) jsByKey.set(varName, sqls);
+let mappedByResult = 0;
+for (const entry of resultEntries) {
+  if (!entry.variable) continue;
+  const sqls = jsByVar.get(entry.variable);
+  if (!sqls) continue;
+  if (!jsByKey.has(entry.key)) { jsByKey.set(entry.key, sqls); mappedByResult++; }
+  else if (jsByKey.get(entry.key) !== sqls) { jsByKey.set(entry.key, sqls); }
 }
 
 /** Java: mọi `data.put("KEY", …)` → gom TẤT CẢ khối `"""SQL"""` trong lệnh đó. */
