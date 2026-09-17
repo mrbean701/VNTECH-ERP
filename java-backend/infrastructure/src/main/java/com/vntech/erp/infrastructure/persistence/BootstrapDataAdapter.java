@@ -245,7 +245,9 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                        po.ordered_at AS orderedAt,po.eta,po.status,po.total_value AS totalValue,
                        COALESCE(poa.item_count,0) AS itemCount,COALESCE(poa.ordered_qty,0) AS orderedQty,
                        COALESCE(poa.received_qty,0) AS receivedQty,
-                       COALESCE(gra.actual_delivered_qty,0) AS actualDeliveredQty
+                       COALESCE(gra.actual_delivered_qty,0) AS actualDeliveredQty,
+                       COALESCE(cert.certificate_count,0) AS certificateCount,
+                       COALESCE(atta.attachment_count,0) AS attachmentCount
                 FROM purchase_orders po
                 JOIN projects p ON p.id=po.project_id
                 JOIN suppliers s ON s.id=po.supplier_id
@@ -257,6 +259,16 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                            FROM goods_receipt_items gri
                            JOIN purchase_order_items actual_poi ON actual_poi.id=gri.purchase_order_item_id
                            GROUP BY actual_poi.purchase_order_id) gra ON gra.purchase_order_id=po.id
+                -- TASK-082 (TASK-080 dot 2): 2 cot nay truoc day KHONG duoc nap -> UI luon hien 0 (du lieu gia).
+                -- certificateCount = so phieu nhap cua PO da co chung chi (goods_receipts.certificate_status='complete').
+                -- attachmentCount  = so anh/tai lieu that gan voi cac phieu nhap cua PO (attachments.entity_type='goods_receipt').
+                LEFT JOIN (SELECT gr2.purchase_order_id AS po_id,COUNT(*) AS certificate_count
+                           FROM goods_receipts gr2 WHERE gr2.certificate_status='complete'
+                           GROUP BY gr2.purchase_order_id) cert ON cert.po_id=po.id
+                LEFT JOIN (SELECT gr3.purchase_order_id AS po_id,COUNT(att2.id) AS attachment_count
+                           FROM goods_receipts gr3 JOIN attachments att2
+                                ON att2.entity_type='goods_receipt' AND att2.entity_id=gr3.id
+                           GROUP BY gr3.purchase_order_id) atta ON atta.po_id=po.id
                 WHERE po.project_id IN (%s) ORDER BY po.ordered_at DESC LIMIT 300""".formatted(pidSql), params(pids));
         // JS bootstrap gắn items[] lồng vào từng PO; front-end (ReceiptModal, PO detail) đọc trực tiếp po.items.
         if (!purchaseOrders.isEmpty()) {
@@ -293,16 +305,23 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                        gr.qc_status AS qcStatus,gr.document_status AS documentStatus,
                        gr.certificate_status AS certificateStatus,gr.delivery_document_status AS deliveryDocumentStatus,
                        gr.bch_confirmation_status AS bchConfirmationStatus,gr.posting_status AS postingStatus,
+                       gr.delivery_note_no AS deliveryNoteNo,gr.bch_confirmed_at AS bchConfirmedAt,
+                       gr.bch_comment AS bchComment,confirmer.full_name AS bchConfirmedByName,
                        COALESCE(gra.item_count,0) AS itemCount,COALESCE(gra.actual_delivered_qty,0) AS actualDeliveredQty,
-                       COALESCE(gra.accepted_qty,0) AS acceptedQty,COALESCE(gra.rejected_qty,0) AS rejectedQty
+                       COALESCE(gra.accepted_qty,0) AS acceptedQty,COALESCE(gra.rejected_qty,0) AS rejectedQty,
+                       CASE WHEN gr.certificate_status='complete' THEN 1 ELSE 0 END AS certificateCount,
+                       COALESCE(atta.attachment_count,0) AS attachmentCount
                 FROM goods_receipts gr
                 JOIN purchase_orders po ON po.id=gr.purchase_order_id
                 JOIN projects p ON p.id=po.project_id
                 JOIN suppliers s ON s.id=po.supplier_id
                 JOIN warehouses w ON w.id=gr.warehouse_id
+                LEFT JOIN users confirmer ON confirmer.id=gr.bch_confirmed_by
                 LEFT JOIN (SELECT receipt_id,COUNT(*) AS item_count,COALESCE(SUM(received_qty),0) AS actual_delivered_qty,
                                   COALESCE(SUM(accepted_qty),0) AS accepted_qty,COALESCE(SUM(rejected_qty),0) AS rejected_qty
                            FROM goods_receipt_items GROUP BY receipt_id) gra ON gra.receipt_id=gr.id
+                LEFT JOIN (SELECT entity_id,COUNT(*) AS attachment_count FROM attachments
+                           WHERE entity_type='goods_receipt' GROUP BY entity_id) atta ON atta.entity_id=gr.id
                 WHERE po.project_id IN (%s) ORDER BY gr.received_at DESC LIMIT 300""".formatted(pidSql), params(pids));
         // JS bootstrap gắn items[] lồng vào từng phiếu nhập (goods_receipt_items + PO + material).
         if (!receipts.isEmpty()) {
