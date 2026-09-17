@@ -180,6 +180,16 @@ const SCREENS = [
   // 08-requests: màn Phiếu đề nghị mua hàng — nhóm MUA HÀNG & CUNG ỨNG, module đầu tiên.
   // Thêm 18/09/2026 (TASK-083 bảng 15) vì màn này gồm bảng chọn dòng `selected-row` mà 7 màn trên KHÔNG phủ.
   { id: "08-requests",  label: "Phiếu đề nghị mua hàng", steps: [{ group: "purchasing",   child: 0 }] },
+  // 09/10: màn phòng ban "Giao việc & Kiểm soát hoàn thành" (DepartmentTaskWorkspace) — bảng 10 cột,
+  // có CHỌN DÒNG (`selected-row`), ô hạn có `red-text`, cột nguồn là `link-button`, cột % có thanh tiến độ.
+  // ⚠️ Nhóm "department_management" KHÔNG còn tồn tại — đã tách thành my_work/mep/finance/hr_legal/reports
+  // (migration V4__menu_restructure.sql, ghi chú ở page.tsx:49). Trong nhóm `my_work` thứ tự sort_order:
+  // dept_plan_tasks(10) · dept_project_tasks(20) · **dept_plan_assign(30) → con 2** ·
+  // **dept_project_assign(40) → con 3** · approvals(50).
+  // Hai màn được chụp vì dữ liệu thật KHÁC NHAU: 7 việc thật đều thuộc phòng DA ⇒ màn KH là **trạng thái rỗng**,
+  // màn DA có **7 dòng** ⇒ phủ cả hai đường render (rỗng + có dữ liệu).
+  { id: "09-dept-assign-kh", label: "Phòng Kế hoạch — Giao việc (trạng thái rỗng)", steps: [{ group: "my_work", child: 2 }], fullPage: true },
+  { id: "10-dept-assign-da", label: "Phòng Dự án — Giao việc (7 việc thật)", steps: [{ group: "my_work", child: 3 }], fullPage: true },
 ];
 
 const SCREENS_TO_RUN = ONLY ? SCREENS.filter((s) => s.id.includes(ONLY)) : SCREENS;
@@ -304,7 +314,8 @@ async function freeze() {
 
 async function clickSteps(steps) {
   for (const st of steps) {
-    const expand = await evaluate(`(()=>{const s=document.querySelector('[data-nav-group="${st.group}"]');if(!s)return 'NO_GROUP';
+    const expand = await evaluate(`(()=>{const s=document.querySelector('[data-nav-group="${st.group}"]');
+      if(!s)return 'NO_GROUP('+[...document.querySelectorAll('[data-nav-group]')].map(e=>e.getAttribute('data-nav-group')).join('|')+')';
       const p=s.querySelector('.nav-parent');if(p&&p.getAttribute('aria-expanded')==='false')p.click();return 'OK';})()`);
     if (expand !== "OK") return expand;
     await sleep(700);
@@ -331,7 +342,13 @@ async function capture(screen, vp) {
   await sleep(5200);
   const nav = await clickSteps(screen.steps);
   await freeze();
-  const shot = await send("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
+  const shot = await send("Page.captureScreenshot", {
+    format: "png",
+    // SÀN DƯỚI MÀN HÌNH: các màn phòng ban có bảng nằm DƯỚI nếp gấp (page head + 6 thẻ KPI + form giao việc
+    // + card lọc đẩy bảng xuống khỏi 1080 px) ⇒ chụp mặc định KHÔNG thấy bảng ⇒ cổng "xanh" mà không đo gì.
+    // Màn nào đặt `fullPage: true` thì chụp TOÀN TRANG. Mặc định vẫn là khung nhìn, để 32 ảnh chuẩn cũ không đổi.
+    captureBeyondViewport: screen.fullPage === true,
+  });
   return { png: Buffer.from(shot.data, "base64"), nav };
 }
 
