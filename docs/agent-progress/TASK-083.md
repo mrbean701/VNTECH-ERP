@@ -26,8 +26,9 @@ Số đo bằng `tools/probe-ui-adoption.mjs`: **bảng tự viết 87 chỗ** �
 | 9 | `MaterialCatalogPage` | **danh mục vật tư (chế độ CHỈ XEM)** | 7 cột; `emptyText` nguyên văn *"Danh mục vật tư chưa có dữ liệu."* |
 | 10 | `ProjectManagement` | **danh sách KHO của dự án** | 9 cột (mã · tên · loại · thủ kho · tồn kho · chờ nhập/xuất/duyệt · nút `Xem kho ›`); `emptyText` nguyên văn *"Dự án chưa có kho."* |
 | 11 | `BoqControl` | **chi tiết lũy kế theo vật tư** | 10 cột; ⚠️ **GIỮ lớp `resizable-data-table`** qua tham số mới **`tableClassName`** (xem mục 3b) |
+| 12 | `Receiving` | **"Kế hoạch giao hàng" (12 cột)** | ✅ **ĐÃ CHUYỂN LẠI THÀNH CÔNG** ở lượt kế tiếp bằng đúng cách ghi ở mục 3c (khoảng trắng sau `=>`, `<span>` thay fragment trần cho ô `▧`, cột chuỗi trả thẳng); giữ nguyên `ordered`/`actual`/`remain`/`pct` |
 
-**Đo lại sau khi chuyển:** `DataTable` **13 → 24 lần** · bảng tự viết **87 → 76 chỗ** · trạng thái rỗng tự viết **88 → 79 chỗ**.
+**Đo lại sau khi chuyển:** `DataTable` **13 → 25 lần** · bảng tự viết **87 → 75 chỗ** · trạng thái rỗng tự viết **88 → 78 chỗ**.
 
 ## 3c. ⚠️ BẢNG 12 CỘT (`Receiving` — "Kế hoạch giao hàng"): LỖI CÚ PHÁP JSX, ĐÃ HOÀN TÁC
 
