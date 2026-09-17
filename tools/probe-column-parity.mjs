@@ -33,18 +33,30 @@ const js = readFileSync(JS_SRC, "utf8");
 const java = readFileSync(JAVA_SRC, "utf8");
 
 // ─────────────────────────── TÁCH TẬP CỘT TỪ MỘT CÂU SQL ───────────────────────────
-/** Bỏ chuỗi trong nháy đơn/backtick + chuỗi `"` để không tách nhầm dấu phẩy bên trong literal. */
+/**
+ * Bỏ chuỗi trong nháy đơn/nháy kép (LITERAL) để không tách nhầm dấu phẩy bên trong literal.
+ * ⚠️ SỬA Ở #103 (TASK-062): **backtick KHÔNG phải literal** — trong MySQL nó là dấu ĐỊNH DANH
+ * (`m.`system`` vì `system` là từ khoá). Bản cũ coi backtick là literal ⇒ **xoá mất tên cột** ⇒ cổng báo
+ * thiếu cột `system` ở CẢ 3 khoá `materials`/`adminMaterials`/`centralInventory`. Đó là DƯƠNG TÍNH GIẢ
+ * của cổng, không phải lỗi của bản port ⇒ nay GIỮ NGUYÊN nội dung trong backtick.
+ */
 function maskLiterals(sql) {
   let out = "";
   let quote = null;
   for (let i = 0; i < sql.length; i++) {
     const ch = sql[i];
     if (quote) {
+      if (quote === "`") {
+        if (ch === "`") { quote = null; out += " "; continue; }
+        out += ch;           // tên cột trong backtick: giữ nguyên (đây là ĐỊNH DANH, không phải literal)
+        continue;
+      }
       if (ch === quote) { quote = null; out += ch; continue; }
       out += " ";
       continue;
     }
-    if (ch === "'" || ch === '"' || ch === "`") { quote = ch; out += ch; continue; }
+    if (ch === "`") { quote = "`"; out += " "; continue; }   // mở định danh: bỏ dấu, giữ chữ
+    if (ch === "'" || ch === '"') { quote = ch; out += ch; continue; }
     out += ch;
   }
   return out;
@@ -93,11 +105,16 @@ function splitTopLevel(list) {
   return items.map((s) => s.trim()).filter(Boolean);
 }
 
-/** Tên cột đầu ra của một mục chọn: ưu tiên `AS <alias>`, nếu không có thì lấy định danh cuối. */
+/**
+ * Tên cột đầu ra của một mục chọn: ưu tiên `AS <alias>`, nếu không có thì lấy định danh cuối.
+ * ⚠️ #103 (TASK-062): BỎ DẤU BACKTICK trước khi khớp — `m.`system`` (định danh MySQL do `system` là từ khoá)
+ * phải cho ra cột `system`; bản cũ để nguyên backtick nên biểu thức cuối không khớp ⇒ báo thiếu cột oan.
+ */
 function columnOf(item) {
-  const asMatch = item.match(/\s+AS\s+([A-Za-z_][A-Za-z0-9_]*)\s*$/i);
+  const clean = item.replace(/`/g, "");
+  const asMatch = clean.match(/\s+AS\s+([A-Za-z_][A-Za-z0-9_]*)\s*$/i);
   if (asMatch) return { name: asMatch[1], fromAlias: true };
-  const ident = item.match(/([A-Za-z_][A-Za-z0-9_]*)\s*\)*\s*$/);
+  const ident = clean.match(/([A-Za-z_][A-Za-z0-9_]*)\s*\)*\s*$/);
   return { name: ident ? ident[1] : null, fromAlias: false };
 }
 
@@ -145,8 +162,24 @@ const jsByVar = new Map();
     const sqls = [...stmt.matchAll(/(?:all|first)\(\s*`([\s\S]*?)`/g)].map((x) => x[1]);
     if (!sqls.length) continue;
     const prev = jsByVar.get(name) ?? [];
-    jsByVar.set(name, prev.concat(sqls));
+    jsByVar.set(name, prev.concat(sqls.map((sql) => ({ sql, offset: m.index }))));
   }
+}
+
+/**
+ * ⚠️ SỬA Ở #103 (TASK-062) — **TRÙNG TÊN BIẾN GIỮA CÁC HÀM** là nguồn DƯƠNG TÍNH GIẢ của bản ánh xạ theo tên:
+ * tệp JS dài 3.156 dòng có **5** khai báo tên `materials` ở 5 hàm khác nhau; cổng cũ hợp cả 5 câu SQL ⇒ báo
+ * Java "thiếu `active`/`materialId`/`aliasName`" trong khi đó là cột của `adminMaterials`/`materialAliases`.
+ * Phép sửa: mọi giá trị bootstrap được gán TRƯỚC khi dựng object `result` ⇒ **chỉ lấy khai báo TRƯỚC
+ * object `result` đầu tiên**. Nếu cấu trúc tệp đổi khiến ranh giới này sai, phần **ĐỘ PHỦ** cuối cổng sẽ báo HỎNG.
+ */
+const RESULT_LIT_OFFSET = (() => {
+  const at = js.search(/const\s+result\s*=\s*\{/);
+  return at < 0 ? Number.MAX_SAFE_INTEGER : at;
+})();
+for (const [name, list] of [...jsByVar.entries()]) {
+  const inScope = list.filter((x) => x.offset < RESULT_LIT_OFFSET);
+  jsByVar.set(name, (inScope.length ? inScope : list).map((x) => x.sql));
 }
 
 // ══════════ TASK-060 — ÁNH XẠ KHOÁ KẾT QUẢ → BIẾN CỦA JS (`const result = { key: value, … }`) ══════════
@@ -196,7 +229,34 @@ for (const entry of resultEntries) {
   else if (jsByKey.get(entry.key) !== sqls) { jsByKey.set(entry.key, sqls); }
 }
 
-/** Java: mọi `data.put("KEY", …)` → gom TẤT CẢ khối `"""SQL"""` trong lệnh đó. */
+/**
+ * Java: BIẾN CỤC BỘ giữ SQL — `List<Map<String, Object>> X = query("""SQL""")`.
+ * ⚠️ THÊM Ở #103 (TASK-062) vì một BÀI HỌC ĐÃ XẢY RA: khi `data.put("boqItems", boqItems)` không còn SQL
+ * nội tuyến (vì phải gộp 2 câu + gắn trường dẫn xuất), cổng **ÂM THẦM MẤT ĐỘ PHỦ** khoá đó nhưng vẫn in
+ * "KHÔNG khoá nào thiếu cột ✅". Một cổng mất độ phủ mà không báo là cổng NÓI DỐI ⇒ nay cổng phải
+ * (a) giải được `data.put("K", biến)`, (b) khai TƯỜNG MINH các khoá GHÉP, (c) TỰ BÁO HỎNG khi mất độ phủ.
+ */
+const javaVars = new Map();
+{
+  const varRe = /(?:List<Map<String,\s*Object>>|var|final\s+var)\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(?:new\s+ArrayList<>\(\s*)?query\(\s*"""([\s\S]*?)"""/g;
+  let m;
+  while ((m = varRe.exec(java)) !== null) {
+    const prev = javaVars.get(m[1]) ?? [];
+    javaVars.set(m[1], prev.concat([m[2]]));
+  }
+}
+
+/**
+ * KHOÁ GHÉP — khoá bootstrap mà dữ liệu đến từ NHIỀU câu SQL (không phải 1 `query` nội tuyến).
+ * Khai tường minh + ghi LÝ DO; nếu ai đó đổi cấu trúc mà quên cập nhật đây, phần ĐỘ PHỦ bên dưới sẽ báo HỎNG.
+ */
+const JAVA_KEY_SQL_VARS = {
+  // JS `:624-655`: `boqItems` = câu CHÍNH (dòng BOQ đã ánh xạ) ⊕ `unmappedSourceRows` (dòng nguồn chưa ánh xạ)
+  // ⊕ 3 trường dẫn xuất ⊕ `customFields`.
+  boqItems: ["boqMainRows", "unmappedBoqRows"],
+};
+
+/** Java: mọi `data.put("KEY", …)` → gom TẤT CẢ khối `"""SQL"""` trong lệnh đó, + giải biến nếu có. */
 const javaByKey = new Map();
 {
   const putRe = /data\.put\("([A-Za-z_][A-Za-z0-9_]*)"/g;
@@ -208,12 +268,23 @@ const javaByKey = new Map();
     const end = tail.indexOf(");");
     const body = end >= 0 ? tail.slice(0, end) : tail;
     const sqls = [...body.matchAll(/"""([\s\S]*?)"""/g)].map((x) => x[1]);
+    // dạng `data.put("KEY", biến)` — giải qua biến cục bộ và/hoặc bảng khoá ghép
+    const bare = tail.match(/^data\.put\("([A-Za-z_][A-Za-z0-9_]*)"\s*,\s*([A-Za-z_][A-Za-z0-9_]*)\s*\)/);
+    if (bare) {
+      const varName = bare[2];
+      for (const name of JAVA_KEY_SQL_VARS[key] ?? [varName]) {
+        for (const s of javaVars.get(name) ?? []) sqls.push(s);
+      }
+    }
     if (sqls.length) {
       const prev = javaByKey.get(key) ?? [];
       javaByKey.set(key, prev.concat(sqls));
     }
   }
 }
+/** Tên biến nào đã được cổng dùng để lấy SQL (để phát hiện khai báo sai tên trong JAVA_KEY_SQL_VARS). */
+const javaVarNamesSeen = new Set(javaVars.keys());
+
 
 // ─────────────────────────── ĐỐI CHỨNG DƯƠNG: bộ tách ↔ metadata MySQL ───────────────────────────
 // Cách lấy metadata: dựng BẢNG TẠM từ chính câu SQL rồi `SHOW COLUMNS` — cách này KHÔNG phụ thuộc
@@ -302,8 +373,42 @@ if (!findings.length) {
   }
 }
 
+// ═══════════════════ ĐỘ PHỦ — CỔNG PHẢI TỰ BÁO KHI MẤT KHOÁ (bài học #103) ═══════════════════
+// Sự cố thật: sau khi `boqItems` chuyển từ SQL nội tuyến sang mảng ghép, cổng mất độ phủ khoá đó
+// nhưng VẪN in "KHÔNG khoá nào thiếu cột ✅". Một cổng mất độ phủ mà không báo là cổng NÓI DỐI.
+const comparedKeys = new Set(compared.map((c) => c.key));
+const REQUIRED_COMPARED_KEYS = [
+  "boqItems", "boqSourceItems", "boqImportBatches", "boqChangeHistory", "boqVersions", "projectContracts",
+  "contractStockLedger", "contractStockBalances", "stockReconciliations", "teamSettlements", "teamPayments",
+  "modulePermissions", "workflowAssignments", "constructionDailyLogs", "taskNotifications",
+  "businessRoleGroupScopes", "organizationUnits", "materials", "adminMaterials", "centralInventory",
+];
+const MIN_COMPARED = 65;
+const coverageProblems = [];
+{
+  const lost = REQUIRED_COMPARED_KEYS.filter((k) => !comparedKeys.has(k));
+  if (lost.length) coverageProblems.push(`mất độ phủ ${lost.length} khoá BẮT BUỘC: ${lost.join(", ")}`);
+  if (compared.length < MIN_COMPARED) {
+    coverageProblems.push(`số khoá so được tụt còn ${compared.length} (< ${MIN_COMPARED}) — có khoá vừa rơi khỏi cổng`);
+  }
+  for (const [key, names] of Object.entries(JAVA_KEY_SQL_VARS)) {
+    for (const n of names) {
+      if (!javaVarNamesSeen.has(n)) coverageProblems.push(`JAVA_KEY_SQL_VARS["${key}"] trỏ tới biến KHÔNG tồn tại: \`${n}\``);
+    }
+  }
+}
+if (coverageProblems.length) {
+  console.log("\n⚠️ ĐỘ PHỦ CỦA CỔNG CÓ VẤN ĐỀ — kết luận 'không thiếu cột' ở trên KHÔNG đáng tin:");
+  for (const p of coverageProblems) console.log(`  • ${p}`);
+} else {
+  console.log(`\nĐỘ PHỦ: so được ${compared.length} khoá (≥ ${MIN_COMPARED}) · có đủ ${REQUIRED_COMPARED_KEYS.length} khoá bắt buộc` +
+    " ⇒ cổng KHÔNG mất độ phủ.");
+}
+
 console.log("\nGIỚI HẠN: chỉ so các khoá TRÙNG TÊN hai phía; mục không có `AS` lấy định danh cuối (có thể sai với biểu thức phức tạp)");
 console.log("         ⇒ vì vậy cổng BẮT BUỘC có phần đối chứng dương với metadata MySQL ở trên.");
+console.log("         Cổng CHỈ so TẬP CỘT — KHÔNG kiểm `ORDER BY`/`LIMIT`/kiểu `JOIN`/mệnh đề `WHERE` (xem Known Problems #61).");
+const controlsOk = controlResults.length > 0 && controlResults.every(Boolean);
 console.log(`ĐỐI CHỨNG DƯƠNG: ${controlResults.filter(Boolean).length}/${controlResults.length} khoá kiểm được khớp HOÀN TOÀN với MySQL` +
-  (controlResults.length && controlResults.every(Boolean) ? " ⇒ bộ tách cột đáng tin." : " ⇒ ⚠️ bộ tách có vấn đề, ĐỪNG kết luận từ danh sách trên."));
-process.exit(controlResults.length && controlResults.every(Boolean) ? 0 : 1);
+  (controlsOk ? " ⇒ bộ tách cột đáng tin." : " ⇒ ⚠️ bộ tách có vấn đề, ĐỪNG kết luận từ danh sách trên."));
+process.exit(controlsOk && coverageProblems.length === 0 ? 0 : 1);
