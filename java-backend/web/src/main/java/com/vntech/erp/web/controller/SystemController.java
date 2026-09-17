@@ -1365,6 +1365,7 @@ public class SystemController {
             @Override public String userId() { return cu.id(); }
             @Override public String role() { return cu.role(); }
             @Override public String roleBase() { return cu.roleBase(); }
+            @Override public String warehouseScopeKind() { return cu.warehouseScopeKind(); }
             @Override public String fullName() { return cu.fullName(); }
             @Override public String email() { return cu.email(); }
         };

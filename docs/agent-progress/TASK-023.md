@@ -144,7 +144,8 @@ tools/patch-task023-batch1.mjs       (mới)
 | `node tools/probe-action-scope-parity.mjs` (trước lô 1) | Java kiểm **0**/64 action |
 | `node tools/probe-action-scope-parity.mjs` (sau lô 1) | Java kiểm **2**/64 |
 | `node tools/probe-action-scope-parity.mjs` (sau lô 2) | Java kiểm **6**/64 |
-| `node tools/probe-action-scope-parity.mjs` (sau lô 3) | Java kiểm **17**/64 — còn **47** |
+| `node tools/probe-action-scope-parity.mjs` (sau lô 3) | Java kiểm **17**/64 (nhóm KHO phủ hết) |
+| `node tools/probe-action-scope-parity.mjs` (sau lô 4) | Java kiểm **21**/64 — còn **43** |
 | `node tools/patch-task023-batch1.mjs` | 7 áp dụng · 0 lỗi |
 | `node tools/patch-task023-batch2.mjs` | 10 áp dụng · 1 không khớp (Principal đã bị TASK-021b sửa trước) · vá bổ sung |
 | `node tools/patch-task023-batch2b.mjs` | 1 áp dụng · 0 lỗi |
@@ -183,6 +184,29 @@ Công cụ mới: `tools/show-java-method.mjs` — in thân một phương thứ
 Kiểm chứng bổ sung trước khi vá: đã đọc `WarehouseStockStoreAdapter` để xác nhận **tên khoá thật** —
 `findTransferOrder`/`findCentralReturn`/`findIssueItem` alias camelCase, còn `findStockMovement` dùng
 `SELECT *` nên khoá là **snake_case**. Không đoán tên khoá.
+
+## LÔ 4 — PurchaseManagementUseCase (4 action)
+
+| Action | Phạm vi dự án | Phạm vi kho |
+|---|---|---|
+| `create_po` | `mr.projectId` (DB) · "Tài khoản không có quyền mua hàng tại dự án này." | `warehouseId` · "Tài khoản không có quyền thao tác kho nhận PO này." |
+| `close_po_line` | `line.projectId` (DB) · "Không có quyền tại dự án này." | — |
+| `receive_goods` | `po.projectId` (DB) · "Tài khoản không có quyền giao nhận tại dự án này." | `po.warehouseId` (DB) · "Tài khoản không có quyền thao tác kho nhận hàng này." |
+| `confirm_delivery` | `receipt.projectId` (DB) · "Tài khoản không có quyền xác nhận tại dự án này." | `receipt.warehouseId` (DB) · "Tài khoản không có quyền xác nhận tại kho này." |
+
+Cũng đã thêm đường ống `warehouseScopeKind` cho `PurchaseManagementUseCase` (Principal + `principalAsCurrent`
++ `SystemController.asPurchasePrincipal` + bean), và kiểm tra tên khoá thật trong `PurchaseStoreAdapter`.
+
+### Hai lỗi của chính công cụ vá trong lô này (đã tự phát hiện và sửa)
+
+1. **Bỏ qua nhầm `asPurchasePrincipal`**: phép kiểm "đã có `warehouseScopeKind()` chưa" dùng **cửa sổ 1000 ký tự**
+   kể từ chữ ký helper, mà `asStockPrincipal` nằm ngay sau và **đã có** override đó ⇒ cửa sổ bắt sang helper
+   kế tiếp ⇒ **dương tính giả**, helper thật bị bỏ qua. Phát hiện bằng cách **đọc lại code** sau khi script báo "BO".
+2. **Chèn sai vị trí**: bản vá bổ sung dùng `ANCHOR.indexOf("\n") + 1` (sau dòng **đầu** của neo) thay vì
+   `ANCHOR.length` (sau dòng **cuối**) ⇒ dòng override rơi vào giữa chữ ký và `return new ...` ⇒ sai cú pháp.
+   Đã sửa bằng `patch-task023-batch4c.mjs` và **kiểm chứng lại bằng mắt** trước khi biên dịch.
+
+Bài học: **script báo "bỏ qua" phải được đọc lại code để xác nhận**, không được tin kết quả bỏ qua.
 
 ## LÔ 2 — StockManagementUseCase (4 action)
 

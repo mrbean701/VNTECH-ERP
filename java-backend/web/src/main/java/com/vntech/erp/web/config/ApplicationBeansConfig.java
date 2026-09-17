@@ -125,8 +125,9 @@ public class ApplicationBeansConfig {
     @Bean
     public PurchaseManagementUseCase purchaseManagementUseCase(PurchaseStore purchaseStore,
                                                                IdGenerator idGenerator,
-                                                               RbacService rbacService) {
-        return new PurchaseManagementUseCase(purchaseStore, idGenerator, rbacService);
+                                                               RbacService rbacService,
+                                                               AccessScopeService accessScopeService) {
+        return new PurchaseManagementUseCase(purchaseStore, idGenerator, rbacService, accessScopeService);
     }
 
     @Bean

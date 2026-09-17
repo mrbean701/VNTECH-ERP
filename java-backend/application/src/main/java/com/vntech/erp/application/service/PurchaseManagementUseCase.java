@@ -2,6 +2,7 @@ package com.vntech.erp.application.service;
 
 import com.vntech.erp.application.port.out.IdGenerator;
 import com.vntech.erp.application.port.out.PurchaseStore;
+import com.vntech.erp.application.rbac.AccessScopeService;
 import com.vntech.erp.application.rbac.RbacService;
 
 import java.time.Instant;
@@ -22,11 +23,13 @@ public final class PurchaseManagementUseCase {
     private final PurchaseStore store;
     private final IdGenerator idGenerator;
     private final RbacService rbac;
+    private final AccessScopeService accessScope;
 
-    public PurchaseManagementUseCase(PurchaseStore store, IdGenerator idGenerator, RbacService rbac) {
+    public PurchaseManagementUseCase(PurchaseStore store, IdGenerator idGenerator, RbacService rbac, AccessScopeService accessScope) {
         this.store = store;
         this.idGenerator = idGenerator;
         this.rbac = rbac;
+        this.accessScope = accessScope;
     }
 
     public interface Principal {
@@ -40,6 +43,9 @@ public final class PurchaseManagementUseCase {
          * tầng gọi chưa truyền giá trị này xuống.
          */
         default String roleBase() { return role(); }
+
+        /** Loại phạm vi kho (role_catalog.warehouse_scope_kind: "site" | "central"); rỗng ⇒ coi như "site". */
+        default String warehouseScopeKind() { return ""; }
     }
 
     private static final double EPS = 1e-9;
@@ -54,8 +60,16 @@ public final class PurchaseManagementUseCase {
         String defaultSupplierId = trim(payload.get("supplierId"));
         Map<String, Object> mr = store.findApprovedRequest(requestId)
                 .orElseThrow(() -> Api("Chỉ được tạo PO từ MR đã duyệt đủ các cấp."));
+        // JS 1283: phạm vi dự án lấy từ CHÍNH phiếu MR (không lấy từ payload).
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), sv(mr, "projectId"), true,
+                "Tài khoản không có quyền mua hàng tại dự án này.");
+
         if (store.findWarehouse(warehouseId, sv(mr, "projectId")).isEmpty())
             throw Api("Kho nhận PO phải thuộc đúng dự án.");
+        // JS 1284: phạm vi kho nhận PO — kiểm sau khi đã xác nhận kho thuộc dự án.
+        accessScope.requireWarehouseAccess(principal.userId(), principal.role(),
+                principal.warehouseScopeKind(), warehouseId, true,
+                "Tài khoản không có quyền thao tác kho nhận PO này.");
         if (!store.supplierActive(defaultSupplierId) && trim(payload.get("lines")).isEmpty())
             throw Api("Nhà cung cấp không hợp lệ.");
 
@@ -192,6 +206,10 @@ public final class PurchaseManagementUseCase {
         if (reason.isEmpty()) throw Api("Đóng thiếu phải có lý do được phê duyệt.");
         Map<String, Object> line = store.findPoLine(poItemId)
                 .orElseThrow(() -> Api("Không tìm thấy dòng PO."));
+        // JS 1305: phạm vi dự án lấy từ dòng PO.
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), sv(line, "projectId"), true,
+                "Không có quyền tại dự án này.");
+
         double shortage = Math.max(0, numberValue(ci(line, "orderedQty"))
                 - numberValue(ci(line, "deliveredQty")) - numberValue(ci(line, "closedQty")));
         if (shortage <= 0) throw Api("Dòng PO không còn số lượng thiếu để đóng.");
@@ -213,6 +231,13 @@ public final class PurchaseManagementUseCase {
         Map<String, Object> po = store.findPoForReceiving(poId)
                 .orElseThrow(() -> Api("Phiếu nhập cần PO và ít nhất một dòng nhận hàng."));
         if (rawLines.isEmpty()) throw Api("Phiếu nhập cần PO và ít nhất một dòng nhận hàng.");
+        // JS 1319/1321: phạm vi dự án rồi phạm vi kho — đều lấy từ CHÍNH phiếu PO.
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), sv(po, "projectId"), true,
+                "Tài khoản không có quyền giao nhận tại dự án này.");
+        accessScope.requireWarehouseAccess(principal.userId(), principal.role(),
+                principal.warehouseScopeKind(), sv(po, "warehouseId"), true,
+                "Tài khoản không có quyền thao tác kho nhận hàng này.");
+
         List<Map<String, Object>> poItems = store.poItemsForReceiving(poId);
         Map<String, Map<String, Object>> map = new LinkedHashMap<>();
         for (Map<String, Object> row : poItems) map.put(sv(row, "id"), row);
@@ -300,6 +325,13 @@ public final class PurchaseManagementUseCase {
                 .orElseThrow(() -> Api("Chuyến giao không tồn tại hoặc đã được BCH xác nhận."));
         if (!"pending".equals(sv(receipt, "confirmationStatus")))
             throw Api("Chuyến giao không tồn tại hoặc đã được BCH xác nhận.");
+        // JS 1388/1390: phạm vi dự án rồi phạm vi kho — trước kiểm ảnh, đúng thứ tự JS.
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), sv(receipt, "projectId"), true,
+                "Tài khoản không có quyền xác nhận tại dự án này.");
+        accessScope.requireWarehouseAccess(principal.userId(), principal.role(),
+                principal.warehouseScopeKind(), sv(receipt, "warehouseId"), true,
+                "Tài khoản không có quyền xác nhận tại kho này.");
+
         if (store.goodsReceiptImageCount(receiptId) < 1)
             throw Api("Phải tải ít nhất một ảnh giao hàng thực tế trước khi BCH xác nhận.");
         String certificateStatus = trim(payload.get("certificateStatus"));
@@ -381,6 +413,6 @@ public final class PurchaseManagementUseCase {
 
     private AuthUseCase.CurrentUser principalAsCurrent(Principal p) {
         return new AuthUseCase.CurrentUser(p.userId(), "", p.fullName(), p.email(), p.role(), p.roleBase(), p.role(),
-                null, null, null, false);
+                p.warehouseScopeKind(), null, null, false);
     }
 }
