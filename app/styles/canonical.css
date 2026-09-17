@@ -880,6 +880,10 @@ thead th {
   font-size: calc(var(--vt-font-min) * var(--user-font-scale, 1)); color: #42566f;
 }
 .vt-timeline-detail { margin-top: var(--vt-space-2); font-size: calc(var(--vt-font-min) * var(--user-font-scale, 1)); }
+.vt-timeline-note {
+  margin: var(--vt-space-2) 0 0;
+  font-size: calc(var(--vt-font-min) * var(--user-font-scale, 1)); color: var(--vt-c-muted);
+}
 .vt-timeline-empty { list-style: none; }
 .vt-timeline-compact .vt-timeline-meta { gap: var(--vt-space-3); }
 

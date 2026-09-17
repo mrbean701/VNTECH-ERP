@@ -33,6 +33,14 @@ export type ApprovalStep = {
   comment?: string | null;
   /** Hạn phải xử lý. */
   dueAt?: string | null;
+  /** Thời điểm cấp nhận hồ sơ vào bước này — nhãn "Nhận hồ sơ" lấy nguyên văn từ markup cũ. */
+  queuedAt?: string | null;
+  /** Thời điểm gửi email nhắc — chỉ hiện với bước CHƯA ra quyết định, đúng như markup cũ. */
+  notifiedAt?: string | null;
+  /** Câu mô tả thời gian xử lý do nơi gọi tính sẵn (`approvalTiming`) — component không tự tính lại. */
+  timingText?: string | null;
+  /** Bước đang quá hạn ⇒ tô đỏ dòng thời gian, đúng hành vi cũ. */
+  late?: boolean;
 };
 
 const STEP_LABEL: Record<ApprovalStepStatus, string> = {
@@ -79,7 +87,7 @@ export function ApprovalTimeline({ steps, title = "DẢI PHÊ DUYỆT", note, co
       </div>
       <ol className={`vt-timeline${compact ? " vt-timeline-compact" : ""}`}>
         {steps.map((s) => (
-          <li key={s.no} className={`vt-timeline-step is-${s.status}`}>
+          <li key={s.no} className={`vt-timeline-step is-${s.status}${s.late ? " is-late" : ""}`}>
             <div className="vt-timeline-marker" aria-hidden="true">
               <span>{s.no}</span>
             </div>
@@ -92,10 +100,20 @@ export function ApprovalTimeline({ steps, title = "DẢI PHÊ DUYỆT", note, co
                 <span title="Người duyệt"><b>Người duyệt:</b> {s.approver || "—"}</span>
                 <span title="Phòng ban"><b>Phòng ban:</b> {s.department || "—"}</span>
                 <span title="Thời gian"><b>Thời gian:</b> {fmt(s.at)}</span>
-                {s.status !== "approved" && s.dueAt && (
+                {s.queuedAt && (
+                  <span title="Nhận hồ sơ"><b>Nhận hồ sơ:</b> {fmt(s.queuedAt)}</span>
+                )}
+                {s.dueAt && (
                   <span title="Hạn xử lý"><b>Hạn:</b> {fmt(s.dueAt)}</span>
                 )}
               </div>
+              {(s.timingText || !s.at) && (
+                <p className={s.late ? "vt-timeline-note red-text" : "vt-timeline-note"}>
+                  {s.timingText}
+                  {s.timingText && !s.at ? " · " : null}
+                  {!s.at ? (s.notifiedAt ? `Đã gửi email ${fmt(s.notifiedAt)}` : "Email chưa gửi hoặc chưa cấu hình") : null}
+                </p>
+              )}
               {s.comment && <p className="vt-timeline-comment">“{s.comment}”</p>}
             </div>
           </li>
