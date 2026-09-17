@@ -18,18 +18,29 @@ import type { ReactNode } from "react";
 
 export type Tone = "green" | "red" | "amber" | "blue" | "grey";
 
-/** Từ khoá quyết định màu — giữ nguyên đúng tập từ khoá của <Pill> cũ để không đổi hành vi. */
-const GREEN_HINTS = ["đã", "đủ", "đạt"];
+/**
+ * Từ khoá quyết định màu — giữ nguyên đúng tập từ khoá của <Pill> cũ để không đổi hành vi.
+ *
+ * LƯU Ý QUAN TRỌNG (phát hiện 17/09/2026 khi chuẩn bị thay 88 chỗ <Pill> bằng component này):
+ * <Pill> dùng `lower === "đạt"` (SO SÁNH BẰNG) cho màu xanh lá, KHÔNG phải `includes("đạt")`.
+ * Nếu để `includes` thì giá trị "Chưa đạt" sẽ thành XANH LÁ (sai ngữ nghĩa) trong khi <Pill> cho
+ * XANH DƯƠNG. Vì vậy "đạt" phải nằm ở danh sách SO SÁNH BẰNG, không nằm trong danh sách chứa.
+ */
+const GREEN_HINTS = ["đã", "đủ"];
+const GREEN_EXACT = ["đạt"];
 const RED_HINTS = ["từ", "chặn", "trễ", "âm", "không"];
 const AMBER_HINTS = ["chờ", "đang", "thiếu", "partial", "dưới"];
 
 /**
  * Suy ra màu từ chữ hiển thị. Xuất ra ngoài để nơi khác dùng lại được (ví dụ tính toán
  * thống kê theo màu) mà không phải chép lại quy tắc.
+ *
+ * Hàm này PHẢI cho kết quả giống hệt <Pill> cũ với MỌI đầu vào — có công cụ kiểm chứng:
+ * `node tools/probe-statusbadge-parity.mjs`.
  */
 export function toneOf(value: unknown): Tone {
   const lower = String(value ?? "").toLowerCase();
-  if (GREEN_HINTS.some((k) => lower.includes(k))) return "green";
+  if (GREEN_HINTS.some((k) => lower.includes(k)) || GREEN_EXACT.includes(lower)) return "green";
   if (RED_HINTS.some((k) => lower.includes(k))) return "red";
   if (AMBER_HINTS.some((k) => lower.includes(k))) return "amber";
   return "blue";

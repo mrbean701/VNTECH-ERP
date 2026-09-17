@@ -8,11 +8,11 @@
 * Overall status: **IN PROGRESS** — PHASE 1 chưa xong
 * Current phase: PHASE 1 — HẠ TẦNG UI DÙNG CHUNG (chiếm phần lớn khối lượng còn lại)
 * Current task: TASK-009 — U-09 đợt 6 (13 màn còn lại); nếu chưa có quyền mở rộng sandbox thì chọn việc kiểm được bằng kiểm tra tĩnh
-* Last completed task: TASK-019 — sửa 5 lỗi mã vai trò (commit #19 cùng lượt). Trước đó: TASK-018 (#18) · TASK-016 (#17) · TASK-008 PARTIAL (`96c3aa8`)
+* Last completed task: TASK-020 — thay 88 `<Pill>` bằng `<StatusBadge>` (commit #21 cùng lượt). Trước đó: TASK-019 (#19) · TASK-018 (#18) · TASK-016 (#17) · TASK-008 PARTIAL (`96c3aa8`)
 * Next task: TASK-009 — U-09 đợt 6 (13 màn còn lại)
 * Blocked task: TASK-B01 — tên màn Receiving (chờ người dùng; **KHÔNG chặn tiến độ**)
 * User confirmation required: **YES** — 2 việc: (1) tên hiển thị màn `Receiving` (GIAO NHẬN) lấy từ menu; (2) **cho phép mở rộng sandbox** để chạy cổng ảnh + bộ probe (TASK-B02) — việc (2) đang chặn phần hồi quy của mọi thay đổi giao diện
-* Last updated: 2026-09-17 (sau TASK-019)
+* Last updated: 2026-09-17 (sau TASK-020)
 
 ## System State
 
@@ -40,7 +40,7 @@
 ## Known Problems
 
 1. **Điều tra CÒN MỞ** — cổng ảnh có hiện tượng bất định giữa các phiên (đã đo 0 px · 20 px · 0 px trên cùng một màn). Đã khoanh vùng tới ô tìm kiếm topbar và loại trừ nó, **chưa tìm ra nguyên nhân gốc**.
-2. **Roadmap từng báo quá** — U-01/U-02/U-04/U-06/U-07 đánh DONE nhưng số lần DÙNG THẬT = 0. Đã sửa và tách thành U-14…U-17.
+2. **Roadmap từng báo quá** — U-01/U-02/U-04/U-06/U-07 đánh DONE nhưng số lần DÙNG THẬT = 0. Đã sửa và tách thành U-14…U-17. **Tiến độ áp dụng (đo bằng `tools/probe-ui-adoption.mjs`)**: `StatusBadge` **90** · `ListToolbar` **13** · `DataTable` **0** · `PermissionGuard` **0** · `ApprovalTimeline`/`ActivityTimeline` **0** · `EntityDetailModal` **0**. Còn lại: **100** bảng tự viết · **100** trạng thái rỗng tự viết · **50** điều kiện quyền rải rác · **4** modal tự viết · **3** dải timeline tự viết.
 3. **`/api/files` chưa được bảo vệ** (S-05) — người dùng yêu cầu tạm bỏ qua phần bảo mật.
 4. ~~5 lỗi mã vai trò còn lại trong `ProductionManagementUseCase`~~ **ĐÃ SỬA ở TASK-019**: `commander` → `cht`, `project` → `da_nv` cho 5 use case sản lượng/tổ đội. javac **exit 0**. **CHƯA đóng gói lại JAR** (sandbox chặn ghi `.m2`, và offline thiếu artifact plugin) nên sửa **chưa có hiệu lực lúc chạy**.
 5. **`team_members` = 0 dòng** ⇒ màn Tổ đội trống; **`approval_stage_decisions` = 0 dòng** (mã chết).

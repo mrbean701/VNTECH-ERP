@@ -24,5 +24,6 @@ Trạng thái hợp lệ: `PENDING` · `IN PROGRESS` · `DONE` · `BLOCKED` · `
 | TASK-017 | Điều tra còn mở — nguyên nhân gốc bất định của cổng ảnh | PENDING | — | — | Đã khoanh vùng ô tìm kiếm topbar |
 | TASK-018 | Đối chiếu action giữa bản JS tham chiếu và bản Java đã port (đính chính audit) | DONE | #18 (cùng lượt) | 17/09/2026 | Cáo buộc "catalog lệch 50 action" là **SAI**; Java **không thiếu action nào** |
 | TASK-019 | Sửa 5 lỗi mã vai trò còn sót trong `ProductionManagementUseCase` (commander→cht, project→da_nv) | DONE | #19 (cùng lượt) | 17/09/2026 | Người dùng `cht`/`da_nv` hết bị 403 oan; javac **exit 0**; chưa đóng gói lại JAR |
+| TASK-020 | U-15 (phần StatusBadge) — thay 88 chỗ `<Pill>` bằng `<StatusBadge>`, chứng minh tương đương bằng công cụ | DONE | #21 (cùng lượt) | 17/09/2026 | StatusBadge **2 → 90** lần dùng thật; `<Pill>` 88 → 0; tsc ĐẠT · eslint 0 lỗi; **chưa kiểm bằng mắt** (TASK-B02) |
 | TASK-B02 | **Cổng ảnh + bộ probe KHÔNG chạy được** — cần mở rộng sandbox để khởi động Edge headless (named pipe) | BLOCKED | — | 17/09/2026 | Yêu cầu mở rộng quyền đã bị huỷ; chặn phần hồi quy quét rộng của TASK-008 và mọi việc UI tiếp theo |
 | TASK-B01 | Xác nhận tên màn Receiving từ menu | BLOCKED | — | 17/09/2026 | Cần người dùng; KHÔNG chặn tiến độ |
