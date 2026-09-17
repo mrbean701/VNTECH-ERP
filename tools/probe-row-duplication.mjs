@@ -61,6 +61,12 @@ const SPEC = [
   { key: "contractPayments", nhan: "Thanh toán hợp đồng", table: "contract_payments", sqlD: "SELECT COUNT(*) FROM contract_payments WHERE project_id='{P}'" },
   { key: "workItems", nhan: "Công việc", table: "work_items", sqlD: "SELECT COUNT(*) FROM work_items WHERE project_id='{P}'" },
   { key: "teams", nhan: "Tổ đội", table: "teams", sqlD: "SELECT COUNT(*) FROM teams WHERE project_id='{P}'" },
+  // Hai khoá dưới đây gắn dự án bằng cột NGUỒN (`source_*`) chứ không phải `project_id` — nên payload
+  // cũng trả khoá khác tên (`sourceProjectId`), vì vậy mục spec có thêm `field`.
+  { key: "centralReturns", nhan: "Chuyển vật tư dư về Kho Tổng", table: "central_returns", field: "sourceProjectId", sqlD: "SELECT COUNT(*) FROM central_returns WHERE source_project_id='{P}'" },
+  { key: "transferOrders", nhan: "Lệnh điều chuyển", table: "transfer_orders", field: "sourceProjectId", sqlD: "SELECT COUNT(*) FROM transfer_orders WHERE source_project_id='{P}'" },
+  { key: "projectContracts", nhan: "Hợp đồng dự án", table: "project_contracts", sqlD: "SELECT COUNT(*) FROM project_contracts WHERE project_id='{P}'" },
+  { key: "materialNorms", nhan: "Định mức vật tư", table: "material_norms", sqlD: "SELECT COUNT(*) FROM material_norms WHERE project_id='{P}'" },
 ];
 
 async function login(username, password) {
@@ -96,7 +102,8 @@ async function main() {
     const chiTietVuot = [];
     for (const p of projects) {
       const pid = String(p.id);
-      const ui = rows.filter((r) => String(r.projectId) === pid).length;
+      const field = s.field || "projectId";
+      const ui = rows.filter((r) => String(r[field]) === pid).length;
       if (!ui) continue;
       let sqlN = 0;
       try {
