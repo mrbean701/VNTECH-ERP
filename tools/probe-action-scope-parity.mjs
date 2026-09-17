@@ -117,6 +117,25 @@ console.log(`  → Java KHÔNG kiểm phạm vi     : ${missing.length}   ← nh
 console.log(`  → Không ánh xạ được sang Java : ${noMap.length}`);
 
 console.log(`\n── JAVA KHÔNG KIỂM PHẠM VI (${missing.length}) ──`);
+if (process.argv.includes("--missing")) {
+  // Chế độ lập kế hoạch: in kèm use-case.phương thức để biết phải vá ở đâu.
+  const byUseCase = new Map();
+  for (const r of missing) {
+    const key = r.calls.map((c) => c.split(".")[0]).join(",") || "(không rõ)";
+    if (!byUseCase.has(key)) byUseCase.set(key, []);
+    byUseCase.get(key).push(r);
+  }
+  for (const [useCase, rows] of [...byUseCase].sort((a, b) => b[1].length - a[1].length)) {
+    console.log(`\n   [${rows.length}] ${useCase}`);
+    for (const r of rows) {
+      console.log(`        ${r.action.padEnd(34)} ${label(r.scope).padEnd(46)} ${r.calls.join(" ")}`);
+    }
+  }
+  console.log("\n" + "═".repeat(96));
+  console.log(`  KẾT LUẬN: còn ${missing.length} action chưa kiểm phạm vi (${byUseCase.size} use-case)`);
+  console.log("═".repeat(96));
+  process.exit(1);
+}
 console.log("   'admin-gated' = case đó đã bị chặn admin-only ở controller (giảm nhẹ, không thay thế).");
 console.log(missing.length
   ? missing.map((r) => `   ${r.action.padEnd(32)} ${label(r.scope).padEnd(46)} ${r.adminGated ? "[admin-gated]" : ""}`).join("\n")

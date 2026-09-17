@@ -53,7 +53,10 @@ for (let m; (m = reAction.exec(js)); ) {
   for (let c; (c = reCall.exec(body)); ) {
     const text = callAt(body, c.index).replace(/\s+/g, " ");
     const lineNo = js.slice(0, bodyStart + c.index).split("\n").length;
-    found.push({ lineNo, text });
+    // Lấy thông điệp lỗi đi kèm: JS luôn `if(!(await canAccessX(...))) throw new Error("...")`
+    const after = body.slice(c.index + text.length, c.index + text.length + 260);
+    const msg = (after.match(/throw new Error\(\s*"([^"]*)"/) || [])[1] ?? "";
+    found.push({ lineNo, text, msg });
   }
   if (!found.length) continue;
   const roleLine = (body.match(/requireRole\(\s*user\s*,\s*\[[^\]]*\]\s*\)/) || [])[0];
@@ -65,7 +68,7 @@ for (let m; (m = reAction.exec(js)); ) {
 console.log(`Nguồn: ${JS} — ${lines.length} action có kiểm phạm vi${only ? ` (lọc: ${only})` : ""}\n`);
 for (const row of lines) {
   console.log(`── ${row.action}`);
-  for (const f of row.found) console.log(`     L${f.lineNo}: ${f.text}`);
+  for (const f of row.found) console.log(`     L${f.lineNo}: ${f.text}${f.msg ? `\n              ↳ "${f.msg}"` : ""}`);
   if (row.roleLine) {
     console.log(`     requireRole: ${row.roleLine}  → phạm vi kiểm ${row.scopeFirst ? "TRƯỚC" : "SAU"} vai trò`);
   }

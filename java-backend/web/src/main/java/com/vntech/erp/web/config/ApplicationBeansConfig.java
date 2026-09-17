@@ -146,8 +146,9 @@ public class ApplicationBeansConfig {
     @Bean
     public ProductionManagementUseCase productionManagementUseCase(ProductionStore productionStore,
                                                                    IdGenerator idGenerator,
-                                                                   RbacService rbacService) {
-        return new ProductionManagementUseCase(productionStore, idGenerator, rbacService);
+                                                                   RbacService rbacService,
+                                                                   AccessScopeService accessScopeService) {
+        return new ProductionManagementUseCase(productionStore, idGenerator, rbacService, accessScopeService);
     }
 
     @Bean

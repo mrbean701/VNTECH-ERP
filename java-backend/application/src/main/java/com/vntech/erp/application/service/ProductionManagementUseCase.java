@@ -2,6 +2,7 @@ package com.vntech.erp.application.service;
 
 import com.vntech.erp.application.port.out.IdGenerator;
 import com.vntech.erp.application.port.out.ProductionStore;
+import com.vntech.erp.application.rbac.AccessScopeService;
 import com.vntech.erp.application.rbac.RbacService;
 
 import java.time.Instant;
@@ -18,11 +19,13 @@ public final class ProductionManagementUseCase {
     private final ProductionStore store;
     private final IdGenerator idGenerator;
     private final RbacService rbac;
+    private final AccessScopeService accessScope;
 
-    public ProductionManagementUseCase(ProductionStore store, IdGenerator idGenerator, RbacService rbac) {
+    public ProductionManagementUseCase(ProductionStore store, IdGenerator idGenerator, RbacService rbac, AccessScopeService accessScope) {
         this.store = store;
         this.idGenerator = idGenerator;
         this.rbac = rbac;
+        this.accessScope = accessScope;
     }
 
     public interface Principal {
@@ -40,6 +43,9 @@ public final class ProductionManagementUseCase {
     public Map<String, Object> saveProductionReport(Principal principal, Map<String, Object> payload) {
         String reportId = trim(payload.get("productionReportId"));
         String projectId = trim(payload.get("projectId"));
+        // JS 1190.
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), projectId, true,
+                "Không có quyền cập nhật sản lượng tại dự án này.");
         String reportPeriod = trim(payload.get("reportPeriod"));
         String referenceNo = nvl(payload.get("referenceNo"));
         String description = nvl(payload.get("description"));
@@ -73,6 +79,9 @@ public final class ProductionManagementUseCase {
         double approvedValue = strictNonNegative(payload.get("approvedValue"), "Giá trị sản lượng được duyệt");
         Map<String, Object> old = store.findProductionReport(reportId)
                 .orElseThrow(() -> Api("Không tìm thấy báo cáo sản lượng."));
+        // JS 1195: phạm vi dự án của CHÍNH báo cáo.
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), sv(old, "project_id"), true,
+                "Không có quyền tại dự án này.");
         if (approvedValue > num(old.get("actual_value") == null ? 0 : old.get("actual_value")))
             throw Api("Sản lượng được duyệt không được vượt sản lượng thực tế đã báo cáo.");
         store.approveProductionReport(reportId, approvedValue, principal.userId(), Instant.now());
@@ -83,6 +92,9 @@ public final class ProductionManagementUseCase {
     public Map<String, Object> saveCapitalRecovery(Principal principal, Map<String, Object> payload) {
         String recoveryId = trim(payload.get("recoveryId"));
         String projectId = trim(payload.get("projectId"));
+        // JS 1214.
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), projectId, true,
+                "Không có quyền cập nhật thu hồi vốn tại dự án này.");
         String periodKey = trim(payload.get("periodKey"));
         String referenceNo = nvl(payload.get("referenceNo"));
         String productionReportId = nvl(payload.get("productionReportId"));
@@ -124,6 +136,9 @@ public final class ProductionManagementUseCase {
         String recoveryId = trim(payload.get("recoveryId"));
         Map<String, Object> old = store.findCapitalRecovery(recoveryId)
                 .orElseThrow(() -> Api("Không tìm thấy hồ sơ thu hồi vốn."));
+        // JS 1222: phạm vi dự án của CHÍNH hồ sơ.
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), sv(old, "project_id"), true,
+                "Không có quyền tại dự án này.");
         if (store.countRecoveryPayments(recoveryId) > 0)
             throw Api("Hồ sơ đã có tiền thực thu liên kết nên không được xóa.");
         store.deleteCapitalRecovery(recoveryId);
@@ -134,6 +149,9 @@ public final class ProductionManagementUseCase {
     public Map<String, Object> saveContractPayment(Principal principal, Map<String, Object> payload) {
         String paymentId = trim(payload.get("paymentId"));
         String projectId = trim(payload.get("projectId"));
+        // JS 1226.
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), projectId, true,
+                "Không có quyền cập nhật thanh toán tại dự án này.");
         String recoveryRecordId = nvl(payload.get("recoveryRecordId"));
         String paymentDate = trim(payload.get("paymentDate"));
         String referenceNo = nvl(payload.get("referenceNo"));
@@ -161,7 +179,11 @@ public final class ProductionManagementUseCase {
 
     public Map<String, Object> deleteContractPayment(Principal principal, Map<String, Object> payload) {
         String paymentId = trim(payload.get("paymentId"));
-        store.findContractPayment(paymentId).orElseThrow(() -> Api("Không tìm thấy dòng thanh toán."));
+        // JS 1235: tra bản ghi CŨ rồi kiểm phạm vi dự án của chính bản ghi đó.
+        Map<String, Object> oldPayment = store.findContractPayment(paymentId)
+                .orElseThrow(() -> Api("Không tìm thấy dòng thanh toán."));
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), sv(oldPayment, "project_id"), true,
+                "Không có quyền tại dự án này.");
         store.deleteContractPayment(paymentId);
         return Map.of("message", "Đã xóa dòng thanh toán.");
     }
@@ -171,6 +193,9 @@ public final class ProductionManagementUseCase {
         String projectId = trim(payload.get("projectId"));
         List<?> rows = payload.get("rows") instanceof List<?> l ? l : List.of();
         if (projectId.isEmpty() || rows.isEmpty()) throw Api("File thanh toán không có dữ liệu.");
+        // JS 1232.
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), projectId, true,
+                "Không có quyền cập nhật thanh toán tại dự án này.");
         if (rows.size() > 5000) throw Api("Mỗi lần chỉ nhập tối đa 5.000 dòng thanh toán.");
         Instant now = Instant.now();
         for (int i = 0; i < rows.size(); i++) {
@@ -191,6 +216,9 @@ public final class ProductionManagementUseCase {
     public Map<String, Object> saveTeamSubcontract(Principal principal, Map<String, Object> payload) {
         rbac.requireRole(principalAsCurrent(principal), List.of("admin", "commander", "project"));
         String projectId = trim(payload.get("projectId"));
+        // JS 1238.
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), projectId, true,
+                "Không có quyền tại dự án này.");
         String teamId = trim(payload.get("teamId"));
         String contractNo = trim(payload.get("contractNo")).toUpperCase();
         String contractName = trim(payload.get("contractName"));
@@ -219,7 +247,9 @@ public final class ProductionManagementUseCase {
         if (approvedValue > submittedValue + 1e-9)
             throw Api("Sản lượng duyệt không được vượt giá trị trình.");
         Map<String, Object> sc = store.findSubcontract(subcontractId).orElse(null);
-        if (sc == null || !sv(sc, "projectId").equals(projectId))
+        // JS 1241: gộp kiểm tồn tại + phạm vi vào cùng một thông điệp như JS.
+        if (sc == null || !sv(sc, "projectId").equals(projectId)
+                || !accessScope.canAccessProject(principal.userId(), principal.role(), projectId, true))
             throw Api("Hợp đồng giao khoán không thuộc phạm vi dự án.");
         double accumulated = store.sumApprovedProduction(subcontractId, "");
         if (accumulated + approvedValue > num(sc.get("contractValue")) + 1e-9)
@@ -236,6 +266,10 @@ public final class ProductionManagementUseCase {
         Map<String, Object> rec = store.findTeamProduction(productionId).orElse(null);
         if (rec == null || !"submitted".equals(sv(rec, "status")))
             throw Api("Hồ sơ sản lượng không còn ở trạng thái chờ duyệt.");
+        // JS 1244: phạm vi dự án lấy từ CHÍNH hồ sơ sản lượng.
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), sv(rec, "project_id"), true,
+                "Không có quyền tại dự án này.");
+
         Map<String, Object> sc = store.findSubcontract(sv(rec, "subcontract_id")).orElse(Map.of());
         double acc = store.sumApprovedProduction(sv(rec, "subcontract_id"), productionId);
         if (acc + num(rec.get("approved_value")) > num(sc.get("contractValue")) + 1e-9)
@@ -255,7 +289,9 @@ public final class ProductionManagementUseCase {
         if (paymentType.isEmpty()) paymentType = "progress";
         String description = trim(payload.get("description"));
         Map<String, Object> sc = store.findSubcontract(subcontractId).orElse(null);
-        if (sc == null || !sv(sc, "projectId").equals(projectId))
+        // JS 1247: gộp kiểm tồn tại + phạm vi vào cùng một thông điệp như JS.
+        if (sc == null || !sv(sc, "projectId").equals(projectId)
+                || !accessScope.canAccessProject(principal.userId(), principal.role(), projectId, true))
             throw Api("Hợp đồng giao khoán không thuộc phạm vi dự án.");
         if (!paymentDate.matches("\\d{4}-\\d{2}-\\d{2}")) throw Api("Ngày thanh toán không hợp lệ.");
         double approved = store.sumApprovedProduction(subcontractId, "");
@@ -274,6 +310,9 @@ public final class ProductionManagementUseCase {
         String subcontractId = trim(payload.get("subcontractId"));
         Map<String, Object> sc = store.findSubcontract(subcontractId)
                 .orElseThrow(() -> Api("Không có quyền quyết toán hợp đồng này."));
+        // JS 1250.
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), sv(sc, "projectId"), true,
+                "Không có quyền quyết toán hợp đồng này.");
         if (store.teamHeldStockLines(sv(sc, "teamId")) > 0)
             throw Api("Tổ đội vẫn còn vật tư đang giữ; phải hoàn trả hoặc xác nhận lắp đặt trước quyết toán.");
         double approved = store.sumApprovedProduction(subcontractId, "");
@@ -297,6 +336,9 @@ public final class ProductionManagementUseCase {
     public Map<String, Object> saveConstructionDailyLog(Principal principal, Map<String, Object> payload) {
         String logId = trim(payload.get("logId"));
         String projectId = trim(payload.get("projectId"));
+        // JS 1200.
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), projectId, true,
+                "Không có quyền cập nhật nhật ký thi công tại dự án này.");
         String workDate = trim(payload.get("workDate"));
         String shift = blankDefault(trim(payload.get("shift")), "sang");
         String weather = nvl(payload.get("weather"));
@@ -362,6 +404,9 @@ public final class ProductionManagementUseCase {
         String logId = trim(payload.get("logId"));
         Map<String, Object> old = store.findDailyLog(logId)
                 .orElseThrow(() -> Api("Không tìm thấy nhật ký thi công."));
+        // JS 1205: phạm vi dự án của CHÍNH nhật ký.
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), sv(old, "project_id"), true,
+                "Không có quyền tại dự án này.");
         if ("approved".equals(sv(old, "status"))) throw Api("Nhật ký đã được duyệt.");
         store.approveDailyLog(logId, principal.userId(), Instant.now());
         return Map.of("message", "Đã duyệt nhật ký thi công; tiến độ thực hiện được dùng làm cơ sở đối chiếu nghiệm thu.");
@@ -373,6 +418,9 @@ public final class ProductionManagementUseCase {
                 .orElseThrow(() -> Api("Không tìm thấy nhật ký thi công."));
         if ("approved".equals(sv(old, "status")) && !"admin".equals(principal.role()))
             throw Api("Nhật ký đã duyệt; chỉ Quản trị được xóa.");
+        // JS 1208: phạm vi dự án của CHÍNH nhật ký.
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), sv(old, "project_id"), true,
+                "Không có quyền tại dự án này.");
         store.deleteDailyLog(logId);
         return Map.of("message", "Đã xóa nhật ký thi công.");
     }

@@ -145,7 +145,8 @@ tools/patch-task023-batch1.mjs       (mới)
 | `node tools/probe-action-scope-parity.mjs` (sau lô 1) | Java kiểm **2**/64 |
 | `node tools/probe-action-scope-parity.mjs` (sau lô 2) | Java kiểm **6**/64 |
 | `node tools/probe-action-scope-parity.mjs` (sau lô 3) | Java kiểm **17**/64 (nhóm KHO phủ hết) |
-| `node tools/probe-action-scope-parity.mjs` (sau lô 4) | Java kiểm **21**/64 — còn **43** |
+| `node tools/probe-action-scope-parity.mjs` (sau lô 4) | Java kiểm **21**/64 (nhóm MUA HÀNG phủ hết) |
+| `node tools/probe-action-scope-parity.mjs` (sau lô 5) | Java kiểm **36**/64 — còn **28** |
 | `node tools/patch-task023-batch1.mjs` | 7 áp dụng · 0 lỗi |
 | `node tools/patch-task023-batch2.mjs` | 10 áp dụng · 1 không khớp (Principal đã bị TASK-021b sửa trước) · vá bổ sung |
 | `node tools/patch-task023-batch2b.mjs` | 1 áp dụng · 0 lỗi |
@@ -207,6 +208,45 @@ Cũng đã thêm đường ống `warehouseScopeKind` cho `PurchaseManagementUse
    Đã sửa bằng `patch-task023-batch4c.mjs` và **kiểm chứng lại bằng mắt** trước khi biên dịch.
 
 Bài học: **script báo "bỏ qua" phải được đọc lại code để xác nhận**, không được tin kết quả bỏ qua.
+
+## LÔ 5 — ProductionManagementUseCase (15 action)
+
+Tất cả 15 action chỉ kiểm **phạm vi DỰ ÁN** (không có nhánh kho) ⇒ không cần `warehouseScopeKind`.
+
+| Nhóm | Action | Nguồn giá trị |
+|---|---|---|
+| Tổ đội/giao khoán | `save_team_subcontract` | `projectId` (payload) |
+| | `save_team_production`, `save_team_payment` | `projectId` — JS **gộp** kiểm tồn tại + phạm vi vào **một** thông điệp ⇒ Java cũng gộp vào cùng điều kiện `if` |
+| | `approve_team_production` | `rec.project_id` (DB) |
+| | `settle_team_subcontract` | `sc.projectId` (DB) |
+| Sản lượng | `save_production_report` | `projectId` (payload) |
+| | `approve_production_report` | `old.project_id` (DB) |
+| Thu hồi vốn | `save_capital_recovery` | `projectId` (payload) |
+| | `delete_capital_recovery` | `old.project_id` (DB) |
+| Thanh toán HĐ | `save_contract_payment` | `projectId` (payload) |
+| | `delete_contract_payment` | `oldPayment.project_id` (DB) |
+| | `import_contract_payments` | `projectId` (payload) |
+| Nhật ký thi công | `save_construction_daily_log` | `projectId` (payload) |
+| | `approve_construction_daily_log`, `delete_construction_daily_log` | `old.project_id` (DB) |
+
+`delete_contract_payment` trước đây Java **bỏ kết quả tra bản ghi** (`store.findContractPayment(paymentId).orElseThrow(...)`),
+nên không có `project_id` để kiểm. Đã sửa để **giữ lại bản ghi cũ** — đúng như JS.
+
+### Lỗi thứ ba của công cụ vá trong lượt này (đã tự phát hiện và sửa)
+
+Phép vá `delete_construction_daily_log` dùng neo
+`if ("approved".equals(sv(old, "status")) && !"admin".equals(principal.role()))` — nhưng dòng này xuất hiện
+**HAI lần** trong tệp (`saveProductionReport` và `deleteConstructionDailyLog`). `String.prototype.replace`
+với mẫu **chuỗi** chỉ thay lần **đầu** ⇒ kiểm phạm vi bị chèn vào **`saveProductionReport`** (sai phương thức),
+trong khi cổng lại báo phép vá "đã áp dụng" (vì script chỉ kiểm chuỗi tồn tại, không kiểm vị trí).
+
+Phát hiện nhờ **cổng đối chiếu vẫn báo action còn thiếu** ⇒ đọc lại code ⇒ thấy sai chỗ.
+Đã sửa bằng `patch-task023-batch5b.mjs`, có **kiểm chứng sau khi sửa**: khối mới phải nằm trong
+`deleteConstructionDailyLog` và số lần xuất hiện phải bằng 1 — nếu không thì **không ghi tệp**.
+
+**Bài học bổ sung:** phép vá theo chuỗi phải **kiểm cả vị trí** (hoặc số lần xuất hiện của neo), không chỉ
+kiểm "chuỗi đã có mặt". Ba lỗi liên tiếp của công cụ vá trong 2 lượt gần đây đều cùng một gốc: **neo không duy nhất**
+hoặc **kiểm tra quá rộng**.
 
 ## LÔ 2 — StockManagementUseCase (4 action)
 
