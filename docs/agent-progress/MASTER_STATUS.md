@@ -131,6 +131,19 @@ Mặc định của interface là `return role()` = **mã chuẩn** ⇒ thiếu 
    ⇒ **152 action JS ghi nhật ký mà Java KHÔNG ghi** — danh sách đầy đủ in ra từ cổng.
    **GIỚI HẠN của phép đo (phải nói rõ):** Java đo theo **LỚP use-case** (không theo từng method) và chỉ thấy lời gọi **tĩnh** `auditLog.log(...)`; `AuditTrailFilter` ở tầng web **ghi thêm 1 dòng cho mỗi request** nên `audit_logs` **không trống** — nhưng bản ghi đó là *"POST action X"*, **không phải** nhật ký nghiệp vụ có `before/after` như JS.
    **Lát cắt chọn làm trước (P2 lõi):** 6 action **luồng Phiếu đề nghị** — `create_request` · `update_returned_request` · `resubmit_request` · `delete_request` · `cancel_request` · `decide_approval` (đo được: `audit_logs.entity_type='material_request'` = **0 dòng**). Sau đó: mua hàng/PO · kho · tổ ong · admin.
+47. **QUÉT MỒ CÔI TOÀN HỆ THỐNG (17/09, read-only — bổ sung cho #21 và #35):** rà 10 cặp khoá ngoại bằng `LEFT JOIN … WHERE cha IS NULL`:
+
+| Quan hệ con → cha | Dòng mồ côi |
+|---|---:|
+| `procurement_allocations.request_item_id` → `material_request_items` | **32** |
+| `approvals.request_id` → `material_requests` | **15** |
+| `stock_issues.team_id` → `teams` | **3** |
+| `project_boq_items.material_id` → `materials` | **3** |
+| `material_request_items.request_id` → `material_requests` | **1** |
+| `purchase_order_items.purchase_order_id` → `purchase_orders` | **1** |
+| `material_requests.project_id` → `projects` · `goods_receipt_items.receipt_id` → `goods_receipts` · `project_boq_items.boq_version_id` → `boq_versions` · `custom_field_values.entity_id` → `material_request_items` | 0 |
+
+   **Ý nghĩa:** (a) **32 allocations + 15 approvals mồ côi** là **bằng chứng thực tế cho known issue #36** — xoá phiếu để lại rác ở **cả JS lẫn Java**; (b) `stock_issues.team_id` (không phải `stock_issue_items` — cột `team_id` **không tồn tại** ở bảng đó, đã kiểm bằng `information_schema`) đúng **3 dòng**, khớp số ghi ở #21; (c) 3 dòng BOQ trỏ vật tư không còn tồn tại. **KHÔNG tự sửa dữ liệu** — cần anh quyết định: xoá rác, hay giữ để đối chiếu lịch sử? (Bản ghi mồ côi **không hiển thị** trên giao diện vì mọi truy vấn đều `JOIN` bảng cha.)
 
 ## Important Decisions
 
