@@ -193,3 +193,43 @@ toolbar/danh sách → chụp lại ảnh chuẩn **kèm lý do ghi trong commit
    theo môi trường (`--update` ở lần chạy đầu).
 2. **Có push các commit đang chờ không?** Commit #9 (`8b4a5da`) và #10 (`3c948cb`) hiện **chưa**
    được push lên remote.
+
+---
+
+## 10. PHÁT HIỆN 17/09/2026 — "ĐÃ TẠO" KHÔNG PHẢI "ĐÃ DÙNG": ROADMAP TRƯỚC ĐÓ BÁO QUÁ
+
+Trong lúc kiểm tra lại tính trung thực của roadmap, tôi đo **số lần DÙNG THẬT** của thư viện dùng
+chung trong ứng dụng (không tính chính thư viện). Công cụ: `tools/probe-ui-adoption.mjs`.
+
+| Thành phần | Mã | Dùng thật | Kết luận |
+|---|---|---|---|
+| `ListToolbar` | U-03 | **10** | ĐANG DÙNG |
+| `StatusBadge` | U-05 | **2** | ĐANG DÙNG (mới 2/88 chỗ) |
+| `EntityDetailModal` | U-01 / U-10 | **0** | CHƯA ÁP DỤNG |
+| `DataTable` | U-02 | **0** | CHƯA ÁP DỤNG |
+| `PermissionGuard` | U-04 | **0** | CHƯA ÁP DỤNG |
+| `ApprovalTimeline` | U-06 | **0** | CHƯA ÁP DỤNG |
+| `ActivityTimeline` | U-07 | **0** | CHƯA ÁP DỤNG |
+
+**Vấn đề:** roadmap từng đánh `DONE` cho U-01/U-02/U-04/U-06/U-07 — nhưng đó mới là **DỰNG KHUNG**,
+chưa áp dụng vào ứng dụng lần nào. Đây đúng là điều MASTER TASK cảnh báo: *không được coi là xong
+chỉ vì mã đã được sửa*.
+
+**Đã tự sửa:**
+
+- Cột TT của U-01…U-08 nay ghi theo **số đo thật**: `KHUNG-XONG / AP-DUNG 0` · `DONE / AP-DUNG 10` ·
+  `DONE / AP-DUNG 2`.
+- Tách phần **áp dụng** thành 4 việc riêng, kèm phạm vi đo được:
+  - **U-14** `EntityDetailModal` — dùng thật 0; còn **4** chỗ tự viết `.overlay`
+  - **U-15** `DataTable` + `StatusBadge` — DataTable dùng thật 0, còn **100** bảng tự viết và
+    **100** trạng thái rỗng tự viết; StatusBadge mới **2/88** chỗ `<Pill>`
+  - **U-16** `PermissionGuard` — dùng thật 0; còn **50** chỗ điều kiện quyền rải rác
+  - **U-17** `ApprovalTimeline`/`ActivityTimeline` — dùng thật 0; còn **3** chỗ tự viết dải
+- Ghi chú phát hiện ngay trong roadmap để người đọc sau không hiểu nhầm là đã xong.
+
+**Định hướng thi công (khác với "quét một lần"):** khối lượng áp dụng rất lớn (hơn 300 điểm chạm).
+Quét một lần sẽ tạo ra thay đổi khổng lồ, khó kiểm chứng và dễ phá giao diện — trái quy tắc không
+viết lại mã đang chạy khi không cần thiết. Vì vậy nên **áp dụng theo từng màn, gắn vào các phase
+nghiệp vụ tương ứng** (PHASE 2 trở đi), mỗi đợt đều chạy cổng ảnh + probe như đã làm với U-09.
+
+**Quy mô tệp cần tách (U-11):** `app/page.tsx` = **4.140 dòng · 221 hàm top-level**.

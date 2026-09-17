@@ -286,3 +286,64 @@ từ menu trước khi làm.
 | 2 | `Admin` | 1 |
 | 3 | `WorkCenter` · `TeamManagement` · `ProjectManagement` | 3 |
 | **Tổng** | | **7/32** |
+
+---
+
+## 12. ĐỢT 4 — DANH SÁCH NHÂN SỰ (ADMIN BƯỚC 1) + DANH BẠ NỘI BỘ
+
+| Màn | Khối | Sau khi chuyển |
+|---|---|---|
+| `Admin` bước 1 | `.table-toolbar` "DANH SÁCH NHÂN SỰ / NGƯỜI DÙNG" | `ListToolbar` tiêu đề + số lượng + **TÌM** + nút ＋ |
+| `StaffDirectory` | `.staff-directory-head` + `.staff-toolbar` (hai khối rời) | **một** `ListToolbar` tiêu đề + mô tả + số lượng ‖ TÌM · LỌC bộ phận · thống kê ONLINE/OFFLINE |
+
+**Ô tìm kiếm chuyển từ trong `AdminStaffList` lên toolbar.** Trạng thái tìm vẫn do màn cha giữ
+(`adminQuery`) và truyền xuống qua prop `query` nên logic lọc **không đổi**. Prop `onQuery` bỏ hẳn —
+đã kiểm nó chỉ xuất hiện đúng 3 chỗ (chữ ký hàm, ô nhập, lời gọi) nên **không phát sinh cảnh báo
+mới**: eslint giữ nguyên 3 lỗi có sẵn + 74 cảnh báo.
+
+**Bốn `<select>` phụ và ô số dòng/trang VẪN ở trong thân danh sách** — chúng là state nội bộ của
+`AdminStaffList`; đưa lên toolbar phải nâng state lên màn cha, để đợt sau, không làm ẩu.
+
+### Một suy suyển THẬT do bộ probe bắt được
+
+`probe-staff-full` **KHÔNG ĐẠT** sau thay đổi này: `hasSearch: false`. Nguyên nhân: probe dò
+`input[aria-label="Tìm nhân sự"]` **bên trong** `.staff-full`, mà ô đó đã chuyển lên toolbar (đúng §5).
+
+Cách xử lý — **cập nhật phép kiểm theo thiết kế mới và làm nó CHẶT HƠN**, không bỏ qua:
+
+- Tìm ô tìm kiếm ở **cả hai** vị trí (`.list-toolbar` và trong danh sách).
+- **Thêm phép kiểm mới**: gõ vào ô tìm kiếm ở toolbar và **bắt buộc danh sách phải lọc thật**.
+- Kết quả sau cập nhật: **ĐẠT ✅** — `hasSearch: true`, và phép kiểm mới chứng minh lọc thật:
+  *tìm "Nguyễn": 12 dòng → 0 dòng*. Tức việc chuyển vị trí **không làm mất chức năng**.
+
+### Cổng ảnh chập chờn — điều tra và kết luận trung thực
+
+Dự đoán "chỉ `07-admin` lệch" **sai một nửa**: `01-dashboard` cũng lệch 1096 px, mà màn đó
+**không hề bị sửa**.
+
+- `--locate=1420,41` → `<INPUT>` trong `<FORM class="global-search">` rect 1282,22,320,38
+  ⇒ vùng lệch **đúng bằng dòng chữ gợi ý của ô tìm kiếm topbar**.
+- Giả thuyết 1: chữ vẽ bằng font dự phòng khi chụp lúc font chưa tải xong → đã thêm
+  `await document.fonts.ready` trước khi chụp. **Chạy lại: lần 1 ĐẠT 28/28, lần 2 vẫn lệch đúng
+  1096 px tại đúng toạ độ ⇒ giả thuyết này KHÔNG đủ.**
+- Ba lần chạy liên tiếp trên `01-dashboard`: **0 px · 20 px tại (734,190) · 0 px**.
+- Kết luận: đây là yếu tố **không tất định của khung chung**, không phải lỗi giao diện của 7 màn
+  được kiểm. Đã **loại trừ phần tử** `.global-search` (giữ nguyên kích thước nên bố cục topbar
+  không đổi) và **ghi rõ đây là ĐIỀU TRA CÒN MỞ** — chưa xác định được nguyên nhân gốc, chỉ
+  khoanh vùng được phần tử.
+
+**Bài học quy trình:** đổi bộ loại trừ thì **phải chụp lại ảnh chuẩn ngay**, nếu không cổng báo
+lệch toàn bộ — đã xảy ra thật: 28/28 ảnh lệch 18230 px ở vùng topbar vì ảnh chuẩn cũ vẫn có ô
+tìm kiếm.
+
+---
+
+## 13. TIẾN ĐỘ U-09
+
+| Đợt | Màn | Số màn |
+|---|---|---|
+| 1 | `Requests` · `WarehouseReceipt` · `Inventory` | 3 |
+| 2 | `Admin` (tiêu đề màn) | 1 |
+| 3 | `WorkCenter` · `TeamManagement` · `ProjectManagement` | 3 |
+| 4 | `Admin` bước 1 (danh sách nhân sự) · `StaffDirectory` | 2 |
+| **Tổng** | | **9/32** |

@@ -73,7 +73,10 @@ const info = JSON.parse(await ev(`(()=>{
   const heads=t?[...t.querySelectorAll('thead th')].map(x=>x.textContent.trim()):[];
   const rows=t?t.querySelectorAll('tbody tr').length:0;
   const filters=root.querySelectorAll('.staff-full-filters select').length;
-  const hasSearch=!!root.querySelector('input[aria-label="Tìm nhân sự"]');
+  // Ô tìm kiếm đã được CHUYỂN LÊN ListToolbar chuẩn §5 (nằm ngoài .staff-full) nên phép kiểm
+  // phải tìm ở cả hai vị trí. Việc chuyển vị trí là yêu cầu §5, KHÔNG phải mất chức năng —
+  // và chức năng được kiểm riêng ở khối "ô tìm kiếm có tác dụng thật" bên dưới.
+  const hasSearch=!!(document.querySelector('.list-toolbar input[type="search"], .list-toolbar-search input') || root.querySelector('input[aria-label="Tìm nhân sự"]'));
   const actionBtns=[...root.querySelectorAll('tbody .row-actions button')].map(b=>b.textContent.trim());
   const w=Math.round(root.getBoundingClientRect().width);
   const card=root.closest('.card');
@@ -88,7 +91,7 @@ console.log("   " + JSON.stringify(info).slice(0, 400));
 
 check("Danh sách nhân sự render (.staff-full)", info.found === true);
 check("Là BẢNG có tiêu đề (không còn mini-list)", (info.heads || []).length >= 8, (info.heads || []).join(" | "));
-check("Có ô tìm kiếm", info.hasSearch === true);
+check("Có ô tìm kiếm (toolbar chuẩn §5 hoặc trong danh sách)", info.hasSearch === true);
 check("Có ≥3 bộ lọc", (info.filters || 0) >= 3, `${info.filters} select`);
 check("Có phân trang", info.pager === true);
 check("Nút CRUD đủ 3 (Hồ sơ/Sửa/Quyền)", (info.actionBtns || []).length >= 3, (info.actionBtns || []).join(" · "));
@@ -97,6 +100,31 @@ check("Nút CRUD đủ 3 (Hồ sơ/Sửa/Quyền)", (info.actionBtns || []).leng
 const ratio = info.winW ? info.tableW / info.winW : 0;
 check("Bảng chiếm toàn màn hình (không bị chia đôi)", ratio >= 0.6,
   `bảng ${info.tableW}px / cửa sổ ${info.winW}px = ${Math.round(ratio * 100)}%`);
+
+// Ô tìm kiếm PHẢI CÓ TÁC DỤNG THẬT sau khi chuyển lên toolbar chuẩn §5.
+// Đây là phép kiểm CHẶT HƠN phép kiểm cũ (chỉ hỏi ô nhập có tồn tại) — chứng minh việc chuyển
+// vị trí không làm mất khả năng lọc.
+console.log("\n▸ Ô tìm kiếm ở toolbar có lọc thật không");
+const sBefore = JSON.parse(await ev(`(()=>{
+  const i=document.querySelector('.list-toolbar input[type="search"], .list-toolbar-search input');
+  if(!i) return JSON.stringify({ok:false});
+  const before=document.querySelectorAll('.staff-full tbody tr .row-actions').length;
+  const setter=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set;
+  setter.call(i,'Nguyễn');
+  i.dispatchEvent(new Event('input',{bubbles:true}));
+  return JSON.stringify({ok:true,before});
+})()`));
+await sleep(900);
+const sAfter = JSON.parse(await ev(`(()=>{
+  const n=document.querySelectorAll('.staff-full tbody tr .row-actions').length;
+  const i=document.querySelector('.list-toolbar input[type="search"], .list-toolbar-search input');
+  if(i){ const setter=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set;
+    setter.call(i,''); i.dispatchEvent(new Event('input',{bubbles:true})); }
+  return JSON.stringify({after:n});
+})()`));
+await sleep(700);
+check("Ô tìm kiếm ở toolbar LỌC THẬT", sBefore.ok === true && sAfter.after < sBefore.before,
+  `tìm "Nguyễn": ${sBefore.before} dòng → ${sAfter.after} dòng`);
 
 // lọc thử
 console.log("\n▸ Thử bộ lọc + sắp xếp");
