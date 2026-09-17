@@ -67,3 +67,14 @@ Kèm đó, `tsc` bắt tiếp một lớp khác: `ListToolbar` khai `title: stri
 | `app/components/ui/ListToolbar.tsx` | `title`/`note`: `string` → **`ReactNode`** |
 | `docs/25_TODO_ROADMAP.md` | `U-09` → **`DONE / AP-DUNG 25`** (đúng định dạng cổng đếm được) |
 | `docs/agent-progress/{MASTER_STATUS,TASK_INDEX}.md` | mốc trạng thái + dòng task |
+
+## 7. Bằng chứng sau khi DỰNG LẠI BUNDLE + KHỞI ĐỘNG LẠI UI
+
+| Phép kiểm | Kết quả |
+|---|---|
+| Dấu vân tay mới | head `drizzle/0112_phase1_ui_toolbar_done_identity.sql` ⇒ **`fe5df2df…`** (`VNTECH-FP-FE5DF2DF9314BB0C`, **245 tệp**), *Fixed point stable: OK*, cổng xác minh **ĐẠT** |
+| `npm run build` | **EXIT 0** · `BUILT ARTIFACT VALIDATION: ĐẠT` |
+| UI `:8787` | **HTTP 200** · header `x-vntech-source-fingerprint` = **`VNTECH-FP-FE5DF2DF9314BB0C`** ⇒ đúng bản mới |
+| Proxy `:9000` · Java health · đăng nhập qua proxy | **200 · 200 · 200** |
+| Bundle client đang phục vụ | **CÓ** `list-toolbar` (xác nhận U-09 vào bản chạy) cùng `vt-timeline-step` · `entity-detail-modal` · `attachment-photos` · `vt-timeline-activity` |
+| **Cổng ảnh 28 ảnh (đo lại trên bản mới)** | **8/28 — KHÔNG TĂNG** so với trước thay đổi |
