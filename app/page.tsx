@@ -988,16 +988,14 @@ function TeamManagement({ data, open }: { data: AppData; open: (name: string, ro
         </section>
         {past.length > 0 && <section className="card">
           <CardHead title="Thành viên đã rời tổ đội" note="Lưu vết thời gian tham gia và rời đi"/>
-          <div className="table-wrap"><table className="baseline-table">
-            <thead><tr><th>Họ tên</th><th>Mã NV</th><th>Vai trò</th><th>Ngày tham gia</th><th>Ngày rời</th><th>Thời gian tham gia</th></tr></thead>
-            <tbody>{past.map((m) => {
-              const days = m.joinedAt && m.leftAt ? Math.max(0, Math.round((new Date(String(m.leftAt)).getTime() - new Date(String(m.joinedAt)).getTime()) / 86400000)) : null;
-              return <tr key={String(m.id)}>
-                <td><strong>{m.fullName || "—"}</strong></td><td>{m.employeeCode || "—"}</td><td>{m.roleInTeam || "Thành viên"}</td>
-                <td>{m.joinedAt ? date(m.joinedAt) : "—"}</td><td>{m.leftAt ? date(m.leftAt) : "—"}</td>
-                <td>{days === null ? "—" : `${days} ngày`}</td></tr>;
-            })}</tbody>
-          </table></div>
+          <DataTable rows={past} rowKey={(m) => String(m.id)} columns={[
+            { key: "c1", header: "Họ tên", render: (m) => <strong>{m.fullName || "—"}</strong> },
+            { key: "c2", header: "Mã NV", render: (m) => m.employeeCode || "—" },
+            { key: "c3", header: "Vai trò", render: (m) => m.roleInTeam || "Thành viên" },
+            { key: "c4", header: "Ngày tham gia", render: (m) => (m.joinedAt ? date(m.joinedAt) : "—") },
+            { key: "c5", header: "Ngày rời", render: (m) => (m.leftAt ? date(m.leftAt) : "—") },
+            { key: "c6", header: "Thời gian tham gia", render: (m) => { const days = m.joinedAt && m.leftAt ? Math.max(0, Math.round((new Date(String(m.leftAt)).getTime() - new Date(String(m.joinedAt)).getTime()) / 86400000)) : null; return days === null ? "—" : `${days} ngày`; } },
+          ]} />
         </section>}
       </div>}
 
