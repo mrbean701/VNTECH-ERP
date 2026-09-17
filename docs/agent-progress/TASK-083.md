@@ -1,9 +1,9 @@
 # TASK-083 — `U-15` ĐỢT 2: CHUYỂN BẢNG PHẲNG SANG `DataTable`
 
-- **Mã:** TASK-083 · **Ngày:** 18/09/2026 · **Commit:** `#151` … `#167` (15 bảng)
-- **Định danh nguồn:** head `drizzle/0124_phase1_ui_datatable10_identity.sql` ⇒ **`VNTECH-FP-10606747FB52F138`**
-- **Trạng thái:** đang làm — **15 bảng phẳng đã chuyển** (`DataTable` **13 → 28** · bảng tự viết **87 → 72** ·
-  trạng thái rỗng tự viết **88 → 75**); còn **bảng "cần cân nhắc"** + **~72 bảng KHÔNG chuyển được** (xem mục 3)
+- **Mã:** TASK-083 · **Ngày:** 18/09/2026 · **Commit:** `#151` … `#169` (16 bảng)
+- **Định danh nguồn:** head `drizzle/0125_phase1_ui_datatable11_identity.sql` ⇒ **`VNTECH-FP-6341C996591D3DD3`**
+- **Trạng thái:** đang làm — **16 bảng phẳng đã chuyển** (`DataTable` **13 → 29** · bảng tự viết **87 → 71** ·
+  trạng thái rỗng tự viết **88 → 74**); còn **bảng "cần cân nhắc"** + **~71 bảng KHÔNG chuyển được** (xem mục 3)
 
 ## 1. Vì sao có task này
 
@@ -30,9 +30,10 @@ Số đo bằng `tools/probe-ui-adoption.mjs`: **bảng tự viết 87 chỗ** �
 | 13 | `TeamManagement` | **thông tin dự án của tổ đội** | 6 cột; bảng cũ render **đúng 1 dòng** khi có dự án ⇒ `rows={proj ? [proj] : []}`; `emptyText` **nguyên văn** *"Tổ đội chưa gắn dự án nào."* |
 | 14 | `ProjectManagement` | **danh sách dự án (9 cột)** | mã · tên (+`<small>` hợp đồng) · trạng thái · bắt đầu · kết thúc dự kiến · tiến độ · nhân sự · tổ đội · nút `Chi tiết ›`; giữ nguyên `projectOverdueDays(row)` cho `red-text`, `scopesOf().length`, `teamsOf().length`; `emptyText` **nguyên văn** *"Không có dự án phù hợp bộ lọc."* |
 | 15 | `Requests` | **danh sách Phiếu đề nghị (9 cột)** | bảng **ĐẦU TIÊN cần CHỌN DÒNG** ⇒ phải mở rộng `DataTable` lần thứ 4: thêm **`rowClassName`**. Giữ `tableClassName="data-table"` (con trỏ dòng), ô `radio readOnly`, 2 nút `icon-mini` có `stopPropagation`, và dải phân trang **ở ngoài** bảng; `emptyText` **nguyên văn** *"Không có phiếu phù hợp bộ lọc."* |
+| 16 | `MaterialCatalogPage` | **danh mục vật tư** (`material-list-table`) | 10/11 cột; ⚠️ **GIỮ lớp `material-list-table`** qua `tableClassName` (`canonical.css:732` chặn ngắt dòng + `:734` nút `disabled`) — bỏ là **mất định dạng**. Cột **"Tên phụ (alias)" ĐỘNG** nay là một `Column` với **`hidden: !showAlias`** (tiêu đề và dữ liệu biến mất cùng nhau; `colSpan` dòng rỗng tự đúng). Giữ 3 nút `export-mini` (Sửa/Hợp nhất/Ngừng) **nguyên văn** `title`/`disabled`; `emptyText` **nguyên văn** *"Không có vật tư phù hợp bộ lọc."* |
 
-**Đo lại sau khi chuyển:** `DataTable` **13 → 28 lần** · bảng tự viết **87 → 72 chỗ** · trạng thái rỗng tự viết **88 → 75 chỗ**.
-`app/page.tsx` **4025 dòng** / 221 hàm top-level.
+**Đo lại sau khi chuyển:** `DataTable` **13 → 29 lần** · bảng tự viết **87 → 71 chỗ** · trạng thái rỗng tự viết **88 → 74 chỗ**.
+`app/page.tsx` **4019 dòng** / 221 hàm top-level.
 
 ### 2c. ⚠️ VÌ SAO `rowClassName` PHẢI LÀ **LỚP CSS**, KHÔNG THỂ DÙNG `rowStyle` (bảng 15)
 
@@ -185,15 +186,17 @@ bảng nhóm dòng, bảng tổng hợp tĩnh, lưới nhập liệu).
 
 1. ~~Mở rộng `DataTable`: `rowStyle`~~ · ✅ **XONG** (bảng 5) · ~~`tableClassName`~~ ✅ **XONG** (bảng 11) ·
    ~~`cellClassName`~~ ✅ **XONG** (TASK-081) · ~~`rowClassName`~~ ✅ **XONG** (bảng 15).
-2. ~~Chuyển các bảng có `colSpan` **chỉ ở dòng rỗng**~~ ✅ **XONG** · ~~bảng chọn dòng `selected-row`~~ ✅ **XONG** (bảng 15).
-3. **Kế tiếp — `MaterialCatalogPage` bảng danh mục `material-list-table`**: dùng `tableClassName` đã có để giữ
-   `white-space: nowrap` (`canonical.css:732`), cột alias **ĐỘNG** ⇒ dựng `columns` động như bảng ma trận quyền.
-4. **Rồi — `WorkCenter` bảng nhiệm vụ phòng ban** (10 cột, có `selected?.id` **chọn dòng** ⇒ nay đã có `rowClassName`,
-   nhưng bảng này **không** dùng `baseline-table` ⇒ phải so cổng ảnh trước/sau rồi mới kết luận).
+2. ~~Chuyển các bảng có `colSpan` **chỉ ở dòng rỗng**~~ ✅ **XONG** · ~~bảng chọn dòng `selected-row`~~ ✅ **XONG** (bảng 15) ·
+   ~~`material-list-table` cột alias ĐỘNG~~ ✅ **XONG** (bảng 16).
+3. **Kế tiếp — `WorkCenter` bảng nhiệm vụ phòng ban** (10 cột, có `selected?.id` **chọn dòng** ⇒ nay đã có `rowClassName`,
+   cột "Hạn hoàn thành" có `red-text` theo hạn, cột "Nguồn" là `link-button`) — bảng này **không** dùng `baseline-table`
+   ⇒ **bắt buộc so cổng ảnh trước/sau** rồi mới kết luận (màn `03-work` **đã được cổng ảnh phủ** nên chỉ cần so hash báo cáo).
+4. **Rồi — rà lại danh sách "cần cân nhắc" còn lại** trên **89 khối `<table>`** (bộ quét ở mục 3) để tìm bảng nào
+   vừa **an toàn** vừa **là danh sách phẳng**; bảng nhập liệu/nhóm dòng/bảng in thì **giữ nguyên**.
 5. Chỉ chuyển bảng `<table>` trần **khi** đã chứng minh CSS tương đương (`canonical.css:103-113` đã chứng minh cho
    `.table-wrap table` — nhưng mỗi bảng **vẫn phải so cổng ảnh trước/sau**, xem mục 2b và 2e).
 
-## 4b. Lịch sử head định danh nguồn (15 bảng = 10 head)
+## 4b. Lịch sử head định danh nguồn (16 bảng = 11 head)
 
 | Head | Bảng đã chuyển | Fingerprint |
 |---|---|---|
@@ -202,36 +205,37 @@ bảng nhóm dòng, bảng tổng hợp tĩnh, lưới nhập liệu).
 | `0118`…`0122` | 5–13 | … |
 | `0122_phase1_ui_datatable8_identity.sql` | 13 | `VNTECH-FP-30EE365D549AD7D4` |
 | `0123_phase1_ui_datatable9_identity.sql` | 14 (danh sách dự án 9 cột) | `VNTECH-FP-ADA2358D8EFD995C` |
-| `0124_phase1_ui_datatable10_identity.sql` | **15 (Phiếu đề nghị 9 cột + `rowClassName`)** | **`VNTECH-FP-10606747FB52F138`** |
+| `0124_phase1_ui_datatable10_identity.sql` | 15 (Phiếu đề nghị 9 cột + `rowClassName`) | `VNTECH-FP-10606747FB52F138` |
+| `0125_phase1_ui_datatable11_identity.sql` | **16 (danh mục vật tư `material-list-table`)** | **`VNTECH-FP-6341C996591D3DD3`** |
 
 ⚠️ **Bắt buộc mỗi lần đổi `app/page.tsx`:** head mới → `node tools/refresh-phase-identity.mjs <head.sql> "<NHÃN>"`
-→ `UPDATE vntech_product_identity` trên **MySQL** (SQLite do `local-runtime.mjs` tự chạy migration)
-→ `node scripts/generate-release-manifest.mjs` → `npm run build`. Bỏ bước nào cũng **chặn build** (fingerprint gate).
+→ `UPDATE vntech_product_identity` trên **MySQL** **và** đồng bộ `.local-data/warehouse.sqlite` (`node tools/set-local-identity.mjs`)
+→ `node scripts/generate-release-manifest.mjs` → `npm run build`. Bỏ bước nào cũng **chặn build/khởi động** (fingerprint gate).
 
 ⚠️ **Cột `source_fingerprint_short` trong SQLite KHÔNG được các head cập nhật** (khối identity chỉ `UPDATE
 source_fingerprint`); nó còn giá trị cũ từ `0049_master_baseline_identity_refresh_r1_1_1.sql`
 (`VNTECH-FP-31CB2728606DF468`). **Cổng khởi động chỉ so cột 64-hex** ⇒ không phải lỗi, nhưng **đừng đọc
 `source_fingerprint_short` của SQLite để kết luận định danh** — hãy đọc `source_fingerprint`, hoặc đọc banner khởi động.
+(`tools/set-local-identity.mjs` có cập nhật cả cột short cho nhất quán khi ta chủ động chạy.)
 
-## 5. Tệp thay đổi (đợt này — bảng 15)
+## 5. Tệp thay đổi (đợt này — bảng 16)
 
 | Tệp | Nội dung |
 |---|---|
-| `app/page.tsx` | bảng **Phiếu đề nghị 9 cột** (`Requests`) → `<DataTable>` + `rowClassName`/`onRowClick`/`tableClassName="data-table"` (4007 → 4025 dòng) |
-| `app/components/ui/DataTable.tsx` | **mở rộng lần 4:** thêm **`rowClassName?: (row, index) => string \| undefined`** (lớp CSS trên `<tr>`) |
-| `drizzle/0124_phase1_ui_datatable10_identity.sql` | **MỚI** — head định danh nguồn (fixed point `VNTECH-FP-10606747FB52F138`) |
-| `tools/probe-visual-regression.mjs` | thêm **màn 08 `08-requests`** (nhóm `purchasing`, con 0) — màn này trước đây **không được cổng ảnh phủ** |
-| `tools/baseline/08-requests__{desktop,laptop,tablet,phone}.png` | **MỚI** — 4 ảnh chuẩn của màn Phiếu đề nghị, chụp từ **bản CŨ** để làm mốc đối chiếu |
-| `tools/set-local-identity.mjs` | **MỚI** — đồng bộ hàng định danh trong `.local-data/warehouse.sqlite` (bắt buộc khi đo bản CŨ) |
+| `app/page.tsx` | bảng **danh mục vật tư** (`material-list-table`) → `<DataTable>` + `tableClassName="material-list-table"` + cột alias **`hidden: !showAlias`** (4025 → 4019 dòng) |
+| `drizzle/0125_phase1_ui_datatable11_identity.sql` | **MỚI** — head định danh nguồn (fixed point `VNTECH-FP-6341C996591D3DD3`) |
 | `lib/vntech-identity-data.mjs` · `VNTECH_*.txt` · `VNTECH_FINGERPRINT.json` · `MANIFEST_SHA256.txt` | đồng bộ định danh + manifest |
 | `docs/agent-progress/TASK-083.md` | hồ sơ này |
 
-**Bằng chứng kiểm chứng lượt bảng 15:** `tsc --noEmit` **EXIT 0** · eslint **0 error** (72 warning, đều có trước) ·
+**Bằng chứng kiểm chứng lượt bảng 16:** `tsc --noEmit` **EXIT 0** · eslint **0 error** (72 warning, đều có trước) ·
 `master-baseline-gate` **ĐẠT** (`!important=4950` · `css=400643B`) · `npm run build` **EXIT 0** +
 `BUILT ARTIFACT VALIDATION: ĐẠT` · `npm run test:regression` **61 test / 59 pass / 2 fail (đúng 2 ca đã biết)** ·
-🔬 **cổng ảnh TRƯỚC/SAU cho màn Phiếu đề nghị (màn chưa từng có ảnh chuẩn): ✅ 0 px cả 4 kích thước** ·
-7 màn cũ vẫn giữ nguyên kết quả như trước · `probe-column-parity` **KHÔNG khoá nào thiếu cột** (đối chứng dương 5/5) ·
-`probe-money-consistency` **14/14** · `probe-row-duplication` **15/15** · UI `:8787` và proxy `:9000` **HTTP 200**,
-định danh phục vụ **`VNTECH-FP-10606747FB52F138`**.
+🔬 **cổng ảnh 32 ảnh TRÙNG NHAU TỪNG BYTE với lượt trước** (`FF18686D…967C`) — trong đó màn `05-material`
+(**chính màn vừa chuyển**) **không đổi một điểm ảnh** · `probe-column-parity` **KHÔNG khoá nào thiếu cột**
+(đối chứng dương **5/5**) · `probe-money-consistency` **14/14** · `probe-row-duplication` **15/15** ·
+UI `:8787` và proxy `:9000` **HTTP 200**, định danh phục vụ **`VNTECH-FP-6341C996591D3DD3`**.
+⚠️ **Cổng ảnh tổng thể vẫn ghi "KHÔNG ĐẠT ❌ — 19/32"** — 19 ảnh lệch đó là **19 ảnh có từ trước** do **đổi dữ liệu thật**
+(17–18/09) và **không** thuộc lượt này; muốn đưa về ĐẠT phải chạy `--update` **sau khi anh xác nhận dữ liệu mới**.
+
 
 
