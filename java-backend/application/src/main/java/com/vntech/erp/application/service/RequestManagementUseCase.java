@@ -2,6 +2,7 @@ package com.vntech.erp.application.service;
 
 import com.vntech.erp.application.port.out.IdGenerator;
 import com.vntech.erp.application.port.out.RequestStore;
+import com.vntech.erp.application.rbac.AccessScopeService;
 import com.vntech.erp.application.rbac.RbacService;
 
 import java.time.Instant;
@@ -26,11 +27,14 @@ public final class RequestManagementUseCase {
     private final RequestStore store;
     private final IdGenerator idGenerator;
     private final RbacService rbac;
+    private final AccessScopeService accessScope;
 
-    public RequestManagementUseCase(RequestStore store, IdGenerator idGenerator, RbacService rbac) {
+    public RequestManagementUseCase(RequestStore store, IdGenerator idGenerator, RbacService rbac,
+                                    AccessScopeService accessScope) {
         this.store = store;
         this.idGenerator = idGenerator;
         this.rbac = rbac;
+        this.accessScope = accessScope;
     }
 
     public interface Principal {
@@ -367,6 +371,9 @@ public final class RequestManagementUseCase {
         if (reason.isEmpty()) throw Api("Phải nhập lý do hủy phiếu.");
         Map<String, Object> mr = store.findRequestBasic(requestId)
                 .orElseThrow(() -> Api("Không tìm thấy phiếu đề nghị."));
+        // JS 1048: canAccessProject(user, mr.projectId, true) — kiểm TRƯỚC khi kiểm vai trò.
+        accessScope.requireProjectAccess(principal.userId(), principal.role(),
+                sv(mr, "projectId"), true, "Tài khoản không có quyền tại dự án.");
         if (!"commander".equals(cancelBaseRole(principal)) && !"admin".equals(principal.role()))
             throw Api("Chỉ Chỉ huy trưởng được hủy phiếu bị trả lại.");
         if (!"returned_to_requester".equals(sv(mr, "status")))

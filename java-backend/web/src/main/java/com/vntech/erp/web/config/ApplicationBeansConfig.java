@@ -1,5 +1,6 @@
 package com.vntech.erp.web.config;
 
+import com.vntech.erp.application.port.out.AccessScopeStore;
 import com.vntech.erp.application.port.out.AdminSystemStore;
 import com.vntech.erp.application.port.out.AuditLogPort;
 import com.vntech.erp.application.port.out.AdminOpsStore;
@@ -26,6 +27,7 @@ import com.vntech.erp.application.port.out.SystemSetupPort;
 import com.vntech.erp.application.port.out.UserAdminStore;
 import com.vntech.erp.application.port.out.UserRepository;
 import com.vntech.erp.application.port.out.WarehouseStockStore;
+import com.vntech.erp.application.rbac.AccessScopeService;
 import com.vntech.erp.application.rbac.RbacService;
 import com.vntech.erp.application.service.AdminOpsManagementUseCase;
 import com.vntech.erp.application.service.AdminSystemUseCase;
@@ -71,6 +73,13 @@ public class ApplicationBeansConfig {
         return new RbacService(modulePermissionStore);
     }
 
+    /** Port nguyên trạng canAccessProject()/canAccessWarehouse() — kiểm PHẠM VI dự án/kho (TASK-023). */
+    @Bean
+    public AccessScopeService accessScopeService(AccessScopeStore accessScopeStore,
+                                                 ModulePermissionStore modulePermissionStore) {
+        return new AccessScopeService(accessScopeStore, modulePermissionStore);
+    }
+
     /** Port /api/files (app/api/files/route.ts) — tệp đính kèm + archive dự án offline. */
     @Bean
     public FileUseCase fileUseCase(com.vntech.erp.application.port.out.FileStore fileStore) {
@@ -102,8 +111,9 @@ public class ApplicationBeansConfig {
     @Bean
     public RequestManagementUseCase requestManagementUseCase(RequestStore requestStore,
                                                              IdGenerator idGenerator,
-                                                             RbacService rbacService) {
-        return new RequestManagementUseCase(requestStore, idGenerator, rbacService);
+                                                             RbacService rbacService,
+                                                             AccessScopeService accessScopeService) {
+        return new RequestManagementUseCase(requestStore, idGenerator, rbacService, accessScopeService);
     }
 
     @Bean
