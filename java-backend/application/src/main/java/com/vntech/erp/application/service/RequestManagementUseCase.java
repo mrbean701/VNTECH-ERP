@@ -56,6 +56,9 @@ public final class RequestManagementUseCase {
         // admin-only, không ai lập được phiếu đề nghị mua. Dùng mã vai trò THẬT trong DB.
         rbac.requireRole(principalAsCurrent(principal), List.of("engineer", "commander", "admin"));
         String projectId = trim(payload.get("projectId"));
+        // JS 907.
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), projectId, true,
+                "Tài khoản không được lập đơn cho dự án này.");
         String neededAt = trim(payload.get("neededAt"));
         String area = trim(payload.get("area"));
         List<?> rawLines = payload.get("lines") instanceof List<?> l ? l : List.of();
@@ -391,6 +394,9 @@ public final class RequestManagementUseCase {
         String comment = trim(payload.get("comment"));
         Map<String, Object> mr = store.findRequestForApproval(requestId)
                 .orElseThrow(() -> Api("Không tìm thấy đơn yêu cầu."));
+        // JS 1076: phạm vi dự án của CHÍNH đơn (findRequestForApproval alias projectId).
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), sv(mr, "projectId"), true,
+                "Tài khoản không có quyền tại dự án.");
         if (!canApproveRequestStage(principal.userId(), requestId, stage))
             throw Api("Bạn không phải Owner được phân công của bước này hoặc không đủ RBAC để phê duyệt.");
         if ((int) numberValue(gi(mr, "approvalStage")) != stage || !"pending_approval".equals(sv(mr, "status")))

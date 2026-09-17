@@ -40,7 +40,36 @@ for (const file of walk("java-backend")) {
     writeFileSync(file, crlf ? text.replace(/\n/g, "\r\n") : text, "utf8");
     filesTouched++;
     removed += hits;
-    rows.push(`  APD ${file.replace(/\\/g, "/").split("/").pop()} — go ${hits} khoi lap`);
+    rows.push(`  APD ${file.replace(/\\/g, "/").split("/").pop()} — go ${hits} khoi requireRole lap`);
+  }
+
+  // LƯỢT 2: gỡ các dòng `import ...;` BỊ LẶP LIỀN KỀ (cùng gốc lỗi idempotency, script dọn đầu chưa xử lý).
+  let importHits = 0;
+  for (;;) {
+    const m = /(^import [^\n]+;\n)\1/m.exec(text);
+    if (!m) break;
+    text = text.replace(m[0], m[1]);
+    importHits++;
+  }
+  // Và import lặp KHÔNG liền kề (cùng nội dung, khác vị trí) — chỉ gỡ khi trùng y hệt.
+  const importLines = text.split("\n");
+  const seen = new Set();
+  const kept = [];
+  let nonAdjacent = 0;
+  for (const line of importLines) {
+    if (line.startsWith("import ") && line.endsWith(";")) {
+      if (seen.has(line)) { nonAdjacent++; continue; }
+      seen.add(line);
+    }
+    kept.push(line);
+  }
+  if (nonAdjacent > 0) text = kept.join("\n");
+
+  if (importHits + nonAdjacent > 0) {
+    writeFileSync(file, crlf ? text.replace(/\n/g, "\r\n") : text, "utf8");
+    if (hits === 0) filesTouched++;
+    removed += importHits + nonAdjacent;
+    rows.push(`  APD ${file.replace(/\\/g, "/").split("/").pop()} — go ${importHits + nonAdjacent} dong import lap`);
   }
   void before;
 }

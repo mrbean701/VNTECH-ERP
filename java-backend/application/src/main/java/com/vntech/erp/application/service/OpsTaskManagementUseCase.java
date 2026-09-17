@@ -2,7 +2,7 @@ package com.vntech.erp.application.service;
 
 import com.vntech.erp.application.port.out.IdGenerator;
 import com.vntech.erp.application.port.out.OpsTaskStore;
-import com.vntech.erp.application.rbac.RbacService;
+import com.vntech.erp.application.rbac.AccessScopeService;
 import com.vntech.erp.application.rbac.RbacService;
 
 import java.time.Instant;
@@ -27,11 +27,13 @@ public final class OpsTaskManagementUseCase {
     private final OpsTaskStore store;
     private final IdGenerator idGenerator;
     private final RbacService rbac;
+    private final AccessScopeService accessScope;
 
-    public OpsTaskManagementUseCase(OpsTaskStore store, IdGenerator idGenerator, RbacService rbac) {
+    public OpsTaskManagementUseCase(OpsTaskStore store, IdGenerator idGenerator, RbacService rbac, AccessScopeService accessScope) {
         this.store = store;
         this.idGenerator = idGenerator;
         this.rbac = rbac;
+        this.accessScope = accessScope;
     }
 
     /** Dựng CurrentUser cho tầng RBAC — roleBase là mã ENGINE do controller truyền xuống. */
@@ -62,6 +64,12 @@ public final class OpsTaskManagementUseCase {
         if (!trim(payload.get("sourceId")).isEmpty() || !trim(payload.get("sourceType")).isEmpty()
                 || !trim(payload.get("sourceModule")).isEmpty())
             throw Api("Giao việc thủ công chỉ dùng cho công việc không có nghiệp vụ nguồn. Task từ ERP phải được hệ thống tự sinh.");
+        // JS 1153: CHỈ kiểm khi projectId KHÁC RỖNG — công việc phòng ban không gắn dự án vẫn hợp lệ.
+        String scopeProjectId = trim(payload.get("projectId"));
+        if (!scopeProjectId.isEmpty()
+                && !accessScope.canAccessProject(principal.userId(), principal.role(), scopeProjectId, true)) {
+            throw Api("Không có quyền tại dự án.");
+        }
         String title = trim(payload.get("title"));
         if (title.isEmpty()) throw Api("Cần nhập nội dung công việc.");
         String projectId = nvl(payload.get("projectId"));
@@ -219,6 +227,9 @@ public final class OpsTaskManagementUseCase {
         // JS 1484: requireRole(user,["commander","admin"]) — TASK-022 bổ sung.
         rbac.requireRole(principalAsCurrent(principal), List.of("commander", "admin"));
         String projectId = trim(payload.get("projectId"));
+        // JS 1487.
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), projectId, true,
+                "CHT chỉ được tạo tổ đội trong dự án được phân quyền.");
         String code = trim(payload.get("code")).toUpperCase(Locale.ROOT);
         String name = trim(payload.get("name"));
         String trade = trim(payload.get("trade"));
@@ -492,6 +503,9 @@ public final class OpsTaskManagementUseCase {
         // JS 1253: requireRole(user,["project","procurement","admin"]) — TASK-022 bổ sung.
         rbac.requireRole(principalAsCurrent(principal), List.of("project", "procurement", "admin"));
         String projectId = trim(payload.get("projectId"));
+        // JS 1253.
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), projectId, true,
+                "Không có quyền tại dự án này.");
         String materialId = trim(payload.get("materialId"));
         String status = trim(payload.get("status"));
         if (!List.of("pending", "approved", "rejected").contains(status)) throw Api("Trạng thái MAR không hợp lệ.");

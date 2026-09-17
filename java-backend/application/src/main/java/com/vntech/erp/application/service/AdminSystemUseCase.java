@@ -2,6 +2,7 @@ package com.vntech.erp.application.service;
 
 import com.vntech.erp.application.port.out.AdminSystemStore;
 import com.vntech.erp.application.port.out.IdGenerator;
+import com.vntech.erp.application.rbac.AccessScopeService;
 import com.vntech.erp.application.rbac.RbacService;
 
 import java.time.Instant;
@@ -27,19 +28,24 @@ public final class AdminSystemUseCase {
     private final AdminSystemStore store;
     private final IdGenerator idGenerator;
     private final RbacService rbac;
+    private final AccessScopeService accessScope;
     private final UserManagementUseCase userManagement;
 
     public AdminSystemUseCase(AdminSystemStore store, IdGenerator idGenerator, RbacService rbac,
-                              UserManagementUseCase userManagement) {
+                              UserManagementUseCase userManagement, AccessScopeService accessScope) {
         this.store = store;
         this.idGenerator = idGenerator;
         this.rbac = rbac;
+        this.accessScope = accessScope;
         this.userManagement = userManagement;
     }
 
     public interface Principal {
         String userId();
         String role();
+
+        /** Loại phạm vi kho (site | central); rỗng ⇒ coi như "site". */
+        default String warehouseScopeKind() { return ""; }
     }
 
     // ================= organization_units =================
@@ -297,6 +303,10 @@ public final class AdminSystemUseCase {
         if (warehouseId.isEmpty() || code.isEmpty() || name.isEmpty())
             throw Api("Mã và tên vị trí kho là bắt buộc.");
         if (store.findWarehouse(warehouseId).isEmpty()) throw Api("Kho không còn tồn tại.");
+        // JS 1273.
+        accessScope.requireWarehouseAccess(principal.userId(), principal.role(),
+                principal.warehouseScopeKind(), warehouseId, true,
+                "Không có quyền cấu hình vị trí tại kho này.");
         boolean secure = payload.get("secure") == Boolean.TRUE || "1".equals(trim(payload.get("secure")));
         boolean active = !(payload.get("active") == Boolean.FALSE || "0".equals(trim(payload.get("active"))));
         store.upsertWarehouseLocation(warehouseId, code, name, locationType, secure, active, Instant.now());
@@ -530,6 +540,6 @@ public final class AdminSystemUseCase {
 
     private AuthUseCase.CurrentUser principalAsCurrent(Principal p) {
         return new AuthUseCase.CurrentUser(p.userId(), "", "", null, p.role(), p.role(), p.role(),
-                null, null, null, false);
+                p.warehouseScopeKind(), null, null, false);
     }
 }

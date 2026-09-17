@@ -3,6 +3,7 @@ package com.vntech.erp.application.service;
 import com.vntech.erp.application.port.out.AdminOpsStore;
 import com.vntech.erp.application.port.out.IdGenerator;
 import com.vntech.erp.application.port.out.ProductionStore;
+import com.vntech.erp.application.rbac.AccessScopeService;
 import com.vntech.erp.application.rbac.RbacService;
 import com.vntech.erp.domain.service.MaterialMatcherV2;
 
@@ -22,13 +23,15 @@ public final class AdminOpsManagementUseCase {
     private final ProductionStore productionStore;
     private final IdGenerator idGenerator;
     private final RbacService rbac;
+    private final AccessScopeService accessScope;
 
     public AdminOpsManagementUseCase(AdminOpsStore store, ProductionStore productionStore,
-                                     IdGenerator idGenerator, RbacService rbac) {
+                                     IdGenerator idGenerator, RbacService rbac, AccessScopeService accessScope) {
         this.store = store;
         this.productionStore = productionStore;
         this.idGenerator = idGenerator;
         this.rbac = rbac;
+        this.accessScope = accessScope;
     }
 
     public interface Principal {
@@ -116,6 +119,9 @@ public final class AdminOpsManagementUseCase {
         if (projectId.isEmpty() || rawLines.isEmpty())
             throw Api("Chọn dự án và file có ít nhất một dòng vật tư trước khi đối chiếu.");
         if (rawLines.size() > 100) throw Api("Mỗi phiếu đề nghị được nhập tối đa 100 dòng vật tư.");
+        // JS 865.
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), projectId, true,
+                "Tài khoản không được lập đơn cho dự án này.");
         String contractId = trim(payload.get("contractId"));
         String boqVersionId = trim(payload.get("boqVersionId"));
         Map<String, Object> ctx = store.findContractForVersion(projectId, contractId, boqVersionId)

@@ -1357,6 +1357,7 @@ public class SystemController {
         return new AdminSystemUseCase.Principal() {
             @Override public String userId() { return cu.id(); }
             @Override public String role() { return cu.role(); }
+            @Override public String warehouseScopeKind() { return cu.warehouseScopeKind(); }
         };
     }
 

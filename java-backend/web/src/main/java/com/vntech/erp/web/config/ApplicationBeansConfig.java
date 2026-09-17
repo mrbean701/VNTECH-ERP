@@ -170,8 +170,9 @@ public class ApplicationBeansConfig {
     public AdminOpsManagementUseCase adminOpsManagementUseCase(AdminOpsStore adminOpsStore,
                                                                ProductionStore productionStore,
                                                                IdGenerator idGenerator,
-                                                               RbacService rbacService) {
-        return new AdminOpsManagementUseCase(adminOpsStore, productionStore, idGenerator, rbacService);
+                                                               RbacService rbacService,
+                                                               AccessScopeService accessScopeService) {
+        return new AdminOpsManagementUseCase(adminOpsStore, productionStore, idGenerator, rbacService, accessScopeService);
     }
 
     @Bean
@@ -183,8 +184,9 @@ public class ApplicationBeansConfig {
 
     @Bean
     public OpsTaskManagementUseCase opsTaskManagementUseCase(OpsTaskStore opsTaskStore, IdGenerator idGenerator,
-                                                              RbacService rbacService) {
-        return new OpsTaskManagementUseCase(opsTaskStore, idGenerator, rbacService);
+                                                              RbacService rbacService,
+                                                              AccessScopeService accessScopeService) {
+        return new OpsTaskManagementUseCase(opsTaskStore, idGenerator, rbacService, accessScopeService);
     }
 
     @Bean
@@ -197,8 +199,9 @@ public class ApplicationBeansConfig {
     public AdminSystemUseCase adminSystemUseCase(AdminSystemStore adminSystemStore,
                                                  IdGenerator idGenerator,
                                                  RbacService rbacService,
-                                                 UserManagementUseCase userManagementUseCase) {
-        return new AdminSystemUseCase(adminSystemStore, idGenerator, rbacService, userManagementUseCase);
+                                                 UserManagementUseCase userManagementUseCase,
+                                                 AccessScopeService accessScopeService) {
+        return new AdminSystemUseCase(adminSystemStore, idGenerator, rbacService, userManagementUseCase, accessScopeService);
     }
 
     @Bean
