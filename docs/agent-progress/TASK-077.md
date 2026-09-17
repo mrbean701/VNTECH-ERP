@@ -57,3 +57,17 @@ Phép kiểm đúng phải là *"nội dung trong ngoặc nhọn có phải bi�
 | `app/page.tsx` | 6 khối toolbar → `<ListToolbar …/>`; 7 chỗ vá dấu nháy kép |
 | `docs/25_TODO_ROADMAP.md` | `U-09` cập nhật **số đo thật** (17 hàm / 19 lần dùng · còn 4 hàm) |
 | `docs/agent-progress/{MASTER_STATUS,TASK_INDEX}.md` | mốc trạng thái + dòng task |
+
+## 7. Bằng chứng sau khi DỰNG LẠI BUNDLE + KHỞI ĐỘNG LẠI UI
+
+Vì mỗi lần sửa nguồn đều phải làm mới dấu vân tay rồi dựng lại, phần này là bằng chứng đo trên **bản đang phục vụ thật**:
+
+| Phép kiểm | Kết quả |
+|---|---|
+| Dấu vân tay mới | head `drizzle/0111_phase1_ui_toolbar_identity.sql` ⇒ **`18c11578…`** (`VNTECH-FP-18C1157899707604`, **244 tệp**), *Fixed point stable: OK*, cổng xác minh **ĐẠT** |
+| `npm run build` | **EXIT 0** · `BUILT ARTIFACT VALIDATION: ĐẠT` |
+| UI `:8787` | **HTTP 200** · header `x-vntech-source-fingerprint` = **`VNTECH-FP-18C1157899707604`** ⇒ đúng bản mới |
+| Proxy `:9000` | **HTTP 200** · Java health **HTTP 200** |
+| Bundle client đang phục vụ | **CÓ** `list-toolbar` (thay đổi của task này) cùng `vt-timeline-step` · `entity-detail-modal` · `attachment-photos` · `vt-timeline-activity` |
+| **Cổng ảnh 28 ảnh** | **8/28 — KHÔNG TĂNG** so với trước thay đổi |
+| **Cổng ảnh riêng `--only=07-admin`** (nơi sửa 3 toolbar) | **ĐẠT ✅** — desktop **2 px** (dưới ngưỡng 8 px), laptop/tablet/phone **0 px** |
