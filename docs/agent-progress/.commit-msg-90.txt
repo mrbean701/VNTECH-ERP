@@ -1,0 +1,14 @@
+So sach sau #89 + DINH CHINH: TASK-054 DONE (port du 9 hanh vi all_roles, kiem chung 20/20) nhung KET LUAN o #88 la SAI - nguyen nhan that la snapshot dong bang che do duyet (dung chung ca hai loi) => TASK-055/D6 + bai hoc #24
+
+- TASK-054.md viet lai: bang 9 hanh vi da port (kem 2 phuong thuc moi o tang store), ket qua
+  probe 20/20, muc 3 DINH CHINH day du (lan chay dau 7/18 do dung hanh vi THAT cua CA HAI loi;
+  JS :1080 dung dung cau truy van uu tien snapshot; JS :976 ghi snapshot 'single' cho moi buoc co
+  Owner => 21/21 dong buoc all_roles bi dong bang => ma chet o ca hai loi), muc 4 => TASK-055.
+- TASK-055.md (moi): su viec + co che + 3 huong (A giu nguyen / B sua ca hai phia / C chi sua cho
+  phieu moi - khuyen nghi) + 7 phieu dang cho o buoc 5 bi anh huong + viec phai lam khi chon.
+- MASTER_STATUS: Known Problems #54 viet lai (da port du nhung ket luan cu sai) + #55 (snapshot dong
+  bang), D6 them vao bang quyet dinh, CURRENT TASK = TASK-049, LAST COMPLETED = TASK-054,
+  CURRENT TODO cap nhat, bai hoc #24: khi phep do cho ra hanh vi "sai" thi phai doc CAU TRUY VAN
+  tuong ung cua JS truoc khi buoc toi ban port - dau hieu bo qua: ban port chi THIEU MA, con cau SQL
+  doc du lieu thi GIONG HET.
+- TASK_INDEX: dong TASK-054 (DONE + dinh chinh) + dong TASK-055 moi.
