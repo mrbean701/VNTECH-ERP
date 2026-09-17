@@ -17,6 +17,9 @@ public interface BootstrapDataPort {
     record Context(
             String userId,
             boolean admin,
+            String roleCode,                  // users.role (mã vai trò thô)
+            String roleBase,                  // COALESCE(role_catalog.base_role, users.role) — JS effectiveRole()
+            String warehouseScopeKind,        // role_catalog.warehouse_scope_kind (JS mặc định "site")
             List<String> visibleProjectIds,   // projectIds sau khi lọc scope
             List<String> allProjectIds         // mọi project id (admin) hoặc trùng visible
     ) { }

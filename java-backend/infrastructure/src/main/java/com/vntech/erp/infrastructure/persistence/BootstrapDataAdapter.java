@@ -7,8 +7,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Port bootstrap(user) từ monolith JS sang JdbcTemplate + native SQL.
@@ -501,17 +503,52 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                         admin ? "" : "LEFT JOIN menu_group_catalog mg ON mg.group_key=mc.group_key WHERE mc.active=1 AND (mc.group_key IS NULL OR mg.active=1)"));
         data.put("moduleCatalog", moduleCatalog);
         // modulePermissions: admin = toàn bộ module active (giống JS)
+        // ⚠️ SỬA LỖI (TASK-052 — "lớp lỗi #4": cột MySQL `tinyint(1)` được JDBC trả về **Boolean**,
+        // không phải Number): hai nhánh dưới đây trước kia kiểm `activeVal instanceof Number`
+        // ⇒ LUÔN sai ⇒ `data.modulePermissions` của admin LUÔN RỖNG (0 dòng) dù JS trả đủ 61 dòng
+        // với permissionSource="admin". Đo được: `moduleCatalog[0].active === true` (JSON boolean).
+        // Hệ quả bị UI che: `app/page.tsx:548` trả toàn quyền cho admin TRƯỚC khi đọc danh sách này,
+        // nên lỗi không lộ ra ở màn hình quản trị. Dùng chung helper `isActiveOne` như 5 use-case khác
+        // trong kho (AdminSystemUseCase:527, ProjectContractUseCase:101, PurchaseManagementUseCase:405,
+        // RequestManagementUseCase:598, UserManagementUseCase:596).
         if (admin) {
             List<Map<String, Object>> perms = new ArrayList<>();
             for (Map<String, Object> mod : moduleCatalog) {
-                Object activeVal = mod.getOrDefault("active", 0);
-                if (activeVal instanceof Number num && num.intValue() == 1) {
+                if (isActiveOne(mod.get("active"))) {
                     Map<String, Object> perm = new LinkedHashMap<>();
                     perm.put("userId", ctx.userId());
                     perm.put("moduleKey", mod.get("moduleKey"));
                     perm.put("canView", 1); perm.put("canUse", 1); perm.put("canCreate", 1);
                     perm.put("canEdit", 1); perm.put("canApprove", 1); perm.put("canExport", 1);
                     perm.put("permissionSource", "admin");
+                    perms.add(perm);
+                }
+            }
+            data.put("modulePermissions", perms);
+        } else if (isCompanyLeadership(ctx.roleCode(), ctx.roleBase())) {
+            // ══════════════════════════════════════════════════════════════════════════════
+            // TASK-050 (kèm theo) — NHÁNH THỨ BA của JS `system-route.mjs:684` BỊ THIẾU HOÀN TOÀN
+            // JS: modulePermissions = admin ? <toàn bộ MODULE_KEYS>
+            //                        : isCompanyLeadership(user) ? <mọi module TRỪ "admin">
+            //                        : <dòng user_module_permissions của chính người dùng>
+            // Bản Java chỉ có nhánh 1 và nhánh 3. Hậu quả ĐO ĐƯỢC: tài khoản `thukydemo`
+            // (role `thuky`, base_role `director`) chỉ có 15 dòng `user_module_permissions`, trong khi
+            // JS cấp cho họ TOÀN BỘ module (trừ admin) với permissionSource="company_leadership".
+            // Việc này PHẢI port cùng lượt với bộ lọc module bên dưới: bộ lọc lấy chính danh sách
+            // modulePermissions làm đầu vào, nên nếu để nguyên thì tài khoản Ban giám đốc sẽ bị
+            // XOÁ TRẮNG dữ liệu oan (JS không xoá gì cho họ).
+            // (Hồ sơ TASK-024 đã ghi nhận lệch này ở mặt "mã vai trò"; đây là mặt ĐỌC của cùng lỗi.)
+            // ══════════════════════════════════════════════════════════════════════════════
+            List<Map<String, Object>> perms = new ArrayList<>();
+            for (Map<String, Object> mod : moduleCatalog) {
+                if (isActiveOne(mod.get("active"))
+                        && !"admin".equals(String.valueOf(mod.get("moduleKey")))) {
+                    Map<String, Object> perm = new LinkedHashMap<>();
+                    perm.put("userId", ctx.userId());
+                    perm.put("moduleKey", mod.get("moduleKey"));
+                    perm.put("canView", 1); perm.put("canUse", 1); perm.put("canCreate", 1);
+                    perm.put("canEdit", 1); perm.put("canApprove", 1); perm.put("canExport", 1);
+                    perm.put("permissionSource", "company_leadership");
                     perms.add(perm);
                 }
             }
@@ -1022,12 +1059,209 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                        l.equipment_note AS equipmentNote,l.status,l.submitted_by AS submittedBy,
                        us.full_name AS submittedByName,l.approved_by AS approvedBy,
                        ua.full_name AS approvedByName,l.approved_at AS approvedAt,l.note,
-                       l.created_at AS createdAt,l.updated_at AS updatedAt
+                       l.created_at AS createdAt,l.updated_at AS updatedAt,
+                       COALESCE(x.item_count,0) AS itemCount,COALESCE(x.completed_qty,0) AS completedQty
                 FROM construction_daily_logs l
                 JOIN projects p ON p.id=l.project_id
                 LEFT JOIN users us ON us.id=l.submitted_by
                 LEFT JOIN users ua ON ua.id=l.approved_by
+                LEFT JOIN (SELECT log_id,COUNT(*) AS item_count,SUM(completed_qty) AS completed_qty
+                           FROM construction_daily_log_items GROUP BY log_id) x ON x.log_id=l.id
                 WHERE l.project_id IN (%s) ORDER BY l.work_date DESC,l.created_at DESC""".formatted(pidSql), params(pids)));
+
+        // ══════════════════════════════════════════════════════════════════════════════════
+        // TASK-050 — 4 KHOÁ BOOTSTRAP BỊ THIẾU (lỗi port đường ĐỌC lần thứ 10)
+        // Cổng `tools/probe-bootstrap-keys.mjs` (#77) chỉ ra 4 khoá UI ĐỌC mà Java KHÔNG trả;
+        // đọc mã hai phía xác nhận JS trả đủ 4 (`system-route.mjs:620,621,659,712`), bản Java
+        // không có khoá nào ⇒ 4 màn hình RỖNG ngay sau cutover:
+        //   • centralInventory        → Tồn kho tổng
+        //   • centralReturns          → Trả hàng về kho tổng
+        //   • companyAvailability     → Khả dụng toàn công ty
+        //   • constructionDailyLogItems → dòng công việc của Nhật ký thi công
+        // Các action GHI tương ứng ĐÃ port từ trước — đúng lớp lỗi "port GHI mà quên port ĐỌC".
+        // ══════════════════════════════════════════════════════════════════════════════════
+
+        // JS :620 — Trả hàng về kho tổng (kèm dòng hàng lồng `items` + số tệp đính kèm)
+        List<Map<String, Object>> centralReturns = pids.isEmpty() ? List.of() : query("""
+                SELECT cr.id,cr.return_no AS returnNo,cr.source_project_id AS sourceProjectId,
+                       p.code AS projectCode,p.name AS projectName,
+                       cr.source_warehouse_id AS sourceWarehouseId,sw.name AS sourceWarehouseName,
+                       cr.central_warehouse_id AS centralWarehouseId,cr.requested_at AS requestedAt,
+                       cr.approved_at AS approvedAt,cr.received_at AS receivedAt,cr.status,cr.note,
+                       u.full_name AS requestedBy,
+                       COALESCE(a.item_count,0) AS itemCount,COALESCE(a.proposed_qty,0) AS proposedQty,
+                       COALESCE(a.accepted_qty,0) AS acceptedQty,COALESCE(a.rejected_qty,0) AS rejectedQty,
+                       COALESCE(att.attachment_count,0) AS attachmentCount
+                FROM central_returns cr
+                JOIN projects p ON p.id=cr.source_project_id
+                JOIN warehouses sw ON sw.id=cr.source_warehouse_id
+                JOIN users u ON u.id=cr.requested_by
+                LEFT JOIN (SELECT central_return_id,COUNT(*) AS item_count,SUM(proposed_qty) AS proposed_qty,
+                                  SUM(accepted_qty) AS accepted_qty,SUM(rejected_qty) AS rejected_qty
+                           FROM central_return_items GROUP BY central_return_id) a
+                       ON a.central_return_id=cr.id
+                LEFT JOIN (SELECT entity_id,COUNT(*) AS attachment_count FROM attachments
+                           WHERE entity_type='central_return' GROUP BY entity_id) att
+                       ON att.entity_id=cr.id
+                WHERE cr.source_project_id IN (%s)
+                ORDER BY cr.requested_at DESC LIMIT 300""".formatted(pidSql), params(pids));
+        if (!centralReturns.isEmpty()) {
+            List<String> returnIds = centralReturns.stream().map(r -> String.valueOf(r.get("id"))).toList();
+            List<Map<String, Object>> returnItemRows = query("""
+                    SELECT cri.id,cri.central_return_id AS centralReturnId,cri.material_id AS materialId,
+                           m.code AS materialCode,m.name AS materialName,m.unit,
+                           cri.proposed_qty AS proposedQty,cri.counted_qty AS countedQty,
+                           cri.accepted_qty AS acceptedQty,cri.rejected_qty AS rejectedQty,
+                           cri.condition_status AS conditionStatus,cri.unit_cost AS unitCost,
+                           cri.rejection_reason AS rejectionReason
+                    FROM central_return_items cri
+                    JOIN materials m ON m.id=cri.material_id
+                    WHERE cri.central_return_id IN (%s)
+                    ORDER BY cri.central_return_id,m.code""".formatted(inClause(returnIds)), params(returnIds));
+            centralReturns = centralReturns.stream().map(r -> {
+                Map<String, Object> out = new LinkedHashMap<>(r);
+                out.put("items", groupBy(returnItemRows, "centralReturnId", String.valueOf(r.get("id"))));
+                return out;
+            }).toList();
+        }
+        data.put("centralReturns", centralReturns);
+
+        // JS :621 — Tồn kho tổng: chỉ vật tư có số dư <> 0 tại kho WH-CENTRAL (KHÔNG lọc theo dự án)
+        List<Map<String, Object>> centralInventory = new ArrayList<>(query("""
+                WITH movements AS (
+                    SELECT material_id,to_warehouse_id AS warehouse_id,quantity AS qty
+                    FROM stock_movements WHERE to_warehouse_id='WH-CENTRAL'
+                    UNION ALL
+                    SELECT material_id,from_warehouse_id,-quantity
+                    FROM stock_movements WHERE from_warehouse_id='WH-CENTRAL'),
+                     balances AS (SELECT material_id,COALESCE(SUM(qty),0) AS balance
+                                  FROM movements GROUP BY material_id)
+                SELECT m.id AS materialId,m.code AS materialCode,m.name AS materialName,m.unit,
+                       m.`system`,m.min_stock AS minStock,COALESCE(b.balance,0) AS balance
+                FROM materials m LEFT JOIN balances b ON b.material_id=m.id
+                WHERE m.active=1 AND COALESCE(b.balance,0)<>0 ORDER BY m.code"""));
+        centralInventory.forEach(row -> row.put("aliasText",
+                String.join("; ", aliasesByMaterial.getOrDefault(
+                        String.valueOf(row.get("materialId")), List.of()))));
+        data.put("centralInventory", centralInventory);
+
+        // JS :712 — Khả dụng toàn công ty: on_hand - reserved theo từng kho (KHÔNG lọc theo dự án)
+        data.put("companyAvailability", query("""
+                WITH movements AS (
+                    SELECT material_id,to_warehouse_id AS warehouse_id,quantity AS qty
+                    FROM stock_movements WHERE to_warehouse_id IS NOT NULL
+                    UNION ALL
+                    SELECT material_id,from_warehouse_id,-quantity
+                    FROM stock_movements WHERE from_warehouse_id IS NOT NULL),
+                     balances AS (SELECT material_id,warehouse_id,SUM(qty) AS on_hand
+                                  FROM movements GROUP BY material_id,warehouse_id),
+                     res AS (SELECT material_id,warehouse_id,SUM(quantity) AS reserved
+                             FROM stock_reservations WHERE status='active'
+                             GROUP BY material_id,warehouse_id)
+                SELECT w.id AS warehouseId,w.code AS warehouseCode,w.name AS warehouseName,w.type,
+                       w.project_id AS projectId,p.code AS projectCode,b.material_id AS materialId,
+                       m.code AS materialCode,m.name AS materialName,m.unit,
+                       COALESCE(b.on_hand,0) AS onHand,COALESCE(r.reserved,0) AS reserved,
+                       CASE WHEN COALESCE(b.on_hand,0)-COALESCE(r.reserved,0)>0
+                            THEN COALESCE(b.on_hand,0)-COALESCE(r.reserved,0) ELSE 0 END AS available
+                FROM balances b
+                JOIN warehouses w ON w.id=b.warehouse_id AND w.active=1
+                JOIN materials m ON m.id=b.material_id
+                LEFT JOIN projects p ON p.id=w.project_id
+                LEFT JOIN res r ON r.material_id=b.material_id AND r.warehouse_id=b.warehouse_id
+                WHERE w.type<>'transit' AND COALESCE(b.on_hand,0)<>0
+                ORDER BY m.code,w.type,w.code"""));
+
+        // JS :659 — DÒNG công việc của Nhật ký thi công (trước đây Java chỉ trả `constructionDailyLogs`)
+        data.put("constructionDailyLogItems", pids.isEmpty() ? List.of() : query("""
+                SELECT i.id,i.log_id AS logId,i.boq_item_id AS boqItemId,i.item_name AS itemName,
+                       i.location,i.planned_qty AS plannedQty,i.completed_qty AS completedQty,i.unit,
+                       i.labor_hours AS laborHours,i.photo_attachment_id AS photoAttachmentId,i.note
+                FROM construction_daily_log_items i
+                JOIN construction_daily_logs l ON l.id=i.log_id
+                WHERE l.project_id IN (%s)""".formatted(pidSql), params(pids)));
+
+        // JS :622 — vai trò kho với phạm vi SITE bị XOÁ TRẮNG 2 khoá kho tổng (đúng trước khi dựng result).
+        // LƯU Ý: đây là bộ lọc theo VAI TRÒ, độc lập với bộ lọc theo MODULE ở dưới — port thiếu là LỖI BẢO MẬT.
+        String roleBaseClean = ctx.roleBase() == null ? "" : ctx.roleBase().trim();
+        String scopeKind = (ctx.warehouseScopeKind() == null || ctx.warehouseScopeKind().isBlank())
+                ? "site" : ctx.warehouseScopeKind().trim();
+        if ("warehouse".equals(roleBaseClean) && "site".equals(scopeKind)) {
+            data.put("centralInventory", List.of());
+            data.put("centralReturns", List.of());
+        }
+
+        // ══════════════════════════════════════════════════════════════════════════════════
+        // TASK-050 — BỘ LỌC QUYỀN SAU KHI DỰNG `result` (JS `system-route.mjs:728-737`)
+        // JS dựng ĐỦ dữ liệu rồi XOÁ TRẮNG theo module khi KHÔNG phải admin:
+        //   const view = new Set(modulePermissions.filter(r => Number(r.canView)===1).map(r => r.moduleKey))
+        // Bản Java port TRƯỚC ĐÂY KHÔNG CÓ bộ lọc này ⇒ người dùng thường nhận dữ liệu mà JS
+        // không hề trả: `users`, `audits`, `activeSessions`, `serverInfo`, `trustStatus`, sổ kho,
+        // BOQ/tài chính, danh mục vật tư, nhân sự… Vì cùng một SPA chạy trên cả hai lõi, khớp JS
+        // chính là hành vi đúng của bản cutover.
+        // GIỚI HẠN ĐÃ BIẾT: đầu vào `modulePermissions` của Java thiếu điều kiện `permission_expires_at`
+        // và phép JOIN nhóm menu mà JS:684 có ⇒ tập quyền của Java có thể RỘNG HƠN ⇒ xoá trắng ÍT HƠN
+        // JS một chút (không bao giờ nhiều hơn). Việc bù phần thiếu đó thuộc hồ sơ TASK-024.
+        // ══════════════════════════════════════════════════════════════════════════════════
+        if (!admin) {
+            Set<String> view = new LinkedHashSet<>();
+            Object permsObj = data.get("modulePermissions");
+            if (permsObj instanceof List<?> permsList) {
+                for (Object item : permsList) {
+                    if (item instanceof Map<?, ?> perm && isOne(perm.get("canView"))) {
+                        view.add(String.valueOf(perm.get("moduleKey")));
+                    }
+                }
+            }
+            if (!anyModule(view, "dashboard", "site_command", "dept_legal_hr", "dept_legal_labor",
+                    "dept_legal_correspondence", "dept_legal_documents", "dept_legal_seal",
+                    "dept_legal_benefits")) {
+                blank(data, "staffDirectory");
+            }
+            if (!anyModule(view, "requests", "approvals", "purchasing", "supplier_catalog",
+                    "receiving", "delivered")) {
+                blank(data, "requests", "supplySteps", "purchaseOrders", "receipts");
+            }
+            if (!anyModule(view, "warehouse_receipt", "warehouse_issue", "inventory", "stocktake",
+                    "central_warehouse", "material_catalog")) {
+                blank(data, "inventory", "contractStockLedger", "contractStockBalances",
+                        "stockReconciliations", "centralInventory", "centralReturns",
+                        "companyAvailability", "transferOrders", "issues", "returns", "stockCounts");
+            }
+            if (!anyModule(view, "boq", "dept_project_boq", "dept_project_material", "project_progress",
+                    "production", "construction", "capital_recovery", "payments", "dept_finance_recovery",
+                    "dept_finance_payment_plan", "dept_finance_advance", "dept_finance_site_cost",
+                    "dept_finance_cashbank", "dept_finance_documents", "dept_legal_correspondence",
+                    "dept_legal_documents", "dept_legal_seal", "dept_legal_benefits", "dept_legal_hr",
+                    "dept_legal_labor")) {
+                blank(data, "boqItems", "boqSourceItems", "projectContracts", "boqVersions",
+                        "boqImportBatches", "boqChangeHistory", "contractPayments", "productionReports",
+                        "capitalRecoveryRecords", "constructionDailyLogs", "constructionDailyLogItems",
+                        "paymentPlans", "advanceRequests", "siteExpenseClaims", "bankAccounts",
+                        "cashbookEntries", "accountingVouchers", "officialCorrespondence",
+                        "legalDocuments", "sealManagement", "benefitRecords");
+            }
+            if (!anyModule(view, "teams", "site_command", "construction")) {
+                blank(data, "teams", "teamSubcontracts", "teamProductionRecords", "teamPayments",
+                        "teamSettlements");
+            }
+            if (!anyModule(view, "material_catalog", "central_warehouse", "boq", "requests",
+                    "purchasing", "dept_project_material", "material_norms")) {
+                blank(data, "materials", "materialCategories", "materialSubcategories",
+                        "materialAliases", "materialNorms");
+            }
+            if (!anyModule(view, "dept_plan_tasks", "dept_plan_assign", "dept_project_tasks",
+                    "dept_project_assign", "site_command")) {
+                blank(data, "workItems", "workItemEvents", "taskNotifications");
+            }
+            blank(data, "adminProjects", "adminMaterials", "adminMaterialCategories",
+                    "adminMaterialSubcategories", "adminSuppliers", "users", "userScopes",
+                    "userWarehouseScopes", "allModulePermissions", "audits", "activeSessions",
+                    "emailRecipients");
+            data.put("serverInfo", null);
+            data.put("trustStatus", null);
+            data.put("emailSettings", null);
+        }
 
         return data;
     }
@@ -1055,5 +1289,48 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
 
     private static Object[] params(List<String> ids) {
         return ids.toArray();
+    }
+
+    // ── helpers của bộ lọc quyền bootstrap (TASK-050) ────────────────────────────────
+    /** JS `system-route.mjs:386` — mã vai trò Ban giám đốc. */
+    private static final Set<String> COMPANY_LEADERSHIP_ROLE_CODES =
+            Set.of("director", "tgd", "ptgd", "giam_doc", "pho_giam_doc", "thuky", "thu_ky_tgd");
+
+    /**
+     * JS `system-route.mjs:387`:
+     * {@code COMPANY_LEADERSHIP_ROLE_CODES.has(role.toLowerCase()) || effectiveRole(user)==="director"}.
+     * Giữ NGUYÊN hai vế (mã vai trò thô + base_role) thay vì gộp về một vế.
+     */
+    private static boolean isCompanyLeadership(String roleCode, String roleBase) {
+        String code = roleCode == null ? "" : roleCode.trim().toLowerCase();
+        String base = roleBase == null ? "" : roleBase.trim().toLowerCase();
+        return COMPANY_LEADERSHIP_ROLE_CODES.contains(code) || "director".equals(base);
+    }
+
+    /** `Number(row.canView) === 1` của JS — chấp nhận Integer 1, chuỗi "1" và Boolean true (tinyint(1)). */
+    private static boolean isOne(Object value) {
+        if (value instanceof Number number) return number.intValue() == 1;
+        return Boolean.TRUE.equals(value) || "1".equals(String.valueOf(value));
+    }
+
+    /**
+     * Cột cờ `tinyint(1)` của MySQL: JDBC trả về **Boolean**, KHÔNG phải Number (lớp lỗi #4).
+     * Giữ đúng quy ước đã có trong kho (AdminSystemUseCase.isOne v.v.).
+     */
+    private static boolean isActiveOne(Object value) {
+        if (value instanceof Number number) return number.intValue() == 1;
+        return Boolean.TRUE.equals(value);
+    }
+
+    private static boolean anyModule(Set<String> view, String... moduleKeys) {
+        for (String moduleKey : moduleKeys) {
+            if (view.contains(moduleKey)) return true;
+        }
+        return false;
+    }
+
+    /** Xoá trắng một nhóm khoá về mảng rỗng — đúng cách JS gán `result.<khoá> = []`. */
+    private static void blank(Map<String, Object> data, String... keys) {
+        for (String key : keys) data.put(key, List.of());
     }
 }

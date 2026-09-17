@@ -152,8 +152,12 @@ public class SystemController {
         if (user.isEmpty()) {
             return ResponseEntity.status(401).body(json(Map.of("ok", false, "authenticated", false)));
         }
-        boolean isAdmin = "admin".equals(user.get().role());
-        Map<String, Object> data = bootstrapUseCase.load(user.get().id(), isAdmin);
+        // JS isAdmin(user) = (COALESCE(rc.base_role,u.role)==='admin' || u.role==='admin')
+        // (system-route.mjs:210) — bản Java trước đây CHỈ so `users.role` nên một vai trò
+        // tuỳ biến có base_role='admin' bị coi là người dùng thường (lệch quyền bootstrap).
+        boolean isAdmin = "admin".equals(user.get().roleBase()) || "admin".equals(user.get().role());
+        Map<String, Object> data = bootstrapUseCase.load(user.get().id(), isAdmin,
+                user.get().role(), user.get().roleBase(), user.get().warehouseScopeKind());
         // user + profile nằm trong data (như JS bootstrap trả về)
         Map<String, Object> userMap = new LinkedHashMap<>();
         userMap.put("id", user.get().id());
@@ -162,8 +166,13 @@ public class SystemController {
         userMap.put("role", user.get().role());
         userMap.put("roleBase", user.get().roleBase());
         userMap.put("roleName", user.get().roleName());
-        userMap.put("department", user.get().department());
-        userMap.put("avatarUrl", user.get().avatarUrl());
+        // SỬA LỖI (đường ĐỌC thứ 11 — hồ sơ TASK-051): JS trả đủ 10 trường của `user`
+        // (system-route.mjs:181/189 `SELECT … rc.warehouse_scope_kind AS warehouseScopeKind,
+        // u.must_change_password AS mustChangePassword`), bản Java CHỈ trả 8 ⇒ thiếu 2 khoá.
+        // Hệ quả thật: `app/page.tsx:565` đọc `data.user.mustChangePassword` để MỞ modal bắt
+        // đổi mật khẩu ngay sau khi đăng nhập ⇒ giá trị `undefined` làm modal KHÔNG BAO GIỜ hiện.
+        userMap.put("warehouseScopeKind", user.get().warehouseScopeKind());
+        userMap.put("mustChangePassword", user.get().mustChangePassword());
         data.put("user", userMap);
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("ok", true);
