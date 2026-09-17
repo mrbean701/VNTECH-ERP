@@ -14,9 +14,9 @@
 | Mục | Giá trị |
 |---|---|
 | CURRENT PHASE | PHASE 1 — hạ tầng UI dùng chung. Song song: hoàn thiện tầng phân quyền Java |
-| CURRENT TASK | **TASK-040 nhóm 3b + 6** — nhóm 3b: port hành vi `import_material_catalog`; nhóm 6: lệch **cấu trúc** hệ license (cần quyết định) |
-| LAST COMPLETED | **TASK-040 nhóm 4 + 5 (#50)** — `confirm_installation` (bỏ cột `status` không tồn tại + **sửa lỗi NGỮ NGHĨA ghi đè → cộng dồn**) và `settle_team_subcontract`; SQL chứng minh bằng transaction + ROLLBACK, HTTP **9/9**. Trước đó: **nhóm 1+1b (#47)** · **nhóm 3 (#49)** |
-| NEXT TASK | TASK-040 nhóm 3b (port `import_material_catalog`) → nhóm 6 (chờ quyết định) → TASK-034 (gỡ chặn dựng bundle) → chứng minh render §8.1 → **§8.2** → **§8.3** |
+| CURRENT TASK | **TASK-040 nhóm 3b** — port hành vi `import_material_catalog` (phần 1 xong ở #52: helper `MaterialSystemCodes`) |
+| LAST COMPLETED | **TASK-040 nhóm 3b phần 1 (#52)** — gom `canonicalMeCode` về **một nguồn sự thật** ở tầng domain, **vá lệch 7/28 đầu vào** với JS; unit test **5/5** · toàn module domain **19/19**. Trước đó: **nhóm 4+5 (#50, #51)** · **nhóm 3 (#49)** |
+| NEXT TASK | TASK-040 nhóm 3b phần 2 (port thân `import_material_catalog`) → nhóm 6 (chờ quyết định) → TASK-034 → render §8.1 → **§8.2** → **§8.3** |
 | BLOCKED ITEMS | **TASK-040 nhóm 6** (lệch cấu trúc: `vntech_license_*` cần port cả hệ license + xác minh chữ ký số — thuộc phần **bảo mật** đã yêu cầu tạm hoãn) · **TASK-034** (`npm run build` không dựng lại được UI: dấu vân tay nguồn lệch + bảng identity có **trigger chặn UPDATE** ⇒ phải viết migration) · **TASK-035 mục 7** · **TASK-036 mục 7** · **TASK-037 mục 5** · **TASK-031** · **TASK-032** · **TASK-029** · **TASK-024** · **dữ liệu `user_module_permissions`** · **số SLA thật (24h/8h)** |
 | USER CONFIRMATION REQUIRED | **YES** — **11 câu hỏi**, ghi ở mục riêng bên dưới |
 | CURRENT BRANCH | `unity` |
@@ -29,8 +29,8 @@
 * **Database**: MySQL 8.0.46; Flyway V1–V16 + drizzle tới `0108`; 121 bảng
 * **API**: 2 route (`app/api/system`, `app/api/files`); Java phục vụ **186 action**; JS tham chiếu 174 · Java **không thiếu action nào** · Java có **thêm 12**
 * **Tầng Java chỉ phục vụ action GHI** — action ĐỌC do SSR/RSC đảm nhiệm. Đây là lý do phép kiểm quyền sống phải dùng payload rỗng.
-* **Infrastructure**: MySQL **3306** · Java API **18081** (PID 2872, background job `pwsh-64`) · Node SSR **8787** · cutover proxy **9000** (người dùng mở `:9000`)
-* **JAR**: đã đóng gói lại **thành công** — `vntech-erp-web-0.1.0-SNAPSHOT.jar` **90.886.009 bytes** (17/09 14:55); **mọi sửa đổi backend ĐÃ có hiệu lực lúc chạy**
+* **Infrastructure**: MySQL **3306** · Java API **18081** (PID 19532, background job `pwsh-66`) · Node SSR **8787** · cutover proxy **9000** (người dùng mở `:9000`)
+* **JAR**: đã đóng gói lại **thành công** — `vntech-erp-web-0.1.0-SNAPSHOT.jar` **90.887.539 bytes** (17/09 15:07); **mọi sửa đổi backend ĐÃ có hiệu lực lúc chạy**
 * **TODO hiện tại**: xem mục CURRENT TODO cuối tệp
 
 ## Authentication
@@ -102,6 +102,8 @@ Mặc định của interface là `return role()` = **mã chuẩn** ⇒ thiếu 
 22. **KHÔNG SUY TÊN ACTION TỪ TÊN PHƯƠNG THỨC** (lỗi của chính tôi ở vòng 4): tôi gọi thử `settle_subcontract` — tên **không tồn tại** — rồi suýt kết luận nhóm 5 là **mã chết**. Tên đúng là **`settle_team_subcontract`** (`SystemController:637`, JS `system-route.mjs:1249`). Bắt được nhờ cổng mới `probe-action-coverage-controller.mjs` báo **0 action thiếu `case`** — mâu thuẫn với kết luận "chưa triển khai".
 23. **Cổng đối chiếu với chính các nhánh `case`**: `tools/probe-action-coverage-controller.mjs` → Java phục vụ **224** · JS có mã **174** · UI gọi **119** · **UI gọi mà Java thiếu: 0** · **JS có mã mà Java thiếu: 0** · Java-only **50** (38 tên chỉ mục SQL hợp lệ + 12 action Java-only đã biết). Các cổng cũ chỉ so với danh mục/thanh ghi RBAC, **không** so với nhánh `case` đang phục vụ request.
 24. **LỚP LỖI THỨ HAI ĐÃ ĐƯỢC PHỦ CỔNG**: `tools/probe-increment-drift.mjs` săn trường hợp JS **cộng dồn** (`col=col+?`) nhưng Java **ghi đè** (`col=?`) — lớp lỗi mà cổng lược đồ **không thể** bắt. Kết quả: 10 cột JS cộng dồn · **0 ứng viên** trên toàn kho Java, **có đối chứng dương** (`tools/_old-adapter-positive-control.java.txt`).
+25. ~~`canonicalMeCode` Java lệch JS~~ **ĐÃ VÁ ở #52**: Java chỉ so **đúng bằng** trong khi JS khớp **tiền tố** ⇒ đo được **7/28 đầu vào lệch** (`Điện lực`, `DIEN123`, `ELV-1`, `PCCC-01`, `DIEN.TU`… bị xếp `KHAC` thay vì đúng hệ M&E) ⇒ **vật tư nhập vào mang `system` sai** (cả nhập BOQ lẫn danh mục vật tư). Nay có `domain/service/MaterialSystemCodes.java` làm **một nguồn sự thật**, `BoqManagementUseCase` uỷ quyền cho nó, kèm **unit test 5 ca** ghi lại đúng 7 ca từng lệch. Cổng đo: `tools/probe-canonical-me-code-drift.mjs`.
+26. **Bẫy `(?i)` của Java (lỗi của chính tôi, unit test bắt được)**: `replaceAll("(?i)đ","d")` **KHÔNG** khớp `Đ` — cờ `(?i)` của Java chỉ case-fold ASCII trừ khi bật `UNICODE_CASE` ⇒ mọi đầu vào tiếng Việt rơi về `KHAC`. Phải thay **tường minh** `đ`→`d` và `Đ`→`D` (như `MaterialMatcherV2` đang làm).
 
 ## Important Decisions
 
@@ -153,7 +155,8 @@ Mặc định của interface là `return role()` = **mã chuẩn** ⇒ thiếu 
 * [x] **TASK-040 nhóm 3 · `material_norms` + `materials`** — #49: SQL 6 cột + hợp đồng payload + nghiệp vụ + **đường ĐỌC thiếu `source_type`**; probe **25/25**
 * [x] **TASK-040 nhóm 4 · `confirm_installation`** — #50: bỏ cột `status` không tồn tại + **sửa lỗi NGỮ NGHĨA ghi đè → cộng dồn**; SQL chứng minh bằng transaction + ROLLBACK; HTTP **9/9**
 * [x] **TASK-040 nhóm 5 · `settle_team_subcontract`** — #50: bỏ `settlement_id`/`settled_at`; probe HTTP **9/9**
-* [ ] **TASK-040 nhóm 3b** · port hành vi `import_material_catalog` (UI gửi `categoryCode`/`subcategoryCode`, Java đọc `categoryId`/`subcategoryId` ⇒ vật tư nhập vào **mất nhóm**)
+* [ ] **TASK-040 nhóm 3b phần 2** · port thân `import_material_catalog` (tu tao `material_categories`/`material_subcategories` tu mã trong tệp; `system = canonicalMeCode(category.code)`; `sort_order` 999/9999; mô tả nguyên văn; yêu cầu đủ **Mã + Tên + ĐVT**; thông điệp riêng của JS). **Phần 1 (helper dùng chung) ĐÃ XONG ở #52**
+* [x] **`canonicalMeCode` gom về một nguồn** — #52: vá **7/28 đầu vào lệch** với JS; unit test **5/5** · domain **19/19**
 * [!] **TASK-040 nhóm 6 · CHỜ QUYẾT ĐỊNH** — `vntech_license_*` lệch **cấu trúc** (câu hỏi #11)
 * [x] **Cổng mới**: `probe-java-sql-live.mjs` (lược đồ đang chạy) · `probe-schema-drift.mjs` (tệp migration ↔ DB: **0 lệch**) · `probe-increment-drift.mjs` (SET vs cộng dồn, **có đối chứng dương**) · `probe-action-coverage-controller.mjs` (UI ↔ nhánh `case`: **0 thiếu**) · `show-js-lines.mjs`
 * [!] **DỮ LIỆU MỒ CÔI** — `stock_issue_items` 3/5 dòng trỏ tới tổ đội không tồn tại (known issue #21) — **KHÔNG tự sửa dữ liệu**
