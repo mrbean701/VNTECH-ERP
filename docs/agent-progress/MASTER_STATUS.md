@@ -217,7 +217,7 @@ Mặc định của interface là `return role()` = **mã chuẩn** ⇒ thiếu 
 
 ## CONTINUATION NOTES (cho phiên sau)
 
-1. **Đọc theo thứ tự**: tệp này → `TASK_INDEX.md` → `TASK-040.md` (mục 13 = nhóm 1+1b) → `TASK-039.md` → `TASK-030.md`.
+1. **Đọc theo thứ tự**: tệp này → `TASK_INDEX.md` → **`docs/28_DANH_SACH_110_MUC_MASTER_TASK.md`** (110 mục MASTER TASK, checklist + bảng theo phase, sinh tự động từ `docs/25_TODO_ROADMAP.md`) → `TASK-043.md`/`TASK-045.md` (2 vòng vá gần nhất) → `TASK-040.md` (mục 13 = nhóm 1+1b) → `TASK-039.md`.
 2. **KHÔNG chạy lại** các việc đã DONE: TASK-B01/B02/B03, TASK-025, TASK-027, TASK-030, **TASK-040 nhóm 1+1b**.
 3. **Chốt quyền ở tầng Java nằm ở ĐẦU mỗi nhánh `case`, TRƯỚC validate** — nhờ vậy payload rỗng đo được CHO/CHẶN mà không ghi dữ liệu.
 4. **18 khối `Principal` vô danh** trong `SystemController`; **đã rà toàn bộ**: chỉ 2 khối của `RequestManagement` từng nguy hiểm và đã vá. Nếu thêm nhánh `case` mới có tạo lớp vô danh thì **phải override `roleBase()`** — hoặc tốt hơn là dùng helper `asXxxPrincipal(cu)`.
