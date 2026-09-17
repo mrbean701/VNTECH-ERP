@@ -1,7 +1,7 @@
 # MASTER STATUS — VNTECH ERP V5.3.0
 
 > Tệp này là NGUỒN SỰ THẬT về trạng thái toàn cục. Mọi phiên làm việc mới PHẢI đọc tệp này trước.
-> Cấu trúc theo GOAL §12. Cập nhật lần cuối: 2026-09-17 (sau **TASK-040 nhóm 1+1b**, commit #47).
+> Cấu trúc theo GOAL §12. Cập nhật lần cuối: 2026-09-17 (sau **TASK-045**, commit #63; ghi chú #64).
 
 ## MASTER TASK STATUS
 
@@ -20,7 +20,7 @@
 | BLOCKED ITEMS | **TASK-040 nhóm 6** (lệch cấu trúc: `vntech_license_*` cần port cả hệ license + xác minh chữ ký số — thuộc phần **bảo mật** đã yêu cầu tạm hoãn) · **TASK-034** (`npm run build` không dựng lại được UI: dấu vân tay nguồn lệch + bảng identity có **trigger chặn UPDATE** ⇒ phải viết migration) · **TASK-035 mục 7** · **TASK-036 mục 7** · **TASK-037 mục 5** · **TASK-031** · **TASK-032** · **TASK-029** · **TASK-024** · **dữ liệu `user_module_permissions`** · **số SLA thật (24h/8h)** |
 | USER CONFIRMATION REQUIRED | **YES** — **11 câu hỏi**, ghi ở mục riêng bên dưới |
 | CURRENT BRANCH | `unity` |
-| LATEST COMMIT | `4a16194` (#61 TASK-042) · **53 commit local CHƯA PUSH** (theo quyết định của người dùng) |
+| LATEST COMMIT | `90f658d` (#64) · **56 commit CHƯA PUSH** — đo bằng `git rev-list --count origin/unity..HEAD` (HEAD tổng **66**); **KHÔNG PUSH** theo quyết định của người dùng |
 
 ## System State
 
@@ -226,6 +226,9 @@ Mặc định của interface là `return role()` = **mã chuẩn** ⇒ thiếu 
 7. **Đóng gói**: `JAVA_HOME=C:\Users\PC\.jdks\openjdk-26.0.2.1`; maven wrapper `apache-maven-3.9.16`; `java-backend/.mvn/maven.config` chứa `-Dmaven.repo.local=<workspace>\_m2-repo` (PowerShell làm hỏng `-D` vì đường dẫn có dấu cách). Fat jar phải ≈ **90 MB**; 68 KB nghĩa là `repackage` thất bại.
 8. **Thứ tự chẩn đoán**: 4 cổng → `/actuator/health` → `tools/probe-live-stack.mjs` → cổng ảnh.
 9. **Vá TASK-040 theo nhóm — quy trình 5 bước bắt buộc** (đúc từ nhóm 1): (1) đọc SQL tương ứng của JS; (2) sửa Java theo JS **kể cả thứ tự toán hạng của mặc định**; (3) **kiểm cả đường ĐỌC** (khoá bootstrap có tồn tại không, tên khoá UI dùng là gì); (4) build lại jar + khởi động lại + gọi thật + **đối chiếu MySQL** (không chỉ HTTP 200); (5) chạy `probe-java-sql-schema.mjs` lại để chắc không còn cột sai.
-10. **Jar đang chạy**: nếu sửa mã Java mà KHÔNG build lại + khởi động lại thì mọi probe sẽ đo **bản cũ** — PID hiện tại **2872** (job `pwsh-64`) đang chạy jar có nhóm 1+1b, 3, 4, 5. Trước khi `mvn package` phải dừng **đúng PID đang giữ cổng 18081**.
+10. **Jar đang chạy**: nếu sửa mã Java mà KHÔNG build lại + khởi động lại thì mọi probe sẽ đo **bản cũ** — PID hiện tại **19364** (job `pwsh-82`) đang chạy jar có TASK-042/043/044/045. Trước khi `mvn package` phải dừng **đúng PID đang giữ cổng 18081**.
 11. **Bốn cổng phải chạy trước khi kết luận về SQL/ngữ nghĩa** (đúc từ TASK-040): `probe-java-sql-live.mjs` (cột có tồn tại?) → `probe-increment-drift.mjs` (ghi đúng cách?) → đọc lại qua bootstrap (**đường ĐỌC có không?**) → `probe-action-coverage-controller.mjs` (action có `case` không?). Thiếu một cổng là còn một lớp lỗi không nhìn thấy.
 12. **Khi chứng minh action GHI**: dùng `transaction + ROLLBACK` cho tầng SQL và chỉ gọi HTTP vào các **nhánh chặn**; luôn ghi rõ giới hạn "chưa test end-to-end".
+13. **BÀI HỌC LỚN NHẤT CỦA PHIÊN NÀY (TASK-043/045): lỗi "port sai NGUỒN DỮ LIỆU" có thể nằm trong CÙNG một action với lỗi GHI/ĐỌC và chỉ lộ ra khi "ghi xong ĐỌC LẠI ĐÚNG TRƯỜNG".** Hai dạng đã gặp: (a) Java đọc một khoá payload mà **UI KHÔNG BAO GIỜ gửi** (`payload.system` ở TASK-045, `categoryId` ở TASK-040 nhóm 3b) ⇒ giá trị mặc định **ghi đè dữ liệu thật**, API vẫn trả 200; (b) Java tra bảng bằng **sai loại khoá** (id PHIẾU thay vì id DÒNG ở TASK-043) ⇒ đường ĐỌC **không bao giờ khớp**. **Quy trình bắt buộc: đối chiếu payload với FORM UI, và với mỗi cặp GHI/ĐỌC phải có một phép kiểm "ghi rồi đọc lại" — 7 lần dự án đã dính lớp lỗi này.**
+14. **Probe cho action sửa DANH MỤC nên TỰ DỰNG bản ghi TẠM bằng SQL rồi tự xoá** (TASK-045) — rẻ, không đụng dữ liệu thật, mà vẫn chứng minh được toàn bộ hợp đồng; và **phải chạy probe TRƯỚC khi vá** để làm **đối chứng dương** (TASK-045: 6/14 → 14/14).
+15. **Cảnh báo thao tác đo**: **KHÔNG nuốt `stderr`** (`2>$null`) khi chạy `mysql` — một câu SQL sai cột sẽ trả về "rỗng" và rất dễ bị đọc thành "bảng không có dữ liệu" (suýt xảy ra ở TASK-043 với `stage_no`/`stage`).
