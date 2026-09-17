@@ -1,0 +1,87 @@
+#38 TASK-008 phan 2: quet hoi quy rong - va loi chan npm test, 3 test do da phan loai, tim ra nguyen nhan goc cong anh
+
+Pham vi: chay toan bo cong hoi quy cua du an sau chuoi thay doi RBAC TASK-021 -> TASK-027.
+
+DINH CHINH NHAN TASK
+MASTER_STATUS tung ghi "Current task = TASK-008 - quet hoi quy toan bo", trong khi TASK-008.md
+that su la "U-09 dot 5 - chuan hoa toolbar 3 man tab Quan tri", va luot quet hoi quy chi la
+BUOC CON LAI cua no. Da sua lai nhan trong MASTER_STATUS. Bai hoc: nhan task phai lay tu chinh
+TASK-XXX.md, khong suy dien tu dong "remaining work".
+
+F1 - LOI CHAN TOAN BO CHUOI npm test (DA VA)
+npm test noi bang && va dung ngay o buoc lint voi 1 error:
+  app/components/ui/EntityDetailModal.tsx:76:53
+    react-hooks/set-state-in-effect
+    useEffect(() => { if (!visibleTabs.some(t => t.key === active)) setActive(visibleTabs[0]?.key); }, [visibleTabs, active])
+Hau qua: typecheck + 8 tep test:regression + test:workflow CHUA TUNG CHAY ke tu khi component nay
+duoc them vao.
+Ban sua dung khuon mau React "you might not need an effect": dong 89 VON DA co fallback
+|| visibleTabs[0] nen effect hoan toan thua; thay bang SUY RA tab dang chon ngay khi render:
+  const [selectedTab, setSelectedTab] = useState<string | undefined>(undefined);
+  const active = visibleTabs.some((t) => t.key === selectedTab) ? selectedTab : visibleTabs[0]?.key;
+Hanh vi nguoi dung KHONG DOI (van quay ve tab dau khi tab cu bien mat), chi bo render day chuyen.
+Kiem chung: eslint tep -> exit 0; eslint . -> 0 error (98 warnings khong chan); bo kiem da tien qua typecheck.
+
+KET QUA CAC CONG
+  probe-action-role-parity     exit 0  ("tang vai tro hai ban KHOP va duong ong roleBase day du")
+  probe-action-scope-parity    exit 0  ("moi action JS kiem pham vi deu duoc Java kiem tuong ung")
+  probe-action-module-parity   exit 1  (lech DA BIET - TASK-029, khong phai hoi quy moi)
+  probe-live-stack             ALL PASS (61 module, 5 buoc duyet, 484 quyen, UTF-8 0 loi, 12/12 nhom menu)
+  cong anh 28 anh x 4 kich thuoc   DAT - 0 px lech
+  npm run lint                 PASSED (0 error)
+  npm run typecheck            PASSED
+  npm run test:regression      61 test - 58 PASS - 3 FAIL (da phan loai duoi day)
+
+F2c - .local-data/email-secret.key => DUONG TINH GIA DO MOI TRUONG, KHONG RO RI
+  git check-ignore -v .local-data/email-secret.key  -> .gitignore:43:/.local-data/  (bi bo qua)
+  git ls-files .local-data                          -> rong (khong tep nao duoc theo doi)
+=> KHONG co khoa bi mat nao trong kho ma. Tep do chinh ung dung tao khi chay cuc bo, nam trong
+   thu muc da gitignore. Phep kiem quet ca cay lam viec ma khong loai tru thu muc runtime.
+
+F2a - CAY DU AN TRONG MENU BI TAT O CA HAI NAV (=> TASK-031, CAN NGUOI DUNG QUYET DINH)
+  tests/mobile-menu-interaction.test.mjs:36 khang dinh /groupKey==="site_command" ? activeSiteProjects\.map/
+  nhung ma hien tai khong bao gio thoa: ca hai nav dung sentinel __site_command_tree_disabled__
+  (app/page.tsx:664 desktop VA :678 mobile) - sentinel khong the trung groupKey that
+  => nhanh activeSiteProjects.map(...) la MA CHET; activeSiteProjects (dong 671) van duoc tinh ma
+     khong con noi dung.
+  Truy nguon y do: sentinel vao o commit 1c01f39 (16/09), TRUOC toan bo cong viec RBAC cua phien nay;
+  mo ta commit do KHONG nhac viec tat cay du an => thay doi duoc dua vao AM THAM trong mot commit
+  khong lien quan va test da khong duoc cap nhat.
+  Phan loai CONFLICT giua ma dang tat (ten sentinel noi ro "disabled", ca hai nav cung tat nen trong
+  co chu dich) va test van khang dinh dang bat. Bat lai la THAY DOI HANH VI NGUOI DUNG => KHONG tu sua.
+  Cung KHONG sua test cho khop ma - lam vay la "dong bang" mot trang thai co the la loi.
+
+F2b - LO HONG LIEN KET DU LIEU: 0/16 VAI TRO TRO DON VI MAC DINH (=> TASK-032)
+  tests/runtime-admin-boq-regression.test.mjs:65 khang dinh thuky co name='Thu ky Tong giam doc'
+  va defaultOrganizationCode='BGD'. Do du lieu song bang tools/show-role-catalog.mjs:
+    - code='thuky' ton tai, active=true                                  -> khop
+    - name = "Thu ky Tong giam doc / Truong phong Hanh chinh Phap che"    -> KHONG khop (ten dai hon)
+    - defaultOrganizationCode = null                                     -> KHONG khop
+  Truy nguyen sau hon: organization_units co 8 don vi dang hoat dong, BAO GOM BGD = "Ban giam doc",
+  nhung 0/16 vai tro tro toi bat ky don vi mac dinh nao => DON VI TON TAI MA KHONG VAI TRO NAO LIEN KET
+  => LO HONG LIEN KET (du lieu), khong phai thieu don vi, khong phai loi hien thi.
+  He qua: co che "don vi mac dinh theo vai tro" am tham khong the hoat dong.
+  Bay ky thuat: KHONG tep SQL/Java nao nhac default_organization_code - truong nay la TEN HIEN THI
+  sinh tu JOIN tren cot that default_organization_unit_id, nen tim theo ten do se khong thay gi.
+
+RAO CAN MOI TRUONG - TASK-B02/TASK-017 DA TIM RA NGUYEN NHAN GOC
+Truoc day chi biet "cong anh khong chay duoc". Nay xac dinh chinh xac bang tools/diag-edge-cdp.mjs
+(ghi stderr cua Edge ra TEP, khong dung pipe):
+  FATAL:mojo\public\cpp\platform\platform_channel.cc:183] Check failed: . : Access is denied. (0x5)
+  crashpad_client_win.cc:447] OpenProcess: Access is denied. (0x5)
+Edge SAP NGAY KHI KHOI DONG (ma thoat 2147483651 = 0x80000003) vi khong tao duoc mojo platform
+channel - thu duoc hien thuc bang NAMED PIPE tren Windows, ma sandbox chan mo named pipe. Cong anh
+spawn Edge voi stdio "ignore" nen loi bi nuot, chi lo trieu chung "Khong ket noi duoc CDP cua Edge".
+=> RANG BUOC MOI TRUONG, khong phai loi ma du an. Cong anh chay duoc khi cap danger-full-access
+   - va khi chay da DAT 28/28, 0 px. Node test runner cung can spawn tien trinh con qua pipe nen
+   test:regression cung can quyen rong hon (neu khong: 8/8 tep loi spawn EPERM, assertion CHUA HE CHAY).
+
+Tep thay doi:
+  app/components/ui/EntityDetailModal.tsx   (bo setState trong effect, suy ra tab khi render)
+  tools/diag-edge-cdp.mjs                   (moi - chan doan Edge/CDP bang log ra tep)
+  tools/show-role-catalog.mjs               (moi - doi chieu role_catalog + organization_units)
+  docs/agent-progress/TASK-008.md           (them PHAN 2 + dinh chinh nhan)
+  docs/agent-progress/TASK-031.md, TASK-032.md (moi)
+  docs/agent-progress/MASTER_STATUS.md, TASK_INDEX.md
+
+Tài liệu: docs/agent-progress/TASK-008.md (PHẦN 2), TASK-031.md, TASK-032.md

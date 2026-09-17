@@ -68,13 +68,14 @@ export function EntityDetailModal({
     () => tabs.filter((t) => t.permission === undefined || t.permission === true || t.permission === 1 || t.permission === "1"),
     [tabs],
   );
-  const [active, setActive] = useState(visibleTabs[0]?.key);
+  // Tab người dùng đã bấm (undefined = chưa bấm lần nào).
+  const [selectedTab, setSelectedTab] = useState<string | undefined>(undefined);
 
-  // Đổi thực thể hoặc đổi danh sách tab thì quay về tab đầu — tránh trạng thái tab cũ
-  // trỏ vào tab không còn tồn tại.
-  useEffect(() => {
-    if (!visibleTabs.some((t) => t.key === active)) setActive(visibleTabs[0]?.key);
-  }, [visibleTabs, active]);
+  // Đổi thực thể hoặc đổi danh sách tab thì quay về tab đầu — tránh trạng thái tab cũ trỏ vào
+  // tab không còn tồn tại. SUY RA ngay khi render thay vì đồng bộ bằng useEffect: cách cũ gọi
+  // setState trực tiếp trong effect, gây render dây chuyền và bị lint chặn
+  // (`react-hooks/set-state-in-effect`). Hành vi với người dùng là như nhau.
+  const active = visibleTabs.some((t) => t.key === selectedTab) ? selectedTab : visibleTabs[0]?.key;
 
   // Đóng bằng phím Esc — hành vi người dùng mong đợi ở mọi modal.
   useEffect(() => {
@@ -127,7 +128,7 @@ export function EntityDetailModal({
                 role="tab"
                 aria-selected={t.key === active}
                 className={t.key === active ? "is-active" : ""}
-                onClick={() => setActive(t.key)}
+                onClick={() => setSelectedTab(t.key)}
               >
                 {t.label}
                 {t.badge !== undefined && <b className="edm-tab-badge">{t.badge}</b>}

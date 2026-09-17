@@ -14,11 +14,11 @@
 | Mục | Giá trị |
 |---|---|
 | CURRENT PHASE | PHASE 1 — hạ tầng UI dùng chung. Song song: hoàn thiện tầng phân quyền Java |
-| CURRENT TASK | **TASK-008** — quét hồi quy toàn bộ sau các thay đổi RBAC |
-| LAST COMPLETED | **TASK-030** (#36) · trước đó TASK-027 (#35) · TASK-025 (#34) |
-| NEXT TASK | TASK-008 (hồi quy) → TASK-022b (catalog) → MASTER TASK §2.1/2.2/2.3 → TASK-009…015 |
-| BLOCKED ITEMS | **TASK-029** (Java chặt hơn JS trên 30 action) · **TASK-024** (`isCompanyLeadership`) · **dữ liệu `user_module_permissions`** · **TASK-017** (nguyên nhân gốc cổng ảnh bất định) |
-| USER CONFIRMATION REQUIRED | **YES** — 3 câu hỏi, ghi ở mục riêng bên dưới |
+| CURRENT TASK | **TASK-009** — U-09 đợt 6 (13 màn còn lại). *(Đính chính: `TASK-008` là "U-09 đợt 5 — 3 màn tab Quản trị", lượt "quét hồi quy" chỉ là bước còn lại của nó — đã hoàn thành ở #38)* |
+| LAST COMPLETED | **TASK-008 phần 2 (#38)** — quét hồi quy rộng: vá lỗi lint chặn cả chuỗi `npm test`, cổng ảnh ĐẠT 28/28 · 0 px, `test:regression` 61 test/58 PASS, 3 test đỏ đã **phân loại**; tìm ra **nguyên nhân gốc** rào cản cổng ảnh. Trước đó: TASK-030 (#36, #37) · TASK-027 (#35) · TASK-025 (#34) |
+| NEXT TASK | TASK-009 (U-09 đợt 6) → TASK-022b → MASTER TASK §2.1/2.2/2.3 → TASK-010…015 |
+| BLOCKED ITEMS | **TASK-031** (cây dự án trong menu bị tắt — chủ ý hay nhầm?) · **TASK-032** (0/16 vai trò trỏ đơn vị mặc định) · **TASK-029** (Java chặt hơn JS trên 30 action) · **TASK-024** (`isCompanyLeadership`) · **dữ liệu `user_module_permissions`** · **TASK-017** (bất định của cổng ảnh — nay đã rõ là ràng buộc môi trường) |
+| USER CONFIRMATION REQUIRED | **YES** — **5 câu hỏi**, ghi ở mục riêng bên dưới |
 | CURRENT BRANCH | `unity` |
 | LATEST COMMIT | `f2cd1bc` (#36) · **28 commit local CHƯA PUSH** (theo quyết định của người dùng) |
 
@@ -89,6 +89,10 @@ Mặc định của interface là `return role()` = **mã chuẩn** ⇒ thiếu 
 11. **TASK-024 — `isCompanyLeadership` lệch**: JS = tập 7 mã **HOẶC** `base_role='director'`; Java = `{director, accountant}`. Java **cấp thừa** cho `accountant`, **cấp thiếu** cho `thuky`/`hcpc_truong`. Chờ người dùng.
 12. **TASK-022b** — `ACTION_CATALOG` chưa ghi 12 action chỉ có ở Java (ưu tiên thấp; TASK-018 đã đính chính cáo buộc "lệch ~50 action" là SAI).
 13. **Sai lệch bản đồ MODULE**: MODULE khớp **156/186**, CAPABILITY khớp **185/186** (`system_level_impact`: JS `canUse` vs Java `canView`).
+14. ~~`EntityDetailModal` gây lỗi lint chặn CẢ chuỗi `npm test`~~ **ĐÃ VÁ ở TASK-008 phần 2** — `setState` trong `useEffect` (`react-hooks/set-state-in-effect`) khiến `npm test` dừng ngay ở `lint`, nên `typecheck` + 8 tệp `test:regression` + `test:workflow` **chưa từng chạy**. Nay suy ra tab khi render ⇒ `eslint .` **0 error**, bộ kiểm đã tiến qua `typecheck`.
+15. **TASK-031 — cây dự án trong menu bị TẮT ở CẢ HAI nav** (`__site_command_tree_disabled__`, `app/page.tsx:664` và `:678`) ⇒ nhánh `activeSiteProjects.map(...)` là **mã chết**. Sentinel vào ở commit `1c01f39` (16/09) **âm thầm trong một commit không liên quan**, test không được cập nhật. `CONFLICT` — **cần người dùng quyết định**, không tự sửa và **không sửa test cho khớp mã**.
+16. **TASK-032 — LỖ HỔNG LIÊN KẾT DỮ LIỆU: 0/16 vai trò trỏ đơn vị mặc định.** `organization_units` có 8 đơn vị đang hoạt động **gồm `BGD` = "Ban giám đốc"**, nhưng `role_catalog.default_organization_unit_id` **null ở mọi vai trò** ⇒ cơ chế "đơn vị mặc định theo vai trò" âm thầm không thể chạy. Lưu ý: **không tệp SQL/Java nào nhắc `default_organization_code`** — đó là tên hiển thị sinh từ JOIN trên `default_organization_unit_id`.
+17. ~~Cổng ảnh + `test:regression` không chạy được~~ **ĐÃ RÕ NGUYÊN NHÂN GỐC** — Edge sập khi khởi động: `FATAL:mojo\...\platform_channel.cc:183 Check failed: Access is denied (0x5)` (mojo channel = **named pipe**, sandbox chặn). Node test runner cũng lỗi `spawn EPERM` vì spawn con qua pipe. ⇒ **ràng buộc MÔI TRƯỜNG, không phải lỗi mã**; chạy được khi cấp `danger-full-access`. Chẩn đoán mẫu: `tools/diag-edge-cdp.mjs`.
 
 ## Important Decisions
 
@@ -110,18 +114,22 @@ Mặc định của interface là `return role()` = **mã chuẩn** ⇒ thiếu 
 16. **Thông điệp lỗi là dữ liệu chẩn đoán**: phải phân biệt **T1-module** ("chưa được quản trị viên cấp đúng quyền") · **T2-vai trò** ("không có quyền thực hiện nghiệp vụ") · **T3-phạm vi** ("không được … dự án/kho") trước khi buộc tội mã nguồn.
 17. **Luôn chuẩn hoá KIỂU trước khi kết luận** — `active` trong payload là **boolean `true`**, không phải số `1`; so `=== 1` từng gây báo động giả 9/9.
 
-## USER CONFIRMATION REQUIRED (3 câu hỏi)
+## USER CONFIRMATION REQUIRED (5 câu hỏi)
 
 1. **TASK-029** — 6 action (`save_team_subcontract`, `save_team_production`, `approve_team_production`, `save_team_payment`, `settle_team_subcontract`, `create_project_team`): JS cho phép theo vai trò, Java bắt buộc module `teams` (**0 dòng quyền**) nên **chỉ admin làm được**. Chọn **(A)** khôi phục đúng JS, hay **(B)** giữ Java + nạp đủ dữ liệu quyền module?
-2. **Dữ liệu `user_module_permissions`** (484/732; 5 module 0 dòng) — (a) chạy lại cơ chế cấp mặc định theo phòng ban, (b) cấu hình thủ công, hay (c) giữ nguyên?
+2. **Dữ liệu `user_module_permissions`** (484/732; 5 module 0 dòng: `boq`, `stocktake`, `inventory`, `teams`, `warehouse_issue`) — (a) chạy lại cơ chế cấp mặc định theo phòng ban, (b) cấu hình thủ công, hay (c) giữ nguyên?
 3. **TASK-024** — `isCompanyLeadership`: giữ `{director, accountant}` hay theo JS (7 mã HOẶC `base_role='director'`)?
+4. **TASK-031** — cây dự án trong nhóm **QUẢN LÝ DỰ ÁN** hiện **không hiển thị** danh sách dự án + cây workspace ở **cả desktop và mobile**. Đây là **chủ ý** (giữ nguyên + cập nhật test) hay **tắt nhầm** (bật lại)? Hay chỉ muốn một nav có cây?
+5. **TASK-032** — (a) có khôi phục `role_catalog.default_organization_unit_id` cho 16 vai trò không (xin xác nhận bảng ánh xạ vai trò → đơn vị)? (b) tên vai trò `thuky` chuẩn là **"Thư ký Tổng giám đốc"** (theo test) hay **"Thư ký Tổng giám đốc / Trưởng phòng Hành chính Pháp chế"** (theo dữ liệu đang chạy)?
 
 ## CURRENT TODO
 
 * [x] TASK-025 · Sửa `SlaComplianceWorker` hỏng âm thầm mỗi giờ (cột `overdue_at` không tồn tại) — #34
 * [x] TASK-027 · Kiểm chứng SỐNG bằng tài khoản thật; vá **2 lỗi P0** — #35
 * [x] TASK-030 · 43 ca chặn tầng module là **ĐÚNG DỮ LIỆU** — #36
-* [~] **TASK-008 · Quét hồi quy toàn bộ sau thay đổi RBAC** ← ĐANG LÀM
+* [!] **TASK-008 phần 2 · Quét hồi quy rộng** — **DONE** (#38): vá lỗi lint chặn cả chuỗi `npm test`; cổng ảnh ĐẠT 28/28 · 0 px; `test:regression` 61 test / 58 PASS; 3 test đỏ **đã phân loại**; tìm ra nguyên nhân gốc rào cản cổng ảnh
+* [!] **TASK-031 · CHỜ QUYẾT ĐỊNH** — cây dự án trong menu bị tắt ở cả hai nav
+* [!] **TASK-032 · CHỜ QUYẾT ĐỊNH** — 0/16 vai trò trỏ đơn vị mặc định (lỗ hổng liên kết dữ liệu)
 * [ ] TASK-022b · Bổ sung 12 action chỉ có ở Java vào `ACTION_CATALOG` (ưu tiên thấp)
 * [ ] TASK-009 · U-09 đợt 6 — 13 màn còn lại
 * [ ] TASK-010/011/012/013 · Áp dụng `EntityDetailModal` / `DataTable` / `PermissionGuard` / `ApprovalTimeline`
