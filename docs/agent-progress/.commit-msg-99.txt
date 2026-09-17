@@ -1,0 +1,12 @@
+So sach sau #98: TASK-059 DONE (8 khoa thieu cot cuoi cung => cong tap cot ve 0; probe bootstrap 100/100) + Known Problems #59 viet lai (da va) + #60 (cong con bo qua 49/78 khoa + lop truong dan xuat thieu) + CURRENT TASK = TASK-060
+
+- TASK-059.md (moi): bang 8 khoa da va voi cot thieu va anh huong cu the (taskNotifications lech ca
+  ten khoa va thu tu sap; hrRecords nhap duoc ma doc lai khong co truong; roleCatalog lam cot "Nhom
+  nghiep vu" luon hien "—"; businessRoleGroupScopes dung JS :675; organizationUnits 3 cot), muc 2
+  ket qua kiem chung (cong tinh ve 0 + probe 100/100 voi doi chieu gia tri theo tung dong, bang rong
+  duoc in ro la "(bo qua)"), muc 3 loi cua chinh toi (ReferenceError q), muc 4 viec ke tiep.
+- MASTER_STATUS: Known Problems #59 viet lai thanh DA VA (kem tien trinh 13 -> 9 -> 8 -> 0) + #60 moi
+  (cong con bo qua 49/78 khoa vi ten bien khac ten khoa; va lop "khoa co khai nhung TRUONG DAN XUAT
+  thieu" ma cong theo tap cot khong bat duoc), CURRENT TASK = TASK-060, LAST COMPLETED = TASK-059,
+  dong Infrastructure (PID 22928 job pwsh-103, jar 90.908.254 bytes) + dong kiem chung cuoi luot.
+- TASK_INDEX: dong TASK-059 day du bang chung.
