@@ -1,9 +1,11 @@
 package com.vntech.erp.application.service;
 
+import com.vntech.erp.application.port.out.AuditLogPort;
 import com.vntech.erp.application.port.out.IdGenerator;
 import com.vntech.erp.application.port.out.RequestStore;
 import com.vntech.erp.application.rbac.AccessScopeService;
 import com.vntech.erp.application.rbac.RbacService;
+import com.vntech.erp.application.support.MiniJson;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -28,13 +30,17 @@ public final class RequestManagementUseCase {
     private final IdGenerator idGenerator;
     private final RbacService rbac;
     private final AccessScopeService accessScope;
+    // TASK-048 — nhật ký kiểm toán: Java TRƯỚC ĐÂY không ghi dòng `audit_logs` nào cho luồng Phiếu
+    // đề nghị (`SELECT COUNT(*) WHERE entity_type='material_request'` = 0) trong khi JS ghi 6 chỗ.
+    private final AuditLogPort auditLog;
 
     public RequestManagementUseCase(RequestStore store, IdGenerator idGenerator, RbacService rbac,
-                                    AccessScopeService accessScope) {
+                                    AccessScopeService accessScope, AuditLogPort auditLog) {
         this.store = store;
         this.idGenerator = idGenerator;
         this.rbac = rbac;
         this.accessScope = accessScope;
+        this.auditLog = auditLog;
     }
 
     public interface Principal {
@@ -319,6 +325,28 @@ public final class RequestManagementUseCase {
         }
 
         store.insertRequest(header, normalizedItems, approvalRows, customFieldRows, now);
+
+        // ══════════════════════════════════════════════════════════════════════════════════
+        // TASK-048 — AUDIT #1/6: port NGUYÊN VĂN JS `system-route.mjs:980`
+        //   await audit(user.id, "CREATE", "material_request", requestId, null,
+        //     { requestNo, projectId, contractId, boqVersionId, lineCount: normalizedLines.length,
+        //       newMaterialCount: 0, mappingMode: "strict_internal_material", total, dynamicFields: true },
+        //     request);
+        // Thứ tự giống JS: ghi DB xong MỚI audit. `before` = null (JS truyền null).
+        // ══════════════════════════════════════════════════════════════════════════════════
+        Map<String, Object> createAfter = new LinkedHashMap<>();
+        createAfter.put("requestNo", requestNo);
+        createAfter.put("projectId", projectId);
+        createAfter.put("contractId", contractId);
+        createAfter.put("boqVersionId", boqVersionId);
+        createAfter.put("lineCount", normalizedItems.size());
+        createAfter.put("newMaterialCount", 0);
+        createAfter.put("mappingMode", "strict_internal_material");
+        createAfter.put("total", total);
+        createAfter.put("dynamicFields", true);
+        auditLog.log(principal.userId(), "CREATE", "material_request", requestId, null,
+                MiniJson.stringify(createAfter), null);
+
         return Map.of("message", allAutoComplete
                 ? "Đã lập phiếu " + requestNo + "; luồng phê duyệt tự hoàn tất và chuyển sang Mua hàng & PO."
                 : "Đã lập phiếu " + requestNo + " gồm " + normalizedItems.size() + " dòng và chuyển tới bước " + currentStage + ".");
@@ -350,6 +378,25 @@ public final class RequestManagementUseCase {
                 blankDefault(trim(payload.get("priority")), "normal"), nvl(payload.get("area")),
                 nvl(payload.get("purpose")), lines, principal.userId(),
                 "CHT đã chỉnh sửa phiếu sau khi bị trả lại.", Instant.now());
+
+        // ══════════════════════════════════════════════════════════════════════════════════
+        // TASK-048 — AUDIT #2/6: JS `:994`
+        //   await audit(user.id, "EDIT_RETURNED", "material_request", requestId, mr,
+        //     { neededAt, priority: clean(payload.priority), area: clean(payload.area),
+        //       purpose: clean(payload.purpose), lineCount: lines.length }, request);
+        // ⚠️ BẪY ĐÃ GẶP (bài học #13): `after` dùng giá trị THÔ của payload
+        // (`clean(payload.priority)`), KHÔNG phải giá trị đã mặc định hoá ("normal") truyền vào UPDATE.
+        // Tương tự `neededAt` là giá trị thô đã trim — không phải `null` khi rỗng.
+        // ══════════════════════════════════════════════════════════════════════════════════
+        Map<String, Object> editAfter = new LinkedHashMap<>();
+        editAfter.put("neededAt", neededAt);
+        editAfter.put("priority", trim(payload.get("priority")));
+        editAfter.put("area", trim(payload.get("area")));
+        editAfter.put("purpose", trim(payload.get("purpose")));
+        editAfter.put("lineCount", lines.size());
+        auditLog.log(principal.userId(), "EDIT_RETURNED", "material_request", requestId,
+                MiniJson.stringify(mr), MiniJson.stringify(editAfter), null);
+
         return Map.of("message", "Đã lưu chỉnh sửa " + sv(mr, "requestNo") + ". Kiểm tra lại trước khi gửi lại từ đầu.");
     }
 
@@ -376,6 +423,22 @@ public final class RequestManagementUseCase {
                 "Đã sửa phiếu; CHT xác nhận lại và khởi động lại luồng duyệt từ đầu.");
         store.resubmitRequest(requestId, stages, sv(firstStage, "stageNo"), autoFirst, currentStage,
                 principal.userId(), comment, Instant.now());
+
+        // ══════════════════════════════════════════════════════════════════════════════════
+        // TASK-048 — AUDIT #3/6: JS `:1019`
+        //   await audit(user.id, "RESUBMIT", "material_request", requestId, mr,
+        //     { confirmedStage: firstStage.stageNo, restartStage: currentStage,
+        //       comment: clean(payload.comment) }, request);
+        // ⚠️ BẪY (bài học #13): `comment` ở đây là giá trị THÔ `clean(payload.comment)` — KHÔNG phải
+        // biến `comment` cục bộ đã được mặc định hoá ("CHT GỬI LẠI: …") truyền xuống store.
+        // ══════════════════════════════════════════════════════════════════════════════════
+        Map<String, Object> resubmitAfter = new LinkedHashMap<>();
+        resubmitAfter.put("confirmedStage", gi(firstStage, "stageNo"));
+        resubmitAfter.put("restartStage", currentStage);
+        resubmitAfter.put("comment", trim(payload.get("comment")));
+        auditLog.log(principal.userId(), "RESUBMIT", "material_request", requestId,
+                MiniJson.stringify(mr), MiniJson.stringify(resubmitAfter), null);
+
         return Map.of("message", "Đã gửi lại " + sv(mr, "requestNo") + "; CHT đã xác nhận và hồ sơ chuyển sang "
                 + sv(currentConfig, "name") + ".");
     }
@@ -391,6 +454,19 @@ public final class RequestManagementUseCase {
             throw Api("Chỉ phiếu bị trả lại/từ chối và chưa phát sinh mua hàng mới được xóa.");
         if (store.countRequestPoItems(requestId) > 0)
             throw Api("Phiếu đã phát sinh PO nên không được xóa; hãy giữ lịch sử.");
+
+        // ══════════════════════════════════════════════════════════════════════════════════
+        // TASK-048 — AUDIT #4/6: JS `:1030`
+        //   await audit(user.id, "DELETE_RETURNED", "material_request", requestId, mr,
+        //     { reason: clean(payload.reason) || "CHT xóa phiếu bị trả lại để lập mới" }, request);
+        // ⚠️ THỨ TỰ: JS audit TRƯỚC rồi mới xoá (dòng 1030 audit, 1031 batch DELETE) ⇒ giữ đúng thứ tự.
+        // ══════════════════════════════════════════════════════════════════════════════════
+        Map<String, Object> deleteAfter = new LinkedHashMap<>();
+        deleteAfter.put("reason", blankDefault(trim(payload.get("reason")),
+                "CHT xóa phiếu bị trả lại để lập mới"));
+        auditLog.log(principal.userId(), "DELETE_RETURNED", "material_request", requestId,
+                MiniJson.stringify(mr), MiniJson.stringify(deleteAfter), null);
+
         store.deleteRequestCascade(requestId);
         return Map.of("message", "Đã xóa " + sv(mr, "requestNo") + ". CHT có thể lập phiếu mới.");
     }
@@ -411,6 +487,14 @@ public final class RequestManagementUseCase {
             throw Api("Chỉ phiếu đã bị trả lại và đang chờ CHT xử lý mới được hủy/xóa.");
         if (store.countRequestPoItems(requestId) > 0) throw Api("Phiếu đã phát sinh PO nên không thể hủy.");
         store.cancelRequest(requestId, reason, principal.userId(), Instant.now());
+
+        // ══════════════════════════════════════════════════════════════════════════════════
+        // TASK-048 — AUDIT #5/6: JS `:1062`
+        //   await audit(user.id, "CANCEL", "material_request", requestId, mr, { reason }, request);
+        // ══════════════════════════════════════════════════════════════════════════════════
+        auditLog.log(principal.userId(), "CANCEL", "material_request", requestId,
+                MiniJson.stringify(mr), MiniJson.stringify(Map.of("reason", reason)), null);
+
         return Map.of("message", "Đã hủy " + sv(mr, "requestNo") + "; số phiếu được giữ nguyên trong lịch sử.");
     }
 

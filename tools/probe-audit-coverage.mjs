@@ -51,9 +51,16 @@ const javaCases = [];
   while ((m = re.exec(ctrl)) !== null) {
     const body = m[2];
     const call = body.match(/([a-zA-Z]+UseCase)\.([a-zA-Z0-9_]+)\s*\(/);
+    // ⚠️ SỬA LỖI CỦA CHÍNH CỔNG (17/09): bản trước lấy THẲNG tên BIẾN trong controller
+    // (`requestManagementUseCase` — camelCase) rồi tra vào bảng khoá theo tên TỆP/LỚP
+    // (`RequestManagementUseCase` — PascalCase) ⇒ tra KHÔNG BAO GIỜ khớp ⇒ `CẢ HAI ĐỀU GHI: 0`
+    // và "khe hở" luôn bằng ĐÚNG số action JS có audit (152) — một hằng số, không phải phép đo.
+    // Nay chuẩn hoá về PascalCase trước khi tra.
+    const cls = call ? call[1].charAt(0).toUpperCase() + call[1].slice(1) : null;
     javaCases.push({
       name: m[1],
       useCase: call ? call[1] : null,
+      cls,
       method: call ? call[2] : null,
       hasCase: true,
     });
@@ -66,10 +73,13 @@ const onlyJs = [];
 const both = [];
 for (const a of jsActions) {
   const c = caseByName.get(a.name);
-  const javaAudit = c && c.useCase ? Boolean(classHasAudit[c.useCase]) : false;
+  const javaAudit = c && c.cls ? Boolean(classHasAudit[c.cls]) : false;
   if (a.audit && !javaAudit) onlyJs.push({ ...a, useCase: c?.useCase ?? "(không có case)", method: c?.method ?? "—" });
   else if (a.audit && javaAudit) both.push(a.name);
 }
+// Đối chứng dương cho chính cổng: số case tra được lớp phải > 0, nếu không thì phép đo vô nghĩa.
+const mapped = javaCases.filter((c) => c.cls && classHasAudit[c.cls] !== undefined).length;
+console.log(`ĐỐI CHỨNG: ${mapped}/${javaCases.length} nhánh case tra được LỚP use-case (phải > 0, nếu = 0 là cổng hỏng)`);
 
 console.log(`JS: ${jsActions.length} action · trong đó CÓ gọi audit(): ${jsActions.filter((a) => a.audit).length}`);
 console.log(`Java: ${javaCases.length} nhánh case · lớp use-case CÓ gọi audit(): ${Object.values(classHasAudit).filter(Boolean).length}/${Object.keys(classHasAudit).length}`);

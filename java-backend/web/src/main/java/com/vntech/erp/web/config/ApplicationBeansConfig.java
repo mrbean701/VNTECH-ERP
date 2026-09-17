@@ -114,8 +114,11 @@ public class ApplicationBeansConfig {
     public RequestManagementUseCase requestManagementUseCase(RequestStore requestStore,
                                                              IdGenerator idGenerator,
                                                              RbacService rbacService,
-                                                             AccessScopeService accessScopeService) {
-        return new RequestManagementUseCase(requestStore, idGenerator, rbacService, accessScopeService);
+                                                             AccessScopeService accessScopeService,
+                                                             AuditLogPort auditLogPort) {
+        // TASK-048 — nối `AuditLogPort` để ghi 5/6 mốc nhật ký kiểm toán của luồng Phiếu đề nghị.
+        return new RequestManagementUseCase(requestStore, idGenerator, rbacService, accessScopeService,
+                auditLogPort);
     }
 
     @Bean
