@@ -192,6 +192,14 @@ try {
       others.map((it) => JSON.stringify(it.customFields)).join(" "));
     check("KHÔNG còn khoá `customFields` ở cấp PHIẾU (JS không có ⇒ tránh giao diện đọc nhầm chỗ)",
       !("customFields" in req), JSON.stringify(Object.keys(req).filter((k) => k.includes("custom"))));
+
+    // TASK-048 — phép kiểm ĐỎ trước khi port: JS `:980` ghi `audit(user.id,"CREATE","material_request",…)`,
+    // Java thêm sau. Chạy probe này khi CHƯA port sẽ thấy HỎNG ⇒ đối chứng dương cho vòng port.
+    const auditCreate = sqlRows(`SELECT action,entity_type,after_json FROM audit_logs
+                                 WHERE entity_id=${q1(requestId)} AND action='CREATE' AND entity_type='material_request'`);
+    check("TASK-048 · có dòng `audit_logs` CREATE/material_request cho phiếu vừa lập (JS `:980`)",
+      auditCreate.length === 1 && /"requestNo"/.test(String(auditCreate[0]?.[2])),
+      `${auditCreate.length} dòng`);
   }
 
   // ---------- 6. TASK-044: 11 trường dòng phiếu + đối chiếu SỐ với SQL ----------
