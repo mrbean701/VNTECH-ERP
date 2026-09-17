@@ -7,7 +7,7 @@
 * Master Task: MASTER TASK — ERP/MIS SYSTEM AUDIT, REFACTOR & FEATURE UPGRADE (46 mục)
 * Overall status: **IN PROGRESS** — PHASE 1 chưa xong
 * Current phase: PHASE 1 — HẠ TẦNG UI DÙNG CHUNG. Song song: hoàn thiện tầng phân quyền phía Java (P0/P1)
-* Current task: **TASK-023 (IN PROGRESS)** — kiểm PHẠM VI dự án/kho. Hạ tầng dùng chung đã xong; đã nối **6/64** action (`cancel_request`, `issue_stock`, `return_stock`, `create_stock_count`, `approve_stock_count`, + 1 có sẵn); **còn 58**
+* Current task: **TASK-023 (IN PROGRESS)** — kiểm PHẠM VI dự án/kho. Hạ tầng dùng chung đã xong; đã nối **17/64** action (**nhóm KHO đã phủ hết** — 15 action của `StockManagementUseCase`); **còn 47** (Purchase, Request, Production, Finance, Boq, AdminSystem)
 * Last completed task: TASK-022 + TASK-021b (#23) — thắt 5 cổng vai trò và sửa hồi quy đường ống `roleBase`. Trước đó: TASK-021 (#22) · TASK-020 (#21)
 * Next task: TASK-023 lô 2 — nối phạm vi cho `StockManagementUseCase` (13 action có kiểm cả kho)
 * Blocked task: TASK-B02 (sandbox chặn Edge headless) · **TASK-B03 (mvn chặn ghi `.m2` ⇒ JAR chưa đóng gói lại)** · TASK-B01 (tên màn Receiving — KHÔNG chặn tiến độ)

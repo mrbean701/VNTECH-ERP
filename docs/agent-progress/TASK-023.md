@@ -143,11 +143,46 @@ tools/patch-task023-batch1.mjs       (mới)
 |---|---|
 | `node tools/probe-action-scope-parity.mjs` (trước lô 1) | Java kiểm **0**/64 action |
 | `node tools/probe-action-scope-parity.mjs` (sau lô 1) | Java kiểm **2**/64 |
-| `node tools/probe-action-scope-parity.mjs` (sau lô 2) | Java kiểm **6**/64 — còn **58** |
+| `node tools/probe-action-scope-parity.mjs` (sau lô 2) | Java kiểm **6**/64 |
+| `node tools/probe-action-scope-parity.mjs` (sau lô 3) | Java kiểm **17**/64 — còn **47** |
 | `node tools/patch-task023-batch1.mjs` | 7 áp dụng · 0 lỗi |
-| `node tools/patch-task023-batch2.mjs` | 10 áp dụng · 1 không khớp (Principal đã bị TASK-021b sửa trước) · 0 lỗi sau khi vá bổ sung |
+| `node tools/patch-task023-batch2.mjs` | 10 áp dụng · 1 không khớp (Principal đã bị TASK-021b sửa trước) · vá bổ sung |
 | `node tools/patch-task023-batch2b.mjs` | 1 áp dụng · 0 lỗi |
-| `tools/verify-java-compile.ps1` | **102 tệp nguồn · 0 dòng lỗi · 156 `.class` · exit 0** |
+| `node tools/patch-task023-batch3.mjs` | **11 áp dụng · 0 lỗi** |
+| `tools/verify-java-compile.ps1` | **102 tệp nguồn · 0 dòng lỗi · 156 `.class` · exit 0** (chạy lại sau lô 2 và lô 3) |
+
+## LÔ 3 — StockManagementUseCase (10 action còn lại)
+
+Nhóm kho đã **phủ hết**. Mỗi action lấy **nguồn giá trị đúng như JS** (tra từ DB khi JS tra từ DB) và đặt
+kiểm phạm vi **đúng vị trí** so với các kiểm tra khác:
+
+| Action | Phạm vi | Nguồn giá trị | Thông điệp |
+|---|---|---|---|
+| `confirm_installation` | dự án (write) | `item.projectId` (DB) | "Tài khoản không có quyền tại dự án này." |
+| `create_transfer_order` | kho nguồn (write) | `sourceWarehouseId` (payload) | "Không có quyền lập điều chuyển từ kho nguồn này." |
+| `approve_transfer_order` | kho nguồn (write) | `t.sourceWarehouseId` (DB) | "Không có quyền duyệt kho nguồn." |
+| `ship_transfer_order` | kho nguồn (write) | `t.sourceWarehouseId` (DB) | "Chỉ thủ kho nguồn/đúng phạm vi mới được xác nhận xuất." |
+| `receive_transfer_order` | kho đích (write) | `t.destinationWarehouseId` (DB) | "Chỉ thủ kho đích/đúng phạm vi mới được xác nhận nhận." |
+| `create_central_return` | dự án + kho (write) | `projectId`, `sourceWarehouseId` | "Không có quyền tại dự án này." / "…xuất tại kho dự án này." |
+| `approve_central_return` | dự án (write) | `row.projectId` (DB) | "Không có quyền tại dự án này." |
+| `receive_central_return` | kho Tổng (write) | `row.centralWarehouseId` (DB) | "Chỉ Thủ kho Tổng được nhận phiếu vào Kho Tổng." |
+| `reconcile_contract_stock` | dự án + kho — **mức ĐỌC** | `projectId`, `warehouseId` | "Không có quyền đối soát kho này." |
+| `transfer_contract_ownership` | dự án + kho (write) | `projectId`, `warehouseId` | "Không có quyền tại dự án/kho này." |
+| `reverse_stock_movement` | kho nguồn + kho đích (write) | `mov.from_warehouse_id`, `mov.to_warehouse_id` — **chỉ khi khác rỗng** | "Không có quyền tại kho nguồn." / "…kho đích." |
+
+Hai điểm phải cẩn thận và đã xử lý đúng:
+
+1. **`reconcile_contract_stock` là mức ĐỌC** (`write=false`) — JS dùng `canAccessProject(user, projectId, false)`
+   và `canAccessWarehouse(user, warehouseId, false)`. Dùng nhầm mức write sẽ chặn oan người chỉ có quyền xem.
+2. **`reverse_stock_movement` chỉ kiểm kho khi kho KHÁC RỖNG** — JS viết `if(mov.from_warehouse_id && !(await …))`.
+   Giao dịch không có kho đích là hợp lệ, không được chặn.
+
+Công cụ mới: `tools/show-java-method.mjs` — in thân một phương thức Java theo tên lớp + tên phương thức
+(quét khối theo cặp ngoặc, bỏ qua chuỗi/chú thích), dùng để lấy dữ liệu chính xác trước khi vá.
+
+Kiểm chứng bổ sung trước khi vá: đã đọc `WarehouseStockStoreAdapter` để xác nhận **tên khoá thật** —
+`findTransferOrder`/`findCentralReturn`/`findIssueItem` alias camelCase, còn `findStockMovement` dùng
+`SELECT *` nên khoá là **snake_case**. Không đoán tên khoá.
 
 ## LÔ 2 — StockManagementUseCase (4 action)
 

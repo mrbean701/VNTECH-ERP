@@ -237,6 +237,9 @@ public final class StockManagementUseCase {
         Map<String, Object> item = store.findIssueItem(issueItemId)
                 .orElseThrow(() -> Api("Dòng xác nhận lắp đặt không hợp lệ."));
         if (quantity <= 0) throw Api("Dòng xác nhận lắp đặt không hợp lệ.");
+        // JS 1520: phạm vi dự án lấy từ CHÍNH dòng xuất kho, không lấy từ payload.
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), sv(item, "projectId"), true,
+                "Tài khoản không có quyền tại dự án này.");
         double installedQty = numberValue(item.get("installedQty"));
         double issueQty = numberValue(item.get("quantity"));
         if (installedQty + quantity > issueQty + 1e-9)
@@ -269,6 +272,10 @@ public final class StockManagementUseCase {
         if (sourceWarehouseId.isEmpty() || destinationWarehouseId.isEmpty()
                 || sourceWarehouseId.equals(destinationWarehouseId) || rawLines.isEmpty())
             throw Api("Phiếu điều chuyển phải có kho nguồn, kho đích khác nhau và ít nhất một vật tư.");
+        // JS 1446: phạm vi kho nguồn (không kiểm kho đích — đúng JS).
+        accessScope.requireWarehouseAccess(principal.userId(), principal.role(),
+                principal.warehouseScopeKind(), sourceWarehouseId, true,
+                "Không có quyền lập điều chuyển từ kho nguồn này.");
         Map<String, Object> sw = store.findWarehouseFull(sourceWarehouseId)
                 .orElseThrow(() -> Api("Kho nguồn/đích không hợp lệ."));
         Map<String, Object> dw = store.findWarehouseFull(destinationWarehouseId)
@@ -348,6 +355,11 @@ public final class StockManagementUseCase {
                 .orElseThrow(() -> Api("Phiếu điều chuyển không ở trạng thái chờ duyệt."));
         if (!"requested".equals(sv(t, "status")))
             throw Api("Phiếu điều chuyển không ở trạng thái chờ duyệt.");
+        // JS 1450: phạm vi kho nguồn của chính phiếu.
+        accessScope.requireWarehouseAccess(principal.userId(), principal.role(),
+                principal.warehouseScopeKind(), sv(t, "sourceWarehouseId"), true,
+                "Không có quyền duyệt kho nguồn.");
+
         store.setTransferApproved(transferId, principal.userId(), Instant.now());
         return Map.of("message", "Đã duyệt điều chuyển; kho nguồn có thể xuất hàng.");
     }
@@ -358,6 +370,11 @@ public final class StockManagementUseCase {
         Map<String, Object> t = store.findTransferOrder(transferId)
                 .orElseThrow(() -> Api("Phiếu chưa được duyệt hoặc đã xuất."));
         if (!"approved".equals(sv(t, "status"))) throw Api("Phiếu chưa được duyệt hoặc đã xuất.");
+        // JS 1452: phạm vi kho nguồn.
+        accessScope.requireWarehouseAccess(principal.userId(), principal.role(),
+                principal.warehouseScopeKind(), sv(t, "sourceWarehouseId"), true,
+                "Chỉ thủ kho nguồn/đúng phạm vi mới được xác nhận xuất.");
+
         List<Map<String, Object>> items = store.transferOrderItems(transferId);
         String sourceProjectId = sv(t, "sourceProjectId");
         for (Map<String, Object> item : items) {
@@ -387,6 +404,11 @@ public final class StockManagementUseCase {
         Map<String, Object> t = store.findTransferOrder(transferId)
                 .orElseThrow(() -> Api("Phiếu chưa ở trạng thái đang vận chuyển."));
         if (!"in_transit".equals(sv(t, "status"))) throw Api("Phiếu chưa ở trạng thái đang vận chuyển.");
+        // JS 1457: phạm vi kho ĐÍCH.
+        accessScope.requireWarehouseAccess(principal.userId(), principal.role(),
+                principal.warehouseScopeKind(), sv(t, "destinationWarehouseId"), true,
+                "Chỉ thủ kho đích/đúng phạm vi mới được xác nhận nhận.");
+
         List<?> rawLines = payload.get("lines") instanceof List<?> l ? l : List.of();
         List<Map<String, Object>> updates = new ArrayList<>();
         long lostTotal = 0;
@@ -433,6 +455,13 @@ public final class StockManagementUseCase {
         String projectId = trim(payload.get("projectId"));
         String sourceWarehouseId = trim(payload.get("sourceWarehouseId"));
         List<?> rawLines = payload.get("lines") instanceof List<?> l ? l : List.of();
+        // JS 1466: phạm vi DỰ ÁN rồi phạm vi KHO — kiểm trước khi xác nhận kho thuộc dự án.
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), projectId, true,
+                "Tài khoản không có quyền tại dự án này.");
+        accessScope.requireWarehouseAccess(principal.userId(), principal.role(),
+                principal.warehouseScopeKind(), sourceWarehouseId, true,
+                "Không có quyền xuất tại kho dự án này.");
+
         if (store.findActiveWarehouse(sourceWarehouseId, projectId).isEmpty() || rawLines.isEmpty())
             throw Api("Phiếu trả Kho Tổng phải đúng kho dự án và có vật tư.");
         Map<String, Object> central = store.findCentralWarehouse()
@@ -488,6 +517,10 @@ public final class StockManagementUseCase {
         Map<String, Object> row = store.findCentralReturn(returnId)
                 .orElseThrow(() -> Api("Phiếu không còn ở trạng thái chờ duyệt."));
         if (!"pending_approval".equals(sv(row, "status"))) throw Api("Phiếu không còn ở trạng thái chờ duyệt.");
+        // JS 1471: phạm vi dự án của chính phiếu (không kiểm kho — đúng JS).
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), sv(row, "projectId"), true,
+                "Tài khoản không có quyền tại dự án này.");
+
         String transitId = store.findTransitWarehouse().map(m -> sv(m, "id"))
                 .orElseThrow(() -> Api("Thiếu kho Transit hệ thống."));
         String projectId = sv(row, "projectId");
@@ -521,6 +554,11 @@ public final class StockManagementUseCase {
                 .orElseThrow(() -> Api("Phiếu phải được duyệt và có kết quả kiểm đếm."));
         if (!"in_transit".equals(sv(row, "status")) || rawLines.isEmpty())
             throw Api("Phiếu phải được duyệt và có kết quả kiểm đếm.");
+        // JS 1476: phạm vi Kho Tổng nhận phiếu — đặt trước kiểm ảnh, đúng thứ tự JS.
+        accessScope.requireWarehouseAccess(principal.userId(), principal.role(),
+                principal.warehouseScopeKind(), sv(row, "centralWarehouseId"), true,
+                "Chỉ Thủ kho Tổng được nhận phiếu vào Kho Tổng.");
+
         if (store.centralReturnImageCount(returnId) < 1)
             throw Api("Phải tải ít nhất một ảnh kiểm đếm trước khi Kho Tổng xác nhận.");
         Map<String, Map<String, Object>> sourceMap = new LinkedHashMap<>();
@@ -654,6 +692,12 @@ public final class StockManagementUseCase {
         String warehouseId = trim(payload.get("warehouseId"));
         if (projectId.isEmpty() || warehouseId.isEmpty())
             throw Api("Đối soát cần chọn đúng một dự án và kho.");
+        // JS 858: phạm vi ở mức ĐỌC (write=false) — đối soát không làm thay đổi dữ liệu.
+        if (!accessScope.canAccessProject(principal.userId(), principal.role(), projectId, false)
+                || !accessScope.canAccessWarehouse(principal.userId(), principal.role(),
+                        principal.warehouseScopeKind(), warehouseId, false)) {
+            throw Api("Không có quyền đối soát kho này.");
+        }
         List<Map<String, Object>> rows = store.reconcilePhysicalVsContract(warehouseId, projectId);
         Instant now = Instant.now();
         int mismatch = 0;
@@ -687,6 +731,12 @@ public final class StockManagementUseCase {
         if (projectId.isEmpty() || warehouseId.isEmpty() || materialId.isEmpty()
                 || sourceContractId.isEmpty() || destinationContractId.isEmpty() || qty <= 0)
             throw Api("Chuyển ownership cần đủ kho, vật tư, Contract nguồn/đích hợp lệ và số lượng > 0.");
+        // JS 855: JS gộp hai kiểm vào một thông điệp.
+        if (!accessScope.canAccessProject(principal.userId(), principal.role(), projectId, true)
+                || !accessScope.canAccessWarehouse(principal.userId(), principal.role(),
+                        principal.warehouseScopeKind(), warehouseId, true)) {
+            throw Api("Không có quyền tại dự án/kho này.");
+        }
         if (sourceContractId.equals(destinationContractId)) throw Api("Contract nguồn và đích phải khác nhau.");
         Map<String, Object> source = store.findContractActive(sourceContractId).orElse(null);
         Map<String, Object> dest = store.findContractActive(destinationContractId).orElse(null);
@@ -748,6 +798,19 @@ public final class StockManagementUseCase {
                 .orElseThrow(() -> Api("Không tìm thấy giao dịch kho."));
         if (!sv(mov, "reversal_of_id").isEmpty()) throw Api("Không được đảo một giao dịch đảo.");
         if (store.findReversal(movementId).isPresent()) throw Api("Giao dịch này đã được đảo trước đó.");
+        // JS 1277: chỉ kiểm khi kho KHÁC RỖNG; findStockMovement dùng SELECT * nên khoá snake_case.
+        String scopeFromWh = sv(mov, "from_warehouse_id");
+        if (!scopeFromWh.isEmpty()) {
+        accessScope.requireWarehouseAccess(principal.userId(), principal.role(),
+                principal.warehouseScopeKind(), scopeFromWh, true,
+                "Không có quyền tại kho nguồn.");
+        }
+        String scopeToWh = sv(mov, "to_warehouse_id");
+        if (!scopeToWh.isEmpty()) {
+        accessScope.requireWarehouseAccess(principal.userId(), principal.role(),
+                principal.warehouseScopeKind(), scopeToWh, true,
+                "Không có quyền tại kho đích.");
+        }
         Instant now = Instant.now();
         Map<String, Object> reverse = new LinkedHashMap<>();
         reverse.put("id", "MOV_" + java.util.UUID.randomUUID());
