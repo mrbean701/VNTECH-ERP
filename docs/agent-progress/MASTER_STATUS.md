@@ -64,7 +64,7 @@ Java sắp `created_at DESC`) · `boqChangeHistory` (JS có `LIMIT 1000` + tiebr
 | BLOCKED ITEMS | ~~**TASK-034**~~ **✅ ĐÃ GỠ CHẶN 17/09/2026** (bundle nay dựng lại được và đang phục vụ bản MỚI) · **TASK-040 nhóm 6** (lệch cấu trúc: `vntech_license_*` cần port cả hệ license + xác minh chữ ký số — thuộc phần **bảo mật** đã yêu cầu tạm hoãn) · **TASK-034** (`npm run build` không dựng lại được UI: dấu vân tay nguồn lệch + bảng identity có **trigger chặn UPDATE** ⇒ phải viết migration) · **TASK-035 mục 7** · **TASK-036 mục 7** · **TASK-037 mục 5** · **TASK-031** · **TASK-032** · **TASK-029** · **TASK-024** · **dữ liệu `user_module_permissions`** · **số SLA thật (24h/8h)** |
 | USER CONFIRMATION REQUIRED | **YES** — **11 câu hỏi**, ghi ở mục riêng bên dưới |
 | CURRENT BRANCH | `unity` |
-| LATEST COMMIT | `e35d951` (#132 · TASK-078 identity) · **125 commit CHƯA PUSH** (đo bằng `git rev-list --count origin/unity..HEAD`) · **KHÔNG PUSH** theo quyết định của người dùng (chờ anh test thủ công xong) |
+| LATEST COMMIT | `aadd397` (#138 · TASK-081) · **132 commit CHƯA PUSH** (đo bằng `git rev-list --count origin/unity..HEAD`) · **KHÔNG PUSH** theo quyết định của người dùng (chờ anh test thủ công xong) |
 
 ## System State
 
