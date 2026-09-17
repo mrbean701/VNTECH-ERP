@@ -2783,22 +2783,11 @@ function DepartmentPermissionManager({ data, action }: { data: AppData; action: 
             <button className="primary" disabled={busy} onClick={save}>{busy ? "Đang lưu…" : "Lưu thay đổi"}</button>
           </div>
       {msg && <div className="inline-alert">{msg}</div>}
-      <div className="table-wrap"><table>
-        <thead><tr><th>Chức năng</th>{PERM_CAPS.map((c) => <th key={c.key}>{c.label}</th>)}<th></th></tr></thead>
-        <tbody>
-          {modules.map((m) => {
-            const v = valueOf(m.key);
-            const isDraft = Boolean(draft[m.key]);
-            return <tr key={m.key} style={isDraft ? { background: "#fff8e6" } : undefined}>
-              <td><strong>{m.label}</strong><small>{m.key}</small></td>
-              {PERM_CAPS.map((c) => <td key={c.key}>
-                <input type="checkbox" checked={Number(v[c.key]) === 1} onChange={() => toggle(m.key, c.key)} />
-              </td>)}
-              <td>{isDraft ? <StatusBadge value="Chưa lưu" /> : (savedRows.some((r) => String(r.moduleKey) === m.key) ? <StatusBadge value="Đã cấp" /> : "")}</td>
-            </tr>;
-          })}
-        </tbody>
-      </table></div>
+      <DataTable rows={modules} rowKey={(m) => String(m.key)} rowStyle={(m) => (draft[m.key] ? { background: "#fff8e6" } : undefined)} columns={[
+        { key: "c0", header: "Chức năng", render: (m) => <><strong>{m.label}</strong><small>{m.key}</small></> },
+        ...PERM_CAPS.map((c) => ({ key: c.key, header: c.label, render: (m: Row) => <input type="checkbox" checked={Number(valueOf(m.key)[c.key]) === 1} onChange={() => toggle(m.key, c.key)} /> })),
+        { key: "cz", header: "", render: (m) => (draft[m.key] ? <StatusBadge value="Chưa lưu" /> : (savedRows.some((r) => String(r.moduleKey) === m.key) ? <StatusBadge value="Đã cấp" /> : "")) },
+      ]} />
         </div>
       </div>
     </section>

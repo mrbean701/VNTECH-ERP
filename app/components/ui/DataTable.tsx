@@ -23,7 +23,7 @@
 //     emptyText="Chưa có dữ liệu."
 //   />
 
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 export type Column<T> = {
   key: string;
@@ -43,7 +43,7 @@ export type Column<T> = {
 
 export function DataTable<T>({
   columns, rows, rowKey, sort, onRowClick, emptyText = "Chưa có dữ liệu.",
-  loading, error, footer, toolbar,
+  loading, error, footer, toolbar, rowStyle,
 }: {
   columns: Column<T>[];
   rows: T[];
@@ -57,6 +57,11 @@ export function DataTable<T>({
   footer?: ReactNode;
   /** Nội dung chèn ngay trên bảng (thanh công cụ, cảnh báo…). */
   toolbar?: ReactNode;
+  /**
+   * CSS nội tuyến cho CẢ DÒNG — TASK-083. Cần để giữ nguyên các chỗ tô nền theo trạng thái
+   * (vd bảng ma trận quyền phòng ban tô nền vàng dòng "chưa lưu" bằng `style` trên `<tr>`).
+   */
+  rowStyle?: (row: T, index: number) => CSSProperties | undefined;
 }) {
   const visible = columns.filter((c) => !c.hidden);
 
@@ -95,6 +100,7 @@ export function DataTable<T>({
               <tr
                 key={rowKey ? rowKey(row, i) : i}
                 className={onRowClick ? "dt-clickable" : undefined}
+                style={rowStyle ? rowStyle(row, i) : undefined}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
               >
                 {visible.map((c) => (
