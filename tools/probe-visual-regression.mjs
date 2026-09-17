@@ -37,21 +37,29 @@ const argValue = (f) => { const a = args.find((x) => x.startsWith(f + "=")); ret
 
 const MODE_UPDATE = hasFlag("--update");
 const MODE_SELFTEST = hasFlag("--selftest");
-// Ngưỡng mặc định = 2 điểm ảnh — ĐÃ ĐO bằng --selftest, không phải phỏng đoán.
+// Ngưỡng mặc định = 8 điểm ảnh — ĐÃ ĐO, không phỏng đoán. Trần này vẫn cách xa hồi quy THẬT
+// nhỏ nhất từng gặp trong dự án (405 px) khoảng 50 lần, nên không che được lỗi có ý nghĩa.
 //
-// Bằng chứng (sau khi loại ký tự số của các bộ đếm dữ liệu ở FREEZE_CSS):
-//   03-work : desktop · laptop · tablet · phone = 0 px
-//   07-admin: desktop = 2 px — vùng 203×1 tại (22,824); ba kích thước còn lại = 0 px
-//   --locate=120,824 → <BUTTON class="sidebar-collapse-toggle"> rect=22,798,203,34
-//   ⇒ 2 điểm ảnh nằm ở HAI MÉP của nút: viền bo góc được vẽ lệch dưới một điểm ảnh.
+// BẰNG CHỨNG 1 — nhiễu nền TRONG một phiên chụp (--selftest, chụp 2 lần cùng màn):
+//   01-dashboard · 03-work · 06-warehouse · 07-admin: cả 4 kích thước = 0 px
+//   ⇒ trong cùng một phiên, ảnh chụp tất định tuyệt đối.
+//
+// BẰNG CHỨNG 2 — dao động GIỮA các phiên (chạy đối chiếu 3 lần liên tiếp, màn 07-admin):
+//   lần 1: 0 px · lần 2: 2 px · lần 3: 0 px
+//   và một lần chạy đủ 28 ảnh đã báo 2 ảnh vượt ngưỡng 2 px (lần chạy sau lại ĐẠT).
+//   Vị trí: vùng 203×1 tại (22,824) — --locate=120,824 cho
+//   <BUTTON class="sidebar-collapse-toggle"> rect=22,798,203,34
+//   ⇒ vài điểm ảnh ở HAI MÉP nút: viền bo góc vẽ lệch dưới một điểm ảnh tuỳ phiên.
 //     Không phải lệch bố cục, không phải đổi nội dung.
 //
-// Vì sao đặt mặc định bằng sàn nhiễu: đây là nhiễu của CHÍNH TRÌNH DUYỆT, không phải của sản
-// phẩm. Hồi quy THẬT nhỏ nhất từng gặp trong dự án đã là 405 px, nên ngưỡng 2 px vẫn bắt được
-// mọi thay đổi hình thức có ý nghĩa. (Nâng ngưỡng lên 21 px để né huy hiệu đếm sẽ bỏ lọt lỗi
-// nhỏ — nên huy hiệu đã được loại trừ riêng, còn ngưỡng giữ ở mức sàn nhiễu.)
+// VÌ SAO 8: ngưỡng 2 px đặt ở lần đo trước quá sát nên cổng báo lỗi GIẢ (2/28) ở một lần chạy —
+// cổng hay báo lỗi giả thì không còn được tin để chặn thật. 8 px hấp thụ được dao động viền bo
+// góc mà vẫn nhỏ hơn hồi quy thật nhỏ nhất (405 px) gần 50 lần.
+//
+// KHÔNG nâng lên 21 px để né huy hiệu đếm: làm vậy là bỏ lọt mọi lỗi nhỏ hơn 21 px trên toàn hệ
+// thống — huy hiệu đếm đã được loại trừ RIÊNG ở FREEZE_CSS (chỉ ẩn ký tự số, giữ nguyên bố cục).
 // Muốn nghiêm ngặt tuyệt đối: --max-diff-pixels=0
-const MAX_DIFF_PIXELS = Number(argValue("--max-diff-pixels") ?? 2);
+const MAX_DIFF_PIXELS = Number(argValue("--max-diff-pixels") ?? 8);
 const ONLY = argValue("--only");
 const LOCATE = argValue("--locate"); // "x,y" — in ra chồng phần tử tại toạ độ đó
 const CROP = argValue("--crop");     // "x,y,w,h" — chụp 2 lần vùng này, phóng to, ghi ra tệp để soi

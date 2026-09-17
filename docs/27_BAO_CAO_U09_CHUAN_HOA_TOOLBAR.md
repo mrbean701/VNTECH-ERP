@@ -176,3 +176,62 @@ toolbar danh sách theo nghĩa §5): `DocumentsScreen` · `CashbankScreen` · `S
 **Khuyến nghị về quy trình cho các đợt sau:** mỗi đợt nên chọn màn **có trong bộ ảnh chuẩn** để
 cổng ảnh kiểm được; màn không có trong bộ ảnh chuẩn thì phải kiểm bằng `--locate` + OCR như đã làm ở
 mục 4.3, nếu không sẽ không có bằng chứng.
+
+---
+
+## 7. ĐỢT 2 — MÀN PHÂN QUYỀN NGƯỜI DÙNG (`Admin`)
+
+**Lỗi §5 nặng nhất trong kiểm kê:** SÁU nút dồn hết vào một phía, không có vùng số lượng cân đối:
+⇩ MẪU EXCEL TÀI KHOẢN · ⇧ NHẬP EXCEL TÀI KHOẢN · ⇩ XUẤT TÀI KHOẢN · ⓘ Hướng dẫn phân quyền ·
+⚙ Vai trò mặc định · ＋ Thêm người dùng
+
+**Đã sửa:** thay `.approved-module-head` + `.screen-actions` bằng MỘT `<ListToolbar>`:
+
+- giữ nguyên tiêu đề "PHÂN QUYỀN NGƯỜI DÙNG" và nguyên văn chuỗi 11 bước nghiệp vụ;
+- bổ sung vùng số lượng: `filteredAdminUsers.length / activeUsers.length` (tài khoản);
+- sáu nút giữ nguyên handler và thứ tự — chỉ đổi vùng chứa.
+
+**Không đưa ô tìm kiếm lên toolbar cấp màn:** `adminQuery` chỉ áp dụng cho BƯỚC 1 (danh sách nhân
+sự), không áp dụng cho 11 bước còn lại; đặt nó ở toolbar cấp màn sẽ gây hiểu sai rằng nó lọc cả
+màn. Ô tìm kiếm vẫn nằm trong `AdminStaffList` — chuyển nó lên toolbar của riêng bước 1 thuộc đợt sau.
+
+### Kiểm chứng đợt 2
+
+| Hạng mục | Kết quả |
+|---|---|
+| `npx tsc --noEmit` | **ĐẠT** |
+| Build | **ĐẠT** — định danh `VNTECH-FP-6A346E9989229D07` (head `0105`), manifest 798 tệp |
+| Cổng ảnh — kiểm dự đoán nêu trước | chỉ `07-admin` được phép lệch → **đúng**: 24/28 ảnh 0 px |
+| Cổng ảnh — sau khi cập nhật ảnh chuẩn `07-admin` | **ĐẠT ✅ 28/28** |
+| 13 probe hồi quy | **13 ĐẠT / 0 KHÔNG ĐẠT** |
+| OCR xác nhận toolbar | tiêu đề · mô tả 11 bước · "12 tài khoản" (trái) ‖ 6 nút đúng thứ tự (phải); 12 tab bước bên dưới nguyên vẹn |
+
+Chỉ cập nhật ảnh chuẩn cho riêng `07-admin` (4 ảnh).
+
+---
+
+## 8. CỔNG ẢNH CHẬP CHỜN — ĐÃ ĐO VÀ NÂNG NGƯỠNG CÓ BẰNG CHỨNG
+
+Một lần chạy cổng báo **2/28 ảnh vượt ngưỡng**, lần chạy ngay sau lại ĐẠT. Cổng lúc đạt lúc không
+thì không dùng để chặn được, nên đã đo thay vì đoán:
+
+1. **Nhiễu nền TRONG một phiên** (`--selftest` trên `01-dashboard` · `03-work` · `06-warehouse` ·
+   `07-admin`, cả 4 kích thước): **0 px** ⇒ trong phiên thì tất định tuyệt đối.
+2. **Dao động GIỮA các phiên** (chạy đối chiếu 3 lần liên tiếp trên `07-admin`): **0 px · 2 px · 0 px**.
+3. **Vị trí:** vùng 203×1 tại (22,824) → `--locate=120,824` cho
+   `<BUTTON class="sidebar-collapse-toggle">` rect 22,798,203,34 ⇒ vài điểm ảnh ở **hai mép nút**,
+   viền bo góc vẽ lệch dưới một điểm ảnh tuỳ phiên.
+
+**Kết luận:** ngưỡng 2 px quá sát nên sinh lỗi GIẢ. Đã nâng lên **8 px** kèm bằng chứng ghi trong
+mã — vẫn cách hồi quy thật nhỏ nhất từng gặp (405 px) gần 50 lần. Vẫn giữ `--max-diff-pixels=0`
+cho chế độ nghiêm ngặt tuyệt đối.
+
+---
+
+## 9. TIẾN ĐỘ U-09
+
+| Đợt | Màn đã chuyển | Còn lại |
+|---|---|---|
+| 1 | `Requests` · `WarehouseReceipt` · `Inventory` | |
+| 2 | `Admin` | |
+| **Tổng** | **4/32** | **28 màn** |
