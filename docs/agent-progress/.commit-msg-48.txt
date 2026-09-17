@@ -1,0 +1,9 @@
+﻿#48 TASK-040 nhom 1+1b: cap nhat bo nho du an (MASTER_STATUS + TASK_INDEX) va .gitignore cho ban sao luu du lieu
+
+- MASTER_STATUS.md: CURRENT/LAST/NEXT TASK, BLOCKED, 10 cau hoi nguoi dung, System State (jar 90.885.239
+  bytes, API PID 13800/job pwsh-58), DATABASE/API/PERMISSION CHANGES, known problems #18-#20,
+  important decisions #18-#21, CURRENT TODO, CONTINUATION NOTES #9-#10.
+- TASK_INDEX.md: dong moi "TASK-040 nhom 1+1b" = DONE (#47) voi day du bang chung kiem chung.
+- .gitignore: tools/_backup-*.sql (ban sao luu du lieu THAT, giu tai cho nhung khong dua vao kho ma).
+
+Khong doi ma nguon trong commit nay.
