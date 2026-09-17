@@ -1012,27 +1012,17 @@ function TeamManagement({ data, open }: { data: AppData; open: (name: string, ro
         note={`${filtered.length}/${teams.length} tổ đội · mỗi tổ đội thuộc đúng một dự án`}
         search={{ value: q, onChange: setQ, placeholder: "Tìm mã, tên tổ đội, hạng mục, dự án…" }}
       />
-      <div className="table-wrap"><table className="baseline-table">
-        <thead><tr><th>Mã tổ đội</th><th>Tên tổ đội</th><th>Hạng mục</th><th>Dự án</th><th>Kho của tổ đội</th><th>Thành viên</th><th>Quyết toán</th><th>Trạng thái</th><th></th></tr></thead>
-        <tbody>
-          {filtered.map((t) => {
-            const tid = String(t.id);
-            const p = projOf(t.projectId); const wh = whOf(t.warehouseId);
-            const act = membersOf(tid).filter((m) => Number(m.active ?? 1) === 1 && !m.leftAt).length;
-            const settled = (data.teamSettlements || []).some((s) => String(s.teamId) === tid && String(s.status) === "closed");
-            return <tr key={tid}>
-              <td><strong className="code">{t.code}</strong></td><td>{t.name}</td><td>{t.trade || "—"}</td>
-              <td>{p ? `${p.code} · ${p.name}` : "—"}</td>
-              <td>{wh ? `${wh.code} · ${wh.name}` : "—"}</td>
-              <td>{act > 0 ? `${act} người` : <span className="muted">Chưa ghi nhận</span>}</td>
-              <td><StatusBadge value={settled ? "Đã quyết toán" : "Chưa quyết toán"}/></td>
-              <td><StatusBadge value={t.active === 0 ? "Đã ngừng" : "Đang hoạt động"}/></td>
-              <td><button type="button" className="export-mini" onClick={() => { setDetailId(tid); setView("detail"); setTab(0); }}>Chi tiết ›</button></td>
-            </tr>;
-          })}
-          {!filtered.length && <tr><td colSpan={9}><Empty text="Không có tổ đội phù hợp."/></td></tr>}
-        </tbody>
-      </table></div>
+      <DataTable rows={filtered} rowKey={(t) => String(t.id)} emptyText="Không có tổ đội phù hợp." columns={[
+        { key: "c1", header: "Mã tổ đội", render: (t) => <strong className="code">{t.code}</strong> },
+        { key: "c2", header: "Tên tổ đội", render: (t) => t.name },
+        { key: "c3", header: "Hạng mục", render: (t) => t.trade || "—" },
+        { key: "c4", header: "Dự án", render: (t) => { const p = projOf(t.projectId); return p ? `${p.code} · ${p.name}` : "—"; } },
+        { key: "c5", header: "Kho của tổ đội", render: (t) => { const wh = whOf(t.warehouseId); return wh ? `${wh.code} · ${wh.name}` : "—"; } },
+        { key: "c6", header: "Thành viên", render: (t) => { const act = membersOf(String(t.id)).filter((m) => Number(m.active ?? 1) === 1 && !m.leftAt).length; return act > 0 ? `${act} người` : <span className="muted">Chưa ghi nhận</span>; } },
+        { key: "c7", header: "Quyết toán", render: (t) => { const settled = (data.teamSettlements || []).some((s) => String(s.teamId) === String(t.id) && String(s.status) === "closed"); return <StatusBadge value={settled ? "Đã quyết toán" : "Chưa quyết toán"} />; } },
+        { key: "c8", header: "Trạng thái", render: (t) => <StatusBadge value={t.active === 0 ? "Đã ngừng" : "Đang hoạt động"} /> },
+        { key: "c9", header: "", render: (t) => <button type="button" className="export-mini" onClick={() => { setDetailId(String(t.id)); setView("detail"); setTab(0); }}>Chi tiết ›</button> },
+      ]} />
     </section>
   </div>;
 }
@@ -1809,10 +1799,10 @@ function MaterialCatalogPage({ data, open, action, permission }: { data: AppData
     <details className="module-section-collapse" data-tab="1" open><summary><span>SO SÁNH / ĐỐI CHIẾU BOQ</span><b>Ẩn / Hiện</b></summary><div className="module-section-collapse-body"><MaterialMatchingWorkspace data={data} permission={permission}/></div></details>
     <details className="module-section-collapse" data-tab="2" open><summary><span>SOÁT TRÙNG ALIAS & CHẤT LƯỢNG DANH MỤC</span><b>Ẩn / Hiện</b></summary><div className="module-section-collapse-body"><section className="card"><CardHead title="Soát trùng tên tương đương (alias)" note="Rà soát alias trùng normalized hoặc xung đột với tên chuẩn mã khác. Quy trình lưu/hợp nhất hiện tại đã chặn trùng khi nhập; công cụ này phát hiện dữ liệu cũ hoặc trường hợp biên chưa được chặn."/><div className="row-actions"><button className="secondary" disabled={Boolean(aliasReport)} onClick={()=>void runAliasCheck()}>{aliasReport?"Đã soát":"Bắt đầu soát trùng"}</button>{aliasReport&&<button className="secondary" onClick={()=>setAliasReport(null)}>Đóng kết quả</button>}</div>
     {aliasReport&&<div className="table-wrap"><table className="baseline-table"><thead><tr><th>Loại phát hiện</th><th>Số lượng</th></tr></thead><tbody><tr><td>Alias trùng chuẩn hóa</td><td><strong>{Number(aliasReport.totalDuplicate||0)}</strong></td></tr><tr><td>Alias xung đột tên chuẩn mã khác</td><td><strong>{Number(aliasReport.totalClash||0)}</strong></td></tr></tbody></table></div>}
-    {aliasReport&&(Number(aliasReport.totalDuplicate)>0)&&<div className="table-wrap"><table className="baseline-table"><thead><tr><th>Alias chuẩn hóa</th><th>Số mã</th><th>Các mã</th></tr></thead><tbody>{(aliasReport.duplicateAlias||[]).map((row:Row,i:number)=><tr key={i}><td>{row.normalizedName}</td><td>{row.count}</td><td>{row.materials.map((m:Row)=>`${m.code} (${m.aliasName})`).join(" · ")}</td></tr>)}{!(aliasReport.duplicateAlias||[]).length&&<tr><td colSpan={3}><Empty text="Không có alias trùng."/></td></tr>}</tbody></table></div>}
-    {aliasReport&&(Number(aliasReport.totalClash)>0)&&<div className="table-wrap"><table className="baseline-table"><thead><tr><th>Mã nguồn</th><th>Alias</th><th>Xung đột mã</th><th>Tên chuẩn mã xung đột</th></tr></thead><tbody>{(aliasReport.aliasClashWithName||[]).map((row:Row,i:number)=><tr key={i}><td>{row.code}</td><td>{row.aliasName}</td><td>{row.clashCode}</td><td>{row.clashName}</td></tr>)}{!(aliasReport.aliasClashWithName||[]).length&&<tr><td colSpan={4}><Empty text="Không có xung đột alias với tên chuẩn."/></td></tr>}</tbody></table></div>}
+    {aliasReport&&(Number(aliasReport.totalDuplicate)>0)&&<DataTable rows={(aliasReport.duplicateAlias||[]) as Row[]} rowKey={(row,i)=>String(i)} emptyText="Không có alias trùng." columns={[{key:"c1",header:"Alias chuẩn hóa",render:(row)=><>{row.normalizedName}</>},{key:"c2",header:"Số mã",render:(row)=><>{row.count}</>},{key:"c3",header:"Các mã",render:(row)=><>{row.materials.map((m:Row)=>`${m.code} (${m.aliasName})`).join(" · ")}</>}]}/>}
+    {aliasReport&&(Number(aliasReport.totalClash)>0)&&<DataTable rows={(aliasReport.aliasClashWithName||[]) as Row[]} rowKey={(row,i)=>String(i)} emptyText="Không có xung đột alias với tên chuẩn." columns={[{key:"c1",header:"Mã nguồn",render:(row)=><>{row.code}</>},{key:"c2",header:"Alias",render:(row)=><>{row.aliasName}</>},{key:"c3",header:"Xung đột mã",render:(row)=><>{row.clashCode}</>},{key:"c4",header:"Tên chuẩn mã xung đột",render:(row)=><>{row.clashName}</>}]}/>}
     </section></div></details>
-    <details className="module-section-collapse" data-tab="0" open><summary><span>DANH MỤC NHÓM CON & MÃ VẬT TƯ</span><b>Ẩn / Hiện</b></summary><div className="module-section-collapse-body"><MaterialListTable data={data} open={open} permission={permission}/>{permission.canEdit?<MaterialCatalogManager data={data} open={open} action={action}/>:<section className="card"><CardHead title="Danh mục vật tư M&E" note="Tài khoản chỉ có quyền xem"/><div className="table-wrap"><table className="baseline-table"><thead><tr><th>Mã vật tư</th><th>Tên chuẩn</th><th>Hệ M&E</th><th>Nhóm</th><th>ĐVT</th><th>Thông số</th><th>Trạng thái</th></tr></thead><tbody>{materials.filter((row)=>row.active!==0).map((row)=><tr key={row.id}><td><strong className="code">{row.code}</strong></td><td>{row.name}</td><td>{row.categoryName||row.system||"—"}</td><td>{sanitizeUiText(row.subcategoryName||"—")||"—"}</td><td>{row.unit||"—"}</td><td>{sanitizeUiText(row.specification||"—")||"—"}</td><td><StatusBadge value="Đang dùng"/></td></tr>)}{!materials.length&&<tr><td colSpan={7}><Empty text="Danh mục vật tư chưa có dữ liệu."/></td></tr>}</tbody></table></div></section>}</div></details>
+    <details className="module-section-collapse" data-tab="0" open><summary><span>DANH MỤC NHÓM CON & MÃ VẬT TƯ</span><b>Ẩn / Hiện</b></summary><div className="module-section-collapse-body"><MaterialListTable data={data} open={open} permission={permission}/>{permission.canEdit?<MaterialCatalogManager data={data} open={open} action={action}/>:<section className="card"><CardHead title="Danh mục vật tư M&E" note="Tài khoản chỉ có quyền xem"/><DataTable rows={materials.filter((row)=>row.active!==0)} rowKey={(row)=>String(row.id)} emptyText="Danh mục vật tư chưa có dữ liệu." columns={[{key:"c1",header:"Mã vật tư",render:(row)=><strong className="code">{row.code}</strong>},{key:"c2",header:"Tên chuẩn",render:(row)=><>{row.name}</>},{key:"c3",header:"Hệ M&E",render:(row)=><>{row.categoryName||row.system||"—"}</>},{key:"c4",header:"Nhóm",render:(row)=><>{sanitizeUiText(row.subcategoryName||"—")||"—"}</>},{key:"c5",header:"ĐVT",render:(row)=><>{row.unit||"—"}</>},{key:"c6",header:"Thông số",render:(row)=><>{sanitizeUiText(row.specification||"—")||"—"}</>},{key:"c7",header:"Trạng thái",render:()=><StatusBadge value="Đang dùng"/>}]}/></section>}</div></details>
   </div>;
 }
 

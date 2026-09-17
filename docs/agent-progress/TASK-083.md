@@ -20,8 +20,12 @@ Số đo bằng `tools/probe-ui-adoption.mjs`: **bảng tự viết 87 chỗ** �
 | 3 | `TeamManagement` | "thành viên đang hoạt động" (`activeMembers`) | 8 cột, có nút `Hồ sơ ›`; `emptyText` **nguyên văn** từ `<Empty>` cũ |
 | 4 | `TeamManagement` | "tồn kho theo vật tư" (`bal`) | 4 cột; `rowKey` dùng `materialId \|\| index` như khoá cũ |
 | 5 | `DepartmentPermissionManager` | **ma trận quyền phòng ban** | 1 cột "Chức năng" + **7 cột ĐỘNG** từ `PERM_CAPS.map` + 1 cột trạng thái; dòng "chưa lưu" **giữ nguyên nền vàng** qua thuộc tính mới **`rowStyle`** |
+| 6 | `TeamManagement` | **danh sách tổ đội** (`filtered`) | 9 cột (mã · tên · hạng mục · dự án · kho · thành viên · quyết toán · trạng thái · nút `Chi tiết ›`); giữ nguyên công thức `projOf`/`whOf`/`membersOf`/`settled` |
+| 7 | `MaterialCatalogPage` | báo cáo **alias trùng** | 3 cột, khoá theo chỉ số như cũ; `emptyText` nguyên văn *"Không có alias trùng."* |
+| 8 | `MaterialCatalogPage` | báo cáo **xung đột alias** | 4 cột; `emptyText` nguyên văn *"Không có xung đột alias với tên chuẩn."* |
+| 9 | `MaterialCatalogPage` | **danh mục vật tư (chế độ CHỈ XEM)** | 7 cột; `emptyText` nguyên văn *"Danh mục vật tư chưa có dữ liệu."* |
 
-**Đo lại sau khi chuyển:** `DataTable` **13 → 18 lần** · bảng tự viết **87 → 82 chỗ** · trạng thái rỗng tự viết **88 → 85 chỗ**.
+**Đo lại sau khi chuyển:** `DataTable` **13 → 22 lần** · bảng tự viết **87 → 78 chỗ** · trạng thái rỗng tự viết **88 → 81 chỗ** · số bảng "cần cân nhắc" **12 → 5**.
 
 ### Mở rộng `DataTable` (điều kiện tiên quyết — đã làm)
 Thêm **`rowStyle?: (row, index) => CSSProperties`** vào **props** của component (⚠️ KHÔNG phải vào kiểu `Column` —
