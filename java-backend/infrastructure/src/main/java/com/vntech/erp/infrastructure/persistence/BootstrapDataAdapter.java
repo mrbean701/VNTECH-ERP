@@ -882,6 +882,23 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                 SELECT id,project_id AS projectId,stage,emails,active
                 FROM approval_email_recipients ORDER BY project_id,stage""") : List.of());
 
+        // TASK-069 — LỖI THỨ 10 CỦA LỚP "ĐƯỜNG ĐỌC THIẾU KHOÁ": `emailOutbox` là khoá **BẮT BUỘC** trong
+        // hợp đồng `AppData` của UI (`app/page.tsx:31 emailOutbox: Row[]`) nhưng **KHÔNG một adapter Java nào**
+        // khai nó ⇒ UI âm thầm nhận `[]` qua khối chuẩn hoá ⇒ màn "Hộp thư gửi" LUÔN rỗng dù `email_outbox` có dữ liệu
+        // (email phê duyệt / giao việc / thư thử đều ghi vào bảng này). JS `:724`:
+        //   isAdmin(user) ? `SELECT eo.id,eo.request_id AS requestId,eo.stage,eo.event,eo.recipients,eo.subject,
+        //                          eo.status,eo.attempt_count AS attemptCount,eo.queued_at AS queuedAt,
+        //                          eo.sent_at AS sentAt,eo.last_error AS lastError,mr.request_no AS requestNo
+        //                    FROM email_outbox eo LEFT JOIN material_requests mr ON mr.id=eo.request_id
+        //                    ORDER BY eo.queued_at DESC LIMIT 100` : []
+        // JS `:737` cũng xác nhận non-admin nhận `[]`. Port nguyên văn cả hai vế.
+        data.put("emailOutbox", admin ? query("""
+                SELECT eo.id,eo.request_id AS requestId,eo.stage,eo.event,eo.recipients,eo.subject,
+                       eo.status,eo.attempt_count AS attemptCount,eo.queued_at AS queuedAt,
+                       eo.sent_at AS sentAt,eo.last_error AS lastError,mr.request_no AS requestNo
+                FROM email_outbox eo LEFT JOIN material_requests mr ON mr.id=eo.request_id
+                ORDER BY eo.queued_at DESC LIMIT 100""") : List.of());
+
         // JS: `workflowAssignments` = bảng approval_project_assignments (phân công người duyệt theo dự án+bước)
         // TASK-062 — SỬA LỖI RÒ RỈ: JS `:723` là `isAdmin(user) ? await all(…) : []` và **KHÔNG lọc theo dự án**.
         // Bản cũ trả khoá này cho MỌI vai trò (kèm lọc `project_id IN (…)`) ⇒ tài khoản thường đọc được
