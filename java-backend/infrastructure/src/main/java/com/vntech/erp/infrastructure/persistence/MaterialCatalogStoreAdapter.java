@@ -40,14 +40,15 @@ public class MaterialCatalogStoreAdapter implements MaterialCatalogStore {
     @Override @Transactional
     public void insertMaterial(Map<String, Object> m, String createdBy, Instant now) {
         jdbcTemplate.update("""
-                INSERT INTO materials (id,code,name,`system`,specification,brand,unit,standard_price,requires_mar,
+                INSERT INTO materials (id,code,name,`system`,specification,brand,unit,standard_price,min_stock,requires_mar,
                                        active,category_id,subcategory_id,created_at,updated_at)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 m.get("id"), m.get("code"), m.get("name"),
                 m.get("system") != null ? m.get("system") : "KHAC",
                 m.get("specification"), m.get("brand"),
                 m.get("unit") != null ? m.get("unit") : "",
                 m.get("standardPrice") != null ? m.get("standardPrice") : 0,
+                m.get("minStock") != null ? m.get("minStock") : 0,
                 m.get("requiresMar") == Boolean.TRUE ? 1 : 0,
                 m.get("active") == Boolean.FALSE ? 0 : 1,
                 m.get("categoryId"), m.get("subcategoryId"), now, now);
@@ -55,14 +56,26 @@ public class MaterialCatalogStoreAdapter implements MaterialCatalogStore {
 
     @Override @Transactional
     public void updateMaterial(Map<String, Object> m, Instant now) {
+        // TASK-045: thêm `min_stock` — UI (MaterialModal) CÓ gửi `minStock` nhưng bản cũ **bỏ im lặng**,
+        // trong khi JS ghi `min_stock=numberValue(payload.minStock)`.
         jdbcTemplate.update("""
                 UPDATE materials SET code=?,name=?,`system`=?,specification=?,brand=?,unit=?,category_id=?,
-                       subcategory_id=?,standard_price=?,requires_mar=?,updated_at=?
+                       subcategory_id=?,standard_price=?,min_stock=?,requires_mar=?,updated_at=?
                 WHERE id=?""",
                 m.get("code"), m.get("name"), m.get("system") != null ? m.get("system") : "KHAC",
                 m.get("specification"), m.get("brand"), m.get("unit"),
                 m.get("categoryId"), m.get("subcategoryId"), m.get("standardPrice"),
+                m.get("minStock") != null ? m.get("minStock") : 0,
                 m.get("requiresMar") == Boolean.TRUE ? 1 : 0, now, m.get("id"));
+    }
+
+    /** TASK-045 — JS `system-route.mjs:2641`: INSERT INTO material_code_history (id,material_id,old_code,new_code,reason,changed_by,changed_at). */
+    @Override @Transactional
+    public void insertCodeHistory(String id, String materialId, String oldCode, String newCode, String reason,
+                                 String changedBy, Instant now) {
+        jdbcTemplate.update("""
+                INSERT INTO material_code_history (id,material_id,old_code,new_code,reason,changed_by,changed_at)
+                VALUES (?,?,?,?,?,?,?)""", id, materialId, oldCode, newCode, reason, changedBy, now);
     }
 
     @Override @Transactional
@@ -417,6 +430,8 @@ public class MaterialCatalogStoreAdapter implements MaterialCatalogStore {
         jdbcTemplate.update("UPDATE material_aliases SET material_id=? WHERE material_id=?", keepId, mergeId);
         jdbcTemplate.update("UPDATE material_external_codes SET material_id=? WHERE material_id=?", keepId, mergeId);
         jdbcTemplate.update("UPDATE material_uom_conversions SET material_id=? WHERE material_id=?", keepId, mergeId);
+        // TASK-045 — JS `:2670`: lịch sử đổi mã phải đi theo mã đích, nếu không nó trỏ vào mã đã bị gộp.
+        jdbcTemplate.update("UPDATE material_code_history SET material_id=? WHERE material_id=?", keepId, mergeId);
         jdbcTemplate.update("""
                 UPDATE materials SET active=0,code=CONCAT(code,'_X'),updated_at=? WHERE id=?""", now, mergeId);
     }

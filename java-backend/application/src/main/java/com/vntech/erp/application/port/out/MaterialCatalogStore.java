@@ -11,6 +11,13 @@ public interface MaterialCatalogStore {
     Optional<Map<String, Object>> findMaterial(String id);
     Optional<Map<String, Object>> findMaterialByCode(String code);
     boolean materialCodeUsedElsewhere(String code, String excludeId);
+    /**
+     * TASK-045 — ghi lịch sử ĐỔI MÃ GỐC vào `material_code_history` (JS `system-route.mjs:2641`).
+     * Trước đây Java **không hề nhắc** bảng này ⇒ đổi mã vật tư là mất dấu vết, kể cả khi JS buộc phải
+     * có `codeChangeReason`. Xem thêm {@code mergeMaterialMaster} (JS `:2670` chuyển lịch sử sang mã đích).
+     */
+    void insertCodeHistory(String id, String materialId, String oldCode, String newCode, String reason,
+                           String changedBy, Instant now);
     void insertMaterial(Map<String, Object> m, String createdBy, Instant now);
     void updateMaterial(Map<String, Object> m, Instant now);
     void setMaterialActive(String id, boolean active, Instant now);

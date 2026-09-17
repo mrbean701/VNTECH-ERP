@@ -34,48 +34,83 @@ public final class MaterialCatalogManagementUseCase {
     }
 
     // ============ material ============
+    /**
+     * TASK-045 — port lại `save_material` theo JS (`system-route.mjs:2607-2643`).
+     *
+     * <p><b>Lỗi nặng nhất đã sửa:</b> Java lấy {@code system} từ {@code payload.system}, nhưng UI
+     * ({@code app/page.tsx:3769}) **không bao giờ gửi khoá này** — JS thì tính
+     * {@code system = canonicalMeCode(category.code)}. Hệ quả: mỗi lần admin lưu một mã vật tư, Java ghi
+     * {@code system='KHAC'} ⇒ **xoá hệ M&E thật** (dữ liệu đang chạy có 5/14 mã lệch, trong đó
+     * {@code DIEN-DAY-CAD-001} và {@code CTN-ONG-NHUA-001} bị đặt thành {@code KHAC}).
+     */
     public Map<String, Object> saveMaterial(Principal principal, Map<String, Object> payload) {
         String materialId = trim(payload.get("materialId"));
         String code = trim(payload.get("code")).toUpperCase(Locale.ROOT);
         String name = trim(payload.get("name"));
-        if (code.isEmpty() || name.isEmpty()) throw Api("Mã và tên vật tư là bắt buộc.");
+        String unit = trim(payload.get("unit"));
+        String categoryId = trim(payload.get("categoryId"));
+        String subcategoryId = trim(payload.get("subcategoryId"));
+        // JS `:2614` — 4 trường bắt buộc (bản cũ chỉ đòi code + name).
+        if (code.isEmpty() || name.isEmpty() || unit.isEmpty() || categoryId.isEmpty())
+            throw Api("Mã vật tư, tên vật tư, ĐVT và hệ M&E là bắt buộc.");
+        // JS `:2616-2618`.
+        Map<String, Object> category = store.findCategory(categoryId)
+                .orElseThrow(() -> Api("Hệ M&E không tồn tại."));
+        Instant now = Instant.now();
+        if (subcategoryId.isEmpty()) {
+            // JS `:2619-2626` — nhóm con mặc định CHUA_PHAN_NHOM, tự tạo nếu chưa có.
+            Map<String, Object> fallback = store.findSubcategoryByCode("CHUA_PHAN_NHOM", categoryId).orElse(null);
+            if (fallback == null) {
+                String fallbackId = idGenerator.next("SUB");
+                store.insertSubcategory(fallbackId, categoryId, "CHUA_PHAN_NHOM", "Chưa phân nhóm",
+                        "Nhóm mặc định", null, null, null, 9999, principal.userId(), now);
+                subcategoryId = fallbackId;
+            } else {
+                subcategoryId = sv(fallback, "id");
+            }
+        }
+        // JS `:2628-2630`. LƯU Ý: `findSubcategory` dùng `SELECT *` nên khoá trả về là **tên cột thật**
+        // `category_id` (bẫy đã ghi ở `MaterialCatalogStoreAdapter:167`), không phải `categoryId`
+        // ⇒ phải đọc CẢ HAI để không chặn oan payload đúng của UI.
+        Map<String, Object> subcategory = store.findSubcategory(subcategoryId).orElse(null);
+        String subOwner = subcategory == null ? "" : blankDefault(sv(subcategory, "categoryId"), sv(subcategory, "category_id"));
+        if (subcategory == null || !categoryId.equals(subOwner))
+            throw Api("Nhóm con không thuộc hệ M&E đã chọn.");
+        // JS `:2631` — `system` suy từ MÃ NHÓM, không phải từ payload.
+        String system = MaterialSystemCodes.canonicalMeCode(sv(category, "code"));
+        double minStock = numberValue(payload.get("minStock"));
         if (store.materialCodeUsedElsewhere(code, materialId))
             throw Api("Mã vật tư đã tồn tại.");
-        double standardPrice = Math.max(0, numberValue(payload.get("standardPrice")));
-        Instant now = Instant.now();
-        if (!materialId.isEmpty() && store.findMaterial(materialId).isPresent()) {
-            Map<String, Object> m = new LinkedHashMap<>();
-            m.put("id", materialId);
-            m.put("code", code);
-            m.put("name", name);
-            m.put("specification", nvl(payload.get("specification")));
-            m.put("brand", nvl(payload.get("brand")));
-            m.put("unit", nvl(payload.get("unit")));
-            m.put("system", blankDefault(trim(payload.get("system")), "KHAC").toUpperCase(Locale.ROOT));
-            m.put("categoryId", nvl(payload.get("categoryId")));
-            m.put("subcategoryId", nvl(payload.get("subcategoryId")));
-            m.put("standardPrice", standardPrice);
-            m.put("requiresMar", payload.get("requiresMar") == Boolean.TRUE);
-            m.put("isComponent", payload.get("isComponent") == Boolean.TRUE);
-            m.put("formulaKey", nvl(payload.get("formulaKey")));
-            store.updateMaterial(m, now);
-            return Map.of("message", "Đã cập nhật vật tư " + code + ".");
+        Map<String, Object> existing = materialId.isEmpty() ? null : store.findMaterial(materialId).orElse(null);
+        // JS `:2641` — đổi mã gốc PHẢI có lý do, và lý do được GHI vào material_code_history.
+        if (existing != null && !code.equals(sv(existing, "code"))) {
+            String reason = trim(payload.get("codeChangeReason"));
+            if (reason.isEmpty()) throw Api("Đổi mã gốc phải nhập lý do để lưu lịch sử.");
+            store.insertCodeHistory(idGenerator.next("MCH"), materialId, sv(existing, "code"), code,
+                    reason, principal.userId(), now);
         }
+        double standardPrice = Math.max(0, numberValue(payload.get("standardPrice")));
         Map<String, Object> m = new LinkedHashMap<>();
-        m.put("id", idGenerator.next("MAT"));
         m.put("code", code);
         m.put("name", name);
         m.put("specification", nvl(payload.get("specification")));
         m.put("brand", nvl(payload.get("brand")));
-        m.put("unit", nvl(payload.get("unit")));
-        m.put("system", blankDefault(trim(payload.get("system")), "KHAC").toUpperCase(Locale.ROOT));
-        m.put("categoryId", nvl(payload.get("categoryId")));
-        m.put("subcategoryId", nvl(payload.get("subcategoryId")));
+        m.put("unit", unit);
+        m.put("system", system);
+        m.put("categoryId", categoryId);
+        m.put("subcategoryId", subcategoryId);
         m.put("standardPrice", standardPrice);
+        m.put("minStock", minStock);
         m.put("requiresMar", payload.get("requiresMar") == Boolean.TRUE);
+        if (existing != null) {
+            m.put("id", materialId);
+            store.updateMaterial(m, now);
+            return Map.of("message", "Đã cập nhật vật tư " + code + ".");
+        }
+        m.put("id", idGenerator.next("MAT"));
         m.put("isComponent", payload.get("isComponent") == Boolean.TRUE);
-        m.put("active", payload.get("active") != Boolean.FALSE);
         m.put("formulaKey", nvl(payload.get("formulaKey")));
+        m.put("active", payload.get("active") != Boolean.FALSE);
         store.insertMaterial(m, principal.userId(), now);
         // alias theo chuẩn hóa
         String normalized = MaterialMatcherV2.normalizeMaterialText(name);
