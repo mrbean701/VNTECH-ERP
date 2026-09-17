@@ -125,6 +125,12 @@ Mặc định của interface là `return role()` = **mã chuẩn** ⇒ thiếu 
 43. **`save_material` — phần 2 CHƯA port** (đăng ký): rebuild alias theo `aliasText` (JS xoá hết rồi tạo lại), **luật trùng tên gốc/alias** (3 thông điệp), Java còn **tự tạo alias bằng chính tên gốc** khi tạo mã (JS không), **thiếu `audit(...)`**, và **văn bản thông điệp thành công khác JS**. Thêm: `merge_material_master` JavaScript **xoá** mã nguồn còn Java chỉ `active=0` + đổi mã thành `<code>_X`.
 44. ~~TASK-046: hai cột cuối của vòng rà bản đồ GHI~~ **ĐÃ VÁ ở #67** — chi tiết đầy đủ ở mục **40b/40c** ngay trên (mục này giữ chỗ để không đứt số thứ tự sau khi tôi sửa nhầm bằng `Set-Content`). Xem `TASK-046.md`.
 45. **Cổng điều tra nay chỉ còn 5 bảng lệch BẢN ĐỒ GHI** (đo lại bằng `probe-write-map-triage.mjs` sau #67): `boq_versions` (nghi dương tính giả — JS `:2805` bind `null`) · `email_outbox` (Java không có cơ chế gửi email) · `users.avatar_url` (dương tính giả: ghi qua JPA) · `vntech_license_installations` + `vntech_license_transfer_requests` (nhóm 6 — chờ quyết định #11).
+46. **TASK-048 — KHE HỞ `audit(...)` LÀ TOÀN HỆ THỐNG (đo được, 17/09):** cổng mới `tools/probe-audit-coverage.mjs` đối chiếu nhật ký kiểm toán hai phía:
+   * **JS: 174 action, trong đó 152 action CÓ gọi `audit(...)`**
+   * **Java: 186 nhánh `case`, nhưng chỉ 2/21 lớp use-case có gọi `auditLog.log(...)`** (sau #68: `MaterialCatalogManagementUseCase`, `ProjectManagementUseCase`; cộng `AuthUseCase` dùng cổng này ở 4 chỗ)
+   ⇒ **152 action JS ghi nhật ký mà Java KHÔNG ghi** — danh sách đầy đủ in ra từ cổng.
+   **GIỚI HẠN của phép đo (phải nói rõ):** Java đo theo **LỚP use-case** (không theo từng method) và chỉ thấy lời gọi **tĩnh** `auditLog.log(...)`; `AuditTrailFilter` ở tầng web **ghi thêm 1 dòng cho mỗi request** nên `audit_logs` **không trống** — nhưng bản ghi đó là *"POST action X"*, **không phải** nhật ký nghiệp vụ có `before/after` như JS.
+   **Lát cắt chọn làm trước (P2 lõi):** 6 action **luồng Phiếu đề nghị** — `create_request` · `update_returned_request` · `resubmit_request` · `delete_request` · `cancel_request` · `decide_approval` (đo được: `audit_logs.entity_type='material_request'` = **0 dòng**). Sau đó: mua hàng/PO · kho · tổ ong · admin.
 
 ## Important Decisions
 
