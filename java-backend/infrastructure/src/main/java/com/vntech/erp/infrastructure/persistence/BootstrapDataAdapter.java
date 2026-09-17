@@ -1022,9 +1022,6 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                     ORDER BY CASE WHEN ms.active=1 THEN 0 ELSE 1 END,mc.sort_order,ms.sort_order,ms.name"""));
         }
 
-        // engineRoleProfiles: JS trả business_role_engine_catalog dưới tên này.
-        data.put("engineRoleProfiles", data.get("businessRoleEngineProfiles"));
-
         data.put("supplySteps", pids.isEmpty() ? List.of() : query("""
                 SELECT s.id,s.request_id AS requestId,s.step,s.status,s.queued_at AS queuedAt,
                        s.due_at AS dueAt,s.completed_at AS completedAt,s.completed_by AS completedBy,
@@ -1071,14 +1068,56 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
         // TASK-059 — JS `:675` trả `businessScopeId` + `scopeCode` + `scopeName` (JOIN business_scope_catalog)
         // và sắp theo `is_primary DESC, bs.sort_order, bs.name`; bản Java trả `scopeId` + `createdAt`
         // ⇒ `data.businessRoleGroups[].scopeIds/scopes` (JS enrich cạnh đó) không dựng được ở UI.
-        data.put("businessRoleGroupScopes", query("""
+        List<Map<String, Object>> roleGroupScopeRows = query("""
                 SELECT brgs.id,brgs.business_group_id AS businessGroupId,
                        brgs.business_scope_id AS businessScopeId,bs.code AS scopeCode,bs.name AS scopeName,
                        brgs.is_primary AS isPrimary
                 FROM business_role_group_scopes brgs
                 JOIN business_scope_catalog bs ON bs.id=brgs.business_scope_id
                 %s ORDER BY brgs.is_primary DESC,bs.sort_order,bs.name""".formatted(
-                        admin ? "" : "WHERE bs.active=1")));
+                        admin ? "" : "WHERE bs.active=1"));
+        data.put("businessRoleGroupScopes", roleGroupScopeRows);
+
+        // ═════════════════════════════════════════════════════════════════════════════════════════
+        // TASK-066 — BA KHOÁ TOÀN CỤC BỊ ĐẶT SAI CHỖ + MỘT PHÉP GÁN SAI THỨ TỰ (cổng theo vai trò bắt được)
+        // ═════════════════════════════════════════════════════════════════════════════════════════
+        // JS `:671-675` + object `:727`: `engineRoleProfiles` · `businessScopes` · `businessRoleGroups` là khoá
+        // TOÀN CỤC (mọi vai trò đều nhận), chỉ khác bộ lọc `WHERE active=1` khi KHÔNG phải admin.
+        // Bản cũ để cả ba TRONG `if (admin)` ⇒ tài khoản thường **MẤT HẲN khoá**; UI đọc
+        // `Array.isArray(result.data?.businessRoleGroups) ? … : []` nên **âm thầm** thay bằng `[]`
+        // (màn Chức danh/vai trò trống mà KHÔNG có lỗi nào nổi lên — đúng lớp lỗi cổng này sinh ra để bắt).
+        // Ngoài ra `engineRoleProfiles` cũ bị gán bằng `data.get("businessRoleEngineProfiles")` Ở DÒNG 1026 —
+        // TRƯỚC khi khoá nguồn được đặt (nó nằm trong `if (admin)`) ⇒ **luôn null cho MỌI tài khoản, kể cả admin**
+        // (đúng Known Problems #50). Nay gán nguồn TRƯỚC rồi dùng lại cùng một danh sách.
+        List<Map<String, Object>> engineProfiles = query("""
+                SELECT id,engine_key AS engineKey,company_code AS companyCode,display_name AS displayName,
+                       description,active,sort_order AS sortOrder,system_locked AS systemLocked
+                FROM business_role_engine_catalog %s ORDER BY sort_order,display_name""".formatted(
+                        admin ? "" : "WHERE active=1"));
+        data.put("engineRoleProfiles", engineProfiles);
+        // `businessRoleEngineProfiles` là khoá Java-only (không có trong object `result` của JS) — giữ lại
+        // để không phá hợp đồng cũ, nhưng nay trỏ CÙNG danh sách với `engineRoleProfiles`.
+        data.put("businessRoleEngineProfiles", engineProfiles);
+        data.put("businessScopes", query("""
+                SELECT id,code,name,description,active,sort_order AS sortOrder,system_locked AS systemLocked
+                FROM business_scope_catalog %s ORDER BY sort_order,name""".formatted(
+                        admin ? "" : "WHERE active=1")));
+        // JS `:675`: LÀM GIÀU từng nhóm vai trò bằng `scopeIds` (mảng ID phạm vi) + `scopes` (các dòng phạm vi).
+        List<Map<String, Object>> roleGroups = new ArrayList<>(query("""
+                SELECT id,code,name,description,engine_role AS engineRole,active,
+                       sort_order AS sortOrder,system_locked AS systemLocked
+                FROM business_role_group_catalog %s ORDER BY sort_order,name""".formatted(
+                        admin ? "" : "WHERE active=1")));
+        Map<String, List<Map<String, Object>>> scopesByGroup = new LinkedHashMap<>();
+        for (Map<String, Object> s : roleGroupScopeRows) {
+            scopesByGroup.computeIfAbsent(String.valueOf(s.get("businessGroupId")), k -> new ArrayList<>()).add(s);
+        }
+        for (Map<String, Object> g : roleGroups) {
+            List<Map<String, Object>> own = scopesByGroup.getOrDefault(String.valueOf(g.get("id")), List.of());
+            g.put("scopeIds", own.stream().map(s -> String.valueOf(s.get("businessScopeId"))).toList());
+            g.put("scopes", own);
+        }
+        data.put("businessRoleGroups", roleGroups);
 
         // TASK-061 — JS `:768` JOIN warehouses/materials và trả thêm `warehouseCode`,`materialCode`,
         // `materialName`,`note`; JS cũng sắp theo `checked_at DESC` + LIMIT 500.
@@ -1150,17 +1189,9 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                            al.after_json AS afterJson,al.ip_address AS ipAddress
                     FROM audit_logs al LEFT JOIN users u ON u.id=al.user_id
                     ORDER BY al.occurred_at DESC LIMIT 100"""));
-            data.put("businessRoleEngineProfiles", query("""
-                    SELECT id,engine_key AS engineKey,company_code AS companyCode,display_name AS displayName,
-                           description,active,sort_order AS sortOrder,system_locked AS systemLocked
-                    FROM business_role_engine_catalog ORDER BY sort_order,display_name"""));
-            data.put("businessRoleGroups", query("""
-                    SELECT id,code,name,description,engine_role AS engineRole,active,
-                           sort_order AS sortOrder,system_locked AS systemLocked
-                    FROM business_role_group_catalog ORDER BY sort_order,name"""));
-            data.put("businessScopes", query("""
-                    SELECT id,code,name,description,active,sort_order AS sortOrder,system_locked AS systemLocked
-                    FROM business_scope_catalog ORDER BY sort_order,name"""));
+            // TASK-066 — BA KHOÁ `businessRoleEngineProfiles`/`businessRoleGroups`/`businessScopes` ĐÃ CHUYỂN RA
+            // khối TOÀN CỤC phía trên (chúng KHÔNG phải khoá admin-only: JS `:671-675` trả cho MỌI vai trò, chỉ
+            // khác bộ lọc `WHERE active=1`). Để nguyên ở đây thì tài khoản thường mất hẳn khoá ⇒ UI âm thầm `[]`.
         }
 
         // ---- tài chính / pháp chế / nhân sự (mảng đủ khối, UI không vỡ) ----
