@@ -70,3 +70,21 @@ bằng `node tools/probe-visual-regression.mjs --update` (tiền lệ đã ghi �
 | `app/page.tsx` | gắn `cellClassName` cho 2 cột (`WorkCenter` "Quá hạn" · `ProjectProgress` "CHÊNH LỆCH") |
 | `tools/task081-rebuild-parents.mjs` | **MỚI** — sinh SQL dựng lại dữ liệu cha từ tệp trong kho + dữ liệu thật |
 | `docs/agent-progress/TASK-081.md` | hồ sơ này |
+
+## 2b. 🔴 LỖI THỨ HAI CỦA TÔI trong phần dựng lại — CẮT CHUỖI SAI (tự phát hiện rồi tự vá)
+
+Sau khi dựng, kiểm qua API thì **tên tệp hiện sai**: `7fcd-41e8-843a-08b4620b68b5-anh-giao-hang-985135.png`.
+**Nguyên nhân:** tôi tách `attId`/`fileName` bằng **dấu `-` ĐẦU TIÊN**, nhưng khoá tệp có dạng
+`ATT_<uuid 4 nhóm>-<tên tệp>` ⇒ `ATT_e84bf5fc` bị cắt cụt và phần uuid còn lại lẫn vào tên hiển thị.
+
+**Đã sửa:** tách theo **MẪU** `^(ATT_[0-9a-f]{8}-…-[0-9a-f]{12})-(.+)$` → sửa **10 dòng** (đúng `id` + đúng tên),
+và **vá cả script nguồn** `tools/task081-rebuild-parents.mjs` để lần chạy sau không lặp lỗi.
+⇒ Đây là lỗi thứ hai trong cùng một việc — **bài học: kiểm lại KẾT QUẢ qua API sau khi ghi dữ liệu,
+không chỉ kiểm số dòng.**
+
+## 3b. Kiểm chứng cuối qua PROXY `:9000` (đúng đường người dùng dùng)
+
+| Chứng từ | Tệp | Tải về |
+|---|---|---|
+| `GRN_b1cbfe5f…` (**từng mồ côi**) | `anh-giao-hang-161459.png` | **HTTP 200 · image/png · 70 byte · chữ ký `89 50 4e 47`** |
+| `GRN_04bd4bcd…` (**vừa dựng lại**) | `anh-giao-hang-985135.png` | **HTTP 200 · image/png · 70 byte · chữ ký `89 50 4e 47`** |

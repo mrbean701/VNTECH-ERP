@@ -47,8 +47,10 @@ for (const p of need) {
   const parts = key.split('/');
   if (parts.length < 3) continue;
   const [, entityId, filePart] = parts;
-  const attId = filePart.slice(0, filePart.indexOf('-')) || `ATT_T081_${idx}`;
-  const fileName = filePart.slice(filePart.indexOf('-') + 1);
+  // `attId` = `ATT_<uuid 4 nhóm>` ⇒ phải cắt SAU uuid, KHÔNG cắt ở dấu `-` đầu tiên (lỗi đã gặp TASK-081).
+  const m = /^(ATT_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})-(.+)$/.exec(filePart);
+  const attId = m ? m[1] : `ATT_T081_${idx}`;
+  const fileName = m ? m[2] : filePart;
   const poId = poIds[idx % poIds.length];
   const suffix = /(\d{6})\./.exec(fileName);
   // Tên tệp có thể chứa số KHÔNG phải giờ (vd 985135) ⇒ phải KIỂM HỢP LỆ, không thì dùng giờ hành chính.
