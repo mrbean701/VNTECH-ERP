@@ -180,8 +180,9 @@ public class ApplicationBeansConfig {
     @Bean
     public MaterialCatalogManagementUseCase materialCatalogManagementUseCase(MaterialCatalogStore materialCatalogStore,
                                                                              IdGenerator idGenerator,
-                                                                             RbacService rbacService) {
-        return new MaterialCatalogManagementUseCase(materialCatalogStore, idGenerator, rbacService);
+                                                                             RbacService rbacService,
+                                                                             AuditLogPort auditLogPort) {
+        return new MaterialCatalogManagementUseCase(materialCatalogStore, idGenerator, rbacService, auditLogPort);
     }
 
     @Bean

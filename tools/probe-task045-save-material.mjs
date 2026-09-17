@@ -135,6 +135,37 @@ try {
     JSON.stringify(hist));
   check("G3. số dòng lịch sử tăng đúng 1 so với trước phép kiểm F",
     counts().history === histBefore + 1, `${histBefore} → ${counts().history}`);
+
+  // ---------- TASK-047: ALIAS theo aliasText + luật trùng tên + audit + văn bản thông điệp ----------
+  // LỖI CỦA CHÍNH TÔI Ở BẢN ĐẦU: `uiPayload()` mặc định dùng `CODE` gốc, nhưng phép kiểm G đã ĐỔI mã
+  // sang ZZP045-VT-002 ⇒ 3 phép kiểm mới bị chặn bởi luật "đổi mã phải có lý do" (400) và báo HỎNG oan.
+  // Phải dùng ĐÚNG mã hiện tại của bản ghi.
+  const liveCode = state().code;
+  const aliasCall = await call("save_material", uiPayload({
+    code: liveCode,
+    aliasText: `${NAME};\nBê tông M300; bê tông m300 ; Cáp Cu 2x2.5`,
+  }));
+  const aliasRows = sqlRows(`SELECT alias_name,normalized_name FROM material_aliases WHERE material_id=${q1(MAT)} ORDER BY alias_name`);
+  check("T047-I2. văn bản thông điệp theo JS: “Đã lưu mã gốc … với N tên tương đương.”",
+    aliasCall.status === 200 && /^Đã lưu mã gốc .+ · .+ với 2 tên tương đương\.$/.test(aliasCall.message), aliasCall.message || aliasCall.error);
+  check("T047-I3. alias ghi ĐÚNG: bỏ tên gốc + bỏ trùng chuẩn hoá ⇒ 2 dòng",
+    aliasRows.length === 2 && aliasRows.some((r) => r[1] === "be tong m300") && aliasRows.some((r) => r[1] === "cap cu 2x2 5"),
+    JSON.stringify(aliasRows));
+
+  const auditRows = sqlRows(`SELECT action,entity_type,before_json,after_json FROM audit_logs WHERE entity_id=${q1(MAT)} AND action IN ('CREATE','UPDATE') ORDER BY occurred_at DESC`);
+  check("T047-I4. có dòng `audit_logs` cho lần lưu (entity_type='material', after_json hợp lệ)",
+    auditRows.length >= 1 && auditRows[0][1] === "material"
+    && (auditRows[0][3] === null || auditRows[0][3] === "NULL" || /^\{/.test(auditRows[0][3])),
+    `${auditRows.length} dòng · ${auditRows[0]?.[0]} · after=${String(auditRows[0]?.[3]).slice(0, 90)}`);
+
+  const other = sqlRows(`SELECT code,name FROM materials WHERE id<>${q1(MAT)} AND active=1 LIMIT 1`)[0];
+  const conflict = await call("save_material", uiPayload({ code: liveCode, aliasText: other[1] }));
+  const aliasesAfterBlock = Number(sqlOne(`SELECT COUNT(*) FROM material_aliases WHERE material_id=${q1(MAT)}`));
+  check("T047-I5. chặn GHÉP TRÙNG: đặt tên gốc của mã khác làm alias ⇒ 400 + nguyên văn JS, alias GIỮ NGUYÊN",
+    conflict.status === 400
+    && /Tên tương đương “.+?” đang thuộc mã .+; không được ghép hai vật tư khác thông số\./.test(conflict.error + conflict.message)
+    && aliasesAfterBlock === 2,
+    `HTTP ${conflict.status} · ${conflict.error || conflict.message} · alias còn ${aliasesAfterBlock}`);
 } catch (e) {
   check("probe chạy trọn vẹn (không ném lỗi)", false, String(e && e.message ? e.message : e));
 } finally {

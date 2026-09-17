@@ -81,6 +81,12 @@ public interface MaterialCatalogStore {
     void setSubcategoryActive(String id, boolean active, Instant now);
     void deleteSubcategorySafe(String id);
     List<Map<String, Object>> materialAliases(String materialId);
+    /**
+     * TASK-047 — JS `system-route.mjs:2641` xoá TOÀN BỘ alias của mã rồi tạo lại từ `aliasText`
+     * (`DELETE FROM material_aliases WHERE material_id=?`). Thiếu câu này thì alias cũ không bao giờ
+     * được thay, người dùng sửa danh sách tên tương đương mà hệ thống vẫn giữ tên cũ.
+     */
+    void deleteAliasesForMaterial(String materialId);
     Optional<Map<String, Object>> findAliasByNormalized(String normalized);
     void insertAlias(String id, String materialId, String aliasName, String normalized, String createdBy,
                      Instant now);

@@ -254,6 +254,12 @@ public class MaterialCatalogStoreAdapter implements MaterialCatalogStore {
         return jdbcTemplate.queryForList("SELECT * FROM material_aliases WHERE material_id=?", materialId);
     }
 
+    /** TASK-047 — JS `:2641` (xoá hết alias trước khi tạo lại từ `aliasText`). */
+    @Override @Transactional
+    public void deleteAliasesForMaterial(String materialId) {
+        jdbcTemplate.update("DELETE FROM material_aliases WHERE material_id=?", materialId);
+    }
+
     @Override public Optional<Map<String, Object>> findAliasByNormalized(String normalized) {
         return first("SELECT * FROM material_aliases WHERE normalized_name=?", normalized);
     }

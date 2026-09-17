@@ -1,8 +1,10 @@
 package com.vntech.erp.application.service;
 
+import com.vntech.erp.application.port.out.AuditLogPort;
 import com.vntech.erp.application.port.out.IdGenerator;
 import com.vntech.erp.application.port.out.MaterialCatalogStore;
 import com.vntech.erp.application.rbac.RbacService;
+import com.vntech.erp.application.support.MiniJson;
 import com.vntech.erp.domain.service.MaterialMatcherV2;
 import com.vntech.erp.domain.service.MaterialSystemCodes;
 
@@ -21,11 +23,14 @@ public final class MaterialCatalogManagementUseCase {
     private final MaterialCatalogStore store;
     private final IdGenerator idGenerator;
     private final RbacService rbac;
+    private final AuditLogPort auditLog;
 
-    public MaterialCatalogManagementUseCase(MaterialCatalogStore store, IdGenerator idGenerator, RbacService rbac) {
+    public MaterialCatalogManagementUseCase(MaterialCatalogStore store, IdGenerator idGenerator, RbacService rbac,
+                                            AuditLogPort auditLog) {
         this.store = store;
         this.idGenerator = idGenerator;
         this.rbac = rbac;
+        this.auditLog = auditLog;
     }
 
     public interface Principal {
@@ -105,18 +110,74 @@ public final class MaterialCatalogManagementUseCase {
         if (existing != null) {
             m.put("id", materialId);
             store.updateMaterial(m, now);
-            return Map.of("message", "Đã cập nhật vật tư " + code + ".");
+        } else {
+            m.put("id", idGenerator.next("MAT"));
+            m.put("isComponent", payload.get("isComponent") == Boolean.TRUE);
+            m.put("formulaKey", nvl(payload.get("formulaKey")));
+            m.put("active", payload.get("active") != Boolean.FALSE);
+            store.insertMaterial(m, principal.userId(), now);
         }
-        m.put("id", idGenerator.next("MAT"));
-        m.put("isComponent", payload.get("isComponent") == Boolean.TRUE);
-        m.put("formulaKey", nvl(payload.get("formulaKey")));
-        m.put("active", payload.get("active") != Boolean.FALSE);
-        store.insertMaterial(m, principal.userId(), now);
-        // alias theo chuẩn hóa
-        String normalized = MaterialMatcherV2.normalizeMaterialText(name);
-        if (!normalized.isEmpty() && store.findAliasByNormalized(normalized).isEmpty())
-            store.insertAlias(idGenerator.next("MAL"), sv(m, "id"), name, normalized, principal.userId(), now);
-        return Map.of("message", "Đã tạo vật tư " + code + ".");
+        String targetId = sv(m, "id");
+        // ── TASK-047: ALIAS theo `aliasText` — port nguyên trạng JS `:2634-2641` ────────────────────
+        //   aliasText.split(/[;\n]+/) → trim → bỏ rỗng; normalized = normalizeMaterialName(alias);
+        //   BỎ alias trùng CHÍNH tên gốc và trùng nhau (giữ bản đầu tiên).
+        String canonicalNormalized = MaterialSystemCodes.normalizeMaterialName(name);
+        java.util.LinkedHashMap<String, String> aliasByNormalized = new java.util.LinkedHashMap<>();
+        for (String raw : String.valueOf(payload.get("aliasText") == null ? "" : payload.get("aliasText"))
+                .split("[;\\n]+")) {
+            String alias = trim(raw);
+            if (alias.isEmpty()) continue;
+            String normalized = MaterialSystemCodes.normalizeMaterialName(alias);
+            if (normalized.isEmpty() || normalized.equals(canonicalNormalized)) continue;
+            aliasByNormalized.putIfAbsent(normalized, alias);
+        }
+        List<Map<String, Object>> catalog = new java.util.ArrayList<>();
+        for (Map<String, Object> row : store.allMaterials())
+            if (!sv(row, "id").equals(targetId)) catalog.add(row);
+        // JS `:2637-2638` — tên gốc không được trùng/tương đương một mã khác.
+        Map<String, Object> canonicalConflict = null;
+        for (Map<String, Object> row : catalog)
+            if (MaterialSystemCodes.normalizeMaterialName(sv(row, "name")).equals(canonicalNormalized)) {
+                canonicalConflict = row; break;
+            }
+        if (canonicalConflict == null) canonicalConflict = aliasOwnerOf(canonicalNormalized, targetId);
+        if (canonicalConflict != null)
+            throw Api("Tên gốc “" + name + "” đã thuộc hoặc tương đương mã "
+                    + sv(canonicalConflict, "code") + "; hãy chọn đúng mã gốc thay vì tạo vật tư trùng.");
+        // JS `:2639` — mỗi tên tương đương không được trùng tên gốc/alias của mã khác.
+        for (Map.Entry<String, String> e : aliasByNormalized.entrySet()) {
+            Map<String, Object> conflict = null;
+            for (Map<String, Object> row : catalog)
+                if (MaterialSystemCodes.normalizeMaterialName(sv(row, "name")).equals(e.getKey())) { conflict = row; break; }
+            if (conflict == null) conflict = aliasOwnerOf(e.getKey(), targetId);
+            if (conflict != null)
+                throw Api("Tên tương đương “" + e.getValue() + "” đang thuộc mã "
+                        + sv(conflict, "code") + "; không được ghép hai vật tư khác thông số.");
+        }
+        // JS `:2641` — XOÁ HẾT alias cũ rồi tạo lại; JS KHÔNG hề tự tạo alias bằng chính tên gốc.
+        store.deleteAliasesForMaterial(targetId);
+        for (Map.Entry<String, String> e : aliasByNormalized.entrySet())
+            store.insertAlias(idGenerator.next("MAL"), targetId, e.getValue(), e.getKey(), principal.userId(), now);
+        // JS `:2642-2643` — audit + thông điệp.
+        auditLog.log(principal.userId(), existing != null ? "UPDATE" : "CREATE", "material", targetId,
+                existing == null ? null : MiniJson.stringify(existing),
+                MiniJson.stringify(Map.of("code", code, "name", name, "unit", unit, "categoryId", categoryId,
+                        "subcategoryId", subcategoryId, "aliases", aliasByNormalized.values())), null);
+        return Map.of("message", "Đã lưu mã gốc " + code + " · " + name + " với "
+                + aliasByNormalized.size() + " tên tương đương.");
+    }
+
+    /**
+     * Chủ sở hữu một tên chuẩn hoá (dò bảng `material_aliases`), trừ chính mã đang sửa — tương đương
+     * câu `SELECT … FROM material_aliases ma JOIN materials m … WHERE normalized_name=? AND material_id<>?`.
+     * `findAliasByNormalized` dùng `SELECT *` nên phải đọc CẢ HAI dạng khoá (`materialId`/`material_id`).
+     */
+    private Map<String, Object> aliasOwnerOf(String normalized, String excludeMaterialId) {
+        Map<String, Object> alias = store.findAliasByNormalized(normalized).orElse(null);
+        if (alias == null) return null;
+        String owner = blankDefault(sv(alias, "materialId"), sv(alias, "material_id"));
+        if (excludeMaterialId.equals(owner)) return null;
+        return store.findMaterial(owner).orElse(null);
     }
 
     public Map<String, Object> setMaterialStatus(Principal principal, Map<String, Object> payload) {
