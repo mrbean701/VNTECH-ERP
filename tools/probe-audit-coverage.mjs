@@ -12,6 +12,7 @@
 //
 // Chạy: node tools/probe-audit-coverage.mjs
 import { readdirSync, readFileSync, statSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 
 const read = (p) => readFileSync(p, "utf8");
@@ -83,9 +84,41 @@ console.log(`ĐỐI CHỨNG: ${mapped}/${javaCases.length} nhánh case tra đư�
 
 console.log(`JS: ${jsActions.length} action · trong đó CÓ gọi audit(): ${jsActions.filter((a) => a.audit).length}`);
 console.log(`Java: ${javaCases.length} nhánh case · lớp use-case CÓ gọi audit(): ${Object.values(classHasAudit).filter(Boolean).length}/${Object.keys(classHasAudit).length}`);
-console.log(`\n═══ KHE HỞ: JS ghi nhật ký mà lớp use-case Java KHÔNG ghi: ${onlyJs.length} action ═══`);
+console.log(`\n═══ KHE HỞ Ở TẦNG USE-CASE: JS ghi nhật ký mà LỚP use-case Java KHÔNG ghi: ${onlyJs.length} action ═══`);
+console.log(`⚠️ ĐỌC KỸ: con số này là KHE HỞ Ở TẦNG USE-CASE (tên hành động + mức chi tiết nghiệp vụ),`);
+console.log(`   **KHÔNG** có nghĩa là "action đó không có dòng nhật ký nào": \`AuditTrailFilter\` (tầng web, P6)`);
+console.log(`   ghi MỘT dòng cho MỌI POST /api/system thành công (trừ 7 action trong SKIP_ACTIONS).`);
 for (const a of onlyJs.slice(0, 60)) console.log(`  ${a.name.padEnd(34)} → ${a.useCase}.${a.method}`);
 if (onlyJs.length > 60) console.log(`  … còn ${onlyJs.length - 60} action`);
+
+// ═════════════ ĐỐI CHIẾU DỮ LIỆU THẬT: con số trên có phải "không hề ghi nhật ký" không? ═════════════
+// BÀI HỌC TASK-067 (17/09): đã có lúc con số "128 action thiếu audit" bị đọc thành "128 action không được
+// ghi nhật ký" và suýt dẫn tới việc port hàng loạt `audit(...)` KHÔNG cần thiết. Phép đo dưới đây chứng minh
+// bằng dữ liệu: action thuộc danh sách "khe hở" ấy CÓ dòng trong `audit_logs`, và các dòng đó mang
+// `module_key` + `ip_address` — hai cột CHỈ `AuditTrailFilter` mới điền (use-case `auditLog.log` không điền).
+const MYSQL = "C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysql.exe";
+const sqlRows = (q) => execFileSync(MYSQL, ["--default-character-set=utf8mb4", "-uvntech", "-pvntech",
+  "vntech_erp", "--batch", "--raw", "--skip-column-names", "-e", q], { encoding: "utf8" })
+  .split(/\r?\n/).filter(Boolean).map((l) => l.split("\t"));
+try {
+  const db = new Map();
+  for (const [action, total, filterWritten] of sqlRows(`
+      SELECT action, COUNT(*), SUM(CASE WHEN module_key IS NOT NULL AND ip_address IS NOT NULL THEN 1 ELSE 0 END)
+      FROM audit_logs GROUP BY action`)) {
+    db.set(action, { total: Number(total), filterWritten: Number(filterWritten) });
+  }
+  const gapPresent = onlyJs.filter((a) => db.has(a.name));
+  const gapFilterWritten = gapPresent.filter((a) => db.get(a.name).filterWritten > 0);
+  console.log(`\n═══ ĐỐI CHIẾU DỮ LIỆU \`audit_logs\` (${db.size} action khác nhau có dòng) ═══`);
+  console.log(`  trong ${onlyJs.length} action "khe hở": CÓ dòng nhật ký = ${gapPresent.length}` +
+    ` · trong đó do LỚP FILTER ghi = ${gapFilterWritten.length}`);
+  console.log(`  ví dụ: ${gapFilterWritten.slice(0, 6).map((a) => `${a.name} (${db.get(a.name).total} dòng)`).join(" · ") || "(không có)"}`);
+  console.log(`  ⇒ KẾT LUẬN ĐÚNG: khe hở này là về TÊN/CHI TIẾT hành động ở tầng use-case, KHÔNG phải thiếu nhật ký.`);
+  console.log(`  ⚠️ Cổng CHỈ đối chiếu các action ĐÃ từng chạy (có dòng) — action chưa từng chạy thì không kiểm được.`);
+} catch (e) {
+  console.log(`\n⚠️ KHÔNG đối chiếu được \`audit_logs\`: ${String(e.message).slice(0, 120)}`);
+  console.log(`   ⇒ Kết luận về "khe hở" phải để ở mức GIẢ THUYẾT cho tới khi đối chiếu được dữ liệu.`);
+}
 console.log(`\n═══ CẢ HAI ĐỀU GHI: ${both.length} action ═══\n  ${both.join(", ")}`);
 console.log(`\nGHI CHÚ GIỚI HẠN: phép đo Java theo LỚP use-case (không theo từng method) và chỉ thấy`);
 console.log(`lời gọi tĩnh `+ "`auditLog.log(...)`" + `; AuditTrailFilter (tầng web) ghi thêm 1 dòng/request.`);
