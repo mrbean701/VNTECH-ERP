@@ -20,6 +20,7 @@ public interface BootstrapDataPort {
             String roleCode,                  // users.role (mã vai trò thô)
             String roleBase,                  // COALESCE(role_catalog.base_role, users.role) — JS effectiveRole()
             String warehouseScopeKind,        // role_catalog.warehouse_scope_kind (JS mặc định "site")
+            String department,                // users.department — JS departmentCodeForUser (`:388`) xét CHUỖI này trước
             List<String> visibleProjectIds,   // projectIds sau khi lọc scope
             List<String> allProjectIds         // mọi project id (admin) hoặc trùng visible
     ) { }

@@ -810,12 +810,8 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                 JOIN material_requests r ON r.id=s.request_id
                 WHERE r.project_id IN (%s) ORDER BY s.request_id,s.step""".formatted(pidSql), params(pids)));
 
-        data.put("workItemEvents", query("""
-                SELECT e.id,e.work_item_id AS workItemId,e.event_type AS eventType,
-                       e.from_status AS fromStatus,e.to_status AS toStatus,
-                       e.actor_user_id AS actorUserId,e.reason,e.detail_json AS detailJson,
-                       e.occurred_at AS occurredAt
-                FROM work_item_events e ORDER BY e.occurred_at DESC LIMIT 500"""));
+        // TASK-058 — KHỐI `workItemEvents` CŨ (trả sự kiện của MỌI công việc, thiếu 3 cột) ĐÃ BỊ XOÁ;
+        // nay nó nằm ngay sau `workItems` và chỉ lấy sự kiện của các công việc vừa trả về (JS `:718`).
 
         data.put("teamSettlements", pids.isEmpty() ? List.of() : query("""
                 SELECT id,project_id AS projectId,team_id AS teamId,subcontract_id AS subcontractId,
@@ -1077,16 +1073,85 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                 LEFT JOIN materials m ON m.id=mn.material_id
                 LEFT JOIN users u ON u.id=mn.created_by
                 ORDER BY mn.updated_at DESC,mn.norm_code"""));
-        data.put("workItems", query("""
-                SELECT w.id,w.task_no AS taskNo,w.project_id AS projectId,w.work_group AS workGroup,
-                       w.title,w.description,w.status,w.priority,w.progress,
-                       w.department_code AS departmentCode,w.work_step AS workStep,
-                       w.task_origin AS taskOrigin,w.required_output AS requiredOutput,
-                       w.assigned_to AS assigneeUserId,u.full_name AS assigneeName,
-                       w.due_at AS dueAt,w.assigned_at AS assignedAt,
-                       w.completed_at AS completedAt,w.created_at AS createdAt
-                FROM work_items w LEFT JOIN users u ON u.id=w.assigned_to
-                ORDER BY w.created_at DESC LIMIT 500"""));
+        // ══════════════════════════════════════════════════════════════════════════════════
+        // TASK-058 — `workItems` + `workItemEvents`: port NGUYÊN VĂN JS `:715-718`.
+        // TRƯỚC ĐÂY Java **KHÔNG có mệnh đề WHERE** ⇒ mọi tài khoản nhận **toàn bộ** công việc của mọi
+        // phòng ban/dự án (vừa lộ dữ liệu vừa sai hiển thị), và thiếu 14 cột (UI đọc `assignedTo`/
+        // `assignedToName` nên hiện TRỐNG). Probe `tools/probe-task058-work-items.mjs` đo được: **5 tài
+        // khoản khác vai trò đều thấy đủ 7/7 dòng của mọi phòng ban** trước khi vá.
+        //   :715  workItemWhere = admin ? "1=1"
+        //          : departmentForRole(user)==="KH" ? "(wi.department_code='KH' AND (wi.assigned_to=?
+        //                OR EXISTS(SELECT 1 FROM role_catalog rc WHERE rc.code=? AND rc.code='kh_truong')))"
+        //          : departmentForRole(user)==="DA" ? tương tự với 'DA'/'da_truong'
+        //          : departmentCodeForUser(user)==="BCH" ? "(wi.department_code='BCH' AND (wi.assigned_to=?
+        //                OR wi.project_id IS NULL OR wi.project_id IN (<phạm vi dự án>)))"
+        //          : "wi.assigned_to=?"   (chỉ việc CỦA MÌNH)
+        //   :716  workItemBinds tương ứng; :717 truy vấn 29 cột + LIMIT 1000
+        //   :718  workItemEvents CHỈ của các công việc vừa trả (IN ds id)
+        // ══════════════════════════════════════════════════════════════════════════════════
+        String depForRole = departmentForRole(roleBaseClean);
+        String depCode = departmentCodeForUser(ctx.department(), ctx.roleCode(), roleBaseClean);
+        String workItemWhere;
+        java.util.List<Object> workItemBinds = new java.util.ArrayList<>();
+        if (admin) {
+            workItemWhere = "1=1";
+        } else if ("KH".equals(depForRole)) {
+            workItemWhere = "(wi.department_code='KH' AND (wi.assigned_to=?"
+                    + " OR EXISTS(SELECT 1 FROM role_catalog rc WHERE rc.code=? AND rc.code='kh_truong')))";
+            workItemBinds.add(ctx.userId());
+            workItemBinds.add(ctx.roleCode());
+        } else if ("DA".equals(depForRole)) {
+            workItemWhere = "(wi.department_code='DA' AND (wi.assigned_to=?"
+                    + " OR EXISTS(SELECT 1 FROM role_catalog rc WHERE rc.code=? AND rc.code='da_truong')))";
+            workItemBinds.add(ctx.userId());
+            workItemBinds.add(ctx.roleCode());
+        } else if ("BCH".equals(depCode)) {
+            workItemWhere = "(wi.department_code='BCH' AND (wi.assigned_to=?"
+                    + " OR wi.project_id IS NULL OR wi.project_id IN (" + pidSql + ")))";
+            workItemBinds.add(ctx.userId());
+            workItemBinds.addAll(pids);
+        } else {
+            workItemWhere = "wi.assigned_to=?";
+            workItemBinds.add(ctx.userId());
+        }
+        List<Map<String, Object>> workItems = query("""
+                SELECT wi.id,wi.task_no AS taskNo,wi.department_code AS departmentCode,
+                       wi.work_group AS workGroup,wi.title,wi.description,wi.project_id AS projectId,
+                       p.code AS projectCode,p.name AS projectName,wi.source_module AS sourceModule,
+                       wi.source_type AS sourceType,wi.source_id AS sourceId,wi.source_no AS sourceNo,
+                       wi.work_step AS workStep,wi.task_origin AS taskOrigin,
+                       wi.assigned_to AS assignedTo,ua.full_name AS assignedToName,
+                       wi.assigned_by AS assignedBy,ub.full_name AS assignedByName,
+                       wi.assigned_at AS assignedAt,wi.due_at AS dueAt,wi.priority,wi.status,wi.progress,
+                       wi.required_output AS requiredOutput,wi.waiting_reason AS waitingReason,
+                       wi.waiting_started_at AS waitingStartedAt,
+                       wi.submitted_at AS submittedAt,wi.completed_at AS completedAt,wi.active
+                FROM work_items wi
+                LEFT JOIN projects p ON p.id=wi.project_id
+                JOIN users ua ON ua.id=wi.assigned_to
+                JOIN users ub ON ub.id=wi.assigned_by
+                WHERE %s
+                ORDER BY CASE WHEN wi.status IN ('COMPLETED','CANCELLED') THEN 1 ELSE 0 END,
+                         CASE wi.priority WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'normal' THEN 2 ELSE 3 END,
+                         COALESCE(wi.due_at,'9999'),wi.assigned_at DESC
+                LIMIT 1000""".formatted(workItemWhere), workItemBinds.toArray());
+        data.put("workItems", workItems);
+
+        // JS `:718` — sự kiện CHỈ của các công việc vừa trả về (trước đây Java trả SỰ KIỆN CỦA MỌI CÔNG VIỆC).
+        if (workItems.isEmpty()) {
+            data.put("workItemEvents", List.of());
+        } else {
+            List<String> workItemIds = workItems.stream().map(r -> String.valueOf(r.get("id"))).toList();
+            data.put("workItemEvents", query("""
+                    SELECT e.id,e.work_item_id AS workItemId,e.event_type AS eventType,
+                           e.from_status AS fromStatus,e.to_status AS toStatus,
+                           e.actor_user_id AS actorUserId,u.full_name AS actorName,
+                           e.previous_assignee AS previousAssignee,e.new_assignee AS newAssignee,
+                           e.reason,e.detail_json AS detailJson,e.occurred_at AS occurredAt
+                    FROM work_item_events e LEFT JOIN users u ON u.id=e.actor_user_id
+                    WHERE e.work_item_id IN (%s) ORDER BY e.occurred_at DESC""".formatted(inClause(workItemIds)),
+                    params(workItemIds)));
+        }
         data.put("taskNotifications", query("""
                 SELECT n.id,n.user_id AS userId,n.work_item_id AS taskId,
                        COALESCE(NULLIF(n.title,''),n.body) AS message,n.read_at AS readAt,
@@ -1357,6 +1422,41 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
     private static boolean isActiveOne(Object value) {
         if (value instanceof Number number) return number.intValue() == 1;
         return Boolean.TRUE.equals(value);
+    }
+
+    // ── helpers của bộ lọc `workItems` (TASK-058) — port nguyên văn 2 hàm của JS ─────────────
+    /** JS `:246` — {@code departmentForRole(user)}: chỉ hai mã base_role ánh xạ sang phòng ban. */
+    private static String departmentForRole(String roleBase) {
+        String base = roleBase == null ? "" : roleBase.trim();
+        if ("procurement".equals(base)) return "KH";
+        if ("project".equals(base)) return "DA";
+        return "";
+    }
+
+    /**
+     * JS `:388` — {@code departmentCodeForUser(user)}: xét **CHUỖI PHÒNG BAN** (đã bỏ dấu, chữ thường)
+     * trước, rồi tới mã vai trò; trả "" nếu không khớp nhánh nào.
+     * JS: {@code clean(user?.department).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase()}.
+     */
+    private static String departmentCodeForUser(String department, String roleCode, String roleBase) {
+        String dep = stripDiacritics(department == null ? "" : department.trim()).toLowerCase();
+        String role = roleCode == null ? "" : roleCode.trim().toLowerCase();
+        String base = roleBase == null ? "" : roleBase.trim();
+        if (dep.contains("ke hoach") || "kh".equals(dep) || "procurement".equals(base)) return "KH";
+        if (dep.contains("du an") || "da".equals(dep) || "project".equals(base)) return "DA";
+        if (dep.contains("tai chinh") || dep.contains("ke toan") || "tckt".equals(dep)
+                || "accountant".equals(base)) return "TCKT";
+        if (dep.contains("hanh chinh") || dep.contains("phap che") || "hcpc".equals(dep)
+                || "thuky".equals(role) || "thu_ky_tgd".equals(role)) return "HCPC";
+        if (dep.contains("ban chi huy") || "bch".equals(dep)
+                || List.of("commander", "engineer", "warehouse").contains(base)) return "BCH";
+        return "";
+    }
+
+    /** Bỏ dấu theo cách của JS (`normalize("NFD")` + xoá khối dấu tổ hợp) — `đ` KHÔNG bị tách, giống JS. */
+    private static String stripDiacritics(String value) {
+        return java.text.Normalizer.normalize(value, java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "");
     }
 
     private static boolean anyModule(Set<String> view, String... moduleKeys) {

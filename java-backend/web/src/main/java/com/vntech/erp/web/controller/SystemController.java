@@ -157,7 +157,8 @@ public class SystemController {
         // tuỳ biến có base_role='admin' bị coi là người dùng thường (lệch quyền bootstrap).
         boolean isAdmin = "admin".equals(user.get().roleBase()) || "admin".equals(user.get().role());
         Map<String, Object> data = bootstrapUseCase.load(user.get().id(), isAdmin,
-                user.get().role(), user.get().roleBase(), user.get().warehouseScopeKind());
+                user.get().role(), user.get().roleBase(), user.get().warehouseScopeKind(),
+                user.get().department());
         // user + profile nằm trong data (như JS bootstrap trả về)
         Map<String, Object> userMap = new LinkedHashMap<>();
         userMap.put("id", user.get().id());

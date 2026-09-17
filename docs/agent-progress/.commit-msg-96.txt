@@ -1,0 +1,35 @@
+TASK-058: port NGUYEN VAN workItems (29 cot + 4 nhanh loc phong ban/BCH) va workItemEvents (chi su kien cua cong viec trong pham vi) - do truoc khi va: 5 tai khoan khac vai tro deu thay DU 7/7 dong cua moi phong ban
+
+MA NGUON:
+- BootstrapDataPort.Context: them `department` (JS departmentCodeForUser :388 xet CHUOI phong ban truoc);
+  BootstrapUseCase + SystemController truyen them `user.get().department()`.
+- BootstrapDataAdapter:
+  (1) 2 helper port nguyen van JS: `departmentForRole` (:246) va `departmentCodeForUser` (:388) - kem
+      `stripDiacritics` theo dung cach JS (NFD + xoa khoi dau to hop; `đ` khong bi tach, giong JS).
+  (2) `workItemWhere` + binds theo dung 4 nhanh JS :715-716: admin -> `1=1`; KH -> department_code='KH'
+      AND (assigned_to=? OR EXISTS(role_catalog code=? AND code='kh_truong')); DA -> tuong tu 'da_truong';
+      BCH -> department_code='BCH' AND (assigned_to=? OR project_id IS NULL OR project_id IN (<pham vi>));
+      con lai -> assigned_to=? (chi viec CUA MINH).
+  (3) Truy van workItems: 29 cot nhu JS :717 (them projectCode/projectName/sourceModule/sourceType/
+      sourceId/sourceNo/assignedTo/assignedToName/assignedBy/assignedByName/waitingReason/
+      waitingStartedAt/submittedAt/active; bo ten sai assigneeUserId/assigneeName), JOIN projects + users ua/ub,
+      ORDER BY 3 khoa nhu JS, LIMIT 1000 (truoc la 500).
+  (4) `workItemEvents`: XOA khoi cu (tra su kien cua MOI cong viec, thieu 3 cot) - nay chi lay su kien
+      cua cac cong viec vua tra ve (JS :718) + bo sung actorName/previousAssignee/newAssignee.
+
+KIEM CHUNG - cong moi tools/probe-task058-work-items.mjs:
+- `work_items` dang RONG nen probe TU DUNG 7 dong TAM (KH x3, DA x2, BCH x2) + 2 su kien, roi dang nhap
+  6 tai khoan THAT va khang dinh tap hien thi theo tung nhanh; don sach co kiem chung (0 -> 0 dong).
+- DO TRUOC KHI VA (dung tren jar 19:21): **4/18 DAT** - ca 5 tai khoan khac vai tro deu thay DU
+  `T1..T7` (bang chung do duoc cua lo hong "khong co WHERE").
+- SAU KHI VA: **18/18 DAT** - admin 7/7 · nvkhdemo (kh_nv) T1,T5 · trinhtrench (kh_truong) T1,T5,T6
+  (dung nhanh EXISTS) · nvdademo (DA) T2 · tkhodemo (BCH) T3,T4 · thukydemo (HCPC) T7;
+  su kien duoc loc theo pham vi (KH/DA chi thay 1 su kien cua chinh minh); 29 cot du; projectCode/
+  projectName co gia tri; assignedToName/assignedByName co gia tri.
+- Cong khac khong hoi quy: probe-column-parity **9 -> 8 khoa** (workItems sach; doi chung duong 4/4);
+  probe-task050 93/93 · probe-task048 18/18 · probe-task049 10/10 · probe-task054 20/20 ·
+  cong tinh probe-bootstrap-keys con 1 khoa (duong tinh gia) · probe-java-sql-live khong phat sinh moi.
+
+LOI CUA CHINH TOI O LUOT NAY: cau INSERT fixture liet ke 32 cot nhung chi 31 gia tri (ERROR 1136) =>
+lan chay dau probe bao HONG o phan dung du lieu; da sua thanh chi cap 17 cot NOT NULL (cac cot con lai
+cho phep NULL).
