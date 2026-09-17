@@ -144,6 +144,11 @@ Mặc định của interface là `return role()` = **mã chuẩn** ⇒ thiếu 
 | `material_requests.project_id` → `projects` · `goods_receipt_items.receipt_id` → `goods_receipts` · `project_boq_items.boq_version_id` → `boq_versions` · `custom_field_values.entity_id` → `material_request_items` | 0 |
 
    **Ý nghĩa:** (a) **32 allocations + 15 approvals mồ côi** là **bằng chứng thực tế cho known issue #36** — xoá phiếu để lại rác ở **cả JS lẫn Java**; (b) `stock_issues.team_id` (không phải `stock_issue_items` — cột `team_id` **không tồn tại** ở bảng đó, đã kiểm bằng `information_schema`) đúng **3 dòng**, khớp số ghi ở #21; (c) 3 dòng BOQ trỏ vật tư không còn tồn tại. **KHÔNG tự sửa dữ liệu** — cần anh quyết định: xoá rác, hay giữ để đối chiếu lịch sử? (Bản ghi mồ côi **không hiển thị** trên giao diện vì mọi truy vấn đều `JOIN` bảng cha.)
+48. **TRUY NGUỒN 55 DÒNG MỒ CÔI (đo tiếp 17/09, read-only) — đã đủ dữ kiện để anh quyết:**
+   * **15 approvals mồ côi = ĐÚNG 3 phiếu đã bị xoá × 5 bước**, tất cả `status='approved'`, tạo **14/09** lúc 12:00:13 · 12:23:26 · 15:06:02 — tức **cả 3 phiếu đã duyệt xong rồi mới bị xoá**: `MR_77c22ec4-…` · `MR_00b80951-…` · **`MR_46cee316-…`**.
+   * **32 allocations mồ côi** thuộc **3 dự án**: `PRJ_fdbfab20` (PRJ-DEMO-01) **26 dòng / 12 dòng phiếu đã xoá**, `PRJ_62845d6e` 3 · `PRJ_daedb25b` 3; `stage='MR'`, tạo 14/09 (12:00 · 12:23 · 15:49–15:56).
+   * **Cùng một gốc:** `MR_46cee316-…` chính là phiếu mà dòng `material_request_items` mồ côi (`MRI_d1f57f9d…`, known issue #35) trỏ tới ⇒ **3 phiếu bị xoá ở giai đoạn seed/demo 14/09 đã để lại: 15 approvals + 26–32 allocations + 1 dòng phiếu**.
+   * **Đề xuất để anh chọn:** (1) **Xoá rác** — an toàn vì **cha không tồn tại**, không có màn hình nào đọc được các dòng này (mọi truy vấn đều `JOIN` cha); (2) **Giữ nguyên** nếu anh muốn đối chiếu lịch sử duyệt trước khi dọn; (3) **Vá gốc trước rồi mới dọn** — sửa `delete_request` ở **cả JS lẫn Java** để xoá thêm `procurement_allocations` + `custom_field_values` (known issue #36) kẻo rác tiếp tục sinh. **Tôi không tự chạy bất kỳ phương án nào.**
 
 ## Important Decisions
 
