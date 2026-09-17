@@ -55,3 +55,38 @@ Lớp lỗi "đường ĐỌC trả dữ liệu SAI (thừa/thiếu dòng)" **kh
 * cổng ảnh 28 ảnh (không phủ màn Thanh toán).
 
 ⇒ Chỉ phép so **CON SỐ UI ↔ CON SỐ CSDL** mới bắt được. Cổng này nay chạy độc lập và sẽ bắt lại nếu lỗi tái phát.
+
+---
+
+## 5. TASK-085 — CỔNG CHỐNG NHÂN DÒNG (mở rộng bất biến ra toàn bộ danh sách)
+
+**Cổng:** `tools/probe-row-duplication.mjs` — **14/14 ĐẠT · 0 HỎNG · 0 GHI NHẬN** (commit `#146`).
+
+Lỗi đếm trùng BOQ là **một biểu hiện** của lớp lỗi "đường ĐỌC nhân dòng". Cổng này biến phát hiện đó thành
+**bất biến tổng quát** cho 13 khoá danh sách theo dự án:
+
+```text
+số DÒNG payload (cho dự án)  ≤  số DÒNG trong CSDL (cho dự án)
+```
+
+Payload **được phép ÍT hơn** (bị lọc theo quyền/phạm vi/nghiệp vụ) nhưng **KHÔNG được NHIỀU hơn** — nhiều hơn
+nghĩa là nhân dòng hoặc gộp sai. Đo bằng **phiên admin** để loại yếu tố "bị lọc theo quyền" khỏi kết luận.
+
+| Khoá | Bảng CSDL | UI | CSDL | Kết luận |
+|---|---|---|---|---|
+| `boqItems` | `project_boq_items` | 8 | 8 | ĐẠT |
+| `purchaseOrders` | `purchase_orders` | 7 | 7 | ĐẠT |
+| `receipts` | `goods_receipts` (theo PO của dự án) | 15 | 16 | ĐẠT (payload ít hơn do phạm vi hiển thị) |
+| `issues` | `stock_issues` | 1 | 1 | ĐẠT |
+| `returns` | `material_returns` | 1 | 1 | ĐẠT |
+| `constructionDailyLogs` | `construction_daily_logs` | 1 | 1 | ĐẠT |
+| `productionReports` | `production_reports` | 2 | 2 | ĐẠT |
+| `capitalRecoveryRecords` | `capital_recovery_records` | 1 | 1 | ĐẠT |
+| `contractPayments` | `contract_payments` | 2 | 2 | ĐẠT |
+| `workItems` | `work_items` | 7 | 7 | ĐẠT |
+| `teams` | `teams` | 1 | 1 | ĐẠT |
+| `stockCounts` · `stockReconciliations` | — | 0 | — | **bỏ qua** (chưa có dữ liệu) — cổng ghi rõ chứ không im lặng |
+
+**Tự kiểm soát:** phải có **≥ 5 khoá thật sự có dữ liệu** để đối chiếu (lượt này: **11/13**) ⇒ cổng không thể
+"xanh rỗng". Câu SQL nào lỗi thì cổng **ghi nhận là KHÔNG kết luận được** thay vì tính là ĐẠT.
+
