@@ -92,6 +92,24 @@ if (!nonAdmin) {
     console.log(`    · ${key.padEnd(26)} admin: ${shape(a).padEnd(16)} · thường: ${shape(n)}`);
   }
   console.log("    ⇒ Nếu nhánh JS trả dữ liệu mà Java để TRỐNG thì lệch — kiểm bằng tay theo JS `:694`/`:698`/`:723`.");
+
+  // ── KIỂM (không chỉ ĐO) nhánh dự phòng là BIẾN KHÁC — JS `:694`/`:695`/`:696` ──────────────
+  const nd = nonAdmin.data;
+  const same = (x, y) => JSON.stringify((x ?? []).map((r) => r?.id ?? r)) === JSON.stringify((y ?? []).map((r) => r?.id ?? r));
+  check("thường: `adminMaterialCategories` = `materialCategories` (JS `:694` nhánh dự phòng)",
+    same(nd.adminMaterialCategories, nd.materialCategories),
+    `${(nd.adminMaterialCategories ?? []).length} ↔ ${(nd.materialCategories ?? []).length} dòng`);
+  check("thường: `adminMaterialSubcategories` = `materialSubcategories` (JS `:695` nhánh dự phòng)",
+    same(nd.adminMaterialSubcategories, nd.materialSubcategories),
+    `${(nd.adminMaterialSubcategories ?? []).length} ↔ ${(nd.materialSubcategories ?? []).length} dòng`);
+  check("thường: `adminMaterials` = [] (JS `:696` trả MẢNG RỖNG, KHÔNG dùng nhánh dự phòng)",
+    Array.isArray(nd.adminMaterials) && nd.adminMaterials.length === 0,
+    `${(nd.adminMaterials ?? []).length} dòng`);
+  // Các khoá admin-GATED thuần (JS `isAdmin ? … : []`) phải rỗng với tài khoản thường.
+  const MUST_BE_EMPTY = ["workflowAssignments", "audits", "allModulePermissions", "users", "sessions", "adminProjects"];
+  const leaked = MUST_BE_EMPTY.filter((k) => nd[k] !== undefined && (!Array.isArray(nd[k]) || nd[k].length !== 0));
+  check("không RÒ RỈ khoá admin-gated nào cho tài khoản thường", leaked.length === 0,
+    leaked.length ? `rò rỉ: ${leaked.join(", ")}` : `đã kiểm ${MUST_BE_EMPTY.length} khoá`);
 }
 
 const pass = results.filter((r) => r.ok).length;

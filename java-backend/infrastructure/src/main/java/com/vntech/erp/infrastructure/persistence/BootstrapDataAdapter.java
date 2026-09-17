@@ -1642,6 +1642,21 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                     "adminMaterialSubcategories", "adminSuppliers", "users", "userScopes",
                     "userWarehouseScopes", "allModulePermissions", "audits", "activeSessions",
                     "emailRecipients");
+            // TASK-064 — NHÁNH DỰ PHÒNG LÀ **BIẾN KHÁC** (JS `:694`/`:695`), không phải `[]`.
+            // Bản cũ xoá-trắng CẢ BA khoá `adminMaterial*` cho mọi tài khoản không phải admin, nhưng JS chỉ
+            // trả `[]` cho ĐÚNG MỘT khoá:
+            //   adminMaterialCategories    = canEditCentral ? <danh sách đầy đủ> : materialCategories
+            //   adminMaterialSubcategories = canEditCentral ? <danh sách đầy đủ> : materialSubcategories
+            //   adminMaterials             = canEditCentral ? <danh sách đầy đủ> : []          ← GIỮ NGUYÊN
+            // ⇒ đặt lại ĐÚNG bằng giá trị CUỐI của hai khoá nền (sau cả bước xoá-trắng theo module ở trên),
+            //   đúng như JS vì nhánh dự phòng của JS đọc CHÍNH biến đó.
+            // GIỚI HẠN ĐÃ BIẾT (ghi ở Known Problems #63): JS dùng
+            // `canEditCentral = isAdmin(user) || canUseModule(user,"central_warehouse","canEdit")`
+            // còn Java chỉ xét `admin` ⇒ tài khoản KHÔNG phải admin mà CÓ quyền `central_warehouse.canEdit`
+            // vẫn nhận danh sách RÚT GỌN thay vì danh sách ĐẦY ĐỦ (có cả mục `active=0` + `aliases`).
+            // Cần bổ sung phép kiểm module vào đường bootstrap — hạng mục riêng, chưa làm ở lượt này.
+            data.put("adminMaterialCategories", data.getOrDefault("materialCategories", List.of()));
+            data.put("adminMaterialSubcategories", data.getOrDefault("materialSubcategories", List.of()));
             data.put("serverInfo", null);
             data.put("trustStatus", null);
             data.put("emailSettings", null);
