@@ -36,6 +36,11 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
         List<String> pids = ctx.visibleProjectIds();
         // JS dùng `${projectIds.map(()=>"?").join(",") || "NULL"}` -> khi rỗng là IN (NULL)
         String pidSql = pids.isEmpty() ? "NULL" : inClause(pids);
+        // TASK-050/057 — hai biến vai trò dùng cho NHIỀU bộ lọc trong hàm này (JS dùng `effectiveRole(user)`
+        // và `clean(user.warehouseScopeKind || "site")`), nên tính MỘT LẦN ở đầu.
+        String roleBaseClean = ctx.roleBase() == null ? "" : ctx.roleBase().trim();
+        String scopeKind = (ctx.warehouseScopeKind() == null || ctx.warehouseScopeKind().isBlank())
+                ? "site" : ctx.warehouseScopeKind().trim();
 
         // ---- projects: CHỈ dự án trong phạm vi được cấp ----
         // LỖI BẢO MẬT đã sửa: trước đây trả TẤT CẢ dự án active cho mọi user, bỏ qua
@@ -321,19 +326,27 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
         data.put("receipts", receipts);
 
         // ---- xuất kho + returns + stock counts ----
+        // TASK-057 — cổng đối chiếu TẬP CỘT (`tools/probe-column-parity.mjs`) phát hiện 2 cột thiếu ở đây
+        // so với JS `:615`: `si.received_by_name AS receivedByName` (UI `page.tsx:963` dùng làm cột "Người nhận")
+        // và `COALESCE(sia.installed_qty,0) AS installedQty` (UI `page.tsx:2219` cộng vào "Đã xác nhận lắp").
         data.put("issues", pids.isEmpty() ? List.of() : query("""
                 SELECT si.id,si.issue_no AS issueNo,si.project_id AS projectId,si.team_id AS teamId,
                        p.code AS projectCode,t.name AS teamName,si.issued_at AS issuedAt,si.status,
-                       COALESCE(sia.item_count,0) AS itemCount,COALESCE(sia.total_qty,0) AS totalQty
+                       si.received_by_name AS receivedByName,
+                       COALESCE(sia.item_count,0) AS itemCount,COALESCE(sia.total_qty,0) AS totalQty,
+                       COALESCE(sia.installed_qty,0) AS installedQty
                 FROM stock_issues si
                 JOIN projects p ON p.id=si.project_id
                 JOIN teams t ON t.id=si.team_id
-                LEFT JOIN (SELECT issue_id,COUNT(*) AS item_count,COALESCE(SUM(quantity),0) AS total_qty
+                LEFT JOIN (SELECT issue_id,COUNT(*) AS item_count,COALESCE(SUM(quantity),0) AS total_qty,
+                                  COALESCE(SUM(installed_qty),0) AS installed_qty
                            FROM stock_issue_items GROUP BY issue_id) sia ON sia.issue_id=si.id
                 WHERE si.project_id IN (%s) ORDER BY si.issued_at DESC LIMIT 200""".formatted(pidSql), params(pids)));
+        // TASK-057 — thiếu `mr.returned_by_name AS returnedByName` (JS `:619`; UI `page.tsx:965` dùng làm cột "Người trả").
         data.put("returns", pids.isEmpty() ? List.of() : query("""
                 SELECT mr.id,mr.return_no AS returnNo,mr.project_id AS projectId,mr.team_id AS teamId,
                        p.code AS projectCode,t.name AS teamName,mr.returned_at AS returnedAt,mr.status,
+                       mr.returned_by_name AS returnedByName,
                        COALESCE(mra.item_count,0) AS itemCount,COALESCE(mra.accepted_qty,0) AS acceptedQty
                 FROM material_returns mr
                 JOIN projects p ON p.id=mr.project_id
@@ -354,19 +367,44 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                 WHERE sc.project_id IN (%s) ORDER BY sc.counted_at DESC LIMIT 200""".formatted(pidSql), params(pids)));
 
         // ---- chuyển kho ----
-        data.put("transferOrders", query("""
+        // TASK-057 — JS `:713` trả 21 cột, bản Java chỉ 14 (thiếu `sourceProjectId`, `destinationProjectId`,
+        // `approvedAt`, `shippedAt`, `receivedAt`, `shippedQty`, `receivedQty`) ⇒ UI `page.tsx:1745` hiện
+        // "Đã xuất"/"Đã nhận" LUÔN 0, và `page.tsx:2238` lọc theo dự án bị sai. Nay port đủ 21 cột.
+        List<Map<String, Object>> transferOrders = query("""
                 SELECT t.id,t.transfer_no AS transferNo,t.source_warehouse_id AS sourceWarehouseId,
                        sw.code AS sourceWarehouseCode,sw.name AS sourceWarehouseName,
                        t.destination_warehouse_id AS destinationWarehouseId,
                        dw.code AS destinationWarehouseCode,dw.name AS destinationWarehouseName,
-                       t.status,t.reason,t.note,t.requested_at AS requestedAt,
-                       COALESCE(x.item_count,0) AS itemCount,COALESCE(x.requested_qty,0) AS requestedQty
+                       t.source_project_id AS sourceProjectId,t.destination_project_id AS destinationProjectId,
+                       t.status,t.reason,t.note,t.requested_at AS requestedAt,t.approved_at AS approvedAt,
+                       t.shipped_at AS shippedAt,t.received_at AS receivedAt,
+                       COALESCE(x.item_count,0) AS itemCount,COALESCE(x.requested_qty,0) AS requestedQty,
+                       COALESCE(x.shipped_qty,0) AS shippedQty,COALESCE(x.received_qty,0) AS receivedQty
                 FROM transfer_orders t
                 JOIN warehouses sw ON sw.id=t.source_warehouse_id
                 JOIN warehouses dw ON dw.id=t.destination_warehouse_id
-                LEFT JOIN (SELECT transfer_order_id,COUNT(*) AS item_count,SUM(requested_qty) AS requested_qty
+                LEFT JOIN (SELECT transfer_order_id,COUNT(*) AS item_count,SUM(requested_qty) AS requested_qty,
+                                  SUM(shipped_qty) AS shipped_qty,SUM(received_qty) AS received_qty
                            FROM transfer_order_items GROUP BY transfer_order_id) x ON x.transfer_order_id=t.id
-                ORDER BY t.requested_at DESC LIMIT 300"""));
+                ORDER BY t.requested_at DESC LIMIT 300""");
+        // JS `:714` — vai trò kho (không phải admin) CHỈ thấy phiếu điều chuyển mà kho nguồn/đích nằm trong
+        // danh sách kho họ được thấy. Trước đây Java không lọc ⇒ thủ kho thấy phiếu của mọi kho.
+        if (!admin && "warehouse".equals(roleBaseClean)) {
+            java.util.Set<String> visibleWarehouseIds = new java.util.LinkedHashSet<>();
+            Object warehousesObj = data.get("warehouses");
+            if (warehousesObj instanceof List<?> list) {
+                for (Object row : list) {
+                    if (row instanceof Map<?, ?> map && map.get("id") != null) {
+                        visibleWarehouseIds.add(String.valueOf(map.get("id")));
+                    }
+                }
+            }
+            transferOrders = transferOrders.stream()
+                    .filter(row -> visibleWarehouseIds.contains(String.valueOf(row.get("sourceWarehouseId")))
+                            || visibleWarehouseIds.contains(String.valueOf(row.get("destinationWarehouseId"))))
+                    .toList();
+        }
+        data.put("transferOrders", transferOrders);
 
         // ---- BOQ: boqItems, contracts, versions, sourceItems, mapping candidates ----
         data.put("boqItems", pids.isEmpty() ? List.of() : query("""
@@ -691,8 +729,10 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                 FROM material_aliases WHERE active=1 ORDER BY alias_name"""));
 
         // productIdentity / trustStatus: JS trả hằng số + trạng thái trust lock
+        // TASK-057 — JS `:666` đặt alias `id AS productId`; bản Java trả `id` ⇒ `data.productIdentity.productId`
+        // là `undefined` (UI đọc `VNTECH_BRAND` nên chưa lộ, nhưng hợp đồng dữ liệu phải khớp JS).
         data.put("productIdentity", first("""
-                SELECT id,legal_owner AS legalOwner,product_name AS productName,
+                SELECT id AS productId,legal_owner AS legalOwner,product_name AS productName,
                        product_description AS productDescription,version,
                        source_fingerprint AS sourceFingerprint,
                        source_fingerprint_short AS sourceFingerprintShort
@@ -1183,9 +1223,6 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
 
         // JS :622 — vai trò kho với phạm vi SITE bị XOÁ TRẮNG 2 khoá kho tổng (đúng trước khi dựng result).
         // LƯU Ý: đây là bộ lọc theo VAI TRÒ, độc lập với bộ lọc theo MODULE ở dưới — port thiếu là LỖI BẢO MẬT.
-        String roleBaseClean = ctx.roleBase() == null ? "" : ctx.roleBase().trim();
-        String scopeKind = (ctx.warehouseScopeKind() == null || ctx.warehouseScopeKind().isBlank())
-                ? "site" : ctx.warehouseScopeKind().trim();
         if ("warehouse".equals(roleBaseClean) && "site".equals(scopeKind)) {
             data.put("centralInventory", List.of());
             data.put("centralReturns", List.of());

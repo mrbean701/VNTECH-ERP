@@ -1,0 +1,223 @@
+// ════════════════════════════════════════════════════════════════════════════════════════════
+// TASK-056 — CỔNG ĐỐI CHIẾU **TẬP CỘT** SQL giữa JS và Java theo từng khoá bootstrap
+// ════════════════════════════════════════════════════════════════════════════════════════════
+// VÌ SAO CÓ CỔNG NÀY: đã gặp **3 ca liên tiếp ở mức CỘT** mà cổng theo TÊN KHOÁ không bắt được:
+//   • `constructionDailyLogs` thiếu `itemCount` + `completedQty` (TASK-053, #85) ⇒ cột "Khối lượng" luôn 0
+//   • `transferOrders` thiếu 7 trường + thiếu bộ lọc theo kho (known issue #52)
+//   • (và cổng theo tên khoá cũng không thấy lớp "khoá CÓ khai nhưng null/rỗng theo vai trò" — #50)
+// Cổng này đọc **câu SQL hai phía**, tách **tập tên cột đầu ra** rồi so:
+//   Java: `data.put("KEY", … query("""SQL""") …)` trong `BootstrapDataAdapter.java`
+//   JS  : `const|let|var KEY = await all(`SQL`)` trong `scripts/system-route.mjs`
+// và in ra các cột **JS có mà Java KHÔNG có** (đúng lớp lỗi đã gặp 3 lần).
+//
+// ĐỐI CHỨNG DƯƠNG CỦA CHÍNH BỘ TÁCH CỘT: bộ tách là **suy luận văn bản**, nên phải được kiểm bằng
+// **metadata thật của MySQL** (`SELECT * FROM (<sql>) x LIMIT 0` in ra dòng tiêu đề khi dùng --batch).
+// Nếu bộ tách lệch metadata ⇒ cổng tự báo HỎNG (không được tin kết quả).
+//
+// GIỚI HẠN (ghi rõ, không giấu):
+//   • Chỉ so các khoá mà **hai bên TRÙNG TÊN biến** (`data.put("X")` ↔ `const X = await all(...)`).
+//     Nhiều khoá JS đặt tên biến khác khoá kết quả (`rawBusinessRoleGroups` → `businessRoleGroups`…) ⇒ bỏ qua.
+//   • Với `data.put` có nhiều nhánh (`admin ? query(A) : query(B)`), cổng lấy **tất cả** khối SQL của lệnh
+//     đó và hợp các cột lại ⇒ nhánh nào thiếu cột vẫn bị bắt, nhưng không quy được về đúng nhánh.
+//   • Mục không có `AS <alias>` thì lấy **định danh cuối cùng** trong mục đó (với biểu thức phức tạp có thể sai)
+//     — chính vì vậy mới cần đối chứng dương bằng metadata MySQL.
+//
+// Chạy: node tools/probe-column-parity.mjs
+import { readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+
+const JS_SRC = "scripts/system-route.mjs";
+const JAVA_SRC = "java-backend/infrastructure/src/main/java/com/vntech/erp/infrastructure/persistence/BootstrapDataAdapter.java";
+const MYSQL = "C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysql.exe";
+const js = readFileSync(JS_SRC, "utf8");
+const java = readFileSync(JAVA_SRC, "utf8");
+
+// ─────────────────────────── TÁCH TẬP CỘT TỪ MỘT CÂU SQL ───────────────────────────
+/** Bỏ chuỗi trong nháy đơn/backtick + chuỗi `"` để không tách nhầm dấu phẩy bên trong literal. */
+function maskLiterals(sql) {
+  let out = "";
+  let quote = null;
+  for (let i = 0; i < sql.length; i++) {
+    const ch = sql[i];
+    if (quote) {
+      if (ch === quote) { quote = null; out += ch; continue; }
+      out += " ";
+      continue;
+    }
+    if (ch === "'" || ch === '"' || ch === "`") { quote = ch; out += ch; continue; }
+    out += ch;
+  }
+  return out;
+}
+
+/** Tìm danh sách SELECT ở mức ngoài cùng (bỏ qua CTE: lấy SELECT cuối cùng trước FROM đầu tiên). */
+function outerSelectList(sql) {
+  const masked = maskLiterals(sql);
+  let depth = 0;
+  let selectStart = -1;
+  let fromStart = -1;
+  for (let i = 0; i < masked.length; i++) {
+    const ch = masked[i];
+    if (ch === "(") { depth++; continue; }
+    if (ch === ")") { depth--; continue; }
+    if (depth !== 0) continue;
+    if (/[A-Za-z_]/.test(ch)) {
+      const rest = masked.slice(i, i + 7).toUpperCase();
+      if (rest.startsWith("SELECT") && /[^A-Za-z0-9_]/.test(masked[i + 6] ?? " ")) {
+        if (selectStart < 0) selectStart = i + 6;
+        i += 5;
+        continue;
+      }
+      if (rest.startsWith("FROM") && /[^A-Za-z0-9_]/.test(masked[i + 4] ?? " ")) {
+        if (selectStart >= 0) { fromStart = i; break; }
+      }
+    }
+  }
+  if (selectStart < 0 || fromStart < 0) return null;
+  return sql.slice(selectStart, fromStart);
+}
+
+/** Cắt danh sách chọn theo dấu phẩy ở mức ngoài cùng. */
+function splitTopLevel(list) {
+  const masked = maskLiterals(list);
+  const items = [];
+  let depth = 0;
+  let start = 0;
+  for (let i = 0; i < masked.length; i++) {
+    const ch = masked[i];
+    if (ch === "(") depth++;
+    else if (ch === ")") depth--;
+    else if (ch === "," && depth === 0) { items.push(list.slice(start, i)); start = i + 1; }
+  }
+  items.push(list.slice(start));
+  return items.map((s) => s.trim()).filter(Boolean);
+}
+
+/** Tên cột đầu ra của một mục chọn: ưu tiên `AS <alias>`, nếu không có thì lấy định danh cuối. */
+function columnOf(item) {
+  const asMatch = item.match(/\s+AS\s+([A-Za-z_][A-Za-z0-9_]*)\s*$/i);
+  if (asMatch) return { name: asMatch[1], fromAlias: true };
+  const ident = item.match(/([A-Za-z_][A-Za-z0-9_]*)\s*\)*\s*$/);
+  return { name: ident ? ident[1] : null, fromAlias: false };
+}
+
+function columnsOf(sql) {
+  const list = outerSelectList(sql);
+  if (!list) return { columns: new Set(), exact: 0, approx: 0 };
+  const columns = new Set();
+  let exact = 0; let approx = 0;
+  for (const item of splitTopLevel(list)) {
+    const col = columnOf(item);
+    if (!col.name) continue;
+    columns.add(col.name);
+    if (col.fromAlias) exact++; else approx++;
+  }
+  return { columns, exact, approx };
+}
+
+// ─────────────────────────── ĐỌC HAI PHÍA ───────────────────────────
+/** JS: `const|let|var KEY = await all(`SQL`)` (SQL trong backtick, có thể nhiều dòng). */
+const jsByKey = new Map();
+{
+  const re = /(?:const|let|var)\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(?:await\s+)?(?:all|first)\(\s*`([\s\S]*?)`/g;
+  let m;
+  while ((m = re.exec(js)) !== null) {
+    // nhiều câu SQL cho cùng biến: hợp các cột lại
+    const prev = jsByKey.get(m[1]) ?? [];
+    prev.push(m[2]);
+    jsByKey.set(m[1], prev);
+  }
+}
+
+/** Java: mọi `data.put("KEY", …)` → gom TẤT CẢ khối `"""SQL"""` trong lệnh đó. */
+const javaByKey = new Map();
+{
+  const putRe = /data\.put\("([A-Za-z_][A-Za-z0-9_]*)"/g;
+  let m;
+  while ((m = putRe.exec(java)) !== null) {
+    const key = m[1];
+    const tail = java.slice(m.index, m.index + 6000);
+    // kết thúc lệnh: `);` ở mức ngoài cùng của put(...) — lấy thô trong 6000 ký tự nhưng dừng ở lần `);` đầu tiên
+    const end = tail.indexOf(");");
+    const body = end >= 0 ? tail.slice(0, end) : tail;
+    const sqls = [...body.matchAll(/"""([\s\S]*?)"""/g)].map((x) => x[1]);
+    if (sqls.length) {
+      const prev = javaByKey.get(key) ?? [];
+      javaByKey.set(key, prev.concat(sqls));
+    }
+  }
+}
+
+// ─────────────────────────── ĐỐI CHỨNG DƯƠNG: bộ tách ↔ metadata MySQL ───────────────────────────
+// Cách lấy metadata: dựng BẢNG TẠM từ chính câu SQL rồi `SHOW COLUMNS` — cách này KHÔNG phụ thuộc
+// việc câu SQL có dữ liệu hay không (bài học: `SELECT … LIMIT 0` trong chế độ --batch KHÔNG in tiêu đề).
+// `%s` (placeholder của Java `.formatted(...)`) và `?` (bind) được thay bằng NULL để câu SQL hợp lệ.
+function mysqlColumns(sql) {
+  const runnable = sql.replace(/"""/g, "").replace(/%s/g, "NULL").replace(/\?/g, "NULL");
+  const script = `CREATE TEMPORARY TABLE vntech_col_probe AS ${runnable}; SHOW COLUMNS FROM vntech_col_probe;`;
+  try {
+    const out = execFileSync(MYSQL, ["--default-character-set=utf8mb4", "-uvntech", "-pvntech",
+      "vntech_erp", "--batch", "--skip-column-names", "-e", script], { encoding: "utf8" });
+    return out.split(/\r?\n/).map((l) => l.split("\t")[0].trim()).filter(Boolean);
+  } catch (e) {
+    return { error: String(e.stderr ?? e.message).replace(/\s+/g, " ").trim().slice(0, 180) };
+  }
+}
+
+// Chỉ chọn các khoá có SQL **nội tuyến** trong `data.put(...)` (không phải biến trung gian).
+const CONTROLS = ["constructionDailyLogs", "transferOrders", "issues", "returns", "companyAvailability", "roleCatalog"];
+console.log("═══ ĐỐI CHỨNG DƯƠNG: bộ tách cột của cổng ↔ metadata THẬT của MySQL ═══");
+const controlResults = [];
+for (const key of CONTROLS) {
+  const sqls = javaByKey.get(key);
+  if (!sqls) { console.log(`  (bỏ qua) ${key}: không thấy SQL trong adapter`); continue; }
+  const parsed = new Set();
+  for (const s of sqls) for (const c of columnsOf(s).columns) parsed.add(c);
+  const truth = mysqlColumns(sqls[0].replace(/"""/g, ""));
+  if (!Array.isArray(truth)) {
+    console.log(`  (bỏ qua) ${key}: MySQL không chạy được — ${truth.error}`);
+    continue;
+  }
+  const missingInParse = truth.filter((c) => !parsed.has(c));
+  const extraInParse = [...parsed].filter((c) => !truth.includes(c));
+  const ok = missingInParse.length === 0 && extraInParse.length === 0;
+  controlResults.push(ok);
+  console.log(`  ${ok ? "ĐẠT" : "HỎNG"}  ${key}: parser=${parsed.size} cột · MySQL=${truth.length} cột` +
+    (ok ? "" : ` · parser thiếu [${missingInParse.join(",")}] · parser thừa [${extraInParse.join(",")}]`));
+}
+
+// ─────────────────────────── SO SÁNH THEO TỪNG KHOÁ ───────────────────────────
+const findings = [];
+const compared = [];
+const skipped = [];
+for (const [key, javaSqls] of javaByKey) {
+  const jsSqls = jsByKey.get(key);
+  if (!jsSqls) { skipped.push(key); continue; }
+  const jsCols = new Set();
+  for (const s of jsSqls) for (const c of columnsOf(s).columns) jsCols.add(c);
+  const javaCols = new Set();
+  for (const s of javaSqls) for (const c of columnsOf(s).columns) javaCols.add(c);
+  if (!jsCols.size || !javaCols.size) { skipped.push(key); continue; }
+  const missing = [...jsCols].filter((c) => !javaCols.has(c));
+  const extra = [...javaCols].filter((c) => !jsCols.has(c));
+  compared.push({ key, js: jsCols.size, java: javaCols.size });
+  if (missing.length) findings.push({ key, missing, extra });
+}
+
+console.log(`\n═══ SO SÁNH TẬP CỘT: đã so ${compared.length} khoá trùng tên hai phía · bỏ qua ${skipped.length} khoá (không trùng tên biến) ═══`);
+findings.sort((a, b) => b.missing.length - a.missing.length);
+if (!findings.length) {
+  console.log("KHÔNG khoá nào thiếu cột. ✅");
+} else {
+  console.log(`KHOÁ JAVA THIẾU CỘT SO VỚI JS: ${findings.length}`);
+  for (const f of findings) {
+    console.log(`  • ${f.key} — thiếu ${f.missing.length} cột: ${f.missing.join(", ")}` +
+      (f.extra.length ? `  (Java thừa: ${f.extra.join(", ")})` : ""));
+  }
+}
+
+console.log("\nGIỚI HẠN: chỉ so các khoá TRÙNG TÊN hai phía; mục không có `AS` lấy định danh cuối (có thể sai với biểu thức phức tạp)");
+console.log("         ⇒ vì vậy cổng BẮT BUỘC có phần đối chứng dương với metadata MySQL ở trên.");
+console.log(`ĐỐI CHỨNG DƯƠNG: ${controlResults.filter(Boolean).length}/${controlResults.length} khoá kiểm được khớp HOÀN TOÀN với MySQL` +
+  (controlResults.length && controlResults.every(Boolean) ? " ⇒ bộ tách cột đáng tin." : " ⇒ ⚠️ bộ tách có vấn đề, ĐỪNG kết luận từ danh sách trên."));
+process.exit(controlResults.length && controlResults.every(Boolean) ? 0 : 1);

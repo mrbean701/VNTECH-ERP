@@ -272,7 +272,64 @@ console.log("\n═══ 5. TASK-053: itemCount/completedQty của constructionD
   }
 }
 
-// ============================ 6. TỔNG KẾT ============================
+// ============================ 6. TASK-057 — 4 khoá vừa được BỔ SUNG CỘT ============================
+// Cổng `tools/probe-column-parity.mjs` (TASK-056) phát hiện các cột thiếu; mục này kiểm LÚC CHẠY rằng
+// chúng đã có mặt và **giá trị khớp MySQL theo từng dòng** (không chỉ "có tên cột").
+console.log("\n═══ 6. TASK-057: cột bổ sung của `issues` · `returns` · `transferOrders` · `productIdentity` ═══");
+{
+  // 6a. issues — `receivedByName` + `installedQty`
+  const issues = admin.issues;
+  if (!Array.isArray(issues) || issues.length === 0) {
+    skipped++; note("data.issues rỗng ⇒ không kiểm được giá trị");
+  } else {
+    const missing = ["receivedByName", "installedQty"].filter((k) => !(k in issues[0]));
+    check("[admin] data.issues có đủ 2 cột mới `receivedByName`/`installedQty`", missing.length === 0,
+      missing.length ? `thiếu: ${missing.join(", ")}` : `${issues.length} dòng`);
+    const rows = sqlRows(`SELECT si.id,COALESCE(si.received_by_name,''),COALESCE(x.installed_qty,0)
+       FROM stock_issues si
+       LEFT JOIN (SELECT issue_id,COALESCE(SUM(installed_qty),0) AS installed_qty
+                  FROM stock_issue_items GROUP BY issue_id) x ON x.issue_id=si.id`);
+    const expected = new Map(rows.map((r) => [r[0], { receivedByName: r[1], installedQty: Number(r[2]) }]));
+    const bad = issues.filter((row) => {
+      const e = expected.get(String(row.id));
+      if (!e) return true;
+      return String(row.receivedByName ?? "") !== e.receivedByName || Number(row.installedQty ?? 0) !== e.installedQty;
+    });
+    check("[admin] data.issues: `receivedByName` + `installedQty` khớp MySQL theo TỪNG DÒNG", bad.length === 0,
+      bad.length ? `lệch ${bad.length} dòng: ${JSON.stringify(bad[0]).slice(0, 140)}` : `${issues.length} dòng khớp`);
+  }
+
+  // 6b. returns — `returnedByName`
+  const returns = admin.returns;
+  if (!Array.isArray(returns) || returns.length === 0) {
+    skipped++; note("data.returns rỗng ⇒ không kiểm được giá trị");
+  } else {
+    check("[admin] data.returns có cột `returnedByName`", "returnedByName" in (returns[0] ?? {}),
+      `${returns.length} dòng`);
+    const rows = sqlRows(`SELECT id,COALESCE(returned_by_name,'') FROM material_returns`);
+    const expected = new Map(rows.map((r) => [r[0], r[1]]));
+    const bad = returns.filter((row) => String(row.returnedByName ?? "") !== (expected.get(String(row.id)) ?? "\u0000"));
+    check("[admin] data.returns: `returnedByName` khớp MySQL theo TỪNG DÒNG", bad.length === 0,
+      bad.length ? `lệch ${bad.length} dòng` : `${returns.length} dòng khớp`);
+  }
+
+  // 6c. transferOrders — 7 cột mới. Bảng ĐANG RỖNG nên chỉ khẳng định khoá tồn tại + ghi rõ giới hạn:
+  //     phần "đủ cột" được cổng TĨNH `probe-column-parity.mjs` kiểm (so tập cột với JS).
+  check("[admin] data.transferOrders là MẢNG (kiểm được cột ở cổng tĩnh vì bảng rỗng)", Array.isArray(admin.transferOrders),
+    `${admin.transferOrders?.length} dòng · giới hạn: 0 dòng nên KHÔNG kiểm được giá trị lúc chạy`);
+  if (!Array.isArray(admin.transferOrders) || admin.transferOrders.length === 0) {
+    skipped++; note("data.transferOrders rỗng (transfer_orders = 0 bảng ghi) ⇒ chỉ cổng TĨNH kiểm được tập cột");
+  }
+
+  // 6d. productIdentity — alias `productId` như JS
+  const pi = admin.productIdentity ?? {};
+  const expectedId = sqlOne("SELECT id FROM vntech_product_identity LIMIT 1");
+  check("[admin] data.productIdentity dùng alias `productId` như JS (`:666`)",
+    "productId" in pi && String(pi.productId) === expectedId,
+    `productId=${JSON.stringify(pi.productId)} · MySQL=${expectedId}`);
+}
+
+// ============================ 7. TỔNG KẾT ============================
 const failed = results.filter((r) => !r.ok);
 console.log(`\n═══ KẾT QUẢ: ${results.length - failed.length}/${results.length} ĐẠT · ${skipped} phép đo không thực hiện được ═══`);
 if (failed.length) {
