@@ -83,7 +83,7 @@
 | `U-06` | UI | `ApprovalTimeline`: số bước · người duyệt · phòng ban · thời gian · trạng thái · ý kiến | P1 | — | - | - | NEW | - | DONE / AP-DUNG 1 |
 | `U-07` | UI | `ActivityTimeline` dùng cho mọi lịch sử | P1 | — | - | - | NEW | - | DONE / AP-DUNG 2 |
 | `U-08` | UI | Kiểm responsive 4 kích thước cho mọi màn sau khi chuẩn hoá | P1 | U-02,U-03 | - | - | FIX | - | DONE |
-| `U-09` | UI | Chuyển các danh sách sang khuôn Toolbar chuẩn (§5) | P1 | U-03 | - | - | FIX | - | DANG-LAM 9/32 |
+| `U-09` | UI | Chuyển các danh sách sang khuôn Toolbar chuẩn (§5) | P1 | U-03 | - | - | FIX | - | DANG-LAM 17 hàm / 19 lần dùng · còn 4 hàm |
 | `U-10` | UI | Sửa modal vượt viewport | P1 | — | - | - | FIX | - | TODO |
 | `U-11` | Kiến trúc | Tách `page.tsx` (4.057 dòng) thành module theo màn hình | P1 | U-01…U-05 | - | - | - | - | TODO |
 | `U-12` | CSS | Loại `!important` theo từng nhóm; gộp 1.183 selector trùng | P2 | U-11 | - | - | FIX | - | TODO |
