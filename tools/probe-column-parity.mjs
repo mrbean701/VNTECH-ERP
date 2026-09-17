@@ -253,6 +253,25 @@ for (const key of CONTROLS) {
     (ok ? "" : ` · parser thiếu [${missingInParse.join(",")}] · parser thừa [${extraInParse.join(",")}]`));
 }
 
+// ─────────────────────────── CHẾ ĐỘ TRA MỘT KHOÁ (`--key <tên>`) ───────────────────────────
+// Dùng khi vá: in ra CẢ HAI câu SQL (JS + Java) và danh sách cột thiếu/thừa để sửa không phải đoán.
+const keyArgIdx = process.argv.indexOf("--key");
+if (keyArgIdx >= 0) {
+  const key = process.argv[keyArgIdx + 1];
+  const javaSqls = javaByKey.get(key) ?? [];
+  const jsSqls = jsByKey.get(key) ?? [];
+  console.log(`═══ KHOÁ \`${key}\` ═══`);
+  console.log(`\n--- JAVA (${javaSqls.length} câu) ---`);
+  javaSqls.forEach((s, i) => console.log(`[${i}] ${s.replace(/\s+/g, " ").trim()}`));
+  console.log(`\n--- JS (${jsSqls.length} câu) ---`);
+  jsSqls.forEach((s, i) => console.log(`[${i}] ${s.replace(/\s+/g, " ").trim()}`));
+  const jsCols = new Set(); for (const s of jsSqls) for (const c of columnsOf(s).columns) jsCols.add(c);
+  const javaCols = new Set(); for (const s of javaSqls) for (const c of columnsOf(s).columns) javaCols.add(c);
+  console.log(`\nTHIẾU ở Java: ${[...jsCols].filter((c) => !javaCols.has(c)).join(", ") || "(không)"}`);
+  console.log(`THỪA ở Java: ${[...javaCols].filter((c) => !jsCols.has(c)).join(", ") || "(không)"}`);
+  process.exit(0);
+}
+
 // ─────────────────────────── SO SÁNH THEO TỪNG KHOÁ ───────────────────────────
 const findings = [];
 const compared = [];

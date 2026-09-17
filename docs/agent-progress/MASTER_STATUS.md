@@ -1,7 +1,7 @@
 # MASTER STATUS — VNTECH ERP V5.3.0
 
 > Tệp này là NGUỒN SỰ THẬT về trạng thái toàn cục. Mọi phiên làm việc mới PHẢI đọc tệp này trước.
-> Cấu trúc theo GOAL §12. Cập nhật lần cuối: 2026-09-17 (sau **TASK-050/051/052/053**, commit #85)
+> Cấu trúc theo GOAL §12. Cập nhật lần cuối: 2026-09-17 (sau **TASK-061**, commit #100 — xem mục **TIẾN ĐỘ SO VỚI MASTER TASK** ngay dưới)
 
 ## MASTER TASK STATUS
 
@@ -9,18 +9,60 @@
 * Overall status: **IN PROGRESS** — PHASE 1 (hạ tầng UI dùng chung) chưa xong
 * Nguyên tắc: MASTER TASK quyết định PHẢI LÀM GÌ; GOAL quyết định PHẢI LÀM NHƯ THẾ NÀO
 
+## TIẾN ĐỘ SO VỚI MASTER TASK — đo được, không phải cảm nhận
+
+> Cổng: **`tools/probe-roadmap-progress.mjs`** — đọc nguyên văn cột TT của `docs/25_TODO_ROADMAP.md`
+> (nguồn sự thật 110 mục) và phân loại. Chạy lại bất cứ lúc nào để lấy số mới; **không tự đặt tiêu chí "xong"**.
+
+| Phân loại (nguyên văn cột TT) | Số mục | % |
+|---|---|---|
+| **DONE** (`**DONE**` + `DONE` + `DONE / AP-DUNG n`) | **23** | **20,9 %** |
+| ĐANG LÀM (`DANG-LAM 9/32`) | 1 | 0,9 % |
+| KHUNG XONG nhưng **ÁP DỤNG 0** (`KHUNG-XONG / AP-DUNG 0`) | 5 | 4,5 % |
+| **BỊ CHẶN** (`**BLOCKED**` = F-01) | 1 | 0,9 % |
+| TODO | 80 | 72,7 % |
+
+| Phase | DONE / tổng | Ghi chú |
+|---|---|---|
+| PHASE 0 — AUDIT | **12 / 16** | A-01…A-16; A-13…A-16 còn TODO |
+| PHASE 0B — BẢO MẬT | **8 / 10** | đang tạm hoãn theo yêu cầu người dùng |
+| PHASE 1 — UI/UX | 3 / 17 | 1 đang làm (U-11) · 5 mới có khung |
+| PHASE 2 — MUA HÀNG | 0 / 9 | |
+| PHASE 3 — CÔNG VIỆC | 0 / 10 | |
+| PHASE 4 — DỰ ÁN | 0 / 6 | |
+| PHASE 5 — KHO | 0 / 4 | |
+| PHASE 6 — ĐỘI NHÓM | 0 / 6 | |
+| PHASE 7 — QUẢN TRỊ | 0 / 16 | |
+| PHASE 8 — WORKFLOW | 0 / 6 | |
+| PHASE 9 — BÁO CÁO | 0 / 5 | |
+| PHASE 10 — TƯƠNG LAI | 0 / 5 | 1 mục bị chặn (F-01) |
+
+**Phần KHÔNG cộng vào 110 mục — nhánh đang chạy thực tế:** TASK-048 → TASK-061 (14 việc) là **vá lỗi
+phát hiện được khi audit** (đường ĐỌC bootstrap JS ↔ Java, phân quyền, audit trail). Nhánh này **không có
+ánh xạ 1-1** với mục roadmap nào, nên cổng trên **cố tình không cộng** — nếu cộng vào sẽ là thổi phồng.
+Nói cách khác: *audit đã xong về khảo sát (A-01…A-12 DONE) nhưng việc SỬA các lỗi audit tìm ra vẫn đang chạy*.
+
+**Cổng đã xanh sau khi build lại (17/09):** bootstrap `100/100` · work-items `18/18` ·
+audit-requests `18/18` · owner-checks `10/10` · all-roles `20/20` · schema-drift **0 lệch** ·
+đối chiếu tập cột 65 khoá: còn **2 khoá** thiếu cột (`boqItems` 17 cột · `boqSourceItems` 9 cột ⇒ TASK-062).
+
+**Lớp lỗi MỚI phát hiện, cổng tập cột KHÔNG bắt được** (cần cổng riêng): lệch `ORDER BY` / `LIMIT` / kiểu
+`JOIN`. Đã thấy 3 ca khi đọc JS: `boqImportBatches` (JS sắp `project_id,contract_id,version_no DESC`;
+Java sắp `created_at DESC`) · `boqChangeHistory` (JS có `LIMIT 1000` + tiebreaker `h.id DESC`) ·
+`workflowAssignments` (JS **chỉ admin** mới trả, Java trả cho mọi vai trò). **Chưa vá** — ghi ở Known Problems.
+
 ## Mốc trạng thái
 
 | Mục | Giá trị |
 |---|---|
 | CURRENT PHASE | PHASE 1 — hạ tầng UI dùng chung. Song song: hoàn thiện tầng phân quyền Java |
-| CURRENT TASK | **TASK-060 — mở rộng phép ánh xạ của cổng tập cột** để kiểm nốt **49/78 khoá** đang bị bỏ qua (JS đặt tên biến khác tên khoá kết quả: `rawBusinessRoleGroups` → `businessRoleGroups`…), rồi vá những cột thiếu phát hiện thêm. Kèm: **probe HTTP theo vai trò** cho lớp *"khoá có khai nhưng TRƯỜNG DẪN XUẤT thiếu"* (#50 · `businessRoleGroups[].scopeIds/scopes`). Kế tiếp: **TASK-055** (chờ anh chốt D6) · vá gốc `delete_request` (D1 phương án 3) · mở rộng audit (khe hở **128** action) |
-| LAST COMPLETED | **TASK-059 (#98) — 8 khoá thiếu CỘT cuối cùng ⇒ CỔNG TẬP CỘT VỀ 0** (13 → 9 → 8 → **0**; đối chứng dương 4/4): `taskNotifications` (5 cột + sắp "chưa đọc trước" + LIMIT 100) · `hrRecords` (`identityDate`/`identityPlace`) · `accountingVouchers`/`officialCorrespondence`/`legalDocuments` (`createdBy`/`createdByName`) · `roleCatalog` (`businessGroupName` ⇒ cột "Nhóm nghiệp vụ" hết luôn "—") · `businessRoleGroupScopes` (đúng JS) · `organizationUnits` (`projectName`+`effectiveFrom/To`). **Probe bootstrap 100/100** (mục 7 đối chiếu giá trị theo từng dòng). Trước đó: **TASK-058 (#96)** · **TASK-056/057 (#94)** · **TASK-049 (#92)** |
+| CURRENT TASK | **TASK-062 — port 2 khoá BOQ còn thiếu cột** (`boqItems` 17 cột + bộ lọc khoa/dự án theo JS `:631`; `boqSourceItems` 9 cột) — đây là **2 khoá cuối cùng** của cổng đối chiếu tập cột. Kế tiếp: **cổng mới cho lớp lệch `ORDER BY`/`LIMIT`/kiểu `JOIN`** (đã có 3 ca, xem mục TIẾN ĐỘ ở trên) · **TASK-055** (chờ anh chốt D6) · vá gốc `delete_request` (D1 phương án 3) · mở rộng audit (khe hở **128** action) |
+| LAST COMPLETED | **TASK-061 (chưa commit)** — vá **16/18** khoá thiếu cột trong `BootstrapDataAdapter.java`; còn đúng 2 khoá BOQ ⇒ TASK-062. Kèm bài học đã ghi vào code: sự cố `c.name` (cột thật là `contract_name`) từng làm `GET /api/system` trả **500 cho TOÀN BỘ UI** ⇒ **sau mọi sửa SQL phải chạy `probe-java-sql-live.mjs` TRƯỚC khi build+restart**. Trước đó: **TASK-060 (#100)** mở rộng cổng tập cột 29 → 65 khoá · **TASK-059 (#98) — 8 khoá thiếu CỘT cuối cùng ⇒ CỔNG TẬP CỘT VỀ 0** (13 → 9 → 8 → **0**; đối chứng dương 4/4): `taskNotifications` (5 cột + sắp "chưa đọc trước" + LIMIT 100) · `hrRecords` (`identityDate`/`identityPlace`) · `accountingVouchers`/`officialCorrespondence`/`legalDocuments` (`createdBy`/`createdByName`) · `roleCatalog` (`businessGroupName` ⇒ cột "Nhóm nghiệp vụ" hết luôn "—") · `businessRoleGroupScopes` (đúng JS) · `organizationUnits` (`projectName`+`effectiveFrom/To`). **Probe bootstrap 100/100** (mục 7 đối chiếu giá trị theo từng dòng). Trước đó: **TASK-058 (#96)** · **TASK-056/057 (#94)** · **TASK-049 (#92)** |
 | NEXT TASK | Sau TASK-048/049: rà tiếp **đường ĐỌC mức CỘT** (đã lộ 2 ca liên tiếp: `constructionDailyLogs` thiếu 2 cột, `transferOrders` thiếu 7 trường + thiếu lọc theo kho `:714`) ⇒ cần cổng đối chiếu **tập cột SQL JS ↔ Java** theo từng khoá bootstrap; rồi TASK-034 (gỡ chặn dựng bundle) → render §8.1 → **§8.2** → **§8.3** |
 | BLOCKED ITEMS | **TASK-040 nhóm 6** (lệch cấu trúc: `vntech_license_*` cần port cả hệ license + xác minh chữ ký số — thuộc phần **bảo mật** đã yêu cầu tạm hoãn) · **TASK-034** (`npm run build` không dựng lại được UI: dấu vân tay nguồn lệch + bảng identity có **trigger chặn UPDATE** ⇒ phải viết migration) · **TASK-035 mục 7** · **TASK-036 mục 7** · **TASK-037 mục 5** · **TASK-031** · **TASK-032** · **TASK-029** · **TASK-024** · **dữ liệu `user_module_permissions`** · **số SLA thật (24h/8h)** |
 | USER CONFIRMATION REQUIRED | **YES** — **11 câu hỏi**, ghi ở mục riêng bên dưới |
 | CURRENT BRANCH | `unity` |
-| LATEST COMMIT | `d8d8266` (#89) · **81 commit CHƯA PUSH** — đo bằng `git rev-list --count origin/unity..HEAD`; **KHÔNG PUSH** theo quyết định của người dùng |
+| LATEST COMMIT | `d8d85c5` (#100 · TASK-060) · **92 commit CHƯA PUSH** — đo lại 17/09 bằng `git rev-list --count origin/unity..HEAD`; **KHÔNG PUSH** theo quyết định của người dùng (chờ anh test thủ công xong) |
 
 ## System State
 
@@ -161,7 +203,13 @@ Mặc định của interface là `return role()` = **mã chuẩn** ⇒ thiếu 
 57. **MỚI (17/09, cổng TẬP CỘT) — lớp lỗi "THIẾU CỘT": 13 khoá, đã vá 4, còn 9.** Cổng mới `tools/probe-column-parity.mjs` (TASK-056, **có đối chứng dương với metadata MySQL**) so tập tên cột SQL hai phía cho **30 khoá trùng tên**. **Đã vá (#94/TASK-057):** `issues` (+`receivedByName`, +`installedQty`) · `returns` (+`returnedByName`) · `transferOrders` (14 → **21 cột** theo JS `:713` **+ bộ lọc theo kho của `:714`**) · `productIdentity` (`id AS productId`). **Còn 9 khoá:** `workItems` · `taskNotifications` · `businessRoleGroupScopes` · `roleCatalog` · `organizationUnits` · `accountingVouchers` · `hrRecords` · `officialCorrespondence` · `legalDocuments`.
 58. **✅ ĐÃ VÁ (#96 — TASK-058) — `workItems`: Java KHÔNG có mệnh đề lọc ⇒ trả TOÀN BỘ công việc cho mọi tài khoản; thiếu 14 cột.** JS `:715-717` dựng 4 nhánh lọc theo vai trò (admin `1=1`; KH `department_code='KH' AND (assigned_to=? OR EXISTS(role kh_truong…))`; DA tương tự với `da_truong`; BCH `department_code='BCH' AND (assigned_to=? OR project_id IS NULL OR project_id IN (<phạm vi>))`; còn lại `assigned_to=?`). **Đo được TRƯỚC khi vá (jar 19:21, probe dựng 7 dòng tạm + 6 tài khoản thật): 4/18 ĐẠT — cả 5 tài khoản khác vai trò đều thấy ĐỦ `T1..T7`.** Sau khi port **nguyên văn** (kèm `departmentForRole`, `departmentCodeForUser` + `stripDiacritics` theo đúng cách JS, và `Context.department` mới): **18/18 ĐẠT** — admin 7/7 · `nvkhdemo` T1,T5 · `trinhtrench` (kh_truong) T1,T5,T6 · `nvdademo` T2 · `tkhodemo` T3,T4 · `thukydemo` T7; `workItemEvents` nay **chỉ** sự kiện của công việc trong phạm vi (JS `:718`) và đủ cột. Cổng tập cột **9 → 8 khoá**. Chi tiết: `TASK-058.md`.
 59. **✅ ĐÃ VÁ (#98 — TASK-059) — 8 khoá thiếu CỘT còn lại; cổng tập cột nay về 0.** Đã bổ sung: `taskNotifications` (5 cột + **sắp "chưa đọc TRƯỚC"** + LIMIT 100 như JS; giữ thêm `taskId`/`message` Java-only vì `grep` toàn `app/` chỉ đọc `n.readAt`) · `hrRecords` (`identityDate`/`identityPlace` — form **nhập** mà đọc lại **không có trường**) · `accountingVouchers`+`officialCorrespondence`+`legalDocuments` (`createdBy`/`createdByName`) · `roleCatalog` (`businessGroupId` + `businessGroupName` ⇒ cột "Nhóm nghiệp vụ" ở màn Chức danh/vai trò **trước luôn "—"**) · `businessRoleGroupScopes` (đúng JS: `businessScopeId`/`scopeCode`/`scopeName` + JOIN `business_scope_catalog` + thứ tự + lọc `bs.active=1` khi không phải admin) · `organizationUnits` (`projectName`/`effectiveFrom`/`effectiveTo`). **Cổng `probe-column-parity.mjs` = 0 khoá thiếu cột** (13 → 9 → 8 → **0**; đối chứng dương 4/4) · **probe bootstrap 100/100** (mục 7 đối chiếu giá trị **theo từng dòng** với MySQL; bảng rỗng được in rõ là "(bỏ qua)").
-60. **MỚI — cổng tập cột còn BỎ QUA 49/78 khoá** vì JS đặt **tên biến khác tên khoá kết quả** (`rawBusinessRoleGroups` → `businessRoleGroups`…). Mở rộng phép ánh xạ ⇒ kiểm được nốt 49 khoá còn lại (**TASK-060**). Kèm theo: lớp lỗi *"khoá có khai nhưng TRƯỜNG DẪN XUẤT thiếu"* (`engineRoleProfiles` = null cho mọi tài khoản — #50; `businessRoleGroups[].scopeIds/scopes` do JS enrich `:675`) mà cổng theo **tập cột** **không** bắt được ⇒ cần probe HTTP theo vai trò.
+60. **✅ ĐÃ VÁ (#100 — TASK-060) — cổng tập cột từng BỎ QUA 49/78 khoá.** Nay ánh xạ được **khoá kết quả → biến JS** (parse `const result = { key: value }`) + gom **mọi** khối SQL trong một lệnh khai báo (dạng `cond ? await all(A) : []` và 2 nhánh đều bị bỏ sót trước đây) ⇒ so được **65 khoá** (bỏ qua 13), **lộ ra 18 khoá thiếu cột**. Kèm lớp lỗi *"khoá có khai nhưng TRƯỜNG DẪN XUẤT thiếu"* (`engineRoleProfiles` = null cho mọi tài khoản — #50; `businessRoleGroups[].scopeIds/scopes` do JS enrich `:675`) mà cổng theo **tập cột** **không** bắt được ⇒ vẫn cần probe HTTP theo vai trò.
+61. **MỚI (phát hiện khi rà TASK-061) — cổng tập cột KHÔNG bắt được lớp lệch `ORDER BY` / `LIMIT` / kiểu `JOIN`.** Ba ca đã xác nhận bằng cách đọc thẳng JS (chưa vá):
+    * `boqImportBatches` — JS `:647` sắp `ORDER BY project_id,contract_id,version_no DESC`; Java sắp `created_at DESC` ⇒ **thứ tự lô BOQ hiển thị sai**.
+    * `boqChangeHistory` — JS `:648` có `ORDER BY h.created_at DESC, h.id DESC LIMIT 1000`; Java **thiếu cả tiebreaker lẫn LIMIT** ⇒ bảng lịch sử BOQ có thể trả về **toàn bộ** lịch sử của mọi dự án trong phạm vi.
+    * `workflowAssignments` — JS `:723` là `isAdmin ? await all(…) : []` và **không lọc theo dự án**; Java trả cho **mọi vai trò** và lọc `project_id IN (…)` ⇒ **rò rỉ thông tin** "ai duyệt bước nào của dự án nào" cho tài khoản không phải admin.
+    * Bài học: mỗi khi port một khoá, phải đọc **cả câu SQL** (JOIN · WHERE · ORDER BY · LIMIT), không chỉ danh sách cột. Cần **cổng riêng** cho lớp này.
+62. **Lớp lệch `ORDER BY`/`LIMIT` còn lại CHƯA đo được hết** — chỉ mới rà 3 khoá tôi vừa sửa. Kích thước thật của lớp lỗi này **chưa biết** cho tới khi dựng cổng `probe-clause-parity.mjs`. **Không được báo "đã khớp JS" cho tới khi cổng đó xanh.**
 
 ## Important Decisions
 
