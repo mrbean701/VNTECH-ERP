@@ -28,9 +28,16 @@ public interface RequestStore {
     List<Map<String, Object>> approvalStages(boolean activeOnly);           // stage_no,name,allowed_role_codes,approval_mode,sla_hours,auto_approve_on_submit
     Optional<Map<String, Object>> workflowAssignment(String projectId, int stageNo); // owner_user_id, active...
 
-    /** Tạo material_request + items + allocations + custom fields + approvals trong 1 transaction. */
+    /**
+     * Tạo material_request + items + allocations + custom fields + approvals trong 1 transaction.
+     * <p>
+     * TASK-043: {@code customFields} là danh sách dòng cho bảng {@code custom_field_values}
+     * (id, entityId, fieldKey, valueText) — trường động của TỪNG DÒNG phiếu. Trước đây hợp đồng này
+     * ghi "custom fields" trong chú thích nhưng phần triển khai KHÔNG hề ghi bảng đó.
+     */
     void insertRequest(Map<String, Object> header, List<Map<String, Object>> lines,
-                       List<Map<String, Object>> approvals, Instant now);
+                       List<Map<String, Object>> approvals, List<Map<String, Object>> customFields,
+                       Instant now);
 
     // ---- workflow phê duyệt (decide_approval) ----
     Optional<Map<String, Object>> findRequestForApproval(String requestId); // MR + project + requester + itemCount

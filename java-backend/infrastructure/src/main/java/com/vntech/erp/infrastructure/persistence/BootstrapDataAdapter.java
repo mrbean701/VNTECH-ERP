@@ -79,34 +79,68 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                     FROM approvals a
                     LEFT JOIN users u ON u.id=a.approver_user_id
                     WHERE a.request_id IN (%s) ORDER BY a.stage""".formatted(in), params(requestIds));
+            // TASK-044 — 11 trường JS trả về mà Java BỎ SÓT (UI page.tsx:3609 hiển thị trực tiếp):
+            // workPackageCode · boqCode · installationArea · contractLineNo · pendingBchQty · closeReason ·
+            // remainingQty · rejectedQty · linkedPoCount · linkedReceiptCount · missingDocumentCount.
             List<Map<String, Object>> itemRows = query("""
                     SELECT mri.id,mri.request_id AS requestId,mri.line_no AS lineNo,mri.boq_item_id AS boqItemId,
                            COALESCE(m.code,'[MẤT MÃ]') AS materialCode,
                            COALESCE(m.name,'Vật tư không còn trong Danh mục vật tư gốc') AS materialName,
                            COALESCE(m.unit,'') AS unit,m.brand AS manufacturer,mri.material_id AS materialId,
+                           mri.work_package_code AS workPackageCode,mri.boq_code AS boqCode,
+                           mri.installation_area AS installationArea,mri.contract_line_no AS contractLineNo,
                            mri.requested_qty AS requestedQty,mri.estimated_unit_price AS unitPrice,
                            mri.approved_purchase_qty AS approvedPurchaseQty,mri.ordered_qty AS orderedQty,
                            mri.delivered_qty AS actualDeliveredQty,mri.received_qty AS receivedQty,
-                           mri.closed_qty AS closedQty,mri.line_status AS lineStatus,mri.issued_qty AS issuedQty,
+                           CASE WHEN mri.delivered_qty>mri.received_qty
+                                THEN mri.delivered_qty-mri.received_qty ELSE 0 END AS pendingBchQty,
+                           mri.closed_qty AS closedQty,mri.close_reason AS closeReason,
+                           CASE WHEN mri.approved_purchase_qty>mri.received_qty+mri.closed_qty
+                                THEN mri.approved_purchase_qty-mri.received_qty-mri.closed_qty
+                                ELSE 0 END AS remainingQty,
+                           mri.line_status AS lineStatus,mri.issued_qty AS issuedQty,
                            mri.installed_qty AS installedQty,mri.stock_allocation_qty AS stockAllocationQty,
-                           mri.origin,mri.approved_supplier AS approvedSupplier,mri.note
+                           mri.origin,mri.approved_supplier AS approvedSupplier,mri.note,
+                           (SELECT COALESCE(SUM(gri.rejected_qty),0) FROM goods_receipt_items gri
+                              JOIN purchase_order_items poi2 ON poi2.id=gri.purchase_order_item_id
+                             WHERE poi2.request_item_id=mri.id) AS rejectedQty,
+                           (SELECT COUNT(DISTINCT poi3.purchase_order_id) FROM purchase_order_items poi3
+                             WHERE poi3.request_item_id=mri.id) AS linkedPoCount,
+                           (SELECT COUNT(DISTINCT gri2.receipt_id) FROM goods_receipt_items gri2
+                              JOIN purchase_order_items poi4 ON poi4.id=gri2.purchase_order_item_id
+                             WHERE poi4.request_item_id=mri.id) AS linkedReceiptCount,
+                           (SELECT COUNT(*) FROM goods_receipts gr2
+                              JOIN purchase_order_items poi5 ON poi5.purchase_order_id=gr2.purchase_order_id
+                             WHERE poi5.request_item_id=mri.id AND gr2.bch_confirmation_status='confirmed'
+                               AND (gr2.certificate_status='missing'
+                                    OR gr2.delivery_document_status='missing')) AS missingDocumentCount
                     FROM material_request_items mri
                     LEFT JOIN materials m ON m.id=mri.material_id
                     WHERE mri.request_id IN (%s) ORDER BY mri.request_id,mri.line_no""".formatted(in), params(requestIds));
-            List<Map<String, Object>> customRows = query("""
+            // TASK-043 — ĐƯỜNG ĐỌC SAI: JS (system-route.mjs:563-568) tra `custom_field_values` bằng
+            // **id DÒNG phiếu** rồi gắn `customFields` lên **từng dòng**. Bản cũ tra bằng **id PHIẾU**
+            // và gắn lên **phiếu** ⇒ truy vấn không bao giờ khớp (entity_id là MRI…), nên `customFields`
+            // của phiếu luôn `{}` còn từng dòng thì KHÔNG có khoá này (UI đọc `item.customFields`).
+            List<String> itemIds = itemRows.stream().map(r -> String.valueOf(r.get("id"))).toList();
+            List<Map<String, Object>> customRows = itemIds.isEmpty() ? List.of() : query("""
                     SELECT entity_id AS entityId,field_key AS fieldKey,value_text AS valueText
-                    FROM custom_field_values WHERE form_key='request_line' AND entity_id IN (%s)""".formatted(in), params(requestIds));
+                    FROM custom_field_values WHERE form_key='request_line' AND entity_id IN (%s)"""
+                    .formatted(inClause(itemIds)), params(itemIds));
+            Map<String, Map<String, Object>> customByItem = new LinkedHashMap<>();
+            for (Map<String, Object> c : customRows) {
+                customByItem.computeIfAbsent(String.valueOf(c.get("entityId")), k -> new LinkedHashMap<>())
+                        .put(String.valueOf(c.get("fieldKey")), String.valueOf(c.get("valueText")));
+            }
+            List<Map<String, Object>> itemRowsEnriched = itemRows.stream().map(row -> {
+                Map<String, Object> out = new LinkedHashMap<>(row);
+                out.put("customFields", customByItem.getOrDefault(String.valueOf(row.get("id")), new LinkedHashMap<>()));
+                return out;
+            }).toList();
             data.put("requests", requests.stream().map(r -> {
                 Map<String, Object> out = new LinkedHashMap<>(r);
                 String rid = String.valueOf(r.get("id"));
                 out.put("approvals", groupBy(approvalRows, "requestId", rid));
-                out.put("items", groupBy(itemRows, "requestId", rid));
-                Map<String, Object> cf = new LinkedHashMap<>();
-                for (Map<String, Object> c : customRows) {
-                    if (String.valueOf(c.get("entityId")).equals(rid))
-                        cf.put(String.valueOf(c.get("fieldKey")), String.valueOf(c.get("valueText")));
-                }
-                out.put("customFields", cf);
+                out.put("items", groupBy(itemRowsEnriched, "requestId", rid));
                 return out;
             }).toList());
         } else {

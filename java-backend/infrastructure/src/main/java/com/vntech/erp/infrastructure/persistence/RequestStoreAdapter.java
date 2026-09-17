@@ -193,7 +193,8 @@ public class RequestStoreAdapter implements RequestStore {
     @Override
     @Transactional
     public void insertRequest(Map<String, Object> header, List<Map<String, Object>> lines,
-                              List<Map<String, Object>> approvals, Instant now) {
+                              List<Map<String, Object>> approvals, List<Map<String, Object>> customFields,
+                              Instant now) {
         String requestId = (String) header.get("id");
         jdbcTemplate.update("""
                 INSERT INTO material_requests (id,request_no,project_id,contract_id,boq_version_id,team_id,
@@ -242,7 +243,15 @@ public class RequestStoreAdapter implements RequestStore {
                     a.get("comment"), a.get("decisionSnapshot"), a.get("allowedRoleCodes"),
                     a.get("approvalMode"), now, now);
         }
-        header.forEach((k, v) -> { });
+        // TASK-043: trường động của TỪNG DÒNG phiếu (JS system-route.mjs:974). entity_id = id dòng
+        // (material_request_items.id), KHÔNG phải id phiếu — đây chính là chỗ bản cũ đọc sai ở bootstrap.
+        for (Map<String, Object> cf : customFields) {
+            jdbcTemplate.update("""
+                    INSERT INTO custom_field_values (id,form_key,entity_id,field_key,value_text,created_at,updated_at)
+                    VALUES (?, 'request_line', ?, ?, ?, ?, ?)
+                    ON DUPLICATE KEY UPDATE value_text=VALUES(value_text),updated_at=VALUES(updated_at)""",
+                    cf.get("id"), cf.get("entityId"), cf.get("fieldKey"), cf.get("valueText"), now, now);
+        }
     }
 
     // ---------- workflow phê duyệt ----------

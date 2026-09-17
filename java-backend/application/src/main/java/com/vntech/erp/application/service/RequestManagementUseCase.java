@@ -198,6 +198,11 @@ public final class RequestManagementUseCase {
                 nl.put("approvedSupplier", nvl(line.get("approvedSupplier")));
                 nl.put("note", nvl(line.get("note")));
                 nl.put("stockAllocationQty", line.get("stockAllocationQty") == null ? 0 : numberValue(line.get("stockAllocationQty")));
+                // TASK-043: JS bind `clean(line.routeTag) || null` cho cột route_tag. Bản cũ truyền
+                // item.get("routeTag") nhưng `nl` KHÔNG bao giờ có khoá này ⇒ luôn NULL (trường bị bỏ im lặng).
+                nl.put("routeTag", nvl(line.get("routeTag")));
+                // TASK-043: trường động — JS system-route.mjs:962 `customFields: customFieldsObject(line.customFields)`.
+                nl.put("customFields", customFieldsObject(line.get("customFields")));
                 lines.add(nl);
             } catch (IllegalStateException e) {
                 errors.add("Dòng " + excelLine + ": " + e.getMessage());
@@ -247,6 +252,7 @@ public final class RequestManagementUseCase {
         header.put("total", total);
 
         List<Map<String, Object>> normalizedItems = new ArrayList<>();
+        List<Map<String, Object>> customFieldRows = new ArrayList<>();
         for (int i = 0; i < lines.size(); i++) {
             Map<String, Object> line = lines.get(i);
             Map<String, Object> item = new LinkedHashMap<>(line);
@@ -259,6 +265,28 @@ public final class RequestManagementUseCase {
                     : 0);
             item.put("lineStatus", allAutoComplete ? "approved" : "pending");
             normalizedItems.add(item);
+
+            // TASK-043 — port nguyên văn JS system-route.mjs:974:
+            //   for (const [fieldKey,value] of Object.entries(customs))
+            //     if (clean(fieldKey) && value !== undefined && value !== null && clean(value) !== "")
+            //       INSERT custom_field_values (form_key='request_line', entity_id = id DÒNG phiếu, ...)
+            // Mỗi dòng một id `CFV_<uuid>` mới, upsert theo (form_key,entity_id,field_key) như JS.
+            Object customs = line.get("customFields");
+            if (customs instanceof Map<?, ?> map) {
+                for (Map.Entry<?, ?> entry : map.entrySet()) {
+                    String fieldKey = trim(entry.getKey());
+                    Object raw = entry.getValue();
+                    if (fieldKey.isEmpty() || raw == null) continue;
+                    String valueText = cleanValue(raw);
+                    if (valueText.isEmpty()) continue;
+                    Map<String, Object> row = new LinkedHashMap<>();
+                    row.put("id", idGenerator.next("CFV"));
+                    row.put("entityId", item.get("id"));
+                    row.put("fieldKey", fieldKey);
+                    row.put("valueText", valueText);
+                    customFieldRows.add(row);
+                }
+            }
         }
 
         List<Map<String, Object>> approvalRows = new ArrayList<>();
@@ -290,7 +318,7 @@ public final class RequestManagementUseCase {
             approvalRows.add(approval);
         }
 
-        store.insertRequest(header, normalizedItems, approvalRows, now);
+        store.insertRequest(header, normalizedItems, approvalRows, customFieldRows, now);
         return Map.of("message", allAutoComplete
                 ? "Đã lập phiếu " + requestNo + "; luồng phê duyệt tự hoàn tất và chuyển sang Mua hàng & PO."
                 : "Đã lập phiếu " + requestNo + " gồm " + normalizedItems.size() + " dòng và chuyển tới bước " + currentStage + ".");
@@ -586,6 +614,35 @@ public final class RequestManagementUseCase {
     }
     private static String trim(Object o) { return o == null ? "" : String.valueOf(o).trim(); }
     private static String nvl(Object o) { String s = trim(o); return s.isEmpty() ? null : s; }
+
+    /**
+     * TASK-043 — port nguyên văn JS `customFieldsObject` (system-route.mjs:102):
+     * <pre>if (!value || typeof value !== "object" || Array.isArray(value)) return {};</pre>
+     * ⇒ CHỈ nhận object (Map). Chuỗi JSON / mảng / null đều bị coi là rỗng, không tự đoán ý người gửi.
+     */
+    private static Map<String, Object> customFieldsObject(Object value) {
+        if (!(value instanceof Map<?, ?> raw)) return Map.of();
+        Map<String, Object> out = new LinkedHashMap<>();
+        for (Map.Entry<?, ?> e : raw.entrySet()) out.put(trim(e.getKey()), e.getValue());
+        return out;
+    }
+
+    /**
+     * TASK-043 — port `clean(value) = String(value ?? "").trim()` (system-route.mjs:35).
+     * Khác {@code String.valueOf}: JS in số nguyên không có phần thập phân (`1.0` → "1"), nên phải
+     * chuẩn hoá số thực nguyên để `value_text` không lệch so với bản JS.
+     */
+    private static String cleanValue(Object value) {
+        if (value == null) return "";
+        if (value instanceof Double d) {
+            if (d.isNaN() || d.isInfinite()) return String.valueOf(d);
+            if (d == Math.rint(d) && Math.abs(d) < 1e15) return String.valueOf(d.longValue());
+            return String.valueOf(d);
+        }
+        if (value instanceof Float f) return cleanValue(f.doubleValue());
+        if (value instanceof Boolean b) return b ? "true" : "false";
+        return String.valueOf(value).trim();
+    }
     private static String blankDefault(String s, String fallback) { return s.isEmpty() ? fallback : s; }
     @SuppressWarnings("unchecked")
     private static Map<String, Object> asMap(Object o) { return o instanceof Map ? (Map<String, Object>) o : Map.of(); }
