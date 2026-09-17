@@ -24,12 +24,31 @@ public class AuditLogAdapter implements AuditLogPort {
     @Transactional
     public void log(String userId, String action, String entityType, String entityId,
                     String beforeJson, String afterJson, String ipAddress) {
+        insert(userId, action, entityType, entityId, beforeJson, afterJson, ipAddress);
+    }
+
+    /**
+     * TASK-046 — trả về id bản ghi để nơi gọi liên kết được.
+     * JS `system-route.mjs:2451-2452`: sinh `auditId`, ghi `audit_logs`, rồi
+     * `UPDATE project_archives SET purge_audit_id=<auditId>`.
+     */
+    @Override
+    @Transactional
+    public String logReturningId(String userId, String action, String entityType, String entityId,
+                                String beforeJson, String afterJson, String ipAddress) {
+        return insert(userId, action, entityType, entityId, beforeJson, afterJson, ipAddress);
+    }
+
+    private String insert(String userId, String action, String entityType, String entityId,
+                          String beforeJson, String afterJson, String ipAddress) {
+        String id = "AUD_" + UUID.randomUUID();
         jdbcTemplate.update("""
                 INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id,
                                         before_json, after_json, ip_address, occurred_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, "AUD_" + UUID.randomUUID(), userId, action, entityType, entityId,
+                """, id, userId, action, entityType, entityId,
                 beforeJson, afterJson, ipAddress, Instant.now());
+        return id;
     }
 
     /**

@@ -97,7 +97,11 @@ public interface BoqStore {
     void upsertPriceBatch(String batchId, String projectId, String sourceFileName, int rowCount,
                           int changedCount, String updatedBy, Instant now);
     List<Map<String, Object>> pbiPricesForUpdate(String projectId, String contractId, String boqVersionId);
+    /**
+     * TASK-046 — JS `system-route.mjs:2827` ghi `(…,changed,created_at)` với `row.isChanged?1:0`.
+     * Bản Java cũ **bỏ cột `changed`** ⇒ lịch sử nhập giá mất cờ "dòng có đổi giá".
+     */
     void insertPriceItem(String id, String batchId, String boqItemId, double oldPrice, double newPrice,
-                         Instant now);
+                         boolean changed, Instant now);
     void updatePbiPrice(String boqItemId, double unitPrice, boolean variationPending, Instant now);
 }

@@ -559,7 +559,7 @@ public final class BoqManagementUseCase {
             double oldPrice = beforeMap.getOrDefault(boqItemId, 0.0);
             boolean isChanged = Math.abs(oldPrice - unitPrice) > 1e-9;
             if (isChanged) changed++;
-            store.insertPriceItem(idGenerator.next("BPII"), batchId, boqItemId, oldPrice, unitPrice, now);
+            store.insertPriceItem(idGenerator.next("BPII"), batchId, boqItemId, oldPrice, unitPrice, isChanged, now);
             if (isChanged) store.updatePbiPrice(boqItemId, unitPrice, true, now);
         }
         store.upsertPriceBatch(batchId, projectId, nvl(payload.get("sourceFileName")), updates.size(), changed,

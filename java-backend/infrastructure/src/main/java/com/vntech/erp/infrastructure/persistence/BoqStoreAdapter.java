@@ -701,10 +701,10 @@ public class BoqStoreAdapter implements BoqStore {
     @Override
     @Transactional
     public void insertPriceItem(String id, String batchId, String boqItemId, double oldPrice, double newPrice,
-                                Instant now) {
+                                boolean changed, Instant now) {
         jdbcTemplate.update("""
-                INSERT INTO boq_price_import_items (id,batch_id,boq_item_id,old_unit_price,new_unit_price,created_at)
-                VALUES (?,?,?,?,?,?)""", id, batchId, boqItemId, oldPrice, newPrice, now);
+                INSERT INTO boq_price_import_items (id,batch_id,boq_item_id,old_unit_price,new_unit_price,changed,created_at)
+                VALUES (?,?,?,?,?,?,?)""", id, batchId, boqItemId, oldPrice, newPrice, changed ? 1 : 0, now);
     }
 
     @Override

@@ -89,8 +89,9 @@ public class ApplicationBeansConfig {
     @Bean
     public ProjectManagementUseCase projectManagementUseCase(ProjectAdminStore projectAdminStore,
                                                              IdGenerator idGenerator,
-                                                             RbacService rbacService) {
-        return new ProjectManagementUseCase(projectAdminStore, idGenerator, rbacService);
+                                                             RbacService rbacService,
+                                                             AuditLogPort auditLogPort) {
+        return new ProjectManagementUseCase(projectAdminStore, idGenerator, rbacService, auditLogPort);
     }
 
     @Bean

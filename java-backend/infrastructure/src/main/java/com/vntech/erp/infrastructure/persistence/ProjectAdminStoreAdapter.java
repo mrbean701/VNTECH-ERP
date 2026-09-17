@@ -243,6 +243,12 @@ public class ProjectAdminStoreAdapter implements ProjectAdminStore {
         return Map.of("purged", true);
     }
 
+    /** TASK-046 — JS `system-route.mjs:2452` (thiếu ở bản cũ ⇒ `purge_audit_id` luôn NULL). */
+    @Override @Transactional
+    public void setArchivePurgeAuditId(String archiveId, String auditId, Instant now) {
+        jdbcTemplate.update("UPDATE project_archives SET purge_audit_id=? WHERE id=?", auditId, archiveId);
+    }
+
     @Override
     @Transactional(readOnly = true)
     public List<String> projectAttachmentStorageKeys(String projectId) {

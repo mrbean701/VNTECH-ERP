@@ -45,6 +45,13 @@ public interface ProjectAdminStore {
     /** DELETE/UPDATE cascade toàn bộ dữ liệu dự án (port nguyên trạng delete_project JS) — 1 transaction. */
     Map<String, Object> purgeProject(String projectId, String archiveId, Instant now);
 
+    /**
+     * TASK-046 — liên kết gói archive với bản ghi audit của lần purge
+     * (JS `system-route.mjs:2452`: `UPDATE project_archives SET purge_audit_id=? WHERE id=?`).
+     * Trước đây Java **bỏ hẳn** câu này ⇒ `purge_audit_id` luôn NULL, mất dấu vết purge.
+     */
+    void setArchivePurgeAuditId(String archiveId, String auditId, Instant now);
+
     /** attachment storage_key của dự án (để dọn object storage). */
     List<String> projectAttachmentStorageKeys(String projectId);
 

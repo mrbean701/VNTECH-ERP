@@ -1,0 +1,55 @@
+#67 TASK-046: vong ra cuoi ban do GHI - purge_audit_id + changed; probe bat LOI P0 delete_project HTTP 500
+
+=== HAI COT DUOC VA ===
+(1) project_archives.purge_audit_id
+    JS system-route.mjs:2451-2452: ghi 1 dong audit_logs (action PURGE_AFTER_OFFLINE_ARCHIVE, entity
+    type=project) ROI UPDATE project_archives SET purge_audit_id=<auditId>.
+    Java ProjectAdminStoreAdapter:242 dung o "UPDATE project_archives SET status='purged',purged_at=?"
+    => THIEU CA HAI CAU => purge du an khong co vet audit lien ket.
+    Da sua: them AuditLogPort.logReturningId(...) (de `default` tra null => GIU AuditLogPort la
+    FUNCTIONAL INTERFACE, khong lam vo lambda (a..g)->{} trong test cu) + ProjectAdminStore
+    .setArchivePurgeAuditId(...); deleteProject ghi audit roi lien ket id.
+    before_json = JSON ca dong du an bang bo escape TU VIET trong tang application (khong keo Jackson
+    vao use-case); after_json = {archiveId,archiveFile,archiveSha256,status:"purged",
+    crossProjectTracePreserved:true,objectCleanupFailed:[]} dung nhu JS.
+
+(2) boq_price_import_items.changed
+    JS :2827 ghi (…,changed,created_at) voi row.isChanged?1:0; Java BoqStoreAdapter:706 ghi thieu cot
+    => lich su nhap gia khong phan biet duoc dong nao doi gia.
+    Da sua: them tham so `changed` vao BoqStore.insertPriceItem + adapter; use case truyen isChanged
+    (da tinh san cho bo dem).
+
+=== LOI P0 BI CHINH PROBE BAT (lan chay dau) ===
+    delete_project => HTTP 500 · log Java:
+      Incorrect DATETIME value: '0000'
+      at ProjectAdminStoreAdapter.latestVerifiedArchive(ProjectAdminStoreAdapter.java:148)
+    JS truyen moc "0000" (SQLite so chuoi nen vo hai) nhung MySQL 8 TU CHOI gia tri DATETIME '0000'
+    (error 1525) => KHONG ADMIN NAO PURGE DUOC DU AN tren backend Java.
+    Da sua: hang ARCHIVE_FLOOR = "1970-01-01 00:00:00" (moc epoch hop le, bao tron moi du lieu).
+    => CUNG HO voi loi retry_email (TASK-042): port tu SQLite sang MySQL ma khong doi chieu KIEU du lieu.
+
+=== KIEM CHUNG: tools/probe-task046.mjs — 17/17 DAT, exit 0 ===
+    jar 90.896.045 bytes · API PID 35432 · Flyway 16 migrations · log 0 ERROR · regression 59/61 ·
+    cong luoc do 8 phat hien (toan bo nhom 6).
+    Phan A (du an TAM + archive tam): delete_project 200; audit dung 1 dong PURGE_AFTER_OFFLINE_ARCHIVE;
+    entity_type=project + user_id=admin; before_json/after_json JSON HOP LE; purge_audit_id khop TUYET DOI
+    id audit; archive status=purged + purged_at; projects.status=purged.
+    Phan B (dong BOQ THAT, tra gia ve dung gia goc): changed ghi that ca 3 lan
+    1:100000->101000 · 1:101000->100000 · 0:100000->100000.
+    Don sach: 4 bang du lieu that ve dung so dong; moi dong audit cua probe da xoa.
+
+=== LOI CUA CHINH TOI O LUOT NAY ===
+ 1. Probe loc audit_logs theo moi entity_id => bao HONG oan, vi AuditTrailFilter (tang web) ghi 1 dong
+    cho MOI request => 2 dong cung entity_id. Phai loc theo `action`.
+ 2. Dung Set-Content sua MASTER_STATUS.md => XOA MAT mot muc (khoang IndexOf dau-cuoi nuot luon muc 44).
+    Da khoi phuc bang cong cu file. VI PHAM chinh quy tac #28 cua du an: KHONG dung Set-Content
+    de sua tep tai lieu, ke ca khi co -Encoding utf8.
+
+=== CON LAI CUA VONG RA ===
+    boq_versions.approved_at = LIKELY DUONG TINH GIA (JS :2805 bind thang `null`).
+    Cong BAN DO GHI sau #67 chi con 5 bang lech: boq_versions (nghi duong tinh gia) · email_outbox
+    (Java khong co co che gui email) · users.avatar_url (duong tinh gia: ghi qua JPA) ·
+    vntech_license_installations + vntech_license_transfer_requests (nhom 6, cho quyet dinh #11).
+
+=== TAI LIEU ===
+    docs/agent-progress/TASK-046.md (ho so day du) · MASTER_STATUS muc 40b/40c/44/45 · TASK_INDEX dong TASK-046.
