@@ -192,6 +192,15 @@ Mặc định của interface là `return role()` = **mã chuẩn** ⇒ thiếu 
 10. **Số SLA thật của nghiệp vụ** — lỗi port TASK-040 đã ghi đè `po_sla_hours=1` và `bch_confirmation_sla_hours=1` vào DB thật; probe đã khôi phục về **mặc định do mã JS quy định là 24 giờ (PO)** và **8 giờ (BCH)**. Đây là *mặc định của mã*, **không phải con số nghiệp vụ do bạn công bố**. Hỏi: **24h/8h có đúng không**, hay SLA thật khác để tôi ghi lại đúng? (Nếu khác, sửa qua giao diện Quản trị → Cấu hình email.)
 11. **TASK-040 nhóm 6 — hệ license lệch CẤU TRÚC** giữa Java và JS. UI gửi `{licenseEnvelope}` (chuỗi JSON) và JS **xác minh chữ ký số** (`verifyLicenseEnvelope` với public key) rồi ghi theo `claims`; Java lại nhận `licenseKey/companyName/edition` và ghi **6 cột không tồn tại** trong `vntech_license_installations`. Không có cột nào để ánh xạ `edition`/`license_key` ⇒ ánh xạ sẽ là **bịa nghiệp vụ**. Hỏi: **(A)** port đầy đủ hệ license + xác minh chữ ký (thuộc phần bảo mật bạn đã yêu cầu tạm hoãn), hay **(B)** giữ nguyên trạng thái hỏng (HTTP 500) và ghi vào roadmap, hay **(C)** tạm **gỡ** 2 action này khỏi danh mục để người dùng không bấm vào chỗ hỏng?
 
+## QUYẾT ĐỊNH DỮ LIỆU CẦN NGƯỜI DÙNG CHỐT (bổ sung 17/09 — gom về MỘT chỗ để trả lời 1 lần)
+
+| # | Việc | Bằng chứng | Đề xuất của tôi | Nếu anh chọn |
+|---|---|---|---|---|
+| D1 | **55 dòng mồ côi**: 15 `approvals` + 32 `procurement_allocations` + 3 `stock_issues.team_id` + 3 `project_boq_items.material_id` + 1 `material_request_items` + 1 `purchase_order_items` | `MR_46cee316` là gốc chung; 3 phiếu bị xoá 14/09 (seed/demo) | **(3) Vá gốc trước rồi dọn** — sửa `delete_request` ở **cả JS lẫn Java** để xoá thêm `procurement_allocations` + `custom_field_values`, sau đó mới dọn rác | (1) dọn ngay · (2) giữ nguyên · (3) vá gốc trước *(khuyến nghị)* |
+| D2 | **`materials.system` lệch 5/14 mã** | `DIEN-DAY-CAD-001`/`CTN-ONG-NHUA-001` = `KHAC` (khớp cơ chế lỗi #41) · 3 mã còn lại nghi dữ liệu mẫu hoán vị | **Anh mở Danh mục bấm Lưu** cho 2 mã đầu (tự suy lại đúng từ nhóm — đã vá ở #63); 3 mã kia **giữ nguyên** chờ anh xác nhận là dữ liệu mẫu | (1) tự bấm Lưu · (2) cho tôi sửa SQL · (3) giữ nguyên |
+| D3 | **11 câu hỏi cũ** (mục trên): số SLA thật 24h/8h · hệ license `vntech_license_*` (nhóm 6) · nhóm quyền nghiệp vụ có tham gia kiểm quyền · backup/PITR MySQL · spec nghiệp vụ MEP · mã vai trò cũ ở mảng sản lượng … | xem mục USER CONFIRMATION | trả lời theo thứ tự ưu tiên: **license (#11)** và **SLA thật (#10)** đang chặn 2 hạng mục | — |
+| D4 | **Git**: 67 commit chưa push | theo yêu cầu 17/09 "không push tới khi tôi test thủ công xong" | giữ nguyên, **không push** | (1) tiếp tục giữ · (2) cho phép push |
+
 ## CURRENT TODO
 
 * [x] TASK-025 · Sửa `SlaComplianceWorker` hỏng âm thầm mỗi giờ (cột `overdue_at` không tồn tại) — #34
