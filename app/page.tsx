@@ -958,14 +958,7 @@ function TeamManagement({ data, open }: { data: AppData; open: (name: string, ro
         </div>
         <section className="card">
           <CardHead title="Dự án tổ đội đang tham gia" note="Theo quy tắc nghiệp vụ hiện hành, mỗi tổ đội thuộc đúng một dự án"/>
-          <div className="table-wrap"><table className="baseline-table">
-            <thead><tr><th>Mã dự án</th><th>Tên dự án</th><th>Trạng thái</th><th>Bắt đầu</th><th>Kết thúc dự kiến</th><th>Vai trò tổ đội</th></tr></thead>
-            <tbody>{proj ? <tr>
-              <td><strong className="code">{proj.code}</strong></td><td>{proj.name}</td>
-              <td><StatusBadge value={PROJECT_STATUS_LABELS[String(proj.status || "active")] || String(proj.status || "—")}/></td>
-              <td>{date(proj.startDate)}</td><td>{date(proj.plannedEndDate)}</td><td>Thi công / cấp phát vật tư</td>
-            </tr> : <tr><td colSpan={6}><Empty text="Tổ đội chưa gắn dự án nào."/></td></tr>}</tbody>
-          </table></div>
+          <DataTable rows={proj ? [proj] : []} rowKey={(row) => String(row.id)} emptyText="Tổ đội chưa gắn dự án nào." columns={[{ key: "c1", header: "Mã dự án", render: (row) => <strong className="code">{row.code}</strong> }, { key: "c2", header: "Tên dự án", render: (row) => row.name }, { key: "c3", header: "Trạng thái", render: (row) => <StatusBadge value={PROJECT_STATUS_LABELS[String(row.status || "active")] || String(row.status || "—")} /> }, { key: "c4", header: "Bắt đầu", render: (row) => date(row.startDate) }, { key: "c5", header: "Kết thúc dự kiến", render: (row) => date(row.plannedEndDate) }, { key: "c6", header: "Vai trò tổ đội", render: () => "Thi công / cấp phát vật tư" }]} />
         </section>
       </div>}
 
