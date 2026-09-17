@@ -41,13 +41,42 @@ public interface OpsTaskStore {
     void setWarehouseStatus(String warehouseId, boolean active, Instant now);
     void deleteProjectTeamWithWarehouse(String teamId, String warehouseId);
 
-    Optional<Map<String, Object>> findApprovalStageCatalog(String stageNo);
-    boolean stageCodeExists(String code, String excludeId);
+    /** Mã các vai trò đang hoạt động — JS `SELECT code FROM role_catalog WHERE active=1` (system-route.mjs:2144). */
+    List<String> activeRoleCodes();
     Optional<Map<String, Object>> findApprovalStage(String id);
+    /**
+     * INSERT bước phê duyệt — <b>12 cột</b> như JS `system-route.mjs:2175`.
+     *
+     * <p><b>SỬA LỖI (TASK-041):</b> bản cũ chỉ ghi 6 cột và truyền {@code null} CỨNG cho {@code description};
+     * {@code approval_mode}, {@code sla_hours}, {@code auto_approve_on_submit}, {@code sort_order}
+     * <b>không được ghi</b>. Khoá của map: {@code id, stageNo, name, description, allowedRoleCodes,
+     * approvalMode, slaHours, autoApproveOnSubmit, sortOrder}.
+     */
     void insertApprovalStage(Map<String, Object> stage, Instant now);
+    /**
+     * UPDATE bước phê duyệt — <b>8 trường</b> như JS `system-route.mjs:2167`.
+     *
+     * <p><b>SỬA LỖI (TASK-041):</b> bảng `approval_stage_catalog` <b>KHÔNG có cột `code`</b>; bản cũ bắt buộc
+     * payload {@code code} (UI không bao giờ gửi) nên action trả HTTP 400 trước khi tới SQL, và chỉ ghi 3 cột
+     * ({@code name}/{@code stage_no}/{@code allowed_role_codes}) ⇒ admin sửa SLA nhưng SLA **không đổi**.
+     */
     void updateApprovalStage(Map<String, Object> stage, Instant now);
     void setApprovalStageStatus(String id, boolean active, Instant now);
     void deleteApprovalStageSafe(String id);
+    /** Xoá cờ tự duyệt ở MỌI bước TRỪ một bước — JS `:2166` (`WHERE id<>?`). */
+    void clearAutoApproveExcept(String keepStageId, Instant now);
+    /** Xoá cờ tự duyệt ở MỌI bước (nhánh THÊM bước mới) — JS `:2173`. */
+    void clearAutoApproveAll(Instant now);
+    /** Đếm bước đang hoạt động có `stage_no` NHỎ HƠN {@code stageNo}, trừ chính nó — JS `:2152`. */
+    long countActiveStagesBefore(String excludeStageId, int stageNo);
+    /** Lịch sử duyệt của một số bước — JS `:2161` (`SELECT COUNT(*) FROM approvals WHERE stage=?`). */
+    long countApprovalsByStageNo(int stageNo);
+    /** Đồng bộ tên bước sang `approvals.department` của hồ sơ ĐANG CHỜ — JS `:2168`. */
+    void propagateStageNameToPendingApprovals(int stageNo, String name, Instant now);
+    /** Số bước đang hoạt động — JS `:2192`. */
+    long countActiveStages();
+    /** Đếm hồ sơ đang chờ ở một bước (join `material_requests`) — JS `:2187`. */
+    long countPendingApprovalsForStageNo(int stageNo);
 
     Optional<Map<String, Object>> findMaterialMarApproval(String projectId, String materialId);
     void insertMarApproval(String id, String projectId, String materialId, String approvalNo, String status,

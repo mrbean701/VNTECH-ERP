@@ -314,45 +314,109 @@ public final class OpsTaskManagementUseCase {
     }
 
     // ============ approval stages ============
+    /**
+     * Port nguyên trạng JS `save_approval_stage` — scripts/system-route.mjs:2132-2177.
+     *
+     * <p><b>SỬA LỖI (TASK-041).</b> Bản cũ lệch cả ba tầng:
+     * <ol>
+     *   <li><b>Hợp đồng payload:</b> đòi {@code code} — nhưng UI ({@code ApprovalStageModal},
+     *       {@code app/page.tsx:3832}) <b>không bao giờ gửi</b> trường này (bảng không có cột `code`) ⇒ action
+     *       trả HTTP 400 trước khi tới SQL. Bản cũ cũng <b>tự thêm</b> luật `stageNo < 100` không có trong JS.</li>
+     *   <li><b>Nghiệp vụ:</b> chỉ ghi {@code name}/{@code stage_no}/{@code allowed_role_codes} ⇒
+     *       {@code sla_hours}, {@code approval_mode}, {@code auto_approve_on_submit}, {@code description},
+     *       {@code sort_order} bị bỏ im lặng ⇒ <b>admin sửa SLA nhưng SLA không đổi</b>.</li>
+     *   <li><b>Quy tắc thiếu:</b> chỉ MỘT bước được tự duyệt (và chỉ bước ĐẦU của luồng); chặn đổi
+     *       {@code stage_no} khi bước đã có lịch sử duyệt; đồng bộ tên bước sang hồ sơ đang chờ.</li>
+     * </ol>
+     */
     public Map<String, Object> saveApprovalStage(Principal principal, Map<String, Object> payload) {
         String stageId = trim(payload.get("stageId"));
-        String code = trim(payload.get("code"));
         String name = trim(payload.get("name"));
-        int stageNo = (int) Math.round(numberValue(payload.get("stageNo")));
-        String allowedRoleCodes = nvl(payload.get("allowedRoleCodes"));
-        if (code.isEmpty() || name.isEmpty() || stageNo <= 0) throw Api("Bước duyệt cần mã, tên và số thứ tự.");
-        if (stageNo < 100 && store.findApprovalStageCatalog(String.valueOf(stageNo)).isEmpty())
-            throw Api("Bước duyệt hệ thống không tồn tại; chỉ được tạo bước HTML (≥100).");
-        Instant now = Instant.now();
-        if (!stageId.isEmpty() && store.findApprovalStage(stageId).isPresent()) {
-            if (store.stageCodeExists(String.valueOf(stageNo), stageId)) throw Api("Mã bước duyệt đã tồn tại.");
-            Map<String, Object> stage = new LinkedHashMap<>();
-            stage.put("id", stageId);
-            stage.put("code", code);
-            stage.put("name", name);
-            stage.put("stageNo", stageNo);
-            stage.put("allowedRoleCodes", allowedRoleCodes);
-            store.updateApprovalStage(stage, now);
-            return Map.of("message", "Đã cập nhật bước duyệt.");
+        String description = nvl(payload.get("description"));
+        int stageNo = Math.max(1, (int) Math.round(numberValue(payload.get("stageNo"))));
+        double rawSort = numberValue(payload.get("sortOrder"));
+        int sortOrder = (int) Math.round(rawSort == 0 ? stageNo * 10 : rawSort);
+        double rawSla = numberValue(payload.get("slaHours"));
+        int slaHours = Math.max(1, (int) Math.round(rawSla == 0 ? 8 : rawSla));
+
+        // JS gộp vai trò từ MẢNG hoặc từ chuỗi phân tách bằng dấu phẩy, khử trùng lặp và bỏ phần rỗng.
+        List<String> allowedRoles = new ArrayList<>();
+        Object rawRoles = payload.get("allowedRoleCodes");
+        List<?> roleItems = rawRoles instanceof List<?> l ? l : List.of(trim(rawRoles).split(","));
+        for (Object item : roleItems) {
+            String v = trim(item);
+            if (!v.isEmpty() && !allowedRoles.contains(v)) allowedRoles.add(v);
         }
-        if (store.stageCodeExists(String.valueOf(stageNo), "")) throw Api("Mã bước duyệt đã tồn tại.");
+        if (name.isEmpty() || allowedRoles.isEmpty())
+            throw Api("Bước phê duyệt phải có tên và ít nhất một vai trò được phép duyệt.");
+        List<String> validRoles = store.activeRoleCodes();
+        for (String roleCode : allowedRoles)
+            if (!validRoles.contains(roleCode))
+                throw Api("Vai trò " + roleCode + " không tồn tại hoặc đang bị ẩn.");
+
+        String approvalMode = "all_roles".equals(trim(payload.get("approvalMode"))) ? "all_roles" : "single";
+        boolean autoApprove = payload.get("autoApproveOnSubmit") == Boolean.TRUE
+                || List.of("1", "true", "on").contains(trim(payload.get("autoApproveOnSubmit")).toLowerCase(Locale.ROOT));
+        if (autoApprove && store.countActiveStagesBefore(stageId.isEmpty() ? "__NEW__" : stageId, stageNo) > 0)
+            throw Api("Tự xác nhận khi gửi phiếu chỉ được đặt cho bước đầu tiên của luồng. "
+                    + "Hãy đưa bước này lên đầu hoặc bỏ tùy chọn tự xác nhận.");
+
+        Instant now = Instant.now();
         Map<String, Object> stage = new LinkedHashMap<>();
-        stage.put("id", idGenerator.next("ASTG"));
-        stage.put("code", code);
-        stage.put("name", name);
         stage.put("stageNo", stageNo);
-        stage.put("allowedRoleCodes", allowedRoleCodes);
-        stage.put("createdBy", principal.userId());
+        stage.put("name", name);
+        stage.put("description", description);
+        stage.put("allowedRoleCodes", String.join(",", allowedRoles));
+        stage.put("approvalMode", approvalMode);
+        stage.put("slaHours", slaHours);
+        stage.put("autoApproveOnSubmit", autoApprove);
+        stage.put("sortOrder", sortOrder);
+
+        if (!stageId.isEmpty()) {
+            Map<String, Object> before = store.findApprovalStage(stageId)
+                    .orElseThrow(() -> Api("Không tìm thấy bước phê duyệt."));
+            int beforeNo = (int) Math.round(numberValue(before.get("stage_no")));
+            if (beforeNo != stageNo && store.countApprovalsByStageNo(beforeNo) > 0)
+                throw Api("Bước đã có lịch sử phê duyệt nên không thể đổi số bước. "
+                        + "Có thể đổi tên, vai trò, SLA hoặc thứ tự hiển thị.");
+            if (autoApprove) store.clearAutoApproveExcept(stageId, now);
+            stage.put("id", stageId);
+            store.updateApprovalStage(stage, now);
+            store.propagateStageNameToPendingApprovals(stageNo, name, now);
+            return Map.of("message", "Đã cập nhật bước phê duyệt " + name + ".");
+        }
+        if (autoApprove) store.clearAutoApproveAll(now);
+        stage.put("id", idGenerator.next("ASTAGE"));
         store.insertApprovalStage(stage, now);
-        return Map.of("message", "Đã tạo bước duyệt tùy chỉnh.");
+        return Map.of("message", "Đã thêm bước phê duyệt " + name
+                + ". Phiếu mới sẽ áp dụng luồng mới; phiếu cũ giữ nguyên luồng đã tạo.");
     }
 
+    /**
+     * Port nguyên trạng JS `set_approval_stage_status` — scripts/system-route.mjs:2179-2198.
+     *
+     * <p><b>SỬA LỖI (TASK-041):</b> bản cũ chỉ {@code UPDATE active=?} — thiếu **cả hai chốt** của JS:
+     * (1) không cho tắt bước đang có hồ sơ chờ (tránh kẹt hồ sơ), (2) không cho tắt bước CUỐI CÙNG
+     * (nếu tắt hết thì không còn đường duyệt). Hai chốt này chính là hàng rào cho rủi ro "hồ sơ kẹt"
+     * đã ghi ở TASK-035.
+     */
     public Map<String, Object> setApprovalStageStatus(Principal principal, Map<String, Object> payload) {
         String stageId = trim(payload.get("stageId"));
-        store.findApprovalStage(stageId).orElseThrow(() -> Api("Không tìm thấy bước duyệt."));
         boolean active = payload.get("active") == Boolean.TRUE || "1".equals(trim(payload.get("active")));
-        store.setApprovalStageStatus(stageId, active, Instant.now());
-        return Map.of("message", active ? "Đã kích hoạt bước duyệt." : "Đã ẩn bước duyệt (không dùng cho yêu cầu mới).");
+        Map<String, Object> stage = store.findApprovalStage(stageId)
+                .orElseThrow(() -> Api("Không tìm thấy bước phê duyệt."));
+        Instant now = Instant.now();
+        if (!active && store.countPendingApprovalsForStageNo((int) Math.round(numberValue(stage.get("stage_no")))) > 0)
+            throw Api("Bước này đang có hồ sơ chờ xử lý. Hãy xử lý hết hồ sơ hoặc giữ bước hoạt động; "
+                    + "phiếu đang chạy không được cắt ngang.");
+        store.setApprovalStageStatus(stageId, active, now);
+        if (store.countActiveStages() == 0) {
+            store.setApprovalStageStatus(stageId, true, Instant.now());
+            throw Api("Hệ thống phải có ít nhất một bước phê duyệt đang hoạt động.");
+        }
+        return Map.of("message", active
+                ? "Đã kích hoạt bước phê duyệt cho các phiếu mới."
+                : "Đã ẩn bước khỏi luồng của các phiếu mới; lịch sử phiếu cũ vẫn giữ nguyên.");
     }
 
     public Map<String, Object> deleteApprovalStage(Principal principal, Map<String, Object> payload) {

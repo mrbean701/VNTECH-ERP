@@ -156,3 +156,66 @@ thành **TASK-041** và làm ở lượt kế tiếp với ngân sách riêng.
   **không** giải quyết câu hỏi version pinning.
 * **TASK-036** (`required_permission`/`allow_skip_level` không được thi hành): TASK-041 **không** đụng hai cột đó
   — chúng vẫn là mục chờ quyết định riêng.
+
+---
+
+# 6. KẾT QUẢ TRIỂN KHAI (ĐÃ SỬA + ĐÃ KIỂM CHỨNG LÚC CHẠY)
+
+**Ngày:** 17/09/2026 · **Trạng thái:** **DONE** · jar **90.891.156 bytes** (16:01:27) · API PID **34524** ·
+Flyway `validated 16 migrations` · log **0 ERROR** · regression **59/61** (đúng 2 lỗi cũ TASK-031/TASK-032)
+
+## 6.1 Đã sửa
+
+| Tầng | Nội dung |
+|---|---|
+| `OpsTaskStore` (port) | **GỠ 2 phương thức tự phát minh**: `findApprovalStageCatalog`, `stageCodeExists` (chúng coi `code` như `stage_no`, và bảng **không có cột `code`**). **THÊM 8 phương thức theo JS**: `activeRoleCodes`, `clearAutoApproveExcept`, `clearAutoApproveAll`, `countActiveStagesBefore`, `countApprovalsByStageNo`, `propagateStageNameToPendingApprovals`, `countActiveStages`, `countPendingApprovalsForStageNo`. `insertApprovalStage`/`updateApprovalStage` ghi **đủ 12/8 cột**. |
+| `OpsTaskStoreAdapter` | INSERT 12 cột (bỏ `null` cứng cho `description`), UPDATE 8 trường, + 8 câu lệnh mới. |
+| `OpsTaskManagementUseCase` | `saveApprovalStage` + `setApprovalStageStatus` port **nguyên trạng** JS: payload, mặc định, validate vai trò theo `role_catalog`, 3 quy tắc chặn, 4 thông điệp nguyên văn. **Bỏ** luật `stageNo < 100` tự thêm. |
+
+## 6.2 Kiểm chứng lúc chạy — `tools/probe-task041.mjs`: **21/21 ĐẠT, exit 0**
+
+Dùng **đúng payload của UI** (`stageId/stageNo/sortOrder/name/description/slaHours/approvalMode/
+autoApproveOnSubmit/allowedRoleCodes`, **không có `code`**):
+
+| Phép kiểm | Kết quả |
+|---|---|
+| A. Tạo bước tạm `stageNo=900` | **200** + nguyên văn *"Đã thêm bước phê duyệt BƯỚC TẠM TASK-041. Phiếu mới sẽ áp dụng luồng mới; phiếu cũ giữ nguyên luồng đã tạo."* |
+| C. `description` / `approvalMode` / `sortOrder` / `slaHours` khi tạo | ghi được và **đọc lại đúng** (`mô tả tạm TASK-041`, `single`, `9000`, `8`) |
+| **B. Sửa SLA 8 → 33 rồi ĐỌC LẠI** | **33** — đây là lỗi cũ: báo thành công nhưng `sla_hours` **không đổi** |
+| C. Sửa `description`/`approvalMode`/`sortOrder`/2 vai trò | đọc lại đúng: `mô tả mới`, `all_roles`, `9010`, `commander,director` |
+| D. Tự duyệt ở bước **không phải đầu** | **400** nguyên văn *"Tự xác nhận khi gửi phiếu chỉ được đặt cho bước đầu tiên của luồng. Hãy đưa bước này lên đầu hoặc bỏ tùy chọn tự xác nhận."* |
+| E. Đổi `stage_no` của bước 1 (bước **đã có lịch sử duyệt**) | **400** nguyên văn, và `stage_no` **giữ nguyên 1** |
+| F. Tắt bước 1 (đang có **7 hồ sơ chờ**) | **400** nguyên văn *"Bước này đang có hồ sơ chờ xử lý…"*, và bước 1 **vẫn hoạt động** |
+| Dọn dẹp | xoá bước tạm qua API → về đúng **5 bước** |
+
+## 6.3 Chốt "bước cuối cùng" — `tools/probe-task041-last-stage.mjs`: **7/7 ĐẠT, exit 0**
+
+Chốt này cần số bước hoạt động = 1 nên phải dựng kịch bản riêng: tạm tắt bước 1–4 bằng SQL (đã sao lưu
+`tools/_backup-task041.sql`), để bước 5 thành bước **hoạt động cuối cùng**, rồi gọi API.
+
+* Gọi tắt bước 5 → **400** nguyên văn *"Hệ thống phải có ít nhất một bước phê duyệt đang hoạt động."*
+* Bước 5 **được BẬT LẠI tự động** (đúng như JS) ⇒ hệ thống **không bao giờ** rơi vào trạng thái không còn bước duyệt.
+* Script **tự khôi phục trong `finally`**: trạng thái cuối `1:1,2:1,3:1,4:1,5:1` = trạng thái đầu.
+
+## 6.4 Đối chiếu dữ liệu sau khi kiểm chứng
+
+So từng dòng `approval_stage_catalog` với bản sao lưu: **4/5 dòng giống hệt**; dòng 5 **chỉ khác `updated_at`**
+(`2026-09-14 11:57:47.971` → `2026-09-17 16:03:35.640`) — đúng hệ quả của phép kiểm chốt cuối (ghi `active=0`
+rồi tự bật lại). **Mọi trường nghiệp vụ nguyên vẹn**; không còn bước tạm `stage_no=900`.
+
+## 6.5 LỖI CỦA CHÍNH TÔI
+
+1. Probe đầu dùng `allowedRoleCodes: ["admin"]` ⇒ bị chặn *"Vai trò admin không tồn tại hoặc đang bị ẩn."*
+   **Không phải lỗi mã:** `admin` là vai trò dựng sẵn của `users.role`, **không có dòng trong `role_catalog`**,
+   và UI **lọc bỏ** nó (`app/page.tsx:3833` `item.code !== "admin"`); JS cũng kiểm với `role_catalog` nên JS
+   **cũng** từ chối. Đã đổi sang `commander`/`director`.
+2. **Lặp lại lỗi chạy `mvn` từ thư mục workspace** (`no POM in this directory`) — lần thứ hai trong dự án;
+   đã build lại đúng `java-backend`.
+
+## 6.6 Còn lại (ghi rõ, không tự mở rộng)
+
+* JS có `audit(...)` ở cả hai action; Java **chưa** ghi audit — khoảng trống chung của nhóm action này.
+* JS phân quyền bằng `requireRole(user, ["admin"])`; Java để **cổng module** của `ActionRbacRegistry` quyết định
+  ⇒ giữ nguyên cơ chế hiện có (thuộc nhóm quyết định TASK-029).
+* `delete_approval_stage` (JS `:2200+`) **chưa rà** trong lượt này — cần đối chiếu riêng vì có thể chứa chốt
+  tương tự.

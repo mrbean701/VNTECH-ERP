@@ -241,22 +241,8 @@ public class OpsTaskStoreAdapter implements OpsTaskStore {
 
     // ---- approval stages ----
     @Override
-    public Optional<Map<String, Object>> findApprovalStageCatalog(String stageNo) {
-        return first("SELECT * FROM approval_stage_catalog WHERE stage_no=? AND active=1", stageNo);
-    }
-
-    @Override
-    public boolean stageCodeExists(String code, String excludeId) {
-        // approval_stage_catalog không có cột code — chống trùng theo stage_no (chỉ tạo bước ≥100)
-        Long n;
-        try {
-            n = jdbcTemplate.queryForObject(
-                    "SELECT COUNT(*) FROM approval_stage_catalog WHERE stage_no=? AND id<>COALESCE(?, '')",
-                    Long.class, Integer.parseInt(code), excludeId == null ? "" : excludeId);
-        } catch (NumberFormatException e) {
-            return false;
-        }
-        return n != null && n > 0;
+    public List<String> activeRoleCodes() {
+        return jdbcTemplate.queryForList("SELECT code FROM role_catalog WHERE active=1", String.class);
     }
 
     @Override
@@ -266,20 +252,83 @@ public class OpsTaskStoreAdapter implements OpsTaskStore {
 
     @Override @Transactional
     public void insertApprovalStage(Map<String, Object> stage, Instant now) {
+        // SỬA LỖI (TASK-041): bản cũ truyền `null` CỨNG cho description và KHÔNG ghi approval_mode/sla_hours/
+        // auto_approve_on_submit/sort_order. JS `system-route.mjs:2175` chèn đủ 12 cột. Hệ quả cũ: bước mới tạo
+        // mất mô tả, mất SLA (mặc định 8 giờ trong mã JS không bao giờ được ghi vào DB).
         jdbcTemplate.update("""
-                INSERT INTO approval_stage_catalog (id,stage_no,name,description,allowed_role_codes,active,
+                INSERT INTO approval_stage_catalog (id,stage_no,name,description,allowed_role_codes,approval_mode,
+                                                    sla_hours,auto_approve_on_submit,active,sort_order,
                                                     created_at,updated_at)
-                VALUES (?,?,?,?,?,1,?,?)""",
-                stage.get("id"), stage.get("stageNo"), stage.get("name"), null,
-                stage.get("allowedRoleCodes"), now, now);
+                VALUES (?,?,?,?,?,?,?,?,1,?,?,?)""",
+                stage.get("id"), stage.get("stageNo"), stage.get("name"), stage.get("description"),
+                stage.get("allowedRoleCodes"), stage.get("approvalMode"), stage.get("slaHours"),
+                Boolean.TRUE.equals(stage.get("autoApproveOnSubmit")) ? 1 : 0,
+                stage.get("sortOrder"), now, now);
     }
 
     @Override @Transactional
     public void updateApprovalStage(Map<String, Object> stage, Instant now) {
+        // SỬA LỖI (TASK-041): bản cũ chỉ ghi name/stage_no/allowed_role_codes ⇒ admin sửa SLA của bước duyệt,
+        // hệ thống báo thành công nhưng `sla_hours` KHÔNG đổi (và description/approval_mode/auto_approve/
+        // sort_order cũng mất). Đúng JS `system-route.mjs:2167` — 8 trường.
         jdbcTemplate.update("""
-                UPDATE approval_stage_catalog SET name=?,stage_no=?,allowed_role_codes=?,updated_at=?
-                WHERE id=?""", stage.get("name"), stage.get("stageNo"),
-                stage.get("allowedRoleCodes"), now, stage.get("id"));
+                UPDATE approval_stage_catalog SET stage_no=?,name=?,description=?,allowed_role_codes=?,
+                                                  approval_mode=?,sla_hours=?,auto_approve_on_submit=?,sort_order=?,
+                                                  updated_at=?
+                WHERE id=?""",
+                stage.get("stageNo"), stage.get("name"), stage.get("description"), stage.get("allowedRoleCodes"),
+                stage.get("approvalMode"), stage.get("slaHours"),
+                Boolean.TRUE.equals(stage.get("autoApproveOnSubmit")) ? 1 : 0,
+                stage.get("sortOrder"), now, stage.get("id"));
+    }
+
+    @Override @Transactional
+    public void clearAutoApproveExcept(String keepStageId, Instant now) {
+        jdbcTemplate.update("UPDATE approval_stage_catalog SET auto_approve_on_submit=0,updated_at=? WHERE id<>?",
+                now, keepStageId);
+    }
+
+    @Override @Transactional
+    public void clearAutoApproveAll(Instant now) {
+        jdbcTemplate.update("UPDATE approval_stage_catalog SET auto_approve_on_submit=0,updated_at=?", now);
+    }
+
+    @Override
+    public long countActiveStagesBefore(String excludeStageId, int stageNo) {
+        Long n = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*) FROM approval_stage_catalog
+                WHERE active=1 AND id<>COALESCE(?, '') AND stage_no<?""", Long.class, excludeStageId, stageNo);
+        return n == null ? 0 : n;
+    }
+
+    @Override
+    public long countApprovalsByStageNo(int stageNo) {
+        Long n = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM approvals WHERE stage=?", Long.class, stageNo);
+        return n == null ? 0 : n;
+    }
+
+    @Override @Transactional
+    public void propagateStageNameToPendingApprovals(int stageNo, String name, Instant now) {
+        jdbcTemplate.update("""
+                UPDATE approvals SET department=?,updated_at=?
+                WHERE stage=? AND status='pending' AND decided_at IS NULL""", name, now, stageNo);
+    }
+
+    @Override
+    public long countActiveStages() {
+        Long n = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM approval_stage_catalog WHERE active=1", Long.class);
+        return n == null ? 0 : n;
+    }
+
+    @Override
+    public long countPendingApprovalsForStageNo(int stageNo) {
+        Long n = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*) FROM approvals a
+                JOIN material_requests mr ON mr.id=a.request_id
+                WHERE a.stage=? AND a.status='pending' AND mr.status='pending_approval'
+                  AND mr.approval_stage=a.stage""", Long.class, stageNo);
+        return n == null ? 0 : n;
     }
 
     @Override @Transactional
