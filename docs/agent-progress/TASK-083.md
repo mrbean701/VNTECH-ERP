@@ -1,9 +1,9 @@
-# TASK-083 — `U-15` ĐỢT 2: CHUYỂN BẢNG PHẲNG SANG `DataTable` (đợt 1/… — 1 bảng xong)
+# TASK-083 — `U-15` ĐỢT 2: CHUYỂN BẢNG PHẲNG SANG `DataTable`
 
-- **Mã:** TASK-083 · **Ngày:** 18/09/2026 · **Commit:** `#151` (bảng 1) + `#153` (bảng 2–4)
-- **Định danh nguồn:** head `drizzle/0117_phase1_ui_datatable3_identity.sql` ⇒ **`VNTECH-FP-624193C1D2EB2FE6`**
-- **Trạng thái:** đang làm — **4 bảng phẳng đã chuyển** (`DataTable` **13 → 17** · bảng tự viết **87 → 83**);
-  **9 bảng "cần cân nhắc"** còn lại + **~76 bảng KHÔNG chuyển được** (xem mục 3)
+- **Mã:** TASK-083 · **Ngày:** 18/09/2026 · **Commit:** `#151` … `#165` (14 bảng)
+- **Định danh nguồn:** head `drizzle/0123_phase1_ui_datatable9_identity.sql` ⇒ **`VNTECH-FP-ADA2358D8EFD995C`**
+- **Trạng thái:** đang làm — **14 bảng phẳng đã chuyển** (`DataTable` **13 → 27** · bảng tự viết **87 → 73** ·
+  trạng thái rỗng tự viết **88 → 76**); còn **bảng "cần cân nhắc"** + **~73 bảng KHÔNG chuyển được** (xem mục 3)
 
 ## 1. Vì sao có task này
 
@@ -27,8 +27,26 @@ Số đo bằng `tools/probe-ui-adoption.mjs`: **bảng tự viết 87 chỗ** �
 | 10 | `ProjectManagement` | **danh sách KHO của dự án** | 9 cột (mã · tên · loại · thủ kho · tồn kho · chờ nhập/xuất/duyệt · nút `Xem kho ›`); `emptyText` nguyên văn *"Dự án chưa có kho."* |
 | 11 | `BoqControl` | **chi tiết lũy kế theo vật tư** | 10 cột; ⚠️ **GIỮ lớp `resizable-data-table`** qua tham số mới **`tableClassName`** (xem mục 3b) |
 | 12 | `Receiving` | **"Kế hoạch giao hàng" (12 cột)** | ✅ **ĐÃ CHUYỂN LẠI THÀNH CÔNG** ở lượt kế tiếp bằng đúng cách ghi ở mục 3c (khoảng trắng sau `=>`, `<span>` thay fragment trần cho ô `▧`, cột chuỗi trả thẳng); giữ nguyên `ordered`/`actual`/`remain`/`pct` |
+| 13 | `TeamManagement` | **thông tin dự án của tổ đội** | 6 cột; bảng cũ render **đúng 1 dòng** khi có dự án ⇒ `rows={proj ? [proj] : []}`; `emptyText` **nguyên văn** *"Tổ đội chưa gắn dự án nào."* |
+| 14 | `ProjectManagement` | **danh sách dự án (9 cột)** | mã · tên (+`<small>` hợp đồng) · trạng thái · bắt đầu · kết thúc dự kiến · tiến độ · nhân sự · tổ đội · nút `Chi tiết ›`; giữ nguyên `projectOverdueDays(row)` cho `red-text`, `scopesOf().length`, `teamsOf().length`; `emptyText` **nguyên văn** *"Không có dự án phù hợp bộ lọc."* |
 
-**Đo lại sau khi chuyển:** `DataTable` **13 → 25 lần** · bảng tự viết **87 → 75 chỗ** · trạng thái rỗng tự viết **88 → 78 chỗ**.
+**Đo lại sau khi chuyển:** `DataTable` **13 → 27 lần** · bảng tự viết **87 → 73 chỗ** · trạng thái rỗng tự viết **88 → 76 chỗ**.
+`app/page.tsx` **4007 dòng** / 221 hàm top-level.
+
+### 2b. ✅ CÁCH KIỂM CHỨNG MẠNH NHẤT CHO VIỆC CHUYỂN BẢNG (đã dùng thật — bảng 14)
+
+Chuyển bảng là **refactor giữ nguyên giao diện**. Cách chứng minh chắc nhất **không phải** là "đọc lại code thấy giống",
+mà là **so ảnh chụp toàn bộ 28 màn × 4 kích thước trước/sau**:
+
+```
+node tools/probe-visual-regression.mjs            # lần 1: ghi báo cáo SAU khi đổi dữ liệu (đã có trong repo)
+node tools/probe-visual-regression.mjs            # lần 2: sau khi chuyển bảng
+Get-FileHash <bao-cao-1> -Algorithm SHA256 ; Get-FileHash <bao-cao-2> -Algorithm SHA256
+```
+Kết quả lượt này: **hai báo cáo TRÙNG NHAU TỪNG BYTE (`867D58DD…D4D3B4`)** ⇒ **không một màn nào đổi một điểm ảnh nào**,
+kể cả `02-project` (`✅ 0 px` cả desktop/laptop/tablet/phone). Đây là **bằng chứng mạnh hơn mọi lời khẳng định trong văn bản**.
+⇒ **Quy trình từ nay cho mỗi bảng chuyển tiếp:** chạy cổng ảnh **trước** và **sau**, so **hash của báo cáo**;
+hash khác ⇒ phải giải thích được từng vùng lệch, không được bỏ qua.
 
 ## 3c. ⚠️ BẢNG 12 CỘT (`Receiving` — "Kế hoạch giao hàng"): LỖI CÚ PHÁP JSX, ĐÃ HOÀN TÁC
 
@@ -53,8 +71,11 @@ vẫn **24 lần**, bảng tự viết vẫn **76 chỗ** (đúng bằng trướ
 3. Cột nào chỉ trả **chuỗi** thì trả thẳng (`render: (row) => row.poNo`) để bớt JSX.
 4. Trước khi ghi: chạy **`tsc` trên bản nháp** (đúng như lượt này) — lỗi bị chặn **trước khi** commit.
 
-⚠️ **Chưa chuyển:** bảng 12 cột này + bảng **danh sách dự án 9 cột** + **`Receiving`**; và
-**`Purchasing` KHÔNG chuyển được** (dùng `<Fragment>` nhóm dòng — `DataTable` không có khái niệm dòng nhóm).
+⚠️ **Tình trạng sau 14 bảng (đã cập nhật):** bảng 12 cột `Receiving` **đã chuyển xong** (bảng 12 trong mục 2) và
+**bảng danh sách dự án 9 cột cũng đã chuyển xong** (bảng 14, đã kiểm bằng cổng ảnh trùng byte). Còn lại:
+**`Purchasing` KHÔNG chuyển được** (dùng `<Fragment>` nhóm dòng — `DataTable` không có khái niệm dòng nhóm),
+**"yêu cầu phiếu / Requests"** (cần khả năng chọn dòng + lớp `selected-row` trên `<tr>` ⇒ phải mở rộng `DataTable`),
+và **`MaterialCatalogPage` bảng danh mục `material-list-table`** (đã có `tableClassName` nên chuyển được).
 
 ## 3b. ⚠️ LỚP CSS RIÊNG TRÊN `<table>` — BÀI HỌC ĐÃ TRẢ GIÁ (TASK-083)
 
@@ -114,22 +135,52 @@ Em viết bộ quét phân loại **89 khối `<table>`** trong `app/page.tsx` t
    hoặc khuôn CSS riêng như `purchase-comparison-head`) — `DataTable` **luôn** render `.baseline-table`, nên
    chuyển thẳng sẽ **đổi CSS**. Muốn chuyển phải: hoặc thêm tham số cho `DataTable`, hoặc xác nhận CSS tương đương.
 
-⇒ **Kết luận trung thực:** con số "42 bảng" trong kế hoạch trước là **đếm thô**; sau khi soi tiêu chí an toàn,
-số bảng vừa **an toàn** vừa **có giá trị** là **~10–12**, và **3 bảng cần mở rộng `DataTable` trước**.
+⇒ **Kết luận (đã hiệu chỉnh bằng thực tế):** con số "42 bảng" trong kế hoạch trước là **đếm thô**; ước lượng ban đầu
+"số bảng vừa an toàn vừa có giá trị là ~10–12" **hơi thấp** — thực tế **đã chuyển được 14 bảng** và vẫn còn
+**3 nhóm chuyển được tiếp** (xem mục 4), vì ba mở rộng `cellClassName` / `rowStyle` / `tableClassName` gỡ được
+hầu hết rào cản. Phần **~73 bảng còn lại** vẫn **KHÔNG chuyển**: không phải danh sách phẳng (bảng in HTML,
+bảng nhóm dòng, bảng tổng hợp tĩnh, lưới nhập liệu).
 
-## 4. Việc kế tiếp của TASK-083 (thứ tự đã xác định)
+## 4. Việc kế tiếp của TASK-083 (thứ tự đã xác định — cập nhật sau bảng 14)
 
-1. Mở rộng `DataTable`: thêm **`rowClassName`/`rowStyle`** (giữ dấu "chưa lưu" của bảng quyền) — **có cổng**: `tsc` + cổng áp dụng.
-2. Chuyển 5–6 bảng có `colSpan` **chỉ ở dòng rỗng**: `TeamManagement` (2 bảng còn lại) · `ProjectManagement` (4 bảng) ·
-   `MaterialCatalogPage` (3 bảng) — **truyền `emptyText` NGUYÊN VĂN** từ khối `<Empty>` cũ.
-3. Chuyển bảng **ma trận quyền** sau khi có `rowClassName` (cột động `PERM_CAPS`).
-4. Chỉ chuyển bảng `<table>` trần **khi** chứng minh được CSS tương đương (chụp ảnh trước/sau) — nếu không thì **để nguyên**.
+1. ~~Mở rộng `DataTable`: `rowStyle`~~ · ✅ **XONG** (bảng 5) · ~~`tableClassName`~~ ✅ **XONG** (bảng 11) ·
+   ~~`cellClassName`~~ ✅ **XONG** (TASK-081).
+2. ~~Chuyển các bảng có `colSpan` **chỉ ở dòng rỗng**~~ ✅ **XONG 13 bảng** (mục 2) — `emptyText` **NGUYÊN VĂN**.
+3. **Kế tiếp — mở rộng `DataTable` thêm `rowClassName`** (lớp CSS trên `<tr>`) để chuyển được bảng
+   **Phiếu đề nghị / Requests** đang cần `className={selected?.id===r.id ? 'selected-row' : ''}` (chọn dòng).
+   ⚠️ Hiện chưa có chỗ truyền ⇒ chuyển ngay sẽ **mất dấu dòng đang chọn**.
+4. Chuyển `MaterialCatalogPage` bảng **danh mục `material-list-table`** (dùng `tableClassName` đã có, giữ `nowrap`;
+   cột alias ĐỘNG).
+5. Chỉ chuyển bảng `<table>` trần **khi** đã chứng minh CSS tương đương (`canonical.css:103-113` đã chứng minh cho
+   `.table-wrap table` — nhưng mỗi bảng **vẫn phải so cổng ảnh trước/sau**, xem mục 2b).
 
-## 5. Tệp thay đổi (đợt này)
+## 4b. Lịch sử head định danh nguồn (14 bảng = 9 head)
+
+| Head | Bảng đã chuyển | Fingerprint |
+|---|---|---|
+| `0116_…datatable2_identity.sql` | 1 | `VNTECH-FP-…` (đợt đầu) |
+| `0117_…datatable3_identity.sql` | 2–4 | `VNTECH-FP-624193C1D2EB2FE6` |
+| `0118`…`0122` | 5–13 | … |
+| `0122_phase1_ui_datatable8_identity.sql` | 13 | `VNTECH-FP-30EE365D549AD7D4` |
+| `0123_phase1_ui_datatable9_identity.sql` | **14 (danh sách dự án 9 cột)** | **`VNTECH-FP-ADA2358D8EFD995C`** |
+
+⚠️ **Bắt buộc mỗi lần đổi `app/page.tsx`:** head mới → `node tools/refresh-phase-identity.mjs <head.sql> "<NHÃN>"`
+→ `UPDATE vntech_product_identity` trên **MySQL** (SQLite do `local-runtime.mjs` tự chạy migration)
+→ `node scripts/generate-release-manifest.mjs` → `npm run build`. Bỏ bước nào cũng **chặn build** (fingerprint gate).
+
+## 5. Tệp thay đổi (đợt này — bảng 14)
 
 | Tệp | Nội dung |
 |---|---|
-| `app/page.tsx` | 1 bảng `TeamManagement` → `<DataTable>` |
-| `drizzle/0116_phase1_ui_datatable2_identity.sql` | **MỚI** — head định danh nguồn (fixed point) |
+| `app/page.tsx` | bảng **danh sách dự án 9 cột** (`ProjectManagement`) → `<DataTable>` (4019 → 4007 dòng) |
+| `drizzle/0123_phase1_ui_datatable9_identity.sql` | **MỚI** — head định danh nguồn (fixed point `VNTECH-FP-ADA2358D8EFD995C`) |
 | `lib/vntech-identity-data.mjs` · `VNTECH_*.txt` · `VNTECH_FINGERPRINT.json` · `MANIFEST_SHA256.txt` | đồng bộ định danh + manifest |
 | `docs/agent-progress/TASK-083.md` | hồ sơ này |
+
+**Bằng chứng kiểm chứng lượt bảng 14:** `tsc --noEmit` **EXIT 0** · eslint **0 error** (72 warning, đều có trước) ·
+`master-baseline-gate` **ĐẠT** (`!important=4950` · `css=400643B`) · `npm run build` **EXIT 0** +
+`BUILT ARTIFACT VALIDATION: ĐẠT` · `npm run test:regression` **61 test / 59 pass / 2 fail (đúng 2 ca đã biết)** ·
+cổng ảnh **trùng byte** với lượt trước (`867D58DD…`) · `probe-column-parity` **KHÔNG khoá nào thiếu cột** ·
+`probe-money-consistency` **14/14** · `probe-row-duplication` **15/15** · UI `:8787` và proxy `:9000` **HTTP 200**,
+định danh phục vụ **`VNTECH-FP-ADA2358D8EFD995C`**.
+
