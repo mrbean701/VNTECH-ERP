@@ -180,6 +180,34 @@ sản phẩm, cần người dùng xác nhận; và vì `verify:fingerprint` cò
 **Không có.** Bản vá chỉ đọc thêm `staffDirectory` đã có trong payload bootstrap; không thêm API,
 không đổi quyền, không đổi workflow, không đụng dữ liệu.
 
+## 7b. CHỨNG MINH Ở MỨC DỮ LIỆU (bổ sung — vì cổng ảnh không thấy được drawer)
+
+Cổng ảnh **không** kiểm được khối phê duyệt (drawer đóng trong ảnh chuẩn), và bản dựng UI đang bị chặn
+(TASK-034) nên chưa thể chứng minh bằng render. Đã bù bằng một phép kiểm **chứng minh ĐẦU VÀO của phép
+ánh xạ** — `tools/check-approval-dept-mapping.mjs`:
+
+Bản vá suy phòng ban bằng `data.staffDirectory?.find(u => u.id === approval.approverUserId)?.department || ""`
+và chỉ hiển thị khi giá trị khác rỗng. ⇒ Điều kiện để bản vá **hiện được** là: mọi bước đã có người quyết
+định phải tra ra một dòng `staffDirectory` có `department` **khác rỗng**.
+
+Kết quả trên dữ liệu thật:
+
+```
+Phiếu: 17 · staffDirectory: 12
+Bước ĐÃ có người quyết định : 50
+  → tra được phòng ban       : 50
+  → approverUserId rỗng      : 0
+  → không có trong danh bạ   : 0
+  → có trong danh bạ nhưng department TRỐNG: 0
+KẾT LUẬN: toàn bộ 50 bước đã quyết đều tra được phòng ban KHÁC RỖNG
+⇒ bản vá §8.1 sẽ HIỂN THỊ "Phòng ban: …".     exit 0
+```
+
+**Lỗi công cụ đã tự phát hiện và sửa:** lần chạy đầu in ra kết luận ĐẠT nhưng **mã thoát khác 0** —
+Node trên Windows sập với `Assertion failed: !(handle->flags & UV_HANDLE_CLOSING), src\win\async.c` khi
+`process.exit()` được gọi lúc handle `fetch` còn đang đóng. Một cổng **"đạt" mà báo lỗi** rất dễ dẫn tới
+kết luận sai, nên đã đổi sang `process.exitCode` (để Node tự thoát êm). Chạy lại: **exit 0**.
+
 ## 8. Limitations
 
 * **Chứng minh render chưa hoàn tất** ở thời điểm ghi hồ sơ: cần `npm run build` + khởi động lại SSR

@@ -148,3 +148,25 @@ console.log(perms.length === 0
 console.log("  Ghi chú: JS đọc quyền module CHỈ từ user_module_permissions"
   + " (department_module_permissions là bảng riêng, không được canUseModule dùng).");
 console.log("  => Nếu bảng quyền module thưa, JS CŨNG chặn y hệt ⇒ 403 tầng module KHÔNG phải lỗi mã Java.");
+
+// ---------------------------------------------------------------- AI CÓ MODULE "admin"?
+//
+// VÌ SAO QUAN TRỌNG: 3 action quản trị workflow (`save_workflow`, `set_workflow_status`,
+// `delete_workflow`) KHÔNG được controller chặn bằng vai trò admin — chúng chỉ cần đăng nhập, và
+// cổng thật là quyền module `admin` trong bảng user_module_permissions. Nếu có tài khoản KHÔNG phải
+// admin mà vẫn có module `admin` với canUse=1 thì tài khoản đó QUẢN TRỊ ĐƯỢC WORKFLOW.
+console.log("\n=== AI CÓ QUYỀN MODULE 'admin'? ===");
+const adminRows = perms.filter((p) => p.moduleKey === "admin");
+const usable = adminRows.filter((p) => Number(p.canUse) === 1);
+console.log(`  Số dòng quyền cho module 'admin': ${adminRows.length}`);
+console.log(`  Trong đó canUse = 1            : ${usable.length}`);
+for (const p of usable.slice(0, 12)) {
+  const s = staff[p.userId] || {};
+  console.log(`    ${String(s.fullName ?? p.userId).padEnd(28)} role=${String(s.role ?? "?").padEnd(12)} `
+    + `use=${p.canUse} src=${p.permissionSource ?? "-"}`);
+}
+const nonAdminUsable = usable.filter((p) => (staff[p.userId]?.role ?? "") !== "admin");
+console.log(`  Tài khoản KHÔNG phải admin mà có canUse=1: ${nonAdminUsable.length}`);
+console.log(nonAdminUsable.length === 0
+  ? "  => Chỉ admin có module 'admin' ⇒ cổng quản trị workflow hiện ĐÚNG (dù dựa vào quyền module chứ không phải vai trò)."
+  : "  => ⚠ Có tài khoản không phải admin quản trị được workflow ⇒ cần rà GOAL §7.");

@@ -15,7 +15,7 @@
 |---|---|
 | CURRENT PHASE | PHASE 1 — hạ tầng UI dùng chung. Song song: hoàn thiện tầng phân quyền Java |
 | CURRENT TASK | **TASK-033** — MASTER TASK §8.1 (dải phê duyệt thiếu PHÒNG BAN); chờ dựng lại bundle để chứng minh render |
-| LAST COMPLETED | **TASK-036 (#42)** — GOAL §8/§7: `required_permission` + `allow_skip_level` của bước workflow **không được thi hành ở đâu** (UI 0 chỗ, Java chỉ ghi/hiển thị). Trước đó: **TASK-022b (#41)** · **TASK-035 (#40)** · TASK-008 phần 2 (#38) |
+| LAST COMPLETED | **TASK-037 (#43)** — GOAL §7: rà cổng quyền 12 action Java-only (**0 rủi ro**; 1 cổng mong manh: 3 action workflow chỉ cần đăng nhập + quyền module `admin`). Trước đó: **TASK-036 (#42)** · **TASK-022b (#41)** · **TASK-035 (#40)** |
 | NEXT TASK | TASK-034 (gỡ chặn dựng bundle) → chứng minh TASK-033 render → **§8.2** (modal "Tổng hợp giao nhận") → **§8.3** (ảnh/hồ sơ vật tư) → TASK-009 |
 | BLOCKED ITEMS | **TASK-034 — `npm run build` KHÔNG dựng lại được UI** (dấu vân tay nguồn lệch; tái lập định danh còn phải sửa **dòng `vntech_product_identity` trong DB** vì `local-runtime.mjs:177` ném lỗi nếu lệch ⇒ có tác động dữ liệu) · **TASK-035 mục 7** (hành vi khi đổi workflow giữa chừng) · **TASK-036 mục 7** (có thi hành `required_permission`/`allow_skip_level` không) · **TASK-031** (cây dự án bị tắt ở cả 2 nav) · **TASK-032** (0/16 vai trò trỏ đơn vị mặc định) · **TASK-029** (Java chặt/rộng hơn JS) · **TASK-024** (`isCompanyLeadership`) · **dữ liệu `user_module_permissions`** |
 | USER CONFIRMATION REQUIRED | **YES** — **5 câu hỏi**, ghi ở mục riêng bên dưới |
@@ -116,13 +116,17 @@ Mặc định của interface là `return role()` = **mã chuẩn** ⇒ thiếu 
 16. **Thông điệp lỗi là dữ liệu chẩn đoán**: phải phân biệt **T1-module** ("chưa được quản trị viên cấp đúng quyền") · **T2-vai trò** ("không có quyền thực hiện nghiệp vụ") · **T3-phạm vi** ("không được … dự án/kho") trước khi buộc tội mã nguồn.
 17. **Luôn chuẩn hoá KIỂU trước khi kết luận** — `active` trong payload là **boolean `true`**, không phải số `1`; so `=== 1` từng gây báo động giả 9/9.
 
-## USER CONFIRMATION REQUIRED (5 câu hỏi)
+## USER CONFIRMATION REQUIRED (9 câu hỏi)
 
 1. **TASK-029** — 6 action (`save_team_subcontract`, `save_team_production`, `approve_team_production`, `save_team_payment`, `settle_team_subcontract`, `create_project_team`): JS cho phép theo vai trò, Java bắt buộc module `teams` (**0 dòng quyền**) nên **chỉ admin làm được**. Chọn **(A)** khôi phục đúng JS, hay **(B)** giữ Java + nạp đủ dữ liệu quyền module?
 2. **Dữ liệu `user_module_permissions`** (484/732; 5 module 0 dòng: `boq`, `stocktake`, `inventory`, `teams`, `warehouse_issue`) — (a) chạy lại cơ chế cấp mặc định theo phòng ban, (b) cấu hình thủ công, hay (c) giữ nguyên?
 3. **TASK-024** — `isCompanyLeadership`: giữ `{director, accountant}` hay theo JS (7 mã HOẶC `base_role='director'`)?
-4. **TASK-031** — cây dự án trong nhóm **QUẢN LÝ DỰ ÁN** hiện **không hiển thị** danh sách dự án + cây workspace ở **cả desktop và mobile**. Đây là **chủ ý** (giữ nguyên + cập nhật test) hay **tắt nhầm** (bật lại)? Hay chỉ muốn một nav có cây?
-5. **TASK-032** — (a) có khôi phục `role_catalog.default_organization_unit_id` cho 16 vai trò không (xin xác nhận bảng ánh xạ vai trò → đơn vị)? (b) tên vai trò `thuky` chuẩn là **"Thư ký Tổng giám đốc"** (theo test) hay **"Thư ký Tổng giám đốc / Trưởng phòng Hành chính Pháp chế"** (theo dữ liệu đang chạy)?
+4. **TASK-031** — cây dự án trong nhóm **QUẢN LÝ DỰ ÁN** hiện **không hiển thị** danh sách dự án + cây workspace ở **cả desktop và mobile**. Chủ ý (giữ nguyên + cập nhật test) hay tắt nhầm (bật lại)? Hay chỉ muốn một nav có cây?
+5. **TASK-032** — (a) có khôi phục `role_catalog.default_organization_unit_id` cho 16 vai trò không (xin xác nhận bảng ánh xạ)? (b) tên vai trò `thuky` chuẩn là **"Thư ký Tổng giám đốc"** (theo test) hay **"Thư ký Tổng giám đốc / Trưởng phòng Hành chính Pháp chế"** (theo dữ liệu đang chạy)?
+6. **TASK-034** — cho phép **tái lập dấu vân tay nguồn** để `npm run build` chạy được? Việc này còn phải cập nhật **dòng `vntech_product_identity` trong DB** (vì `local-runtime.mjs:177` ném lỗi nếu lệch) ⇒ **có tác động dữ liệu**. Nếu không làm: bạn test thủ công trên **bundle cũ**.
+7. **TASK-035 mục 7** — khi admin đổi cấu hình bước/phân công giữa chừng, hành vi mong muốn: **(A)** giữ bản cũ cho hồ sơ đang chạy (cần version pinning — **thay đổi kiến trúc**) hay **(B)** áp dụng ngay (**đúng hiện tại**)? Và có cần **chặn tắt/xoá** bước đang có hồ sơ chờ (tránh kẹt hồ sơ)?
+8. **TASK-036 mục 7** — `required_permission` (quyền cần để làm người duyệt) và `allow_skip_level` (vượt cấp) hiện **không được thi hành ở đâu**: có cần **thi hành** không, hay **gỡ** khỏi lược đồ/payload để tránh bẫy cấu hình về sau?
+9. **TASK-037 mục 5** — 3 action quản trị workflow chỉ cần **đăng nhập** + quyền module `admin` (hiện **0 dòng**): **(A)** thêm chặn **vai trò admin** cho nhất quán, hay **(B)** giữ nguyên (coi quản trị workflow là một quyền module — đúng thiết kế)?
 
 ## CURRENT TODO
 
