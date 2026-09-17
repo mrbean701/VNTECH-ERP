@@ -26,6 +26,9 @@ const MYSQL_ARGS = ["--default-character-set=utf8mb4", "-uvntech", "-pvntech", "
 const sql = (q) => execFileSync(MYSQL, [...MYSQL_ARGS, "-e", q], { encoding: "utf8" }).trim();
 const sqlRows = (q) => sql(q).split(/\r?\n/).filter(Boolean).map((l) => l.split("\t"));
 const sqlOne = (q) => { const r = sqlRows(q); return r.length ? r[0][0] : ""; };
+// TASK-059 — helper trích dẫn giá trị cho SQL (mục 7 cần chèn id vào truy vấn đối chiếu).
+// (Lượt chạy đầu của mục 7 lỗi `ReferenceError: q is not defined` vì tệp này chỉ dùng `q` làm TÊN THAM SỐ.)
+const q = (v) => "'" + String(v).replace(/'/g, "''") + "'";
 
 const results = [];
 let skipped = 0;
@@ -329,7 +332,92 @@ console.log("\n═══ 6. TASK-057: cột bổ sung của `issues` · `returns
     `productId=${JSON.stringify(pi.productId)} · MySQL=${expectedId}`);
 }
 
-// ============================ 7. TỔNG KẾT ============================
+// ============================ 7. TASK-059 — 8 KHOÁ THIẾU CỘT ĐÃ ĐƯỢC BỔ SUNG ============================
+// Cổng tĩnh `probe-column-parity.mjs` đã về 0 khoá thiếu cột; mục này kiểm LÚC CHẠY rằng cột mới
+// **CÓ GIÁ TRỊ ĐÚNG** (không chỉ tồn tại), đối chiếu MySQL theo từng dòng khi bảng có dữ liệu.
+console.log("\n═══ 7. TASK-059: cột bổ sung của 8 khoá ═══");
+{
+  const rowsOf = (key) => (Array.isArray(admin[key]) ? admin[key] : []);
+
+  // 7a. roleCatalog — `businessGroupId` + `businessGroupName` (UI `page.tsx:3522` cột "Nhóm nghiệp vụ")
+  const roles = rowsOf("roleCatalog");
+  if (!roles.length) { skipped++; note("roleCatalog rỗng"); }
+  else {
+    const bad = roles.filter((r) => {
+      const exp = sqlOne(`SELECT COALESCE(bg.name,rc.base_role) FROM role_catalog rc
+        LEFT JOIN business_role_group_catalog bg ON bg.id=rc.business_group_id WHERE rc.id=${q(String(r.id))}`);
+      return !("businessGroupId" in r) || !("businessGroupName" in r) || String(r.businessGroupName ?? "") !== exp;
+    });
+    check("[admin] roleCatalog: `businessGroupName` khớp MySQL theo TỪNG DÒNG (không còn luôn hiện '—')",
+      bad.length === 0, bad.length ? `lệch ${bad.length}/${roles.length}: ${JSON.stringify(bad[0]).slice(0, 120)}` : `${roles.length} dòng khớp`);
+  }
+
+  // 7b. organizationUnits — `projectName`, `effectiveFrom`, `effectiveTo`
+  const units = rowsOf("organizationUnits");
+  if (!units.length) { skipped++; note("organizationUnits rỗng"); }
+  else {
+    const missing = ["projectName", "effectiveFrom", "effectiveTo"].filter((k) => !(k in units[0]));
+    check("[admin] organizationUnits có đủ 3 cột mới `projectName`/`effectiveFrom`/`effectiveTo`",
+      missing.length === 0, missing.length ? `thiếu: ${missing.join(", ")}` : `${units.length} dòng`);
+    const withProject = units.filter((u) => u.projectId);
+    if (withProject.length === 0) { skipped++; note("không có đơn vị nào gắn dự án ⇒ không kiểm được giá trị `projectName`"); }
+    else {
+      const bad = withProject.filter((u) => String(u.projectName ?? "") !==
+        sqlOne(`SELECT name FROM projects WHERE id=${q(String(u.projectId))}`));
+      check("[admin] organizationUnits: `projectName` khớp MySQL với mọi đơn vị gắn dự án",
+        bad.length === 0, bad.length ? `lệch ${bad.length}/${withProject.length}` : `${withProject.length} dòng khớp`);
+    }
+  }
+
+  // 7c. hrRecords — `identityDate` + `identityPlace`
+  const hr = rowsOf("hrRecords");
+  if (!hr.length) { skipped++; note("hrRecords rỗng"); }
+  else {
+    const missing = ["identityDate", "identityPlace"].filter((k) => !(k in hr[0]));
+    check("[admin] hrRecords có đủ 2 cột mới `identityDate`/`identityPlace`", missing.length === 0,
+      missing.length ? `thiếu: ${missing.join(", ")}` : `${hr.length} dòng`);
+  }
+
+  // 7d. 3 khoá cùng thêm `createdBy` + `createdByName`
+  for (const key of ["accountingVouchers", "officialCorrespondence", "legalDocuments"]) {
+    const rows = rowsOf(key);
+    if (!rows.length) { skipped++; note(`${key} rỗng ⇒ không kiểm được 2 cột mới (cổng TĨNH đã xác nhận tập cột)`); continue; }
+    const missing = ["createdBy", "createdByName"].filter((k) => !(k in rows[0]));
+    const withCreator = rows.filter((r) => r.createdBy);
+    check(`[admin] ${key} có đủ 2 cột mới \`createdBy\`/\`createdByName\``, missing.length === 0,
+      missing.length ? `thiếu: ${missing.join(", ")}` : `${rows.length} dòng · ${withCreator.length} dòng có người lập`);
+    if (withCreator.length) {
+      const bad = withCreator.filter((r) => String(r.createdByName ?? "") !==
+        sqlOne(`SELECT COALESCE(full_name,'') FROM users WHERE id=${q(String(r.createdBy))}`));
+      check(`[admin] ${key}: \`createdByName\` khớp MySQL theo từng dòng có người lập`, bad.length === 0,
+        bad.length ? `lệch ${bad.length}/${withCreator.length}` : `${withCreator.length} dòng khớp`);
+    }
+  }
+
+  // 7e. businessRoleGroupScopes — `businessScopeId`/`scopeCode`/`scopeName`
+  const brgs = rowsOf("businessRoleGroupScopes");
+  if (!brgs.length) { skipped++; note("businessRoleGroupScopes rỗng ⇒ chỉ cổng TĨNH kiểm được tập cột"); }
+  else {
+    const missing = ["businessScopeId", "scopeCode", "scopeName"].filter((k) => !(k in brgs[0]));
+    check("[admin] businessRoleGroupScopes có đủ 3 cột mới `businessScopeId`/`scopeCode`/`scopeName`",
+      missing.length === 0, missing.length ? `thiếu: ${missing.join(", ")}` : `${brgs.length} dòng`);
+    const bad = brgs.filter((r) => String(r.scopeCode ?? "") !==
+      sqlOne(`SELECT COALESCE(code,'') FROM business_scope_catalog WHERE id=${q(String(r.businessScopeId))}`));
+    check("[admin] businessRoleGroupScopes: `scopeCode` khớp MySQL theo TỪNG DÒNG", bad.length === 0,
+      bad.length ? `lệch ${bad.length}/${brgs.length}` : `${brgs.length} dòng khớp`);
+  }
+
+  // 7f. taskNotifications — 5 cột mới; bảng đang rỗng nên CHỈ cổng tĩnh kiểm được
+  const noti = rowsOf("taskNotifications");
+  if (!noti.length) { skipped++; note("taskNotifications rỗng ⇒ chỉ cổng TĨNH kiểm được tập cột (5 cột mới + tên khoá `workItemId`)"); }
+  else {
+    const missing = ["workItemId", "channel", "title", "body", "lastError"].filter((k) => !(k in noti[0]));
+    check("[admin] taskNotifications có đủ 5 cột mới + tên khoá `workItemId`", missing.length === 0,
+      missing.length ? `thiếu: ${missing.join(", ")}` : `${noti.length} dòng`);
+  }
+}
+
+// ============================ 8. TỔNG KẾT ============================
 const failed = results.filter((r) => !r.ok);
 console.log(`\n═══ KẾT QUẢ: ${results.length - failed.length}/${results.length} ĐẠT · ${skipped} phép đo không thực hiện được ═══`);
 if (failed.length) {

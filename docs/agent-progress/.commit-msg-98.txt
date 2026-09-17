@@ -1,0 +1,31 @@
+TASK-059: va 8 khoa bootstrap thieu COT con lai => cong doi chieu tap cot ve 0 (13 -> 9 -> 8 -> 0); probe bootstrap 100/100
+
+DA VA (moi khoa deu doc cap SQL hai phia truoc khi ket luan):
+- `taskNotifications`: them `workItemId`/`channel`/`title`/`body`/`lastError` + ORDER BY "chua doc TRUOC"
+  (`CASE WHEN read_at IS NULL THEN 0 ELSE 1 END`) + LIMIT 100 nhu JS `:719`. GIU them `taskId`+`message`
+  (Java-only, grep toan `app/` chi thay `n.readAt` doc tu khoa nay) de khong pha tuong thich nguoc.
+- `hrRecords`: them `identityDate` + `identityPlace` (form HR nhap `identityDate` o page.tsx:2444 nhung
+  truoc day doc lai khong co truong => ho so thieu ngay/noi cap).
+- `accountingVouchers` · `officialCorrespondence` · `legalDocuments`: them `createdBy` + `createdByName`
+  (+ LEFT JOIN users) - ba khoa cung mot kieu loi.
+- `roleCatalog`: them `businessGroupId` + `COALESCE(bg.name,rc.base_role) AS businessGroupName`
+  (+ JOIN business_role_group_catalog) => cot "Nhom nghiep vu" o man Chuc danh/vai tro
+  (page.tsx:3522 doc `row.businessGroupName`) truoc day LUON hien "—".
+- `businessRoleGroupScopes`: doi sang dung JS `:675` - `businessScopeId`/`scopeCode`/`scopeName`
+  (+ JOIN business_scope_catalog), bo `scopeId`/`createdAt`, sap theo `is_primary DESC, sort_order, name`
+  va loc `bs.active=1` khi khong phai admin.
+- `organizationUnits`: them `projectName`, `effectiveFrom`, `effectiveTo`.
+
+KIEM CHUNG:
+- Cong `tools/probe-column-parity.mjs`: **0 khoa nao thieu cot** (truoc do 13 -> 9 -> 8), doi chung duong
+  voi metadata MySQL van **4/4 DAT**.
+- Mo rong `tools/probe-task050-bootstrap.mjs` them **muc 7** (doi chieu GIA TRI theo tung dong voi MySQL):
+  => **100/100 DAT** (truoc 93/93). Cu the: `roleCatalog.businessGroupName` khop MySQL ca 16 dong;
+  `organizationUnits` du 3 cot (8 dong); `hrRecords` du 2 cot (4 dong); `officialCorrespondence.createdByName`
+  khop; `businessRoleGroupScopes.scopeCode` khop 2 dong. Cac bang RONG (`accountingVouchers`,
+  `legalDocuments`, `taskNotifications`) duoc in ro la "(bo qua)" + ghi chu chi cong TINH kiem duoc tap cot.
+- Khong hoi quy: probe-task058 18/18 · probe-task048 18/18 · probe-task049 10/10 · probe-task054 20/20.
+
+LOI CUA CHINH TOI O LUOT NAY: muc 7 moi dung ham `q(...)` de trich dan SQL nhung tep probe nay chi dung
+`q` lam TEN THAM SO => `ReferenceError: q is not defined` lam probe thoat 1 ngay sau dong tieu de muc 7;
+da them helper `q` va chay lai. (Bai hoc: them mot muc moi vao probe cu phai kiem lai TAP HAM CO SAN.)

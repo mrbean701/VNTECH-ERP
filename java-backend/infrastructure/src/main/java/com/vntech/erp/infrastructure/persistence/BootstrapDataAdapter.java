@@ -513,19 +513,26 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                        approval_mode AS approvalMode,sla_hours AS slaHours,
                        auto_approve_on_submit AS autoApproveOnSubmit,active,sort_order AS sortOrder
                 FROM approval_stage_catalog ORDER BY stage_no"""));
+        // TASK-059 — thiếu `businessGroupId` + `businessGroupName` (JS `:676`) ⇒ cột "Nhóm nghiệp vụ"
+        // của màn *Chức danh / vai trò* (`app/page.tsx:3522` đọc `row.businessGroupName`) LUÔN hiện "—".
         data.put("roleCatalog", query("""
                 SELECT rc.id,rc.code,rc.name,rc.description,rc.base_role AS baseRole,
+                       rc.business_group_id AS businessGroupId,
+                       COALESCE(bg.name,rc.base_role) AS businessGroupName,
                        rc.default_organization_unit_id AS defaultOrganizationUnitId,
                        ou.code AS defaultOrganizationCode,ou.name AS defaultOrganizationName,
                        rc.active,rc.sort_order AS sortOrder,rc.system_locked AS systemLocked
                 FROM role_catalog rc
+                LEFT JOIN business_role_group_catalog bg ON bg.id=rc.business_group_id
                 LEFT JOIN organization_units ou ON ou.id=rc.default_organization_unit_id
                 %s ORDER BY rc.sort_order,rc.name""".formatted(admin ? "" : "WHERE rc.active=1")));
+        // TASK-059 — thiếu `projectName` + `effectiveFrom`/`effectiveTo` (JS `:677`).
         data.put("organizationUnits", query("""
                 SELECT ou.id,ou.code,ou.name,ou.unit_type AS unitType,ou.parent_id AS parentId,
                        parent.name AS parentName,ou.project_id AS projectId,p.code AS projectCode,
-                       ou.description,ou.active,ou.archived_at AS archivedAt,ou.sort_order AS sortOrder,
-                       ou.system_locked AS systemLocked
+                       p.name AS projectName,ou.description,ou.effective_from AS effectiveFrom,
+                       ou.effective_to AS effectiveTo,ou.active,ou.archived_at AS archivedAt,
+                       ou.sort_order AS sortOrder,ou.system_locked AS systemLocked
                 FROM organization_units ou
                 LEFT JOIN organization_units parent ON parent.id=ou.parent_id
                 LEFT JOIN projects p ON p.id=ou.project_id
@@ -833,10 +840,17 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                        reason,actor_user_id AS actorUserId,created_at AS createdAt
                 FROM boq_change_history WHERE project_id IN (%s) ORDER BY created_at DESC""".formatted(pidSql), params(pids)));
 
+        // TASK-059 — JS `:675` trả `businessScopeId` + `scopeCode` + `scopeName` (JOIN business_scope_catalog)
+        // và sắp theo `is_primary DESC, bs.sort_order, bs.name`; bản Java trả `scopeId` + `createdAt`
+        // ⇒ `data.businessRoleGroups[].scopeIds/scopes` (JS enrich cạnh đó) không dựng được ở UI.
         data.put("businessRoleGroupScopes", query("""
-                SELECT id,business_group_id AS businessGroupId,business_scope_id AS scopeId,
-                       is_primary AS isPrimary,created_at AS createdAt
-                FROM business_role_group_scopes ORDER BY business_group_id"""));
+                SELECT brgs.id,brgs.business_group_id AS businessGroupId,
+                       brgs.business_scope_id AS businessScopeId,bs.code AS scopeCode,bs.name AS scopeName,
+                       brgs.is_primary AS isPrimary
+                FROM business_role_group_scopes brgs
+                JOIN business_scope_catalog bs ON bs.id=brgs.business_scope_id
+                %s ORDER BY brgs.is_primary DESC,bs.sort_order,bs.name""".formatted(
+                        admin ? "" : "WHERE bs.active=1")));
 
         data.put("stockReconciliations", pids.isEmpty() ? List.of() : query("""
                 SELECT id,project_id AS projectId,warehouse_id AS warehouseId,material_id AS materialId,
@@ -1012,17 +1026,24 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                 LEFT JOIN bank_accounts b ON b.id=e.account_id
                 LEFT JOIN users u ON u.id=e.created_by
                 ORDER BY e.entry_date DESC,e.created_at DESC"""));
+        // TASK-059 — thiếu `createdBy` + `createdByName` (JS `:706`? — xem `:707`/`:708`): UI có cột
+        // "Người lập" cho chứng từ kế toán / công văn / văn bản pháp lý ⇒ trước đây luôn trống.
         data.put("accountingVouchers", query("""
                 SELECT v.id,v.voucher_no AS voucherNo,v.voucher_date AS voucherDate,
                        v.voucher_type AS voucherType,v.project_id AS projectId,p.code AS projectCode,
                        p.name AS projectName,v.description,v.total_amount AS totalAmount,v.status,
-                       v.files_json AS filesJson,v.created_at AS createdAt,v.updated_at AS updatedAt
+                       v.files_json AS filesJson,v.created_by AS createdBy,u.full_name AS createdByName,
+                       v.created_at AS createdAt,v.updated_at AS updatedAt
                 FROM accounting_vouchers v
                 LEFT JOIN projects p ON p.id=v.project_id
+                LEFT JOIN users u ON u.id=v.created_by
                 ORDER BY v.voucher_date DESC,v.created_at DESC"""));
+        // TASK-059 — thiếu `identityDate` + `identityPlace` (JS `:705`): form HR nhập `identityDate`
+        // (`app/page.tsx:2444`) nhưng khi ĐỌC LẠI thì trường không tồn tại ⇒ hồ sơ hiện thiếu ngày/nơi cấp.
         data.put("hrRecords", query("""
                 SELECT h.id,h.user_id AS userId,u.full_name AS fullName,u.employee_code AS employeeCode,
-                       u.email,u.department,h.identity_no AS identityNo,h.birth_date AS birthDate,
+                       u.email,u.department,h.identity_no AS identityNo,h.identity_date AS identityDate,
+                       h.identity_place AS identityPlace,h.birth_date AS birthDate,
                        h.birthplace,h.permanent_address AS permanentAddress,h.phone,
                        h.education_level AS educationLevel,h.joined_date AS joinedDate,h.position,h.note
                 FROM hr_records h LEFT JOIN users u ON u.id=h.user_id ORDER BY h.full_name"""));
@@ -1037,13 +1058,16 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                 SELECT c.id,c.doc_no AS docNo,c.direction,c.doc_type AS docType,c.issue_date AS issueDate,
                        c.sender_name AS senderName,c.receiver_name AS receiverName,c.summary,
                        c.internal_handler AS internalHandler,c.status,c.result_note AS resultNote,
-                       c.created_at AS createdAt
-                FROM official_correspondence c ORDER BY c.issue_date DESC,c.created_at DESC"""));
+                       c.created_by AS createdBy,u.full_name AS createdByName,c.created_at AS createdAt
+                FROM official_correspondence c LEFT JOIN users u ON u.id=c.created_by
+                ORDER BY c.issue_date DESC,c.created_at DESC"""));
         data.put("legalDocuments", query("""
                 SELECT d.id,d.doc_no AS docNo,d.doc_type AS docType,d.title,d.issue_date AS issueDate,
                        d.issuer,d.effective_date AS effectiveDate,d.expiry_date AS expiryDate,d.scope,
-                       d.attachment_id AS attachmentId,d.status,d.created_at AS createdAt
-                FROM legal_documents d ORDER BY d.issue_date DESC,d.created_at DESC"""));
+                       d.attachment_id AS attachmentId,d.status,d.created_by AS createdBy,
+                       u.full_name AS createdByName,d.created_at AS createdAt
+                FROM legal_documents d LEFT JOIN users u ON u.id=d.created_by
+                ORDER BY d.issue_date DESC,d.created_at DESC"""));
         data.put("sealManagement", query("""
                 SELECT s.id,s.seal_no AS sealNo,s.seal_name AS sealName,s.seal_type AS sealType,
                        s.custodian,s.registered_date AS registeredDate,s.status,s.usage_note AS usageNote
@@ -1152,11 +1176,18 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                     WHERE e.work_item_id IN (%s) ORDER BY e.occurred_at DESC""".formatted(inClause(workItemIds)),
                     params(workItemIds)));
         }
+        // TASK-059 — JS `:719` trả `workItemId`/`channel`/`title`/`body`/`lastError` và sắp **chưa đọc TRƯỚC**
+        // (`CASE WHEN read_at IS NULL THEN 0 ELSE 1 END`), LIMIT 100. Bản Java đặt tên khoá `taskId` +
+        // gộp `title/body` thành `message` và sắp theo `created_at` ⇒ lệch hợp đồng.
+        // Giữ thêm `taskId` + `message` (Java-only, KHÔNG còn nơi nào đọc — `grep` toàn `app/` chỉ thấy
+        // `n.readAt`) để không phá vỡ tương thích ngược; cổng tập cột chỉ coi đây là "Java thừa" (thông tin).
         data.put("taskNotifications", query("""
-                SELECT n.id,n.user_id AS userId,n.work_item_id AS taskId,
-                       COALESCE(NULLIF(n.title,''),n.body) AS message,n.read_at AS readAt,
-                       n.sent_at AS sentAt,n.status,n.created_at AS createdAt
-                FROM task_notifications n WHERE n.user_id=? ORDER BY n.created_at DESC LIMIT 200""", ctx.userId()));
+                SELECT n.id,n.work_item_id AS workItemId,n.user_id AS userId,n.channel,n.title,n.body,
+                       n.status,n.read_at AS readAt,n.sent_at AS sentAt,n.last_error AS lastError,
+                       n.created_at AS createdAt,
+                       n.work_item_id AS taskId,COALESCE(NULLIF(n.title,''),n.body) AS message
+                FROM task_notifications n WHERE n.user_id=?
+                ORDER BY CASE WHEN n.read_at IS NULL THEN 0 ELSE 1 END,n.created_at DESC LIMIT 100""", ctx.userId()));
         data.put("constructionDailyLogs", pids.isEmpty() ? List.of() : query("""
                 SELECT l.id,l.log_no AS logNo,l.project_id AS projectId,p.code AS projectCode,
                        p.name AS projectName,l.warehouse_id AS warehouseId,l.work_date AS workDate,
