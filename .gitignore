@@ -67,3 +67,7 @@ java-backend/**/target/
 
 # Thu muc artifact cua bo cong cu thi giac (khong phai ma nguon)
 /.dsh-vision-toolkit/
+
+# Ban sao luu du lieu THAT lay ra truoc khi probe goi action GHI (chua du lieu nguoi dung that) —
+# giu lai tai cho de doi chieu/khoi phuc nhung KHONG dua vao kho ma.
+tools/_backup-*.sql

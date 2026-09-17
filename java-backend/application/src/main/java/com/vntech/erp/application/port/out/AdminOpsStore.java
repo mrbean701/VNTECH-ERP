@@ -15,8 +15,15 @@ public interface AdminOpsStore {
     void clearApprovalProjectAssignments();
     void insertApprovalAssignment(String id, String projectId, int stage, String ownerUserId, String ccEmails,
                                   String updatedBy, Instant now);
-    void insertApprovalRecipient(String id, String projectId, int stage, String userEmail, String ccEmails,
-                                 String updatedBy, Instant now);
+    /**
+     * Ghi một dòng người nhận email theo dự án + bước duyệt.
+     *
+     * <p><b>SỬA LỖI (TASK-040):</b> chữ ký cũ nhận {@code userEmail} + {@code ccEmails} + {@code updatedBy}.
+     * Lược đồ thật của bảng chỉ có <b>MỘT</b> cột {@code emails} (không có {@code user_email},
+     * {@code cc_emails}, {@code updated_by}) — xem drizzle/0004 và V1__baseline. JS cũng ghi một cột
+     * {@code emails} đã chuẩn hoá và nối bằng dấu phẩy. Nay port theo JS.
+     */
+    void insertApprovalRecipient(String id, String projectId, int stage, String emails, Instant now);
 
     // ---- preview request import context ----
     Optional<Map<String, Object>> findProjectBasic(String projectId);

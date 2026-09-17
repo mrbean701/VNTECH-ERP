@@ -51,24 +51,32 @@ public final class AdminOpsManagementUseCase {
         boolean enabled = payload.get("enabled") == Boolean.TRUE
                 || List.of("1", "true", "on").contains(trim(payload.get("enabled")).toLowerCase(Locale.ROOT));
         String smtpHost = nvl(payload.get("smtpHost"));
-        int smtpPort = Math.max(1, (int) Math.round(numberValue(payload.get("smtpPort"))));
-        if (smtpPort == 0) smtpPort = 587;
+        // SỬA LỖI (TASK-040 nhóm 1b): JS là `Math.max(1, numberValue(payload.smtpPort) || 587)`. Bản cũ kẹp
+        // sàn `max(1,…)` TRƯỚC rồi mới so `== 0`, mà sau `max` thì không bao giờ bằng 0 ⇒ thiếu trường thì
+        // lưu cổng 1 thay vì 587. Phải áp mặc định TRƯỚC khi kẹp sàn, đúng thứ tự toán hạng của JS.
+        int rawPort = (int) Math.round(numberValue(payload.get("smtpPort")));
+        int smtpPort = rawPort == 0 ? 587 : Math.max(1, rawPort);
         String security = List.of("starttls", "tls", "plain").contains(trim(payload.get("security")))
                 ? trim(payload.get("security")) : "starttls";
         String username = nvl(payload.get("username"));
         String suppliedPassword = nvl(payload.get("smtpPassword"));
         String senderEmail = trim(payload.get("senderEmail")).toLowerCase(Locale.ROOT);
         String senderName = blankDefault(trim(payload.get("senderName")), "VNTECH ERP");
+        // SỬA LỖI (TASK-040 nhóm 1b): JS `clean(payload.baseUrl).replace(/\/$/, "")` — bỏ ĐÚNG MỘT dấu "/" cuối.
         String baseUrl = nvl(payload.get("baseUrl"));
+        if (baseUrl != null && baseUrl.endsWith("/")) baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
         if (enabled && (smtpHost == null || smtpPort < 1 || username == null || suppliedPassword == null
-                || senderEmail.isEmpty()))
+                || emailsFrom(senderEmail).isEmpty()))
             throw Api("Để bật gửi mail cần đủ máy chủ SMTP, tài khoản, mật khẩu ứng dụng và email người gửi.");
         if (baseUrl != null && !baseUrl.matches("(?i)^https?://.*"))
             throw Api("Địa chỉ phần mềm trong email phải bắt đầu bằng http:// hoặc https://.");
-        long poSla = Math.max(1, (long) Math.round(numberValue(payload.get("poSlaHours"))));
-        if (poSla == 0) poSla = 24;
-        long bchSla = Math.max(1, (long) Math.round(numberValue(payload.get("bchConfirmationSlaHours"))));
-        if (bchSla == 0) bchSla = 8;
+        // SỬA LỖI (TASK-040 nhóm 1b): JS `Math.max(1, numberValue(...) || 24)` (và `|| 8` cho BCH). Bản cũ
+        // kẹp sàn trước rồi mới so `== 0` ⇒ thiếu trường thì lưu SLA 1 giờ thay vì 24/8 — sai lệch âm thầm
+        // mỗi lần trang Quản trị email được lưu mà không gửi kèm 2 trường SLA.
+        long rawPo = Math.round(numberValue(payload.get("poSlaHours")));
+        long poSla = rawPo == 0 ? 24 : Math.max(1, rawPo);
+        long rawBch = Math.round(numberValue(payload.get("bchConfirmationSlaHours")));
+        long bchSla = rawBch == 0 ? 8 : Math.max(1, rawBch);
         Instant now = Instant.now();
         Map<String, Object> s = new LinkedHashMap<>();
         s.put("enabled", enabled);
@@ -101,11 +109,15 @@ public final class AdminOpsManagementUseCase {
             Map<String, Object> row = asMap(o);
             String projectId = trim(row.get("projectId"));
             int stage = (int) Math.round(numberValue(row.get("stage")));
-            String userEmail = emailsFrom(row.get("userEmail"));
-            String ccEmails = emailsFrom(row.get("ccEmails"));
-            if (projectId.isEmpty() || stage == 0 || userEmail.isEmpty()) continue;
-            store.insertApprovalRecipient(idGenerator.next("AREC"), projectId, stage, userEmail,
-                    ccEmails.isEmpty() ? null : ccEmails, principal.userId(), now);
+            // SỬA LỖI (TASK-040): UI gửi `recipients: [{ projectId, stage, emails }]` — MỘT trường `emails`
+            // (app/page.tsx:3733-3734), đúng như JS đọc (`row.emails`). Bản cũ tìm `userEmail`/`ccEmails`
+            // nên luôn rỗng ⇒ `continue` ⇒ KHÔNG ghi gì, kể cả sau khi đã sửa câu lệnh SQL.
+            String emails = emailsFrom(row.get("emails"));
+            if (projectId.isEmpty() || stage == 0 || emails.isEmpty()) continue;
+            // SỬA LỖI (TASK-040 nhóm 1b): JS dùng tiền tố id `MAILTO` (scripts/system-route.mjs:1615); bản Java
+            // đặt `AREC` — lệch quy ước id dù cùng một bảng. Đổi cho khớp để bản ghi do Java tạo và do JS tạo
+            // không bị phân biệt bởi tiền tố.
+            store.insertApprovalRecipient(idGenerator.next("MAILTO"), projectId, stage, emails, now);
         }
         return Map.of("message", "Đã lưu cấu hình email & gửi thông báo duyệt theo dự án và bước duyệt.");
     }
@@ -287,7 +299,11 @@ public final class AdminOpsManagementUseCase {
         List<String> out = new ArrayList<>();
         for (String part : raw.split("[;,\\s]+")) {
             String p = part.trim();
-            if (p.matches("(?i)^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) out.add(p.toLowerCase(Locale.ROOT));
+            // JS dùng [...new Set(...)] ⇒ KHỬ TRÙNG LẶP; bản cũ không khử nên một email có thể bị lặp.
+            if (p.matches("(?i)^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) {
+                String mail = p.toLowerCase(Locale.ROOT);
+                if (!out.contains(mail)) out.add(mail);
+            }
         }
         return String.join(",", out);
     }

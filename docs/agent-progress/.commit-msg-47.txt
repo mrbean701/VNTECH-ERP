@@ -1,0 +1,83 @@
+#47 TASK-040 nhom 1+1b: save_email_settings - sua SQL, bu 2 duong DOC thieu, va 4 mac dinh JS bi port sai
+
+NGUON PHAT HIEN: TASK-040 (cong cu probe-java-sql-schema.mjs) chi ra AdminOpsStoreAdapter
+ghi 3 cot khong ton tai. Khi doi chieu JS de sua thi lo ra THEM 6 cho lech nua.
+
+PHAN A - LOI SQL (duong GHI) => HTTP 500
+  AdminOpsStoreAdapter.insertApprovalRecipient ghi user_email + cc_emails + updated_by.
+  Ca ba cot nay KHONG co trong BAT KY luoc do nao (drizzle 0004 va V1__baseline chi co
+  MOT cot `emails`) => MySQL nem "Unknown column" => save_email_settings tra HTTP 500.
+  JS (scripts/system-route.mjs:1615) ghi 1 cot emails da chuan hoa, active=1, co created_at.
+  => Port nguyen trang JS. Them: tien to id Java dat "AREC" trong khi JS dung "MAILTO" => doi ve MAILTO.
+
+PHAN B - HAI LOI O DUONG DOC (nghiem trong ngang loi SQL)
+  UI doc data.emailSettings va data.emailRecipients (app/page.tsx:31 va :3739) nhung bootstrap
+  Java THIEU HAN ca hai khoa. Hau qua: quan tri vien luu duoc cau hinh nhung mo lai man hinh thi
+  TRONG (tuong mat cau hinh), va cot email nguoi nhan theo du an/buoc LUON RONG.
+  Day la dang loi "ghi duoc ma khong bao gio doc lai" - lan thu BA trong cung mot tinh nang
+  (sau TASK-039: scope_key='GLOBAL' va cot settings_json).
+  => Them 2 khoa vao BootstrapDataAdapter dung nhu JS system-route.mjs:721-722:
+       emailSettings   - CHI admin, va KHONG BAO GIO tra cot password, chi co passwordConfigured
+       emailRecipients - CHI admin, khong loc theo du an
+
+PHAN C - BON MAC DINH BI PORT SAI (cung lop "port khong nguyen trang")
+  | Truong                   | JS                                  | Java cu | Hau qua
+  | smtpPort                 | Math.max(1, numberValue(p) || 587)  | 1       | luu cong SMTP = 1
+  | poSlaHours               | Math.max(1, numberValue(p) || 24)   | 1       | PO qua han sau 1 GIO thay vi 24
+  | bchConfirmationSlaHours  | Math.max(1, numberValue(p) || 8)    | 1       | BCH qua han sau 1 GIO thay vi 8
+  | baseUrl                  | .replace(/\/$/, "")                 | giu "/" | URL trong email co "/" doi
+  | senderEmail (khi bat gui) | doi email HOP LE (emailsFrom())    | chi doi khac rong | bat gui voi email rac
+  Goc chung: Java kep san max(1,...) TRUOC roi moi so ==0 => sau max thi gia tri KHONG BAO GIO
+  bang 0 => nhanh mac dinh la MA CODE CHET. Phai ap mac dinh truoc, dung thu tu toan hang cua JS.
+
+PHAN D - HU HAI DU LIEU THAT DO 3 MAC DINH SAI (da khoi phuc)
+  Doi chieu MySQL TRUOC khi va:
+    email_settings   : smtp_port = 1                  (seed ghi 587; chi 2 noi ghi cot nay)
+    company_settings : po_sla_hours = 1               (DDL DEFAULT 24)
+                       bch_confirmation_sla_hours = 1 (DDL DEFAULT 8)
+  Ba gia tri nay KHONG phai do seed va CHI save_email_settings ghi duoc 2 cot SLA
+  => loi port da AM THAM SUA HONG CAU HINH THAT ngay tren ban chay.
+  Probe da dua ve dung thiet ke: 587 / 24 / 8.
+  CAN NGUOI DUNG XAC NHAN: 24h (PO) va 8h (BCH) la MAC DINH DO MA JS quy dinh, khong phai con so
+  nghiep vu do nguoi dung cong bo. Neu SLA that khac thi phai sua lai bang giao dien Quan tri.
+
+KIEM CHUNG (bien dich sach KHONG chung minh SQL dung - bai hoc TASK-025/TASK-039)
+  mvn -q -DskipTests package                    : thanh cong - fat jar 90.885.239 bytes (14:04:30)
+  Java khoi dong lai                            : /actuator/health 200 (PID 13800, cong 18081)
+  Flyway                                        : validated 16 migrations, schema up to date
+  Log Java sau 3 lan goi action                 : 0 ERROR, khong stack trace
+  tools/probe-task040-nhom1.mjs                 : 13/13 DAT - exit 0
+      goi THIEU smtpPort/poSlaHours/bchSla      -> HTTP 200 (truoc la 500)
+      smtpPort luu 587 (truoc la 1), baseUrl "https://erp.vntech.local/" -> luu khong co "/" cuoi
+      ghi 1 nguoi nhan tam roi DOC LAI qua bootstrap -> emails=probe.task040@vntech.local
+      id sinh ra dung tien to MAILTO_f953716a-...
+      UI tra duoc theo (projectId, stage) - dung khoa tra cuu cua app/page.tsx:3739
+      5 dong phan cong con nguyen; don dep xong nguoi nhan ve 0 dong
+  tools/probe-task040-nhom1-authz.mjs           : 9/9 DAT - exit 0  (GOAL muc 7)
+      nvdademo (engine role project) goi action -> HTTP 403
+      emailSettings = null, emailRecipients = [] voi nguoi khong phai admin
+      bootstrap KHONG tra truong mat khau tho (chi co passwordConfigured)
+  npm run test:regression                       : 61 tests - 59 pass / 2 fail
+      So voi baseline 58 pass / 3 fail thi MOT test do da XANH tro lai => xac nhan ket luan
+      truoc day "1 loi la duong tinh gia do moi truong (thieu quyen sandbox)" la dung.
+      2 loi con lai la TASK-031 va TASK-032 da biet. KHONG phat sinh loi moi.
+  MySQL sau khi va                                 : smtp_port=587, po_sla_hours=24,
+                                                     bch_confirmation_sla_hours=8, base_url=NULL
+  2 bang                                           : approval_email_recipients 0 dong,
+                                                     approval_project_assignments 5 dong
+
+AN TOAN DU LIEU KHI KIEM CHUNG
+  save_email_settings xoa sach approval_email_recipients (va approval_project_assignments neu payload
+  co "assignments"). Truoc khi goi da: (1) sao luu 2 bang ra tools/_backup-task040-nhom1.sql,
+  (2) probe gui LAI dung 5 dong phan cong dang co, (3) chi ghi 1 nguoi nhan tam roi xoa.
+  Khong them cot vao MySQL de chieu theo port sai.
+
+KHONG doi luoc do, khong them/bot action, khong doi cong quyen.
+
+Tep: AdminOpsStore.java - AdminOpsManagementUseCase.java - AdminOpsStoreAdapter.java -
+BootstrapDataAdapter.java - tools/{probe-task040-nhom1,probe-task040-nhom1-authz}.mjs (moi) -
+docs/agent-progress/TASK-040.md
+Tai lieu: docs/agent-progress/TASK-040.md muc 13
+
+Con lai cua TASK-040: nhom 2->6 (level_rank -> rank; material_norms 6 cot; stock_issue_items;
+team_subcontracts.settlement_id/settled_at; vntech_license_*).

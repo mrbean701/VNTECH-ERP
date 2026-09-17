@@ -121,3 +121,93 @@ lược đồ nào** ⇒ đây là **port sai khi chuyển JS → Java**, không
 3. **Đừng thêm cột vào lược đồ** để làm cho câu lệnh chạy được khi cột đó là do port sai.
 4. Nếu một bảng chỉ được tạo bằng `ALTER TABLE` mà không có `CREATE TABLE` trong tệp migration thì bộ phân tích
    sẽ tạo mục **rỗng cột** ⇒ sinh dương tính giả. Công cụ đã có phần **chẩn đoán số cột** để phát hiện việc này.
+
+---
+
+# 13. NHÓM 1 + 1b — `save_email_settings` (ĐÃ SỬA + ĐÃ KIỂM CHỨNG LÚC CHẠY)
+
+**Ngày:** 17/09/2026 · **Trạng thái:** DONE (có bằng chứng lúc chạy)
+
+## 13.1 Nhóm 1 — lỗi SQL (đường GHI)
+
+`AdminOpsStoreAdapter.insertApprovalRecipient` ghi `user_email`, `cc_emails`, `updated_by` — **cả ba cột này
+không tồn tại** (drizzle `0004` và `V1__baseline` chỉ có **một** cột `emails`) ⇒ `Unknown column` ⇒ HTTP 500.
+
+**Sửa:** port nguyên trạng JS (`scripts/system-route.mjs:1615`) — một cột `emails`, `active=1`, có `created_at`/`updated_at`.
+
+**Phát hiện thêm:** tiền tố id Java đặt `AREC` trong khi JS dùng `MAILTO` ⇒ đổi về `MAILTO` cho khớp quy ước.
+
+## 13.2 Nhóm 1 — hai lỗi ở ĐƯỜNG ĐỌC (nghiêm trọng ngang lỗi SQL)
+
+UI đọc `data.emailSettings` và `data.emailRecipients` (`app/page.tsx:31`, `:3739`), nhưng bootstrap Java
+**thiếu hẳn cả hai khoá**. Hệ quả: người quản trị lưu được cấu hình nhưng **mở lại màn hình thì trống** ⇒
+tưởng mất cấu hình, và cột email người nhận theo dự án/bước **luôn rỗng**. Đây là dạng lỗi *ghi được mà không
+bao giờ đọc lại* — lần thứ ba trong cùng một tính năng (sau TASK-039 `scope_key='GLOBAL'` và `settings_json`).
+
+**Sửa:** thêm hai khoá vào `BootstrapDataAdapter`, đúng như JS `system-route.mjs:721-722`:
+* `emailSettings` — **chỉ admin**, và **không bao giờ trả cột `password`**, chỉ cờ `passwordConfigured`
+* `emailRecipients` — **chỉ admin**, không lọc theo dự án (`isAdmin(user) ? … : []`)
+
+## 13.3 Nhóm 1b — bốn mặc định bị port sai (không phải SQL, nhưng cùng lớp "port không nguyên trạng")
+
+| Trường | JS | Java (cũ) | Hệ quả |
+|---|---|---|---|
+| `smtpPort` | `Math.max(1, numberValue(p) \|\| 587)` | `max(1,…)` rồi mới so `==0` ⇒ **1** | Lưu cổng SMTP = 1 |
+| `poSlaHours` | `Math.max(1, numberValue(p) \|\| 24)` | ⇒ **1** | PO quá hạn sau **1 giờ** thay vì 24 |
+| `bchConfirmationSlaHours` | `Math.max(1, numberValue(p) \|\| 8)` | ⇒ **1** | BCH quá hạn sau **1 giờ** thay vì 8 |
+| `baseUrl` | `.replace(/\/$/, "")` | giữ nguyên | URL trong email có `/` đôi |
+| `senderEmail` (khi bật gửi) | đòi **email hợp lệ** (`emailsFrom().length`) | chỉ đòi **không rỗng** | Bật gửi mail với email rác |
+
+Gốc chung: Java kẹp sàn `max(1, …)` **trước** rồi mới áp mặc định — sau `max` thì giá trị **không bao giờ bằng 0**
+nên nhánh mặc định là **mã chết**. Phải áp mặc định trước, đúng thứ tự toán hạng của JS.
+
+## 13.4 HƯ HẠI DỮ LIỆU THẬT do 3 mặc định sai (đã khôi phục)
+
+Đối chiếu MySQL **trước khi vá**:
+
+```
+email_settings   : smtp_port = 1     (seed ghi 587; chỉ 2 nơi ghi cột này)
+company_settings : po_sla_hours = 1  (DDL DEFAULT 24)
+                   bch_confirmation_sla_hours = 1  (DDL DEFAULT 8)
+```
+
+Ba giá trị này **không phải do seed** (seed ghi 587, DDL mặc định 24/8) và **chỉ `save_email_settings`** là nơi
+ghi được 2 cột SLA ⇒ **lỗi port đã âm thầm sửa hỏng cấu hình thật** ngay trên bản chạy. Probe đã đưa về đúng
+thiết kế: `587 / 24 / 8`.
+
+> ⚠ **CẦN NGƯỜI DÙNG XÁC NHẬN:** 24h (PO) và 8h (BCH) là **mặc định do mã JS quy định**, không phải con số
+> nghiệp vụ do người dùng công bố. Nếu SLA thật khác, phải sửa lại bằng giao diện Quản trị.
+
+## 13.5 Kiểm chứng lúc chạy (bắt buộc theo TASK-039 §"biên dịch sạch không chứng minh SQL đúng")
+
+jar: **90.885.239 bytes** · API PID 13800 trên cổng 18081 · Flyway `validated 16 migrations` · log **0 ERROR**
+
+| Công cụ | Kết quả |
+|---|---|
+| `node tools/probe-task040-nhom1.mjs` | **13/13 ĐẠT, exit 0** |
+| `node tools/probe-task040-nhom1-authz.mjs` | **9/9 ĐẠT, exit 0** |
+| `npm run test:regression` | **59/61 pass** (2 lỗi còn lại là TASK-031 và TASK-032 đã biết; **không phát sinh lỗi mới**) |
+| MySQL sau khi vá | `smtp_port=587`, `po_sla_hours=24`, `bch_confirmation_sla_hours=8`, `base_url=NULL` |
+| Bảng `approval_email_recipients` / `approval_project_assignments` | **0 / 5** dòng — đúng nguyên trạng ban đầu |
+
+Chi tiết đáng chú ý của probe:
+* lần gọi **thiếu** 3 trường số ⇒ `smtpPort` lưu **587** (trước là 1) và `baseUrl` `https://erp.vntech.local/` → lưu **không có `/` cuối**;
+* ghi 1 người nhận tạm `probe.task040@vntech.local` ⇒ **đọc lại được qua bootstrap** với id `MAILTO_f953716a-…`;
+* `nvdademo` (engine role `project`) gọi action ⇒ **HTTP 403**, `emailSettings=null`, `emailRecipients=[]`.
+
+> **Bài học về tính trung thực của công cụ:** probe tự in ra dòng *"script KHÔNG tự kiểm DB"* — vì thiếu bước
+> đối chiếu MySQL thì "13/13 ĐẠT" mới chỉ chứng minh **tầng HTTP**, chưa chứng minh **giá trị đã ghi đúng**.
+
+## 13.6 Files Changed (nhóm 1 + 1b)
+
+* `java-backend/application/.../port/out/AdminOpsStore.java`
+* `java-backend/application/.../service/AdminOpsManagementUseCase.java` (SQL ⇒ đúng; 4 mặc định; validate email; `MAILTO`)
+* `java-backend/infrastructure/.../persistence/AdminOpsStoreAdapter.java` (câu `INSERT` đúng lược đồ)
+* `java-backend/infrastructure/.../persistence/BootstrapDataAdapter.java` (thêm `emailSettings`, `emailRecipients`)
+* `tools/probe-task040-nhom1.mjs`, `tools/probe-task040-nhom1-authz.mjs`, `tools/_backup-task040-nhom1.sql` (mới)
+
+## 13.7 Còn lại của TASK-040
+
+Nhóm **2 → 6** (xem mục 6): `level_rank` → `rank`; `material_norms` 6 cột; `stock_issue_items` `SET status`;
+`team_subcontracts.settlement_id`/`settled_at`; `vntech_license_*`. Mỗi nhóm phải chạy **đủ 4 bước** ở mục 8
+và **kiểm cả đường đọc** — nhóm 1 cho thấy đường đọc cũng có thể thiếu y như câu lệnh SQL.

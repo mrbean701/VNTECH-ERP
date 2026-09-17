@@ -77,12 +77,14 @@ public class AdminOpsStoreAdapter implements AdminOpsStore {
 
     @Override
     @Transactional
-    public void insertApprovalRecipient(String id, String projectId, int stage, String userEmail, String ccEmails,
-                                        String updatedBy, Instant now) {
+    public void insertApprovalRecipient(String id, String projectId, int stage, String emails, Instant now) {
+        // SỬA LỖI (TASK-040): câu lệnh cũ ghi user_email + cc_emails + updated_by — CẢ BA cột này KHÔNG
+        // tồn tại trong lược đồ (drizzle 0004 và V1__baseline đều chỉ có MỘT cột `emails`)
+        // ⇒ MySQL ném "Unknown column" ⇒ action save_email_settings trả HTTP 500.
+        // Port nguyên trạng JS (scripts/system-route.mjs): một cột `emails`, active=1, có created_at.
         jdbcTemplate.update("""
-                INSERT INTO approval_email_recipients (id,project_id,stage,user_email,cc_emails,active,updated_by,
-                                                       created_at,updated_at)
-                VALUES (?,?,?,?,?,1,?,?,?)""", id, projectId, stage, userEmail, ccEmails, updatedBy, now, now);
+                INSERT INTO approval_email_recipients (id,project_id,stage,emails,active,created_at,updated_at)
+                VALUES (?,?,?,?,1,?,?)""", id, projectId, stage, emails, now, now);
     }
 
     // ---------- preview request import ----------

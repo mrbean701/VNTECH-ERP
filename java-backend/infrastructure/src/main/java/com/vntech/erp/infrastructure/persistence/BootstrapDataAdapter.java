@@ -541,6 +541,25 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                 JOIN warehouses w ON w.id=uws.warehouse_id
                 WHERE uws.user_id=? ORDER BY w.code""", ctx.userId()));
 
+        // SỬA LỖI (TASK-040 nhóm 1, đường ĐỌC #1): UI đọc `data.emailSettings` để đổ form Quản trị email
+        // (app/page.tsx:31 khai báo khoá này trong kiểu Bootstrap). Bản Java port THIẾU hẳn khoá ⇒ form luôn
+        // rỗng và người quản trị tưởng đã mất cấu hình SMTP. JS system-route.mjs:721 trả CHỈ cho admin
+        // (`isAdmin(user) ? ... : null`) và KHÔNG bao giờ trả cột `password` — chỉ cờ `passwordConfigured`.
+        Map<String, Object> emailSettingsRow = admin ? first("""
+                SELECT enabled,smtp_host AS smtpHost,smtp_port AS smtpPort,security,username,
+                       sender_email AS senderEmail,sender_name AS senderName,base_url AS baseUrl,
+                       CASE WHEN password IS NOT NULL AND length(password)>0 THEN 1 ELSE 0 END AS passwordConfigured
+                FROM email_settings WHERE id='EMAIL'""") : null;
+        data.put("emailSettings", emailSettingsRow == null || emailSettingsRow.isEmpty() ? null : emailSettingsRow);
+
+        // SỬA LỖI (TASK-040 nhóm 1, đường ĐỌC): UI đọc `data.emailRecipients` để đổ cột email người nhận
+        // (app/page.tsx:3739 `emailFor()`), nhưng bản Java port THIẾU hẳn khoá này ⇒ `data.emailRecipients`
+        // là `undefined` ⇒ luôn hiển thị rỗng: ghi được mà KHÔNG BAO GIỜ đọc lại. JS system-route.mjs:722
+        // trả bảng này CHỈ cho admin (`isAdmin(user) ? ... : []`), và không lọc theo dự án.
+        data.put("emailRecipients", admin ? query("""
+                SELECT id,project_id AS projectId,stage,emails,active
+                FROM approval_email_recipients ORDER BY project_id,stage""") : List.of());
+
         // JS: `workflowAssignments` = bảng approval_project_assignments (phân công người duyệt theo dự án+bước)
         data.put("workflowAssignments", pids.isEmpty() ? List.of() : query("""
                 SELECT apa.id,apa.project_id AS projectId,apa.stage,apa.owner_user_id AS ownerUserId,
