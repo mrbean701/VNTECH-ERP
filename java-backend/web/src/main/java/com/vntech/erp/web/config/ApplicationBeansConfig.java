@@ -218,7 +218,8 @@ public class ApplicationBeansConfig {
     @Bean
     public BootstrapUseCase bootstrapUseCase(ProjectRepository projectRepository,
                                              ProjectScopeStore projectScopeStore,
-                                             BootstrapDataPort bootstrapDataPort) {
-        return new BootstrapUseCase(projectRepository, projectScopeStore, bootstrapDataPort);
+                                             BootstrapDataPort bootstrapDataPort,
+                                             ModulePermissionStore modulePermissionStore) {
+        return new BootstrapUseCase(projectRepository, projectScopeStore, bootstrapDataPort, modulePermissionStore);
     }
 }

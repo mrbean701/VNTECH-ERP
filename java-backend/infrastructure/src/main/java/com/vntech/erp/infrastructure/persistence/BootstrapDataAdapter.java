@@ -33,6 +33,9 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
     public Map<String, Object> load(Context ctx) {
         Map<String, Object> data = new LinkedHashMap<>();
         boolean admin = ctx.admin();
+        // TASK-065 — JS `:693` `canEditCentral = isAdmin(user) || canUseModule(user,"central_warehouse","canEdit")`.
+        // Quyết định này được TÍNH Ở USE-CASE (cần cổng `ModulePermissionStore`) rồi truyền xuống; adapter chỉ đọc.
+        boolean canEditCentral = ctx.canEditCentral();
         List<String> pids = ctx.visibleProjectIds();
         // JS dùng `${projectIds.map(()=>"?").join(",") || "NULL"}` -> khi rỗng là IN (NULL)
         String pidSql = pids.isEmpty() ? "NULL" : inClause(pids);
@@ -969,8 +972,10 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
         data.put("serverInfo", serverInfo);
 
         // adminMaterials / adminMaterialCategories / adminMaterialSubcategories:
-        // JS trả bản "admin" (gồm cả bản ghi ẩn). Khi không phải admin thì không có.
-        if (admin) {
+        // JS `:694-696` trả bản "admin" (gồm cả bản ghi ĐÃ ẨN `active=0` + `aliases`) khi
+        // `canEditCentral` — KHÔNG phải chỉ khi `admin`. TASK-065: dùng đúng `ctx.canEditCentral()`
+        // (= `isAdmin(user) || canUseModule(user,"central_warehouse","canEdit")`, tính ở BootstrapUseCase).
+        if (canEditCentral) {
             // SỬA LỖI (TASK-040 nhóm 3b — lần thứ NĂM gặp dạng "đường ĐỌC thiếu trường"): truy vấn cũ chỉ trả
             // 10 trường, THIẾU `specification`, `brand`, `minStock`, `requiresCocq` và cả mã/tên nhóm
             // (`categoryCode`/`categoryName`/`subcategoryCode`/`subcategoryName`) so với JS
@@ -1638,25 +1643,24 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                     "dept_project_assign", "site_command")) {
                 blank(data, "workItems", "workItemEvents", "taskNotifications");
             }
-            blank(data, "adminProjects", "adminMaterials", "adminMaterialCategories",
-                    "adminMaterialSubcategories", "adminSuppliers", "users", "userScopes",
+            // TASK-065 — ba khoá `adminMaterial*` KHÔNG nằm trong danh sách xoá-trắng vô điều kiện nữa:
+            // JS `:694-696` chỉ trả `[]`/danh sách rút gọn khi `!canEditCentral`, còn khi `canEditCentral`
+            // thì chúng đã được dựng ĐẦY ĐỦ ở khối phía trên (nhánh này chỉ chạy khi KHÔNG phải admin,
+            // nên nếu xoá-trắng ở đây sẽ xoá oan dữ liệu của vai trò có quyền `central_warehouse.canEdit`).
+            blank(data, "adminProjects", "adminSuppliers", "users", "userScopes",
                     "userWarehouseScopes", "allModulePermissions", "audits", "activeSessions",
                     "emailRecipients");
-            // TASK-064 — NHÁNH DỰ PHÒNG LÀ **BIẾN KHÁC** (JS `:694`/`:695`), không phải `[]`.
-            // Bản cũ xoá-trắng CẢ BA khoá `adminMaterial*` cho mọi tài khoản không phải admin, nhưng JS chỉ
-            // trả `[]` cho ĐÚNG MỘT khoá:
-            //   adminMaterialCategories    = canEditCentral ? <danh sách đầy đủ> : materialCategories
-            //   adminMaterialSubcategories = canEditCentral ? <danh sách đầy đủ> : materialSubcategories
-            //   adminMaterials             = canEditCentral ? <danh sách đầy đủ> : []          ← GIỮ NGUYÊN
-            // ⇒ đặt lại ĐÚNG bằng giá trị CUỐI của hai khoá nền (sau cả bước xoá-trắng theo module ở trên),
-            //   đúng như JS vì nhánh dự phòng của JS đọc CHÍNH biến đó.
-            // GIỚI HẠN ĐÃ BIẾT (ghi ở Known Problems #63): JS dùng
-            // `canEditCentral = isAdmin(user) || canUseModule(user,"central_warehouse","canEdit")`
-            // còn Java chỉ xét `admin` ⇒ tài khoản KHÔNG phải admin mà CÓ quyền `central_warehouse.canEdit`
-            // vẫn nhận danh sách RÚT GỌN thay vì danh sách ĐẦY ĐỦ (có cả mục `active=0` + `aliases`).
-            // Cần bổ sung phép kiểm module vào đường bootstrap — hạng mục riêng, chưa làm ở lượt này.
-            data.put("adminMaterialCategories", data.getOrDefault("materialCategories", List.of()));
-            data.put("adminMaterialSubcategories", data.getOrDefault("materialSubcategories", List.of()));
+            if (!canEditCentral) {
+                blank(data, "adminMaterials", "adminMaterialCategories", "adminMaterialSubcategories");
+                // TASK-064 — NHÁNH DỰ PHÒNG LÀ **BIẾN KHÁC** (JS `:694`/`:695`), không phải `[]`:
+                //   adminMaterialCategories    = canEditCentral ? <đầy đủ> : materialCategories
+                //   adminMaterialSubcategories = canEditCentral ? <đầy đủ> : materialSubcategories
+                //   adminMaterials             = canEditCentral ? <đầy đủ> : []          ← giữ `[]`
+                // ⇒ đặt lại bằng giá trị CUỐI của hai khoá nền (sau bước xoá-trắng theo module ở trên),
+                //   đúng như JS vì nhánh dự phòng của JS đọc CHÍNH biến đó.
+                data.put("adminMaterialCategories", data.getOrDefault("materialCategories", List.of()));
+                data.put("adminMaterialSubcategories", data.getOrDefault("materialSubcategories", List.of()));
+            }
             data.put("serverInfo", null);
             data.put("trustStatus", null);
             data.put("emailSettings", null);

@@ -22,7 +22,13 @@ public interface BootstrapDataPort {
             String warehouseScopeKind,        // role_catalog.warehouse_scope_kind (JS mặc định "site")
             String department,                // users.department — JS departmentCodeForUser (`:388`) xét CHUỖI này trước
             List<String> visibleProjectIds,   // projectIds sau khi lọc scope
-            List<String> allProjectIds         // mọi project id (admin) hoặc trùng visible
+            List<String> allProjectIds,        // mọi project id (admin) hoặc trùng visible
+            boolean canEditCentral             // TASK-065 — JS `:693`
+                                               // `canEditCentral = isAdmin(user) || canUseModule(user,"central_warehouse","canEdit")`
+                                               // ⇒ KHÔNG đồng nghĩa với `admin`: vai trò Kho trung tâm có quyền
+                                               // `central_warehouse.canEdit` cũng được xem bản "admin" của 3 khoá
+                                               // `adminMaterials`/`adminMaterialCategories`/`adminMaterialSubcategories`
+                                               // (gồm cả bản ghi đã ẩn `active=0` + `aliases`).
     ) { }
 
     /** Trả về Map toàn bộ `data` khối bootstrap(user) — key camelCase như JS. */
