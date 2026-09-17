@@ -14,9 +14,9 @@
 | Mục | Giá trị |
 |---|---|
 | CURRENT PHASE | PHASE 1 — hạ tầng UI dùng chung. Song song: hoàn thiện tầng phân quyền Java |
-| CURRENT TASK | **TASK-040 nhóm 3b** — port hành vi `import_material_catalog` (phần 1 xong ở #52: helper `MaterialSystemCodes`) |
-| LAST COMPLETED | **TASK-040 nhóm 3b phần 1 (#52)** — gom `canonicalMeCode` về **một nguồn sự thật** ở tầng domain, **vá lệch 7/28 đầu vào** với JS; unit test **5/5** · toàn module domain **19/19**. Trước đó: **nhóm 4+5 (#50, #51)** · **nhóm 3 (#49)** |
-| NEXT TASK | TASK-040 nhóm 3b phần 2 (port thân `import_material_catalog`) → nhóm 6 (chờ quyết định) → TASK-034 → render §8.1 → **§8.2** → **§8.3** |
+| CURRENT TASK | **TASK-040 nhóm 6** (chờ quyết định) — trong lúc chờ: mở rộng phạm vi audit sang **bản đồ GHI của JS ↔ Java** (tìm tiếp lớp "Java thiếu trường/cột") |
+| LAST COMPLETED | **TASK-040 nhóm 3b phần 2 (#54)** — port `import_material_catalog`: nhóm tự tạo từ mã, `system=canonicalMeCode`, thông điệp JS; **vá đường ĐỌC thứ NĂM** (`adminMaterials` thiếu 5 trường); probe **17/17**. Trước đó: **nhóm 3b phần 1 (#52)** · **nhóm 4+5 (#50, #51)** |
+| NEXT TASK | Mở rộng audit sang **bản đồ GHI** (`insert`/`update` của JS so với Java theo từng cột) → TASK-034 (gỡ chặn dựng bundle) → render §8.1 → **§8.2** → **§8.3** |
 | BLOCKED ITEMS | **TASK-040 nhóm 6** (lệch cấu trúc: `vntech_license_*` cần port cả hệ license + xác minh chữ ký số — thuộc phần **bảo mật** đã yêu cầu tạm hoãn) · **TASK-034** (`npm run build` không dựng lại được UI: dấu vân tay nguồn lệch + bảng identity có **trigger chặn UPDATE** ⇒ phải viết migration) · **TASK-035 mục 7** · **TASK-036 mục 7** · **TASK-037 mục 5** · **TASK-031** · **TASK-032** · **TASK-029** · **TASK-024** · **dữ liệu `user_module_permissions`** · **số SLA thật (24h/8h)** |
 | USER CONFIRMATION REQUIRED | **YES** — **11 câu hỏi**, ghi ở mục riêng bên dưới |
 | CURRENT BRANCH | `unity` |
@@ -29,8 +29,8 @@
 * **Database**: MySQL 8.0.46; Flyway V1–V16 + drizzle tới `0108`; 121 bảng
 * **API**: 2 route (`app/api/system`, `app/api/files`); Java phục vụ **186 action**; JS tham chiếu 174 · Java **không thiếu action nào** · Java có **thêm 12**
 * **Tầng Java chỉ phục vụ action GHI** — action ĐỌC do SSR/RSC đảm nhiệm. Đây là lý do phép kiểm quyền sống phải dùng payload rỗng.
-* **Infrastructure**: MySQL **3306** · Java API **18081** (PID 19532, background job `pwsh-66`) · Node SSR **8787** · cutover proxy **9000** (người dùng mở `:9000`)
-* **JAR**: đã đóng gói lại **thành công** — `vntech-erp-web-0.1.0-SNAPSHOT.jar` **90.887.539 bytes** (17/09 15:07); **mọi sửa đổi backend ĐÃ có hiệu lực lúc chạy**
+* **Infrastructure**: MySQL **3306** · Java API **18081** (PID 37180, background job `pwsh-68`) · Node SSR **8787** · cutover proxy **9000** (người dùng mở `:9000`)
+* **JAR**: đã đóng gói lại **thành công** — `vntech-erp-web-0.1.0-SNAPSHOT.jar` **90.888.912 bytes** (17/09 15:48); **mọi sửa đổi backend ĐÃ có hiệu lực lúc chạy**
 * **TODO hiện tại**: xem mục CURRENT TODO cuối tệp
 
 ## Authentication
@@ -155,8 +155,9 @@ Mặc định của interface là `return role()` = **mã chuẩn** ⇒ thiếu 
 * [x] **TASK-040 nhóm 3 · `material_norms` + `materials`** — #49: SQL 6 cột + hợp đồng payload + nghiệp vụ + **đường ĐỌC thiếu `source_type`**; probe **25/25**
 * [x] **TASK-040 nhóm 4 · `confirm_installation`** — #50: bỏ cột `status` không tồn tại + **sửa lỗi NGỮ NGHĨA ghi đè → cộng dồn**; SQL chứng minh bằng transaction + ROLLBACK; HTTP **9/9**
 * [x] **TASK-040 nhóm 5 · `settle_team_subcontract`** — #50: bỏ `settlement_id`/`settled_at`; probe HTTP **9/9**
-* [ ] **TASK-040 nhóm 3b phần 2** · port thân `import_material_catalog` (tu tao `material_categories`/`material_subcategories` tu mã trong tệp; `system = canonicalMeCode(category.code)`; `sort_order` 999/9999; mô tả nguyên văn; yêu cầu đủ **Mã + Tên + ĐVT**; thông điệp riêng của JS). **Phần 1 (helper dùng chung) ĐÃ XONG ở #52**
+* [x] **TASK-040 nhóm 3b phần 2** · port thân `import_material_catalog` — #54: nhóm tự tạo từ mã, `system=canonicalMeCode`, thông điệp JS; **vá đường ĐỌC thứ NĂM** (`adminMaterials` thiếu `specification`/`brand`/`minStock`/`requiresCocq`/mã-tên nhóm); probe **17/17**
 * [x] **`canonicalMeCode` gom về một nguồn** — #52: vá **7/28 đầu vào lệch** với JS; unit test **5/5** · domain **19/19**
+* [ ] **Mở rộng audit sang BẢN ĐỒ GHI** — so từng cột mà JS `INSERT`/`UPDATE` với Java cho cùng bảng, để tìm tiếp lớp "Java thiếu trường/cột" (đã gặp **5 lần** dạng "ghi được mà không đọc ra")
 * [!] **TASK-040 nhóm 6 · CHỜ QUYẾT ĐỊNH** — `vntech_license_*` lệch **cấu trúc** (câu hỏi #11)
 * [x] **Cổng mới**: `probe-java-sql-live.mjs` (lược đồ đang chạy) · `probe-schema-drift.mjs` (tệp migration ↔ DB: **0 lệch**) · `probe-increment-drift.mjs` (SET vs cộng dồn, **có đối chứng dương**) · `probe-action-coverage-controller.mjs` (UI ↔ nhánh `case`: **0 thiếu**) · `show-js-lines.mjs`
 * [!] **DỮ LIỆU MỒ CÔI** — `stock_issue_items` 3/5 dòng trỏ tới tổ đội không tồn tại (known issue #21) — **KHÔNG tự sửa dữ liệu**
