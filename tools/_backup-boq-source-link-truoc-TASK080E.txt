@@ -1,0 +1,35 @@
+ghi_chu
+=== boq_source_items TRUOC KHI VÁ LIÊN KẾT NGƯỢC (TASK-080E) ===
+id	project_id	source_order	row_role	contract_material_name	contract_qty	unit_price	project_boq_item_id	active
+BQS_8134b617-933c-408c-aa94-9ea25e4a44b9	PRJ_370df722-907f-495e-9c41-6a2772172550	1	material	Vật tư SC 161459	100.0000	100000.0000	NULL	1
+BQS_199e964e-ab68-46fc-a06a-db8583ad8d00	PRJ_62845d6e-25dc-41b1-8126-5d9be315abd8	1	material	Vật tư SC 012564	100.0000	100000.0000	NULL	1
+BQS_bc43521d-6937-4ccb-80ab-748de7f55483	PRJ_daedb25b-5aee-427b-b9d7-20067002229c	1	material	Vật tư SC 404767	100.0000	100000.0000	NULL	1
+BQS_dca3fab5-b096-4314-ae95-cc54d47b1c31	PRJ_fdbfab20-bf1f-4ad5-8159-7dcc582140c3	1	material	Thép hộp 40x40	500.0000	350000.0000	NULL	1
+BQS_d2028a42-3160-40d3-89ff-080f3d3fc31d	PRJ_fdbfab20-bf1f-4ad5-8159-7dcc582140c3	2	material	Xi măng PCB40	500.0000	98000.0000	NULL	1
+BQS_9e7accd5-1f0b-4385-a3bf-d220673bdd52	PRJ_fdbfab20-bf1f-4ad5-8159-7dcc582140c3	3	material	Sắt phi 12	500.0000	240000.0000	NULL	1
+BQS_0937f9a8-b3ce-4f07-b4b9-e6eed71bb81e	PRJ_fdbfab20-bf1f-4ad5-8159-7dcc582140c3	4	material	Gạch ống 4 lỗ	500.0000	4200.0000	NULL	1
+BQS_10a524bf-b9d2-43f3-ae18-654571b73bc1	PRJ_fdbfab20-bf1f-4ad5-8159-7dcc582140c3	5	material	Cáp điện CV 3x2.5mm	300.0000	18500.0000	NULL	1
+BQS_048dd514-48fb-40c8-86a6-2c93cbfe0343	PRJ_fdbfab20-bf1f-4ad5-8159-7dcc582140c3	6	material	Ống nhựa PVC D60	300.0000	32000.0000	NULL	1
+BQS_ef047f05-269b-467b-baff-f648aced1ae3	PRJ_fdbfab20-bf1f-4ad5-8159-7dcc582140c3	7	material	Gạch men 600x600	300.0000	150000.0000	NULL	1
+BQS_4881dd12-ba5a-42a0-8ecd-755d49d59fdf	PRJ_fdbfab20-bf1f-4ad5-8159-7dcc582140c3	8	material	Sơn chống thấm (18L)	300.0000	890000.0000	NULL	1
+ghi_chu
+=== project_boq_items: lien ket XUOI dang co ===
+id	project_id	line_no	source_item_id	contract_qty	unit_price
+BOQ_0489f84b-594f-4693-b27f-b10af318ca5d	PRJ_370df722-907f-495e-9c41-6a2772172550	1	BQS_8134b617-933c-408c-aa94-9ea25e4a44b9	100.0000	100000.0000
+BOQ_9031350b-07d4-4114-8dab-6cda8a3f6eb1	PRJ_62845d6e-25dc-41b1-8126-5d9be315abd8	1	BQS_199e964e-ab68-46fc-a06a-db8583ad8d00	100.0000	100000.0000
+BOQ_66166c92-691e-4682-a647-89d3d8e674af	PRJ_daedb25b-5aee-427b-b9d7-20067002229c	1	BQS_bc43521d-6937-4ccb-80ab-748de7f55483	100.0000	100000.0000
+BOQ_762fd4c7-f591-4839-8065-9272540df208	PRJ_fdbfab20-bf1f-4ad5-8159-7dcc582140c3	1	BQS_dca3fab5-b096-4314-ae95-cc54d47b1c31	500.0000	350000.0000
+BOQ_36a50087-88f4-49e3-ac5a-fff0631b733d	PRJ_fdbfab20-bf1f-4ad5-8159-7dcc582140c3	2	BQS_d2028a42-3160-40d3-89ff-080f3d3fc31d	500.0000	98000.0000
+BOQ_b6e20666-943e-47e8-b3ca-d09194f51edc	PRJ_fdbfab20-bf1f-4ad5-8159-7dcc582140c3	3	BQS_9e7accd5-1f0b-4385-a3bf-d220673bdd52	500.0000	240000.0000
+BOQ_77be16d0-8a7a-4f8f-92b1-31026070ec5b	PRJ_fdbfab20-bf1f-4ad5-8159-7dcc582140c3	4	BQS_0937f9a8-b3ce-4f07-b4b9-e6eed71bb81e	500.0000	4200.0000
+BOQ_08d9b245-60bc-440e-bfdd-82d7a8cb6229	PRJ_fdbfab20-bf1f-4ad5-8159-7dcc582140c3	5	BQS_10a524bf-b9d2-43f3-ae18-654571b73bc1	300.0000	18500.0000
+BOQ_5a3360b7-0084-43ce-8f88-9aaec0621201	PRJ_fdbfab20-bf1f-4ad5-8159-7dcc582140c3	6	BQS_048dd514-48fb-40c8-86a6-2c93cbfe0343	300.0000	32000.0000
+BOQ_ab82d886-1468-4657-8bf8-c919726e732e	PRJ_fdbfab20-bf1f-4ad5-8159-7dcc582140c3	7	BQS_ef047f05-269b-467b-baff-f648aced1ae3	300.0000	150000.0000
+BOQ_64e585e9-b5d5-45a2-b94d-234a58d7c831	PRJ_fdbfab20-bf1f-4ad5-8159-7dcc582140c3	8	BQS_4881dd12-ba5a-42a0-8ecd-755d49d59fdf	300.0000	890000.0000
+ghi_chu
+=== san luong / thu hoi von TRUOC ===
+bao_cao_san_luong	thu_hoi_von
+2	1
+id	project_id	report_period	planned_value	actual_value	approved_value	status
+PRD_73fe17a6-aa7d-4547-a814-9b6e1dc43acd	PRJ_fdbfab20-bf1f-4ad5-8159-7dcc582140c3	2026-09	1346500000.0000	94220000.0000	94220000.0000	approved
+PRD_1533efab-ef01-4adb-a688-2552ce4a9e9c	PRJ_fdbfab20-bf1f-4ad5-8159-7dcc582140c3	2026-08	1346500000.0000	0.0000	0.0000	submitted

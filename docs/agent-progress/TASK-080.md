@@ -332,5 +332,88 @@ cổng cố ý **KHÔNG** kiểm việc gửi ra ngoài Internet).
 | `tools/_backup-user-email-truoc-TASK080D.txt` | **MỚI** — sao lưu `users` trước khi sửa |
 | `tools/probe-task080c-work-items.mjs` | đo bằng **phiên người nhận + phiên admin** + việc canary |
 
+---
+
+# ĐỢT 2E (18/09/2026) — BÁO CÁO SẢN LƯỢNG + THU HỒI VỐN · PHÁT HIỆN **ĐẾM TRÙNG BOQ**
+
+## E1. Hai bảng tài chính cuối cùng: tạo bằng CHÍNH action của sản phẩm
+
+Chuỗi thật đã chạy: `save_production_report` → `approve_production_report` → `save_capital_recovery`
+(cổng mới `tools/probe-task080e-production.mjs`). **Không nhét tay** vì đây là chứng từ tài chính.
+
+**Nguồn số liệu 100% dữ liệu thật** (cổng tự suy ra từ chính payload, **không hằng số**):
+
+| Chỉ tiêu | Cách tính | Giá trị đo được |
+|---|---|---|
+| Giá trị kế hoạch | Σ (`contract_qty` × `unit_price`) các dòng BOQ **hợp đồng** của dự án | **673.250.000 đ** (8 dòng) |
+| Giá trị thực tế | Σ (khối lượng **đã nhận** theo từng mã vật tư × **đơn giá hợp đồng** của vật tư đó) | **94.220.000 đ** (2 vật tư: `KHAC-VLXD-004` 160/500×350.000 · `KHAC-VLXD-005` 390/500×98.000) |
+
+Vì sao KHÔNG lấy đơn giá từ PO: **cả 13 dòng `purchase_order_items.unit_price` = 0** ⇒
+`purchase_orders.total_value` = 0 với cả 7 PO (xem KP #80). Đơn giá hợp đồng trong BOQ là **dữ liệu thật**
+và là cơ sở kế toán đúng cho "giá trị sản lượng nghiệm thu", nên cổng dùng nó và **ghi rõ công thức**.
+
+**Kết quả (đo trên MySQL):** `production_reports` **2 dòng** — kỳ `2026-09` **approved**
+(KH 673.250.000 · TT 94.220.000 · duyệt 94.220.000) và kỳ `2026-08` **submitted** (cố ý để làm phép
+kiểm luật liên kết) · `capital_recovery_records` **1 dòng** kỳ `2026-09` **approved**, liên kết **đúng**
+báo cáo đã duyệt, giá trị trình = duyệt = 94.220.000, tiền thực thu = 0 (chưa có hóa đơn/thanh toán).
+
+## E2. 🔴 PHÁT HIỆN LỚN: **DỮ LIỆU BOQ BỊ ĐẾM TRÙNG ⇒ GIÁ TRỊ HỢP ĐỒNG TRÊN UI GẤP ĐÔI**
+
+**Triệu chứng:** payload `boqItems` trả **16 dòng** cho dự án trong khi `project_boq_items` chỉ có **8**;
+màn Thanh toán tính Σ qty×price ⇒ hiển thị **1.346.500.000 đ** thay vì **673.250.000 đ** thật.
+
+**Truy vết (không suy đoán):**
+* `BootstrapDataAdapter:554` nối `LEFT JOIN boq_source_items bsi ON bsi.project_boq_item_id=pbi.id`
+  ⇒ sản phẩm dùng **liên kết NGƯỢC** (dòng nguồn → dòng BOQ).
+* Một khối khác **gộp các dòng nguồn CHƯA ÁNH XẠ** (`project_boq_item_id IS NULL`) vào cùng mảng
+  (JS `system-route.mjs:653`, Java cùng quy tắc).
+* Dữ liệu thật: 8 dòng `project_boq_items` **đều có** `source_item_id` trỏ tới dòng nguồn, nhưng cột ngược
+  `boq_source_items.project_boq_item_id` **NULL cả 8** ⇒ dòng nguồn bị coi là "chưa ánh xạ" ⇒ **gộp lần thứ hai**.
+* Sản phẩm **có ghi** cột ngược khi ánh xạ thật (`BoqManagementUseCase:186` — *"đồng bộ lại
+  project_boq_item_id trên source item"*; `setSourceItemActive`). ⇒ **DỮ LIỆU vi phạm bất biến của
+  chính sản phẩm**, không phải lỗi mã.
+
+**Đã vá (dữ liệu):** `tools/task080e-fix-boq-source-link.sql` khôi phục liên kết ngược từ liên kết xuôi
+(1-1, đã kiểm) — **không tạo/xoá bản ghi nào**, chỉ điền cột NULL; sao lưu
+`tools/_backup-boq-source-link-truoc-TASK080E.txt`.
+**Đo lại:** payload còn **8 dòng** · giá trị hợp đồng **673.250.000 đ** (đúng bằng CSDL).
+⚠️ **Con số tiền trên màn Thanh toán vì thế GIẢM MỘT NỬA** so với trước — đây là **sửa cho ĐÚNG**, cần
+người dùng biết khi đối chiếu.
+
+**Cổng được bổ sung phép kiểm chống tái phát:** *"payload boqItems KHÔNG có dòng trùng/rỗng vật tư"* —
+nếu liên kết ngược lại bị NULL, cổng sẽ báo HỎNG ngay.
+
+**Hai báo cáo sản lượng đã tạo trước khi vá cũng được SỬA LẠI bằng chính action thật**
+(`save_production_report` + `productionReportId`, admin được phép mở lại): `2026-09` 1.346.500.000 →
+**673.250.000**; `2026-08` 1.346.500.000 → **673.250.000**.
+
+## E3. ⚠️ KHOẢNG TRỐNG CẦN NGƯỜI DÙNG QUYẾT ĐỊNH: `can_create = 0` cho MỌI phòng
+
+Đo được: `department_module_permissions` của **8/8 đơn vị** có `can_use=1` nhưng **`can_create=0`** ở các
+module nghiệp vụ (`production` · `capital_recovery` · `payments` · `inventory` · `boq` · `approvals` …).
+Trong khi `ActionRbacRegistry` đòi **`canCreate`** cho `save_production_report` · `save_capital_recovery` ·
+`save_contract_payment` ⇒ **Trưởng phòng Dự án bị 403**:
+`{"error":"Tài khoản chưa được quản trị viên cấp đúng quyền cho thao tác này."}`.
+Vì vậy đợt này phải dùng **phiên ADMIN** (người có toàn quyền hợp lệ) để tạo chứng từ — **không tự cấp
+thêm quyền** cho phòng ban (đó là quyết định nghiệp vụ). Ma trận CHUẨN của sản phẩm (`V10` dòng 73-82)
+chỉ định nghĩa `dept_*` (và phần đó **đã đúng**: DA 13 · KH 12 · HCPC 6 · TCKT 6 module có create).
+
+## E4. Kiểm chứng đợt 2E
+
+* Cổng `tools/probe-task080e-production.mjs`: **19/19 ĐẠT · 0 HỎNG · 1 GHI NHẬN**, gồm **3 phép tự kiểm soát**
+  (trùng kỳ báo cáo · duyệt vượt sản lượng thực tế · liên kết báo cáo CHƯA duyệt) + 1 phép chống đếm trùng.
+* **Đo tổng 6 bảng từng rỗng:** `work_items` **6** · `work_item_events` **6** · `task_notifications` **2** ·
+  `email_outbox` **1** · `production_reports` **2** · `capital_recovery_records` **1** ⇒ **4/4 bảng của
+  TASK-080 đợt 2 nay đã có dữ liệu THẬT**.
+
+## E5. Tệp thay đổi (đợt 2E)
+
+| Tệp | Nội dung |
+|---|---|
+| `tools/probe-task080e-production.mjs` | **MỚI** — cổng 19 phép kiểm cho sản lượng + thu hồi vốn |
+| `tools/task080e-fix-boq-source-link.sql` | **MỚI** — vá liên kết ngược BOQ (kèm nghiệm thu) |
+| `tools/_backup-boq-source-link-truoc-TASK080E.txt` | **MỚI** — sao lưu `boq_source_items` + `project_boq_items` + 2 chứng từ tài chính |
+
+
 
 
