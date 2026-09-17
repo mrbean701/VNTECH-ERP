@@ -28,22 +28,61 @@ public class OpsTaskStoreAdapter implements OpsTaskStore {
 
     @Override
     public boolean userIsDepartmentManager(String userId, String departmentCode) {
+        // TASK-080C — PORT NGUỒN DỮ LIỆU từ JS SSOT `scripts/system-route.mjs:247` (quy tắc #9 của dự án:
+        // "khi port từ JS sang Java phải port cả NGUỒN DỮ LIỆU, không chỉ chuỗi so sánh").
+        //   JS: admin -> true; "KH" -> user.role === 'kh_truong'; "DA" -> user.role === 'da_truong'; còn lại false.
+        // Bản Java trước đây so `u.department=?` với MÃ phòng ('KH'/'DA'), nhưng cột `users.department` chứa
+        // TÊN tiếng Việt ('Phòng Kế hoạch'/'Phòng Dự án') ⇒ KHÔNG BAO GIỜ khớp ⇒ mọi action của Trưởng phòng
+        // (create_work_item · update_work_item_status · reassign_work_item) bị chặn với MỌI người dùng thật.
+        String expectedRole = "KH".equals(departmentCode) ? "kh_truong" : "DA".equals(departmentCode) ? "da_truong" : null;
+        if (expectedRole == null) return false;
         Long n = jdbcTemplate.queryForObject("""
                 SELECT COUNT(*) FROM users u
                 LEFT JOIN role_catalog rc ON rc.code=u.role
-                WHERE u.id=? AND (u.role='admin' OR u.department=? OR rc.base_role='admin')""",
-                Long.class, userId, departmentCode);
+                WHERE u.id=? AND (u.role='admin' OR u.role=? OR COALESCE(rc.base_role,u.role)='admin')""",
+                Long.class, userId, expectedRole);
         return n != null && n > 0;
     }
 
     @Override
     public boolean userCanReceiveDepartmentTask(String userId, String departmentCode, String projectId) {
+        // TASK-080C — PORT NGUYÊN quy tắc JS `scripts/system-route.mjs:248-255`:
+        //   · tài khoản phải active;
+        //   · `COALESCE(rc.base_role,u.role)` phải khớp phòng (KH -> 'procurement', DA -> 'project'), trừ admin;
+        //   · nếu có dự án thì phải có dòng `user_project_scopes` (trừ admin).
+        // Bản Java trước đây so `u.department=?` với mã phòng ⇒ luôn sai nguồn dữ liệu (cùng lớp lỗi trên).
+        String expectedBase = "KH".equals(departmentCode) ? "procurement" : "DA".equals(departmentCode) ? "project" : null;
+        if (expectedBase == null) return false;
+        String pid = projectId == null ? "" : projectId;
         Long n = jdbcTemplate.queryForObject("""
                 SELECT COUNT(*) FROM users u
-                WHERE u.id=? AND u.active=1 AND u.department=?
-                  AND (?='' OR EXISTS (SELECT 1 FROM user_project_scopes ups WHERE ups.user_id=u.id AND ups.project_id=?))""",
-                Long.class, userId, departmentCode, projectId == null ? "" : projectId, projectId == null ? "" : projectId);
+                LEFT JOIN role_catalog rc ON rc.code=u.role
+                WHERE u.id=? AND u.active=1
+                  AND (u.role='admin' OR COALESCE(rc.base_role,u.role)=?)
+                  AND (?='' OR u.role='admin'
+                       OR EXISTS (SELECT 1 FROM user_project_scopes ups WHERE ups.user_id=u.id AND ups.project_id=?))""",
+                Long.class, userId, expectedBase, pid, pid);
         return n != null && n > 0;
+    }
+
+    @Override
+    public String defaultDepartmentAssignee(String departmentCode, String projectId) {
+        // TASK-080C — PORT quy tắc chọn người nhận mặc định của JS `scripts/system-route.mjs:256-259`:
+        // ưu tiên nhân sự CÓ phạm vi dự án, rồi tới nhân viên ('kh_nv'/'da_nv'), xếp theo `full_name`.
+        // JS chạy 2 câu (có dự án → không dự án); ở đây gộp thành 1 câu với ORDER BY ưu tiên phạm vi dự án.
+        String base = "KH".equals(departmentCode) ? "procurement" : "DA".equals(departmentCode) ? "project" : null;
+        if (base == null) return null;
+        String pid = projectId == null ? "" : projectId;
+        List<String> ids = jdbcTemplate.queryForList("""
+                SELECT u.id FROM users u
+                LEFT JOIN role_catalog rc ON rc.code=u.role
+                LEFT JOIN user_project_scopes ups ON ups.user_id=u.id AND ups.project_id=?
+                WHERE u.active=1 AND COALESCE(rc.base_role,u.role)=?
+                ORDER BY CASE WHEN u.role IN ('kh_nv','da_nv') THEN 0 ELSE 1 END,
+                         CASE WHEN ?<>'' AND ups.user_id IS NULL THEN 1 ELSE 0 END,
+                         u.full_name
+                LIMIT 1""", String.class, pid, base, pid);
+        return ids.isEmpty() ? null : ids.get(0);
     }
 
     @Override @Transactional

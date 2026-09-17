@@ -1,0 +1,24 @@
+ghi_chu
+=== user_project_scopes TRUOC KHI CAP QUYEN GHI (TASK-080C) ===
+id	username	role	base_role	project_id	permission
+SCOPE_120ef452-b251-4bb5-acaf-b1e6fc995ae4	admin	admin	admin	PRJ_370df722-907f-495e-9c41-6a2772172550	admin
+SCOPE_6fef8788-a30e-4b67-94bb-3f034f01c0d7	admin	admin	admin	PRJ_62845d6e-25dc-41b1-8126-5d9be315abd8	admin
+SCOPE_6349b41a-e59f-4715-ab60-e981bea5ec5e	admin	admin	admin	PRJ_cfba8c1a-2b2e-4119-92d4-0a6438cb4ed8	admin
+SCOPE_2b784e55-418f-4662-a157-1cb8a5df7701	admin	admin	admin	PRJ_daedb25b-5aee-427b-b9d7-20067002229c	admin
+SCOPE_5df55690-5232-408c-9d18-65d2e22141f8	admin	admin	admin	PRJ_fdbfab20-bf1f-4ad5-8159-7dcc582140c3	admin
+SCOPE_f23b5acb-a6df-4c87-a934-6e666a37ef9e	cha.ht	cht	commander	PRJ_fdbfab20-bf1f-4ad5-8159-7dcc582140c3	read
+SCOPE_64044d47-d11f-4f5e-9e23-14a70b49045e	engineer.demo	ksda	engineer	PRJ_cfba8c1a-2b2e-4119-92d4-0a6438cb4ed8	read
+SCOPE_9884d893-573c-4524-9f93-998c5d8ef94d	engineer.demo	ksda	engineer	PRJ_fdbfab20-bf1f-4ad5-8159-7dcc582140c3	read
+SCOPE_97bdd699-f137-4368-8eae-35831d456d93	ksda.demo	ksda	engineer	PRJ_cfba8c1a-2b2e-4119-92d4-0a6438cb4ed8	read
+SCOPE_d5698e5b-842a-4c67-b662-b9233188e6e8	ksda.demo	ksda	engineer	PRJ_fdbfab20-bf1f-4ad5-8159-7dcc582140c3	read
+SCOPE_5ce05d17-1d82-4909-8f99-1fe4dddadc16	kttdemo	accountant	accountant	PRJ_fdbfab20-bf1f-4ad5-8159-7dcc582140c3	read
+SCOPE_22076684-1928-40b6-8793-82c6eacd3c0b	nvdademo	da_nv	project	PRJ_fdbfab20-bf1f-4ad5-8159-7dcc582140c3	read
+SCOPE_0d393faf-5e3b-4157-9be2-1e1bf7c903ac	nvkhdemo	kh_nv	procurement	PRJ_fdbfab20-bf1f-4ad5-8159-7dcc582140c3	read
+SCOPE_11612437-6b4b-4abd-8835-60cc60b70735	thukydemo	thuky	director	PRJ_fdbfab20-bf1f-0000-0000-000000000000	read
+SCOPE_489ad6a6-ec84-4509-ad6a-053130faff16	tkhodemo	thu_kho	warehouse	PRJ_fdbfab20-bf1f-4ad5-8159-7dcc582140c3	read
+SCOPE_83887c9b-0f6a-4de9-829c-c10fdc6b9758	trdademo	da_truong	project	PRJ_fdbfab20-bf1f-4ad5-8159-7dcc582140c3	read
+SCOPE_e015febf-3599-4fbc-8e04-bd7d1a3f95f2	trinhtrench	kh_truong	procurement	PRJ_fdbfab20-bf1f-4ad5-8159-7dcc582140c3	read
+ghi_chu
+=== work_items / task_notifications TRUOC ===
+work_items	task_notifications
+0	0

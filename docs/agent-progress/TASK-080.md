@@ -148,3 +148,117 @@ danh sách câu hỏi cho người dùng.
 | `tools/probe-task082-realdata.mjs` | mở rộng 18 → **21** phép kiểm |
 | `docs/agent-progress/TASK-080.md` | mục này |
 
+---
+
+# ĐỢT 2C (18/09/2026) — BẢNG `work_items` RỖNG: ba lỗi THẬT trong mô-đun công việc
+
+Mục tiêu: làm cho bảng `work_items` (và màn Trung tâm công việc) có **dữ liệu thật**.
+Nguyên tắc: **KHÔNG nhét tay** — chính sản phẩm đã chặn điều đó (`OpsTaskManagementUseCase:64-66`:
+*"Task từ ERP phải được hệ thống tự sinh"*). Vì vậy em dùng ĐÚNG đường thật: **Trưởng phòng
+gọi action `create_work_item`** qua cổng 9000. Cổng kiểm chứng mới: `tools/probe-task080c-work-items.mjs`.
+
+Đường đi đó lộ ra **3 lỗi thật**, mỗi lỗi đều bị chặn cứng nên phải sửa mới có dữ liệu:
+
+## C1. Luật "Trưởng phòng" so SAI NGUỒN DỮ LIỆU (vi phạm quy tắc #9)
+
+| | JS SSOT (`scripts/system-route.mjs:247`) | Java (trước) |
+|---|---|---|
+| Nguồn | `user.role` | `u.department` **so với mã phòng** |
+| KH | `role === 'kh_truong'` | `u.department = 'KH'` |
+| DA | `role === 'da_truong'` | `u.department = 'DA'` |
+
+Cột `users.department` trong MySQL chứa **TÊN tiếng Việt** (`Phòng Dự án`, `Phòng Kế hoạch`) nên
+`u.department='DA'` **không bao giờ đúng** ⇒ **mọi** người dùng thật bị chặn:
+`{"ok":false,"error":"Chỉ Trưởng phòng hoặc Quản trị viên được giao việc thủ công."}`
+(Trưởng phòng Dự án `trdademo` đã bị chặn đúng như vậy khi đo.)
+Ảnh hưởng cả 3 action: `create_work_item` · `update_work_item_status` (xác nhận Hoàn thành) · `reassign_work_item`.
+
+## C2. Luật "người nhận việc" cũng so SAI NGUỒN + thiếu nhánh mặc định
+
+* Java (trước): `u.department = 'DA'` ⇒ luôn sai nguồn (cùng lớp lỗi C1).
+* JS `system-route.mjs:248-255`: phải **active** + `COALESCE(rc.base_role,u.role)` khớp phòng
+  (KH→`procurement`, DA→`project`) + nếu có dự án thì phải có `user_project_scopes`.
+* Java **không hề kiểm người nhận** khi tạo việc, và khi payload không có `assignedTo` thì ghi thẳng
+  `""` ⇒ **công việc không có người nhận** (dữ liệu vô nghĩa). JS có `defaultDepartmentAssignee`
+  (`:256-259`) — Java **chưa port**.
+
+## C3. ⚠️ CHƯA PORT: giao việc xong KHÔNG có thông báo, KHÔNG có email, KHÔNG có sự kiện ASSIGNED
+
+JS `createDepartmentTask` (`system-route.mjs:273-277`) ghi **một lượt 3 việc**:
+`work_items` + `work_item_events` (event `ASSIGNED`) rồi `queueTaskNotice` ⇒ `task_notifications`
++ (nếu người nhận có email) `email_outbox`.
+
+Java `OpsTaskStoreAdapter.insertWorkItem` **chỉ ghi `work_items`**. Đo sau khi giao 3 việc thật:
+`work_item_events=2` (chỉ có `STATUS` + `REASSIGNED` do 2 action khác sinh, **0 event `ASSIGNED`**) ·
+`task_notifications=0` · `email_outbox=0` — **trong khi chính thông điệp trả về của action vẫn nói
+"…và đã tạo thông báo cho nhân viên."** ⇒ Đây là **khoảng trống lớn nhất của mô-đun** và là lý do
+trực tiếp khiến 2 bảng `task_notifications`/`email_outbox` rỗng. **CHƯA sửa trong đợt này** —
+đã ghi thành việc kế tiếp có chỉ dẫn port cụ thể (xem `MASTER_STATUS` KP #78).
+
+## C4. Đã sửa (đợt 2C)
+
+| Tệp | Nội dung |
+|---|---|
+| `OpsTaskStoreAdapter.userIsDepartmentManager` | port đúng nguồn JS: `u.role IN ('kh_truong'/'da_truong')` + admin |
+| `OpsTaskStoreAdapter.userCanReceiveDepartmentTask` | port đúng nguồn JS: active + `base_role` khớp phòng + phạm vi dự án |
+| `OpsTaskStoreAdapter.defaultDepartmentAssignee` (**MỚI**) | port `defaultDepartmentAssignee` (`:256-259`): ưu tiên nhân viên (`kh_nv`/`da_nv`) và người có phạm vi dự án |
+| `OpsTaskStore` (interface) | thêm `defaultDepartmentAssignee(...)` |
+| `OpsTaskManagementUseCase.createWorkItem` | chọn/kiểm người nhận đúng luật JS, thiếu thì **báo lỗi** thay vì ghi rỗng |
+
+🔴 **LỖI CỦA CHÍNH TÔI (ghi lại để không lặp):** lượt đầu em dùng `nvl(...)` rồi gọi `.isEmpty()` ⇒
+**HTTP 500 NullPointerException** (`OpsTaskManagementUseCase:82`), vì trong lớp này
+`nvl` (dòng 628) trả **`null`** khi rỗng chứ không phải `""`. Đã sửa sang `trim(...)` và ghi chú ngay
+tại chỗ sửa. **Thứ tự phát hiện:** cổng chạy thật → log Java (job `pwsh-46`) → đọc đúng dòng 628 → sửa.
+
+🔴 **LỖI CỦA CHÍNH TÔI (cổng kiểm chứng tự vô hiệu):** `staffDirectory` **không có khoá `username`**
+(chỉ có `id · employeeCode · fullName · email · role · …`) nhưng em map theo `username` ⇒ map RỖNG ⇒
+mọi `assignedTo` gửi đi là `""` ⇒ hệ thống rơi vào người nhận MẶC ĐỊNH, và phép "tự kiểm soát" xanh
+mà **không hề kiểm gì**. Đã sửa: map theo `fullName` + `employeeCode` **và bắt buộc khẳng định tra
+được id** trước khi dùng. **Đây là lý do cổng phải có "tự kiểm soát tra được id"** — nếu không,
+cổng sẽ báo xanh sai.
+
+## C5. Dữ liệu THẬT đã tạo (qua chính action của sản phẩm)
+
+| Mã việc | Trạng thái | Người nhận | Hạn | Ưu tiên |
+|---|---|---|---|---|
+| `CV-DA-260917-3436` | NEW | `nvdademo` (Nhân viên Dự án E) | 25/09/2026 | high |
+| `CV-DA-260917-4738` | NEW | `nvdademo` | 28/09/2026 | normal |
+| `CV-DA-260917-1203` | NEW | `trdademo` (Trưởng phòng Dự án C) | 30/09/2026 | normal |
+| `CV-DA-260917-6847` | CANCELLED | (dấu vết lượt chạy lỗi — đã huỷ bằng action thật) | — | — |
+
+Cả 3 việc gắn **đúng dự án thật** `PRJ-DEMO-01` và **đúng người nhận thật** của phòng Dự án.
+
+## C6. Thêm một lỗ hổng dữ liệu: quyền GHI theo dự án
+
+Trong lúc chạy thật, action trả `{"error":"Không có quyền tại dự án."}`. Truy vết:
+`user_project_scopes.permission` của **MỌI tài khoản ngoài admin** đều là **`read`** (kể cả hai
+Trưởng phòng), trong khi luật ghi ở **cả hai đường** đều đòi `{write, approve, admin}`
+(JS `:221` ↔ Java `AccessScopeService:40/70`) ⇒ **mọi thao tác ghi có phạm vi dự án đều bị chặn**.
+Đã rà toàn bộ mã: **không nơi nào phân biệt `approve` với `write`** cho phạm vi dự án ⇒ cấp mức
+**`write` (tối thiểu đủ dùng)** cho các vai trò nghiệp vụ (trưởng phòng · nhân viên · kỹ sư · chỉ huy
+trưởng · thủ kho); **giữ `read`** cho kế toán và thư ký/BGĐ. Tệp:
+`tools/task080c-seed-project-write-scope.sql` + sao lưu `tools/_backup-project-scope-truoc-TASK080C.txt`.
+⚠️ **Cần người dùng xác nhận lại ánh xạ này** (có thể hoàn tác từ sao lưu).
+
+## C7. Kiểm chứng đợt 2C
+
+* Cổng `tools/probe-task080c-work-items.mjs`: **24/24 ĐẠT · 0 HỎNG · 2 KHOẢNG TRỐNG ĐÃ GHI NHẬN**
+  (qua cổng 9000), gồm **4 phép tự kiểm soát**: payload có `sourceId` phải bị từ chối · thiếu nội dung
+  phải bị từ chối · phòng ngoài KH/DA phải bị từ chối · **giao cho người khác phòng phải bị từ chối**
+  (dùng `ksda.demo` — có phạm vi dự án nhưng `base_role=engineer`, chứng minh luật `base_role` đã port đúng).
+* `mvn -DskipTests package` **BUILD SUCCESS** (54 tệp application + 37 tệp infrastructure biên dịch lại).
+* Dữ liệu đo trên MySQL: `work_items` 0 → **4** · `work_item_events` **2** (STATUS + REASSIGNED) ·
+  `task_notifications` **0** và `email_outbox` **0** = **bằng chứng cho khoảng trống C3**.
+
+## C8. Tệp thay đổi (đợt 2C)
+
+| Tệp | Nội dung |
+|---|---|
+| `java-backend/.../OpsTaskStoreAdapter.java` | 2 luật port lại theo JS + thêm `defaultDepartmentAssignee` |
+| `java-backend/.../OpsTaskStore.java` | thêm 1 phương thức cổng |
+| `java-backend/.../OpsTaskManagementUseCase.java` | chọn/kiểm người nhận theo JS; bài học `nvl` trả null |
+| `tools/probe-task080c-work-items.mjs` | **MỚI** — cổng 24 phép kiểm + 2 khoảng trống ghi nhận |
+| `tools/task080c-seed-project-write-scope.sql` | **MỚI** — cấp quyền ghi theo dự án (kèm vì-sao + nghiệm thu) |
+| `tools/_backup-project-scope-truoc-TASK080C.txt` | **MỚI** — sao lưu `user_project_scopes` trước khi sửa |
+
+

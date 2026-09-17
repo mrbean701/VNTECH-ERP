@@ -73,6 +73,24 @@ public final class OpsTaskManagementUseCase {
         String title = trim(payload.get("title"));
         if (title.isEmpty()) throw Api("Cần nhập nội dung công việc.");
         String projectId = nvl(payload.get("projectId"));
+        // TASK-080C — PORT nhánh chọn người nhận của JS `system-route.mjs:270`:
+        //   assignedTo ? userCanReceiveDepartmentTask(...) : defaultDepartmentAssignee(...)
+        //   → không có người hợp lệ thì BÁO LỖI (JS: "Chưa có nhân sự … phù hợp/phạm vi dự án để giao việc.").
+        // Trước đây Java không kiểm gì: ghi thẳng `assignedTo` (kể cả rỗng) ⇒ công việc không có người nhận,
+        // hoặc giao cho người NGOÀI phòng/ngoài phạm vi dự án.
+        // ⚠️ Dùng `trim(...)` KHÔNG dùng `nvl(...)`: trong lớp này `nvl` trả về **null** khi rỗng
+        // (khai báo dòng 628: `String s = trim(o); return s.isEmpty() ? null : s;`) — gọi `.isEmpty()`
+        // trên kết quả `nvl` sẽ nổ NullPointerException (đúng lỗi HTTP 500 đã gặp khi chạy thử 18/09).
+        String assignee = trim(payload.get("assignedTo"));
+        if (!assignee.isEmpty()) {
+            if (!store.userCanReceiveDepartmentTask(assignee, department, projectId)) assignee = "";
+        } else {
+            assignee = trim(store.defaultDepartmentAssignee(department, projectId));
+        }
+        if (assignee.isEmpty()) {
+            throw Api("Chưa có nhân sự " + ("KH".equals(department) ? "Phòng Kế hoạch" : "Phòng Dự án")
+                    + " phù hợp/phạm vi dự án để giao việc.");
+        }
         String dueAt = nvl(payload.get("dueAt"));
         Instant now = Instant.now();
         long seq = java.util.concurrent.ThreadLocalRandom.current().nextLong(100000, 999999);
@@ -85,7 +103,7 @@ public final class OpsTaskManagementUseCase {
         task.put("description", nvl(payload.get("description")));
         task.put("projectId", projectId);
         task.put("workStep", "MANUAL");
-        task.put("assignedTo", nvl(payload.get("assignedTo")));
+        task.put("assignedTo", assignee);
         task.put("assignedBy", principal.userId());
         task.put("dueAt", dueAt);
         task.put("priority", blankDefault(trim(payload.get("priority")), "normal"));

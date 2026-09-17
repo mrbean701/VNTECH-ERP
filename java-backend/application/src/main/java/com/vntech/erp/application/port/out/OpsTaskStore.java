@@ -10,6 +10,13 @@ public interface OpsTaskStore {
 
     boolean userIsDepartmentManager(String userId, String departmentCode);
     boolean userCanReceiveDepartmentTask(String userId, String departmentCode, String projectId);
+    /**
+     * Người nhận việc MẶC ĐỊNH của phòng khi người giao không chọn ai — JS `system-route.mjs:256-259`
+     * ({@code defaultDepartmentAssignee}). Trả {@code null} nếu phòng không có nhân sự phù hợp.
+     * <p><b>TASK-080C:</b> thêm để port đủ nhánh "không truyền assignedTo" của JS; trước đây Java ghi
+     * thẳng {@code assignedTo=""} ⇒ tạo công việc KHÔNG có người nhận (dữ liệu vô nghĩa).
+     */
+    String defaultDepartmentAssignee(String departmentCode, String projectId);
     String insertWorkItem(Map<String, Object> task, Instant now);
     Optional<Map<String, Object>> findWorkItem(String id);
     void updateWorkItemProgress(String id, int progress, String currentStatus, Instant now);
