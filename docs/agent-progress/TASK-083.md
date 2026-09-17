@@ -1,8 +1,9 @@
 # TASK-083 — `U-15` ĐỢT 2: CHUYỂN BẢNG PHẲNG SANG `DataTable` (đợt 1/… — 1 bảng xong)
 
-- **Mã:** TASK-083 · **Ngày:** 18/09/2026 · **Commit:** `#151`
-- **Định danh nguồn:** head `drizzle/0116_phase1_ui_datatable2_identity.sql` ⇒ **`VNTECH-FP-D0B3B43ED5051C47`**
-- **Trạng thái:** đang làm — **1/20** bảng phẳng đã chuyển; **70 bảng còn lại KHÔNG chuyển được** (xem mục 3)
+- **Mã:** TASK-083 · **Ngày:** 18/09/2026 · **Commit:** `#151` (bảng 1) + `#153` (bảng 2–4)
+- **Định danh nguồn:** head `drizzle/0117_phase1_ui_datatable3_identity.sql` ⇒ **`VNTECH-FP-624193C1D2EB2FE6`**
+- **Trạng thái:** đang làm — **4 bảng phẳng đã chuyển** (`DataTable` **13 → 17** · bảng tự viết **87 → 83**);
+  **9 bảng "cần cân nhắc"** còn lại + **~76 bảng KHÔNG chuyển được** (xem mục 3)
 
 ## 1. Vì sao có task này
 
@@ -14,9 +15,12 @@ Số đo bằng `tools/probe-ui-adoption.mjs`: **bảng tự viết 87 chỗ** �
 
 | # | Màn / hàm | Bảng | Ghi chú |
 |---|---|---|---|
-| 1 | `TeamManagement` | "thành viên đã RỜI tổ đội" (`past`) | bảng phẳng, 6 cột, có phép tính `days` trong `render` (giữ nguyên công thức) |
+| 1 | `TeamManagement` | "thành viên đã RỜI tổ đội" (`past`) | 6 cột, có phép tính `days` trong `render` (giữ nguyên công thức) |
+| 2 | `ProjectManagement` | "Tổ đội của dự án" (`teams`) | 6 cột; `emptyText` **nguyên văn** từ khối `<Empty>` cũ: *"Dự án chưa có tổ đội."* |
+| 3 | `TeamManagement` | "thành viên đang hoạt động" (`activeMembers`) | 8 cột, có nút `Hồ sơ ›`; `emptyText` **nguyên văn** từ `<Empty>` cũ |
+| 4 | `TeamManagement` | "tồn kho theo vật tư" (`bal`) | 4 cột; `rowKey` dùng `materialId \|\| index` như khoá cũ |
 
-**Đo lại sau khi chuyển:** `DataTable` **13 → 14 lần** · bảng tự viết **87 → 86 chỗ**.
+**Đo lại sau khi chuyển:** `DataTable` **13 → 17 lần** · bảng tự viết **87 → 83 chỗ** · trạng thái rỗng tự viết **88 → 85 chỗ**.
 
 **Kiểm chứng:** `tsc --noEmit` **EXIT 0** · eslint **0 error** (73 warning, đều có trước) ·
 `master-baseline-gate` **ĐẠT** (`!important=4950` · `css=400643B`) · `npm run build` **EXIT 0**.

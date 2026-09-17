@@ -972,19 +972,16 @@ function TeamManagement({ data, open }: { data: AppData; open: (name: string, ro
       {tab === 1 && <div className="stack">
         <section className="card">
           <CardHead title="Thành viên đang hoạt động" note="Sắp xếp theo NGÀY THAM GIA · bấm “Hồ sơ” để xem dự án / phòng ban / tổ đội của người đó"/>
-          <div className="table-wrap"><table className="baseline-table">
-            <thead><tr><th>Họ tên</th><th>Mã NV</th><th>Chức vụ</th><th>Phòng ban</th><th>Vai trò trong tổ đội</th><th>Ngày tham gia</th><th>Ngày rời</th><th></th></tr></thead>
-            <tbody>
-              {[...activeMembers].sort((a, b) => String(a.joinedAt || "").localeCompare(String(b.joinedAt || ""))).map((m) => <tr key={String(m.id)}>
-                <td><strong>{m.fullName || "—"}</strong></td><td>{m.employeeCode || "—"}</td>
-                <td>{m.roleName || m.role || "—"}</td><td>{m.department || "—"}</td>
-                <td>{m.roleInTeam || "Thành viên"}</td>
-                <td>{m.joinedAt ? date(m.joinedAt) : "—"}</td><td>—</td>
-                <td><button type="button" className="export-mini" onClick={() => open("userProfile", { ...m, id: m.userId })}>Hồ sơ ›</button></td>
-              </tr>)}
-              {!activeMembers.length && <tr><td colSpan={8}><Empty text="Tổ đội chưa ghi nhận thành viên. Bảng team_members đã sẵn sàng (migration V14) — cần bổ sung dữ liệu."/></td></tr>}
-            </tbody>
-          </table></div>
+          <DataTable rows={[...activeMembers].sort((a, b) => String(a.joinedAt || "").localeCompare(String(b.joinedAt || "")))} rowKey={(m) => String(m.id)} emptyText="Tổ đội chưa ghi nhận thành viên. Bảng team_members đã sẵn sàng (migration V14) — cần bổ sung dữ liệu." columns={[
+            { key: "c1", header: "Họ tên", render: (m) => <strong>{m.fullName || "—"}</strong> },
+            { key: "c2", header: "Mã NV", render: (m) => m.employeeCode || "—" },
+            { key: "c3", header: "Chức vụ", render: (m) => m.roleName || m.role || "—" },
+            { key: "c4", header: "Phòng ban", render: (m) => m.department || "—" },
+            { key: "c5", header: "Vai trò trong tổ đội", render: (m) => m.roleInTeam || "Thành viên" },
+            { key: "c6", header: "Ngày tham gia", render: (m) => (m.joinedAt ? date(m.joinedAt) : "—") },
+            { key: "c7", header: "Ngày rời", render: () => "—" },
+            { key: "c8", header: "", render: (m) => <button type="button" className="export-mini" onClick={() => open("userProfile", { ...m, id: m.userId })}>Hồ sơ ›</button> },
+          ]} />
         </section>
         {past.length > 0 && <section className="card">
           <CardHead title="Thành viên đã rời tổ đội" note="Lưu vết thời gian tham gia và rời đi"/>
@@ -1237,24 +1234,14 @@ function ProjectManagement({ data, project, onProject, open, action }: { data: A
 
     {tab === 2 && <section className="card">
       <CardHead title="Tổ đội thuộc dự án" note="Mỗi tổ đội thuộc đúng một dự án và có kho riêng"/>
-      <div className="table-wrap"><table className="baseline-table">
-        <thead><tr><th>Mã tổ đội</th><th>Tên tổ đội</th><th>Hạng mục</th><th>Kho của tổ đội</th><th>Nhân sự</th><th>Trạng thái</th></tr></thead>
-        <tbody>
-          {teams.map((t) => {
-            const wh = (data.warehouses || []).find((w) => String(w.id) === String(t.warehouseId));
-            const members = (data.teamMembers || []).filter((m) => String(m.teamId) === String(t.id) && Number(m.active ?? 1) === 1);
-            return <tr key={String(t.id)}>
-              <td><strong className="code">{t.code}</strong></td>
-              <td>{t.name}</td>
-              <td>{t.trade || "—"}</td>
-              <td>{wh ? `${wh.code} · ${wh.name}` : "—"}</td>
-              <td>{members.length ? `${members.length} người` : <span className="muted">Chưa ghi nhận thành viên</span>}</td>
-              <td><StatusBadge value={t.active === 0 ? "Đã ngừng" : "Đang dùng"}/></td>
-            </tr>;
-          })}
-          {!teams.length && <tr><td colSpan={6}><Empty text="Dự án chưa có tổ đội."/></td></tr>}
-        </tbody>
-      </table></div>
+      <DataTable rows={teams} rowKey={(t) => String(t.id)} emptyText="Dự án chưa có tổ đội." columns={[
+        { key: "c1", header: "Mã tổ đội", render: (t) => <strong className="code">{t.code}</strong> },
+        { key: "c2", header: "Tên tổ đội", render: (t) => t.name },
+        { key: "c3", header: "Hạng mục", render: (t) => t.trade || "—" },
+        { key: "c4", header: "Kho của tổ đội", render: (t) => { const wh = (data.warehouses || []).find((w) => String(w.id) === String(t.warehouseId)); return wh ? `${wh.code} · ${wh.name}` : "—"; } },
+        { key: "c5", header: "Nhân sự", render: (t) => { const members = (data.teamMembers || []).filter((m) => String(m.teamId) === String(t.id) && Number(m.active ?? 1) === 1); return members.length ? `${members.length} người` : <span className="muted">Chưa ghi nhận thành viên</span>; } },
+        { key: "c6", header: "Trạng thái", render: (t) => <StatusBadge value={t.active === 0 ? "Đã ngừng" : "Đang dùng"} /> },
+      ]} />
     </section>}
 
     {tab === 3 && <div className="stack">
@@ -1307,18 +1294,12 @@ function ProjectManagement({ data, project, onProject, open, action }: { data: A
             <Kpi icon="CX" label="Chờ xuất" value={String(d.pendingOut.length)} note="Phiếu cấp phát tổ đội" tone="amber"/>
             <Kpi icon="TK" label="Thủ kho" value={keeper ? keeper.fullName : "Chưa phân công"} note={keeper ? (keeper.roleName || keeper.role || "") : "Cần gán người phụ trách"} tone={keeper ? "blue" : "red"}/>
           </div>
-          <div className="table-wrap"><table className="baseline-table">
-            <thead><tr><th>Mã vật tư</th><th>Tên vật tư</th><th>ĐVT</th><th>Tồn kho</th></tr></thead>
-            <tbody>
-              {bal.filter((r) => Number(r.balance || 0) !== 0).map((r, i) => <tr key={`${r.materialId || i}`}>
-                <td><strong className="code">{r.materialCode || r.materialId}</strong></td>
-                <td>{r.materialName || "—"}</td>
-                <td>{r.unit || "—"}</td>
-                <td><strong>{format.format(Number(r.balance || 0))}</strong></td>
-              </tr>)}
-              {!bal.filter((r) => Number(r.balance || 0) !== 0).length && <tr><td colSpan={4}><Empty text="Kho chưa có tồn."/></td></tr>}
-            </tbody>
-          </table></div>
+          <DataTable rows={bal.filter((r) => Number(r.balance || 0) !== 0)} rowKey={(r, i) => String(r.materialId || i)} emptyText="Kho chưa có tồn." columns={[
+            { key: "c1", header: "Mã vật tư", render: (r) => <strong className="code">{r.materialCode || r.materialId}</strong> },
+            { key: "c2", header: "Tên vật tư", render: (r) => r.materialName || "—" },
+            { key: "c3", header: "ĐVT", render: (r) => r.unit || "—" },
+            { key: "c4", header: "Tồn kho", render: (r) => <strong>{format.format(Number(r.balance || 0))}</strong> },
+          ]} />
           {docs.map((group) => <div key={group.label}>
             <h3>{group.label} <small>({group.rows.length})</small></h3>
             <DataTable rows={group.rows} rowKey={(r, i) => String(String(r.id || i))} columns={[{ key: "c1", header: "Số chứng từ", render: (r) => <><strong className="code">{r[group.noKey] || r.id}</strong></> }, { key: "c2", header: "Trạng thái", render: (r) => <><StatusBadge value={String(r[group.statusKey] || "—")}/></> }, { key: "c3", header: "Đối tượng", render: (r) => <>{r.supplierName || r.requestedBy || r.teamName || "—"}</> }, { key: "c4", header: "Thời điểm", render: (r) => <>{date(r.receivedAt || r.requestedAt || r.createdAt)}</> }]} emptyText="Không có chứng từ." />
