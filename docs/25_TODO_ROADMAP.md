@@ -81,7 +81,7 @@
 | `U-04` | UI | `PermissionGuard` (ẩn/hiện theo quyền; backend vẫn kiểm) | P1 | S-07 | - | - | REUSE | CHECK | KHUNG-XONG / AP-DUNG 0 |
 | `U-05` | UI | `StatusBadge` thống nhất toàn hệ | P1 | — | - | - | REUSE | - | DONE / AP-DUNG 90 |
 | `U-06` | UI | `ApprovalTimeline`: số bước · người duyệt · phòng ban · thời gian · trạng thái · ý kiến | P1 | — | - | - | NEW | - | DONE / AP-DUNG 1 |
-| `U-07` | UI | `ActivityTimeline` dùng cho mọi lịch sử | P1 | — | - | - | NEW | - | KHUNG-XONG / AP-DUNG 0 |
+| `U-07` | UI | `ActivityTimeline` dùng cho mọi lịch sử | P1 | — | - | - | NEW | - | DONE / AP-DUNG 2 |
 | `U-08` | UI | Kiểm responsive 4 kích thước cho mọi màn sau khi chuẩn hoá | P1 | U-02,U-03 | - | - | FIX | - | DONE |
 | `U-09` | UI | Chuyển các danh sách sang khuôn Toolbar chuẩn (§5) | P1 | U-03 | - | - | FIX | - | DANG-LAM 9/32 |
 | `U-10` | UI | Sửa modal vượt viewport | P1 | — | - | - | FIX | - | TODO |
@@ -94,7 +94,7 @@
 | `U-14` | UI | **ÁP DỤNG** `EntityDetailModal` — dùng thật **0** lần; còn **4** chỗ tự viết .overlay | P1 | U-01 | - | - | REUSE | CHECK | TODO |
 | `U-15` | UI | **ÁP DỤNG** `DataTable` + `StatusBadge` — DataTable dùng thật **0** lần, còn **100** bảng tự viết + **100** trạng thái rỗng tự viết; StatusBadge đã dùng **90** chỗ (TASK-020 đã chuyển 88 `<Pill>` → 0; đo lại bằng `probe-ui-adoption.mjs`) | P1 | U-02,U-05 | - | - | REUSE | - | TODO |
 | `U-16` | UI | **ÁP DỤNG** `PermissionGuard` — dùng thật **0** lần; còn **50** chỗ điều kiện quyền rải rác | P1 | U-04 | - | - | REUSE | CHECK | TODO |
-| `U-17` | UI | **ÁP DỤNG** `ApprovalTimeline`/`ActivityTimeline` — dùng thật **1** lần (`ApprovalTimeline`; `ActivityTimeline` **0**); còn **2** chỗ tự viết dải | P1 | U-06,U-07 | - | - | REUSE | - | TODO |
+| `U-17` | UI | **ÁP DỤNG** `ApprovalTimeline`/`ActivityTimeline` — dùng thật **3** lần (`ApprovalTimeline` 1 · `ActivityTimeline` **2**); còn **0** chỗ tự viết dải | P1 | U-06,U-07 | - | - | REUSE | - | DONE |
 
 ---
 
