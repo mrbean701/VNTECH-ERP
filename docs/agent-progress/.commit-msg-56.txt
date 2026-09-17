@@ -1,0 +1,54 @@
+#56 TASK-041: cong cu BAN DO GHI (JS<->Java) phat hien save_approval_stage lech hop dong payload + 5 truong + 3 quy tac
+
+=== VI SAO VIET CONG CU NAY ===
+TASK-040 da gap NAM lan dang loi "ghi duoc ma DOC khong ra" va nhieu lan "Java ghi thieu cot". Cac cong cu
+hien co bat duoc: cot KHONG TON TAI (luoc do), ghi sai CACH (cong don), action thieu `case`. Con mot lop
+chua co cong: Java ghi THIEU cot so voi JS (am tham mat du lieu) va Java ghi THUA cot ma JS khong ghi
+(dau hieu port tu them, nhu materials.is_component/created_by da gap o nho 3).
+
+tools/probe-write-map-drift.mjs: trich `INSERT INTO <bang> (<cot>)` va `UPDATE <bang> SET <cot>=...` o CA HAI
+phia, gom theo bang, in hieu doi xung. Bo qua cau lenh DONG (co ${} o JS, %s/${}/ghep chuoi o Java).
+
+KET QUA:
+  JS  : 108 bang co cau lenh GHI tinh - 1374 cap (bang,cot)
+  Java: 108 bang - 1371 cap (bo qua 46 cau lenh dong)
+  => 17 bang co lech cot
+DOI CHUNG DUONG (bat buoc): cong cu phai bat duoc `vntech_license_installations` - ca lech DA BIET o nho 6.
+No bat dung, nen phep do co gia tri. Khong co buoc nay thi "17 bang lech" khong chung minh duoc gi.
+
+=== UNG VIEN DANG NGHI NHAT VE NGHIEP VU: approval_stage_catalog ===
+JS GHI ma Java KHONG ghi: approval_mode, auto_approve_on_submit, sla_hours, sort_order
+Truy nguyen thi KHONG chi thieu cot - Java lech ca HOP DONG PAYLOAD lan QUY TAC:
+
+1. UI (app/page.tsx:3830-3834 ApprovalStageModal) gui: stageNo, sortOrder (hidden), name, description,
+   slaHours, approvalMode, autoApproveOnSubmit, allowedRoleCodes, stageId. UI KHONG GUI `code`.
+   Java `OpsTaskManagementUseCase:323` BAT BUOC `code` => action LUON tra HTTP 400 truoc khi cham SQL.
+   CUNG LOP LOI VOI NHOM 3 (dinh muc vat tu): Java doi mot truong ma UI khong co.
+2. Java BO IM LANG 5 truong: description, sla_hours, approval_mode, auto_approve_on_submit, sort_order.
+   `OpsTaskStoreAdapter:280` chi ghi name/stage_no/allowed_role_codes. INSERT con truyen `null` cung cho
+   description (dong 273).
+   => HAU QUA NGHIEP VU: admin sua SLA cua buoc duyet, he thong bao thanh cong nhung SLA KHONG DOI.
+      SLA la thu ma worker SLA dung de danh dau qua han.
+3. Java TU THEM quy tac khong co trong JS: `stageNo < 100` => "Buoc duyet he thong khong ton tai;
+   chi duoc tao buoc HTML (>=100)." JS cho phep stageNo >= 1.
+4. BA QUY TAC CUA JS KHONG DUOC THI HANH:
+   - chi MOT buoc duoc tu duyet: `UPDATE approval_stage_catalog SET auto_approve_on_submit=0 WHERE id<>?`
+   - CHAN doi `stage_no` khi buoc da co lich su duyet ("Buoc da co lich su phe duyet nen khong the doi so buoc...")
+   - set_approval_stage_status: CHAN tat buoc dang co ho so cho ("Buoc nay dang co ho so cho xu ly...")
+     va KHONG cho tat buoc CUOI CUNG ("He thong phai co it nhat mot buoc phe duyet dang hoat dong.")
+   => Hai chot cuoi chinh la HANG RAO cho rui ro "ho so ket" ma TASK-035 ghi la LIKELY.
+5. JS con dong bo ten buoc sang `approvals.department` cho ho so dang cho + ghi audit; Java khong.
+
+=== VI SAO CHUA SUA NGAY ===
+Day khong phai mot cau lenh SQL sai cot. Sua dung nghia la: doi hop dong payload; them ~4 cau lenh phu
+(clearAutoApprove x2, propagate department, countApprovalsByStage); port dung 3 quy tac chan + nguyen van
+4 thong diep; them ~7 phuong thuc port; sua 2 use-case; roi build + probe LUC CHAY CO TAO/SUA BUOC DUYET THAT
+=> phai co kich ban dung-kiem-don can than. Gop tat ca vao luot dang lam se la mot thay doi lon KHONG duoc
+kiem chung day du (trai GOAL muc 11). Da dang ky TASK-041 voi ke hoach 5 buoc o docs/agent-progress/TASK-041.md.
+
+BUILD/KIEM CHUNG TRONG LUOT NAY
+  Khong doi ma nguon Java nao (chi them cong cu + tai lieu). API van chay jar 90.888.912 bytes (PID 37180),
+  log 0 ERROR, regression 59/61 (2 loi cu TASK-031/TASK-032).
+
+Tep: tools/probe-write-map-drift.mjs (moi) - docs/agent-progress/TASK-041.md (moi) -
+docs/agent-progress/MASTER_STATUS.md - docs/agent-progress/TASK_INDEX.md
