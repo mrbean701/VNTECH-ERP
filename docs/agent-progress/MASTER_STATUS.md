@@ -201,6 +201,19 @@ Mặc định của interface là `return role()` = **mã chuẩn** ⇒ thiếu 
 | D3 | **11 câu hỏi cũ** (mục trên): số SLA thật 24h/8h · hệ license `vntech_license_*` (nhóm 6) · nhóm quyền nghiệp vụ có tham gia kiểm quyền · backup/PITR MySQL · spec nghiệp vụ MEP · mã vai trò cũ ở mảng sản lượng … | xem mục USER CONFIRMATION | trả lời theo thứ tự ưu tiên: **license (#11)** và **SLA thật (#10)** đang chặn 2 hạng mục | — |
 | D4 | **Git**: 67 commit chưa push | theo yêu cầu 17/09 "không push tới khi tôi test thủ công xong" | giữ nguyên, **không push** | (1) tiếp tục giữ · (2) cho phép push |
 
+## BOOTSTRAP — CỔNG QUÉT KHOÁ ĐỌC (mới 17/09, `tools/probe-bootstrap-keys.mjs`)
+
+Lớp lỗi *"đường ĐỌC thiếu khoá"* đã bắt được **8 lần thủ công**; nay có cổng quét một lượt:
+đối chiếu **92 khoá `data.*` mà UI đọc** với **123 khoá Java khai trong 26 tệp adapter**.
+
+| Kết quả | Nội dung |
+|---|---|
+| **UI đọc mà không thấy Java trả (5 khoá)** | `centralInventory` · `centralReturns` · `companyAvailability` · `constructionDailyLogItems` · `user` |
+| `user` | **DƯƠNG TÍNH GIẢ — đã kiểm:** `SystemController.java:167` có `data.put("user", userMap)` (lớp web, ngoài phạm vi cổng quét) ✓ |
+| **4 khoá dữ liệu còn lại — CẦN RÀ TỪNG KHOÁ** | `centralInventory` · `centralReturns` (kho tổng) · `companyAvailability` · `constructionDailyLogItems` (nhật ký thi công) — Java **CÓ action ghi** tương ứng (`saveConstructionDailyLog`, duyệt trả hàng…) nhưng **bootstrap có thể không trả dữ liệu** ⇒ **màn hình sẽ trống sau cutover** dù API ghi được |
+| **Giới hạn của cổng (ghi rõ)** | so khớp **tên chuỗi**, không phân tích kiểu; không thấy khoá do lớp khác (web/JPA) trả; không kiểm khoá lồng trong object con. **Mỗi khoá phải mở mã xác nhận trước khi kết luận.** |
+| Việc kế tiếp | xác nhận 4 khoá theo đúng quy trình: tìm nơi UI dùng → tìm truy vấn tương ứng trong JS (`system-route.mjs`) → kiểm Java có truy vấn tương đương trong bootstrap chưa → nếu thiếu thì **port truy vấn ĐỌC**, không chỉ port action GHI |
+
 ## CURRENT TODO
 
 * [x] TASK-025 · Sửa `SlaComplianceWorker` hỏng âm thầm mỗi giờ (cột `overdue_at` không tồn tại) — #34
