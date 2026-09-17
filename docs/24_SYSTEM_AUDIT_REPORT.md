@@ -618,3 +618,43 @@ Ba kết quả mong đợi:
 | `S-05` | Kiểm quyền cho `/api/files` (endpoint riêng, không đi qua action) | **TODO** |
 | `S-08` | Snapshot danh sách người được chỉ định của workflow | **TODO** (rủi ro §20.3) |
 | — | 46 action còn khai rỗng | **An toàn**: 41 đã `requireRequireAdmin` + 5 công khai. Mặc định TỪ CHỐI đã che nốt. |
+---
+
+## ĐÍNH CHÍNH (17/09/2026) — CÁO BUỘC "CATALOG LỆCH 50 ACTION" LÀ SAI
+
+Báo cáo này từng ghi: SystemController có **224 nhánh `case`**, `ACTION_CATALOG.json` có **174 action**
+⇒ *catalog lệch 50 action*. **Cáo buộc đó SAI.** Đã đo lại bằng công cụ `tools/probe-action-parity.mjs`
+(đối chiếu đúng HAI NGUỒN: bản JS tham chiếu và bản Java đã port).
+
+Hai lỗi trong phép so cũ:
+
+1. **Đếm lẫn tên chỉ mục SQL.** SystemController có NHIỀU `switch`; một cái duyệt tên chỉ mục nên
+   regex thô đếm cả **38 tên** như `materials_code_uidx`, `users_username_uidx`, `primary_key_f`
+   thành "action".
+2. **So sai hai nguồn.** Catalog được **SINH từ `scripts/system-route.mjs`** (bản JS), không phải từ
+   Java. So catalog với Java là so hai thứ khác nguồn.
+
+**Số đo ĐÚNG:**
+
+| Chỉ số | Giá trị |
+|---|---|
+| Action trong bản JS | 174 |
+| Nhánh `case` thô trong Java | 224 |
+| Trong đó là tên chỉ mục SQL (không phải action) | 38 |
+| **Action thật trong Java** | **186** |
+| Có ở cả hai | 174 |
+| **Chỉ có ở JS (Java thiếu)** | **0** |
+| **Chỉ có ở Java (thêm khi port)** | **12** |
+| Catalog khớp nguồn JS | **0 lệch cả hai chiều** |
+
+⇒ **Bản port KHÔNG thiếu action nào.** Java có **thêm 12 action**: `create_self_work_item`,
+`save_department_permission`, `delete_department_permission`, `rebuild_department_permissions`,
+`save_system_level`, `delete_system_level`, `set_system_level_status`, `set_user_system_level`,
+`system_level_impact`, `save_workflow`, `set_workflow_status`, `delete_workflow`.
+
+**Kiểm quyền của 12 action này — KHÔNG có lỗ hổng:** 1 action có module thật
+(`create_self_work_item` → `dept_plan_tasks`, `dept_project_tasks`); 8 action để danh sách module
+RỖNG (cơ chế admin-guard: rỗng ⇒ chỉ admin gọi được); 3 action ghi rõ `["admin"]`.
+
+**Việc còn lại chỉ là TÀI LIỆU:** `ACTION_CATALOG.json` (sinh từ JS) chưa ghi 12 action Java-only.
+Muốn bổ sung phải sửa bộ sinh cho biết cả nguồn Java — chưa làm.

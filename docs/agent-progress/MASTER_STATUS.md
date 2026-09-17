@@ -8,11 +8,11 @@
 * Overall status: **IN PROGRESS** — PHASE 1 chưa xong
 * Current phase: PHASE 1 — HẠ TẦNG UI DÙNG CHUNG (chiếm phần lớn khối lượng còn lại)
 * Current task: TASK-009 — U-09 đợt 6 (13 màn còn lại); nếu chưa có quyền mở rộng sandbox thì chọn việc kiểm được bằng kiểm tra tĩnh
-* Last completed task: TASK-016 — U-13 tách `TaskTable` ra cấp module (commit #17 cùng lượt); TASK-008 đang ở trạng thái PARTIAL: `96c3aa8`
+* Last completed task: TASK-018 — đối chiếu action JS ↔ Java, đính chính báo cáo audit (commit #18 cùng lượt). Trước đó: TASK-016 (#17) · TASK-008 PARTIAL (`96c3aa8`)
 * Next task: TASK-009 — U-09 đợt 6 (13 màn còn lại)
 * Blocked task: TASK-B01 — tên màn Receiving (chờ người dùng; **KHÔNG chặn tiến độ**)
 * User confirmation required: **YES** — 2 việc: (1) tên hiển thị màn `Receiving` (GIAO NHẬN) lấy từ menu; (2) **cho phép mở rộng sandbox** để chạy cổng ảnh + bộ probe (TASK-B02) — việc (2) đang chặn phần hồi quy của mọi thay đổi giao diện
-* Last updated: 2026-09-17 (sau TASK-016)
+* Last updated: 2026-09-17 (sau TASK-018)
 
 ## System State
 
@@ -46,12 +46,12 @@
 5. **`team_members` = 0 dòng** ⇒ màn Tổ đội trống; **`approval_stage_decisions` = 0 dòng** (mã chết).
 6. ~~3 lỗi eslint có sẵn `react-hooks/static-components`~~ **ĐÃ SỬA ở TASK-016 (U-13)**: `TaskTable` nay ở cấp module; eslint **0 lỗi** (74 cảnh báo).
 7. **Cổng ảnh + probe không chạy được** (TASK-B02) — cần mở rộng sandbox cho Edge headless; đây là rào cản lớn nhất cho mọi việc UI tiếp theo.
-8. **`ACTION_CATALOG.json` lệch ~50 action** so với 224 nhánh `case` trong SystemController — việc backend, kiểm được bằng script nên CÓ THỂ làm trong lúc chờ quyền.
+8. ~~`ACTION_CATALOG.json` lệch ~50 action~~ **ĐÍNH CHÍNH Ở TASK-018 — cáo buộc này SAI**: catalog khớp HOÀN TOÀN với nguồn JS; con số 224 bị tính lẫn **38 tên chỉ mục SQL**. Số đúng: JS 174 action · Java 186 action thật · Java **không thiếu action nào** · Java có **thêm 12 action** đều đã được kiểm quyền. Việc còn lại chỉ là **tài liệu** (catalog chưa ghi 12 action đó).
 
 ## Current TODO
 
 * [~] TASK-008 · U-09 đợt 5 — code xong, probe riêng 11/11 ĐẠT, đã commit `96c3aa8` (PARTIAL); còn lượt quét hồi quy rộng (chờ quyền)
-* [ ] TASK-018 (MỚI) · Đồng bộ `ACTION_CATALOG.json` với 224 action thật trong SystemController — việc backend, **kiểm được không cần trình duyệt**
+* [x] TASK-018 · Đối chiếu action JS ↔ Java — **ĐÍNH CHÍNH** cáo buộc sai về catalog; công cụ `tools/probe-action-parity.mjs`
 * [ ] TASK-009 · U-09 đợt 6 — 13 màn còn lại
 * [ ] TASK-010 · U-14 — ÁP DỤNG EntityDetailModal (dùng thật 0; còn 4 chỗ .overlay)
 * [ ] TASK-011 · U-15 — ÁP DỤNG DataTable + StatusBadge (100 bảng + 100 trạng thái rỗng; StatusBadge 2/88)
