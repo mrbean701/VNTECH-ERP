@@ -1,0 +1,83 @@
+#49 TASK-040 nhom 2+3: nho 2 la DUONG TINH GIA (cong cu cua toi sai), nho 3 va dinh muc vat tu (3 lop loi)
+
+NGUON: tiep tuc TASK-040 theo nhom. Truoc khi sua nhom 2 thi phat hien chinh CONG CU cua toi sai.
+
+=== NHOM 2: KHONG PHAI LOI - CONG CU TO OAN MA DUNG ===
+Truoc khi "sua" UserAdminStoreAdapter (bi bao cot `level_rank` khong ton tai), toi doi chieu
+information_schema cua MySQL DANG CHAY:
+  system_level_catalog: id,code,name,description,LEVEL_RANK,auto_grant_all,can_skip_levels,active,
+                        sort_order,created_at,updated_at       (co level_rank, KHONG co `rank`)
+=> Ma Java DUNG. Neu tin bao cao cua cong cu thi da SUA HONG ma dang dung.
+
+NGUYEN NHAN GOC: V10__dept_permissions_and_levels.sql:42 tao cot `rank`;
+V11__rename_level_rank.sql:24 doi ten: ALTER TABLE system_level_catalog CHANGE COLUMN rank level_rank.
+Cong cu cu chi ap dung `ALTER TABLE ... ADD [COLUMN]`, KHONG ap dung CHANGE/RENAME/DROP COLUMN
+=> ban do luoc do giu ten cu `rank` => to oan `level_rank`.
+
+BA VIEC DE CHOT LAI SU THAT
+  1. Va cong cu cu: ap dung du ADD / CHANGE / RENAME COLUMN ... TO / DROP + ghi ro GIOI HAN dau tep.
+  2. Them tools/probe-java-sql-live.mjs: doi chieu SQL Java voi LUOC DO MYSQL DANG CHAY
+     (ket xuat tools/_live-schema.tsv tu information_schema). BAT BUOC dung `--raw`: che do `--batch`
+     mac dinh escape tab thanh `\t` lam hong tep.
+  3. Them tools/probe-schema-drift.mjs: tra loi "tep migration co tai lap duoc DB dang chay khong?".
+
+KET QUA: hai phuong phap DOC LAP hoi tu
+  cong cu doc tep migration  : 26 -> 22
+  cong cu doc luoc do dang chay: (moi) 22
+=> 4 duong tinh gia (system_level_catalog.level_rank) da bi loai; 22 con lai la THAT.
+Chung thuc cheo bang tay 6 bang: material_norms (17 cot that, khong co name/unit_rate/description);
+materials (khong co is_component/created_by); stock_issue_items (co installed_qty, khong co status);
+team_subcontracts (khong co settlement_id/settled_at); vntech_license_installations (18 cot, thieu 6 cot
+Java dang ghi); vntech_license_transfer_requests (thieu to_company_name/created_at).
+probe-schema-drift: 0 lech - 120 bang nghiep vu / 1543 cot o CA HAI phia (khac biet duy nhat la
+flyway_schema_history - bang so sach cua Flyway, da loai tru tuong minh).
+
+=== NHOM 3: DINH MUC VAT TU + VAT TU - BON LOP LOI TRONG CUNG MOT TINH NANG ===
+1. SQL: insertNorm ghi name/unit_rate/scope_project_id/description; setNormStatus ghi approved_by/approved_at
+   => 6 cot KHONG ton tai => HTTP 500.
+2. HOP DONG PAYLOAD: Java doc name/unitRate/scopeProjectId/description va BAT BUOC `normCode`, trong khi
+   form UI (app/page.tsx:2519) gui itemName/quantityPerUnit/projectId/baseUom/subcategoryId va KHONG BAO GIO
+   gui normCode => action hong NGAY O VALIDATE, chua toi SQL.
+3. NGHIEP VU: UI gui {normId, active:0|1} (app/page.tsx:2522) cho set_material_norm_status, Java doc `status`
+   (luon rong) => nut "An/Kich hoat" vo hieu. JS ghi active + status='active'/'inactive'.
+4. DUONG DOC: bootstrap thieu source_type/source_component_id/created_by/createdByName so voi
+   JS system-route.mjs:697 => UI LUON hien "Thu cong". (Lan thu TU gap dang loi "ghi duoc ma khong doc ra";
+   lan nay CHINH PROBE cua toi bat duoc: sau khi va SQL + payload probe van bao 2 muc HONG => moi lo ra.)
+Them: ban cu ghi status='pending' (JS ghi 'active'); bo sot subcategory_id/base_uom/source_component_id/
+source_type; updateNorm CON doi `norm_code` (JS khong doi).
+
+DA SUA
+  MaterialCatalogStore (port): insertNorm (dung 17 cot JS), updateNorm (10 cot, khong norm_code),
+    setNormStatus -> setNormActive(id,boolean,now), them countNorms() de sinh DM-%04d,
+    importMaterialsBulk BO tham so createdBy (cot created_by khong ton tai trong materials).
+  MaterialCatalogStoreAdapter: 4 cau lenh viet lai theo luoc do that.
+  MaterialCatalogManagementUseCase: saveMaterialNorm + setMaterialNormStatus port nguyen trang JS
+    (payload, validate, sinh ma, thong diep); chan gan dinh muc vao vat tu da an (active=1).
+  BootstrapDataAdapter: materialNorms them 4 truong + LEFT JOIN users.
+
+KIEM CHUNG LUC CHAY
+  jar 90.886.141 bytes (14:41:10) - API PID 37272 - Flyway validated 16 migrations - log 0 ERROR
+  tools/probe-task040-nhom3.mjs : 25/25 DAT - exit 0
+    tao bang DUNG payload form UI (moi gia tri la CHUOI nhu FormData) -> DM-0001, status='active',
+      source_type='manual'; nhanh sourceComponentId -> 'boq_component'
+    sua -> norm_code KHONG doi; {normId,active:0} -> active=false + status='inactive'; active:1 -> true/'active'
+    4 phep chan nghiep vu tra DUNG NGUYEN VAN thong diep JS
+    don dep -> material_norms ve dung 0 dong nhu ban dau
+  probe-java-sql-live.mjs  : 22 -> 11 phat hien
+  probe-java-sql-schema.mjs: 22 -> 11 phat hien (hoi tu)
+
+SUA LOI TRONG PHEP KIEM CUA CHINH TOI: ban probe dau dung Number(active)===0 - ma Number(false)===0 LUON
+dung nen phep kiem co the DAT OAN. Da siet thanh so sanh nghiem (v===false) vi payload bootstrap tra `active`
+la boolean that, khong phai so.
+
+CON LAI: nhom 3b (port hanh vi import_material_catalog: UI gui categoryCode/subcategoryCode nhung Java doc
+categoryId/subcategoryId => moi vat tu nhap vao mat nhom; JS con tu tao category/subcategory tu ma trong tep,
+dat system=canonicalMeCode(category.code)). Chua lam de khong tron thay doi lon vao ban va loi cot.
+Nhom 4/5/6 con 11 phat hien: ProductionStoreAdapter (2), SystemSettingsStoreAdapter (8), WarehouseStockStoreAdapter (1).
+
+Bai hoc: khi phep do buoc toi ma nguon, phai KIEM CHINH PHEP DO truoc. Do tren trang thai DANG CHAY khi co the;
+khi hai phuong phap doc lap cho ket qua khac nhau thi CHENH LECH do moi la thong tin quan trong nhat.
+
+Tep: MaterialCatalogStore.java - MaterialCatalogManagementUseCase.java - MaterialCatalogStoreAdapter.java -
+BootstrapDataAdapter.java - tools/{probe-java-sql-live,probe-schema-drift,probe-task040-nhom3,show-js-lines}.mjs (moi) -
+tools/probe-java-sql-schema.mjs (va CHANGE/RENAME/DROP) - .gitignore - docs/agent-progress/TASK-040.md (muc 14, 15)

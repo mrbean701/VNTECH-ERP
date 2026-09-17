@@ -71,3 +71,7 @@ java-backend/**/target/
 # Ban sao luu du lieu THAT lay ra truoc khi probe goi action GHI (chua du lieu nguoi dung that) —
 # giu lai tai cho de doi chieu/khoi phuc nhung KHONG dua vao kho ma.
 tools/_backup-*.sql
+
+# Ket xuat LUOC DO MySQL dang chay (nguon su thuat cua Java) — du lieu dan xuat, tao lai duoc bang
+# mot cau lenh trong tools/probe-java-sql-live.mjs. Khong phai ma nguon.
+tools/_live-schema.tsv

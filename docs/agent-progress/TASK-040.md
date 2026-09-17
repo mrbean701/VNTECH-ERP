@@ -211,3 +211,141 @@ Chi tiết đáng chú ý của probe:
 Nhóm **2 → 6** (xem mục 6): `level_rank` → `rank`; `material_norms` 6 cột; `stock_issue_items` `SET status`;
 `team_subcontracts.settlement_id`/`settled_at`; `vntech_license_*`. Mỗi nhóm phải chạy **đủ 4 bước** ở mục 8
 và **kiểm cả đường đọc** — nhóm 1 cho thấy đường đọc cũng có thể thiếu y như câu lệnh SQL.
+
+---
+
+# 14. NHÓM 2 — KHÔNG PHẢI LỖI: CÔNG CỦA TÔI ĐÃ TỐ OAN MÃ ĐÚNG ❗
+
+**Ngày:** 17/09/2026 · **Trạng thái:** nhóm 2 **ĐÓNG — không cần sửa mã**
+
+## 14.1 Chuyện đã xảy ra
+
+Trước khi sửa nhóm 2 (`UserAdminStoreAdapter`, bị báo `level_rank` là cột không tồn tại), tôi **đối chiếu
+lược đồ MySQL đang chạy** thay vì tin báo cáo của công cụ:
+
+```
+information_schema.COLUMNS (system_level_catalog):
+  id, code, name, description, level_rank, auto_grant_all, can_skip_levels, active, sort_order,
+  created_at, updated_at                                    ← 11 cột, CÓ `level_rank`, KHÔNG có `rank`
+```
+
+⇒ `UserAdminStoreAdapter` dùng `level_rank` là **ĐÚNG**. Nếu tôi "sửa" theo báo cáo thì đã **phá mã đang đúng**.
+
+## 14.2 Nguyên nhân gốc: `V11__rename_level_rank.sql` bị công cụ bỏ qua
+
+| Tệp | Nội dung |
+|---|---|
+| `V10__dept_permissions_and_levels.sql:42` | tạo cột `` `rank` `` |
+| **`V11__rename_level_rank.sql:24`** | `ALTER TABLE system_level_catalog CHANGE COLUMN rank level_rank int NOT NULL DEFAULT 0` |
+| DB đang chạy | **`level_rank`** (đúng sau khi V11 chạy) |
+
+`tools/probe-java-sql-schema.mjs` dựng lược đồ bằng cách đọc tệp `V*.sql` nhưng **chỉ áp dụng
+`ALTER TABLE … ADD [COLUMN]`** — **không** áp dụng `CHANGE COLUMN` / `RENAME COLUMN` / `DROP COLUMN`.
+Vì thế bản đồ lược đồ vẫn giữ tên cũ `rank` ⇒ cột `level_rank` bị coi là "không tồn tại".
+
+## 14.3 Ba việc đã làm để chốt lại sự thật
+
+1. **Vá công cụ cũ** (`probe-java-sql-schema.mjs`): áp dụng đủ `ADD` / `CHANGE` / `RENAME COLUMN … TO` / `DROP`
+   + ghi rõ GIỚI HẠN ngay đầu tệp.
+2. **Thêm công cụ mới `tools/probe-java-sql-live.mjs`**: đối chiếu SQL Java với **lược đồ MySQL ĐANG CHẠY**
+   (kết xuất `tools/_live-schema.tsv` từ `information_schema`, **bắt buộc `--raw`** vì chế độ `--batch` mặc định
+   escape tab thành `\t` làm hỏng tệp). Đây là nguồn sự thật của Java.
+3. **Thêm `tools/probe-schema-drift.mjs`**: trả lời câu hỏi "tệp migration có tái lập được DB đang chạy không?".
+
+## 14.4 Kết quả: hai phương pháp ĐỘC LẬP cùng ra một con số
+
+| Phép đo | Trước khi vá công cụ | Sau khi vá |
+|---|---|---|
+| Công cụ đọc tệp migration | **26** | **22** |
+| Công cụ đọc lược đồ đang chạy | *(chưa có)* | **22** |
+
+⇒ 4 phát hiện dương tính giả (`system_level_catalog.level_rank`) đã bị loại, và hai phương pháp **hội tụ** —
+đó là bằng chứng chéo cho việc 22 phát hiện còn lại là THẬT.
+
+**Chứng thực chéo 6 bảng** (đối chiếu `information_schema` bằng tay): `material_norms` (17 cột thật —
+`item_name`/`quantity_per_unit`/`notes`, **không** có `name`/`unit_rate`/`description`) · `materials`
+(**không** có `is_component`/`created_by`) · `stock_issue_items` (có `installed_qty`, **không** có `status`) ·
+`team_subcontracts` (**không** có `settlement_id`/`settled_at`) · `vntech_license_installations` (18 cột thật,
+**không** có `license_key`/`company_name`/`edition`/`activated_by`/`activated_at`/`created_at`) ·
+`vntech_license_transfer_requests` (**không** có `to_company_name`/`created_at`).
+
+## 14.5 Tệp migration CÓ tái lập được DB đang chạy
+
+`probe-schema-drift.mjs` → **0 lệch**: `120 bảng nghiệp vụ · 1543 cột` ở **cả hai** phía (khác biệt duy nhất
+là `flyway_schema_history` — bảng sổ sách của chính Flyway, đã loại trừ tường minh). Nghĩa là: không có
+`ALTER` tay nào ngoài Flyway, và các phát hiện SQL là **lỗi mã Java**, không phải chuyện lược đồ bị đổi ngoài luồng.
+
+## 14.6 Bài học
+
+> **Khi phép đo buộc tội mã nguồn, phải kiểm chính phép đo trước.** Một công cụ bỏ sót một cú pháp SQL
+> (`CHANGE COLUMN`) đủ để biến mã đúng thành "lỗi", và nếu tôi tin nó thì đã sửa hỏng `level_rank`.
+> Nguyên tắc rút ra: **đo trên trạng thái ĐANG CHẠY khi có thể**, và khi hai phương pháp độc lập cho kết quả
+> khác nhau thì **chênh lệch đó mới là thông tin quan trọng nhất**.
+
+---
+
+# 15. NHÓM 3 — ĐỊNH MỨC VẬT TƯ + VẬT TƯ (ĐÃ SỬA + ĐÃ KIỂM CHỨNG LÚC CHẠY)
+
+**Ngày:** 17/09/2026 · **Trạng thái:** DONE (11/11 phát hiện đã sạch; probe **25/25**)
+
+## 15.1 Ba lớp lỗi trong cùng một tính năng (không chỉ lỗi cột)
+
+| Lớp | Bản Java cũ | Nguồn sự thật JS | Hậu quả |
+|---|---|---|---|
+| **SQL** | ghi `name`, `unit_rate`, `scope_project_id`, `description`, `approved_by`, `approved_at` | `material_norms` chỉ có `item_name`, `quantity_per_unit`, `project_id`, `notes` | 6 cột không tồn tại ⇒ **HTTP 500** |
+| **Payload** | đọc `name`/`unitRate`/`scopeProjectId`/`description` và **bắt buộc `normCode`** | UI gửi `itemName`/`quantityPerUnit`/`projectId`/`baseUom`/`subcategoryId`; JS **tự sinh** `DM-%04d` | Hỏng **ngay ở validate**, chưa tới SQL |
+| **Nghiệp vụ** | `set_material_norm_status` đọc `status` (chuỗi) rồi ghi cột duyệt | UI gửi `{normId, active:0\|1}`; JS ghi `active` + `status='active'\|'inactive'` | Nút "Ẩn/Kích hoạt" **vô hiệu** |
+| **Cột bỏ sót** | thiếu `subcategory_id`, `base_uom`, `source_component_id`, `source_type` | JS ghi đủ 17 cột, `source_type = sourceComponentId ? 'boq_component' : 'manual'` | Mất dữ liệu nguồn gốc |
+| **Giá trị sai** | `status = 'pending'` | JS ghi `'active'` | Định mức mới tạo bị coi là chờ duyệt |
+| **Đường ĐỌC** | bootstrap thiếu `source_type`/`source_component_id`/`created_by`/`createdByName` | JS `system-route.mjs:697` SELECT đủ + JOIN `users` | UI luôn hiện **"Thủ công"** dù dữ liệu đúng |
+| **Đổi mã** | `updateNorm` **cập nhật cả `norm_code`** | JS **không** đổi `norm_code` khi sửa | Mã định mức bị đổi ngoài ý muốn |
+
+> ⚠️ Đây là lần thứ **tư** trong dự án gặp dạng "ghi được mà không đọc ra" — và lần này **chính probe của tôi
+> bắt được**: sau khi vá SQL + payload, probe vẫn báo 2 mục HỎNG (`sourceType = undefined`) ⇒ mới lộ ra
+> đường đọc thiếu trường. Nếu chỉ kiểm "hết 500" thì đã kết luận xong và **bỏ sót**.
+
+## 15.2 Đã sửa
+
+* `MaterialCatalogStore` (port): `insertNorm` (13 tham số, đúng 17 cột JS), `updateNorm` (10 cột, **không** `norm_code`),
+  `setNormStatus` → **`setNormActive(id, boolean, now)`**, thêm **`countNorms()`** để sinh `DM-%04d`;
+  `importMaterialsBulk` **bỏ tham số `createdBy`** (cột `created_by` không tồn tại trong `materials`).
+* `MaterialCatalogStoreAdapter`: 4 câu lệnh viết lại theo lược đồ thật.
+* `MaterialCatalogManagementUseCase`: `saveMaterialNorm` + `setMaterialNormStatus` port nguyên trạng JS
+  (payload, validate, sinh mã, thông điệp); chặn gắn định mức vào vật tư **đã ẩn** (`active=1` như JS).
+* `BootstrapDataAdapter`: `materialNorms` thêm 4 trường còn thiếu + `LEFT JOIN users`.
+
+## 15.3 Kiểm chứng lúc chạy
+
+jar **90.886.141 bytes** (14:41:10) · API PID **37272** · Flyway `validated 16 migrations` · log **0 ERROR**
+
+| Phép kiểm | Kết quả |
+|---|---|
+| `node tools/probe-task040-nhom3.mjs` | **25/25 ĐẠT — exit 0** |
+| `probe-java-sql-live.mjs` | **22 → 11** phát hiện |
+| `probe-java-sql-schema.mjs` (đã vá) | **22 → 11** phát hiện (hội tụ) |
+| `material_norms` sau probe | **0 dòng** — đúng nguyên trạng ban đầu |
+
+Nội dung probe (theo đúng payload form UI gửi, mọi giá trị là **chuỗi** như `FormData`): tạo → `DM-0001`,
+`status='active'`, `source_type='manual'`; nhánh `sourceComponentId` → `'boq_component'`; sửa → `norm_code`
+**không đổi**; `{normId, active:0}` → `active=false` + `status='inactive'`; `active:1` → `true`/`'active'`;
+4 phép chặn nghiệp vụ trả **đúng nguyên văn** thông điệp JS; dọn dẹp về 0 dòng.
+
+> **Bài học về phép kiểm của chính tôi:** bản probe đầu dùng `Number(active) === 0` — mà `Number(false) === 0`
+> **luôn đúng**, nên phép kiểm có thể ĐẠT OAN. Đã siết thành so sánh nghiêm (`v === false`), vì payload
+> bootstrap trả `active` là **boolean thật**, không phải số.
+
+## 15.4 CÒN LẠI của nhóm 3 — nhóm 3b (port hành vi `import_material_catalog`)
+
+Lỗi cột đã hết, nhưng khi tra UI tôi phát hiện **lệch hành vi chưa xử lý**:
+
+* UI gửi mỗi dòng: `categoryCode, categoryName, subcategoryCode, subcategoryName, code, name, unit,
+  specification, brand, standardPrice, minStock, requiresCocq, requiresMar`
+  (`app/page.tsx:1909-1921`).
+* Java đọc `row.get("categoryId")` / `row.get("subcategoryId")` — **khoá UI không bao giờ gửi** ⇒ mọi vật tư
+  nhập vào đều **mất nhóm** (`category_id`/`subcategory_id` = NULL).
+* JS (`system-route.mjs:2550-2606`) còn **tự tạo** `material_categories`/`material_subcategories` từ mã trong tệp,
+  đặt `system = canonicalMeCode(category.code)`, `sort_order` 999/9999, mô tả `"Tạo từ file danh mục vật tư V5.0.0"`,
+  và yêu cầu đủ **Mã + Tên + ĐVT** với thông điệp riêng.
+
+⇒ Cần port đầy đủ `import_material_catalog` (kèm `canonicalMeCode`, `internalGroupCode`). **Chưa làm ở vòng này**
+để không trộn một thay đổi lớn vào bản vá lỗi cột; đã ghi thành mục riêng.

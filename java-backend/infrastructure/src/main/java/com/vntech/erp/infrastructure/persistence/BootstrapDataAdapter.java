@@ -919,17 +919,24 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                        b.end_date AS endDate,b.monthly_amount AS monthlyAmount,b.status,b.note
                 FROM benefit_records b LEFT JOIN users u ON u.id=b.user_id
                 ORDER BY b.start_date DESC"""));
+        // SỬA LỖI (TASK-040 nhóm 3, đường ĐỌC): truy vấn cũ THIẾU `source_component_id`, `source_type`,
+        // `created_by` và tên người tạo. UI đọc `n.sourceType` để hiển thị "Từ BOQ"/"Thủ công"
+        // (app/page.tsx:2522) ⇒ thiếu trường thì LUÔN hiện "Thủ công" dù dữ liệu ghi đúng. Đồng bộ nguyên
+        // trạng JS scripts/system-route.mjs:697 (gồm cả JOIN `users` để lấy `createdByName`).
         data.put("materialNorms", query("""
                 SELECT mn.id,mn.norm_code AS normCode,mn.project_id AS projectId,p.code AS projectCode,
                        p.name AS projectName,mn.subcategory_id AS subcategoryId,ms.name AS subcategoryName,
                        mn.item_name AS itemName,mn.material_id AS materialId,m.code AS materialCode,
                        m.name AS materialName,m.unit AS materialUnit,mn.base_uom AS baseUom,
-                       mn.quantity_per_unit AS quantityPerUnit,mn.unit,mn.notes,mn.status,mn.active,
+                       mn.quantity_per_unit AS quantityPerUnit,mn.unit,mn.source_component_id AS sourceComponentId,
+                       mn.source_type AS sourceType,mn.notes,mn.status,mn.active,
+                       mn.created_by AS createdBy,u.full_name AS createdByName,
                        mn.created_at AS createdAt,mn.updated_at AS updatedAt
                 FROM material_norms mn
                 LEFT JOIN projects p ON p.id=mn.project_id
                 LEFT JOIN material_subcategories ms ON ms.id=mn.subcategory_id
                 LEFT JOIN materials m ON m.id=mn.material_id
+                LEFT JOIN users u ON u.id=mn.created_by
                 ORDER BY mn.updated_at DESC,mn.norm_code"""));
         data.put("workItems", query("""
                 SELECT w.id,w.task_no AS taskNo,w.project_id AS projectId,w.work_group AS workGroup,

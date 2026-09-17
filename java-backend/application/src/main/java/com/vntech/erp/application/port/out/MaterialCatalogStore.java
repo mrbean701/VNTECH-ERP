@@ -50,14 +50,47 @@ public interface MaterialCatalogStore {
     Optional<Map<String, Object>> findExternalCode(String codeType, String ownerKey, String externalCode);
     void upsertUomConversion(String materialId, String fromUom, String toUom, double factor, Instant now);
     boolean uomConversionExists(String materialId, String fromUom, String toUom);
-    void importMaterialsBulk(List<Map<String, Object>> rows, String createdBy, Instant now);
+    /**
+     * Nhập hàng loạt vật tư — port theo JS `scripts/system-route.mjs:2600`.
+     *
+     * <p><b>SỬA LỖI (TASK-040 nhóm 3):</b> bản cũ nhận thêm {@code createdBy} và ghi cột {@code created_by}
+     * — cột này <b>không tồn tại</b> trong `materials` (và JS cũng không ghi) ⇒ bỏ tham số cho khỏi ghi sai.
+     * Mỗi dòng cần các khoá: `id`, `code`, `name`, `system`, `categoryId`, `subcategoryId`, `specification`,
+     * `brand`, `unit`, `minStock`.
+     */
+    void importMaterialsBulk(List<Map<String, Object>> rows, Instant now);
     boolean materialExistsByCodeCaseInsensitive(String code);
     double estimateMaterialNormUsage(String materialId);
-    void insertNorm(String id, String materialId, String normCode, String name, double unitRate, String unit,
-                    String scopeProjectId, String description, String createdBy, Instant now);
-    void updateNorm(String id, String normCode, String name, double unitRate, String unit, String description,
+    /** Số dòng định mức hiện có — dùng để sinh mã `DM-%04d` như JS `SELECT COUNT(*)+1` (system-route.mjs:1934). */
+    long countNorms();
+    /**
+     * INSERT định mức — <b>17 cột</b> như JS `save_material_norm` (scripts/system-route.mjs:1934).
+     *
+     * <p><b>SỬA LỖI (TASK-040 nhóm 3):</b> chữ ký cũ ghi {@code name}/{@code unit_rate}/{@code scope_project_id}/
+     * {@code description} — bốn cột này <b>không tồn tại</b> trong `material_norms` (cột thật là
+     * {@code item_name}/{@code quantity_per_unit}/{@code project_id}/{@code notes}) ⇒ HTTP 500. Đồng thời
+     * bản cũ <b>bỏ sót</b> {@code subcategory_id}, {@code base_uom}, {@code source_component_id},
+     * {@code source_type} và ghi {@code status='pending'} trong khi JS ghi {@code 'active'}.
+     */
+    void insertNorm(String id, String normCode, String projectId, String subcategoryId, String itemName,
+                    String materialId, String baseUom, double quantityPerUnit, String unit,
+                    String sourceComponentId, String notes, String createdBy, Instant now);
+    /**
+     * UPDATE định mức — 10 cột như JS (scripts/system-route.mjs:1933). JS <b>KHÔNG</b> cập nhật {@code norm_code}
+     * và <b>KHÔNG</b> cập nhật {@code source_type} ở nhánh này (bản Java cũ lại đi cập nhật `norm_code`).
+     */
+    void updateNorm(String id, String projectId, String subcategoryId, String itemName, String materialId,
+                    String baseUom, double quantityPerUnit, String unit, String sourceComponentId, String notes,
                     Instant now);
-    void setNormStatus(String id, String status, String approvedBy, Instant now);
+    /**
+     * Bật/tắt định mức — JS `set_material_norm_status` (scripts/system-route.mjs:1937) nhận
+     * <b>{@code active}</b> (0/1) và ghi {@code active} + {@code status = 'active'|'inactive'}.
+     *
+     * <p>Bản cũ nhận một chuỗi `status` tuỳ ý rồi ghi thêm {@code approved_by}/{@code approved_at} —
+     * hai cột <b>không tồn tại</b> ⇒ HTTP 500; và vì UI chỉ gửi {@code active} nên `status` luôn rỗng
+     * ⇒ dù có tồn tại cột thì cũng ghi rỗng. Xem `app/page.tsx:2522`.
+     */
+    void setNormActive(String id, boolean active, Instant now);
     void deleteNorm(String id);
     Optional<Map<String, Object>> findNorm(String id);
     List<Map<String, Object>> norms();

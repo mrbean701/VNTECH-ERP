@@ -8,6 +8,11 @@
 // LƯỢC ĐỒ LẤY TỪ ĐÂU: `java-backend/infrastructure/src/main/resources/db/migration/V*.sql` — chính là
 // các migration Flyway mà MySQL đang chạy (log khởi động xác nhận "validated 16 migrations").
 //
+// ⚠ GIỚI HẠN ĐÃ BIẾT (TASK-040 nhóm 2): công cụ này DỰNG LẠI lược đồ từ tệp văn bản, nên nếu tệp migration
+// và DB đang chạy lệch nhau thì nó đo sai. Đã từng xảy ra: thiếu `CHANGE COLUMN` ⇒ tố oan `level_rank`.
+// ⇒ Khi cần KẾT LUẬN, dùng `tools/probe-java-sql-live.mjs` (đối chiếu INFORMATION_SCHEMA của DB đang chạy).
+// Hai công cụ cho KẾT QUẢ BẰNG NHAU nghĩa là tệp migration khớp DB; lệch nhau nghĩa là tệp migration đã lệch DB.
+//
 // TÍN HIỆU CAO NHẤT (và đúng loại đã gây lỗi) là INSERT/UPDATE vì chúng liệt kê TÊN CỘT TƯỜNG MINH:
 //   INSERT INTO t (c1,c2,...)   ·   UPDATE t SET c1=?,c2=?
 // Ngoài ra kiểm sự tồn tại của BẢNG trong FROM/JOIN.
@@ -45,10 +50,27 @@ for (const f of migFiles) {
       schema.get(t).add(name);
     }
   }
-  // ALTER TABLE `t` ADD [COLUMN] `c` ...
+  // ALTER TABLE `t` ADD [COLUMN] `c` ... / CHANGE / RENAME / DROP
+  //
+  // SỬA LỖI (TASK-040 nhóm 2): bản đầu CHỈ xử lý `ADD [COLUMN]` nên **bỏ qua đổi tên cột**. Hệ quả thật:
+  // `V10` tạo cột `` `rank` `` rồi `V11__rename_level_rank.sql:24` đổi tên thành `level_rank`; bản đồ lược đồ
+  // vẫn giữ `rank` ⇒ công cụ TỐ OAN `UserAdminStoreAdapter` (dùng `level_rank`, ĐÚNG theo DB đang chạy).
+  // Một dương tính giả như vậy đủ để "sửa" mã đang đúng thành sai.
+  // ⚠ Nguồn sự thật của Java là LƯỢC ĐỒ ĐANG CHẠY — dùng `tools/probe-java-sql-live.mjs` (đọc
+  // `tools/_live-schema.tsv` từ INFORMATION_SCHEMA) khi cần kết luận, vì tệp migration có thể lệch.
   for (const m of sql.matchAll(/ALTER\s+TABLE\s+[`"']?(\w+)[`"']?\s+([\s\S]*?);/gi)) {
     const t = ensure(m[1]);
-    for (const a of m[2].matchAll(/ADD\s+(?:COLUMN\s+)?[`"']?(\w+)[`"']?/gi)) schema.get(t).add(a[1].toLowerCase());
+    const body = m[2];
+    for (const a of body.matchAll(/ADD\s+(?:COLUMN\s+)?[`"']?(\w+)[`"']?/gi)) schema.get(t).add(a[1].toLowerCase());
+    for (const a of body.matchAll(/\bCHANGE\s+(?:COLUMN\s+)?[`"']?(\w+)[`"']?\s+[`"']?(\w+)[`"']?/gi)) {
+      schema.get(t).delete(a[1].toLowerCase());
+      schema.get(t).add(a[2].toLowerCase());
+    }
+    for (const a of body.matchAll(/\bRENAME\s+COLUMN\s+[`"']?(\w+)[`"']?\s+TO\s+[`"']?(\w+)[`"']?/gi)) {
+      schema.get(t).delete(a[1].toLowerCase());
+      schema.get(t).add(a[2].toLowerCase());
+    }
+    for (const a of body.matchAll(/\bDROP\s+(?:COLUMN\s+)?[`"']?(\w+)[`"']?/gi)) schema.get(t).delete(a[1].toLowerCase());
   }
 }
 

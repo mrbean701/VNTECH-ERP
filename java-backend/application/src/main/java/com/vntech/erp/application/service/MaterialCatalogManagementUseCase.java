@@ -290,31 +290,58 @@ public final class MaterialCatalogManagementUseCase {
     }
 
     // ============ norms ============
+    /** Port nguyên trạng JS `save_material_norm` — scripts/system-route.mjs:1930-1935. */
     public Map<String, Object> saveMaterialNorm(Principal principal, Map<String, Object> payload) {
+        // SỬA LỖI (TASK-040 nhóm 3) — bản cũ đọc SAI TÊN TRƯỜNG so với thứ UI thật sự gửi
+        // (app/page.tsx:2519 gửi theo `name` của input): UI gửi itemName/quantityPerUnit/projectId/baseUom/
+        // subcategoryId/notes, bản cũ đọc name/unitRate/scopeProjectId/description ⇒ mọi giá trị rỗng.
+        // Tệ hơn: bản cũ BẮT BUỘC `normCode` trong khi UI KHÔNG BAO GIỜ gửi (JS tự sinh `DM-%04d`)
+        // ⇒ action hỏng ngay ở validate, chưa kịp tới SQL. Nay port đúng hợp đồng JS.
         String normId = trim(payload.get("normId"));
-        String materialId = trim(payload.get("materialId"));
-        String normCode = trim(payload.get("normCode"));
-        String name = trim(payload.get("name"));
-        double unitRate = strictNonNegative(payload.get("unitRate"), "Định mức");
-        if (materialId.isEmpty() || normCode.isEmpty() || name.isEmpty())
-            throw Api("Định mức vật tư cần mã vật tư, mã định mức và tên.");
-        store.findMaterial(materialId).orElseThrow(() -> Api("Không tìm thấy vật tư."));
+        String projectId = nvl(payload.get("projectId"));
+        String subcategoryId = nvl(payload.get("subcategoryId"));
+        String itemName = trim(payload.get("itemName"));
+        String materialId = nvl(payload.get("materialId"));
+        String baseUom = nvl(payload.get("baseUom"));
+        double quantityPerUnit = strictNonNegative(payload.get("quantityPerUnit"), "Định mức tiêu hao");
+        String unit = nvl(payload.get("unit"));
+        String sourceComponentId = nvl(payload.get("sourceComponentId"));
+        String notes = nvl(payload.get("notes"));
+        if (itemName.isEmpty()) throw Api("Hạng mục áp định mức là bắt buộc.");
+        if (quantityPerUnit <= 0) throw Api("Định mức tiêu hao phải lớn hơn 0.");
+        if (materialId != null && store.findMaterial(materialId).filter(m -> isActiveRow(m)).isEmpty())
+            throw Api("Mã vật tư không tồn tại hoặc đang bị ẩn.");
         Instant now = Instant.now();
         if (!normId.isEmpty() && store.findNorm(normId).isPresent()) {
-            store.updateNorm(normId, normCode, name, unitRate, nvl(payload.get("unit")), nvl(payload.get("description")), now);
+            store.updateNorm(normId, projectId, subcategoryId, itemName, materialId, baseUom, quantityPerUnit,
+                    unit, sourceComponentId, notes, now);
             return Map.of("message", "Đã cập nhật định mức vật tư.");
         }
-        store.insertNorm(idGenerator.next("NORM"), materialId, normCode, name, unitRate, nvl(payload.get("unit")),
-                nvl(payload.get("scopeProjectId")), nvl(payload.get("description")), principal.userId(), now);
-        return Map.of("message", "Đã lưu định mức vật tư " + normCode + ".");
+        // JS: `const newId=id("MNR"), seq=COUNT(*)+1, normCode=DM-<4 số>`
+        String normCode = "DM-" + String.format("%04d", store.countNorms() + 1);
+        store.insertNorm(idGenerator.next("MNR"), normCode, projectId, subcategoryId, itemName, materialId, baseUom,
+                quantityPerUnit, unit, sourceComponentId, notes, principal.userId(), now);
+        return Map.of("message", "Đã thêm định mức vật tư.");
     }
 
+    /** JS `SELECT id FROM materials WHERE id=? AND active=1` — định mức không được gắn vào vật tư đã ẩn. */
+    private static boolean isActiveRow(Map<String, Object> row) {
+        Object v = row.get("active");
+        if (v == null) return false;
+        if (v instanceof Boolean b) return b;
+        return "1".equals(String.valueOf(v));
+    }
+
+    /** Port nguyên trạng JS `set_material_norm_status` — scripts/system-route.mjs:1936-1938. */
     public Map<String, Object> setMaterialNormStatus(Principal principal, Map<String, Object> payload) {
         String normId = trim(payload.get("normId"));
-        String status = trim(payload.get("status"));
+        // SỬA LỖI (TASK-040 nhóm 3): UI gửi `{normId, active:0|1}` (app/page.tsx:2522), bản cũ đọc `status`
+        // (luôn rỗng) rồi ghi status='' + approved_by + approved_at (2 cột không tồn tại ⇒ 500).
+        boolean active = payload.get("active") == Boolean.TRUE
+                || List.of("1", "true", "on").contains(trim(payload.get("active")).toLowerCase(Locale.ROOT));
         store.findNorm(normId).orElseThrow(() -> Api("Không tìm thấy định mức."));
-        store.setNormStatus(normId, status, principal.userId(), Instant.now());
-        return Map.of("message", "Đã cập nhật trạng thái định mức.");
+        store.setNormActive(normId, active, Instant.now());
+        return Map.of("message", active ? "Đã kích hoạt định mức." : "Đã ẩn định mức.");
     }
 
     public Map<String, Object> deleteMaterialNorm(Principal principal, Map<String, Object> payload) {
@@ -355,13 +382,16 @@ public final class MaterialCatalogManagementUseCase {
             m.put("system", blankDefault(trim(row.get("system")), "KHAC").toUpperCase(Locale.ROOT));
             m.put("categoryId", nvl(row.get("categoryId")));
             m.put("subcategoryId", nvl(row.get("subcategoryId")));
-            m.put("standardPrice", Math.max(0, numberValue(row.get("standardPrice"))));
-            m.put("requiresMar", row.get("requiresMar") == Boolean.TRUE || "1".equals(trim(row.get("requiresMar"))));
-            m.put("isComponent", row.get("isComponent") == Boolean.TRUE);
+            // SỬA LỖI (TASK-040 nhóm 3): bản cũ chuẩn bị các khoá `standardPrice`/`requiresMar`/`isComponent`
+            // để ghi vào `materials` — nhưng `is_component` KHÔNG tồn tại trong bảng đó ⇒ 500. JS
+            // (scripts/system-route.mjs:2600) ghi standard_price=0, requires_mar=0, requires_cocq=0 và lấy
+            // `min_stock` từ dòng nhập, `brand` từ dòng nhập ⇒ đổi sang đúng tập khoá JS.
+            m.put("brand", nvl(row.get("brand")));
+            m.put("minStock", Math.max(0, numberValue(row.get("minStock"))));
             prepared.add(m);
             if (exists) updated++; else created++;
         }
-        store.importMaterialsBulk(prepared, principal.userId(), now);
+        store.importMaterialsBulk(prepared, now);
         return Map.of("message", "Đã nhập " + rows.size() + " dòng: " + created + " mới, " + updated + " cập nhật.");
     }
 

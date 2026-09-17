@@ -264,19 +264,27 @@ public class MaterialCatalogStoreAdapter implements MaterialCatalogStore {
     }
 
     @Override @Transactional
-    public void importMaterialsBulk(List<Map<String, Object>> rows, String createdBy, Instant now) {
+    public void importMaterialsBulk(List<Map<String, Object>> rows, Instant now) {
         for (Map<String, Object> m : rows) {
+            // SỬA LỖI (TASK-040 nhóm 3): câu lệnh cũ ghi `is_component` và `created_by` — hai cột KHÔNG tồn tại
+            // trong `materials` (16 cột thật: id,code,name,system,specification,brand,unit,standard_price,min_stock,
+            // requires_cocq,requires_mar,active,created_at,updated_at,category_id,subcategory_id) ⇒ HTTP 500.
+            // Đồng thời bản cũ BỎ SÓT `brand`, `min_stock`, `requires_cocq` — port theo JS
+            // (scripts/system-route.mjs:2600): standard_price=0, requires_cocq=0, requires_mar=0,
+            // min_stock lấy từ dòng nhập. `createdBy` không còn cột để ghi (JS cũng không ghi).
             jdbcTemplate.update("""
-                    INSERT INTO materials (id,code,name,specification,unit,`system`,category_id,subcategory_id,
-                                           standard_price,requires_mar,is_component,active,created_by,created_at,updated_at)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,1,?,?,?)
-                    ON DUPLICATE KEY UPDATE name=VALUES(name),specification=VALUES(specification),unit=VALUES(unit),
-                        `system`=VALUES(`system`),category_id=VALUES(category_id),subcategory_id=VALUES(subcategory_id),
-                        standard_price=VALUES(standard_price),updated_at=VALUES(updated_at)""",
-                    m.get("id"), m.get("code"), m.get("name"), m.get("specification"), m.get("unit"), m.get("system"),
-                    m.get("categoryId"), m.get("subcategoryId"), m.get("standardPrice"),
-                    m.get("requiresMar") == Boolean.TRUE ? 1 : 0, m.get("isComponent") == Boolean.TRUE ? 1 : 0,
-                    createdBy, now, now);
+                    INSERT INTO materials (id,code,name,`system`,category_id,subcategory_id,specification,brand,unit,
+                                           standard_price,min_stock,requires_cocq,requires_mar,active,created_at,updated_at)
+                    VALUES (?,?,?,?,?,?,?,?,?,0,?,0,0,1,?,?)
+                    ON DUPLICATE KEY UPDATE name=VALUES(name),`system`=VALUES(`system`),
+                        category_id=VALUES(category_id),subcategory_id=VALUES(subcategory_id),
+                        specification=VALUES(specification),brand=VALUES(brand),unit=VALUES(unit),
+                        standard_price=VALUES(standard_price),min_stock=VALUES(min_stock),
+                        requires_cocq=VALUES(requires_cocq),requires_mar=VALUES(requires_mar),
+                        active=1,updated_at=VALUES(updated_at)""",
+                    m.get("id"), m.get("code"), m.get("name"), m.get("system"),
+                    m.get("categoryId"), m.get("subcategoryId"), m.get("specification"), m.get("brand"),
+                    m.get("unit"), m.get("minStock"), now, now);
         }
     }
 
@@ -286,28 +294,49 @@ public class MaterialCatalogStoreAdapter implements MaterialCatalogStore {
     }
 
     @Override @Transactional
-    public void insertNorm(String id, String materialId, String normCode, String name, double unitRate, String unit,
-                           String scopeProjectId, String description, String createdBy, Instant now) {
+    public void insertNorm(String id, String normCode, String projectId, String subcategoryId, String itemName,
+                           String materialId, String baseUom, double quantityPerUnit, String unit,
+                           String sourceComponentId, String notes, String createdBy, Instant now) {
+        // SỬA LỖI (TASK-040 nhóm 3): câu lệnh cũ ghi name/unit_rate/scope_project_id/description — KHÔNG cột nào
+        // tồn tại trong `material_norms` (cột thật: item_name/quantity_per_unit/project_id/notes) ⇒ Unknown column
+        // ⇒ action save_material_norm trả HTTP 500. Port nguyên trạng JS (scripts/system-route.mjs:1934):
+        // 17 cột, status='active', source_type suy từ sourceComponentId.
         jdbcTemplate.update("""
-                INSERT INTO material_norms (id,material_id,norm_code,name,unit_rate,unit,scope_project_id,
-                                            description,status,active,created_by,created_at,updated_at)
-                VALUES (?,?,?,?,?,?,?,'pending',1,?,?,?)""",
-                id, materialId, normCode, name, unitRate, unit, scopeProjectId, description, createdBy, now, now);
+                INSERT INTO material_norms (id,norm_code,project_id,subcategory_id,item_name,material_id,base_uom,
+                                            quantity_per_unit,unit,source_component_id,source_type,notes,status,active,
+                                            created_by,created_at,updated_at)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                id, normCode, projectId, subcategoryId, itemName, materialId, baseUom, quantityPerUnit, unit,
+                sourceComponentId, sourceComponentId == null ? "manual" : "boq_component", notes, "active", 1,
+                createdBy, now, now);
     }
 
     @Override @Transactional
-    public void updateNorm(String id, String normCode, String name, double unitRate, String unit, String description,
+    public void updateNorm(String id, String projectId, String subcategoryId, String itemName, String materialId,
+                           String baseUom, double quantityPerUnit, String unit, String sourceComponentId, String notes,
                            Instant now) {
+        // SỬA LỖI (TASK-040 nhóm 3): theo JS scripts/system-route.mjs:1933 — 10 cột, KHÔNG có norm_code/source_type.
         jdbcTemplate.update("""
-                UPDATE material_norms SET norm_code=?,name=?,unit_rate=?,unit=?,description=?,updated_at=? WHERE id=?""",
-                normCode, name, unitRate, unit, description, now, id);
+                UPDATE material_norms SET project_id=?,subcategory_id=?,item_name=?,material_id=?,base_uom=?,
+                                          quantity_per_unit=?,unit=?,source_component_id=?,notes=?,updated_at=?
+                WHERE id=?""",
+                projectId, subcategoryId, itemName, materialId, baseUom, quantityPerUnit, unit, sourceComponentId,
+                notes, now, id);
     }
 
     @Override @Transactional
-    public void setNormStatus(String id, String status, String approvedBy, Instant now) {
+    public void setNormActive(String id, boolean active, Instant now) {
+        // SỬA LỖI (TASK-040 nhóm 3): câu lệnh cũ ghi approved_by/approved_at — hai cột KHÔNG tồn tại ⇒ 500.
+        // JS (scripts/system-route.mjs:1937) chỉ ghi active + status.
         jdbcTemplate.update("""
-                UPDATE material_norms SET status=?,approved_by=?,approved_at=?,updated_at=? WHERE id=?""",
-                status, status.equals("approved") ? approvedBy : null, status.equals("approved") ? now : null, now, id);
+                UPDATE material_norms SET active=?,status=CASE WHEN ? THEN 'active' ELSE 'inactive' END,updated_at=?
+                WHERE id=?""", active ? 1 : 0, active, now, id);
+    }
+
+    @Override
+    public long countNorms() {
+        Long n = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM material_norms", Long.class);
+        return n == null ? 0 : n;
     }
 
     @Override @Transactional
