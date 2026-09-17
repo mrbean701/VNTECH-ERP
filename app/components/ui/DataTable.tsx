@@ -43,7 +43,7 @@ export type Column<T> = {
 
 export function DataTable<T>({
   columns, rows, rowKey, sort, onRowClick, emptyText = "Chưa có dữ liệu.",
-  loading, error, footer, toolbar, rowStyle,
+  loading, error, footer, toolbar, rowStyle, tableClassName,
 }: {
   columns: Column<T>[];
   rows: T[];
@@ -62,6 +62,13 @@ export function DataTable<T>({
    * (vd bảng ma trận quyền phòng ban tô nền vàng dòng "chưa lưu" bằng `style` trên `<tr>`).
    */
   rowStyle?: (row: T, index: number) => CSSProperties | undefined;
+  /**
+   * Lớp CSS THÊM cho chính thẻ `<table>` — TASK-083. Cần cho các bảng cũ mang lớp định dạng riêng
+   * (vd `resizable-data-table` trong `globals.css` đặt `table-layout:fixed` + quy tắc ngắt dòng;
+   * `data-table` thêm con trỏ dòng; `material-list-table` chặn ngắt dòng ô).
+   * ⚠️ Bỏ qua tham số này khi chuyển bảng có lớp riêng là **làm mất định dạng** — đã gặp thật 18/09.
+   */
+  tableClassName?: string;
 }) {
   const visible = columns.filter((c) => !c.hidden);
 
@@ -76,7 +83,7 @@ export function DataTable<T>({
       {toolbar}
       {error && <div className="inline-alert danger dt-error">Lỗi tải dữ liệu: {error}</div>}
       <div className="table-wrap">
-        <table className="baseline-table">
+        <table className={["baseline-table", tableClassName].filter(Boolean).join(" ")}>
           <thead>
             <tr>
               {visible.map((c) => (

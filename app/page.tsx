@@ -1237,30 +1237,17 @@ function ProjectManagement({ data, project, onProject, open, action }: { data: A
     {tab === 3 && <div className="stack">
       <section className="card">
         <CardHead title="Kho của dự án" note="Bấm một kho để xem tồn kho, thủ kho và đơn từ liên quan"/>
-        <div className="table-wrap"><table className="baseline-table">
-          <thead><tr><th>Mã kho</th><th>Tên kho</th><th>Loại</th><th>Thủ kho</th><th>Tồn kho</th><th>Chờ nhập</th><th>Chờ xuất</th><th>Chờ duyệt</th><th></th></tr></thead>
-          <tbody>
-            {warehouses.map((w) => {
-              const wid = String(w.id);
-              const bal = (data.inventory || []).filter((r) => String(r.warehouseId) === wid);
-              const total = bal.reduce((s, r) => s + Number(r.balance || 0), 0);
-              const d = docsOfWarehouse(w);
-              const keeper = keepers[0];
-              return <tr key={wid}>
-                <td><strong className="code">{w.code}</strong></td>
-                <td>{w.name}</td>
-                <td>{w.type === "site" ? "Kho công trường" : w.type === "central" ? "Kho tổng" : w.type === "team" ? "Kho tổ đội" : String(w.type || "—")}</td>
-                <td>{keeper ? keeper.fullName : <span className="muted">Chưa phân công</span>}</td>
-                <td>{bal.length} mã · {format.format(total)}</td>
-                <td>{d.pendingIn.length}</td>
-                <td>{d.pendingOut.length}</td>
-                <td>{d.pendingApprove.length}</td>
-                <td><button type="button" className="export-mini" onClick={() => setOpenWarehouse(openWarehouse === wid ? "" : wid)}>{openWarehouse === wid ? "Thu gọn" : "Xem kho ›"}</button></td>
-              </tr>;
-            })}
-            {!warehouses.length && <tr><td colSpan={9}><Empty text="Dự án chưa có kho."/></td></tr>}
-          </tbody>
-        </table></div>
+        <DataTable rows={warehouses} rowKey={(w) => String(w.id)} emptyText="Dự án chưa có kho." columns={[
+          { key: "c1", header: "Mã kho", render: (w) => <strong className="code">{w.code}</strong> },
+          { key: "c2", header: "Tên kho", render: (w) => w.name },
+          { key: "c3", header: "Loại", render: (w) => (w.type === "site" ? "Kho công trường" : w.type === "central" ? "Kho tổng" : w.type === "team" ? "Kho tổ đội" : String(w.type || "—")) },
+          { key: "c4", header: "Thủ kho", render: () => (keepers[0] ? keepers[0].fullName : <span className="muted">Chưa phân công</span>) },
+          { key: "c5", header: "Tồn kho", render: (w) => { const bal = (data.inventory || []).filter((r) => String(r.warehouseId) === String(w.id)); return `${bal.length} mã · ${format.format(bal.reduce((s, r) => s + Number(r.balance || 0), 0))}`; } },
+          { key: "c6", header: "Chờ nhập", render: (w) => docsOfWarehouse(w).pendingIn.length },
+          { key: "c7", header: "Chờ xuất", render: (w) => docsOfWarehouse(w).pendingOut.length },
+          { key: "c8", header: "Chờ duyệt", render: (w) => docsOfWarehouse(w).pendingApprove.length },
+          { key: "c9", header: "", render: (w) => { const wid = String(w.id); return <button type="button" className="export-mini" onClick={() => setOpenWarehouse(openWarehouse === wid ? "" : wid)}>{openWarehouse === wid ? "Thu gọn" : "Xem kho ›"}</button>; } },
+        ]} />
       </section>
 
       {openWarehouse && (() => {
@@ -1571,7 +1558,18 @@ function Purchasing({ data, project, open, action, canUse }: { data: AppData; pr
     <div className="purchase-action-bar"><button className="secondary" onClick={()=>selected?downloadBoqPriceTemplateXlsx(doc):window.alert("Hãy chọn một dự án cụ thể.")}>⇩ TẢI MẪU ĐƠN GIÁ HĐ</button><label className={`secondary file-inline ${!selected||!canUse?"is-disabled":""}`}>⇧ NHẬP ĐƠN GIÁ HĐ<input type="file" accept=".xlsx,.csv" disabled={!selected||!canUse} onChange={(e)=>{void importPrices(e.target.files?.[0]);e.target.value="";}}/></label><button className="secondary" onClick={()=>requests[0]?downloadPoPlanningTemplate(data,requests[0]):downloadBlankPoPlanningTemplate(data)}>⇩ TẢI MẪU PO</button><button className="secondary" disabled={!requests[0]} onClick={()=>requests[0]&&open("po",requests[0])}>⇧ NHẬP PO EXCEL</button><button className="primary" disabled={!canUse||!requests[0]} onClick={()=>requests[0]&&open("po",requests[0])}>＋ PHÁT HÀNH PO</button></div>
     {pricePreview.length>0&&<section className="card price-import-preview"><header><div><strong>KIỂM TRA TRƯỚC KHI CẬP NHẬT · {priceFileName}</strong><small>{pricePreview.length} dòng hợp lệ · {pricePreview.filter((row)=>row.changed).length} dòng thay đổi</small></div><div className="row-actions"><button className="secondary" onClick={()=>setPricePreview([])}>HỦY</button><button className="primary" onClick={()=>void confirmPrices()}>XÁC NHẬN CẬP NHẬT GIÁ</button></div></header></section>}
     <section className="card purchase-system-table"><div className="table-wrap"><table className="baseline-table"><thead><tr><th>NHÓM VẬT TƯ (HỆ M&E)</th><th>HỢP ĐỒNG (A)</th><th>ĐỐI CHIẾU (B)</th><th>ĐÃ NHẬN (C)</th><th>THANH TOÁN (D)</th><th>C/E/B</th><th>TRẠNG THÁI</th></tr></thead><tbody>{systemRows.map((row)=><Fragment key={row.code}><tr className="system-total-row"><td><strong>⌄ &nbsp; HỆ {row.name.toUpperCase()}</strong></td><td><strong>{moneyBillion(row.a)}</strong></td><td><strong>{moneyBillion(row.b)}</strong></td><td><strong>{moneyBillion(row.r)}</strong></td><td><strong>{moneyBillion(row.a?paid*(row.a/Math.max(contract,1)):0)}</strong></td><td><strong>{row.pct.toLocaleString("vi-VN",{maximumFractionDigits:2})}%</strong></td><td><StatusBadge value={row.pct>=50?"Đạt kế hoạch":"Cần theo dõi"}/></td></tr></Fragment>)}{!systemRows.length&&<tr><td colSpan={7}><Empty text="Chưa có dữ liệu BOQ/Hợp đồng phát sinh trong phạm vi đang chọn."/></td></tr>}<tr className="total-row"><td><strong>TỔNG CỘNG</strong></td><td><strong>{moneyBillion(contract)}</strong></td><td><strong>{moneyBillion(ordered)}</strong></td><td><strong>{moneyBillion(received)}</strong></td><td><strong>{moneyBillion(paid)}</strong></td><td><strong>{efficiency.toLocaleString("vi-VN",{maximumFractionDigits:2})}%</strong></td><td></td></tr></tbody></table></div></section>
-    <section className="card purchase-material-cumulative"><CardHead title="Chi tiết lũy kế theo vật tư" note="Chỉ hiển thị dữ liệu thực từ BOQ, đề nghị, PO và giao nhận; không nội suy dòng minh họa."/><div className="table-wrap"><table className="baseline-table resizable-data-table"><thead><tr><th>STT HĐ</th><th>Mã vật tư</th><th>Tên vật tư</th><th>ĐVT</th><th>BOQ/HĐ</th><th>Đã đề nghị</th><th>Đã duyệt mua</th><th>Lũy kế PO</th><th>Đã nhận</th><th>Còn phải mua</th></tr></thead><tbody>{boqRows.map((row)=><tr key={row.id}><td>{row.sourceOrder||"—"}</td><td><strong>{row.materialCode||"—"}</strong></td><td>{row.materialName||"—"}</td><td>{row.unit||"—"}</td><td>{format.format(Number(row.contractQty||0))}</td><td>{format.format(Number(row.requestedQty||0))}</td><td>{format.format(Number(row.approvedQty||row.approvedPurchaseQty||0))}</td><td>{format.format(Number(row.orderedQty||0))}</td><td>{format.format(Number(row.receivedQty||0))}</td><td><strong>{format.format(Math.max(0,boqControlQty(row)-Number(row.orderedQty||0)))}</strong></td></tr>)}{!boqRows.length&&<tr><td colSpan={10}><Empty text="Chưa có dòng vật tư BOQ/Hợp đồng cho phạm vi đang chọn."/></td></tr>}</tbody></table></div></section>
+    <section className="card purchase-material-cumulative"><CardHead title="Chi tiết lũy kế theo vật tư" note="Chỉ hiển thị dữ liệu thực từ BOQ, đề nghị, PO và giao nhận; không nội suy dòng minh họa."/><DataTable rows={boqRows} rowKey={(row)=>String(row.id)} emptyText="Chưa có dòng vật tư BOQ/Hợp đồng cho phạm vi đang chọn." tableClassName="resizable-data-table" columns={[
+  { key: "c1", header: "STT HĐ", render: (row) => <>{row.sourceOrder||"—"}</> },
+  { key: "c2", header: "Mã vật tư", render: (row) => <strong>{row.materialCode||"—"}</strong> },
+  { key: "c3", header: "Tên vật tư", render: (row) => <>{row.materialName||"—"}</> },
+  { key: "c4", header: "ĐVT", render: (row) => <>{row.unit||"—"}</> },
+  { key: "c5", header: "BOQ/HĐ", render: (row) => <>{format.format(Number(row.contractQty||0))}</> },
+  { key: "c6", header: "Đã đề nghị", render: (row) => <>{format.format(Number(row.requestedQty||0))}</> },
+  { key: "c7", header: "Đã duyệt mua", render: (row) => <>{format.format(Number(row.approvedQty||row.approvedPurchaseQty||0))}</> },
+  { key: "c8", header: "Lũy kế PO", render: (row) => <>{format.format(Number(row.orderedQty||0))}</> },
+  { key: "c9", header: "Đã nhận", render: (row) => <>{format.format(Number(row.receivedQty||0))}</> },
+  { key: "c10", header: "Còn phải mua", render: (row) => <strong>{format.format(Math.max(0,boqControlQty(row)-Number(row.orderedQty||0)))}</strong> },
+]}/></section>
   </div>;
 }
 function Receiving({ data, project, open, canUse }: { data: AppData; project: string; open: (name: string, row?: Row) => void; canUse: boolean }) {

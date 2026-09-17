@@ -24,8 +24,25 @@ Số đo bằng `tools/probe-ui-adoption.mjs`: **bảng tự viết 87 chỗ** �
 | 7 | `MaterialCatalogPage` | báo cáo **alias trùng** | 3 cột, khoá theo chỉ số như cũ; `emptyText` nguyên văn *"Không có alias trùng."* |
 | 8 | `MaterialCatalogPage` | báo cáo **xung đột alias** | 4 cột; `emptyText` nguyên văn *"Không có xung đột alias với tên chuẩn."* |
 | 9 | `MaterialCatalogPage` | **danh mục vật tư (chế độ CHỈ XEM)** | 7 cột; `emptyText` nguyên văn *"Danh mục vật tư chưa có dữ liệu."* |
+| 10 | `ProjectManagement` | **danh sách KHO của dự án** | 9 cột (mã · tên · loại · thủ kho · tồn kho · chờ nhập/xuất/duyệt · nút `Xem kho ›`); `emptyText` nguyên văn *"Dự án chưa có kho."* |
+| 11 | `BoqControl` | **chi tiết lũy kế theo vật tư** | 10 cột; ⚠️ **GIỮ lớp `resizable-data-table`** qua tham số mới **`tableClassName`** (xem mục 3b) |
 
-**Đo lại sau khi chuyển:** `DataTable` **13 → 22 lần** · bảng tự viết **87 → 78 chỗ** · trạng thái rỗng tự viết **88 → 81 chỗ** · số bảng "cần cân nhắc" **12 → 5**.
+**Đo lại sau khi chuyển:** `DataTable` **13 → 24 lần** · bảng tự viết **87 → 76 chỗ** · trạng thái rỗng tự viết **88 → 79 chỗ**.
+
+## 3b. ⚠️ LỚP CSS RIÊNG TRÊN `<table>` — BÀI HỌC ĐÃ TRẢ GIÁ (TASK-083)
+
+Một số bảng cũ mang **lớp định dạng riêng** trên chính thẻ `<table>`; `DataTable` luôn render
+`className="baseline-table"` nên **chuyển thẳng là MẤT định dạng**:
+
+| Lớp | CSS thật | Hệ quả nếu bỏ |
+|---|---|---|
+| `resizable-data-table` | `globals.css:1261-1263` — `table-layout:fixed; width:max-content; min-width:100%` + quy tắc ngắt dòng ô | bảng lũy kế vật tư **mất khuôn cột/ngắt dòng** |
+| `data-table` | `globals.css:124` — `tbody tr { cursor:pointer }` | mất con trỏ dòng (bảng Phiếu đề nghị) |
+| `material-list-table` | `canonical.css:732` — `td, th { white-space: nowrap }` | ô bị ngắt dòng |
+
+⇒ **Đã mở rộng `DataTable` thêm `tableClassName`** và dùng ngay cho bảng lũy kế.
+**Quy trình bắt buộc từ nay:** trước khi chuyển một bảng, phải **grep CSS theo lớp riêng của bảng đó**;
+lớp nào có luật thì **truyền vào `tableClassName`**, không được bỏ.
 
 ### Mở rộng `DataTable` (điều kiện tiên quyết — đã làm)
 Thêm **`rowStyle?: (row, index) => CSSProperties`** vào **props** của component (⚠️ KHÔNG phải vào kiểu `Column` —
