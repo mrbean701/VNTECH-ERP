@@ -29,6 +29,32 @@ Số đo bằng `tools/probe-ui-adoption.mjs`: **bảng tự viết 87 chỗ** �
 
 **Đo lại sau khi chuyển:** `DataTable` **13 → 24 lần** · bảng tự viết **87 → 76 chỗ** · trạng thái rỗng tự viết **88 → 79 chỗ**.
 
+## 3c. ⚠️ BẢNG 12 CỘT (`Receiving` — "Kế hoạch giao hàng"): LỖI CÚ PHÁP JSX, ĐÃ HOÀN TÁC
+
+Lượt này em thử chuyển bảng **kế hoạch giao hàng** (12 cột, `baseline-table`, không có lớp riêng) nhưng
+`tsc` báo **3 lỗi** ngay:
+```
+app/page.tsx(1580,1593): error TS2322: Type 'Element' is not assignable to type '(row: Row, index: number) => ReactNode'
+app/page.tsx(1580,1601): error TS2304: Cannot find name 'row'
+app/page.tsx(1580,1611): error TS2304: Cannot find name 'row'
+```
+**Nguyên nhân (đã xác định):** em viết `render:(row)=><>▧ {row.certificateCount||0}</>` — **không có khoảng
+trắng sau `=>`**. TypeScript đọc `=><>` thành **danh sách tham số generic rỗng** nên phần `row` phía sau
+**không còn nằm trong hàm arrow** ⇒ mất biến `row`. Đây là **cùng họ lỗi với 3 lỗi đã ghi ở TASK-079**
+(`key={…}` bị cắt, sai tên biến chỉ số, thiếu `cellClassName`).
+
+**Việc đã làm ngay:** `git checkout -- app/page.tsx` ⇒ **hoàn tác**, `tsc` trở lại **EXIT 0**, `DataTable`
+vẫn **24 lần**, bảng tự viết vẫn **76 chỗ** (đúng bằng trước khi thử) ⇒ **không để lại mã hỏng**.
+
+**Cách làm đúng cho vòng sau (đã xác định, chỉ cần áp dụng):**
+1. **Luôn có khoảng trắng sau `=>`** khi thân là JSX: `render: (row) => <>…</>` (KHÔNG viết `=><>`).
+2. Với ô **trộn chữ + biểu thức** (`▧ {row.certificateCount||0}`) thì bọc bằng fragment và giữ khoảng trắng.
+3. Cột nào chỉ trả **chuỗi** thì trả thẳng (`render: (row) => row.poNo`) để bớt JSX.
+4. Trước khi ghi: chạy **`tsc` trên bản nháp** (đúng như lượt này) — lỗi bị chặn **trước khi** commit.
+
+⚠️ **Chưa chuyển:** bảng 12 cột này + bảng **danh sách dự án 9 cột** + **`Receiving`**; và
+**`Purchasing` KHÔNG chuyển được** (dùng `<Fragment>` nhóm dòng — `DataTable` không có khái niệm dòng nhóm).
+
 ## 3b. ⚠️ LỚP CSS RIÊNG TRÊN `<table>` — BÀI HỌC ĐÃ TRẢ GIÁ (TASK-083)
 
 Một số bảng cũ mang **lớp định dạng riêng** trên chính thẻ `<table>`; `DataTable` luôn render
