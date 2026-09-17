@@ -1741,35 +1741,29 @@ function MaterialListTable({ data, open, permission }: { data: AppData; open: (n
       <label className="material-list-toggle"><input type="checkbox" checked={showAlias} onChange={(e) => setShowAlias(e.target.checked)}/> Hiện tên phụ</label>
       <button type="button" className="primary" disabled={!canCreate} title={canCreate ? "Thêm vật tư" : "Bạn không có quyền tạo vật tư"} onClick={() => open("material")}>＋ Thêm vật tư</button>
     </div>
-    <div className="table-wrap"><table className="baseline-table material-list-table">
-      <thead><tr>
-        <th>Mã vật tư</th><th>Tên chuẩn</th>{showAlias && <th>Tên phụ (alias)</th>}
-        <th>Hệ M&amp;E</th><th>Nhóm</th><th>ĐVT</th><th>Thông số</th><th>Hãng</th><th>Tồn min</th><th>Trạng thái</th><th>Thao tác</th>
-      </tr></thead>
-      <tbody>
-        {rows.map((m) => {
-          const al = aliasOf(m.id);
-          return <tr key={String(m.id)}>
-            <td><strong className="code">{m.code}</strong></td>
-            <td><strong>{m.name}</strong></td>
-            {showAlias && <td>{al.length ? al.join(" · ") : <span className="muted">Chưa có</span>}</td>}
-            <td>{m.categoryName || "—"}</td>
-            <td>{m.subcategoryName || "—"}</td>
-            <td>{m.unit || "—"}</td>
-            <td>{m.specification || "—"}</td>
-            <td>{m.brand || "—"}</td>
-            <td>{Number(m.minStock || 0)}</td>
-            <td>{Number(m.active) === 0 ? <StatusBadge value="Đã ngừng"/> : <StatusBadge value="Đang dùng"/>}</td>
-            <td><div className="row-actions">
-              <button type="button" className="export-mini" disabled={!canEdit} title={canEdit ? "Sửa vật tư" : "Thiếu quyền Sửa"} onClick={() => open("material", m)}>Sửa</button>
-              <button type="button" className="export-mini" disabled={!canMerge} title={canMerge ? "Hợp nhất mã trùng" : "Thiếu quyền Hợp nhất"} onClick={() => open("materialMerge", m)}>Hợp nhất</button>
-              <button type="button" className="export-mini" disabled={!canRetire} title={canRetire ? "Ngừng dùng vật tư" : "Chỉ Quản trị hệ thống được ngừng vật tư"} onClick={() => open("material", { ...m, active: 0 })}>Ngừng</button>
-            </div></td>
-          </tr>;
-        })}
-        {!rows.length && <tr><td colSpan={showAlias ? 11 : 10}><Empty text="Không có vật tư phù hợp bộ lọc."/></td></tr>}
-      </tbody>
-    </table></div>
+    <DataTable
+      rows={rows}
+      rowKey={(m) => String(m.id)}
+      tableClassName="material-list-table"
+      emptyText="Không có vật tư phù hợp bộ lọc."
+      columns={[
+        { key: "code", header: "Mã vật tư", render: (m) => <strong className="code">{m.code}</strong> },
+        { key: "name", header: "Tên chuẩn", render: (m) => <strong>{m.name}</strong> },
+        { key: "alias", header: "Tên phụ (alias)", hidden: !showAlias, render: (m) => { const al = aliasOf(m.id); return al.length ? <>{al.join(" · ")}</> : <span className="muted">Chưa có</span>; } },
+        { key: "category", header: "Hệ M&E", render: (m) => <>{m.categoryName || "—"}</> },
+        { key: "subcategory", header: "Nhóm", render: (m) => <>{m.subcategoryName || "—"}</> },
+        { key: "unit", header: "ĐVT", render: (m) => <>{m.unit || "—"}</> },
+        { key: "specification", header: "Thông số", render: (m) => <>{m.specification || "—"}</> },
+        { key: "brand", header: "Hãng", render: (m) => <>{m.brand || "—"}</> },
+        { key: "minStock", header: "Tồn min", render: (m) => <>{Number(m.minStock || 0)}</> },
+        { key: "active", header: "Trạng thái", render: (m) => Number(m.active) === 0 ? <StatusBadge value="Đã ngừng"/> : <StatusBadge value="Đang dùng"/> },
+        { key: "actions", header: "Thao tác", render: (m) => <div className="row-actions">
+          <button type="button" className="export-mini" disabled={!canEdit} title={canEdit ? "Sửa vật tư" : "Thiếu quyền Sửa"} onClick={() => open("material", m)}>Sửa</button>
+          <button type="button" className="export-mini" disabled={!canMerge} title={canMerge ? "Hợp nhất mã trùng" : "Thiếu quyền Hợp nhất"} onClick={() => open("materialMerge", m)}>Hợp nhất</button>
+          <button type="button" className="export-mini" disabled={!canRetire} title={canRetire ? "Ngừng dùng vật tư" : "Chỉ Quản trị hệ thống được ngừng vật tư"} onClick={() => open("material", { ...m, active: 0 })}>Ngừng</button>
+        </div> },
+      ]}
+    />
     <div className="material-list-note">
       <span>{rows.length}/{materials.length} vật tư</span>
       <span>{canEdit ? "Bạn có quyền Sửa/Hợp nhất" : "Bạn chỉ có quyền xem — các nút đã bị vô hiệu hoá"}</span>
