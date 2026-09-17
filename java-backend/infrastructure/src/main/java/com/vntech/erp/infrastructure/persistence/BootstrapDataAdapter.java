@@ -472,12 +472,18 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                 LEFT JOIN materials m ON m.id=c.material_id
                 WHERE bsi.project_id IN (%s)
                 ORDER BY bsi.project_id,c.rank_no""".formatted(pidSql), params(pids)));
+        // TASK-061 — thiếu `contractName` (JS `:435`/`:448` chọn `c.contract_no` **và `c.contract_name`**) và `referenceItemId`.
+        // ⚠️ LỖI CỦA CHÍNH TÔI (đã sửa): bản đầu tôi viết `c.name` — `project_contracts` **KHÔNG có** cột `name`
+        // (cột thật là `contract_name`) ⇒ `GET /api/system` trả **500 cho TOÀN BỘ giao diện** cho tới khi sửa.
+        // Bài học: sau khi sửa SQL **PHẢI chạy `probe-java-sql-live.mjs`** (đối chiếu lược đồ đang chạy) TRƯỚC khi build+restart.
         data.put("contractStockLedger", pids.isEmpty() ? List.of() : query("""
                 SELECT l.id,l.project_id AS projectId,l.contract_id AS contractId,c.contract_no AS contractNo,
+                       c.contract_name AS contractName,
                        l.warehouse_id AS warehouseId,w.code AS warehouseCode,w.name AS warehouseName,
                        l.material_id AS materialId,m.code AS materialCode,m.name AS materialName,m.unit,
                        l.movement_type AS movementType,l.quantity_delta AS quantityDelta,
                        l.occurred_at AS occurredAt,l.reference_type AS referenceType,l.reference_id AS referenceId,
+                       l.reference_item_id AS referenceItemId,
                        l.counterparty_contract_id AS counterpartyContractId,l.note
                 FROM contract_stock_ledger l
                 JOIN project_contracts c ON c.id=l.contract_id
@@ -487,6 +493,7 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                 ORDER BY l.occurred_at DESC,l.id DESC LIMIT 2000""".formatted(pidSql), params(pids)));
         data.put("contractStockBalances", pids.isEmpty() ? List.of() : query("""
                 SELECT l.project_id AS projectId,l.contract_id AS contractId,c.contract_no AS contractNo,
+                       c.contract_name AS contractName,
                        l.warehouse_id AS warehouseId,w.code AS warehouseCode,
                        l.material_id AS materialId,m.code AS materialCode,m.name AS materialName,m.unit,
                        COALESCE(SUM(l.quantity_delta),0) AS balance
@@ -495,7 +502,8 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                 JOIN warehouses w ON w.id=l.warehouse_id
                 JOIN materials m ON m.id=l.material_id
                 WHERE l.project_id IN (%s)
-                GROUP BY l.project_id,l.contract_id,c.contract_no,l.warehouse_id,w.code,l.material_id,m.code,m.name,m.unit
+                GROUP BY l.project_id,l.contract_id,c.contract_no,c.contract_name,l.warehouse_id,w.code,
+                         l.material_id,m.code,m.name,m.unit
                 HAVING ABS(COALESCE(SUM(l.quantity_delta),0))>0.0000001
                 ORDER BY l.project_id,c.contract_no,w.code,m.code""".formatted(pidSql), params(pids)));
 
@@ -599,14 +607,24 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
             }
             data.put("modulePermissions", perms);
         } else {
+            // TASK-061 — port NỐT hai phần còn thiếu so với JS `:684` nhánh 3:
+            //   (a) cột `permission_expires_at AS permissionExpiresAt`;
+            //   (b) **bộ lọc hết hạn** `AND (ump.permission_expires_at IS NULL OR ump.permission_expires_at>?)`
+            //       (JS bind `now()`), tức quyền đã hết hạn KHÔNG được trả về. Đây cũng chính là "GIỚI HẠN
+            //       ĐÃ BIẾT" đã ghi ở bộ lọc quyền của TASK-050: nay đầu vào của bộ lọc khớp JS hơn.
             data.put("modulePermissions", query("""
                     SELECT ump.user_id AS userId,ump.module_key AS moduleKey,ump.can_view AS canView,
                            ump.can_use AS canUse,ump.can_create AS canCreate,ump.can_edit AS canEdit,
                            ump.can_approve AS canApprove,ump.can_export AS canExport,
+                           ump.permission_expires_at AS permissionExpiresAt,
                            COALESCE(ump.permission_source,'manual_override') AS permissionSource
                     FROM user_module_permissions ump
                     JOIN module_catalog mc ON mc.module_key=ump.module_key AND mc.active=1
-                    WHERE ump.user_id=? ORDER BY mc.sort_order,ump.module_key""", ctx.userId()));
+                    LEFT JOIN menu_group_catalog mg ON mg.group_key=mc.group_key
+                    WHERE ump.user_id=?
+                      AND (ump.permission_expires_at IS NULL OR ump.permission_expires_at>?)
+                      AND (mc.group_key IS NULL OR mg.active=1)
+                    ORDER BY mc.sort_order,ump.module_key""", ctx.userId(), java.time.Instant.now()));
         }
         data.put("staffDirectory", query("""
                 SELECT u.id,u.employee_code AS employeeCode,u.full_name AS fullName,u.email,u.role,
@@ -680,7 +698,8 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
         // JS: `workflowAssignments` = bảng approval_project_assignments (phân công người duyệt theo dự án+bước)
         data.put("workflowAssignments", pids.isEmpty() ? List.of() : query("""
                 SELECT apa.id,apa.project_id AS projectId,apa.stage,apa.owner_user_id AS ownerUserId,
-                       u.full_name AS ownerName,apa.cc_emails AS ccEmails,apa.active
+                       u.full_name AS ownerName,u.email AS ownerEmail,u.role AS ownerRole,
+                       apa.cc_emails AS ccEmails,apa.active
                 FROM approval_project_assignments apa
                 LEFT JOIN users u ON u.id=apa.owner_user_id
                 WHERE apa.project_id IN (%s) ORDER BY apa.project_id,apa.stage""".formatted(pidSql), params(pids)));
@@ -820,25 +839,36 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
         // TASK-058 — KHỐI `workItemEvents` CŨ (trả sự kiện của MỌI công việc, thiếu 3 cột) ĐÃ BỊ XOÁ;
         // nay nó nằm ngay sau `workItems` và chỉ lấy sự kiện của các công việc vừa trả về (JS `:718`).
 
+        // TASK-061 — JS `:664` JOIN teams + team_subcontracts và trả thêm `teamName`,`contractNo`,
+        // `approvedProductionValue`,`adjustmentValue`,`note`.
         data.put("teamSettlements", pids.isEmpty() ? List.of() : query("""
-                SELECT id,project_id AS projectId,team_id AS teamId,subcontract_id AS subcontractId,
-                       settlement_no AS settlementNo,status,final_value AS finalValue,
-                       paid_value AS paidValue,remaining_value AS remainingValue,
-                       settled_at AS settledAt,created_at AS createdAt
-                FROM team_settlements WHERE project_id IN (%s) ORDER BY created_at DESC""".formatted(pidSql), params(pids)));
+                SELECT st.id,st.project_id AS projectId,st.team_id AS teamId,t.name AS teamName,
+                       st.subcontract_id AS subcontractId,sc.contract_no AS contractNo,
+                       st.settlement_no AS settlementNo,st.approved_production_value AS approvedProductionValue,
+                       st.adjustment_value AS adjustmentValue,st.final_value AS finalValue,
+                       st.paid_value AS paidValue,st.remaining_value AS remainingValue,
+                       st.status,st.settled_at AS settledAt,st.note,st.created_at AS createdAt
+                FROM team_settlements st
+                JOIN teams t ON t.id=st.team_id
+                JOIN team_subcontracts sc ON sc.id=st.subcontract_id
+                WHERE st.project_id IN (%s) ORDER BY st.created_at DESC""".formatted(pidSql), params(pids)));
 
         data.put("boqImportBatches", pids.isEmpty() ? List.of() : query("""
                 SELECT id,project_id AS projectId,contract_id AS contractId,
                        boq_version_id AS boqVersionId,version_no AS versionNo,
                        source_file_name AS sourceFileName,row_count AS rowCount,
-                       imported_by AS importedBy,created_at AS createdAt
+                       imported_by AS importedBy,active,created_at AS createdAt
                 FROM boq_import_batches WHERE project_id IN (%s) ORDER BY created_at DESC""".formatted(pidSql), params(pids)));
 
+        // TASK-061 — JS `:757` trả thêm `contractId`,`boqVersionId`,`sourceItemId` và `actorName` (JOIN users).
         data.put("boqChangeHistory", pids.isEmpty() ? List.of() : query("""
-                SELECT id,project_id AS projectId,project_boq_item_id AS projectBoqItemId,
-                       action_type AS actionType,before_json AS beforeJson,after_json AS afterJson,
-                       reason,actor_user_id AS actorUserId,created_at AS createdAt
-                FROM boq_change_history WHERE project_id IN (%s) ORDER BY created_at DESC""".formatted(pidSql), params(pids)));
+                SELECT h.id,h.project_id AS projectId,h.contract_id AS contractId,
+                       h.boq_version_id AS boqVersionId,h.project_boq_item_id AS projectBoqItemId,
+                       h.source_item_id AS sourceItemId,h.action_type AS actionType,
+                       h.before_json AS beforeJson,h.after_json AS afterJson,h.reason,
+                       h.actor_user_id AS actorUserId,u.full_name AS actorName,h.created_at AS createdAt
+                FROM boq_change_history h LEFT JOIN users u ON u.id=h.actor_user_id
+                WHERE h.project_id IN (%s) ORDER BY h.created_at DESC""".formatted(pidSql), params(pids)));
 
         // TASK-059 — JS `:675` trả `businessScopeId` + `scopeCode` + `scopeName` (JOIN business_scope_catalog)
         // và sắp theo `is_primary DESC, bs.sort_order, bs.name`; bản Java trả `scopeId` + `createdAt`
@@ -852,11 +882,19 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                 %s ORDER BY brgs.is_primary DESC,bs.sort_order,bs.name""".formatted(
                         admin ? "" : "WHERE bs.active=1")));
 
+        // TASK-061 — JS `:768` JOIN warehouses/materials và trả thêm `warehouseCode`,`materialCode`,
+        // `materialName`,`note`; JS cũng sắp theo `checked_at DESC` + LIMIT 500.
         data.put("stockReconciliations", pids.isEmpty() ? List.of() : query("""
-                SELECT id,project_id AS projectId,warehouse_id AS warehouseId,material_id AS materialId,
-                       physical_qty AS physicalQty,contract_qty AS contractQty,
-                       difference_qty AS differenceQty,status,checked_at AS checkedAt,created_at AS createdAt
-                FROM contract_stock_reconciliations WHERE project_id IN (%s) ORDER BY created_at DESC""".formatted(pidSql), params(pids)));
+                SELECT r.id,r.project_id AS projectId,r.warehouse_id AS warehouseId,
+                       w.code AS warehouseCode,r.material_id AS materialId,
+                       m.code AS materialCode,m.name AS materialName,
+                       r.physical_qty AS physicalQty,r.contract_qty AS contractQty,
+                       r.difference_qty AS differenceQty,r.status,r.checked_at AS checkedAt,r.note,
+                       r.created_at AS createdAt
+                FROM contract_stock_reconciliations r
+                JOIN warehouses w ON w.id=r.warehouse_id
+                JOIN materials m ON m.id=r.material_id
+                WHERE r.project_id IN (%s) ORDER BY r.checked_at DESC LIMIT 500""".formatted(pidSql), params(pids)));
         if (admin) {
             data.put("users", query("""
                     SELECT u.id,u.employee_code AS employeeCode,u.full_name AS fullName,u.username,u.email,u.role,
@@ -864,7 +902,8 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                            rc.warehouse_scope_kind AS warehouseScopeKind,u.department,
                            u.organization_unit_id AS organizationUnitId,ou.code AS organizationCode,
                            COALESCE(ou.name,u.department) AS organizationName,u.avatar_url AS avatarUrl,
-                           u.approval_limit AS approvalLimit,u.must_change_password AS mustChangePassword,u.active,
+                           u.approval_limit AS approvalLimit,u.must_change_password AS mustChangePassword,
+                           u.password_reset_at AS passwordResetAt,u.active,
                            u.system_level_code AS systemLevelCode
                     FROM users u
                     LEFT JOIN role_catalog rc ON rc.code=u.role
@@ -928,8 +967,10 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                 SELECT cp.id,cp.project_id AS projectId,p.code AS projectCode,p.name AS projectName,
                        cp.recovery_record_id AS recoveryRecordId,cp.payment_date AS paymentDate,
                        cp.reference_no AS referenceNo,cp.description,cp.amount,cp.note,
+                       cp.created_by AS createdBy,u.full_name AS createdByName,
                        cp.created_at AS createdAt,cp.updated_at AS updatedAt
                 FROM contract_payments cp JOIN projects p ON p.id=cp.project_id
+                LEFT JOIN users u ON u.id=cp.created_by
                 WHERE cp.project_id IN (%s) ORDER BY cp.payment_date DESC,cp.created_at DESC""".formatted(pidSql), params(pids)));
         data.put("productionReports", pids.isEmpty() ? List.of() : query("""
                 SELECT pr.id,pr.project_id AS projectId,p.code AS projectCode,p.name AS projectName,
@@ -950,11 +991,13 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                        cr.production_report_id AS productionReportId,pr.approved_value AS productionApprovedValue,
                        cr.submitted_value AS submittedValue,cr.approved_value AS approvedValue,
                        cr.invoice_no AS invoiceNo,cr.invoice_value AS invoiceValue,cr.due_date AS dueDate,
-                       cr.status,cr.note,cr.created_at AS createdAt,cr.updated_at AS updatedAt,
+                       cr.status,cr.note,cr.created_by AS createdBy,u.full_name AS createdByName,
+                       cr.created_at AS createdAt,cr.updated_at AS updatedAt,
                        COALESCE((SELECT SUM(cp.amount) FROM contract_payments cp WHERE cp.recovery_record_id=cr.id),0) AS cashReceived
                 FROM capital_recovery_records cr
                 JOIN projects p ON p.id=cr.project_id
                 LEFT JOIN production_reports pr ON pr.id=cr.production_report_id
+                LEFT JOIN users u ON u.id=cr.created_by
                 WHERE cr.project_id IN (%s) ORDER BY cr.period_key DESC,cr.updated_at DESC""".formatted(pidSql), params(pids)));
         data.put("teamSubcontracts", pids.isEmpty() ? List.of() : query("""
                 SELECT sc.id,sc.project_id AS projectId,sc.team_id AS teamId,t.code AS teamCode,t.name AS teamName,
@@ -976,6 +1019,7 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
         data.put("teamPayments", pids.isEmpty() ? List.of() : query("""
                 SELECT pay.id,pay.project_id AS projectId,pay.team_id AS teamId,t.name AS teamName,
                        pay.subcontract_id AS subcontractId,sc.contract_no AS contractNo,
+                       pay.production_record_id AS productionRecordId,
                        pay.payment_date AS paymentDate,pay.payment_type AS paymentType,
                        pay.reference_no AS referenceNo,pay.description,pay.amount,pay.note,
                        pay.created_at AS createdAt
@@ -987,31 +1031,39 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                 SELECT pp.id,pp.plan_no AS planNo,pp.project_id AS projectId,p.code AS projectCode,
                        p.name AS projectName,pp.contract_id AS contractId,pp.po_id AS poId,
                        pp.milestone,pp.planned_date AS plannedDate,pp.planned_amount AS plannedAmount,
-                       pp.paid_amount AS paidAmount,pp.status,pp.note,pp.created_at AS createdAt,
-                       pp.updated_at AS updatedAt
+                       pp.paid_amount AS paidAmount,pp.status,pp.note,
+                       pp.created_by AS createdBy,u.full_name AS createdByName,
+                       pp.created_at AS createdAt,pp.updated_at AS updatedAt
                 FROM payment_plans pp JOIN projects p ON p.id=pp.project_id
+                LEFT JOIN users u ON u.id=pp.created_by
                 WHERE pp.project_id IN (%s) ORDER BY pp.planned_date,pp.created_at DESC""".formatted(pidSql), params(pids)));
         data.put("advanceRequests", pids.isEmpty() ? List.of() : query("""
                 SELECT ar.id,ar.request_no AS requestNo,ar.project_id AS projectId,p.code AS projectCode,
                        p.name AS projectName,ar.requester_id AS requesterId,u.full_name AS requesterName,
                        u.department AS requesterDepartment,ar.amount,ar.purpose,ar.category,ar.status,
                        ar.advance_paid AS advancePaid,ar.settlement_value AS settlementValue,
-                       ar.settled_at AS settledAt,ar.note,ar.created_at AS createdAt,ar.updated_at AS updatedAt
+                       ar.settled_at AS settledAt,ar.note,ar.created_by AS createdBy,
+                       uc.full_name AS createdByName,
+                       ar.created_at AS createdAt,ar.updated_at AS updatedAt
                 FROM advance_requests ar
                 LEFT JOIN projects p ON p.id=ar.project_id
                 LEFT JOIN users u ON u.id=ar.requester_id
+                LEFT JOIN users uc ON uc.id=ar.created_by
                 WHERE ar.project_id IS NULL OR ar.project_id IN (%s)
                 ORDER BY ar.created_at DESC""".formatted(pidSql), params(pids)));
         data.put("siteExpenseClaims", pids.isEmpty() ? List.of() : query("""
                 SELECT sc.id,sc.claim_no AS claimNo,sc.project_id AS projectId,p.code AS projectCode,
                        p.name AS projectName,sc.cost_type AS costType,sc.amount,sc.paid_by AS paidBy,
                        pu.full_name AS paidByName,sc.claim_date AS claimDate,sc.description,
+                       sc.voucher_attachment_id AS voucherAttachmentId,
                        sc.status,sc.approved_by AS approvedBy,au.full_name AS approvedByName,
-                       sc.approved_at AS approvedAt,sc.created_at AS createdAt,sc.updated_at AS updatedAt
+                       sc.approved_at AS approvedAt,sc.created_by AS createdBy,
+                       cu.full_name AS createdByName,sc.created_at AS createdAt,sc.updated_at AS updatedAt
                 FROM site_expense_claims sc
                 JOIN projects p ON p.id=sc.project_id
                 LEFT JOIN users pu ON pu.id=sc.paid_by
                 LEFT JOIN users au ON au.id=sc.approved_by
+                LEFT JOIN users cu ON cu.id=sc.created_by
                 WHERE sc.project_id IN (%s) ORDER BY sc.claim_date DESC,sc.created_at DESC""".formatted(pidSql), params(pids)));
         data.put("bankAccounts", query("""
                 SELECT b.id,b.code,b.bank_name AS bankName,b.account_no AS accountNo,b.branch,b.currency,
@@ -1194,13 +1246,16 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                        l.shift,l.weather,l.work_content AS workContent,l.labor_count AS laborCount,
                        l.equipment_note AS equipmentNote,l.status,l.submitted_by AS submittedBy,
                        us.full_name AS submittedByName,l.approved_by AS approvedBy,
-                       ua.full_name AS approvedByName,l.approved_at AS approvedAt,l.note,
+                       ua.full_name AS approvedByName,l.approved_at AS approvedAt,
+                       l.cancelled_by AS cancelledBy,l.cancelled_at AS cancelledAt,
+                       l.created_by AS createdBy,uc.full_name AS createdByName,l.note,
                        l.created_at AS createdAt,l.updated_at AS updatedAt,
                        COALESCE(x.item_count,0) AS itemCount,COALESCE(x.completed_qty,0) AS completedQty
                 FROM construction_daily_logs l
                 JOIN projects p ON p.id=l.project_id
                 LEFT JOIN users us ON us.id=l.submitted_by
                 LEFT JOIN users ua ON ua.id=l.approved_by
+                LEFT JOIN users uc ON uc.id=l.created_by
                 LEFT JOIN (SELECT log_id,COUNT(*) AS item_count,SUM(completed_qty) AS completed_qty
                            FROM construction_daily_log_items GROUP BY log_id) x ON x.log_id=l.id
                 WHERE l.project_id IN (%s) ORDER BY l.work_date DESC,l.created_at DESC""".formatted(pidSql), params(pids)));
