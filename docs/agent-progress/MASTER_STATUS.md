@@ -14,10 +14,10 @@
 | Mục | Giá trị |
 |---|---|
 | CURRENT PHASE | PHASE 1 — hạ tầng UI dùng chung. Song song: hoàn thiện tầng phân quyền Java |
-| CURRENT TASK | **TASK-033** — MASTER TASK §8.1 (dải phê duyệt thiếu PHÒNG BAN); đang chờ dựng lại bundle để chứng minh render |
-| LAST COMPLETED | **TASK-008 phần 2 (#38)** — quét hồi quy rộng. Trước đó: TASK-030 (#36, #37) · TASK-027 (#35) · TASK-025 (#34) |
-| NEXT TASK | TASK-034 (gỡ chặn dựng bundle) → chứng minh TASK-033 render → TASK-009 (U-09 đợt 6) → §8.2/§8.3 |
-| BLOCKED ITEMS | **TASK-034 — `npm run build` KHÔNG dựng lại được UI** (dấu vân tay nguồn lệch, không có công cụ ghi lại) ⇒ mọi thay đổi UI không thể kiểm chứng lúc chạy và **bạn sẽ test thủ công trên bundle cũ** · **TASK-031** (cây dự án trong menu bị tắt) · **TASK-032** (0/16 vai trò trỏ đơn vị mặc định) · **TASK-029** (Java chặt hơn JS trên 30 action) · **TASK-024** (`isCompanyLeadership`) · **dữ liệu `user_module_permissions`** |
+| CURRENT TASK | **TASK-033** — MASTER TASK §8.1 (dải phê duyệt thiếu PHÒNG BAN); chờ dựng lại bundle để chứng minh render |
+| LAST COMPLETED | **TASK-035 (#40)** — GOAL §8: xác định **KHÔNG có version pinning** cho hồ sơ đang pending (+ phát hiện Java rộng hơn JS về nguồn quyền duyệt). Trước đó: TASK-008 phần 2 (#38) · TASK-030 (#36, #37) · TASK-027 (#35) |
+| NEXT TASK | TASK-034 (gỡ chặn dựng bundle) → chứng minh TASK-033 render → **§8.2** (modal "Tổng hợp giao nhận") → **§8.3** (ảnh/hồ sơ vật tư) → TASK-009 |
+| BLOCKED ITEMS | **TASK-034 — `npm run build` KHÔNG dựng lại được UI** (dấu vân tay nguồn lệch, không có công cụ ghi lại) ⇒ bạn sẽ test thủ công trên **bundle cũ** · **TASK-035 mục 7** (hành vi mong muốn khi đổi workflow giữa chừng + chặn tắt bước đang chờ) · **TASK-031** (cây dự án trong menu bị tắt) · **TASK-032** (0/16 vai trò trỏ đơn vị mặc định) · **TASK-029** (Java chặt/rộng hơn JS: 30 action module **+** nguồn quyền duyệt P4) · **TASK-024** (`isCompanyLeadership`) · **dữ liệu `user_module_permissions`** |
 | USER CONFIRMATION REQUIRED | **YES** — **5 câu hỏi**, ghi ở mục riêng bên dưới |
 | CURRENT BRANCH | `unity` |
 | LATEST COMMIT | `f2cd1bc` (#36) · **28 commit local CHƯA PUSH** (theo quyết định của người dùng) |
@@ -63,7 +63,9 @@ Mặc định của interface là `return role()` = **mã chuẩn** ⇒ thiếu 
 
 * `WF-MUAHANG` 5 bước tuần tự, mỗi bước cần 1 người duyệt; điều kiện hợp lệ = được gán **HOẶC** role nằm trong `allowed_role_codes` (so **cả** `role` và `baseRole`)
 * Dữ liệu: `approval_stage_catalog` 5 bước · `workflow_assignments` 5 dòng · `team_members` **0 dòng** · `approval_stage_decisions` **0 dòng** (mã chết)
-* **Chưa xác định**: tài liệu đang pending sẽ theo workflow version CŨ hay chuyển sang version MỚI khi admin đổi workflow (GOAL §8) → cần điều tra trước khi kết luận
+* **ĐÃ XÁC ĐỊNH (TASK-035, #40)**: **KHÔNG có version pinning.** Hồ sơ đang pending chỉ lưu `approvalStage` (một con số) — **không** lưu `workflow_id`/`workflow_version`; mọi thuộc tính bước (người duyệt · `approval_mode` · `allowed_role_codes`) được tra **LIVE** tại thời điểm quyết định. ⇒ Admin đổi cấu hình ⇒ **hồ sơ đang chờ đổi theo NGAY**, không giữ bản cũ.
+* `workflow_definitions.version` **tồn tại nhưng KHÔNG hoạt động như versioning**: cả `drizzle/0080:46` lẫn MySQL `V8__workflow_multi.sql` đều ràng buộc `UNIQUE (workflow_id, step_no)` — **không có `version`** trong khoá ⇒ không thể tồn tại song song hai phiên bản của cùng một bước. `LIKELY`: tắt/xoá bước đang có hồ sơ chờ ⇒ `allowed` rỗng ⇒ **không ai duyệt được, không có đường thoát**.
+* Ba bảng P4 (`workflow_definitions`, `workflow_steps`, `workflow_step_approvers`) là **metadata + màn quản trị**, **không** điều khiển nghiệp vụ phía JS (**0** tham chiếu). Java thì **có** dùng để cấp quyền duyệt (rộng hơn JS) — xếp cùng nhóm quyết định TASK-029.
 
 ## Thay đổi trong phiên gần nhất
 
