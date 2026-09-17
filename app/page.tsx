@@ -801,10 +801,11 @@ function WorkCenter({ data, action, refresh }: { data: AppData; action: (name: s
 
   return <div className="stack work-center">
     <section className="card">
-      <div className="table-toolbar">
-        <div><strong>CÔNG VIỆC</strong><span>{mine.length} việc của bạn · {deptWork.length + teamWork.length} việc phòng ban/tổ đội · {items.length} tổng</span></div>
-        <div className="row-actions"><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Tìm mã việc, nội dung, người làm…" aria-label="Tìm nhiệm vụ"/></div>
-      </div>
+      <ListToolbar
+        title="CÔNG VIỆC"
+        note={`${mine.length} việc của bạn · ${deptWork.length + teamWork.length} việc phòng ban/tổ đội · ${items.length} tổng`}
+        search={{ value: q, onChange: setQ, placeholder: "Tìm mã việc, nội dung, người làm…" }}
+      />
       <div className="project-scope-tabs" role="tablist">
         {TABS.map((label, i) => <button key={label} type="button" role="tab" aria-selected={tab === i} className={tab === i ? "active" : ""} onClick={() => setTab(i)}>{label}</button>)}
       </div>
@@ -1045,10 +1046,11 @@ function TeamManagement({ data, open }: { data: AppData; open: (name: string, ro
 
   return <div className="stack team-management">
     <section className="card">
-      <div className="table-toolbar">
-        <div><strong>DANH SÁCH TỔ ĐỘI</strong><span>{filtered.length}/{teams.length} tổ đội · mỗi tổ đội thuộc đúng một dự án</span></div>
-        <div className="row-actions"><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Tìm mã, tên tổ đội, hạng mục, dự án…" aria-label="Tìm tổ đội"/></div>
-      </div>
+      <ListToolbar
+        title="DANH SÁCH TỔ ĐỘI"
+        note={`${filtered.length}/${teams.length} tổ đội · mỗi tổ đội thuộc đúng một dự án`}
+        search={{ value: q, onChange: setQ, placeholder: "Tìm mã, tên tổ đội, hạng mục, dự án…" }}
+      />
       <div className="table-wrap"><table className="baseline-table">
         <thead><tr><th>Mã tổ đội</th><th>Tên tổ đội</th><th>Hạng mục</th><th>Dự án</th><th>Kho của tổ đội</th><th>Thành viên</th><th>Quyết toán</th><th>Trạng thái</th><th></th></tr></thead>
         <tbody>
@@ -1162,23 +1164,22 @@ function ProjectManagement({ data, project, onProject, open, action }: { data: A
   if (view === "list") {
     return <div className="stack project-management">
       <section className="card">
-        <div className="table-toolbar">
-          <div><strong>DANH SÁCH DỰ ÁN</strong><span>{filtered.length}/{allProjects.length} dự án · ưu tiên đang hoạt động, mới nhất trước</span></div>
-          <div className="row-actions">
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Tìm mã, tên, hợp đồng…" aria-label="Tìm dự án"/>
-            <select value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Lọc trạng thái">
-              <option value="ALL">Tất cả trạng thái</option>
-              <option value="active">Đang hoạt động</option>
-              <option value="paused">Tạm dừng</option>
-              <option value="closed">Đã đóng</option>
-            </select>
-            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} aria-label="Sắp xếp">
-              <option value="active_newest">Hoạt động trước · mới nhất</option>
-              <option value="name">Theo mã dự án</option>
-              <option value="overdue">Chậm tiến độ nhiều nhất</option>
-            </select>
-          </div>
-        </div>
+        <ListToolbar
+          title="DANH SÁCH DỰ ÁN"
+          note={`${filtered.length}/${allProjects.length} dự án · ưu tiên đang hoạt động, mới nhất trước`}
+          search={{ value: q, onChange: setQ, placeholder: "Tìm mã, tên, hợp đồng…" }}
+          filters={[{ key: "status", label: "Trạng thái", value: status, onChange: setStatus, options: [
+            { value: "ALL", label: "Tất cả trạng thái" },
+            { value: "active", label: "Đang hoạt động" },
+            { value: "paused", label: "Tạm dừng" },
+            { value: "closed", label: "Đã đóng" },
+          ] }]}
+          sort={{ value: sortBy, onChange: setSortBy, options: [
+            { value: "active_newest", label: "Hoạt động trước · mới nhất" },
+            { value: "name", label: "Theo mã dự án" },
+            { value: "overdue", label: "Chậm tiến độ nhiều nhất" },
+          ] }}
+        />
         <div className="table-wrap">
           <table className="baseline-table">
             <thead><tr>
@@ -1228,16 +1229,14 @@ function ProjectManagement({ data, project, onProject, open, action }: { data: A
 
   return <div className="stack project-management">
     <section className="card project-detail-head">
-      <div className="table-toolbar">
-        <div>
-          <strong>{detail.code} · {detail.name}</strong>
-          <span>{PROJECT_STATUS_LABELS[String(detail.status || "active")] || detail.status} · {staff.length} nhân sự · {teams.length} tổ đội · {warehouses.length} kho</span>
-        </div>
-        <div className="row-actions">
+      <ListToolbar
+        title={`${detail.code} · ${detail.name}`}
+        note={`${PROJECT_STATUS_LABELS[String(detail.status || "active")] || detail.status} · ${staff.length} nhân sự · ${teams.length} tổ đội · ${warehouses.length} kho`}
+        actions={<>
           <button type="button" className="secondary" onClick={() => { onProject(pid); }} title="Đặt dự án này làm phạm vi làm việc">Đặt làm dự án hiện tại</button>
           <button type="button" className="page-back" onClick={() => setView("list")}>← Quay lại danh sách</button>
-        </div>
-      </div>
+        </>}
+      />
       <div className="project-scope-tabs" role="tablist">
         {TABS.map((label, index) => <button key={label} type="button" role="tab" aria-selected={tab === index} className={tab === index ? "active" : ""} onClick={() => setTab(index)}>{label}</button>)}
       </div>

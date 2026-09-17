@@ -6,7 +6,7 @@ daf241f23a4040823c77f49c38f9d3e69f8949910b6e4d91ad1a21c21edf03b9  ./.dsh-vision-
 3c3df54995719784621163efe23acfc0ec4d4a3d132f42337495e817c62f0990  ./.env.example
 0d28b5757449785b0bf70c915d51ee62284eb061aae57daf77cab3bf0c63bbac  ./.gitignore
 be5993e97c75a38c59fb4532c0897e5e60f43627b10ff9c8a044971e3e7ffa1f  ./.memsearch/memory/2026-09-15.md
-89e628a367145c0746f4d562954227e222c6cdcfd49a3a9f85098c6d8d8ddc32  ./.memsearch/memory/2026-09-16.md
+7447d5850f8fa0c0084a391939b00817b42ad0c447a6b5099d8c8103e60a287b  ./.memsearch/memory/2026-09-16.md
 494e64a8818b6158e89321250500ad5ad018e33ad5cfea06a1cacd2cf4da75fa  ./.npmrc
 0c8112872080635eb712d0b77bac53c68d73ed519cc32063ce8f82652c833255  ./.openai/hosting.json
 7c240586c6a4e7885776068d1fad3620de018b8a720af0aa3389c9ffc5bad0d1  ./00_CAI_MOI_SERVER_WINDOWS.bat
@@ -25,7 +25,7 @@ da918bb17b3429524b9cc9cd313dd5c93153c2bba378ecda1c8c3d6f873dddbf  ./app/componen
 2b3c267c1b0cc92f9becc08acdf4cac03793b407e176146b3b8280e752ee9fcd  ./app/components/ui/Timeline.tsx
 23cc00495e4ccf7e62e745fa5a8f66e4c1203bc42f76a79f20424262ed62b4d6  ./app/globals.css
 728272ec719506f737c1d9d9072931abbc7277fc9391e35029be88e2f594a553  ./app/layout.tsx
-6c38ef5ff15997e214db3cf249663981a698b3ee65d30e34196c7eac1e4b2ae5  ./app/page.tsx
+52c84ec4127c4021d671cede840ca63fe66000fe59a5963c000d4cdd8e8167e2  ./app/page.tsx
 7d7d0539f2cf0958405a7edb13da965b5bc6b414344fca317dac3dfaa65b6d2d  ./app/styles/canonical.css
 e9fdea16090b6c9c93ccec893bd68370527f7e06796012aea63025b3c0ea0382  ./app/styles/font-floor.css
 fff2e154d3c551c293fd59b9bf8c2cc7e80de38533ff221a16ce6d427a4afb8d  ./app/styles/tokens.css
@@ -146,6 +146,7 @@ f7adaa2718b8aff13370790124b9e0ada7acebfb6d8a791ec69c9a181046e6e6  ./drizzle/0102
 653497f9634b733418d5502cdcd8117f12169c5cc1f1afbadb967c3e4bb2515e  ./drizzle/0103_phase1_sua_xung_dot_lop_css_identity.sql
 870f9656c0b5910f787466414566799f1dc9537de8d398b2994bd76e527cd7df  ./drizzle/0104_phase1_u09_toolbar_chuan_identity.sql
 8aadd0de23c3ddc0ad98dfead3837809e5635704c1785e6413f82ff98f0e1e2c  ./drizzle/0105_phase1_u09_admin_toolbar_identity.sql
+124c7a35b4a8ccd93053755b6389f2b3e605e18124498552583cdcb9ad19f336  ./drizzle/0106_phase1_u09_dot3_toolbar_identity.sql
 870f1adccecf3051cbcd9fd307cef51d7633cf510979c181a81f4b1797273493  ./eslint.config.mjs
 7f47c57e035d4bb3f3fd449b795dfa51b7db8f0720ae6457a3a37868e07e3178  ./java-backend/.gitignore
 4d4bf7821823e4011771702449065544347784ecf4cbde265125a36c0d8e31b0  ./java-backend/.idea/.gitignore
@@ -606,7 +607,7 @@ a650e892769428cb727534390ba6544c213f128bf1d993407da6ee4ecac60c3a  ./lib/trust/in
 128cab7c6e6a11cd87f7d57e0ac0b885eae4335592b9ab94227ae68e6d69c901  ./lib/trust/license-verifier.mjs
 6647a2069fe00ed99916c7847a1de10cca12088ce62cf3d185f1dc6f29679495  ./lib/trust/source-fingerprint.mjs
 de95cd69830545dce32ba5e3d2a05fd7f16656849ee95ef9856f187e5d83d662  ./lib/vntech-brand.ts
-1c4401ece28823c12c52f82859ae11302847dab7a05074c838393b6e327ac2ad  ./lib/vntech-identity-data.mjs
+55894d937621484ff26960b03d5de35d8455400b5cde036da3e818e2955421f1  ./lib/vntech-identity-data.mjs
 cd24eebc4022ebf74ffae54cf0851131a1cff84bb016241cc966c01947d90123  ./MASTER_BASELINE_CLEANUP_DIFF.txt
 2623000ac3b162675c9e4e68d364ef1af3f2761ba64c3f050f6250245afca1b4  ./MASTER_BASELINE_CLEANUP_REPORT.md
 cb6a409cc283707a072acc211fbe159b48828d3cffbeaf894b9afd6e0320df8c  ./MASTER_BASELINE_CLEANUP_VALIDATION.md
@@ -694,8 +695,8 @@ eae1d187870ad9a4b3f0c37b40589b25c1a2090dcbee19964555cf70c136b118  ./tests/render
 addc733250d2481a93097e1f6e4ef162faf77943f976d5d9139f37968c983355  ./tests/trust-lock-foundation.test.mjs
 e39e486f11d48540226cb905e03c0bc1f26084113e8fa62513b1b725cba29916  ./tests/w2-admin-import-role-org.test.mjs
 32691c1aa533b7d2f337fb5160b040246f9e50801eca25dcd06f2573f05ab944  ./tests/workflow-direct.test.ts
-b8396839b62a34e5bc5eb8a4144d19042f83074342d300d78e69d360be3a9cd0  ./tools/_diff/crop-1.png
-b8396839b62a34e5bc5eb8a4144d19042f83074342d300d78e69d360be3a9cd0  ./tools/_diff/crop-2.png
+1e993840768c0a41ed28b979146fbe8d422dd65962229cfbb8c847cbcefdb5e6  ./tools/_diff/crop-1.png
+1e993840768c0a41ed28b979146fbe8d422dd65962229cfbb8c847cbcefdb5e6  ./tools/_diff/crop-2.png
 dca3cb1d0638102d578bb4206417a12a040c303931976d7ee30e3b51c2a553bb  ./tools/analyze-features.mjs
 35647aff849336a93d2d3738ecc3388e04e6d8dd55ec8471d3ca3dc2a0460314  ./tools/baseline/01-dashboard__desktop.png
 f4459b8fc70e86d80dbe3bdea57bf97e670507e77c58725bd8f9845686c3b1e1  ./tools/baseline/01-dashboard__laptop.png
@@ -721,10 +722,10 @@ de62f4bb08525e79c8028848326aee79158ea8d881e462dce8906b9a5ffe9148  ./tools/baseli
 ca83d93d5336ff232e015dc0080f7ffecf963d204fe8e1c7f3b201fa18301b78  ./tools/baseline/06-warehouse__laptop.png
 d8502c26fe88c91d6d023647d8dbc71a35daf760f59ec4225e7cfb8741d1478e  ./tools/baseline/06-warehouse__phone.png
 9df2d997819c43c728e62326e6421f3435873b95049d37b02bb36a8560f2688b  ./tools/baseline/06-warehouse__tablet.png
-4587066328d8af67192873714f320794dc11591031cc6b75eabbfce3c81f4d21  ./tools/baseline/07-admin__desktop.png
-b7e9c12cba45877fbe55e802a4512ea48dedb85ef17847697ca8bccafd0f010c  ./tools/baseline/07-admin__laptop.png
-17a5f4340d12b5df7c9a6c1c72b247515f1f712c5193f33af7ba67eda7bd95f7  ./tools/baseline/07-admin__phone.png
-51e7b757239eb1fc21c34d8b645e4b6d7c2e9aadfcf250a6ba360c78913bfb3a  ./tools/baseline/07-admin__tablet.png
+b183a561fad3af27df9942506c37bb4a490959fb1d8759c35d462afe384db9ce  ./tools/baseline/07-admin__desktop.png
+4f0837cb2b63a6acd2092a04b7d7b3e4ff314cc3c3e806876f8128e7fe358ce3  ./tools/baseline/07-admin__laptop.png
+caeac829e3656e6c8a5d1245e1958a17e65ea08f99d0b564a04acee085d88dfa  ./tools/baseline/07-admin__phone.png
+64ffd9ec030691dbb13342691fe2568b69c927848f27febca9cf8aec28c3d483  ./tools/baseline/07-admin__tablet.png
 f97bce0cc310e6ee56b21e4e1ecbe28ebec46c8429923cfbf59fe45a5887c00d  ./tools/css-budget.json
 bdb2a017b28c6eca7e5e941e5e83d923b8679d997aabf8a25625edb735b51ef2  ./tools/cutover-proxy.mjs
 3d227e241e57501fd9b365188761fba873b575aaeaa3a5d5e20bec4d85e8c47a  ./tools/cutover-setup.mjs
@@ -774,7 +775,7 @@ d963191a9263bb98291c2afa734e80a9be56ea1fe0dd16a0446d58b4b6b96543  ./tools/probe-
 4e13c690d2513cd8b487619055f5ff1b329f5116b554ff4f88618b64e79b25d8  ./tools/probe-team-screen.mjs
 1ff178186c294efb03d307d2449fdb8e333c4ba86cc171650f6e56668e806411  ./tools/probe-ui-data.mjs
 391bf721766504df25c74f0b27755a6b0c2bf12d0338cfef2479659d8044aebb  ./tools/probe-user-profile.mjs
-90774c3fc361f82ca9c6bf598053b92e05881345e5e34d80348717974e3f1ce8  ./tools/probe-visual-regression.mjs
+5e71e4eb54ea86adc8942e91bedece5d419c41636ebfe84d204a9c8afedc6afd  ./tools/probe-visual-regression.mjs
 d835bb2944bd76013194b789bf44ddcb0d7f1a7c798fb44a44cd63ed3eec7559  ./tools/probe-work-center.mjs
 ac6229074a17b7a61ab227628717a63aec1892fd12e8b5ff0121629eb5eafbe9  ./tools/probe-work-permission.mjs
 3ad12bad5d7f04e15db0ebe33a070c3559e71ae39bf8163cb8be5ce1aee2be49  ./tools/probe-workflow.mjs
@@ -789,10 +790,10 @@ a4fbd6cd7b62f1e5ca990765df515316c21721d33b6f8a65f319db8ae74edcc6  ./tsconfig.jso
 6477f43fd1dc0e9c5ef6229949a3f01c45967e1ad75447df9c0fa651d0fcf64b  ./types/cloudflare.d.ts
 43e5f02f727ca043f08ebf34789f330580a7a0cb90f426c92f4a454d066988fc  ./vite.config.ts
 21fa7f72849b31e4ddf726c1922a82ef97fe7770c4a4ebb4087b6edca38357b5  ./VNTECH_ERP_FULL_CONSOLIDATION_CHANGE_REPORT.md
-70db22e1003abea210ce7045fe609027e8847230c30af565f2eac5245734dc1a  ./VNTECH_FINGERPRINT.json
-51cfe97dbef3c45d8629dacb006ee61c42dfc51dab466bce99752c386b7b06b4  ./VNTECH_FULL_W2_ID.txt
-51cfe97dbef3c45d8629dacb006ee61c42dfc51dab466bce99752c386b7b06b4  ./VNTECH_PACKAGE_ID.txt
-bb4f9d8c5ea14e408feeea9ea97ee40cbeb029b978e8692bca40dd25bcdd7bf9  ./VNTECH_PRODUCT_IDENTITY.txt
+a409a7ba3c0b90af7eb53975e95446158fdd8070eaf070d50766066c7a31b622  ./VNTECH_FINGERPRINT.json
+c311b9d9595ce0826d5ffacda554f56b78c297a71dfc1c131c32a7359d93a82d  ./VNTECH_FULL_W2_ID.txt
+c311b9d9595ce0826d5ffacda554f56b78c297a71dfc1c131c32a7359d93a82d  ./VNTECH_PACKAGE_ID.txt
+06f16de86e46259ddc44619a17cbf993f3c43ab75b7ed363ac3c8cf8c32af8fb  ./VNTECH_PRODUCT_IDENTITY.txt
 562f841d82e5a77078d55fdbc040ebe9e3288767c6da8916359db69290ca37db  ./VNTECH_SERVER.sh
 a521385f192c37b4fd352cf229fc0bf26ed974febef7d968d5bc16585605942f  ./worker/index.ts
 65bc26dddd31afe34f03934d029a76bc94a1dbe18623467c56d86a83d4420856  ./wrangler.local.jsonc

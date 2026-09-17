@@ -235,3 +235,54 @@ cho chế độ nghiêm ngặt tuyệt đối.
 | 1 | `Requests` · `WarehouseReceipt` · `Inventory` | |
 | 2 | `Admin` | |
 | **Tổng** | **4/32** | **28 màn** |
+
+---
+
+## 10. ĐỢT 3 — BA MÀN CÓ TRONG BỘ ẢNH CHUẨN
+
+Chọn 3 màn này vì cả ba đều nằm trong bộ ảnh chuẩn (`02-project` · `03-work` · `04-team`) nên cổng
+ảnh kiểm chứng được trực tiếp. Bốn khối `.table-toolbar` đã chuyển:
+
+| Màn | Khối | Sau khi chuyển |
+|---|---|---|
+| `WorkCenter` | danh sách việc | `ListToolbar` title + note + search |
+| `TeamManagement` | "DANH SÁCH TỔ ĐỘI" | `ListToolbar` title + note + search |
+| `ProjectManagement` | "DANH SÁCH DỰ ÁN" | `ListToolbar` search + filters[trạng thái] + sort[sắp xếp] |
+| `ProjectManagement` | đầu màn chi tiết dự án | `ListToolbar` title + note + actions[2 nút] |
+
+Nguyên tắc giữ nguyên: không đổi handler, không đổi state, không đổi tên hàm action, và **không tự
+đặt chữ mới** — mọi chữ hiển thị lấy nguyên văn từ markup cũ.
+
+### Kiểm chứng đợt 3
+
+**Dự đoán nêu TRƯỚC khi chạy cổng:** chỉ `02-project` · `03-work` · `04-team` được phép lệch; 4 màn
+còn lại phải 0 px.
+
+Kết quả: **ĐÚNG CHÍNH XÁC** — `01-dashboard` · `05-material` · `06-warehouse` · `07-admin` = **0 px**;
+đúng 3 màn đã chuyển là lệch (12/28 ảnh).
+
+| Hạng mục | Kết quả |
+|---|---|
+| `npx tsc --noEmit` | **ĐẠT** |
+| Build | **ĐẠT** — định danh `VNTECH-FP-2A2C61885DDB98C9` (head `0106`), manifest 799 tệp |
+| Cổng ảnh sau khi cập nhật 12 ảnh của 3 màn | **ĐẠT ✅ 28/28** |
+| 13 probe hồi quy | **13 ĐẠT / 0 KHÔNG ĐẠT** |
+| OCR `04-team` | "DANH SÁCH TỔ ĐỘI · 1/1 tổ đội · mỗi tổ đội thuộc đúng một dự án" (trái) ‖ "Tìm" (phải); bảng bên dưới nguyên vẹn |
+| OCR `02-project` | "DANH SÁCH DỰ ÁN · 2/2 dự án · ưu tiên đang hoạt động, mới nhất trước" (trái) ‖ "Tìm" · "Trạng thái" · "Sắp xếp" (phải) |
+
+### Vì sao KHÔNG làm màn `Receiving` trong đợt này
+
+Màn GIAO NHẬN **không có tiêu đề sẵn trên màn** (chỉ có card lọc tách rời + `.table-toolbar` "Tổng N
+bản ghi"). Thêm tiêu đề sẽ là **tự đặt chữ** — trái nguyên tắc không suy đoán. Cần xác nhận tên màn
+từ menu trước khi làm.
+
+---
+
+## 11. TIẾN ĐỘ U-09
+
+| Đợt | Màn | Số màn |
+|---|---|---|
+| 1 | `Requests` · `WarehouseReceipt` · `Inventory` | 3 |
+| 2 | `Admin` | 1 |
+| 3 | `WorkCenter` · `TeamManagement` · `ProjectManagement` | 3 |
+| **Tổng** | | **7/32** |
