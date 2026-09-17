@@ -239,6 +239,7 @@ try {
 const failed = results.filter((r) => !r.ok);
 console.log(`\n═══ KẾT QUẢ: ${results.length - failed.length}/${results.length} ĐẠT ═══`);
 if (failed.length) { console.log("MỤC HỎNG:"); for (const f of failed) console.log(`  • ${f.name} — ${f.detail}`); }
-console.log("GIỚI HẠN: mốc APPROVE_PARTIAL (JS :1101) KHÔNG nằm trong probe này — nó thuộc nhánh duyệt");
-console.log("         nhiều vai trò (`all_roles`) mà Java CHƯA port hành vi (xem TASK-048.md mục 5).");
+console.log("GIỚI HẠN: mốc APPROVE_PARTIAL (JS :1101) KHÔNG nằm trong probe này vì nó thuộc nhánh duyệt");
+console.log("         nhiều vai trò (`all_roles`) — nhánh đó đã được port ở #89 (TASK-054) và có cổng riêng:");
+console.log("         `tools/probe-task054-all-roles.mjs` (20/20 ĐẠT).");
 process.exit(failed.length ? 1 : 0);

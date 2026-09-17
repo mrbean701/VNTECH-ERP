@@ -29,8 +29,9 @@
 * **Database**: MySQL 8.0.46; Flyway V1–V16 + drizzle tới `0108`; 121 bảng
 * **API**: 2 route (`app/api/system`, `app/api/files`); Java phục vụ **186 action**; JS tham chiếu 174 · Java **không thiếu action nào** · Java có **thêm 12**
 * **Tầng Java chỉ phục vụ action GHI** — action ĐỌC do SSR/RSC đảm nhiệm. Đây là lý do phép kiểm quyền sống phải dùng payload rỗng.
-* **Infrastructure**: MySQL **3306** · Java API **18081** (PID **27084**, background job `pwsh-98`) · Node SSR **8787** · cutover proxy **9000** (người dùng mở `:9000`)
-* **JAR**: đã đóng gói lại **thành công** — `vntech-erp-web-0.1.0-SNAPSHOT.jar` **90.904.135 bytes** (17/09 18:47); **mọi sửa đổi backend ĐÃ có hiệu lực lúc chạy** (TASK-050/051/052/053 + TASK-048 đã kiểm chứng trên jar này)
+* **Infrastructure**: MySQL **3306** · Java API **18081** (PID **22788**, background job `pwsh-99`) · Node SSR **8787** · cutover proxy **9000** (người dùng mở `:9000`)
+* **JAR**: đã đóng gói lại **thành công** — `vntech-erp-web-0.1.0-SNAPSHOT.jar` **90.905.043 bytes** (17/09 19:00); **mọi sửa đổi backend ĐÃ có hiệu lực lúc chạy** (TASK-050/051/052/053 + TASK-048 + TASK-054 đều đã kiểm chứng trên jar này)
+* **Kiểm chứng cuối lượt (trên jar 19:00)**: `/actuator/health` **200** · cổng tĩnh `probe-bootstrap-keys` còn **1 khoá** (`user` — dương tính giả) · `probe-task050-bootstrap` **87/87** · `probe-task048-audit-requests` **18/18** · `probe-task054-all-roles` **20/20** · `test:regression` **59/61** (không đổi) · cây làm việc **sạch**
 * **TODO hiện tại**: xem mục CURRENT TODO cuối tệp
 
 ## Authentication

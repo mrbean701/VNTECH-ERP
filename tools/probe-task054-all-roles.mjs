@@ -228,6 +228,8 @@ try {
 const failed = results.filter((r) => !r.ok);
 console.log(`\n═══ KẾT QUẢ: ${results.length - failed.length}/${results.length} ĐẠT ═══`);
 if (failed.length) { console.log("MỤC HỎNG:"); for (const f of failed) console.log(`  • ${f.name} — ${f.detail}`); }
-console.log("GIỚI HẠN: hành vi CŨ (chuyển bước sớm) không đo lại được vì jar cũ đã bị ghi đè —");
-console.log("         phép kiểm ★ 'hồ sơ VẪN pending_approval sau xác nhận lần 1' sẽ HỎNG nếu chạy trên bản cũ.");
+console.log("GIỚI HẠN 1: hành vi khi snapshot=`single` (một lần xác nhận là hoàn tất) là hành vi ĐÚNG của CẢ HAI lõi,");
+console.log("            KHÔNG phải lỗi của bản port — xem TASK-055: snapshot đóng băng chế độ duyệt (21/21 dòng).");
+console.log("GIỚI HẠN 2: probe phải TỰ DỰNG fixture (đặt approval_mode_snapshot='all_roles' trên dòng của phiếu probe)");
+console.log("            mới chạm được nhánh vừa port; phiếu tạo qua API hiện luôn có snapshot 'single'.");
 process.exit(failed.length ? 1 : 0);
