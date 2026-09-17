@@ -1,41 +1,98 @@
 # MASTER STATUS — VNTECH ERP V5.3.0
 
 > Tệp này là NGUỒN SỰ THẬT về trạng thái toàn cục. Mọi phiên làm việc mới PHẢI đọc tệp này trước.
+> Cấu trúc theo GOAL §12. Cập nhật lần cuối: 2026-09-18 (sau TASK-030).
 
-## Current Master Task
+## MASTER TASK STATUS
 
-* Master Task: MASTER TASK — ERP/MIS SYSTEM AUDIT, REFACTOR & FEATURE UPGRADE (46 mục)
-* Overall status: **IN PROGRESS** — PHASE 1 chưa xong
-* Current phase: PHASE 1 — HẠ TẦNG UI DÙNG CHUNG. Song song: hoàn thiện tầng phân quyền phía Java (P0/P1)
-* Current task: **TASK-008** — quét hồi quy toàn bộ sau các thay đổi RBAC. Chờ người dùng quyết định: **TASK-029** (Java chặt hơn JS trên 30 action — 6 action chỉ admin làm được trong khi JS cho phép) · **TASK-024** (`isCompanyLeadership`) · **dữ liệu `user_module_permissions`** (484/732 dòng; 5/9 module cần thiết có 0 dòng)
-* Last completed task: **TASK-030 (DONE)** — 43 ca chặn tầng module là **ĐÚNG DỮ LIỆU** (484 dòng cho 61 module × 12 người dùng). Trước đó: **TASK-027 (DONE)** — kiểm chứng sống: vai trò 10/10 đúng mã engine, chặn đúng 351/351 lọt 0, **403 tầng vai trò = 0**; tìm và vá **2 lỗi P0** (`create_request`/`decide_approval` thiếu `roleBase()`; nhánh phạm vi kho là mã chết) · TASK-025 (SLA worker) · TASK-023 (64/64) · TASK-023b · TASK-028 · TASK-026
-* Next task: TASK-025 (worker SLA) → TASK-027 (kiểm chứng sống) → TASK-022b (catalog) → TASK-009 (U-09 đợt 6)
-* Blocked task: **KHÔNG CÒN BLOCKER CỨNG.** Lưu ý vận hành: cổng ảnh và các probe cần `spawn mysql`/Edge headless phải chạy với sandbox mở rộng; **KHÔNG dùng `Start-Process` cho Java API** (tiến trình chết theo cửa sổ PowerShell) — xem `docs/29` mục 6
-* User confirmation required: **YES** — 2 việc: (1) **quyết định về `isCompanyLeadership`** (TASK-024: Java cấp thừa cho `accountant`, cấp thiếu cho `thuky`/`hcpc_truong` so với JS); (2) xác nhận đã hết cần tên màn Receiving — **đã tự giải quyết** = "Kế hoạch giao hàng" (TASK-B01)
-* Last updated: 2026-09-18 (sau TASK-023 DONE — 64/64)
+* Master Task: **ERP/MIS SYSTEM AUDIT, REFACTOR & FEATURE UPGRADE (46 mục)** + §2.1/2.2/2.3
+* Overall status: **IN PROGRESS** — PHASE 1 (hạ tầng UI dùng chung) chưa xong
+* Nguyên tắc: MASTER TASK quyết định PHẢI LÀM GÌ; GOAL quyết định PHẢI LÀM NHƯ THẾ NÀO
+
+## Mốc trạng thái
+
+| Mục | Giá trị |
+|---|---|
+| CURRENT PHASE | PHASE 1 — hạ tầng UI dùng chung. Song song: hoàn thiện tầng phân quyền Java |
+| CURRENT TASK | **TASK-008** — quét hồi quy toàn bộ sau các thay đổi RBAC |
+| LAST COMPLETED | **TASK-030** (#36) · trước đó TASK-027 (#35) · TASK-025 (#34) |
+| NEXT TASK | TASK-008 (hồi quy) → TASK-022b (catalog) → MASTER TASK §2.1/2.2/2.3 → TASK-009…015 |
+| BLOCKED ITEMS | **TASK-029** (Java chặt hơn JS trên 30 action) · **TASK-024** (`isCompanyLeadership`) · **dữ liệu `user_module_permissions`** · **TASK-017** (nguyên nhân gốc cổng ảnh bất định) |
+| USER CONFIRMATION REQUIRED | **YES** — 3 câu hỏi, ghi ở mục riêng bên dưới |
+| CURRENT BRANCH | `unity` |
+| LATEST COMMIT | `f2cd1bc` (#36) · **28 commit local CHƯA PUSH** (theo quyết định của người dùng) |
 
 ## System State
 
-* **Frontend**: Next 16.2.6 + React 19 + TS 5.9 + Tailwind 4; UI render SSR; toàn bộ giao diện nằm trong `app/page.tsx` (4.140+ dòng, 221 hàm top-level — U-11 chưa tách)
-* **Backend**: Java Spring Boot 3.5 (target Java 21), Maven đa module Clean Architecture; `SystemController.java` 1.457 dòng, 224 nhánh `case` = **186 action thật + 38 tên chỉ mục SQL**
+* **Frontend**: Next 16.2.6 + React 19 + TS 5.9 + Tailwind 4; SSR; gần toàn bộ giao diện trong `app/page.tsx` (~4.140 dòng, 221 hàm — U-11 chưa tách)
+* **Backend**: Java Spring Boot 3.5 (target 21, chạy JDK 26), Maven đa module Clean Architecture; `SystemController.java` ~1.481 dòng, 224 nhánh `case` = **186 action thật + 38 tên chỉ mục SQL** (`*_uidx`, chỉ để ánh xạ lỗi unique — **không phải action**)
 * **Database**: MySQL 8.0.46; Flyway V1–V16 + drizzle tới `0108`; 121 bảng
-* **API**: chỉ 2 route ngoài action (`app/api/system`, `app/api/files`); 186 action trong SystemController; JS tham chiếu 174 · Java **không thiếu action nào** · Java có **thêm 12 action** (đã đính chính ở TASK-018)
-* **Authentication**: `login` · `setup` · `logout` · `change_password` · `update_profile_avatar` (PUBLIC_ACTIONS)
-* **Authorization — 4 lớp**:
-  1. `requireActionModule` — quyền module cho MỌI action không công khai (PHASE 0B).
-  2. `requireRole` / `requireRequireAdmin` — theo vai trò, so bằng **mã ENGINE**.
-  3. **PHẠM VI dự án/kho** — `AccessScopeService` (`accessScope.requireProjectAccess` / `requireWarehouseAccess`). **Mới có hạ tầng; mới nối 2/64 action.**
-  4. Quy tắc P5.3 (không cấp quyền vượt phòng ban).
-* **Authorization — NGỮ NGHĨA VAI TRÒ (TASK-021)**: giá trị phân quyền là `COALESCE(role_catalog.base_role, users.role)` = **mã ENGINE** (`commander`/`project`/`engineer`/`warehouse`/`procurement`/`accountant`/`team`/`director`), KHÔNG phải mã chuẩn. Ánh xạ **nhiều-về-một**.
-* **Authorization — ĐƯỜNG ỐNG roleBase (TASK-021b)**: use-case dựng `CurrentUser` từ `Principal` PHẢI lấy `roleBase` thật qua `Principal.roleBase()`; nếu không sẽ 403 oan cho mọi tài khoản không phải admin.
-* **Workflow**: `WF-MUAHANG` 5 bước tuần tự, mỗi bước cần 1 người duyệt; điều kiện hợp lệ = được gán HOẶC role nằm trong `allowed_role_codes` (so **cả** `role` và `baseRole`)
-* **Infrastructure/server**: MySQL **3306** · Java API **18081** · Node SSR **8787** · cutover proxy **9000** (người dùng mở :9000)
-* **Tests**: 14 probe hồi quy + cổng ảnh 28 ảnh + `tsc` + eslint; **mới**: `probe-role-code-scan.mjs`, `probe-action-role-parity.mjs`, `probe-action-scope-parity.mjs`, `patch-role-engine-codes.mjs`, `patch-task021b-022.mjs`, `patch-adminops-rolebase.mjs`, `patch-task023-batch1.mjs`, `verify-java-compile.ps1`
-* **HẠN CHẾ HIỆN TẠI**: cổng ảnh và các probe UI KHÔNG chạy được (cần mở rộng sandbox cho Edge headless — TASK-B02). JAR Java KHÔNG đóng gói lại được (TASK-B03) ⇒ **mọi sửa đổi backend chưa có hiệu lực lúc chạy**.
+* **API**: 2 route (`app/api/system`, `app/api/files`); Java phục vụ **186 action**; JS tham chiếu 174 · Java **không thiếu action nào** · Java có **thêm 12**
+* **Tầng Java chỉ phục vụ action GHI** — action ĐỌC do SSR/RSC đảm nhiệm. Đây là lý do phép kiểm quyền sống phải dùng payload rỗng.
+* **Infrastructure**: MySQL **3306** · Java API **18081** (PID 16256, background job `pwsh-48`) · Node SSR **8787** · cutover proxy **9000** (người dùng mở `:9000`)
+* **JAR**: đã đóng gói lại **thành công** — `vntech-erp-web-0.1.0-SNAPSHOT.jar` **90.884.012 bytes**; **mọi sửa đổi backend ĐÃ có hiệu lực lúc chạy**
+* **TODO hiện tại**: xem mục CURRENT TODO cuối tệp
+
+## Authentication
+
+* `login` · `setup` · `logout` · `change_password` · `update_profile_avatar` (PUBLIC_ACTIONS)
+* `me` và `bootstrap`: **`me` KHÔNG được Java triển khai** (Strangler Fig) — proxy `:9000` định tuyến mọi action sang Java nên `me` trả 400 với admin / 403 với tài khoản thường. **`bootstrap` (GET) chạy tốt** và là đường UI thật sự dùng để nạp toàn bộ dữ liệu.
+
+## Authorization — 4 lớp
+
+1. `requireActionModule` — quyền module cho MỌI action không công khai (PHASE 0B), **mặc định TỪ CHỐI** nếu action chưa khai module
+2. `requireRole` / `requireRequireAdmin` — theo vai trò, so bằng **mã ENGINE**; `requireRole` nhận **cả** `role()` và `roleBase()`
+3. **PHẠM VI dự án/kho** — `AccessScopeService`; **đã phủ 64/64 action** (cổng `probe-action-scope-parity` 64/64, exit 0)
+4. Quy tắc P5.3 (không cấp quyền vượt phòng ban)
+
+### Ngữ nghĩa vai trò (TASK-021, CONFIRMED)
+
+Giá trị phân quyền = `COALESCE(role_catalog.base_role, users.role)` = **mã ENGINE**
+(`commander`/`project`/`engineer`/`warehouse`/`procurement`/`accountant`/`team`/`director`), KHÔNG phải mã chuẩn.
+Ánh xạ **nhiều-về-một**: `cht→commander` · `da_nv`,`da_truong→project` · `ksda→engineer` ·
+`kh_nv`,`kh_truong→procurement` · `thu_kho`,`kho_tong→warehouse` · `thuky`,`hcpc_truong→director`.
+Nguồn: `drizzle/0029_v530_erp_permissions_workflow.sql:71-80`.
+
+### Đường ống `roleBase` (TASK-021b + TASK-027)
+
+Use-case dựng `CurrentUser` từ `Principal` **PHẢI** lấy `roleBase` thật qua `Principal.roleBase()`.
+Mặc định của interface là `return role()` = **mã chuẩn** ⇒ thiếu override sẽ 403 oan.
+**TASK-027 phát hiện 2 nhánh `case` tự dựng lớp vô danh `Principal` tại chỗ (không dùng helper) nên thiếu override** — xem Known Problems #16.
+
+## Workflow
+
+* `WF-MUAHANG` 5 bước tuần tự, mỗi bước cần 1 người duyệt; điều kiện hợp lệ = được gán **HOẶC** role nằm trong `allowed_role_codes` (so **cả** `role` và `baseRole`)
+* Dữ liệu: `approval_stage_catalog` 5 bước · `workflow_assignments` 5 dòng · `team_members` **0 dòng** · `approval_stage_decisions` **0 dòng** (mã chết)
+* **Chưa xác định**: tài liệu đang pending sẽ theo workflow version CŨ hay chuyển sang version MỚI khi admin đổi workflow (GOAL §8) → cần điều tra trước khi kết luận
+
+## Thay đổi trong phiên gần nhất
+
+| Loại | Nội dung |
+|---|---|
+| DATABASE CHANGES | **Không có** — không thêm migration nào trong TASK-025/027/030 |
+| API CHANGES | **Không có** — không thêm/bớt action |
+| WORKFLOW CHANGES | **Không có** |
+| PERMISSION CHANGES | (1) `AccessScopeService` thêm `isWarehouseRole(role)` nhận **cả** mã engine lẫn mã chuẩn (`thu_kho`/`kho_tong`) — vá nhánh phạm vi kho bị chết; (2) `case "create_request"` và `case "decide_approval"` chuyển sang dùng helper `asReqPrincipal(cu)` ⇒ có `roleBase()` thật |
+
+## Known Problems
+
+1. **TASK-017 — CÒN MỞ**: cổng ảnh bất định giữa các phiên (0 px · 20 px · 0 px trên cùng một màn). Đã khoanh vùng tới ô tìm kiếm topbar và loại trừ, **chưa ra nguyên nhân gốc**.
+2. **Tiến độ áp dụng UI dùng chung**: `StatusBadge` **90** · `ListToolbar` **13** · `DataTable` **0** · `PermissionGuard` **0** · timeline **0** · `EntityDetailModal` **0**. Còn lại: **~100** bảng tự viết · **~100** trạng thái rỗng · **~50** điều kiện quyền · **4** modal · **3** dải timeline.
+3. **`/api/files` chưa được bảo vệ** (S-05) — người dùng yêu cầu tạm bỏ qua phần bảo mật.
+4. ~~JAR không đóng gói lại được~~ **SAI NAY ĐÃ SỬA** — TASK-B03 DONE. JAR 90.884.012 bytes đã build và chạy; **mọi sửa đổi backend TỪ TASK-019 trở đi ĐÃ có hiệu lực lúc chạy**.
+5. ~~Cổng ảnh + probe UI không chạy được~~ **SAI NAY ĐÃ SỬA** — TASK-B02 DONE. Cổng ảnh **28/28 ĐẠT, 0 px**; riêng probe cần `spawn mysql`/Edge headless vẫn cần mở rộng sandbox (đã xin và chạy được nhiều lần).
+6. ~~Lỗ hổng P0 phạm vi: Java mới kiểm 2/64~~ **ĐÃ SỬA Ở TASK-023** — nay **64/64**, cổng `probe-action-scope-parity` 64/64 exit 0.
+7. **`team_members` = 0 dòng** ⇒ màn Tổ đội trống; `approval_stage_decisions` = 0 dòng (mã chết).
+8. **TASK-029 — Java CHẶT HƠN JS trên 30 action** (chi tiết + tác động ở mục BLOCKED).
+9. **Dữ liệu `user_module_permissions` thiếu** — 484/732 dòng; **5 module có 0 dòng**: `boq`, `stocktake`, `inventory`, `teams`, `warehouse_issue`. Đã loại trừ nguyên nhân module/nhóm menu (0 module thiếu, 0 module tắt, 0 nhóm tắt) ⇒ **cấp quyền là đủ**. **`central_warehouse` cũng 0 dòng** ⇒ nhánh kho-central của `canAccessWarehouse` hiện không thể đạt tới vì **dữ liệu**, không phải mã.
+10. **Known-problem #15 CŨ ĐÃ ĐÓNG**: tên capability `canView`/`canUse`/… ánh xạ đúng sang cột thật `can_view`/`can_use`/… (`ModulePermissionStoreAdapter:22-24`), mặc định `can_use` khớp JS.
+11. **TASK-024 — `isCompanyLeadership` lệch**: JS = tập 7 mã **HOẶC** `base_role='director'`; Java = `{director, accountant}`. Java **cấp thừa** cho `accountant`, **cấp thiếu** cho `thuky`/`hcpc_truong`. Chờ người dùng.
+12. **TASK-022b** — `ACTION_CATALOG` chưa ghi 12 action chỉ có ở Java (ưu tiên thấp; TASK-018 đã đính chính cáo buộc "lệch ~50 action" là SAI).
+13. **Sai lệch bản đồ MODULE**: MODULE khớp **156/186**, CAPABILITY khớp **185/186** (`system_level_impact`: JS `canUse` vs Java `canView`).
 
 ## Important Decisions
 
-1. **Không tự suy đoán nghiệp vụ.** Chuỗi audit: Code → DB → API → UI → Permission → Workflow → Dữ liệu hiện có; phân loại CONFIRMED/LIKELY/UNKNOWN/CONFLICT; gặp UNKNOWN ảnh hưởng DB/logic thì DỪNG và báo.
+1. **Không tự suy đoán nghiệp vụ.** Chuỗi audit Code → DB → API → UI → Permission → Workflow → Dữ liệu; phân loại CONFIRMED/LIKELY/UNKNOWN/CONFLICT; gặp UNKNOWN ảnh hưởng DB/logic thì DỪNG và báo.
 2. **Không push git** cho tới khi TOÀN BỘ công việc xong VÀ người dùng đã test thủ công (chốt 17/09/2026).
 3. **Giữ ảnh chuẩn** `tools/baseline/` (28 PNG) và `tools/_tools/_diff` trong kho mã.
 4. **Không viết lại mã đang chạy** khi không cần thiết; ưu tiên tái sử dụng.
@@ -43,51 +100,48 @@
 6. **Cổng ảnh dùng cơ chế chống lỗi giả**: chụp lại khi lệch, chỉ kết luận LỆCH khi cả hai lần đều vượt ngưỡng.
 7. **Không tự đặt chữ mới** trong giao diện — mọi chữ phải lấy nguyên văn từ markup cũ.
 8. **Phân quyền so bằng mã ENGINE** (`role_catalog.base_role`), không so bằng mã vai trò chuẩn.
-9. **Khi port từ JS sang Java phải port cả NGUỒN DỮ LIỆU, không chỉ chuỗi so sánh.**
-10. **Không dùng bảng ánh xạ mã-chuẩn→mã-engine trong Java.** Truyền `roleBase` thật từ `role_catalog` xuống.
-11. **Mọi thay đổi tầng vai trò phải chạy `tools/probe-action-role-parity.mjs`** (kiểm cả đối chiếu JS↔Java **và** đường ống `roleBase`).
-12. **Mọi thay đổi tầng phạm vi phải chạy `tools/probe-action-scope-parity.mjs`** — cổng đo tiến độ nối phạm vi.
-13. **Nối phạm vi theo LÔ, không ồ ạt**: mỗi lô phải biên dịch sạch và cổng phải chứng minh tiến độ (bài học: vừa rồi nối 4 use-case một lượt đã tạo hồi quy ở lượt trước).
+9. **Khi port từ JS sang Java phải port cả NGUỒN DỮ LIỆU**, không chỉ chuỗi so sánh.
+10. **Không dùng bảng ánh xạ mã-chuẩn→mã-engine trong Java.** Truyền `roleBase` thật từ `role_catalog` xuống. *(Ngoại lệ có kiểm soát: `requireRole` và `isWarehouseRole` chấp nhận CẢ HAI mã để chống 403 oan — đây là chấp nhận, không phải ánh xạ.)*
+11. **Mọi thay đổi tầng vai trò phải chạy `tools/probe-action-role-parity.mjs`.**
+12. **Mọi thay đổi tầng phạm vi phải chạy `tools/probe-action-scope-parity.mjs`.**
+13. **Nối phạm vi theo LÔ, không ồ ạt** — mỗi lô phải biên dịch sạch và cổng phải chứng minh tiến độ.
 14. **Giá trị truyền vào hàm kiểm phạm vi phải là giá trị JS dùng** (thường tra từ DB), không phải tham số thô của payload.
+15. **Payload rỗng là cách đo quyền AN TOÀN** trên backend chỉ có action ghi (chốt quyền chạy trước validate) — nhưng phải **loại trừ tường minh** các action nguy hiểm (`factory_reset_*`, `rebuild_department_permissions`, `bulk_import_*`, `install_license_foundation`, `retry_email`, `reorder_*`).
+16. **Thông điệp lỗi là dữ liệu chẩn đoán**: phải phân biệt **T1-module** ("chưa được quản trị viên cấp đúng quyền") · **T2-vai trò** ("không có quyền thực hiện nghiệp vụ") · **T3-phạm vi** ("không được … dự án/kho") trước khi buộc tội mã nguồn.
+17. **Luôn chuẩn hoá KIỂU trước khi kết luận** — `active` trong payload là **boolean `true`**, không phải số `1`; so `=== 1` từng gây báo động giả 9/9.
 
-## Known Problems
+## USER CONFIRMATION REQUIRED (3 câu hỏi)
 
-1. **Điều tra CÒN MỞ** — cổng ảnh bất định giữa các phiên (0 px · 20 px · 0 px trên cùng một màn). Đã khoanh vùng tới ô tìm kiếm topbar và loại trừ, **chưa tìm ra nguyên nhân gốc**.
-2. **Roadmap từng báo quá** — đã sửa và tách thành U-14…U-17. **Tiến độ áp dụng**: `StatusBadge` **90** · `ListToolbar` **13** · `DataTable` **0** · `PermissionGuard` **0** · timeline **0** · `EntityDetailModal` **0**. Còn lại: **100** bảng tự viết · **100** trạng thái rỗng · **50** điều kiện quyền · **4** modal · **3** dải timeline.
-3. **`/api/files` chưa được bảo vệ** (S-05) — người dùng yêu cầu tạm bỏ qua phần bảo mật.
-4. ~~5 lỗi mã vai trò trong `ProductionManagementUseCase`~~ **ĐÃ SỬA ở TASK-019, HOÀN THIỆN ở TASK-021**.
-5. **`team_members` = 0 dòng** ⇒ màn Tổ đội trống; **`approval_stage_decisions` = 0 dòng** (mã chết).
-6. ~~3 lỗi eslint `react-hooks/static-components`~~ **ĐÃ SỬA ở TASK-016**.
-7. **Cổng ảnh + probe UI không chạy được** (TASK-B02) — rào cản lớn nhất cho mọi việc UI tiếp theo.
-8. ~~`ACTION_CATALOG.json` lệch ~50 action~~ **ĐÍNH CHÍNH Ở TASK-018 — cáo buộc này SAI**.
-9. **JAR Java CHƯA đóng gói lại** (TASK-B03) — mọi sửa đổi backend (TASK-019 → 023) **chưa có hiệu lực lúc chạy**; mới kiểm chứng ở mức mã nguồn + biên dịch (`verify-java-compile.ps1`: 102 tệp · 0 lỗi · 156 `.class`).
-10. **LỖ HỔNG P0 ĐANG TỒN TẠI — PHẠM VI dự án/kho (TASK-023)**: JS kiểm phạm vi ở **64 action**, Java mới kiểm **2** (đo bằng `tools/probe-action-scope-parity.mjs`). **62 action còn lại vẫn cho phép thao tác trên dự án/kho ngoài phạm vi** nếu tài khoản có quyền module. Hạ tầng đã xong; việc còn lại là nối dần.
-11. **`isCompanyLeadership` lệch** (TASK-024) — JS = tập 7 mã HOẶC `base_role==='director'`; Java = `{director, accountant}`. Java **cấp thừa** cho `accountant`, **cấp thiếu** cho `thuky`/`hcpc_truong`. Chờ người dùng quyết định.
-12. ~~Vài action Java thiếu `requireRole`~~ **ĐÃ SỬA ở TASK-022** — cổng `probe-action-role-parity` **exit 0**.
-13. **Hồi quy TASK-021 đã được sửa ở TASK-021b** — bài học: thêm lớp kiểm mới mà không kiểm **đường ống dữ liệu** nuôi nó thì tạo lỗi nặng hơn lỗi gốc.
-14. **`Principal` chưa mang `warehouseScopeKind`** — nhánh kho của `canAccessWarehouse` cần giá trị này; hiện `CurrentUser` có nhưng `Principal` thì không. Phải bổ sung (theo đúng cách đã làm với `roleBase` ở TASK-021b) trước khi nối các action có kiểm kho.
-15. **Chưa kiểm chứng tên capability** `canUse`/`canView` mà nhánh kho-central của `AccessScopeService` dùng có khớp dữ liệu thật trong `user_module_permissions` hay không.
+1. **TASK-029** — 6 action (`save_team_subcontract`, `save_team_production`, `approve_team_production`, `save_team_payment`, `settle_team_subcontract`, `create_project_team`): JS cho phép theo vai trò, Java bắt buộc module `teams` (**0 dòng quyền**) nên **chỉ admin làm được**. Chọn **(A)** khôi phục đúng JS, hay **(B)** giữ Java + nạp đủ dữ liệu quyền module?
+2. **Dữ liệu `user_module_permissions`** (484/732; 5 module 0 dòng) — (a) chạy lại cơ chế cấp mặc định theo phòng ban, (b) cấu hình thủ công, hay (c) giữ nguyên?
+3. **TASK-024** — `isCompanyLeadership`: giữ `{director, accountant}` hay theo JS (7 mã HOẶC `base_role='director'`)?
 
-## Current TODO
+## CURRENT TODO
 
-* [x] TASK-021 · Sửa GỐC ngữ nghĩa vai trò (`roleBase` từ `role_catalog`, `requireRole` nhận mã engine) — docs/28
-* [x] TASK-021b · Sửa hồi quy đường ống `roleBase` — `default roleBase()` trên `Principal` + controller truyền giá trị thật
-* [x] TASK-022 · Thắt 5 cổng vai trò còn hở; cổng `probe-action-role-parity` **exit 0**
-* [~] **TASK-023 · Kiểm PHẠM VI dự án/kho — IN PROGRESS, 2/64; còn 62.** Lô 1 xong: hạ tầng `AccessScopeService` + port `AccessScopeStore` + `cancel_request`
-* [~] TASK-008 · U-09 đợt 5 — code xong, probe riêng 11/11 ĐẠT (`96c3aa8`, PARTIAL); còn lượt quét hồi quy rộng (chờ quyền)
-* [!] TASK-024 · CHỜ QUYẾT ĐỊNH: lệch `isCompanyLeadership`
+* [x] TASK-025 · Sửa `SlaComplianceWorker` hỏng âm thầm mỗi giờ (cột `overdue_at` không tồn tại) — #34
+* [x] TASK-027 · Kiểm chứng SỐNG bằng tài khoản thật; vá **2 lỗi P0** — #35
+* [x] TASK-030 · 43 ca chặn tầng module là **ĐÚNG DỮ LIỆU** — #36
+* [~] **TASK-008 · Quét hồi quy toàn bộ sau thay đổi RBAC** ← ĐANG LÀM
+* [ ] TASK-022b · Bổ sung 12 action chỉ có ở Java vào `ACTION_CATALOG` (ưu tiên thấp)
 * [ ] TASK-009 · U-09 đợt 6 — 13 màn còn lại
-* [ ] TASK-010 · U-14 — ÁP DỤNG EntityDetailModal
-* [ ] TASK-011 · U-15 — ÁP DỤNG DataTable
-* [ ] TASK-012 · U-16 — ÁP DỤNG PermissionGuard
-* [ ] TASK-013 · U-17 — ÁP DỤNG Approval/ActivityTimeline
-* [ ] TASK-014 · U-11 — Tách `page.tsx` thành module theo màn hình
-* [ ] TASK-015 · U-12 — Loại `!important` + gộp selector trùng lặp CSS
-* [ ] TASK-017 · Điều tra còn mở — nguyên nhân gốc bất định của cổng ảnh
-* [!] TASK-B03 · CHẶN: không đóng gói lại được JAR Java (mvn chặn ghi `.m2`)
-* [!] TASK-B02 · CHẶN: cổng ảnh + probe UI không chạy được
-* [!] TASK-B01 — CHỜ XÁC NHẬN: tên màn Receiving
+* [ ] TASK-010/011/012/013 · Áp dụng `EntityDetailModal` / `DataTable` / `PermissionGuard` / `ApprovalTimeline`
+* [ ] TASK-014 · U-11 — tách `page.tsx`
+* [ ] TASK-015 · U-12 — loại `!important` + gộp selector trùng
+* [ ] TASK-017 · nguyên nhân gốc cổng ảnh bất định
+* [ ] **MASTER TASK §2.1** · timeline luồng duyệt phiếu đề nghị mua hàng
+* [ ] **MASTER TASK §2.2** · modal "Tổng hợp giao nhận về phiếu đề nghị gốc"
+* [ ] **MASTER TASK §2.3** · responsive ảnh/hồ sơ vật tư đặc thù
+* [ ] Đóng gói lại UI bundle trước khi người dùng test thủ công
+* [!] TASK-024 · CHỜ QUYẾT ĐỊNH `isCompanyLeadership`
+* [!] TASK-029 · CHỜ QUYẾT ĐỊNH mức chặt module
 
-## PHASE 2–10 (theo docs/25_TODO_ROADMAP.md)
+## CONTINUATION NOTES (cho phiên sau)
 
-Chưa bắt đầu. Ngoài ra MASTER TASK còn 3 mục **chưa bắt đầu**: §2.1 timeline duyệt phiếu đề nghị mua hàng · §2.2 modal "Tổng hợp giao nhận về phiếu đề nghị gốc" · §2.3 responsive ảnh/hồ sơ vật tư đặc thù.
+1. **Đọc theo thứ tự**: tệp này → `TASK_INDEX.md` → `TASK-030.md` → `TASK-027.md` → `TASK-025.md`.
+2. **KHÔNG chạy lại** các việc đã DONE: TASK-B01/B02/B03, TASK-025, TASK-027, TASK-030.
+3. **Chốt quyền ở tầng Java nằm ở ĐẦU mỗi nhánh `case`, TRƯỚC validate** — nhờ vậy payload rỗng đo được CHO/CHẶN mà không ghi dữ liệu.
+4. **18 khối `Principal` vô danh** trong `SystemController`; **đã rà toàn bộ**: chỉ 2 khối của `RequestManagement` từng nguy hiểm và đã vá. Nếu thêm nhánh `case` mới có tạo lớp vô danh thì **phải override `roleBase()`** — hoặc tốt hơn là dùng helper `asXxxPrincipal(cu)`.
+5. **Trước khi buộc tội mã nguồn**, hãy phân loại 403 theo 3 tầng (quyết định #16) và đối chiếu dữ liệu (`tools/probe-module-permission-data.mjs`).
+6. **Java API phải chạy bằng background job**; **TUYỆT ĐỐI KHÔNG** `Start-Process` (tiến trình chết theo cửa sổ) và **KHÔNG** `Stop-Process node`. Chỉ dừng đúng PID đang giữ cổng 18081 trước khi `mvn package`.
+7. **Đóng gói**: `JAVA_HOME=C:\Users\PC\.jdks\openjdk-26.0.2.1`; maven wrapper `apache-maven-3.9.16`; `java-backend/.mvn/maven.config` chứa `-Dmaven.repo.local=<workspace>\_m2-repo` (PowerShell làm hỏng `-D` vì đường dẫn có dấu cách). Fat jar phải ≈ **90 MB**; 68 KB nghĩa là `repackage` thất bại.
+8. **Thứ tự chẩn đoán**: 4 cổng → `/actuator/health` → `tools/probe-live-stack.mjs` → cổng ảnh.

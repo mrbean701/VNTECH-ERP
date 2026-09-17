@@ -1,0 +1,50 @@
+#37 TASK-030 bo sung: loai tru nguyen nhan sau hon + dong known-problem #15 + lam sach MASTER_STATUS
+
+PHAN 1 - TASK-030: LOAI TRU NGUYEN NHAN SAU HON
+"0 dong quyen" co the do 3 nguyen nhan khac han nhau, va cach khac phuc HOAN TOAN khac:
+  - module khong ton tai trong module_catalog          -> phai TAO module
+  - module active=0 hoac nhom menu cua no active=0     -> phai BAT
+    (dieu kien SQL cua canUseModule: mc.active=1 VA (mc.group_key IS NULL OR mg.active=1))
+  - module + nhom hoat dong, nhung khong co dong quyen -> phai CAP QUYEN
+Da kiem ca 9 module can thiet CONG central_warehouse va material_catalog:
+  Module CAN ma KHONG ton tai  : 0
+  Module CAN dang TAT          : 0
+  Module CAN bi nhom menu TAT  : 0
+  Module CAN co 0 dong quyen   : 5 -> boq, stocktake, inventory, teams, warehouse_issue
+=> Nguyen nhan DUY NHAT la THIEU DONG QUYEN. Chi can cap quyen; KHONG can tao/bat module hay nhom menu.
+   Ket luan TASK-030 vi the duoc CUNG CO, khong chi dua vao suy luan "bang thua".
+
+PHAN 2 - DONG KNOWN-PROBLEM #15 (ten capability co khop du lieu that?)
+  - ModulePermissionStoreAdapter:22-24 anh xa DUNG: canView->can_view, canUse->can_use,
+    canCreate->can_create, canEdit->can_edit, canApprove->can_approve, canExport->can_export,
+    mac dinh "can_use" - khop JS (columns[capability] || columns.canUse).
+  - central_warehouse DANG HOAT DONG (module active, nhom warehouse active) nhung co 0 DONG QUYEN
+    trong toan he thong. Nhanh kho-central cua AccessScopeService.canAccessWarehouse goi
+    canUseModule(central_warehouse) || canUseModule(material_catalog); material_catalog CO dong
+    (mot so tai khoan view=1 use=0) nen nhanh nay chi dat duoc o muc DOC cho so it tai khoan va
+    KHONG BAO GIO dat o muc GHI. Day la khoang trong DU LIEU, khong phai loi ma.
+
+PHAN 3 - BAI HOC: PHEP KIEM CUA CHINH TOI CUNG CO THE SAI
+Lan chay dau, phep kiem in ra "nhom menu TAT hoac thieu" cho CA 9/9 module - ke ca purchasing,
+requests, receiving von DANG CHAY DUOC trong thuc te. Ket qua "qua hoan hao de dung" do la dau hieu
+loi o phep kiem: toi da so g.active === 1, nhung payload tra active la BOOLEAN true.
+Da kiem raw roi sua bang chuan hoa kieu (isOn = true | 1 | "1" | "true").
+Quy tac: khi mot phep kiem cho ket qua DONG LOAT bat thuong, phai NGHI PHEP KIEM TRUOC KHI NGHI
+HE THONG - va phai kiem gia tri RAW chu khong chi kieu da dien giai.
+
+PHAN 4 - LAM SACH MASTER_STATUS.md (GOAL §12 + §13)
+Tep nay dang chua khang dinh SAI va co the dan phien sau lam sai:
+  - "JAR Java KHONG dong goi lai duoc => moi sua doi backend chua co hieu luc luc chay"  -> SAI.
+    TASK-B03 da DONE; JAR 90.884.012 bytes da build va dang chay. Moi sua doi backend TU TASK-019
+    tro di DA co hieu luc luc chay.
+  - "Cong anh + probe UI khong chay duoc"        -> SAI. TASK-B02 DONE; cong anh 28/28 DAT, 0 px.
+  - "Lo hong P0 pham vi: Java moi kiem 2/64"     -> SAI. TASK-023 da lam 64/64, cong exit 0.
+  - "Hinh nhu con 62 action cho phep thao tac ngoai pham vi" -> SAI, da phu 64/64.
+Da viet lai theo dung cau truc GOAL §12, bo sung cac muc con thieu: CURRENT BRANCH, LATEST COMMIT,
+DATABASE/API/WORKFLOW/PERMISSION CHANGES, CONTINUATION NOTES; va ghi ro 3 cau hoi can nguoi dung
+quyet dinh, danh sach known-problems da dong, cung cac quy tac van hanh rut ra tu phien nay
+(payload rong de do quyen; phan loai 403 theo 3 tang; chuan hoa kieu truoc khi ket luan).
+
+Khong co thay doi ma nguon Java trong commit nay - chi cong cu kiem va tai lieu.
+
+Tài liệu: docs/agent-progress/MASTER_STATUS.md, TASK-030.md, TASK_INDEX.md; tools/probe-module-permission-data.mjs

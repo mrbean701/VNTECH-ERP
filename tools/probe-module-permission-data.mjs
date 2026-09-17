@@ -96,6 +96,51 @@ console.log("\n=== KẾT LUẬN DỮ LIỆU ===");
 const covered = [...need.keys()].filter((m) => perms.some((p) => p.moduleKey === m));
 console.log(`  Module được yêu cầu mà CÓ dòng quyền nào đó: ${covered.length}/${need.size}` +
   (covered.length ? ` -> ${covered.join(", ")}` : " -> KHÔNG có module nào"));
+
+// PHÂN BIỆT hai nguyên nhân đều dẫn tới 403 (cách khắc phục KHÁC HẲN nhau):
+//   (1) module TỒN TẠI + đang hoạt động, nhưng KHÔNG có dòng quyền  -> cần CẤP QUYỀN
+//   (2) module KHÔNG tồn tại / bị tắt, hoặc nhóm menu của nó bị tắt -> cần TẠO/BẬT (cấp quyền vô ích)
+// Điều kiện của canUseModule: mc.active=1 VÀ (mc.group_key IS NULL HOẶC mg.active=1)
+console.log("\n=== TÌNH TRẠNG MODULE trong module_catalog (quyết định cách khắc phục) ===");
+const byKey = new Map(activeModules.concat((d.moduleCatalog || []).filter((m) => !m.active))
+  .map((m) => [m.moduleKey, m]));
+const groups = new Map((d.menuGroups || []).map((g) => [g.groupKey, g]));
+
+// BÀI HỌC: `active` trong payload là BOOLEAN true, không phải số 1. So `=== 1` đã cho
+// báo động giả 9/9 module "nhóm menu TẮT". Luôn chuẩn hoá kiểu trước khi kết luận.
+const isOn = (v) => v === true || v === 1 || v === "1" || v === "true";
+
+const rowsTxt = [];
+for (const m of [...need.keys(), "central_warehouse", "material_catalog"]) {
+  const mod = byKey.get(m);
+  if (!mod) { rowsTxt.push(`  ${m.padEnd(20)} KHÔNG TỒN TẠI trong module_catalog            -> phải TẠO module`); continue; }
+  const g = mod.groupKey ? groups.get(mod.groupKey) : null;
+  const groupOk = !mod.groupKey || (g && isOn(g.active));
+  const has = perms.some((p) => p.moduleKey === m);
+  let verdict;
+  if (!isOn(mod.active)) verdict = "module đang TẮT                      -> phải BẬT";
+  else if (!groupOk) verdict = `nhóm menu '${mod.groupKey}' TẮT/thiếu         -> phải BẬT nhóm`;
+  else if (!has) verdict = "hoạt động, nhưng 0 dòng quyền        -> phải CẤP QUYỀN";
+  else verdict = "hoạt động + có dòng quyền            -> kiểm giá trị cột cụ thể";
+  rowsTxt.push(`  ${m.padEnd(20)} active=${String(mod.active).padEnd(5)} group=${String(mod.groupKey || "(không)").padEnd(18)} ${verdict}`);
+}
+console.log(rowsTxt.join("\n"));
+
+const missing = [...need.keys()].filter((m) => !byKey.has(m));
+const offModules = [...need.keys()].filter((m) => { const mod = byKey.get(m); return mod && !isOn(mod.active); });
+const offGroups = [...need.keys()].filter((m) => {
+  const mod = byKey.get(m); if (!mod || !mod.groupKey) return false;
+  const g = groups.get(mod.groupKey); return !g || !isOn(g.active);
+});
+const noRows = [...need.keys()].filter((m) => !perms.some((p) => p.moduleKey === m));
+console.log(`\n  Module CẦN mà KHÔNG tồn tại  : ${missing.length}${missing.length ? ` -> ${missing.join(", ")}` : ""}`);
+console.log(`  Module CẦN đang TẮT          : ${offModules.length}${offModules.length ? ` -> ${offModules.join(", ")}` : ""}`);
+console.log(`  Module CẦN bị nhóm menu TẮT  : ${offGroups.length}${offGroups.length ? ` -> ${offGroups.join(", ")}` : ""}`);
+console.log(`  Module CẦN có 0 dòng quyền   : ${noRows.length} -> ${noRows.join(", ")}`);
+console.log("\n  => Nếu cả 3 nhóm trên đều 0 thì nguyên nhân DUY NHẤT là THIẾU DÒNG QUYỀN"
+  + "\n     (cấp quyền là đủ; không cần tạo/bật module hay nhóm menu).");
+
+
 console.log(perms.length === 0
   ? "  => KHÔNG có dòng quyền module nào trong hệ thống."
   : `  => Chỉ ${perms.length} dòng cho ${activeModules.length} module × ${(d.staffDirectory || []).length} người dùng`

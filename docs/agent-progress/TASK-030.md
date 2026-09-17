@@ -38,6 +38,50 @@ Số dòng theo người dùng (một số ví dụ): `kh_nv` 30 · `kh_truong` 
 | `receiving` | 1 | ✅ có dòng |
 | `warehouse_receipt` | 1 | ✅ có dòng |
 
+## 3b. LOẠI TRỪ NGUYÊN NHÂN SÂU HƠN (bổ sung cùng ngày)
+
+"0 dòng quyền" có thể do **3 nguyên nhân khác hẳn nhau**, và cách khắc phục **hoàn toàn khác**:
+
+| Nguyên nhân | Cách khắc phục |
+|---|---|
+| Module không tồn tại trong `module_catalog` | phải **TẠO** module (cấp quyền vô ích) |
+| Module tồn tại nhưng `active=0`, hoặc nhóm menu của nó `active=0` | phải **BẬT** (điều kiện SQL: `mc.active=1` VÀ `mc.group_key IS NULL OR mg.active=1`) |
+| Module hoạt động + nhóm hoạt động, nhưng không có dòng quyền | phải **CẤP QUYỀN** |
+
+Đã kiểm cả 9 module cần thiết **cộng** `central_warehouse` và `material_catalog`:
+
+```
+Module CẦN mà KHÔNG tồn tại  : 0
+Module CẦN đang TẮT          : 0
+Module CẦN bị nhóm menu TẮT  : 0
+Module CẦN có 0 dòng quyền   : 5 -> boq, stocktake, inventory, teams, warehouse_issue
+```
+
+⇒ **Nguyên nhân DUY NHẤT là THIẾU DÒNG QUYỀN.** Chỉ cần cấp quyền; **không** cần tạo/bật module hay nhóm menu.
+Kết luận TASK-030 vì thế được **củng cố**, không chỉ dựa vào suy luận "bảng thưa".
+
+### Phát hiện kèm theo — đóng known-problem #15
+
+`central_warehouse` **đang hoạt động** (module active, nhóm `warehouse` active) nhưng có **0 dòng quyền**
+trong toàn hệ thống. Nhánh kho-central của `AccessScopeService.canAccessWarehouse` gọi
+`canUseModule(userId,"central_warehouse",…) || canUseModule(userId,"material_catalog",…)`; `material_catalog`
+**có** dòng (một số tài khoản `view=1 use=0`) nên nhánh này chỉ đạt được ở mức **đọc** cho số ít tài khoản,
+và **không bao giờ đạt ở mức ghi**. Đây là **khoảng trống DỮ LIỆU**, không phải lỗi mã.
+
+**Đồng thời xác nhận tên capability là ĐÚNG:** `ModulePermissionStoreAdapter:22-24` ánh xạ
+`canView→can_view`, `canUse→can_use`, `canCreate→can_create`, `canEdit→can_edit`, `canApprove→can_approve`,
+`canExport→can_export`, mặc định `can_use` — khớp JS `columns[capability] || columns.canUse`.
+
+## 3c. Bài học: PHÉP KIỂM CỦA CHÍNH TÔI cũng có thể sai
+
+Lần chạy đầu, phép kiểm in ra **"nhóm menu TẮT hoặc thiếu" cho CẢ 9/9 module** — kể cả `purchasing`,
+`requests`, `receiving` vốn **đang chạy được trong thực tế**. Kết quả "quá hoàn hảo để đúng" đó là dấu hiệu
+lỗi ở phép kiểm: tôi đã so `g.active === 1`, nhưng payload trả `active` là **boolean `true`**.
+
+Đã kiểm tra raw rồi sửa bằng chuẩn hoá kiểu (`isOn = v === true || v === 1 || v === "1" || v === "true"`).
+**Quy tắc rút ra:** khi một phép kiểm cho kết quả đồng loạt bất thường, phải **nghi phép kiểm trước khi
+nghi hệ thống** — và phải kiểm tra giá trị RAW chứ không chỉ kiểu đã diễn giải.
+
 ## 4. Kết luận
 
 **5/9 module mà JS yêu cầu có ZERO dòng quyền trong toàn hệ thống.** JS `canUseModule` đọc **chỉ**
