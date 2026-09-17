@@ -95,6 +95,35 @@ for (const file of javaFiles) {
   for (const { text, line } of extractSql(src)) {
     if (/%s|%d|\$\{|"\s*\+|\+\s*"/.test(text)) continue;   // câu lệnh ĐỘNG: không phân tích tĩnh được
 
+    // ---- MỚI (TASK-042): bảng trong FROM/JOIN của câu SELECT ----
+    //
+    // VÌ SAO CẦN: cổng cũ chỉ kiểm cột của INSERT/UPDATE. Ca thật đã lọt: `SystemSettingsStoreAdapter`
+    // chạy `SELECT COUNT(*) FROM email_queue …` trong khi lược đồ chỉ có **`email_outbox`**
+    // ⇒ action `retry_email` trả **HTTP 500** (đã gọi thật xác nhận). Cả lớp lỗi "SELECT từ bảng không
+    // tồn tại" không có cổng nào bắt.
+    // Bỏ qua tên CTE (`WITH x AS (…)`) để không báo oan.
+    // Bỏ qua tên CTE. LỖI CỦA CHÍNH TÔI ĐÃ SỬA HAI LẦN: bản đầu chỉ bắt tên ĐẦU TIÊN sau `WITH`; bản hai bắt
+    // `<tên> AS (` nhưng vẫn trượt `WITH RECURSIVE descendants(id) AS (` — tên CTE có **danh sách cột**.
+    // Nay gom cả hai dạng. (Hai lần sửa này đến từ 5 rồi 1 dương tính giả đã kiểm bằng cách ĐỌC mã.)
+    const cteNames = new Set([
+      ...[...text.matchAll(/(\w+)\s+AS\s*\(/gi)].map((m) => m[1].toLowerCase()),
+      ...[...text.matchAll(/(\w+)\s*\([^()]*\)\s+AS\s*\(/gi)].map((m) => m[1].toLowerCase()),
+    ]);
+    for (const m of text.matchAll(/\b(?:FROM|JOIN)\s+(?:(\w+)\s*\.\s*)?[`"']?(\w+)[`"']?/gi)) {
+      const schemaPrefix = m[1] ? m[1].toLowerCase() : "";
+      const table = m[2].toLowerCase();
+      if (cteNames.has(table)) continue;
+      // `information_schema.COLUMNS` / `mysql.*` là bảng hệ thống, không thuộc lược đồ nghiệp vụ.
+      if (["information_schema", "mysql", "performance_schema", "sys"].includes(schemaPrefix)) continue;
+      if (["dual", "select", "values"].includes(table)) continue;
+      // Bỏ qua bí danh 1 ký tự: trong câu lệnh này `FROM b` / `JOIN r` là bí danh bảng đã JOIN trước đó.
+      if (table.length === 1) continue;
+      const key = `FROM|${rel}|${table}`;
+      if (seenSql.has(key)) continue;
+      seenSql.add(key);
+      if (!tables.has(table)) findings.push({ kind: "BẢNG KHÔNG TỒN TẠI (FROM/JOIN)", table, col: "", rel, line });
+    }
+
     for (const m of text.matchAll(/INSERT\s+INTO\s+[`"']?(\w+)[`"']?\s*\(([^)]*)\)/gi)) {
       const t = m[1].toLowerCase();
       const key = `INS|${rel}|${t}|${m[2]}`;

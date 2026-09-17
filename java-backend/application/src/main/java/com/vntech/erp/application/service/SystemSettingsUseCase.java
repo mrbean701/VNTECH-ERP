@@ -231,10 +231,18 @@ public final class SystemSettingsUseCase {
     }
 
     // ============ email / settings ============
+    /**
+     * Port nguyên trạng JS `retry_email` — scripts/system-route.mjs:1630-1636:
+     * {@code UPDATE email_outbox SET status='queued',next_attempt_at=?,last_error=NULL,updated_at=? WHERE id=?}
+     * rồi trả *"Đã xếp lại email để máy chủ gửi."*
+     *
+     * <p><b>SỬA LỖI (TASK-042):</b> bản cũ gọi {@code store.retryEmailQueue(100, now)} (truy vấn bảng
+     * **không tồn tại** `email_queue` ⇒ HTTP 500) và trả thông điệp theo kiểu ĐẾM — trái hẳn nghiệp vụ JS.
+     */
     public Map<String, Object> retryEmail(Principal principal, Map<String, Object> payload) {
         rbac.requireRole(principalAsCurrent(principal), List.of("admin"));
-        String pending = store.retryEmailQueue(100, Instant.now());
-        return Map.of("message", "Hàng đợi email còn " + pending + " chưa gửi; sẽ thử lại ở lượt kế tiếp.");
+        store.requeueEmail(trim(payload.get("emailId")), Instant.now());
+        return Map.of("message", "Đã xếp lại email để máy chủ gửi.");
     }
 
     public Map<String, Object> saveUiDisplaySettings(Principal principal, Map<String, Object> payload) {

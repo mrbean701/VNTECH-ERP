@@ -144,11 +144,18 @@ public class SystemSettingsStoreAdapter implements SystemSettingsStore {
                 now, licenseId);
     }
 
-    @Override
-    public String retryEmailQueue(int limit, Instant now) {
-        Long pending = jdbcTemplate.queryForObject("""
-                SELECT COUNT(*) FROM email_queue WHERE status='pending'""", Long.class);
-        return pending == null ? "0" : String.valueOf(pending);
+    /**
+     * SỬA LỖI (TASK-042): bản cũ chạy {@code SELECT COUNT(*) FROM email_queue WHERE status='pending'} —
+     * bảng {@code email_queue} **KHÔNG tồn tại** (lược đồ chỉ có {@code email_outbox}) ⇒ MySQL ném
+     * "Table … doesn't exist" ⇒ action {@code retry_email} trả **HTTP 500** (đã gọi thật xác nhận).
+     * JS `system-route.mjs:1630-1636` còn cho thấy Java <b>hiểu sai nghiệp vụ</b>: JS không đếm mà
+     * <b>xếp lại MỘT email theo id</b>.
+     */
+    @Override @Transactional
+    public void requeueEmail(String emailId, Instant now) {
+        jdbcTemplate.update("""
+                UPDATE email_outbox SET status='queued',next_attempt_at=?,last_error=NULL,updated_at=?
+                WHERE id=?""", now, now, emailId);
     }
 
     @Override public Optional<Map<String, Object>> findProjectByCodeUpper(String code) {

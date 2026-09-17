@@ -32,7 +32,16 @@ public interface SystemSettingsStore {
     Optional<Map<String, Object>> findLicense(String id);
     void requestLicenseTransfer(String licenseId, String toCompanyName, String reason, String requestedBy,
                                 Instant now);
-    String retryEmailQueue(int limit, Instant now);
+    /**
+     * Xếp lại MỘT email trong hàng đợi để máy chủ gửi thử lại — JS `scripts/system-route.mjs:1630-1636`:
+     * {@code UPDATE email_outbox SET status='queued',next_attempt_at=?,last_error=NULL,updated_at=? WHERE id=?}.
+     *
+     * <p><b>SỬA LỖI (TASK-042).</b> Chữ ký cũ là {@code String retryEmailQueue(int limit, Instant now)} và bản
+     * thi hành chạy {@code SELECT COUNT(*) FROM email_queue …} — <b>bảng `email_queue` KHÔNG TỒN TẠI</b>
+     * (bảng thật là `email_outbox`) ⇒ action `retry_email` trả **HTTP 500** (đã gọi thật xác nhận). Ngoài ra
+     * Java còn <b>hiểu sai nghiệp vụ</b>: JS không đếm gì cả, JS <b>xếp lại theo {@code emailId}</b>.
+     */
+    void requeueEmail(String emailId, Instant now);
 
     Optional<Map<String, Object>> findProjectByCodeUpper(String code);
     Optional<Map<String, Object>> findSiteWarehouseForProject(String projectId);
