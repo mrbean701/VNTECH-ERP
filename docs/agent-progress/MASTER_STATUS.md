@@ -10,7 +10,7 @@
 * Current task: **TASK-023 (IN PROGRESS)** — kiểm PHẠM VI dự án/kho. Đã nối **47/64** action (**KHO, MUA HÀNG, SẢN LƯỢNG, BOQ đã phủ hết**); **còn 17** (Finance 7, OpsTask 3, ProjectContract 3, Request 2, AdminOps 1, AdminSystem 1)
 * Last completed task: TASK-022 + TASK-021b (#23) — thắt 5 cổng vai trò và sửa hồi quy đường ống `roleBase`. Trước đó: TASK-021 (#22) · TASK-020 (#21)
 * Next task: TASK-023 lô 2 — nối phạm vi cho `StockManagementUseCase` (13 action có kiểm cả kho)
-* Blocked task: TASK-B02 (sandbox chặn Edge headless) · **TASK-B03 (mvn chặn ghi `.m2` ⇒ JAR chưa đóng gói lại)** · TASK-B01 (tên màn Receiving — KHÔNG chặn tiến độ)
+* Blocked task: **KHÔNG CÒN BLOCKER CỨNG.** TASK-B01/B02/B03 đều đã gỡ chặn ngày 18/09/2026. Lưu ý vận hành: cổng ảnh và các probe cần `spawn mysql`/Edge headless phải chạy với sandbox mở rộng (xem `docs/29`)
 * User confirmation required: **YES** — 3 việc: (1) tên hiển thị màn `Receiving` (GIAO NHẬN) lấy từ menu; (2) **cho phép mở rộng sandbox** để chạy cổng ảnh + bộ probe (TASK-B02); (3) **quyết định về `isCompanyLeadership`** (TASK-024)
 * Last updated: 2026-09-18 (sau TASK-023 lô 1 — PARTIAL)
 

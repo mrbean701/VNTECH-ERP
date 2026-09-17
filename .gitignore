@@ -59,6 +59,11 @@ java-backend/**/target/
 # Thư mục tạm của tools/verify-java-compile.ps1 (fat JAR đã giải nén + .class biên dịch) — không phải mã nguồn
 /_javac-verify/
 
+# Local Maven repo sao chép vào workspace để mvn ghi được khi sandbox chặn C:\Users\PC\.m2 (411 MB)
+/_m2-repo/
+# maven.config trỏ local repo bằng ĐƯỜNG DẪN TUYỆT ĐỐI đặc thù máy này — đã ghi hướng dẫn ở docs/29
+/java-backend/.mvn/maven.config
+
 
 # Thu muc artifact cua bo cong cu thi giac (khong phai ma nguon)
 /.dsh-vision-toolkit/
