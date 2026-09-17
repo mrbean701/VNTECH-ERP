@@ -940,15 +940,14 @@ public final class BoqManagementUseCase {
         return String.join(" | ", out);
     }
 
+    /**
+     * ĐÃ GOM VỀ MỘT NGUỒN SỰ THẬT (TASK-040 nhóm 3b): bản cũ chỉ so <b>ĐÚNG BẰNG</b> trong khi JS khớp
+     * <b>TIỀN TỐ</b> ⇒ đo được <b>7/28 đầu vào lệch</b> ({@code Điện lực}, {@code DIEN123}, {@code ELV-1},
+     * {@code PCCC-01}… bị xếp vào {@code KHAC} thay vì đúng hệ M&amp;E). Nay dùng helper chung ở tầng domain
+     * ({@code tools/probe-canonical-me-code-drift.mjs} + {@code MaterialSystemCodesTest} giữ hành vi này).
+     */
     private static String canonicalMeCode(String value) {
-        String raw = com.vntech.erp.domain.service.MaterialMatcherV2
-                .normalizeMaterialText(value).replaceAll("[^a-z0-9]", "");
-        if (List.of("dien", "electrical").contains(raw)) return "DIEN";
-        if (List.of("ctn", "nuoc", "capthoatnuoc", "plumbing").contains(raw)) return "CTN";
-        if (List.of("hvac", "dieuhoathonggio").contains(raw)) return "HVAC";
-        if (List.of("dnhe", "diennhe", "elv").contains(raw)) return "DNHE";
-        if (List.of("pccc", "fire").contains(raw)) return "PCCC";
-        return "KHAC";
+        return com.vntech.erp.domain.service.MaterialSystemCodes.canonicalMeCode(value);
     }
 
     private static Map<String, Object> scoreMap(com.vntech.erp.domain.service.MaterialMatcherV2.CandidateScore s) {
