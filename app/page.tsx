@@ -1124,35 +1124,22 @@ function ProjectManagement({ data, project, onProject, open, action }: { data: A
             { value: "overdue", label: "Chậm tiến độ nhiều nhất" },
           ] }}
         />
-        <div className="table-wrap">
-          <table className="baseline-table">
-            <thead><tr>
-              <th>Mã dự án</th><th>Tên dự án</th><th>Trạng thái</th><th>Bắt đầu</th>
-              <th>Kết thúc dự kiến</th><th>Tiến độ</th><th>Nhân sự</th><th>Tổ đội</th><th></th>
-            </tr></thead>
-            <tbody>
-              {filtered.map((row) => {
-                const late = projectOverdueDays(row);
-                const staff = scopesOf(String(row.id)).length;
-                const teams = teamsOf(String(row.id)).length;
-                return <tr key={String(row.id)}>
-                  <td><strong className="code">{row.code}</strong></td>
-                  <td>{row.name}<small>{row.contractNo || "Chưa có hợp đồng"}</small></td>
-                  <td><StatusBadge value={PROJECT_STATUS_LABELS[String(row.status || "active")] || String(row.status || "—")}/></td>
-                  <td>{date(row.startDate)}</td>
-                  <td>{date(row.plannedEndDate)}</td>
-                  <td>{late > 0
-                    ? <strong className="red-text">Chậm {late} ngày</strong>
-                    : <StatusBadge value="Đúng tiến độ"/>}</td>
-                  <td>{staff} người</td>
-                  <td>{teams} tổ đội</td>
-                  <td><button type="button" className="export-mini" onClick={() => { setDetailId(String(row.id)); setView("detail"); setTab(0); setOpenWarehouse(""); }}>Chi tiết ›</button></td>
-                </tr>;
-              })}
-              {!filtered.length && <tr><td colSpan={9}><Empty text="Không có dự án phù hợp bộ lọc."/></td></tr>}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          rows={filtered}
+          rowKey={(row) => String(row.id)}
+          emptyText="Không có dự án phù hợp bộ lọc."
+          columns={[
+            { key: "code", header: "Mã dự án", render: (row) => <strong className="code">{row.code}</strong> },
+            { key: "name", header: "Tên dự án", render: (row) => <>{row.name}<small>{row.contractNo || "Chưa có hợp đồng"}</small></> },
+            { key: "status", header: "Trạng thái", render: (row) => <StatusBadge value={PROJECT_STATUS_LABELS[String(row.status || "active")] || String(row.status || "—")}/> },
+            { key: "startDate", header: "Bắt đầu", render: (row) => <>{date(row.startDate)}</> },
+            { key: "plannedEndDate", header: "Kết thúc dự kiến", render: (row) => <>{date(row.plannedEndDate)}</> },
+            { key: "progress", header: "Tiến độ", render: (row) => { const late = projectOverdueDays(row); return late > 0 ? <strong className="red-text">Chậm {late} ngày</strong> : <StatusBadge value="Đúng tiến độ"/>; } },
+            { key: "staff", header: "Nhân sự", render: (row) => <>{scopesOf(String(row.id)).length} người</> },
+            { key: "teams", header: "Tổ đội", render: (row) => <>{teamsOf(String(row.id)).length} tổ đội</> },
+            { key: "actions", header: "", render: (row) => <button type="button" className="export-mini" onClick={() => { setDetailId(String(row.id)); setView("detail"); setTab(0); setOpenWarehouse(""); }}>Chi tiết ›</button> },
+          ]}
+        />
       </section>
     </div>;
   }
