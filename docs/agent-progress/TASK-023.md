@@ -146,7 +146,8 @@ tools/patch-task023-batch1.mjs       (mới)
 | `node tools/probe-action-scope-parity.mjs` (sau lô 2) | Java kiểm **6**/64 |
 | `node tools/probe-action-scope-parity.mjs` (sau lô 3) | Java kiểm **17**/64 (nhóm KHO phủ hết) |
 | `node tools/probe-action-scope-parity.mjs` (sau lô 4) | Java kiểm **21**/64 (nhóm MUA HÀNG phủ hết) |
-| `node tools/probe-action-scope-parity.mjs` (sau lô 5) | Java kiểm **36**/64 — còn **28** |
+| `node tools/probe-action-scope-parity.mjs` (sau lô 5) | Java kiểm **36**/64 (nhóm SẢN LƯỢNG phủ hết) |
+| `node tools/probe-action-scope-parity.mjs` (sau lô 6) | Java kiểm **47**/64 — còn **17** |
 | `node tools/patch-task023-batch1.mjs` | 7 áp dụng · 0 lỗi |
 | `node tools/patch-task023-batch2.mjs` | 10 áp dụng · 1 không khớp (Principal đã bị TASK-021b sửa trước) · vá bổ sung |
 | `node tools/patch-task023-batch2b.mjs` | 1 áp dụng · 0 lỗi |
@@ -247,6 +248,24 @@ Phát hiện nhờ **cổng đối chiếu vẫn báo action còn thiếu** ⇒ 
 **Bài học bổ sung:** phép vá theo chuỗi phải **kiểm cả vị trí** (hoặc số lần xuất hiện của neo), không chỉ
 kiểm "chuỗi đã có mặt". Ba lỗi liên tiếp của công cụ vá trong 2 lượt gần đây đều cùng một gốc: **neo không duy nhất**
 hoặc **kiểm tra quá rộng**.
+
+## LÔ 6 — BoqManagementUseCase (11 action)
+
+Tất cả chỉ kiểm **phạm vi DỰ ÁN**. Hai điểm đặc biệt:
+
+1. **`compare_boq_materials` là mức ĐỌC** (`write=false`) — so sánh BOQ không làm thay đổi dữ liệu.
+2. **`bulk_boq_item_action` kiểm phạm vi TỪNG DÒNG** trong vòng lặp: chỉ cần **một** dòng ngoài phạm vi là
+   chặn **cả lô** — thông điệp riêng "Danh sách có dòng BOQ ngoài phạm vi được cấp quyền." Không được kiểm
+   một lần bằng `payload.projectId` vì payload đó có thể không khớp dòng thật.
+
+`BoqManagementUseCase` **chưa từng có** `RbacService` (nó không nằm trong danh sách use-case gọi `requireRole`),
+nên phải **thêm mới** import + trường + tham số constructor — không phải sửa dòng có sẵn.
+
+### Cải tiến công cụ vá sau 3 lỗi liên tiếp
+
+Từ lô này, script vá **kiểm số lần xuất hiện của neo TRƯỚC khi thay**; neo khác 1 là **từ chối** phép vá đó
+(`NEO KHONG DUY NHAT`). Đây chính là lớp phòng ngừa cho lỗi đã xảy ra ở lô 5. Nhờ vậy lô 6 phát hiện được
+2 phép neo sai (Boq chưa có `RbacService`) mà **không ghi tệp** — tránh trạng thái nửa vời.
 
 ## LÔ 2 — StockManagementUseCase (4 action)
 

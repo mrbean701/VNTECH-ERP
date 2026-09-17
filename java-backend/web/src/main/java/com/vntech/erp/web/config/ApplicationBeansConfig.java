@@ -131,8 +131,9 @@ public class ApplicationBeansConfig {
     }
 
     @Bean
-    public BoqManagementUseCase boqManagementUseCase(BoqStore boqStore, IdGenerator idGenerator) {
-        return new BoqManagementUseCase(boqStore, idGenerator);
+    public BoqManagementUseCase boqManagementUseCase(BoqStore boqStore, IdGenerator idGenerator,
+                                                          AccessScopeService accessScopeService) {
+        return new BoqManagementUseCase(boqStore, idGenerator, accessScopeService);
     }
 
     @Bean

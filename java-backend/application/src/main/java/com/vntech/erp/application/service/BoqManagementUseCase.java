@@ -2,6 +2,7 @@ package com.vntech.erp.application.service;
 
 import com.vntech.erp.application.port.out.BoqStore;
 import com.vntech.erp.application.port.out.IdGenerator;
+import com.vntech.erp.application.rbac.AccessScopeService;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -21,10 +22,12 @@ public final class BoqManagementUseCase {
 
     private final BoqStore store;
     private final IdGenerator idGenerator;
+    private final AccessScopeService accessScope;
 
-    public BoqManagementUseCase(BoqStore store, IdGenerator idGenerator) {
+    public BoqManagementUseCase(BoqStore store, IdGenerator idGenerator, AccessScopeService accessScope) {
         this.store = store;
         this.idGenerator = idGenerator;
+        this.accessScope = accessScope;
     }
 
     public interface Principal {
@@ -36,6 +39,10 @@ public final class BoqManagementUseCase {
     // ============ save_boq_version ============
     public Map<String, Object> saveBoqVersion(Principal principal, Map<String, Object> payload) {
         String projectId = trim(payload.get("projectId"));
+        // JS 816.
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), projectId, true,
+                "Không có quyền BOQ dự án này.");
+
         Map<String, Object> contract = resolveContract(projectId, trim(payload.get("contractId")));
         Boolean makeActive = payload.get("makeActive") != Boolean.FALSE;
         long currentMax = store.maxBoqVersion(sv(contract, "id"));
@@ -57,6 +64,10 @@ public final class BoqManagementUseCase {
     // ============ save_boq_item ============
     public Map<String, Object> saveBoqItem(Principal principal, Map<String, Object> payload) {
         String projectId = trim(payload.get("projectId"));
+        // JS 2712.
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), projectId, true,
+                "Không có quyền cập nhật BOQ dự án này.");
+
         Map<String, Object> contract = resolveContract(projectId, trim(payload.get("contractId")));
         String contractId = sv(contract, "id");
         Optional<Map<String, Object>> version = resolveBoqVersion(projectId, contractId, trim(payload.get("boqVersionId")));
@@ -196,6 +207,9 @@ public final class BoqManagementUseCase {
         String sourceItemId = trim(payload.get("sourceItemId"));
         Map<String, Object> row = findSourceItemAnywhere(sourceItemId)
                 .orElseThrow(() -> Api("Không tìm thấy dòng BOQ."));
+        // JS 2734.
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), sv(row, "project_id"), true,
+                "Không có quyền tại dự án này.");
         boolean active = payload.get("active") == Boolean.TRUE || "1".equals(trim(payload.get("active")));
         store.setSourceItemActive(sourceItemId, active, sv(row, "project_boq_item_id"), java.time.Instant.now());
         store.insertBoqChangeHistory(changeHistory(sv(row, "project_id"), sv(row, "contract_id"),
@@ -213,6 +227,9 @@ public final class BoqManagementUseCase {
         List<?> rawRows = payload.get("rows") instanceof List<?> l ? l : List.of();
         if (rawRows.isEmpty()) throw Api("File BOQ không có dòng dữ liệu.");
         if (rawRows.size() > 5000) throw Api("Mỗi lần nhập tối đa 5.000 dòng BOQ.");
+        // JS 2799.
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), projectId, true,
+                "Không có quyền cập nhật BOQ dự án này.");
         String importMode = List.of("new_version", "append", "merge", "replace_version")
                 .contains(trim(payload.get("importMode"))) ? trim(payload.get("importMode")) : "new_version";
         String requestedContractId = trim(payload.get("contractId"));
@@ -507,6 +524,10 @@ public final class BoqManagementUseCase {
     /** update_boq_contract_prices — cập nhật hàng loạt đơn giá HĐ từ file. */
     public Map<String, Object> updateBoqContractPrices(Principal principal, Map<String, Object> payload) {
         String projectId = trim(payload.get("projectId"));
+        // JS 2827.
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), projectId, true,
+                "Không có quyền cập nhật BOQ dự án này.");
+
         Map<String, Object> contract = resolveContract(projectId, trim(payload.get("contractId")));
         Optional<Map<String, Object>> v = resolveBoqVersion(projectId, sv(contract, "id"), trim(payload.get("boqVersionId")));
         if (v.isEmpty()) throw Api("Hợp đồng chưa có phiên bản BOQ. Hãy tạo/import BOQ trước.");
@@ -565,6 +586,10 @@ public final class BoqManagementUseCase {
         for (String id : ids) {
             Map<String, Object> row = store.findBoqSourceItemById(id).orElse(null);
             if (row == null) continue;
+            // JS 2737: kiểm phạm vi TỪNG dòng; có một dòng ngoài phạm vi là chặn CẢ LÔ.
+            if (!accessScope.canAccessProject(principal.userId(), principal.role(), sv(row, "project_id"), true)) {
+                throw Api("Danh sách có dòng BOQ ngoài phạm vi được cấp quyền.");
+            }
             store.setSourceItemActive(id, active, sv(row, "project_boq_item_id"), now);
             store.insertBoqChangeHistory(changeHistory(sv(row, "project_id"), sv(row, "contract_id"),
                     sv(row, "boq_version_id"), id, nvlLazy(row.get("project_boq_item_id"), null),
@@ -581,6 +606,9 @@ public final class BoqManagementUseCase {
         String sourceItemId = trim(payload.get("sourceItemId"));
         Map<String, Object> row = store.findBoqSourceItemById(sourceItemId)
                 .orElseThrow(() -> Api("Không tìm thấy dòng BOQ."));
+        // JS 2740.
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), sv(row, "project_id"), true,
+                "Không có quyền tại dự án này.");
         String pbiId = sv(row, "project_boq_item_id");
         long dep = pbiId.isEmpty() ? 0 : store.boqItemDependencyTotal(pbiId);
         java.time.Instant now = java.time.Instant.now();
@@ -599,6 +627,10 @@ public final class BoqManagementUseCase {
     /** clear_boq_version — archive/restore/purge toàn phiên bản. */
     public Map<String, Object> clearBoqVersion(Principal principal, Map<String, Object> payload) {
         String projectId = trim(payload.get("projectId"));
+        // JS 2744.
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), projectId, true,
+                "Không có quyền tại dự án này.");
+
         Map<String, Object> contract = resolveContract(projectId, trim(payload.get("contractId")));
         Map<String, Object> version = resolveBoqVersion(projectId, sv(contract, "id"), trim(payload.get("boqVersionId")))
                 .orElseThrow(() -> Api("Hợp đồng chưa có phiên bản BOQ. Hãy tạo/import BOQ trước."));
@@ -637,6 +669,9 @@ public final class BoqManagementUseCase {
         Map<String, Object> source = store.findBoqSourceItemById(sourceItemId).orElse(null);
         if (source == null || !sv(source, "project_id").equals(projectId) || !isOne(ci(source, "active")))
             throw Api("Không tìm thấy dòng BOQ nguồn.");
+        // JS 2795.
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), projectId, true,
+                "Không có quyền dự án.");
         java.time.Instant now = java.time.Instant.now();
         store.confirmSourceMapping(sourceItemId, null, null, null, "new_material_requested",
                 sv(source, "project_boq_item_id"), principal.userId(), now);
@@ -652,6 +687,9 @@ public final class BoqManagementUseCase {
     /** compare_boq_materials — chạy Material Matching V2 trên batch BOQ, ghi mapping run + candidates. */
     public Map<String, Object> compareBoqMaterials(Principal principal, Map<String, Object> payload) {
         String projectId = trim(payload.get("projectId"));
+        // JS 2770: mức ĐỌC (write=false) — so sánh không làm thay đổi dữ liệu.
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), projectId, false,
+                "Không có quyền xem/so sánh BOQ dự án này.");
         String requestedBatchId = trim(payload.get("batchId"));
         String requestedContractId = trim(payload.get("contractId"));
         String requestedBoqVersionId = trim(payload.get("boqVersionId"));
@@ -756,6 +794,9 @@ public final class BoqManagementUseCase {
         List<?> rows = payload.get("mappings") instanceof List<?> l ? l : List.of();
         if (rows.isEmpty()) throw Api("Chưa chọn dòng mapping để cập nhật.");
         if (rows.size() > 5000) throw Api("Mỗi lần xác nhận tối đa 5.000 dòng.");
+        // JS 2783.
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), projectId, true,
+                "Không có quyền cập nhật mapping BOQ dự án này.");
         String runId = nvl(payload.get("runId"));
         java.time.Instant now = java.time.Instant.now();
         int confirmed = 0, remapped = 0;
