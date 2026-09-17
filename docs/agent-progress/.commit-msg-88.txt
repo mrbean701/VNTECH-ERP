@@ -1,0 +1,18 @@
+So sach sau #87: MASTER_STATUS (CURRENT TASK = TASK-054 voi du lieu that da do duoc, LAST COMPLETED = TASK-048, PID/jar moi, Known Problems #53/#54, muc audit sua so 152 -> 128, 3 bai hoc #21-#23) + TASK_INDEX (TASK-048 DONE 5/6 + dong TASK-054) + ho so TASK-048 viet lai + ho so moi TASK-054
+
+- TASK-048.md: viet lai toan bo theo trang thai THAT - bang 5/6 moc da port + 2 cai bay da tranh
+  (priority THO / comment THO), cong moi 18/18 (lai dung luong nghiep vu + don sach co kiem chung
+  17/35/100/0/0/91/0), muc 3 ghi ro CON SO 152 LA HIEN VAT cua chinh cong do (bang doi chieu
+  truoc/sau: 152 -> 128 khe ho, 0 -> 24 ca hai deu ghi, 2/21 -> 3/21 lop), muc 4 ghi day du 3 loi
+  cua chinh toi (phep kiem chua bao gio chay; gop 7 cau DELETE trong finally nen mysql dung o cau 5
+  va du lieu probe con nam lai; lai nuot stderr), muc 5 ly do tach TASK-054.
+- TASK-054.md (moi): 5 dong doi chieu nguyen van JS :1087-1103 voi Java, 4 viec phai lam, va
+  KET QUA DO TRUOC: approval_stage_catalog co DUNG 1 buoc all_roles (stage_no=5,
+  da_truong,kh_truong) => kiem chung duoc end-to-end tren du lieu that (neu khong co thi phai
+  dung test don vi voi RequestStore gia - khong tu tao cau hinh duyet).
+- MASTER_STATUS: Known Problems #53 (da sua cong do sai) + #54 (nhanh all_roles chuyen buoc som),
+  muc 46 sua so that, CURRENT TODO bo sung 4 muc, bai hoc #21 (moi cong do phai co doi chung duong;
+  dau hieu nhan biet: "khe ho + so JS co audit = tong JS" nghia la phep tru luon bang 0),
+  #22 ("probe bao DAT" KHONG bang "phep kiem da chay"), #23 (finally phai chay tung cau + gom loi;
+  phai luu id dong TRUOC khi goi API xoa).
+- TASK_INDEX: dong TASK-048 day du bang chung + dong TASK-054.
