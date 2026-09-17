@@ -114,7 +114,95 @@ public final class OpsTaskManagementUseCase {
         task.put("taskNo", taskNo);
         task.put("createdBy", principal.userId());
         store.insertWorkItem(task, now);
+        // TASK-080C (KP #78) — PORT HAI BƯỚC CÒN THIẾU của JS `createDepartmentTask` (`system-route.mjs:273-277`):
+        //   (1) ghi 1 sự kiện `ASSIGNED` vào `work_item_events` (JS `:275`);
+        //   (2) `queueTaskNotice` ⇒ `task_notifications` + (nếu người nhận có email) `email_outbox` (JS `:261-267`).
+        // Trước đây Java thiếu cả hai ⇒ lịch sử việc trống, người nhận không được thông báo, hàng đợi email
+        // rỗng — trong khi chính thông điệp trả về vẫn hứa "đã tạo thông báo cho nhân viên" (câu nói SAI sự thật).
+        store.insertWorkItemEvent(idGenerator.next("EVT"), sv(task, "id"), "ASSIGNED", null, "NEW",
+                principal.userId(), null, assignee, null, null, now);
+        queueTaskNotice(task, assignee, principal, now);
         return Map.of("message", "Đã giao " + taskNo + ". SLA/KPI tính ngay từ assigned_at và đã tạo thông báo cho nhân viên.");
+    }
+
+    /**
+     * PORT `queueTaskNotice` — JS `scripts/system-route.mjs:261-267`.
+     *
+     * <p>Ghi THÔNG BÁO trong ứng dụng cho người nhận (bảng `task_notifications`, luôn ghi), và nếu người nhận
+     * có email thì xếp thêm một thư vào `email_outbox` (`event='task_assigned'`, `status='queued'`).
+     * Nội dung giữ nguyên mẫu câu của JS:
+     * <ul>
+     *   <li>tiêu đề: {@code Công việc mới: <tên việc>}</li>
+     *   <li>thân: {@code <mã việc> · <mã - tên dự án | "Không gắn dự án"> · Hạn: <hạn | "Chưa đặt hạn">}</li>
+     * </ul>
+     *
+     * <p><b>Khác JS một điểm có chủ ý:</b> JS dựng liên kết tuyệt đối từ {@code email_settings.base_url},
+     * nếu trống thì lấy origin của request. Tầng use-case của Java không có origin, nên khi `base_url` trống
+     * liên kết sẽ ở dạng tương đối {@code /?task=<id>} — KHÔNG bịa ra origin.
+     */
+    private void queueTaskNotice(Map<String, Object> task, String assigneeId, Principal actor, Instant now) {
+        Map<String, Object> contact = store.findUserContact(assigneeId).orElse(null);
+        if (contact == null) return;
+        String projectId = sv(task, "projectId");
+        Map<String, Object> project = projectId.isEmpty() ? null : store.findActiveProject(projectId).orElse(null);
+        String projectText = project == null ? "Không gắn dự án"
+                : sv(project, "code") + " - " + sv(project, "name");
+        String dueText = humanDue(sv(task, "dueAt"));
+        String taskNo = sv(task, "taskNo");
+        String taskTitle = sv(task, "title");
+
+        Map<String, Object> notice = new LinkedHashMap<>();
+        notice.put("id", idGenerator.next("NTF"));
+        notice.put("workItemId", sv(task, "id"));
+        notice.put("userId", assigneeId);
+        notice.put("channel", "in_app");
+        notice.put("title", "Công việc mới: " + taskTitle);
+        notice.put("body", taskNo + " · " + projectText + " · Hạn: " + dueText);
+        store.insertTaskNotification(notice, now);
+
+        String email = sv(contact, "email");
+        if (email.isEmpty()) return;
+        String base = trim(store.emailBaseUrl()).replaceAll("/+$", "");
+        String link = base + "/?task=" + sv(task, "id");
+        String textBody = "Bạn được giao công việc mới.\n"
+                + "Mã: " + taskNo + "\n"
+                + "Công việc: " + taskTitle + "\n"
+                + "Dự án: " + projectText + "\n"
+                + "Người giao: " + sv(contact, "fullName") + "\n"
+                + "Thời điểm giao: " + now + "\n"
+                + "Hạn hoàn thành: " + dueText + "\n"
+                + "Ưu tiên: " + sv(task, "priority") + "\n"
+                + "Mở nhiệm vụ: " + link;
+        String htmlBody = "<div style=\"font-family:Arial,sans-serif;max-width:680px;color:#173f58\">"
+                + "<h2>" + html(taskTitle) + "</h2><p><b>" + html(taskNo) + "</b></p>"
+                + "<p>Dự án: " + html(projectText) + "</p>"
+                + "<p>Người giao: " + html(actor.fullName()) + " · Hạn: <b>" + html(dueText) + "</b></p>"
+                + "<p><a href=\"" + html(link) + "\" style=\"background:#0b78be;color:white;text-decoration:none;"
+                + "padding:10px 16px;border-radius:6px\">Mở nhiệm vụ</a></p></div>";
+        Map<String, Object> mail = new LinkedHashMap<>();
+        mail.put("id", idGenerator.next("MAIL"));
+        mail.put("recipients", email);
+        mail.put("subject", "[VNTECH ERP] " + taskNo + " - " + taskTitle);
+        mail.put("textBody", textBody);
+        mail.put("htmlBody", htmlBody);
+        store.insertEmailOutbox(mail, now);
+    }
+
+    /** Hiển thị hạn theo JS `:263` (giờ Việt Nam); không phân tích được thì trả nguyên văn. */
+    private static String humanDue(String dueAt) {
+        String raw = trim(dueAt);
+        if (raw.isEmpty()) return "Chưa đặt hạn";
+        try {
+            java.time.LocalDateTime parsed = java.time.LocalDateTime.parse(raw.replace(' ', 'T'));
+            return parsed.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+        } catch (RuntimeException ignored) {
+            return raw;
+        }
+    }
+
+    /** Thoát HTML như helper `html(...)` của JS. */
+    private static String html(String value) {
+        return trim(value).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;");
     }
 
     /**

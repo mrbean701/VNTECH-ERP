@@ -157,6 +157,43 @@ public class OpsTaskStoreAdapter implements OpsTaskStore {
                 WHERE id=? AND user_id=?""", now, now, notificationId, userId);
     }
 
+    // ---- TASK-080C (KP #78): port bước `queueTaskNotice` của JS `system-route.mjs:261-267` ----
+
+    @Override @Transactional(readOnly = true)
+    public Optional<Map<String, Object>> findUserContact(String userId) {
+        return first("SELECT id,full_name AS fullName,email FROM users WHERE id=?", userId);
+    }
+
+    @Override @Transactional(readOnly = true)
+    public String emailBaseUrl() {
+        return first("SELECT base_url AS baseUrl FROM email_settings WHERE id='EMAIL'")
+                .map(row -> sv(row, "baseUrl")).orElse("");
+    }
+
+    @Override @Transactional
+    public void insertTaskNotification(Map<String, Object> notice, Instant now) {
+        // JS `:265`: INSERT task_notifications(...,channel='in_app',status='SENT',sent_at=stamp,...)
+        jdbcTemplate.update("""
+                INSERT INTO task_notifications (id,work_item_id,user_id,channel,title,body,status,
+                                               read_at,sent_at,last_error,created_at,updated_at)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+                notice.get("id"), notice.get("workItemId"), notice.get("userId"), notice.get("channel"),
+                notice.get("title"), notice.get("body"), "SENT", null, now, null, now, now);
+    }
+
+    @Override @Transactional
+    public void insertEmailOutbox(Map<String, Object> mail, Instant now) {
+        // JS `:266`: INSERT email_outbox(...,request_id=NULL,stage=NULL,event='task_assigned',
+        //                                status='queued',attempt_count=0,next_attempt_at=stamp,queued_at=stamp)
+        jdbcTemplate.update("""
+                INSERT INTO email_outbox (id,request_id,stage,event,recipients,subject,text_body,html_body,
+                                         status,attempt_count,next_attempt_at,queued_at,sent_at,last_error,
+                                         created_at,updated_at)
+                VALUES (?,NULL,NULL,'task_assigned',?,?,?,?,'queued',0,?,?,NULL,NULL,?,?)""",
+                mail.get("id"), mail.get("recipients"), mail.get("subject"), mail.get("textBody"),
+                mail.get("htmlBody"), now, now, now, now);
+    }
+
     // ---- project teams ----
     @Override
     public Optional<Map<String, Object>> findProjectTeam(String teamId, String projectId) {

@@ -1,0 +1,19 @@
+ghi_chu
+=== users: email TRUOC KHI DIEN (TASK-080D) ===
+id	username	full_name	role	email	active
+USR_2f435847-8a39-44fe-b620-6e52186526e0	admin	Quản trị viên VNTECH	admin	admin@vntech.local	1
+USR_911a47b2-3f2a-4a81-9ca3-891dd492b18b	cha.ht	Chỉ huy trưởng A	cht	NULL	1
+USR_38e49f49-9d2a-40e9-8109-4bdf346ea62c	engineer.demo	Kỹ sư hiện trường (lập phiếu)	ksda	engineer.demo@vntech.vn	1
+USR_4a1c4fd5-dd0f-4ca6-80ff-feda3f3ed881	ksda.demo	Kỹ sư dự án (đề nghị mua)	ksda	ksda.demo@vntech.vn	1
+USR_8f44eaed-4466-4a7d-a0a8-b5e1bd04e0e7	kttdemo	Kế toán trưởng H	accountant	NULL	1
+USR_76575c08-4d16-49fc-8cd8-bde8ae204003	nvdademo	Nhân viên Dự án E	da_nv	NULL	1
+USR_8869ca60-7c6a-4e7f-bebd-0547f38bcdb8	nvkhdemo	Nhân viên Kế hoạch F	kh_nv	NULL	1
+USR_a5b738ea-13ca-466d-b5a7-493195e2ea04	testuser86661	Người dùng kiểm chứng	ksda	testuser86661@test.local	1
+USR_8011a197-261a-4288-91d6-1d62a233cedb	thukydemo	Thư ký TGĐ D	thuky	NULL	1
+USR_8984cf69-c2d7-4162-bb4f-03ab51427e1e	tkhodemo	Thủ kho G	thu_kho	NULL	1
+USR_c51d95b2-8f98-4f01-9daa-0b64d0037b7d	trdademo	Trưởng phòng Dự án C	da_truong	NULL	1
+USR_a5cd3bc6-f7b4-468f-af3b-103170fc0b2c	trinhtrench	Trưởng phòng Kế hoạch B	kh_truong	NULL	1
+ghi_chu
+=== email_outbox / task_notifications TRUOC ===
+tb	mail
+1	0

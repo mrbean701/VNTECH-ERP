@@ -17,6 +17,19 @@ public interface OpsTaskStore {
      * thẳng {@code assignedTo=""} ⇒ tạo công việc KHÔNG có người nhận (dữ liệu vô nghĩa).
      */
     String defaultDepartmentAssignee(String departmentCode, String projectId);
+    /**
+     * Liên hệ của người nhận việc — JS {@code queueTaskNotice} (`system-route.mjs:265-266`) đọc
+     * {@code assignee.id} và {@code assignee.email}.
+     * <p><b>TASK-080C (KP #78):</b> thiếu bước gửi thông báo nên giao việc xong KHÔNG có thông báo,
+     * KHÔNG có email — trong khi thông điệp trả về của action vẫn hứa "đã tạo thông báo cho nhân viên".
+     */
+    Optional<Map<String, Object>> findUserContact(String userId);
+    /** Nền tảng URL của `email_settings` — JS `:266` ({@code cfg?.baseUrl}); rỗng nếu chưa cấu hình. */
+    String emailBaseUrl();
+    /** Thông báo trong ứng dụng cho người nhận việc — JS `:265` (bảng `task_notifications`, status `SENT`). */
+    void insertTaskNotification(Map<String, Object> notice, Instant now);
+    /** Hàng đợi email — JS `:266` (bảng `email_outbox`, event `task_assigned`, status `queued`). */
+    void insertEmailOutbox(Map<String, Object> mail, Instant now);
     String insertWorkItem(Map<String, Object> task, Instant now);
     Optional<Map<String, Object>> findWorkItem(String id);
     void updateWorkItemProgress(String id, int progress, String currentStatus, Instant now);

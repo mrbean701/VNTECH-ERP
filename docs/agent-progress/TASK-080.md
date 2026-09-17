@@ -261,4 +261,76 @@ trưởng · thủ kho); **giữ `read`** cho kế toán và thư ký/BGĐ. Tệ
 | `tools/task080c-seed-project-write-scope.sql` | **MỚI** — cấp quyền ghi theo dự án (kèm vì-sao + nghiệm thu) |
 | `tools/_backup-project-scope-truoc-TASK080C.txt` | **MỚI** — sao lưu `user_project_scopes` trước khi sửa |
 
+---
+
+# ĐỢT 2D (18/09/2026) — PORT NỐT BƯỚC GỬI THÔNG BÁO/EMAIL (KP #78) + ĐIỀN EMAIL CÒN THIẾU
+
+## D1. Port `queueTaskNotice` (JS `system-route.mjs:261-267`) sang Java
+
+| Thêm vào cổng `OpsTaskStore` | Vì sao |
+|---|---|
+| `findUserContact(userId)` → `{id, fullName, email}` | JS đọc `assignee.email` để quyết định có xếp thư hay không |
+| `emailBaseUrl()` → `email_settings.base_url` | JS `:266` đọc `cfg?.baseUrl` để dựng liên kết |
+| `insertTaskNotification(...)` | bảng `task_notifications`, `channel='in_app'`, `status='SENT'`, `sent_at=now` |
+| `insertEmailOutbox(...)` | bảng `email_outbox`, `event='task_assigned'`, `status='queued'`, `attempt_count=0` |
+
+Trong `createWorkItem`, sau `store.insertWorkItem(...)` nay gọi thêm:
+`store.insertWorkItemEvent(idGenerator.next("EVT"), id, "ASSIGNED", null, "NEW", actor, null, assignee, null, null, now)`
+rồi `queueTaskNotice(task, assignee, principal, now)`.
+
+**Nội dung giữ nguyên mẫu câu của JS:** tiêu đề `Công việc mới: <tên việc>`; thân
+`<mã việc> · <mã - tên dự án | "Không gắn dự án"> · Hạn: <hạn | "Chưa đặt hạn">`; thư
+`[VNTECH ERP] <mã> - <tên việc>` kèm bản text và bản HTML.
+
+⚠️ **Khác JS MỘT điểm có chủ ý (ghi rõ, không giấu):** JS dựng liên kết TUYỆT ĐỐI, khi
+`email_settings.base_url` trống thì lấy `new URL(request.url).origin`. Tầng use-case của Java
+**không có origin của request**, nên khi `base_url` trống liên kết ở dạng **tương đối** `/?task=<id>`
+— **không bịa ra origin**.
+
+## D2. Phát sinh khi đo: tài khoản thật THIẾU EMAIL ⇒ nhánh email luôn bị bỏ qua
+
+Sau khi port, thông báo trong ứng dụng sinh **đúng** (`task_notifications` có `NTF_…` cho `nvdademo`)
+nhưng `email_outbox` **vẫn 0**. Truy vết: JS `:266` chỉ xếp thư **khi `assignee.email` có giá trị**
+(`if(assignee.email){…}`) — mà **mọi tài khoản nhận việc đều `email = NULL`** (chỉ 3 tài khoản kỹ sư có).
+⇒ Hành vi 0 thư là **đúng luật**, nhưng luồng email **không thể kiểm chứng**.
+**Đã điền:** `<username>@vntech.vn` theo **đúng khuôn mẫu dữ liệu thật đã có** (`ksda.demo@vntech.vn`),
+**không ghi đè** email sẵn có ⇒ **12/12 tài khoản hoạt động có email, 0 NULL**.
+Tệp `tools/task080d-seed-user-email.sql` + sao lưu `tools/_backup-user-email-truoc-TASK080D.txt`.
+⚠️ **Cần người dùng xác nhận** (đây là dữ liệu tài khoản thử, hoàn tác được).
+
+## D3. Cổng kiểm chứng được sửa cho ĐÚNG cách đo
+
+Lượt đo đầu dùng **phiên của Trưởng phòng** để tìm thông báo ⇒ luôn ra 0, vì payload lọc
+`task_notifications WHERE n.user_id=?` theo **chính người đăng nhập**. Đã sửa: cổng mở
+**phiên của NGƯỜI NHẬN** (`nvdademo`) để đo thông báo, và **phiên admin** để đo hàng đợi email
+(màn "Hộp thư gửi"). Thêm **việc "canary"** tạo mới mỗi lượt chạy (rồi huỷ bằng chính action thật)
+để đo được bước gửi thông báo ở **mọi** lượt, thay vì chỉ lượt đầu.
+
+## D4. Kết quả đo (4 bảng rỗng của đợt 2)
+
+| Bảng | Trước | Sau đợt 2C+2D | Ghi chú |
+|---|---|---|---|
+| `work_items` | **0** | **6** | 3 việc thật đang mở + 3 dòng đã huỷ (2 canary + 1 dòng thử), đều do action thật tạo/huỷ |
+| `work_item_events` | **0** | **6** | có `ASSIGNED` · `STATUS` · `REASSIGNED` |
+| `task_notifications` | **0** | **2** | người nhận TỰ THẤY trong phiên của chính họ, `status=SENT` |
+| `email_outbox` | **0** | **1** | `status=queued` (chưa bật cấu hình gửi thư thật — đúng hiện trạng) |
+| `capital_recovery_records` | 0 | **0** | **còn lại** — thuộc đợt sau |
+| `production_reports` | 0 | **0** | **còn lại** — thuộc đợt sau |
+
+**Cổng `tools/probe-task080c-work-items.mjs`: 28/28 ĐẠT · 0 HỎNG · 1 khoảng trống ghi nhận**
+(dòng ghi nhận còn lại chỉ là thông tin: thư đang nằm trong hàng đợi vì cấu hình gửi email đang tắt —
+cổng cố ý **KHÔNG** kiểm việc gửi ra ngoài Internet).
+
+## D5. Tệp thay đổi (đợt 2D)
+
+| Tệp | Nội dung |
+|---|---|
+| `java-backend/.../OpsTaskStoreAdapter.java` | cài đặt 4 phương thức mới (liên hệ · base URL · thông báo · hàng đợi thư) |
+| `java-backend/.../OpsTaskStore.java` | 4 phương thức mới của cổng |
+| `java-backend/.../OpsTaskManagementUseCase.java` | gọi event `ASSIGNED` + helper `queueTaskNotice` (kèm `humanDue`, `html`) |
+| `tools/task080d-seed-user-email.sql` | **MỚI** — điền email theo khuôn mẫu thật (kèm nghiệm thu) |
+| `tools/_backup-user-email-truoc-TASK080D.txt` | **MỚI** — sao lưu `users` trước khi sửa |
+| `tools/probe-task080c-work-items.mjs` | đo bằng **phiên người nhận + phiên admin** + việc canary |
+
+
 

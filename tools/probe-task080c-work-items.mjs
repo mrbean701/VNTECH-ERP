@@ -16,6 +16,12 @@
 const BASE = process.env.PROBE_BASE || "http://127.0.0.1:9000";
 const MGR_USER = process.env.PROBE_MGR_USER || "trdademo";
 const MGR_PASS = process.env.PROBE_MGR_PASS || "Vntech@2026";
+/** Người NHẬN việc — payload lọc thông báo theo chính người đăng nhập nên phải mở phiên riêng. */
+const NV_USER = process.env.PROBE_NV_USER || "nvdademo";
+const NV_PASS = process.env.PROBE_NV_PASS || "Vntech@2026";
+/** Admin — chỉ admin thấy màn "Hộp thư gửi" (`email_outbox`). */
+const ADMIN_USER = process.env.PROBE_ADMIN_USER || "admin";
+const ADMIN_PASS = process.env.PROBE_ADMIN_PASS || "Admin123456@";
 
 let pass = 0;
 let fail = 0;
@@ -199,7 +205,25 @@ async function main() {
     check("huỷ được việc thử bằng action thật `update_work_item_status`", rx.status === 200, `HTTP ${rx.status} · ${JSON.stringify(rx.json).slice(0, 140)}`);
   }
 
-  // ---- 2. TỰ KIỂM SOÁT: 2 payload SAI phải bị TỪ CHỐI ----
+  // ---- 1bis. VIỆC "CANARY": tạo mới MỖI LƯỢT CHẠY để đo được bước GỬI THÔNG BÁO (KP #78) ----
+  // 3 việc kế hoạch ở trên chỉ tạo một lần (chạy lại thì bỏ qua) nên không thể dùng để đo lại
+  // bước gửi thông báo; canary được tạo mới rồi HUỶ bằng action thật khi đo xong ⇒ vừa đo được,
+  // vừa không để lại rác.
+  const nhan = new Date().toISOString().slice(11, 19);
+  const canaryTitle = `[canary ${nhan}] Kiểm chứng gửi thông báo khi giao việc`;
+  const canary = await call(mgr.cookie, {
+    action: "create_work_item",
+    departmentCode: "DA",
+    title: canaryTitle,
+    assignedTo: idNvda,
+    projectId: duAnId,
+    priority: "normal",
+    dueAt: "2026-10-05 17:00:00",
+  });
+  const canaryOk = canary.status === 200 && /Đã giao CV-/.test(String((canary.json || {}).message || ""));
+  check("tạo việc canary (để đo bước gửi thông báo mỗi lượt chạy)", canaryOk, canaryOk ? String(canary.json.message) : `HTTP ${canary.status} · ${JSON.stringify(canary.json).slice(0, 140)}`);
+
+  // ---- 2. TỰ KIỂM SOÁT: 4 payload SAI phải bị TỪ CHỐI ----
   const sai1 = await call(mgr.cookie, {
     action: "create_work_item",
     departmentCode: "DA",
@@ -260,26 +284,60 @@ async function main() {
     }
   }
 
-  // ---- 4. KHOẢNG TRỐNG ĐÃ BIẾT (đo được, chưa port) — JS làm 3 việc, Java mới làm 1 ----
-  // JS `system-route.mjs:273-277` (createDepartmentTask) ghi MỘT LƯỢT: `work_items` + `work_item_events`
-  // (event ASSIGNED) rồi `queueTaskNotice` ⇒ `task_notifications` + (nếu có email) `email_outbox`.
-  // Java `OpsTaskStoreAdapter.insertWorkItem` mới ghi DUY NHẤT `work_items` ⇒ lịch sử việc trống,
-  // người nhận KHÔNG có thông báo, và không có email nào vào hàng đợi — trong khi thông điệp trả về
-  // của chính action vẫn nói "…và đã tạo thông báo cho nhân viên."
-  const soThongBao = Array.isArray(sau.taskNotifications) ? sau.taskNotifications.length : 0;
-  const viecMoi = items.filter((r) => keHoach.some((v) => v.title === String(r.title)));
-  if (soThongBao === 0) {
-    ghiNhan(
-      "task_notifications TRỐNG sau khi giao việc — Java CHƯA port `queueTaskNotice` (JS `system-route.mjs:261-267`)",
-      "thông điệp action vẫn hứa \"đã tạo thông báo cho nhân viên\" ⇒ cần port tiếp"
-    );
-  } else {
-    check("taskNotifications có dữ liệu thật (thông báo cho người nhận việc)", true, `${soThongBao} thông báo`);
-  }
-  ghiNhan(
-    `work_item_events: JS ghi 1 event ASSIGNED mỗi lần giao việc — cần đối chiếu riêng`,
-    `${viecMoi.length} việc vừa tạo/đã có (Java hiện không ghi event khi tạo)`
+  // ---- 4. BƯỚC GỬI THÔNG BÁO / EMAIL (KP #78) — JS `system-route.mjs:261-267`, đo bằng canary ----
+  // ⚠️ Payload lọc thông báo theo CHÍNH người đang đăng nhập (`WHERE n.user_id=?`) nên phiên của
+  // Trưởng phòng KHÔNG thấy thông báo của nhân viên — phải mở PHIÊN CỦA NGƯỜI NHẬN để đo cho đúng.
+  const nv = await login(NV_USER, NV_PASS);
+  const payloadNv = await snapshot(nv.cookie);
+  const tb = Array.isArray(payloadNv.taskNotifications) ? payloadNv.taskNotifications : [];
+  const tbCanary = tb.find((n) => String(n.title || "").includes(canaryTitle));
+  check(
+    "người nhận TỰ THẤY thông báo việc mới trong ứng dụng",
+    Boolean(tbCanary),
+    tbCanary
+      ? `title="${String(tbCanary.title).slice(0, 56)}" · status=${tbCanary.status}`
+      : `${tb.length} thông báo của phiên ${NV_USER} nhưng KHÔNG có bản ghi cho canary`
   );
+  if (tbCanary) {
+    check("thông báo ở trạng thái đã gửi (SENT)", String(tbCanary.status) === "SENT", `status=${tbCanary.status}`);
+  }
+  // Hàng đợi email nằm ở màn "Hộp thư gửi" (admin) — đo bằng phiên admin.
+  const adm = await login(ADMIN_USER, ADMIN_PASS);
+  const payloadAdm = await snapshot(adm.cookie);
+  const hopThu = Array.isArray(payloadAdm.emailOutbox) ? payloadAdm.emailOutbox : [];
+  const mailCanary = hopThu.find((m) => String(m.subject || "").includes(canaryTitle));
+  check(
+    "việc giao cho người CÓ email ⇒ xếp 1 thư vào `email_outbox` (status=queued)",
+    Boolean(mailCanary),
+    mailCanary
+      ? `subject="${String(mailCanary.subject).slice(0, 55)}" · status=${mailCanary.status}`
+      : `${hopThu.length} thư trong hàng đợi, không có thư cho canary`
+  );
+  const events = Array.isArray(sau.workItemEvents) ? sau.workItemEvents : [];
+  const eventAssigned = events.filter((e) => String(e.eventType) === "ASSIGNED");
+  check(
+    "mỗi lần giao việc có 1 sự kiện `ASSIGNED` trong lịch sử",
+    eventAssigned.length > 0,
+    `${eventAssigned.length}/${events.length} sự kiện là ASSIGNED`
+  );
+  if (hopThu.length) {
+    ghiNhan(
+      `Hàng đợi email đang có ${hopThu.length} thư — cần bật cấu hình email để gửi thật`,
+      "cổng chỉ kiểm việc XẾP THƯ vào hàng đợi (đúng luồng), KHÔNG kiểm việc gửi ra ngoài"
+    );
+  }
+
+  // Dọn canary bằng CHÍNH action thật (không xoá tay) sau khi đã đo xong.
+  const canaryRow = items.find((r) => String(r.title) === canaryTitle);
+  if (canaryRow) {
+    const rx = await call(mgr.cookie, {
+      action: "update_work_item_status",
+      workItemId: canaryRow.id,
+      status: "CANCELLED",
+      reason: "Việc canary của cổng kiểm chứng TASK-080C — đã đo xong bước gửi thông báo",
+    });
+    check("dọn việc canary bằng action thật `update_work_item_status`", rx.status === 200, `HTTP ${rx.status}`);
+  }
 
   console.log(kq.join("\n"));
   console.log(`\n=== KẾT QUẢ: ${pass}/${pass + fail} ĐẠT · ${fail} HỎNG · ${gap} KHOẢNG TRỐNG ĐÃ GHI NHẬN ===`);
