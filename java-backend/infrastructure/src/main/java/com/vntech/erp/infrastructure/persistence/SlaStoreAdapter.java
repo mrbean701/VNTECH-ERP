@@ -31,9 +31,18 @@ public class SlaStoreAdapter implements SlaStore {
     @Override
     @Transactional
     public void markStepOverdue(String stepId, Instant now) {
+        // TASK-025 — SỬA LỖI: câu lệnh cũ là
+        //     SET status='overdue',overdue_at=?,updated_at=?
+        // nhưng bảng supply_workflow_steps **KHÔNG có cột `overdue_at`**:
+        //   • lược đồ MySQL  — V1__baseline.sql:1795-1810 (chỉ có due_at/completed_at/completed_by/…)
+        //   • lược đồ SQLite — drizzle/0005_supply_delivery_workflow.sql:31-49 (giống hệt)
+        //   • monolith JS    — KHÔNG hề dùng `overdue_at` (chỉ dùng *giá trị* status 'overdue')
+        // ⇒ mọi lượt chạy đều ném "bad SQL grammar" và worker SLA **chưa bao giờ chạy được**
+        //   (log lặp lại mỗi giờ: 08:02 · 09:02 · 10:02 · 11:02).
+        // Ngày quá hạn đã có sẵn ở cột `due_at`; không cần ghi thêm cột nào.
         jdbcTemplate.update("""
-                UPDATE supply_workflow_steps SET status='overdue',overdue_at=?,updated_at=?
-                WHERE id=? AND status='pending'""", now, now, stepId);
+                UPDATE supply_workflow_steps SET status='overdue',updated_at=?
+                WHERE id=? AND status='pending'""", now, stepId);
     }
 
     @Override

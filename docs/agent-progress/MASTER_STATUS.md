@@ -7,8 +7,8 @@
 * Master Task: MASTER TASK — ERP/MIS SYSTEM AUDIT, REFACTOR & FEATURE UPGRADE (46 mục)
 * Overall status: **IN PROGRESS** — PHASE 1 chưa xong
 * Current phase: PHASE 1 — HẠ TẦNG UI DÙNG CHUNG. Song song: hoàn thiện tầng phân quyền phía Java (P0/P1)
-* Current task: **TASK-025** — điều tra `SlaComplianceWorker` lỗi `bad SQL grammar` lặp mỗi giờ (worker SLA chưa bao giờ chạy được). Song song: TASK-027 kiểm chứng sống bằng tài khoản `da_truong`/`kho_tong`/`cht`
-* Last completed task: **TASK-023 (DONE — 64/64 action)** · TASK-023b · TASK-028 · TASK-026. Trước đó: TASK-022 + TASK-021b (#23) · TASK-021 (#22)
+* Current task: **TASK-027** — kiểm chứng SỐNG bằng tài khoản thật (`da_truong`/`kho_tong`/`cht`) cho các sửa đổi vai trò + phạm vi
+* Last completed task: **TASK-025 (DONE)** — sửa `SlaComplianceWorker` hỏng âm thầm mỗi giờ; bằng chứng: log đổi từ WARN lỗi sang `INFO SLA worker: 29 supply steps quá hạn…`. Trước đó: TASK-023 (64/64) · TASK-023b · TASK-028 · TASK-026
 * Next task: TASK-025 (worker SLA) → TASK-027 (kiểm chứng sống) → TASK-022b (catalog) → TASK-009 (U-09 đợt 6)
 * Blocked task: **KHÔNG CÒN BLOCKER CỨNG.** Lưu ý vận hành: cổng ảnh và các probe cần `spawn mysql`/Edge headless phải chạy với sandbox mở rộng; **KHÔNG dùng `Start-Process` cho Java API** (tiến trình chết theo cửa sổ PowerShell) — xem `docs/29` mục 6
 * User confirmation required: **YES** — 2 việc: (1) **quyết định về `isCompanyLeadership`** (TASK-024: Java cấp thừa cho `accountant`, cấp thiếu cho `thuky`/`hcpc_truong` so với JS); (2) xác nhận đã hết cần tên màn Receiving — **đã tự giải quyết** = "Kế hoạch giao hàng" (TASK-B01)
