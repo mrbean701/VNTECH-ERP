@@ -74,3 +74,77 @@ rồi chạy lại đồng bộ. **Đối chiếu ngược với bản sao lưu 
 | `tools/task080-seed-real-data.sql` | **MỚI** — toàn bộ SQL đã chạy (ma trận quyền + tổ đội), kèm vì-sao và kết quả đo |
 | `tools/_backup-permissions-truoc-TASK080.txt` | **MỚI** — sao lưu 2 bảng quyền trước khi sửa |
 | `docs/agent-progress/TASK-080.md` | hồ sơ này |
+
+---
+
+# ĐỢT 2B (18/09/2026) — hai lỗ hổng dữ liệu thật, tiếp nối TASK-082
+
+Đợt 2A (hồ sơ `TASK-082.md`) đã **nối cột** và **bỏ hằng số giả**. Đợt 2B xử lý hai chỗ mà chính
+TASK-082 phát hiện ra là **dữ liệu thật còn thiếu/bất nhất** (đo trên MySQL, không suy đoán).
+
+## B1. Phiếu nhập `confirmed` nhưng THIẾU người xác nhận BCH
+
+| Đo trước | Giá trị |
+|---|---|
+| `goods_receipts` có `bch_confirmation_status='confirmed'` | **12** |
+| … trong đó `bch_confirmed_by IS NULL` | **10** (10 phiếu do TASK-081 dựng lại) |
+| … trong đó `bch_confirmed_by` trỏ tới user **KHÔNG tồn tại** (`USR_2f435847-…`) | **2** (tham chiếu treo do các lượt smoke trước) |
+
+⇒ Dù trạng thái là "đã xác nhận", Java `LEFT JOIN users` ra **NULL** nên UI in chữ dự phòng
+`"BCH công trường"`. **Đã điền người xác nhận THẬT:** `cha.ht` = *"Chỉ huy trưởng A"*, vai trò `cht`,
+thuộc **Ban chỉ huy công trường** — đúng cột nghiệp vụ "BCH XÁC NHẬN" và cùng ban với kho nhận
+`KHO-DA-MAU-01`. Mốc thời gian lấy **chính `received_at`** (đúng cách sản phẩm ghi khi BCH xác nhận
+trong cùng lượt nhập: bản ghi thật `GRN-…-0005` có `confirmed_at` cách `received_at` 0,237 giây).
+
+## B2. `role_catalog.default_organization_unit_id` NULL 16/16 trên MySQL
+
+Quy tắc ánh xạ vai trò → đơn vị **đã có sẵn trong kho mã**: `drizzle/0045_patch01_runtime_admin_boq_hardening.sql`
+dòng 80–90, nhưng **chỉ chạy trên SQLite** ⇒ Java đọc `ou.code AS defaultOrganizationCode` qua
+`LEFT JOIN` nên luôn NULL ⇒ giao diện không hiện đơn vị mặc định của vai trò.
+
+⚠️ **Bẫy đã tránh:** KHÔNG chép nguyên literal `'ORG-KH'`/`'ORG-TCKT'`/… của 0045. Đo thật cho thấy
+MySQL dùng **ID hỗn hợp**: `ORG-BGD` · `ORG-DA` · `ORG-HCPC` là chuỗi mã, còn `BCH` · `KH` · `TCKT` ·
+`VNTECH` · `VNTECH-01` mang dạng `ORG_<uuid>` (do migration `V13__merge_duplicate_org_units` gộp đơn vị
+trùng) ⇒ phải **JOIN theo `organization_units.code`**. Nếu chép literal thì 5/7 giá trị thành **tham chiếu treo**.
+
+**Kết quả nghiệm thu (chạy trong chính tệp seed):**
+
+| Chỉ số | Trước | Sau |
+|---|---|---|
+| `role_catalog` có đơn vị mặc định | **0/16** | **15/16** |
+| … còn NULL | 16 | **1** = vai trò `team` (Tổ đội) — **GIỮ NULL có chủ ý** vì `drizzle/0045` không ánh xạ `team` ⇒ đúng luật §45 **không tự suy đoán**, đã ghi thành câu hỏi cho người dùng |
+| Phiếu `confirmed` thiếu người xác nhận | 10 | **0** |
+| Phiếu trỏ tới user không tồn tại | 2 | **0** |
+
+## B3. Truy nguyên TRỌN VẸN test đỏ đã biết TASK-032 (không sửa, chỉ báo cáo)
+
+Test `tests/runtime-admin-boq-regression.test.mjs` khẳng định
+`x.code==='thuky' && x.name==='Thư ký Tổng giám đốc' && x.defaultOrganizationCode==='BGD'`.
+Chuỗi thật của schema:
+
+1. `drizzle/0029:76` — tạo `thuky` với **tên DÀI**: *"Thư ký Tổng giám đốc / Trưởng phòng Hành chính Pháp chế"*.
+2. `drizzle/0045:90` — đổi thành **tên NGẮN** *"Thư ký Tổng giám đốc"* + gán `ORG-BGD` ← **test được viết theo mốc này**.
+3. `drizzle/0079` (migration **SAU ĐÓ**) — đổi **ngược lại tên DÀI**: `UPDATE role_catalog SET name='Thư ký Tổng giám đốc / Trưởng phòng Hành chính Pháp chế' … WHERE code='thuky'`.
+
+⇒ **Phần ánh xạ đơn vị thì ĐÚNG** (`thuky → BGD`, có cả ở SQLite lẫn MySQL sau đợt này);
+**phần đỏ còn lại là KỲ VỌNG TEST ĐÃ CŨ** so với migration 0079 (dữ liệu hiện tại khớp MySQL).
+**Không tự sửa** kỳ vọng test hay đổi tên vai trò — đây là **quyết định đặt tên nghiệp vụ**, đã đưa vào
+danh sách câu hỏi cho người dùng.
+
+## B4. Kiểm chứng
+
+- Cổng `tools/probe-task082-realdata.mjs` **mở rộng lên 21 phép kiểm** và **21/21 ĐẠT** (qua cổng 9000):
+  thêm 2 bất biến mới — *mọi phiếu đã BCH xác nhận đều phải có TÊN người xác nhận thật* (11/11) ·
+  *phiếu CHƯA xác nhận thì KHÔNG được có người xác nhận* (tự kiểm soát, 4 phiếu chờ) · *ánh xạ đơn vị
+  mặc định đã có thật* (15/16) · *`thuky` → BGD đúng quy tắc 0045*.
+- `tests/runtime-admin-boq-regression.test.mjs` chạy riêng: **26/27** (1 đỏ = kỳ vọng tên cũ ở B3).
+
+## B5. Tệp thay đổi (đợt 2B)
+
+| Tệp | Nội dung |
+|---|---|
+| `tools/task080b-seed-real-data.sql` | **MỚI** — 6 câu `UPDATE` + khối nghiệm thu; ghi rõ nguồn quy tắc và bẫy ID hỗn hợp |
+| `tools/_backup-bch-roleorg-truoc-TASK080B.txt` | **MỚI** — sao lưu `role_catalog` + `goods_receipts` + `users` trước khi sửa (4.364 byte) |
+| `tools/probe-task082-realdata.mjs` | mở rộng 18 → **21** phép kiểm |
+| `docs/agent-progress/TASK-080.md` | mục này |
+

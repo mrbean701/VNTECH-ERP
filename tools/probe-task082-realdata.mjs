@@ -116,8 +116,34 @@ async function main() {
   check("receipts.postingStatus có giá trị thật để hiển thị TÌNH TRẠNG", postingSet.length > 0 && postingSet[0] !== "(trong)", `tập giá trị = {${postingSet.join(", ")}}`);
 
   // ---- 7. BCH XÁC NHẬN: tên/ngày người xác nhận thật ----
-  const coBch = receipts.filter((r) => String(r.bchConfirmedByName || "").trim().length > 0).length;
-  check("receipts có tên người BCH xác nhận thật", coBch > 0, `${coBch}/${receipts.length} dòng`);
+  const confirmed = receipts.filter((r) => String(r.bchConfirmationStatus) === "confirmed");
+  const thieuBch = confirmed.filter((r) => !String(r.bchConfirmedByName || "").trim());
+  check(
+    "mọi phiếu đã BCH xác nhận đều có TÊN người xác nhận THẬT (không rơi vào chữ dự phòng)",
+    confirmed.length > 0 && thieuBch.length === 0,
+    `${confirmed.length - thieuBch.length}/${confirmed.length} phiếu`
+  );
+  const choBch = receipts.filter((r) => String(r.bchConfirmationStatus) !== "confirmed");
+  check(
+    "[tự kiểm soát] phiếu CHƯA xác nhận thì KHÔNG được có người xác nhận",
+    choBch.every((r) => !String(r.bchConfirmedByName || "").trim()),
+    `${choBch.length} phiếu chờ`
+  );
+
+  // ---- 7b. Ánh xạ vai trò → đơn vị mặc định (port từ drizzle/0045 sang MySQL) ----
+  const roles = Array.isArray(d.roleCatalog) ? d.roleCatalog : [];
+  const coOrg = roles.filter((r) => String(r.defaultOrganizationCode || "").trim());
+  check(
+    "roleCatalog: ánh xạ ĐƠN VỊ MẶC ĐỊNH đã có thật (trước đây NULL 16/16)",
+    coOrg.length >= 15,
+    `${coOrg.length}/${roles.length} vai trò có đơn vị mặc định`
+  );
+  const thuky = roles.find((r) => String(r.code) === "thuky");
+  check(
+    "vai trò `thuky` mặc định về Ban giám đốc (BGD) — đúng quy tắc drizzle/0045:90-93",
+    Boolean(thuky) && String(thuky.defaultOrganizationCode) === "BGD",
+    thuky ? `${thuky.code} -> ${thuky.defaultOrganizationCode}` : "(khong co vai tro thuky)"
+  );
 
   // ---- 8. Màn Thanh toán 'Quá hạn' phải > 0 theo payment_plans.status='overdue' ----
   const quaHan = plans.filter((p) => String(p.status) === "overdue");
