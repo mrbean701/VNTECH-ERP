@@ -1,7 +1,7 @@
 # MASTER STATUS — VNTECH ERP V5.3.0
 
 > Tệp này là NGUỒN SỰ THẬT về trạng thái toàn cục. Mọi phiên làm việc mới PHẢI đọc tệp này trước.
-> Cấu trúc theo GOAL §12. Cập nhật lần cuối: 2026-09-17 (sau **TASK-061**, commit #100 — xem mục **TIẾN ĐỘ SO VỚI MASTER TASK** ngay dưới)
+> Cấu trúc theo GOAL §12. Cập nhật lần cuối: 2026-09-17 (sau **TASK-072**, commit **#115** — xem mục **TIẾN ĐỘ SO VỚI MASTER TASK** ngay dưới)
 
 ## MASTER TASK STATUS
 
@@ -16,18 +16,18 @@
 
 | Phân loại (nguyên văn cột TT) | Số mục | % |
 |---|---|---|
-| **DONE** (`**DONE**` + `DONE` + `DONE / AP-DUNG n`) | **23** | **20,9 %** |
+| **DONE** (`**DONE**` + `DONE` + `DONE / AP-DUNG n`) | **25** | **22,7 %** |
 | ĐANG LÀM (`DANG-LAM 9/32`) | 1 | 0,9 % |
-| KHUNG XONG nhưng **ÁP DỤNG 0** (`KHUNG-XONG / AP-DUNG 0`) | 5 | 4,5 % |
+| KHUNG XONG nhưng **ÁP DỤNG 0** (`KHUNG-XONG / AP-DUNG 0`) | 4 | 3,6 % |
 | **BỊ CHẶN** (`**BLOCKED**` = F-01) | 1 | 0,9 % |
-| TODO | 80 | 72,7 % |
+| TODO | 79 | 71,8 % |
 
 | Phase | DONE / tổng | Ghi chú |
 |---|---|---|
 | PHASE 0 — AUDIT | **12 / 16** | A-01…A-16; A-13…A-16 còn TODO |
 | PHASE 0B — BẢO MẬT | **8 / 10** | đang tạm hoãn theo yêu cầu người dùng |
-| PHASE 1 — UI/UX | 3 / 17 | 1 đang làm (U-11) · 5 mới có khung |
-| PHASE 2 — MUA HÀNG | 0 / 9 | |
+| PHASE 1 — UI/UX | 4 / 17 | 1 đang làm (U-09) · 4 mới có khung |
+| PHASE 2 — MUA HÀNG | 1 / 9 | `P-04` DONE (TASK-072) |
 | PHASE 3 — CÔNG VIỆC | 0 / 10 | |
 | PHASE 4 — DỰ ÁN | 0 / 6 | |
 | PHASE 5 — KHO | 0 / 4 | |
@@ -37,28 +37,30 @@
 | PHASE 9 — BÁO CÁO | 0 / 5 | |
 | PHASE 10 — TƯƠNG LAI | 0 / 5 | 1 mục bị chặn (F-01) |
 
-**Phần KHÔNG cộng vào 110 mục — nhánh đang chạy thực tế:** TASK-048 → TASK-061 (14 việc) là **vá lỗi
+**Phần KHÔNG cộng vào 110 mục — nhánh đang chạy thực tế:** TASK-048 → TASK-071 là **vá lỗi
 phát hiện được khi audit** (đường ĐỌC bootstrap JS ↔ Java, phân quyền, audit trail). Nhánh này **không có
 ánh xạ 1-1** với mục roadmap nào, nên cổng trên **cố tình không cộng** — nếu cộng vào sẽ là thổi phồng.
 Nói cách khác: *audit đã xong về khảo sát (A-01…A-12 DONE) nhưng việc SỬA các lỗi audit tìm ra vẫn đang chạy*.
 
-**Cổng đã xanh sau khi build lại (17/09):** bootstrap `100/100` · work-items `18/18` ·
-audit-requests `18/18` · owner-checks `10/10` · all-roles `20/20` · schema-drift **0 lệch** ·
-đối chiếu tập cột 65 khoá: còn **2 khoá** thiếu cột (`boqItems` 17 cột · `boqSourceItems` 9 cột ⇒ TASK-062).
+**Từ TASK-072 trở đi THÌ ĐÃ cộng vào 110 mục** (vì có ánh xạ 1-1 với một dòng roadmap): TASK-072 làm đúng mục **`P-04`** ⇒ chuyển **DONE**; mục thứ hai là **`U-06`** — từ *có khung, áp dụng 0* thành *đã áp dụng thật 1 lần* ⇒ tiến độ **23 → 25/110 = 22,7 %**. **Quy ước:** việc nào có ánh xạ 1-1 thì cập nhật thẳng **cột TT của `docs/25_TODO_ROADMAP.md`** rồi chạy `probe-roadmap-progress.mjs` — **nguồn sự thật là roadmap, không phải tệp này**.
 
-**Lớp lỗi MỚI phát hiện, cổng tập cột KHÔNG bắt được** (cần cổng riêng): lệch `ORDER BY` / `LIMIT` / kiểu
+**Cổng đã xanh** (riêng các cổng ở dòng cuối ĐO LẠI trong phiên TASK-072 — 17/09; các số còn lại ghi kèm task đo gần nhất, **KHÔNG chép lại như thể vừa đo**): bootstrap `100/100` · work-items `18/18` ·
+audit-requests `18/18` · owner-checks `10/10` · all-roles `20/20` · schema-drift **0 lệch** ·
+đối chiếu **TẬP CỘT** **73 khoá · 0 khoá thiếu cột** (độ phủ: so được 73 ≥ sàn 65, đủ 20 khoá bắt buộc ⇒ cổng KHÔNG mất độ phủ; **đối chứng dương 5/5 khớp metadata THẬT của MySQL**; đối chiếu chéo hai bản đọc nguồn cho kết quả giống hệt) · đối chiếu **MỆNH ĐỀ** `ORDER BY`/`LIMIT`/kiểu `JOIN` **73 khoá · 0 lệch** (**đối chứng dựng sẵn 6/6**, gồm 1 cặp phải IM và 5 cặp phải BẮT) · `probe-roadmap-progress.mjs` đọc đủ **110 mục** · `probe-ui-adoption.mjs` chạy được.
+
+**Lớp lỗi lệch `ORDER BY` / `LIMIT` / kiểu `JOIN` — ĐÃ VÁ (TASK-062/063) và nay CÓ CỔNG RIÊNG** (`tools/probe-clause-parity.mjs`):
 `JOIN`. Đã thấy 3 ca khi đọc JS: `boqImportBatches` (JS sắp `project_id,contract_id,version_no DESC`;
 Java sắp `created_at DESC`) · `boqChangeHistory` (JS có `LIMIT 1000` + tiebreaker `h.id DESC`) ·
-`workflowAssignments` (JS **chỉ admin** mới trả, Java trả cho mọi vai trò). **Chưa vá** — ghi ở Known Problems.
+`workflowAssignments` (JS **chỉ admin** mới trả, Java trả cho mọi vai trò). **Cả 3 ca ĐÃ VÁ HẾT.**
 
 ## Mốc trạng thái
 
 | Mục | Giá trị |
 |---|---|
 | CURRENT PHASE | PHASE 1 — hạ tầng UI dùng chung. Song song: hoàn thiện tầng phân quyền Java |
-| CURRENT TASK | **TASK-072 — `teamMembers` (bảng `team_members` 0 dòng ⇒ CHƯA CỔNG NÀO KIỂM)** — cần cắm fixture như `probe-task058` đã làm cho `workItemEvents`, hoặc nêu rõ là vùng chưa đo. Kế tiếp: cho `AuditLogPort.log` nhận **ngữ cảnh request (IP)** để gộp nhật ký an toàn (sau khi kiểm mức METHOD) · MASTER TASK **§2.1/§2.2/§2.3** · **đóng gói UI bundle** trước khi anh test thủ công · TASK-034 (gỡ chặn dựng bundle) |
-| LAST COMPLETED | **TASK-071 — Đo 7 TRƯỜNG ĐẶT ALIAS KHÁC TÊN CỘT NGUỒN: 9/9 ĐẠT · 1 phép đo KHÔNG thực hiện được.** Cổng mới `tools/probe-task071-aliased-fields.mjs` xây bản đồ `alias → bảng` từ `FROM`/`JOIN`, tìm mục SELECT theo alias, lấy **cột nguồn** trong biểu thức rồi so *"số dòng có dữ liệu ở cột nguồn (MySQL)"* với *"số dòng API KHÔNG rỗng"*. **Bộ giải mã bị CHÍNH ĐỐI CHỨNG dựng sẵn (4 ca) bắt lỗi ngay lượt chạy đầu:** ca alias có **BACKTICK** (`` level_rank AS `rank` ``) ra sai cột vì bản đầu **để nguyên phần `AS <alias>`** khi trích cột ⇒ alias bị hiểu thành tên cột; **đã sửa: bỏ `AS <alias>` TRƯỚC khi trích cột**. **Nếu không có đối chứng, cổng đã cho kết quả SAI.** Kết quả: `fullName`/`employeeCode`/`role` ← `users` (12/12, 11/12, 12/12 · API 5/5) · `organizationCode`/`organizationName` ← `organization_units` (8/8 · API **51/51**) · `rank` ← `system_level_catalog.level_rank` (5/5 · 5/5) · `staffDirectory.roleName` ← `role_catalog.name` (16/16 · 12/12) · `organizationCode` (8/8 · **11/12** — 1 tài khoản chưa gán đơn vị, **hợp lý**) · `organizationName` (12/12 qua `COALESCE` dự phòng). **Không tìm thấy lỗi trường alias luôn rỗng.** **CHƯA KIỂM ĐƯỢC:** `teamMembers` (bảng 0 dòng) và nhánh DỰ PHÒNG của `COALESCE`. Trước đó cùng phiên: **TASK-070 (#113)** · **TASK-069 (#112)** · **TASK-068 (#111)** · **TASK-067 (#110)** · **TASK-066 (#109)** · **TASK-065 (#108)** · **TASK-064 (#107)** · **TASK-063 (#106)** · **TASK-062 (#104/#105)** · **TASK-061 (#101)** · **TASK-060 (#100)** · **TASK-059 (#98)** · **TASK-058 (#96)** · **TASK-056/057 (#94)** · **TASK-049 (#92)** |
-| NEXT TASK | Sau TASK-048/049: rà tiếp **đường ĐỌC mức CỘT** (đã lộ 2 ca liên tiếp: `constructionDailyLogs` thiếu 2 cột, `transferOrders` thiếu 7 trường + thiếu lọc theo kho `:714`) ⇒ cần cổng đối chiếu **tập cột SQL JS ↔ Java** theo từng khoá bootstrap; rồi TASK-034 (gỡ chặn dựng bundle) → render §8.1 → **§8.2** → **§8.3** |
+| CURRENT TASK | **TASK-073 — `teamMembers` (bảng `team_members` 0 dòng ⇒ CHƯA CỔNG NÀO KIỂM)** — cần cắm fixture như `probe-task058` đã làm cho `workItemEvents`, hoặc nêu rõ là vùng chưa đo. **Ghi chú số hiệu:** việc này từng mới là **NHÁP** với số `TASK-072`, nhưng số đó đã dùng cho **`P-04`** (Approval Timeline). Kế tiếp: cho `AuditLogPort.log` nhận **ngữ cảnh request (IP)** để gộp nhật ký an toàn (sau khi kiểm mức METHOD) · MASTER TASK **§2.1/§2.2/§2.3** · **đóng gói UI bundle** trước khi anh test thủ công · TASK-034 (gỡ chặn dựng bundle) |
+| LAST COMPLETED | **TASK-072 — MASTER TASK §2.1 (`P-04`): ÁP DỤNG THẬT `ApprovalTimeline` VÀO CHI TIẾT PHIẾU (§8.1)** — thay khối tự viết **1467 ký tự** bằng component dùng chung và ánh xạ **đủ 6 thông tin §8.1**: số bước · tên bước · người duyệt · **phòng ban lấy từ CỘT THẬT `approvals.department`** (thay vì dò `staffDirectory`) · thời gian + hạn · trạng thái · ý kiến. **4 cổng xanh:** cổng áp dụng UI dùng chung **0 → 1 lần DANG DUNG** · `tsc --noEmit` **exit 0** · UI `:8787` + proxy `:9000` **HTTP 200** không có marker lỗi biên dịch · cổng ảnh **8/28 lệch — ĐÃ CHỨNG MINH LÀ CÓ SẴN BẰNG ĐỐI CHỨNG THỰC NGHIỆM** (`git stash push app/page.tsx` → chạy lại → **vẫn 8/28 y hệt** → `git stash pop`), và 8 ảnh đó đều ở màn **05-material KHÔNG chứa drawer vừa sửa** ⇒ thay đổi này **không thêm ảnh lệch nào**. **Ledger cập nhật bằng SỐ ĐO:** `P-04` → DONE · `U-06` → `DONE / AP-DUNG 1` · `U-05` AP-DUNG **2 → 90** (số cũ đã bị TASK-020 vượt qua; **xác nhận chéo** bằng `grep` đếm **lần xuất hiện** chứ không đếm dòng) · `U-17` còn **2** chỗ tự viết dải ⇒ **23 → 25/110 = 22,7 %**. Chi tiết: `TASK-072.md`. *Trước đó:* **TASK-071 — Đo 7 TRƯỜNG ĐẶT ALIAS KHÁC TÊN CỘT NGUỒN: 9/9 ĐẠT · 1 phép đo KHÔNG thực hiện được.** Cổng mới `tools/probe-task071-aliased-fields.mjs` xây bản đồ `alias → bảng` từ `FROM`/`JOIN`, tìm mục SELECT theo alias, lấy **cột nguồn** trong biểu thức rồi so *"số dòng có dữ liệu ở cột nguồn (MySQL)"* với *"số dòng API KHÔNG rỗng"*. **Bộ giải mã bị CHÍNH ĐỐI CHỨNG dựng sẵn (4 ca) bắt lỗi ngay lượt chạy đầu:** ca alias có **BACKTICK** (`` level_rank AS `rank` ``) ra sai cột vì bản đầu **để nguyên phần `AS <alias>`** khi trích cột ⇒ alias bị hiểu thành tên cột; **đã sửa: bỏ `AS <alias>` TRƯỚC khi trích cột**. **Nếu không có đối chứng, cổng đã cho kết quả SAI.** Kết quả: `fullName`/`employeeCode`/`role` ← `users` (12/12, 11/12, 12/12 · API 5/5) · `organizationCode`/`organizationName` ← `organization_units` (8/8 · API **51/51**) · `rank` ← `system_level_catalog.level_rank` (5/5 · 5/5) · `staffDirectory.roleName` ← `role_catalog.name` (16/16 · 12/12) · `organizationCode` (8/8 · **11/12** — 1 tài khoản chưa gán đơn vị, **hợp lý**) · `organizationName` (12/12 qua `COALESCE` dự phòng). **Không tìm thấy lỗi trường alias luôn rỗng.** **CHƯA KIỂM ĐƯỢC:** `teamMembers` (bảng 0 dòng) và nhánh DỰ PHÒNG của `COALESCE`. Trước đó cùng phiên: **TASK-070 (#113)** · **TASK-069 (#112)** · **TASK-068 (#111)** · **TASK-067 (#110)** · **TASK-066 (#109)** · **TASK-065 (#108)** · **TASK-064 (#107)** · **TASK-063 (#106)** · **TASK-062 (#104/#105)** · **TASK-061 (#101)** · **TASK-060 (#100)** · **TASK-059 (#98)** · **TASK-058 (#96)** · **TASK-056/057 (#94)** · **TASK-049 (#92)** |
+| NEXT TASK | **(1)** Tiếp tục thực thi MASTER TASK §2.1: **`P-05`** (§8.2 — modal **Tổng hợp giao nhận** về phiếu đề nghị gốc) rồi **`P-06`** (§8.3 — ảnh/hồ sơ vật tư đặc thù xem được, **không tràn khung**); cùng nhóm Phiếu, phụ thuộc đã xong. **(2)** TASK-073 — cắm fixture cho `teamMembers` (vùng **chưa cổng nào đo**). **(3)** TASK-034 — gỡ chặn dựng **bundle UI** trước khi anh test thủ công. **(4)** `U-14`→`U-17` — áp dụng nốt thư viện dùng chung (còn **4** modal · **~100** bảng · **~50** điều kiện quyền · **2** dải timeline) |
 | BLOCKED ITEMS | **TASK-040 nhóm 6** (lệch cấu trúc: `vntech_license_*` cần port cả hệ license + xác minh chữ ký số — thuộc phần **bảo mật** đã yêu cầu tạm hoãn) · **TASK-034** (`npm run build` không dựng lại được UI: dấu vân tay nguồn lệch + bảng identity có **trigger chặn UPDATE** ⇒ phải viết migration) · **TASK-035 mục 7** · **TASK-036 mục 7** · **TASK-037 mục 5** · **TASK-031** · **TASK-032** · **TASK-029** · **TASK-024** · **dữ liệu `user_module_permissions`** · **số SLA thật (24h/8h)** |
 | USER CONFIRMATION REQUIRED | **YES** — **11 câu hỏi**, ghi ở mục riêng bên dưới |
 | CURRENT BRANCH | `unity` |
@@ -112,6 +114,8 @@ Mặc định của interface là `return role()` = **mã chuẩn** ⇒ thiếu 
 
 ## Thay đổi trong phiên gần nhất
 
+**TASK-072 (17/09 — mới nhất):** `DATABASE` **không đổi** · `API` **không đổi** (không thêm/bớt action, không đổi bootstrap) · `WORKFLOW` **không đổi** · `PERMISSION` **không đổi** · **UI: ÁP DỤNG THẬT `ApprovalTimeline`** vào chi tiết phiếu (§8.1) — thay khối tự viết 1467 ký tự bằng component dùng chung; cổng áp dụng **0 → 1 lần**. *(Bảng dưới ghi phiên TASK-040/041 trước đó.)*
+
 | Loại | Nội dung |
 |---|---|
 | DATABASE CHANGES | **Không thêm migration / không đổi lược đồ.** NHƯNG **có sửa DỮ LIỆU CẤU HÌNH bị hỏng**: `email_settings.smtp_port` **1 → 587** · `company_settings.po_sla_hours` **1 → 24** · `bch_confirmation_sla_hours` **1 → 8**. Ba giá trị `1` này do **lỗi port của `save_email_settings` ghi đè** (seed ghi 587; DDL default 24/8; chỉ action đó ghi được 2 cột SLA) ⇒ probe đã đưa về đúng thiết kế. **Cần người dùng xác nhận 24h/8h có đúng nghiệp vụ** (câu hỏi #10) |
@@ -122,7 +126,7 @@ Mặc định của interface là `return role()` = **mã chuẩn** ⇒ thiếu 
 ## Known Problems
 
 1. **TASK-017 — CÒN MỞ**: cổng ảnh bất định giữa các phiên (0 px · 20 px · 0 px trên cùng một màn). Đã khoanh vùng tới ô tìm kiếm topbar và loại trừ, **chưa ra nguyên nhân gốc**.
-2. **Tiến độ áp dụng UI dùng chung**: `StatusBadge` **90** · `ListToolbar` **13** · `DataTable` **0** · `PermissionGuard` **0** · timeline **0** · `EntityDetailModal` **0**. Còn lại: **~100** bảng tự viết · **~100** trạng thái rỗng · **~50** điều kiện quyền · **4** modal · **3** dải timeline.
+2. **Tiến độ áp dụng UI dùng chung**: `StatusBadge` **90** · `ListToolbar` **13** · `DataTable` **0** · `PermissionGuard` **0** · **`ApprovalTimeline` 1 — ĐÃ DÙNG THẬT (TASK-072)** · `ActivityTimeline` **0** · `EntityDetailModal` **0**. Còn lại: **~100** bảng tự viết · **~100** trạng thái rỗng · **~50** điều kiện quyền · **4** modal · **2** dải timeline.
 3. **`/api/files` chưa được bảo vệ** (S-05) — người dùng yêu cầu tạm bỏ qua phần bảo mật.
 4. ~~JAR không đóng gói lại được~~ **SAI NAY ĐÃ SỬA** — TASK-B03 DONE. JAR **90.885.239 bytes** (17/09 14:04) đã build và chạy; **mọi sửa đổi backend TỪ TASK-019 trở đi ĐÃ có hiệu lực lúc chạy**.
 5. ~~Cổng ảnh + probe UI không chạy được~~ **SAI NAY ĐÃ SỬA** — TASK-B02 DONE. Cổng ảnh **28/28 ĐẠT, 0 px**; riêng probe cần `spawn mysql`/Edge headless vẫn cần mở rộng sandbox (đã xin và chạy được nhiều lần).
@@ -222,6 +226,8 @@ Mặc định của interface là `return role()` = **mã chuẩn** ⇒ thiếu 
 65. **ĐÃ SỬA DÒNG TODO CŨ (TASK-067) — `SlaComplianceWorker` thực ra ĐÃ XONG từ commit #34.** Dòng TODO trong tệp này ghi *"hỏng âm thầm mỗi giờ (cột `overdue_at` không tồn tại)"* nhưng câu lệnh đã được sửa từ #34 (bỏ hẳn `overdue_at`) và `TASK-025.md` ghi DONE. **Đo lại hôm nay:** log `INFO SlaComplianceWorker : SLA worker: 0 supply steps quá hạn; 0 payment plans quá hạn; 4 BCH chờ xác nhận.` (chạy 60s sau khởi động, **không còn WARN**); DB `supply_workflow_steps` **29 `overdue`** / 27 `completed` / **0 `pending` quá hạn**; `payment_plans` 2 `overdue`; `company_settings` `po_sla_hours 24` / `bch_confirmation_sla_hours 8`. **Bài học: TODO phải được ĐO LẠI trước khi truyền tiếp — hai hạng mục của tôi trong lượt đó đều đã cũ/sai.**
 66. **✅ ĐÃ VÁ (TASK-069) — LỖI THỨ 10 CỦA LỚP "ĐƯỜNG ĐỌC THIẾU KHOÁ": `emailOutbox`.** Khoá này là **BẮT BUỘC** trong hợp đồng `AppData` của UI (`app/page.tsx:31 emailOutbox: Row[]`) nhưng **KHÔNG một adapter Java nào** khai nó (`grep` toàn `java-backend` = 0 kết quả) ⇒ khối chuẩn hoá của UI **âm thầm** thay `[]` ⇒ màn **Hộp thư gửi** luôn rỗng dù `email_outbox` có dữ liệu (email phê duyệt / giao việc / thư thử đều ghi vào bảng này). JS `:724` trả `isAdmin(user) ? <11 cột + requestNo qua LEFT JOIN material_requests, ORDER BY queued_at DESC LIMIT 100> : []`; JS `:737` xác nhận non-admin nhận `[]`. **Đã port nguyên văn cả hai vế.** **Phát hiện bằng cổng MỚI `tools/probe-task069-appdata-contract.mjs`** — cổng này đọc **khai báo KIỂU `AppData`** (nguồn sự thật mạnh hơn dạng viết `result.data?.<khoá>` của cổng TASK-066): **95 khoá** (88 bắt buộc + 7 tuỳ chọn) × 6 tài khoản thật. **Lượt chạy đầu 0/6 ĐẠT (thiếu đúng `emailOutbox` cho cả 6 tài khoản) ⇒ cổng tự chứng minh CÓ TÁC DỤNG bằng cách bắt một lỗi THẬT; sau khi vá 6/6 ĐẠT.** Cùng lượt, rà 11 khoá Java-only: **10/11 khớp số dòng với bảng nguồn**; `boqMappingCandidates` là **payload chết** (UI không đọc, không có trong `AppData`, JS không trả, bảng rỗng) — ghi lại, không xoá.
 67. **CÒN LẠI của lớp "đường ĐỌC thiếu khoá":** các cổng đã phủ **khoá + kiểu** (95 khoá × 6 vai trò) và **tập cột** (73 khoá) và **mệnh đề** (73 khoá), nhưng **CHƯA** kiểm **trường bên trong từng dòng** cho 11 khoá Java-only (mới kiểm khoá + số dòng) và **13 khoá trùng tên còn bỏ qua** của cổng tĩnh. Ngoài ra cổng `AppData` chỉ kiểm khoá **BẮT BUỘC/tuỳ chọn** theo khai báo — nếu UI đọc một khoá KHÔNG khai trong `AppData` (truy cập động) thì cổng không thấy.
+68. **MỚI (TASK-072) — CỔNG ẢNH 28 ẢNH KHÔNG PHỦ MÀN CHI TIẾT PHIẾU, nên nó KHÔNG xác nhận được §8.1 hiển thị đúng.** 28 ảnh chuẩn chỉ gồm **7 màn danh sách** (dashboard · project · work · team · material · warehouse · admin) — **không** có màn **chi tiết phiếu**, đúng nơi vừa áp dụng `ApprovalTimeline`. Cổng ảnh vì vậy chứng minh được *không hỏng màn khác*, **không** chứng minh được *timeline mới hiển thị đúng*; hiện chỉ có phép kiểm **TĨNH** (cổng áp dụng đếm 1 lần dùng + `tsc` + HTTP 200). ⇒ Cần probe **mở drawer bằng headless** rồi đọc DOM/chụp ảnh. Ghi kèm: cổng ảnh đang có **8/28 ảnh lệch CÓ SẴN** do **DỮ LIỆU đổi** (đã chứng minh bằng đối chứng `git stash`), **chưa cập nhật ảnh chuẩn**.
+69. **MỚI (TASK-072) — `ApprovalStep` THIẾU 2 MỐC THÔNG TIN so với khối cũ.** Khối tự viết trước đây hiển thị thêm *Nhận hồ sơ (`queuedAt`)* và *Đã gửi email (`notifiedAt`)*; component dùng chung **chưa có chỗ** cho 2 trường này ⇒ khi thay đã **mất 2 mốc**. **Không nhét vào trường khác** (là hiển thị sai nhãn); hướng đúng là **mở rộng `ApprovalStep`** thêm 2 trường rồi truyền từ `approvals` — dữ liệu Java **đã có sẵn** (`approvals.queuedAt`/`notifiedAt`).
 
 1. **Không tự suy đoán nghiệp vụ.** Chuỗi audit Code → DB → API → UI → Permission → Workflow → Dữ liệu; phân loại CONFIRMED/LIKELY/UNKNOWN/CONFLICT; gặp UNKNOWN ảnh hưởng DB/logic thì DỪNG và báo.
 2. **Không push git** cho tới khi TOÀN BỘ công việc xong VÀ người dùng đã test thủ công (chốt 17/09/2026).
@@ -292,6 +298,9 @@ Lớp lỗi *"đường ĐỌC thiếu khoá"* đã bắt được **8 lần th�
 
 ## CURRENT TODO
 
+* [x] **TASK-072 DONE (chờ commit #115) — MASTER TASK §2.1 (`P-04`): ÁP DỤNG THẬT `ApprovalTimeline` VÀO CHI TIẾT PHIẾU (§8.1)**. Trước khi sửa: component **đã tồn tại và ĐÃ ĐƯỢC IMPORT nhưng CHƯA HỀ render** (cổng áp dụng ghi **0 lần**) và màn chi tiết phiếu tự dựng `<div className="timeline">` trong **1 dòng 1467 ký tự**, phòng ban phải **dò `staffDirectory`** dù cột `approvals.department` đã có sẵn. Nay ánh xạ **đủ 6 thông tin §8.1**; **4 cổng xanh** (áp dụng **0 → 1** · `tsc` exit 0 · UI `:8787` + proxy `:9000` HTTP 200 · cổng ảnh **8/28 lệch ĐÃ CHỨNG MINH CÓ SẴN** bằng đối chứng `git stash`). Ledger: `P-04` → DONE · `U-06` → DONE/AP-DUNG 1 · `U-05` AP-DUNG 2 → **90** · `U-17` còn **2** dải tự viết ⇒ **23 → 25/110 = 22,7 %**. Còn lại: xem **Known Problems #68/#69**. Chi tiết: `TASK-072.md`
+* [x] **TASK-071 DONE (#114)** — đo **7 TRƯỜNG ĐẶT ALIAS KHÁC TÊN CỘT NGUỒN** mà cổng TASK-070 không đối chiếu được: **9/9 ĐẠT**. **Đối chứng dựng sẵn (4 ca) bắt lỗi bộ giải mã ngay lượt chạy đầu** — ca alias có **BACKTICK** (`` level_rank AS `rank` ``) cho sai cột vì bản đầu để nguyên phần `AS <alias>` khi trích cột ⇒ **nếu không có đối chứng thì cổng đã cho kết quả SAI**. Không tìm thấy lỗi *trường alias luôn rỗng* (**kết quả ÂM có kiểm chứng**). Vẫn **chưa đo được**: `teamMembers` (bảng 0 dòng) và nhánh **DỰ PHÒNG** của `COALESCE`. Chi tiết: `TASK-071.md`
+* [x] **TASK-070 DONE (#113)** — **cổng ĐỘ PHỦ TRƯỜNG** cho 10 khoá Java-only: **8/8 ĐẠT · 2 phép đo KHÔNG thực hiện được** (nói rõ, **không** tính ĐẠT). **Không tìm thấy lỗi trường-luôn-rỗng.** Bẫy đã gặp và ghi lại: vị từ `cột <> ''` làm MySQL 8 báo `ERROR 1525 (HY000): Incorrect DATETIME value: ''` với cột `DATETIME` ⇒ phải đọc `DATA_TYPE` từ `information_schema` rồi mới thêm điều kiện chuỗi. Chi tiết: `TASK-070.md`
 * [x] **TASK-069 DONE (#112)** — **lỗi thứ 10 của lớp "đường ĐỌC thiếu khoá": `emailOutbox`**. Cổng mới `tools/probe-task069-appdata-contract.mjs` đọc **khai báo KIỂU `AppData`** (nguồn sự thật mạnh hơn dạng viết `result.data?.<khoá>`) ⇒ **95 khoá × 6 tài khoản THẬT**; lượt chạy đầu **0/6 ĐẠT** (thiếu `emailOutbox` cho **cả 6**, kể cả admin — khoá BẮT BUỘC của UI mà **không adapter Java nào** khai ⇒ màn Hộp thư gửi luôn rỗng). **Đã port nguyên văn JS `:724`** (admin: 11 cột + `requestNo`, `LIMIT 100`; non-admin `[]`), cổng SQL chạy trước build, sau vá **6/6 ĐẠT**. Rà 11 khoá Java-only: **10/11 khớp số dòng** với bảng nguồn; `boqMappingCandidates` = **payload chết**, ghi lại không xoá. Chi tiết: `TASK-069.md`
 * [x] **TASK-068 DONE (#111)** — **quyết định** nhật ký ghi trùng: đo được dòng FILTER **có IP + module** còn dòng use-case **KHÔNG có IP** ⇒ hai dòng **BỔ SUNG** cho nhau ⇒ **GIỮ CẢ HAI, không đổi mã**; hướng cải thiện đúng (cho `AuditLogPort.log` nhận ngữ cảnh request) đã ghi lại. Chi tiết: `TASK-068.md`
 * [x] **TASK-067 DONE (#110)** — cổng **BẪY THỨ TỰ** `probe-put-order.mjs` (0 vi phạm · đối chứng **3/3**) · **BÁC BỎ báo động giả "128 action thiếu audit"** bằng dữ liệu (`audit_logs` 825 dòng/39 action; `decide_approval` 173/173, `save_email_settings` 6/6 — 100% do lớp FILTER ghi) · xác minh lại **TASK-025 ĐÃ XONG từ #34** ⇒ **HAI HẠNG MỤC TRONG TODO CỦA TÔI ĐÃ CŨ/SAI**. Chi tiết: `TASK-067.md`

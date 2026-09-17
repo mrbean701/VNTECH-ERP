@@ -79,8 +79,8 @@
 | `U-02` | UI | `DataTable` dùng chung: cột, sắp xếp, lọc, phân trang, rỗng/đang tải/lỗi | P1 | — | - | - | REUSE | - | KHUNG-XONG / AP-DUNG 0 |
 | `U-03` | UI | `ListToolbar`: TIÊU ĐỀ + SỐ LƯỢNG ‖ TÌM · LỌC · SẮP XẾP · HÀNH ĐỘNG | P1 | — | - | - | REUSE | - | DONE / AP-DUNG 10 |
 | `U-04` | UI | `PermissionGuard` (ẩn/hiện theo quyền; backend vẫn kiểm) | P1 | S-07 | - | - | REUSE | CHECK | KHUNG-XONG / AP-DUNG 0 |
-| `U-05` | UI | `StatusBadge` thống nhất toàn hệ | P1 | — | - | - | REUSE | - | DONE / AP-DUNG 2 |
-| `U-06` | UI | `ApprovalTimeline`: số bước · người duyệt · phòng ban · thời gian · trạng thái · ý kiến | P1 | — | - | - | NEW | - | KHUNG-XONG / AP-DUNG 0 |
+| `U-05` | UI | `StatusBadge` thống nhất toàn hệ | P1 | — | - | - | REUSE | - | DONE / AP-DUNG 90 |
+| `U-06` | UI | `ApprovalTimeline`: số bước · người duyệt · phòng ban · thời gian · trạng thái · ý kiến | P1 | — | - | - | NEW | - | DONE / AP-DUNG 1 |
 | `U-07` | UI | `ActivityTimeline` dùng cho mọi lịch sử | P1 | — | - | - | NEW | - | KHUNG-XONG / AP-DUNG 0 |
 | `U-08` | UI | Kiểm responsive 4 kích thước cho mọi màn sau khi chuẩn hoá | P1 | U-02,U-03 | - | - | FIX | - | DONE |
 | `U-09` | UI | Chuyển các danh sách sang khuôn Toolbar chuẩn (§5) | P1 | U-03 | - | - | FIX | - | DANG-LAM 9/32 |
@@ -92,9 +92,9 @@
 > **PHÁT HIỆN 17/09/2026 — roadmap trước đó BÁO QUÁ:** các mục U-01/U-02/U-04/U-06/U-07 từng được đánh DONE nhưng đó mới là **DỰNG KHUNG**, số lần dùng THẬT trong ứng dụng = **0**. Đã sửa lại cột TT theo số đo và tách phần **áp dụng** thành U-14..U-17.
 
 | `U-14` | UI | **ÁP DỤNG** `EntityDetailModal` — dùng thật **0** lần; còn **4** chỗ tự viết .overlay | P1 | U-01 | - | - | REUSE | CHECK | TODO |
-| `U-15` | UI | **ÁP DỤNG** `DataTable` + `StatusBadge` — DataTable dùng thật **0** lần, còn **100** bảng tự viết + **100** trạng thái rỗng tự viết; StatusBadge mới **2/88** chỗ | P1 | U-02,U-05 | - | - | REUSE | - | TODO |
+| `U-15` | UI | **ÁP DỤNG** `DataTable` + `StatusBadge` — DataTable dùng thật **0** lần, còn **100** bảng tự viết + **100** trạng thái rỗng tự viết; StatusBadge đã dùng **90** chỗ (TASK-020 đã chuyển 88 `<Pill>` → 0; đo lại bằng `probe-ui-adoption.mjs`) | P1 | U-02,U-05 | - | - | REUSE | - | TODO |
 | `U-16` | UI | **ÁP DỤNG** `PermissionGuard` — dùng thật **0** lần; còn **50** chỗ điều kiện quyền rải rác | P1 | U-04 | - | - | REUSE | CHECK | TODO |
-| `U-17` | UI | **ÁP DỤNG** `ApprovalTimeline`/`ActivityTimeline` — dùng thật **0** lần; còn **3** chỗ tự viết dải | P1 | U-06,U-07 | - | - | REUSE | - | TODO |
+| `U-17` | UI | **ÁP DỤNG** `ApprovalTimeline`/`ActivityTimeline` — dùng thật **1** lần (`ApprovalTimeline`; `ActivityTimeline` **0**); còn **2** chỗ tự viết dải | P1 | U-06,U-07 | - | - | REUSE | - | TODO |
 
 ---
 
@@ -105,7 +105,7 @@
 | `P-01` | Mua hàng | Tách **MR · PR · PO** thành 3 tab riêng | P2 | U-03 | - | - | NEW | CHECK | TODO |
 | `P-02` | Mua hàng | Sắp xếp mặc định `created DESC`; Completed/Rejected xuống cuối | P2 | P-01 | - | - | FIX | - | TODO |
 | `P-03` | Mua hàng | Lọc theo Trạng thái · Ngày · Phòng ban · Người tạo · NCC · Dự án | P2 | P-01 | - | - | FIX | - | TODO |
-| `P-04` | Phiếu | **Approval Timeline** trong chi tiết phiếu (§8.1) | P2 | U-06 | - | - | NEW | - | TODO |
+| `P-04` | Phiếu | **Approval Timeline** trong chi tiết phiếu (§8.1) | P2 | U-06 | - | - | NEW | - | DONE |
 | `P-05` | Phiếu | **Tổng hợp giao nhận** → modal riêng (§8.2) | P2 | U-01 | - | - | NEW | - | TODO |
 | `P-06` | Phiếu | Hồ sơ vật tư đặc thù: ảnh/tệp xem được, không tràn khung (§8.3) | P2 | — | - | - | FIX | - | TODO |
 | `P-07` | NCC | Tách **Nhà cung cấp / Đối tác** thành menu độc lập (§17) | P2 | S-07 | - | - | NEW | CHECK | TODO |
