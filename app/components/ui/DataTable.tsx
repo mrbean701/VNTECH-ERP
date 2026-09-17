@@ -28,7 +28,8 @@ import type { ReactNode } from "react";
 export type Column<T> = {
   key: string;
   header: ReactNode;
-  render: (row: T) => ReactNode;
+  /** Trả về nội dung ô. Nhận thêm `index` (thứ tự dòng) để dùng được cột STT — TASK-079. */
+  render: (row: T, index: number) => ReactNode;
   sortable?: boolean;
   align?: "left" | "right" | "center";
   width?: string;
@@ -95,7 +96,7 @@ export function DataTable<T>({
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
               >
                 {visible.map((c) => (
-                  <td key={c.key} className={c.align ? `dt-${c.align}` : undefined}>{c.render(row)}</td>
+                  <td key={c.key} className={c.align ? `dt-${c.align}` : undefined}>{c.render(row, i)}</td>
                 ))}
               </tr>
             ))}
