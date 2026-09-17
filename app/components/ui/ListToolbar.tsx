@@ -43,10 +43,12 @@ export function ListToolbar({
   title, note, count, total, unit = "",
   search, filters, sort, actions, extra,
 }: {
-  /** Tiêu đề danh sách — nên viết HOA theo quy ước hiện có của hệ thống. */
-  title: string;
-  /** Mô tả ngắn dưới tiêu đề. */
-  note?: string;
+  /** Tiêu đề danh sách — nên viết HOA theo quy ước hiện có của hệ thống.
+   *  Nhận `ReactNode` để dùng được cả nhãn ĐỘNG (vd `BƯỚC {index + 1}`) — mọi chỗ gọi cũ
+   *  truyền CHUỖI vẫn hợp lệ (mở rộng tương thích ngược — TASK-078). */
+  title: ReactNode;
+  /** Mô tả ngắn dưới tiêu đề. Nhận `ReactNode` cùng lý do trên. */
+  note?: ReactNode;
   /** Số dòng đang hiển thị. */
   count?: number;
   /** Tổng số dòng trước khi lọc. */
