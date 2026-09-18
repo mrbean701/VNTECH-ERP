@@ -201,3 +201,18 @@ Kèm probe: **đối chứng dương** (chưa duyệt ⇒ có **cảnh báo** nh
 3. **Cầu nối an toàn = SNAPSHOT**: quyết định luôn đọc snapshot trước, cấu hình chỉ là dự phòng
    => đổi hệ nào cũng KHÔNG làm lệch phiếu đang chạy (đã chứng minh ở WF-05: 5/5 ĐẠT + 100/100 dòng có snapshot).
 4. Sau khi chuẩn hoá từ vựng (WF-04-followup) thì 2 hệ là MỘT engine thống nhất về mặt khái niệm.
+
+### 11.1. [WF-04-followup] KẾT LUẬN VỀ LỆCH QUY ƯỚC equired_permission (18/09) — ĐO MÃ NGUỒN, KHÔNG ĐOÁN
+* **Dữ liệu hiện tại:** MySQL workflow_steps.required_permission = TRỐNG (đã hoàn tác thao tác điền sai của tôi);
+  SQLite (chuỗi drizzle) = `requests.canApprove` (CÓ TIỀN TỐ MODULE).
+* **Bằng chứng mã nguồn (Java):** cột này CHỈ được (a) ĐỌC RA cho client — `BootstrapDataAdapter.java:950`,
+  `OpsTaskStoreAdapter.java:434`; (b) GHI VÀO từ payload — `OpsTaskStoreAdapter.java:488,492`;
+  (c) TRUYỀN THẲNG — `OpsTaskManagementUseCase.java:629` (`step.put("requiredPermission", trim(...))`).
+  **KHÔNG có bất kỳ chỗ nào SO SÁNH cột này với quyền của người dùng** ⇒ **hiện nó KHÔNG phải là cổng chặn**,
+  chỉ là trường dữ liệu để giao diện hiển thị / dự phòng cho tương lai.
+* **⇒ KẾT LUẬN:** lệch quy ước này **KHÔNG gây khác biệt hành vi** ở thời điểm hiện tại (không mã nào so sánh)
+  ⇒ **quyết định: GIỮ NGUYÊN dữ liệu hai bên** (không rủi ro), và **ghi rõ quy ước chuẩn cho tương lai**:
+  khi engine chung bắt đầu **thực thi** trường này thì dùng dạng **`<module_key>.<permission>`** (ví dụ `requests.canApprove`)
+  — theo đúng quy ước SQLite đang dùng và cùng phong cách `domain.action` của `ActionRbacRegistry`.
+* **Việc cần làm khi tới bước đó:** bổ sung phép so sánh ở cả **Java + JS**, kèm probe "thiếu quyền ⇒ chặn" (2 lõi),
+  rồi mới điền dữ liệu cho MySQL theo dạng đã chốt.
