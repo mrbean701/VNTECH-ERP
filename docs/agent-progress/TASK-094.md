@@ -233,3 +233,8 @@ ode --check-tương-đương là mvn -q -DskipTests package **CHỜ NHẢ TỆP 
 nếu không jar hỏng + API down) → restart → **curl thử 1 action** thấy có warnings → chạy lại probe JS probe-task049-owner-checks + hồi quy 61/61.
 **LƯU Ý GIỚI HẠN ĐÃ BIẾT (phải xử lý trong/after B1):** create_po có thể phát hành **NHIỀU PO trong 1 lần** ⇒ cảnh báo phải tính **theo TỪNG PO**,
 không chỉ PO đầu tiên (bản JS hiện đang chỉ tính PO đầu tiên).
+
+### 12.1. Kết quả chạy khô vá Java (18/09) — TỰ CHỐI, còn ĐÚNG 1 BƯỚC
+* Công cụ 	ools/_b1-va-java-canhbao.mjs đã viết xong (mỏ neo + tự chối) cho **3 tệp**: RequestStore (port) · RequestStoreAdapter (native SQL, trả MẢNG, không ném lỗi) · SystemController (3 case).
+* **Chạy khô ĐẦU TIÊN: TỪ CHỐI GHI** vì SystemController **KHÔNG có sẵn bean RequestStore** ⇒ in ra đúng chỗ cần sửa: **constructor ở dòng ~77**.
+* **VIỆC KẾ TIẾP (đúng 1 bước, rất nhỏ):** thêm tham số RequestStore requestStore vào constructor SystemController (dòng ~77) + gán vào field, rồi chạy lại công cụ (chạy khô → --apply) ⇒ sau đó mvn -q -DskipTests package (**CHỜ NHẢ TỆP JAR**) → restart → thử 1 action thấy warnings → hồi quy 61/61.
