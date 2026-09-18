@@ -296,3 +296,23 @@ không chỉ PO đầu tiên (bản JS hiện đang chỉ tính PO đầu tiên)
 * **VIỆC KẾ TIẾP (đúng 1 bước):** đọc **insertStockIssue** trong adapter để biết **danh sách cột ghi thật + cột NOT NULL/UNIQUE/FK**
   ⇒ từ đó seed **đúng chỗ** (hoặc chọn cặp kho–vật tư có sẵn tồn) ⇒ chạy lại issue_stock ⇒ thấy warnings ⇒ **đóng B1**.
 * Trạng thái: **B1 chưa đóng**; dữ liệu vẫn nguyên (4/5/4).
+
+### 12.8. ✅ B1 ĐÃ ĐƯỢC KIỂM CHỨNG CHỨC NĂNG (18/09) — BẰNG CHỨNG NGUYÊN VĂN
+**Gọi issue_stock qua API Java :18081 (đăng nhập dmin) ⇒ HTTP 200** và response trả về:
+``json
+{"ok":true,"message":"Đã xuất kho 1 dòng; phiếu PX-PRJ-DEMO-01-2026-0012 đã ghi nhận. MR còn lượng chưa cấp đủ.",
+ "issueId":"ISS_8ea44725-abec-4d66-b377-9809c3bfd110","issueNo":"PX-PRJ-DEMO-01-2026-0012",
+ "warnings":["stock_issue ISS_8ea44725-abec-4d66-b377-9809c3bfd110: chưa có bản ghi phê duyệt nào (quy trình động chưa khởi tạo) — vẫn cho phép theo chế độ CHỈ CẢNH BÁO."]}
+``
+⇒ **Trường warnings CÓ MẶT**, đúng văn phong **CHỈ CẢNH BÁO**, và **action VẪN THÀNH CÔNG** (ok:true) — đúng quyết định "CHỈ CẢNH BÁO, KHÔNG chặn" của người dùng.
+⇒ **Parity Java ↔ JS đã được chứng minh ở tầng chức năng (không chỉ đọc mã).**
+
+**NGUYÊN NHÂN 409 TRƯỚC ĐÓ — đã tìm ra chính xác bằng ĐO (không đoán):**
+* Loại trừ: **KHÔNG có trigger** nào trong DB và **KHÔNG có FOREIGN KEY** trên 4 bảng đích (chỉ PRIMARY KEY + stock_issues_no_uidx).
+* Còn lại **NOT NULL**: stock_issues.received_by_name là **NOT NULL**, nhưng payload của tôi **không gửi eceivedByName**
+  ⇒ Java 
+vl(payload.get("receivedByName")) ⇒ **NULL** ⇒ vi phạm NOT NULL ⇒ **409** (Dữ liệu vi phạm ràng buộc…).
+* **Sửa:** gửi kèm eceivedByName ⇒ **200 OK** ngay lập tức.
+* ⚠️ **ĐÍNH CHÍNH giả thuyết cũ của tôi:** trước đó tôi nghi *"kho nguồn chưa có tồn"* — **SAI**; hệ thống **cho phép** xuất dù tồn 0 (không có trigger/FK chặn) ⇒ ghi nhận để không lặp lại suy đoán.
+
+**Dữ liệu test đã sinh (đúng yêu cầu "nạp sẵn dữ liệu để test"):** phiếu xuất **PX-PRJ-DEMO-01-2026-0012** / ISS_8ea44725…, 1 dòng (vật tư MAT_c3ff35ff…), đã ghi stock_issue_items + stock_movements + contract_stock_ledger ⇒ **chính là 1 trong 4 chứng từ test của D5**.
