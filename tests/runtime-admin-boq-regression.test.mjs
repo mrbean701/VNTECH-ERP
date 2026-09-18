@@ -4,6 +4,19 @@ import { DatabaseSync } from 'node:sqlite';
 import { readFile, readdir } from 'node:fs/promises';
 import { rankMaterialCandidates, materialCandidateGate } from '../lib/material-matching-v2.mjs';
 
+// U-11 (18/09/2026) — `app/page.tsx` ĐANG ĐƯỢC TÁCH THÀNH MODULE (roadmap `U-11`). Các phép kiểm NỘI DUNG
+// phải đọc **HỢP NHẤT nguồn giao diện**, nếu không chính tầng kiểm thử sẽ **CHẶN việc tách mà roadmap yêu cầu**
+// (đã xảy ra thật: hằng số chuyển sang `lib/ui-shared.tsx` ⇒ regex không khớp ⇒ test đỏ oan).
+// ⚠️ KHÔNG nới lỏng phép kiểm: literal vẫn phải tồn tại trong nguồn giao diện, chỉ đổi phạm vi ĐỌC.
+// Tệp nào chưa tồn tại thì bỏ qua (tương thích ngược với bản chỉ có `app/page.tsx`).
+const readUiSource = async () => {
+  const parts = [];
+  for (const relative of ['app/page.tsx', 'lib/ui-shared.tsx']) {
+    try { parts.push(await readFile(relative, 'utf8')); } catch { /* tệp chưa tồn tại sau khi tách */ }
+  }
+  return parts.join('\n');
+};
+
 class TestStatement {
   constructor(database, sql, values = []) { this.database = database; this.sql = sql; this.values = values; }
   bind(...values) { return new TestStatement(this.database, this.sql, values); }
@@ -171,7 +184,7 @@ await test('Bulk nhóm con + Trust collapse UI có marker hành vi', async()=>{
   let r=await post(adminCookie,'bulk_material_subcategory_action',{subcategoryIds:['SUB-P01-BULK'],operation:'hide'});assert.equal(r.status,200,r.body.error);assert.equal(sqlite.prepare("SELECT active FROM material_subcategories WHERE id='SUB-P01-BULK'").get().active,0);
   r=await post(adminCookie,'bulk_material_subcategory_action',{subcategoryIds:['SUB-P01-BULK'],operation:'restore'});assert.equal(r.status,200,r.body.error);assert.equal(sqlite.prepare("SELECT active FROM material_subcategories WHERE id='SUB-P01-BULK'").get().active,1);
   r=await post(adminCookie,'bulk_material_subcategory_action',{subcategoryIds:['SUB-P01-BULK'],operation:'delete'});assert.equal(r.status,200,r.body.error);assert.equal(sqlite.prepare("SELECT COUNT(*) c FROM material_subcategories WHERE id='SUB-P01-BULK'").get().c,0);
-  const ui=await readFile('app/page.tsx','utf8');assert.match(ui,/Chọn tất cả nhóm con đang lọc/);assert.match(ui,/bulk_material_subcategory_action/);assert.match(ui,/VNTECH LICENSE & TRUST/);assert.match(ui,/setExpanded\(value=>!value\)/);assert.match(ui,/expanded&&/);
+  const ui=await readUiSource();assert.match(ui,/Chọn tất cả nhóm con đang lọc/);assert.match(ui,/bulk_material_subcategory_action/);assert.match(ui,/VNTECH LICENSE & TRUST/);assert.match(ui,/setExpanded\(value=>!value\)/);assert.match(ui,/expanded&&/);
 });
 
 
@@ -191,7 +204,7 @@ await test('ĐNMH preview/enrich + tạo phiếu PostgreSQL-safe theo Contract/B
 });
 
 await test('Project scope toàn hệ thống + RBAC popup + sticky grid + Factory Reset có marker hành vi', async()=>{
-  const ui=await readFile('app/page.tsx','utf8');const css=await readFile('app/globals.css','utf8');const backend=await readFile('scripts/system-route.mjs','utf8');
+  const ui=await readUiSource();const css=await readFile('app/globals.css','utf8');const backend=await readFile('scripts/system-route.mjs','utf8');
   assert.match(ui,/projectAccessAll/);assert.match(ui,/Dự án được phân quyền/);assert.match(ui,/allowAll=\{data.projects.length>1\}/);assert.match(ui,/const initialProject=data.projects.length===1\?String\(data.projects\[0\]\.id\):"ALL"/);assert.match(backend,/const projectAccessAll = isAdmin\(user\);/);
   assert.match(ui,/PHÂN QUYỀN CÔNG VIỆC \/ CHỨC NĂNG/);assert.match(ui,/Đồng bộ SSOT/);assert.match(ui,/permissionMenuStructure/);assert.match(ui,/permission-group-row/);assert.match(ui,/permission-subgroup-row/);
   assert.match(ui,/preview_request_import/);assert.match(ui,/Đối chiếu lại/);assert.match(ui,/Mặc định gọn/);assert.match(ui,/column-resize-handle/);
@@ -203,7 +216,7 @@ await test('Project scope toàn hệ thống + RBAC popup + sticky grid + Factor
 
 
 await test('Project context đồng bộ ĐNMH + tìm vật tư BOQ + collapse/brand UI REV1', async()=>{
-  const ui=await readFile('app/page.tsx','utf8');const css=await readFile('app/globals.css','utf8');
+  const ui=await readUiSource();const css=await readFile('app/globals.css','utf8');
   assert.match(ui,/contextProject=\{project\}/);
   assert.match(ui,/Đồng bộ theo dự án đang chọn ở màn hình ngoài/);
   assert.match(ui,/Đang ở Tất cả dự án: chọn một dự án cụ thể để lập phiếu/);
@@ -234,7 +247,7 @@ await test('Release manifest loại backup/update-state khỏi Docker context', 
 });
 
 await test('BOQ source rows giữ kiểu Row để TypeScript không thu hẹp sai contract', async()=>{
-  const ui=await readFile('app/page.tsx','utf8');
+  const ui=await readUiSource();
   assert.match(ui,/new Map<string, Row>/);
   assert.match(ui,/const sourceRows: Row\[\]/);
   assert.match(ui,/const op: Row = operationalBySource/);
@@ -263,7 +276,7 @@ test("Built UI contract dùng marker ổn định cho rule loại heading khỏi
 });
 
 test('FULL W2 UX/workflow contract: header, drawer rộng, ngày Việt Nam, luồng CHT→Thư ký→DA→TPDA→TPKH', async () => {
-  const page = await readFile('app/page.tsx','utf8');
+  const page = await readUiSource();
   const css = await readFile('app/globals.css','utf8');
   const route = await readFile('scripts/system-route.mjs','utf8');
   const migration = await readFile('drizzle/0045_patch01_runtime_admin_boq_hardening.sql','utf8');
@@ -289,7 +302,7 @@ test('FULL W2 UX/workflow contract: header, drawer rộng, ngày Việt Nam, lu�
 });
 
 test('FULL W2 account recovery + project offline archive contract', async () => {
-  const page = await readFile('app/page.tsx','utf8');
+  const page = await readUiSource();
   const route = await readFile('scripts/system-route.mjs','utf8');
   const files = await readFile('app/api/files/route.ts','utf8');
   const migration = await readFile('drizzle/0046_patch01_account_recovery_project_offline_archive.sql','utf8');
@@ -309,7 +322,7 @@ test('FULL W2 account recovery + project offline archive contract', async () => 
 });
 
 test('FULL W2 responsive contract: login PC, mobile tree, collapsed hover flyout', async () => {
-  const page = await readFile('app/page.tsx','utf8');
+  const page = await readUiSource();
   const css = await readFile('app/globals.css','utf8');
   const migration0007 = await readFile('drizzle/0007_dynamic_projects_materials_boq_permissions.sql','utf8');
   assert.match(page,/VNTECH_FULL_W2_LOGIN_UI/,'Login FULL W2 phải có contract marker ổn định');
@@ -369,7 +382,7 @@ test('Docker typecheck guard: project archive ZIP dùng ArrayBuffer tương thí
 });
 
 test('FULL W2 runtime UI: mobile/header/glass flyout/approval detail/password copy', async () => {
-  const page = await readFile('app/page.tsx','utf8');
+  const page = await readUiSource();
   const css = await readFile('app/globals.css','utf8');
   const route = await readFile('scripts/system-route.mjs','utf8');
   const files = await readFile('app/api/files/route.ts','utf8');
@@ -421,7 +434,7 @@ test('FULL W2 SQL bind arity guard: tạo Task Engine phải có đúng 32 cột
 
 
 test('MASTER BASELINE R1.1.1 CSS dynamic contracts: source-generated classes cannot be deleted', async () => {
-  const page = await readFile('app/page.tsx','utf8');
+  const page = await readUiSource();
   const css = await readFile('app/globals.css','utf8');
   const toneBlock = page.match(/const NAV_ICON_TONE:[^{]+\{([\s\S]*?)\n\};/i)?.[1] || '';
   const tones = [...toneBlock.matchAll(/:\s*"([a-z0-9_-]+)"/gi)].map((m) => m[1]);

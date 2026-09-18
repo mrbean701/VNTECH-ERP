@@ -1,11 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+// U-11 (18/09/2026) — đọc HỢP NHẤT nguồn giao diện vì `page.tsx` đang được tách thành module (roadmap `U-11`).
+const readUiSource = () => ['app/page.tsx', 'lib/ui-shared.tsx']
+  .map((relative) => { try { return readFileSync(resolve(root, relative), 'utf8'); } catch { return ''; } })
+  .join('\n');
+
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const page = readFileSync(resolve(root, 'app/page.tsx'), 'utf8');
+const page = readUiSource();
 const css = readFileSync(resolve(root, 'app/globals.css'), 'utf8');
 
 const mobileStart = page.indexOf('{mobileNavOpen&&<>');

@@ -1,8 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+// U-11 (18/09/2026) — đọc HỢP NHẤT nguồn giao diện vì `page.tsx` đang được tách thành module (roadmap `U-11`).
+// Không nới lỏng phép kiểm: literal vẫn phải tồn tại trong nguồn giao diện, chỉ đổi phạm vi ĐỌC.
+const readUiSource = () => ['app/page.tsx', 'lib/ui-shared.tsx']
+  .map((relative) => { try { return readFileSync(new URL('../' + relative, import.meta.url), 'utf8'); } catch { return ''; } })
+  .join('\n');
 
-const page = readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
+
+const page = readUiSource();
 const css = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
 
 test('Project/BCH navigation is consolidated into one top-level group', () => {

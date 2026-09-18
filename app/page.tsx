@@ -21,11 +21,9 @@ import {
   ListToolbar, PermissionGuard, StatusBadge,
   type ApprovalStep,
 } from "@/app/components/ui";
+import { ADMIN_HELP_TEXT, APPROVAL_MODE_LABELS, APPROVAL_MODE_SHORT, APPROVAL_STAGE_LABELS, BOQ_SYSTEM_CODES, CODE39, DEPT_MODULE_GROUP, NAV_ICON_TONE, NAV_ICON_TYPE, PERM_CAPS, PROJECT_STATUS_LABELS, UI_NOW_MS, WORK_CLOSED, WORK_STATUS_LABELS, boqStatusLabel, canvasJpegBytesForDownload, defaultMenuGroups, durationText, format, initials, joinCodes, kpiIconName, materialCatalogTemplateRows, normalizeBoqHeader, normalizeMasterHeader, normalizePaymentDate, projectPeriod, roleNames, sanitizeUiText, taskStatusLabel, truthyCatalog } from "@/lib/ui-shared";
+import type { ModuleKey, Row } from "@/lib/ui-shared";
 
-// Dynamic rows are normalized by the server API and intentionally remain flexible here.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Row = Record<string, any>;
-type ModuleKey = "dashboard" | "dept_plan_tasks" | "dept_plan_assign" | "dept_plan_supply_plan" | "dept_plan_tender" | "dept_plan_rfq" | "dept_plan_purchasing" | "dept_plan_supply" | "dept_plan_contracts" | "dept_plan_suppliers" | "dept_plan_price_data" | "dept_plan_kpi" | "dept_plan_alerts" | "dept_project_tasks" | "dept_project_pda" | "dept_project_assign" | "dept_project_plan" | "dept_project_shop" | "dept_project_boq" | "dept_project_material" | "dept_project_issues" | "dept_project_asbuilt" | "dept_project_payment" | "dept_project_tender" | "dept_project_kpi" | "dept_project_alerts" | "dept_finance_payment_plan" | "dept_finance_recovery" | "dept_finance_advance" | "dept_finance_site_cost" | "dept_finance_cashbank" | "dept_finance_documents" | "dept_legal_hr" | "dept_legal_labor" | "dept_legal_correspondence" | "dept_legal_documents" | "dept_legal_seal" | "dept_legal_benefits" | "site_command" | "project_progress" | "construction" | "production" | "capital_recovery" | "requests" | "approvals" | "purchasing" | "supplier_catalog" | "receiving" | "delivered" | "warehouse_receipt" | "warehouse_issue" | "inventory" | "material_norms" | "central_warehouse" | "material_catalog" | "boq" | "payments" | "teams" | "stocktake" | "reports" | "admin";
 type AppData = {
   user: Row; settings: Row; productIdentity: Row; projects: Row[]; adminProjects: Row[]; teams: Row[]; warehouses: Row[]; transferWarehouses: Row[]; materials: Row[]; adminMaterials: Row[]; materialCategories: Row[]; adminMaterialCategories: Row[]; materialSubcategories: Row[]; adminMaterialSubcategories: Row[]; materialNorms: Row[]; suppliers: Row[]; adminSuppliers: Row[]; contractPayments: Row[]; productionReports: Row[]; capitalRecoveryRecords: Row[]; teamSubcontracts: Row[]; teamProductionRecords: Row[]; teamPayments: Row[]; teamSettlements: Row[];
   requests: Row[]; inventory: Row[]; centralInventory: Row[]; centralReturns: Row[]; companyAvailability: Row[]; transferOrders: Row[]; materialAliases: Row[]; boqItems: Row[]; boqSourceItems: Row[]; boqImportBatches: Row[]; boqChangeHistory: Row[]; projectContracts: Row[]; boqVersions: Row[]; contractStockLedger: Row[]; contractStockBalances: Row[]; stockReconciliations: Row[]; purchaseOrders: Row[]; receipts: Row[]; issues: Row[]; returns: Row[]; stockCounts: Row[]; users: Row[]; staffDirectory: Row[]; userScopes: Row[]; userWarehouseScopes: Row[]; modulePermissions: Row[]; allModulePermissions: Row[]; audits: Row[]; constructionDailyLogs: Row[]; constructionDailyLogItems: Row[]; paymentPlans: Row[]; advanceRequests: Row[]; siteExpenseClaims: Row[]; bankAccounts: Row[]; cashbookEntries: Row[]; accountingVouchers: Row[]; hrRecords: Row[]; laborContracts: Row[]; officialCorrespondence: Row[]; legalDocuments: Row[]; sealManagement: Row[]; benefitRecords: Row[]; workflowDefinitions: Row[]; workflowSteps: Row[]; workflowStepApprovers: Row[]; departmentModulePermissions: Row[]; systemLevelCatalog: Row[];
@@ -42,26 +40,8 @@ const VNTECH_FUNCTIONAL_UI_MARKER = VNTECH_BRAND.release.functionalUiMarker;
 const VNTECH_UI_DISPLAY_VERSION = VNTECH_BRAND.release.uiGeneration;
 const VNTECH_RUNTIME_REGRESSION_LOCK = VNTECH_BRAND.release.regressionContract;
 const VNTECH_COMPANY_DISPLAY_NAME = VNTECH_BRAND.company.displayName;
-const UI_NOW_MS = new Date().getTime();
 const UI_TODAY = new Date(UI_NOW_MS).toISOString().slice(0, 10);
 const DEFAULT_PO_ETA = new Date(UI_NOW_MS + 7 * 86400000).toISOString().slice(0, 10);
-
-// Menu 11 mục theo nghiệp vụ. Nhóm "department_management" cũ đã được tách thành
-// my_work / mep / finance / hr_legal / reports (xem migration V4__menu_restructure.sql).
-const defaultMenuGroups = [
-  { groupKey: "overview", name: "TỔNG QUAN", icon: "OV", sortOrder: 10, active: true, collapsible: false },
-  { groupKey: "my_work", name: "CÔNG VIỆC", icon: "NV", sortOrder: 15, active: true, collapsible: true },
-  { groupKey: "site_command", name: "QUẢN LÝ DỰ ÁN", icon: "DA", sortOrder: 25, active: true, collapsible: true },
-  { groupKey: "mep", name: "MEP", icon: "MEP", sortOrder: 28, active: true, collapsible: true },
-  { groupKey: "purchasing", name: "MUA HÀNG & CUNG ỨNG", icon: "MH", sortOrder: 30, active: true, collapsible: true },
-  { groupKey: "warehouse", name: "KHO VẬT TƯ", icon: "KV", sortOrder: 40, active: true, collapsible: true },
-  { groupKey: "teams", name: "TỔ ĐỘI", icon: "TD", sortOrder: 45, active: true, collapsible: true },
-  { groupKey: "finance", name: "TÀI CHÍNH – KẾ TOÁN", icon: "TC", sortOrder: 50, active: true, collapsible: true },
-  { groupKey: "hr_legal", name: "HÀNH CHÍNH – PHÁP CHẾ", icon: "HC", sortOrder: 55, active: true, collapsible: true },
-  { groupKey: "reports", name: "BÁO CÁO", icon: "BC", sortOrder: 60, active: true, collapsible: true },
-  { groupKey: "material_master", name: "DANH MỤC VẬT TƯ GỐC", icon: "MV", sortOrder: 70, active: true, collapsible: false },
-  { groupKey: "system_admin", name: "QUẢN TRỊ HỆ THỐNG", icon: "QT", sortOrder: 80, active: true, collapsible: true },
-];
 
 const modules: { key: ModuleKey; label: string; icon: string; groupKey?: string; subGroup?: string }[] = [
   { key: "dashboard", label: "Tổng quan điều hành", icon: "OV", groupKey: "overview" },
@@ -272,11 +252,6 @@ function moduleUserDescription(key:ModuleKey){return USER_MODULE_DESCRIPTIONS[ke
 function moduleAdminGuidance(key:ModuleKey){const raw=titles[key][1].replace(/^ĐANG PHÁT TRIỂN\s*·\s*/i,"").trim();return raw===moduleUserDescription(key).replace(/[.]$/,"").trim()?"":raw;}
 function AdminModuleGuide({moduleKey}:{moduleKey:ModuleKey}){const text=moduleAdminGuidance(moduleKey);if(!text)return null;return <details className="admin-module-guide"><summary>ⓘ Hướng dẫn quản trị</summary><p>{text}</p></details>;}
 
-const roleNames: Record<string, string> = {
-  admin: "Quản trị hệ thống", engineer: "Kỹ sư dự án", commander: "Chỉ huy trưởng",
-  project: "Phòng Dự án", procurement: "Phòng Kế hoạch", accountant: "Kế toán / Tài chính", warehouse: "Thủ kho", team: "Tổ đội", director: "Ban Lãnh đạo",
-};
-const format = new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 2 });
 const money = (value: unknown) => `${format.format(Number(value || 0))} đ`;
 const moneyBillion = (value: unknown) => `${new Intl.NumberFormat("vi-VN",{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(value||0)/1e9)} tỷ`;
 const date = (value: unknown) => {
@@ -286,7 +261,6 @@ const date = (value: unknown) => {
   const hasTime = String(value).includes("T");
   return new Intl.DateTimeFormat("vi-VN", { day:"2-digit", month:"2-digit", year:"numeric", ...(hasTime?{hour:"2-digit",minute:"2-digit",hour12:false}:{}) }).format(parsed);
 };
-function projectPeriod(start:unknown,end:unknown){const fmt=(value:unknown)=>{if(!value)return "?";const d=new Date(String(value));return Number.isNaN(d.getTime())?"?":`${d.getMonth()+1}/${d.getFullYear()}`;};const a=fmt(start),b=fmt(end);return a==="?"&&b==="?"?"Chưa có TG":a!=="?"&&b==="?"?`Từ ${a}`:a==="?"&&b!=="?"?`Đến ${b}`:a===b?a:`${a}–${b}`;}
 function roleBase(user: Row) { return String(user.roleBase || user.role || ""); }
 function isAdminUser(user: Row) { return user.role === "admin" || roleBase(user) === "admin"; }
 function roleLabel(data: AppData, code: string) { return data.roleCatalog?.find((row) => row.code === code)?.name || roleNames[code] || code; }
@@ -470,29 +444,6 @@ function LoginScreen({ onDone }: { onDone: () => void }) {
   return <div className="auth-page auth-page-full auth-full-city-login" data-contract="VNTECH_FULL_W2_LOGIN_UI"><div className="auth-enterprise-shell"><section className="auth-enterprise-intro"><img className="auth-login-master-art" src="/vntech-login-r1-left.png" alt="" aria-hidden="true"/><img className="auth-city-art auth-city-light" src="/vntech-header-city-light.webp" alt="" aria-hidden="true"/><img className="auth-city-art auth-city-dark" src="/vntech-header-city-dark.webp" alt="" aria-hidden="true"/><div className="auth-enterprise-logo"><img src={VNTECH_BRAND.logoPath} alt="VNTECH TECHNOLOGY FOR LIFE"/></div><div className="auth-mobile-company">{VNTECH_COMPANY_DISPLAY_NAME}</div><div className="auth-enterprise-copy"><h1>NỀN TẢNG QUẢN TRỊ &amp;<br/>ĐIỀU HÀNH DOANH NGHIỆP</h1><h2><b>VNTECH</b> Enterprise Resource Planning <strong>(VNTECH ERP)</strong></h2></div><div className="auth-enterprise-visual" aria-hidden="true"><span className="erp-node node-project">DỰ ÁN</span><span className="erp-node node-purchase">MUA HÀNG</span><span className="erp-node node-warehouse">KHO VẬT TƯ</span><span className="erp-node node-approval">PHÊ DUYỆT</span></div><div className="auth-enterprise-wave" aria-hidden="true"><i/><i/><i/></div></section><form className="auth-login-panel" onSubmit={submit}><div className="auth-login-lock" aria-hidden="true"><span className="auth-lock-glyph">🔒</span><img className="auth-lock-logo" src={VNTECH_BRAND.logoPath} alt=""/></div><div className="auth-login-heading"><h2>Đăng nhập hệ thống</h2><p>Chào mừng bạn quay trở lại!</p></div>{error && <div className="auth-alert danger">{error}</div>}<label><span>Tên đăng nhập</span><input name="username" required autoComplete="username" autoFocus defaultValue={rememberedUsername} placeholder="Nhập tên đăng nhập" /></label><label><span>Mật khẩu</span><div className="auth-password-field"><input name="password" required type={showPassword?"text":"password"} autoComplete="current-password" placeholder="Nhập mật khẩu" /><button type="button" onClick={()=>setShowPassword(v=>!v)} aria-label={showPassword?"Ẩn mật khẩu":"Hiện mật khẩu"}>{showPassword?"ẨN":"◉"}</button></div></label><div className="auth-login-options"><label className="auth-remember"><input type="checkbox" checked={remember} onChange={(event)=>setRemember(event.target.checked)}/><span>Ghi nhớ đăng nhập</span></label><button type="button" className="auth-forgot" onClick={()=>setForgotOpen(v=>!v)}>Quên mật khẩu?</button></div>{forgotOpen&&<div className="auth-recovery-note">Liên hệ Quản trị viên hệ thống để <b>Reset mật khẩu</b>. Sau khi đăng nhập bằng mật khẩu tạm, hệ thống sẽ bắt buộc đổi mật khẩu mới.</div>}<button className="primary wide auth-login-submit" disabled={busy}>{busy ? "ĐANG KIỂM TRA…" : "ĐĂNG NHẬP"}</button><div className="auth-support-note"><span>◉</span><div><b>Liên hệ Quản trị viên nếu cần hỗ trợ</b><small>Tài khoản được quản lý tập trung và bảo vệ theo chính sách VNTECH ERP.</small></div></div><footer><span className="auth-footer-desktop">© 2026 {VNTECH_COMPANY_DISPLAY_NAME}</span><span className="auth-footer-mobile"><b>VNTECH ERP</b><small>Bảo mật • Ổn định • Hiệu quả</small></span></footer></form></div></div>;
 }
 
-const NAV_ICON_TYPE: Record<string,string> = {
-  overview:"home", dashboard:"home",
-  department_management:"users", site_command:"hardhat", "phòng kế hoạch":"calendar", "phòng dự án":"hardhat", "tài chính kế toán":"coins", "hành chính pháp chế":"document",
-  project_management:"briefcase", purchasing:"cart", warehouse:"warehouse", system_admin:"gear",
-  dept_plan_tasks:"tasks", dept_plan_assign:"assign", dept_plan_supply_plan:"calendar", dept_plan_tender:"bid", dept_plan_rfq:"quote",
-  dept_plan_purchasing:"cart", dept_plan_supply:"truck", dept_plan_contracts:"document", dept_plan_suppliers:"handshake", dept_plan_price_data:"coins", dept_plan_kpi:"chart", dept_plan_alerts:"bell",
-  dept_project_tasks:"tasks", dept_project_pda:"compass", dept_project_assign:"assign", dept_project_plan:"calendar", dept_project_shop:"blueprint", dept_project_boq:"measure", dept_project_material:"box", dept_project_issues:"alert", dept_project_asbuilt:"checkdoc", dept_project_payment:"wallet", dept_project_tender:"bid", dept_project_kpi:"chart", dept_project_alerts:"bell",
-  dept_finance_payment_plan:"calendar",dept_finance_recovery:"coins",dept_finance_advance:"wallet",dept_finance_site_cost:"coins",dept_finance_cashbank:"wallet",dept_finance_documents:"document",dept_legal_hr:"users",dept_legal_labor:"document",dept_legal_correspondence:"document",dept_legal_documents:"document",dept_legal_seal:"checkdoc",dept_legal_benefits:"document",
-  project_progress:"calendar", construction:"hardhat", production:"chart", capital_recovery:"coins", boq:"measure", payments:"wallet", teams:"users",
-  requests:"clipboard", approvals:"check", supplier_catalog:"handshake", receiving:"truck", delivered:"deliver",
-  warehouse_receipt:"receive", warehouse_issue:"issue", inventory:"transfer", stocktake:"stocktake", material_norms:"ruler", central_warehouse:"warehouse", material_catalog:"boxes",
-  admin:"gear", dept_personal:"user",
-  my_work:"tasks", mep:"blueprint", finance:"coins", hr_legal:"briefcase", reports:"chart"
-};
-const NAV_ICON_TONE: Record<string,string> = {
-  overview:"blue",dashboard:"blue",my_work:"green",mep:"blue",finance:"orange",hr_legal:"purple",reports:"slate",department_management:"indigo",site_command:"orange","phòng kế hoạch":"green","phòng dự án":"blue","tài chính kế toán":"orange","hành chính pháp chế":"purple",project_management:"orange",
-  purchasing:"red",warehouse:"purple",system_admin:"slate",admin:"slate",
-  project_progress:"orange",construction:"orange",production:"orange",capital_recovery:"orange",boq:"orange",payments:"orange",teams:"orange",
-  requests:"red",approvals:"red",receiving:"red",delivered:"red",
-  warehouse_receipt:"purple",warehouse_issue:"purple",inventory:"purple",stocktake:"purple",material_norms:"purple",central_warehouse:"purple",material_catalog:"purple",
-  dept_plan_tasks:"green",dept_plan_assign:"green",dept_plan_supply_plan:"green",dept_plan_tender:"green",dept_plan_rfq:"green",dept_plan_purchasing:"green",dept_plan_supply:"green",dept_plan_contracts:"green",dept_plan_suppliers:"green",dept_plan_price_data:"green",dept_plan_kpi:"green",dept_plan_alerts:"green",
-  dept_project_tasks:"blue",dept_project_pda:"blue",dept_project_assign:"blue",dept_project_plan:"blue",dept_project_shop:"blue",dept_project_boq:"blue",dept_project_material:"blue",dept_project_issues:"blue",dept_project_asbuilt:"blue",dept_project_payment:"blue",dept_project_tender:"blue",dept_project_kpi:"blue",dept_project_alerts:"blue",dept_finance_payment_plan:"orange",dept_finance_recovery:"orange",dept_finance_advance:"orange",dept_finance_site_cost:"orange",dept_finance_cashbank:"orange",dept_finance_documents:"orange",dept_legal_hr:"purple",dept_legal_labor:"purple",dept_legal_correspondence:"purple",dept_legal_documents:"purple",dept_legal_seal:"purple",dept_legal_benefits:"purple",dept_personal:"blue"
-};
 function NavIcon({name,kind="module"}:{name:string;kind?:"module"|"group"}) {
   const key=name.toLowerCase();
   const tone=NAV_ICON_TONE[key] || (key.startsWith("dept_project_")?"blue":key.startsWith("dept_plan_")?"green":"blue");
@@ -692,11 +643,6 @@ function WarehouseApp({ data, refresh, action, logout, globalError, toast }: { d
 }
 
 
-const DEPT_MODULE_GROUP: Record<string,string> = {
-  dept_plan_supply_plan:"KẾ HOẠCH",dept_plan_tender:"ĐẤU THẦU",dept_plan_rfq:"RFQ",dept_plan_purchasing:"MUA HÀNG",dept_plan_supply:"CUNG ỨNG",dept_plan_contracts:"HỢP ĐỒNG",dept_plan_suppliers:"NCC",dept_plan_price_data:"GIÁ",dept_plan_kpi:"KPI",dept_plan_alerts:"CẢNH BÁO",
-  dept_project_pda:"PDA",dept_project_plan:"KẾ HOẠCH",dept_project_shop:"SHOPDRAWING",dept_project_boq:"BOQ",dept_project_material:"VẬT TƯ",dept_project_issues:"PHÁT SINH",dept_project_asbuilt:"HOÀN CÔNG",dept_project_payment:"THANH TOÁN",dept_project_tender:"ĐẤU THẦU",dept_project_kpi:"KPI",dept_project_alerts:"CẢNH BÁO"
-};
-function taskStatusLabel(value:string){const map:Record<string,string>={NEW:"Mới giao",IN_PROGRESS:"Đang thực hiện",WAITING_SUPPLIER:"Chờ NCC",WAITING_CLIENT:"Chờ CĐT/TVGS",WAITING_APPROVAL:"Chờ duyệt",WAITING_PROJECT:"Chờ BCH/Dự án",BLOCKED:"Bị chặn",ON_HOLD:"Tạm dừng",SUBMITTED:"Đã gửi kiểm tra",REWORK:"Yêu cầu chỉnh sửa",COMPLETED:"Hoàn thành",CANCELLED:"Hủy"};return map[value]||value;}
 function AccessDeniedPanel(){return <section className="card access-denied-panel"><img src={VNTECH_BRAND.logoPath} alt="VNTECH"/><strong>{VNTECH_COMPANY_DISPLAY_NAME}</strong><h2>CHƯA ĐƯỢC PHÂN QUYỀN</h2><p>Tài khoản của bạn chưa có quyền xem dữ liệu nghiệp vụ của chức năng này. Vui lòng liên hệ Quản trị hệ thống nếu cần cấp quyền.</p></section>;}
 
 function DepartmentTaskWorkspace({data,department,moduleKey,project,onProject,action,navigate}:{data:AppData;department:"KH"|"DA";moduleKey:ModuleKey;project:string;onProject:(v:string)=>void;action:(name:string,payload:Row)=>Promise<boolean>;navigate:(v:ModuleKey)=>void}){
@@ -736,22 +682,6 @@ function DepartmentTaskWorkspace({data,department,moduleKey,project,onProject,ac
     <aside className="card task-detail-panel">{selected?<><div className="task-detail-head"><div><small>{selected.sourceType||'TASK'} · {selected.taskOrigin==='automatic'?'TỰ ĐỘNG':'BỔ SUNG'}</small><h3>{selected.title}</h3></div><StatusBadge value={taskStatusLabel(selected.status)}/></div><dl><dt>Dự án</dt><dd>{selected.projectCode?`${selected.projectCode} - ${selected.projectName}`:'—'}</dd><dt>Nhân viên phụ trách</dt><dd>{selected.assignedToName}</dd><dt>Người giao</dt><dd>{selected.assignedByName}</dd><dt>Ngày giao việc</dt><dd>{date(selected.assignedAt)}</dd><dt>Hạn hoàn thành</dt><dd>{date(selected.dueAt)}</dd><dt>Ưu tiên</dt><dd>{selected.priority}</dd><dt>% hoàn thành</dt><dd>{selected.progress}%</dd><dt>Đầu ra yêu cầu</dt><dd>{selected.requiredOutput||'—'}</dd><dt>Mô tả</dt><dd>{selected.description||'—'}</dd>{selected.waitingReason&&<><dt>Lý do chờ</dt><dd>{selected.waitingReason}</dd></>}</dl><div className="task-detail-actions">{selected.sourceModule&&<button className="secondary" onClick={()=>{const t=selected.sourceModule as ModuleKey;if(modules.some(m=>m.key===t))navigate(t)}}>Mở phiếu gốc</button>}{selected.status==='NEW'&&<button className="primary" onClick={()=>setTaskStatus('IN_PROGRESS')}>Bắt đầu làm</button>}{['NEW','IN_PROGRESS','REWORK'].includes(String(selected.status))&&<button className="secondary" onClick={()=>setTaskStatus('WAITING_PROJECT')}>Chuyển Chờ</button>}{['NEW','IN_PROGRESS','REWORK'].includes(String(selected.status))&&<button className="primary" onClick={()=>setTaskStatus('SUBMITTED')}>Gửi kiểm tra</button>}{selected.status==='SUBMITTED'&&<button className="primary" onClick={()=>setTaskStatus('COMPLETED')}>Xác nhận hoàn thành</button>}</div><div className="task-history"><h4>Lịch sử nhiệm vụ</h4>{events.slice(0,8).map(e=><p key={e.id}><b>{e.eventType}</b><span>{e.actorName||'Hệ thống'} · {date(e.occurredAt)}</span>{e.reason&&<small>{e.reason}</small>}</p>)}{!events.length&&<span>Chưa có lịch sử bổ sung.</span>}</div></>:<Empty text="Chọn một nhiệm vụ để xem chi tiết."/>}</aside></div>
   </div>;
 }
-
-// =============================================================================
-// GĐ4 — MÀN "CÔNG VIỆC": việc của tôi · việc phòng ban/tổ đội · KPI & báo cáo
-// Yêu cầu người dùng:
-//   • user tự tạo task cho bản thân  → action create_self_work_item (mới, GĐ4)
-//   • tạo task cho nhân viên nếu có chức vụ phù hợp → create_work_item (backend chặn)
-//   • dashboard tỉ lệ hoàn thành để đánh giá năng lực nhân viên
-//   • báo cáo theo tiến độ công việc trong THÁNG của từng nhân viên
-//   • CEO/admin xem được toàn bộ KPI phòng ban và user
-// =============================================================================
-const WORK_STATUS_LABELS: Record<string, string> = {
-  NEW: "Mới", IN_PROGRESS: "Đang làm", WAITING_SUPPLIER: "Chờ NCC", WAITING_CLIENT: "Chờ khách hàng",
-  WAITING_APPROVAL: "Chờ duyệt", WAITING_PROJECT: "Chờ dự án", BLOCKED: "Bị chặn", ON_HOLD: "Tạm dừng",
-  SUBMITTED: "Đã trình", REWORK: "Làm lại", COMPLETED: "Hoàn thành", CANCELLED: "Đã huỷ",
-};
-const WORK_CLOSED = ["COMPLETED", "CANCELLED"];
 
 function workRate(rows: Row[]): number {
   if (!rows.length) return 0;
@@ -1038,9 +968,6 @@ function TeamManagement({ data, open }: { data: AppData; open: (name: string, ro
   </div>;
 }
 
-const PROJECT_STATUS_LABELS: Record<string,string> = { active:"Đang hoạt động", paused:"Tạm dừng", closed:"Đã đóng", purged:"Đã xoá", pending:"Chờ khởi động" };
-
-/** Số ngày lệch giữa một mốc ISO và hôm nay (dương = đã quá mốc). */
 function daysFromToday(iso: unknown): number | null {
   const s = String(iso ?? "").slice(0, 10);
   if (!s) return null;
@@ -1310,32 +1237,9 @@ function DevelopmentNotice(){return <div className="development-screen-notice"><
 function DevelopmentModule({ title, note }: { title: string; note: string }) { return <section className="card development-module"><h2>{title}</h2><p>{note.replace("ĐANG PHÁT TRIỂN · ","")}</p><div className="inline-alert">Màn hình này chưa được ưu tiên hiệu chỉnh sâu. Dữ liệu, phân quyền, workflow và liên kết domain chung vẫn tiếp tục đồng bộ theo hệ thống mới.</div></section>; }
 
 function pendingForRole(requests: Row[], user: Row, stages: Row[] = []) { return requests.filter((row) => { if(row.status!=="pending_approval")return false; const approval=row.approvals?.find((item:Row)=>Number(item.stage)===Number(row.approvalStage)); const rule=approval?.allowedRoleCodes?approval:stages.find((stage)=>Number(stage.stageNo)===Number(row.approvalStage)); return stageAllowedForUser(rule,user); }).length; }
-function initials(name: string) { return name.split(" ").slice(-2).map((part) => part[0]).join("").toUpperCase(); }
 function statusLabel(row: Row) { const labels: Row = { pending_approval: "Chờ duyệt", approval_pending: "Chờ duyệt", approved: "Đã duyệt", awaiting_po: "Chờ lập PO", waiting_delivery: "Chờ giao hàng", partial_delivery: "Giao một phần", delivered_pending_confirmation: "Chờ BCH xác nhận", awaiting_bch_confirmation: "Chờ BCH xác nhận", received_full_docs_pending: "Đã nhận đủ · Chờ hồ sơ", completed: "Đã hoàn tất", completed_with_exceptions: "Hoàn tất · Thiếu hồ sơ", completed_with_shortage: "Đóng đơn có thiếu", returned_to_requester: "Trả lại CHT", rejected: "Từ chối", cancelled: "Đã hủy", ordered: "Đang mua", partial: "Giao một phần", received: "Đã giao đủ", posted: "Đã ghi sổ", blocked: "Bị chặn" }; return labels[row.supplyStatus] || labels[row.status] || labels[row.postingStatus] || row.supplyStatus || row.status || "—"; }
-function durationText(minutes: number) { if (!Number.isFinite(minutes) || minutes < 0) return "—"; if (minutes < 60) return `${Math.max(1, Math.round(minutes))} phút`; const hours = Math.floor(minutes / 60); const rest = Math.round(minutes % 60); return rest ? `${hours} giờ ${rest} phút` : `${hours} giờ`; }
 function approvalTiming(approval?: Row) { if (!approval?.queuedAt) return { text: "Chờ cấp trước hoàn tất", minutes: 0, late: false, active: false }; const end = approval.decidedAt ? new Date(approval.decidedAt).getTime() : Date.now(); const start = new Date(approval.queuedAt).getTime(); const due = approval.dueAt ? new Date(approval.dueAt).getTime() : 0; const minutes = Math.max(0, (end - start) / 60000); const late = Boolean(due && end > due); return { text: `${approval.decidedAt ? "Đã xử lý" : "Đang chờ"} ${durationText(minutes)} · ${late ? "Quá hạn" : "Trong hạn"}`, minutes, late, active: true }; }
 function workflowTiming(step?: Row) { if (!step?.queuedAt) return { text: "Chưa bắt đầu", minutes: 0, late: false }; const end = step.completedAt ? new Date(step.completedAt).getTime() : Date.now(); const start = new Date(step.queuedAt).getTime(); const due = step.dueAt ? new Date(step.dueAt).getTime() : 0; const minutes = Math.max(0, (end - start) / 60000); const late = Boolean(due && end > due); return { text: `${step.completedAt ? "Đã xử lý" : "Đang chờ"} ${durationText(minutes)} · ${late ? "Quá hạn" : "Trong hạn"}`, minutes, late }; }
-function kpiIconName(label:string, legacyIcon:string):string {
-  const text=`${label} ${legacyIcon}`.toLocaleLowerCase("vi");
-  if(text.includes("nhà cung cấp")) return "dept_plan_suppliers";
-  if(text.includes("kiểm kê")||text.includes("hoàn trả")||text.includes("chênh lệch")) return "stocktake";
-  if(text.includes("mã vật tư")) return "material_catalog";
-  if(text.includes("tồn")) return "inventory";
-  if(text.includes("nhập kho")||text.includes("chờ nhập")||text.includes("tổng giá trị nhập")) return "warehouse_receipt";
-  if(text.includes("xuất")) return "warehouse_issue";
-  if(text.includes("giao")||text.includes("trễ hẹn")||text.includes("sắp đến hạn")) return "delivered";
-  if(text.includes("đặt hàng")||text.includes("po")||text.includes("đối chiếu")) return "purchasing";
-  if(text.includes("đề nghị")||text.includes("mr")) return "requests";
-  if(text.includes("phê duyệt")||text.includes("chờ duyệt")||text.includes("quá hạn")) return "approvals";
-  if(text.includes("hợp đồng")||text.includes("boq")||text.includes("trong hợp đồng")||text.includes("ngoài hợp đồng")) return "boq";
-  if(text.includes("thu hồi")||text.includes("tiền thực thu")) return "capital_recovery";
-  if(text.includes("hóa đơn")||text.includes("thanh toán")) return "payments";
-  if(text.includes("sản lượng")||text.includes("thi công")||text.includes("tiến độ")) return "project_progress";
-  if(text.includes("dự án")) return "project_management";
-  if(text.includes("nhiệm vụ")||text.includes("đang thực hiện")||text.includes("hoàn thành")||text.includes("chờ bên khác")) return "dept_plan_tasks";
-  if(text.includes("hồ sơ")) return "dept_project_payment";
-  return "dashboard";
-}
 function Kpi({ icon, label, value, note, tone = "blue", percent }: { icon: string; label: string; value: string; note: string; tone?: string; percent?: number }) {
   const bars=[42,68,54,82,61,92,73,100];
   const pct=percent===undefined?null:Math.max(0,Math.min(100,Number(percent||0)));
@@ -1545,7 +1449,6 @@ async function decide(requestId: string, stage: number, decision: "approved"|"re
 
 function ApprovalDots({ approvals }: { approvals: Row[] }) { const sorted = [...(approvals || [])].sort((a,b) => Number(a.stage)-Number(b.stage)); return <div className="approval-dots">{sorted.map((item) => <span key={item.stage} className={item?.status || "pending"} title={`${item.department || `Bước ${item.stage}`}: ${item?.status || "pending"}`}>{item.stage}</span>)}</div>; }
 
-const APPROVAL_STAGE_LABELS:Record<number,string>={1:"CHT ĐÃ XÁC NHẬN",2:"CHỜ THƯ KÝ TGĐ",3:"CHỜ PHÒNG DỰ ÁN",4:"CHỜ TRƯỞNG PHÒNG DA",5:"CHỜ TRƯỞNG PHÒNG KH"};
 function Approvals({ data, rows, projects, project, onProject, user, action, open, canUse, refresh }: { data: AppData; rows: Row[]; projects:Row[]; project:string; onProject:(value:string)=>void; user: Row; action: (name: string, payload: Row) => Promise<boolean>; open: (name: string, row?: Row) => void; canUse: boolean; refresh:()=>void }) {
   const activeStages=data.approvalStages.filter((stage)=>stage.active).sort((a,b)=>Number(a.stageNo)-Number(b.stageNo)); const [stageFilter,setStageFilter]=useState("ALL"); const [approvalComment,setApprovalComment]=useState(""); const allPendingRows=rows.filter((row)=>row.status==="pending_approval"); const pendingRows=allPendingRows.filter((row)=>stageFilter==="ALL"||Number(row.approvalStage)===Number(stageFilter)).sort((a,b)=>new Date(a.neededAt||a.requestedAt).getTime()-new Date(b.neededAt||b.requestedAt).getTime());
   const [selectedId,setSelectedId]=useState<string>(()=>String(pendingRows[0]?.id||"")); const selected=pendingRows.find((row)=>String(row.id)===selectedId)||pendingRows[0];
@@ -1815,9 +1718,6 @@ function MaterialCatalogPage({ data, open, action, permission }: { data: AppData
 }
 
 
-function sanitizeUiText(value: unknown) { return String(value ?? "").replace(/\bV\d+(?:\.\d+){0,3}\b/gi, "").replace(/\s{2,}/g, " ").replace(/\s+([,.;:])/g, "$1").trim(); }
-function normalizeMasterHeader(value: unknown) { return String(value ?? "").trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[đĐ]/g, "d").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim(); }
-function truthyCatalog(value: unknown) { return ["1", "true", "yes", "co", "có", "x"].includes(String(value ?? "").trim().toLowerCase()); }
 function mapMaterialCatalogRows(rows: string[][]) {
   const aliases: Record<string,string[]> = {
     categoryCode:["ma he","ma he me","he me","system code","ma nhom lon","ma nhom"], categoryName:["ten he","ten he me","he thong","system","category","ten nhom"],
@@ -1832,13 +1732,10 @@ function mapMaterialCatalogRows(rows: string[][]) {
   rows.slice(headerIndex+1).forEach((row,offset)=>{ const get=(key:string)=>idx[key]>=0?String(row[idx[key]]??"").trim():""; if(!get("code")&&!get("name"))return; const minStock=Number(get("minStock").replaceAll(" ","").replace(",","."))||0; const categoryCode=(get("categoryCode")||"KHAC").toUpperCase(); const categoryName=get("categoryName")||categoryCode||"Khác / Chưa phân loại"; const subcategoryName=get("subcategoryName")||"Chưa phân nhóm"; const internalGroupCode=(get("subcategoryCode")||normalizeMasterHeader(subcategoryName).replaceAll(" ","_").toUpperCase().slice(0,48)||"CHUA_PHAN_NHOM"); result.push({ categoryCode, categoryName, subcategoryCode:internalGroupCode, subcategoryName, code:get("code").toUpperCase(), name:get("name"), unit:get("unit"), specification:get("specification"), brand:get("brand"), standardPrice:0, minStock, requiresCocq:false, requiresMar:false }); });
   if(!result.length) throw new Error("File không có mã vật tư để nhập."); if(result.length>5000) throw new Error("Mỗi lần nhập tối đa 5.000 mã vật tư."); return result;
 }
-function materialCatalogTemplateRows(){ return [{ categoryCode:"DIEN",categoryName:"Điện",subcategoryName:"Cáp điện động lực",code:"VT-EL-001",name:"Cáp Cu/XLPE/PVC 4x50 mm²",unit:"m",specification:"0.6/1kV",brand:"CADIVI",minStock:100,active:1 }]; }
 function downloadMaterialCatalogTemplateXlsx(){ downloadPublicTemplate("/templates/Mau_Danh_Muc_Vat_Tu_MEP_VNTECH.xlsx","Mau_Danh_Muc_Vat_Tu_MEP_VNTECH.xlsx"); }
 function downloadMaterialCatalogTemplateCsv(){ downloadPublicTemplate("/templates/Mau_Danh_Muc_Vat_Tu_MEP_VNTECH.csv","Mau_Danh_Muc_Vat_Tu_MEP_VNTECH.csv"); }
 
-function normalizeBoqHeader(value: unknown) { return String(value ?? "").trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[đĐ]/g, "d").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim(); }
 function isBoqTemplateInstructionRow(row:string[]){const markers=["cot he thong tu link tinh khong nhap tay","bat buoc theo cau hinh admin","khong bat buoc"];const cells=row.map(normalizeBoqHeader).filter(Boolean);return cells.filter((cell)=>markers.some((marker)=>cell===marker||cell.startsWith(marker))).length>=2;}
-const BOQ_SYSTEM_CODES=["DIEN","CTN","HVAC","DNHE","PCCC","KHAC"] as const;
 function normalizeBoqSystemCode(value:unknown){const raw=normalizeBoqHeader(value).replaceAll(" ","").toUpperCase();if(!raw)return "KHAC";if(["ELV","DNHE","DIENNHE"].includes(raw)||raw.startsWith("DNHE")||raw.startsWith("ELV")||raw.startsWith("DIENNHE"))return "DNHE";if(["DIEN","ELECTRICAL"].includes(raw)||raw.startsWith("DIEN"))return "DIEN";if(["CTN","NUOC","CAPTHOATNUOC","PLUMBING"].includes(raw)||raw.startsWith("CTN"))return "CTN";if(["HVAC","DIEUHOATHONGGIO"].includes(raw)||raw.startsWith("HVAC"))return "HVAC";if(["PCCC","FIRE"].includes(raw)||raw.startsWith("PCCC"))return "PCCC";return "KHAC";}
 function boqSystemName(code:unknown){const c=normalizeBoqSystemCode(code);return c==="DIEN"?"Điện":c==="CTN"?"Cấp thoát nước":c==="HVAC"?"Điều hòa thông gió":c==="DNHE"?"Điện nhẹ":c==="PCCC"?"Phòng cháy chữa cháy":"Khác";}
 function normalizeBoqType(value: unknown) { const v = normalizeBoqHeader(value); return v.includes("ngoai") || v.includes("phat sinh") ? "outside_contract" : "contract"; }
@@ -1924,7 +1821,6 @@ function downloadBoqTemplate(configs?: FormFieldConfig[]) { downloadBoqTemplateX
 function boqVariationQty(row: Row) { return row.itemType === "outside_contract" ? Number(row.remeasuredQty || 0) : Number(row.remeasuredQty || 0) - Number(row.contractQty || 0); }
 function boqControlQty(row: Row) { if (row.itemType === "outside_contract") return row.variationStatus === "approved" ? Number(row.remeasuredQty || 0) : 0; return row.variationStatus === "approved" ? Number(row.remeasuredQty || 0) : Number(row.contractQty || 0); }
 function boqVariationLabel(row: Row) { const value = boqVariationQty(row); if (row.itemType === "outside_contract") return `Ngoài HĐ +${format.format(value)}`; if (Math.abs(value) < 1e-9) return "Không đổi"; return `${value > 0 ? "Tăng +" : "Giảm "}${format.format(value)}`; }
-function boqStatusLabel(value: string) { return value === "approved" ? "Đã duyệt" : value === "pending" ? "Chờ duyệt" : value === "rejected" ? "Không duyệt" : "Không phát sinh"; }
 function boqAssessment(row: Row) { const control = boqControlQty(row); const ordered = Number(row.orderedQty || 0); const variation = boqVariationQty(row); if ((row.itemType === "outside_contract" || Math.abs(variation) > 1e-9) && row.variationStatus === "pending") return "Có phát sinh chưa duyệt"; if (row.variationStatus === "rejected" && ordered > control + 1e-9) return "PO vượt phần được duyệt"; if (ordered > control + 1e-9) return "Mua vượt"; if (Math.abs(ordered - control) <= 1e-9 && control > 0) return "Đủ theo BOQ sau ĐC"; if (ordered < control - 1e-9) return "Còn thiếu"; return "Theo dõi"; }
 function boqExportRows(rows: Row[]) { return rows.map((row) => { const controlQty = boqControlQty(row); return { ...row, variationQty: boqVariationQty(row), controlQty, remainingToBuy: controlQty - Number(row.orderedQty || 0), purchaseVariance: Number(row.orderedQty || 0) - controlQty, assessment: boqAssessment(row) }; }); }
 function BoqExportButtons({ data, rows, project, mode="boq" }: { data: AppData; rows: Row[]; project: string; mode?:"boq"|"boq_purchase" }) { const selected = project === "ALL" ? null : data.projects.find((item) => item.id === project); const doc = { projectCode: selected?.code, projectName: selected?.name, contractNo: selected?.contractNo, rows: boqExportRows(rows), fieldConfigs: data.formFieldConfigs, formKey:mode }; return <div className="row-actions"><button className="export-mini" onClick={() => downloadBoqXlsx(doc)}>Excel</button><button className="export-mini" onClick={() => downloadBoqCsv(doc)}>CSV</button><button className="export-mini" onClick={() => downloadBoqPdf(doc)}>PDF</button></div>; }
@@ -2077,7 +1973,6 @@ function BoqControl({ data, project, open, action, canUse }: { data: AppData; pr
     </div>{panelOpen&&<aside className="boq-column-panel user-display-panel"><header><h2>HIỂN THỊ CỘT</h2><button onClick={()=>setPanelOpen(false)}>×</button></header><p className="panel-note">Cá nhân hóa hiển thị của tài khoản. Tên/cấu trúc cột chỉ Quản trị viên được thay đổi tại Cấu hình danh mục.</p><h3>CỘT ĐƯỢC HIỂN THỊ</h3><div className="column-list">{allFields.map((field)=><label key={field.fieldKey}><span className="drag-handle">⠿</span><input type="checkbox" checked={enabled[field.fieldKey]!==false} onChange={(e)=>setEnabled((cur)=>({...cur,[field.fieldKey]:e.target.checked}))}/><span>{field.displayName}</span></label>)}</div><h3>MẬT ĐỘ DÒNG</h3><div className="density-options"><div><button className={density==="comfortable"?"active":""} onClick={()=>setDensity("comfortable")}>Thoáng</button><button className={density==="normal"?"active":""} onClick={()=>setDensity("normal")}>Vừa</button><button className={density==="compact"?"active":""} onClick={()=>setDensity("compact")}>Gọn</button></div></div><footer><button className="secondary" onClick={()=>setEnabled(Object.fromEntries(allFields.map((field)=>[field.fieldKey,true])))}>KHÔI PHỤC</button><button className="primary" onClick={()=>setPanelOpen(false)}>ÁP DỤNG</button></footer></aside>}</div>;
 }
 
-function normalizePaymentDate(value:unknown){const raw=String(value??"").trim();if(/^\d{4}-\d{2}-\d{2}$/.test(raw))return raw;const m=raw.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);if(m)return `${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`;const serial=Number(raw);if(Number.isFinite(serial)&&serial>20000&&serial<80000){const d=new Date(Date.UTC(1899,11,30)+serial*86400000);return d.toISOString().slice(0,10);}return raw;}
 function mapPaymentRows(rows:string[][]){const aliases={paymentDate:["ngay thanh toan","ngay tt"],referenceNo:["so ho so","so chung tu","so ho so chung tu","tham chieu"],description:["noi dung","noi dung thanh toan"],amount:["gia tri thanh toan","so tien","gia tri"],note:["ghi chu"]};const normalized=rows.map(row=>row.map(normalizeBoqHeader));const headerIndex=normalized.findIndex(row=>aliases.paymentDate.some(a=>row.includes(a))&&aliases.amount.some(a=>row.includes(a)));if(headerIndex<0)throw new Error("Không tìm thấy dòng tiêu đề thanh toán. Hãy tải đúng Mẫu Excel Thanh toán HĐ từ phần mềm.");const headers=normalized[headerIndex];const index=(keys:string[])=>headers.findIndex(h=>keys.includes(h));const idx={paymentDate:index(aliases.paymentDate),referenceNo:index(aliases.referenceNo),description:index(aliases.description),amount:index(aliases.amount),note:index(aliases.note)};const result:Row[]=[];rows.slice(headerIndex+1).forEach((row,offset)=>{const get=(i:number)=>i>=0?String(row[i]??"").trim():"";if(!row.some(cell=>String(cell??"").trim()))return;const paymentDateHint=normalizeBoqHeader(get(idx.paymentDate)),amountHint=normalizeBoqHeader(get(idx.amount)),descriptionHint=normalizeBoqHeader(get(idx.description));if(paymentDateHint.startsWith("nhap yyyy")||paymentDateHint.includes("dd mm yyyy")||amountHint.includes("so tien vnd")||(descriptionHint==="bat buoc"&&amountHint.includes("khong am")))return;const dateValue=normalizePaymentDate(get(idx.paymentDate));const amountText=get(idx.amount).replace(/\s/g,"").replace(/\.(?=\d{3}(\D|$))/g,"").replace(",",".");const amount=Number(amountText);const description=get(idx.description);if(!/^\d{4}-\d{2}-\d{2}$/.test(dateValue))throw new Error(`Dòng ${headerIndex+offset+2}: Ngày thanh toán không hợp lệ.`);if(!description)throw new Error(`Dòng ${headerIndex+offset+2}: thiếu Nội dung thanh toán.`);if(!Number.isFinite(amount)||amount<0)throw new Error(`Dòng ${headerIndex+offset+2}: Giá trị thanh toán không hợp lệ.`);result.push({paymentDate:dateValue,referenceNo:get(idx.referenceNo),description,amount,note:get(idx.note)});});if(!result.length)throw new Error("File không có dòng thanh toán hợp lệ.");return result;}
 function downloadPaymentTemplate(project:Row){downloadSimpleXlsx({sheetName:"Thanh toan HD",title:`MẪU CẬP NHẬT THANH TOÁN HĐ - ${project.code}`,subtitle:`Dự án: ${project.name} · HĐ: ${project.contractNo||"Chưa khai"}`,headers:["Ngày thanh toán","Số hồ sơ/chứng từ","Nội dung thanh toán","Giá trị thanh toán","Ghi chú"],notes:["Nhập DD/MM/YYYY (hệ thống cũng nhận YYYY-MM-DD)","Có thể để trống","Bắt buộc","Số tiền VND, không âm","Có thể để trống"],widths:[18,24,48,22,40],freezeRows:4},`Mau_Thanh_Toan_HD_${project.code}`);}
 
@@ -2227,26 +2122,6 @@ function MaterialCatalogManager({ data, open, action }: { data: AppData; open: (
     </section>
   </div>;
 }
-
-const ADMIN_HELP_TEXT = {
-  visible: "Bật: cột xuất hiện trên màn hình người dùng. Tắt: chỉ ẩn trên giao diện; dữ liệu đang lưu không bị xóa. Thiết lập này độc lập với Import và Export.",
-  required: "Bật: trường bắt buộc phải có dữ liệu khi tạo/nhập nghiệp vụ. Tắt: có thể để trống. Không làm mất dữ liệu đã có.",
-  importable: "Bật: cột xuất hiện trong mẫu Excel/CSV nhập liệu và hệ thống đọc cột này khi Import. Tắt: cột không được dùng để nhập. Thiết lập này độc lập với Hiện và Export.",
-  exportable: "Bật: cột được đưa ra file Excel/CSV/PDF khi xuất dữ liệu. Tắt: dữ liệu vẫn còn trong hệ thống nhưng không xuất ra báo cáo/file.",
-  editable: "Bật: người có quyền Sửa phù hợp được chỉnh giá trị trường. Tắt: trường chỉ đọc. Trường hệ thống tự tính/link luôn bị khóa sửa trực tiếp.",
-  position: "Quy định vị trí cột trong bảng/mẫu. Vị trí 1 đứng trước vị trí 2. Nút ↑/↓ di chuyển một bước và hệ thống tự đánh lại thứ tự 1…N.",
-  dataType: "Quy định kiểu dữ liệu mà trường nhận: chữ, số, ngày, danh sách hoặc ghi chú dài. Chọn sai kiểu có thể làm dữ liệu nhập không hợp lệ.",
-  fieldKey: "Khóa kỹ thuật dùng để liên kết dữ liệu. Người vận hành không cần nhập/sửa khóa trường hệ thống. Cột tùy chỉnh mới phải có khóa duy nhất.",
-  permissionView: "Cho phép mở chức năng và xem dữ liệu trong phạm vi dự án được gán. Các quyền Tạo/Sửa/Duyệt/Xuất sẽ tự bật Xem khi cần.",
-  permissionUse: "Cho phép thực hiện thao tác nghiệp vụ thông thường của chức năng. Quyền này không tự cho phép sửa dữ liệu gốc nếu chưa bật Sửa.",
-  permissionCreate: "Cho phép tạo mới phiếu/chứng từ/dữ liệu của chức năng. Khi bật, hệ thống tự bật Xem và Thao tác.",
-  permissionEdit: "Cho phép chỉnh sửa dữ liệu đã tồn tại trong phạm vi được cấp. Khi bật, hệ thống tự bật Xem và Thao tác.",
-  permissionApprove: "Cho phép phê duyệt/xác nhận nghiệp vụ nếu người dùng đồng thời đúng cấp workflow. Khi bật, hệ thống tự bật Xem và Thao tác.",
-  permissionExport: "Cho phép xuất Excel/CSV/PDF hoặc tải dữ liệu. Khi bật, hệ thống tự bật Xem.",
-  permissionExpiry: "Thời điểm toàn bộ quyền của dòng chức năng này tự hết hiệu lực. Để trống nếu quyền không có ngày hết hạn.",
-  hide: "Ẩn mục khỏi giao diện người dùng nhưng giữ nguyên dữ liệu và lịch sử. Có thể bật Hiện/Kích hoạt lại sau.",
-  activate: "Hiển thị/kích hoạt lại mục đã ẩn. Dữ liệu lịch sử trước đó vẫn được giữ nguyên.",
-} as const;
 
 function HelpTip({ text, label="Giải thích" }: { text:string; label?:string }) {
   return <details className="admin-help-tip"><summary aria-label={label} title={label}>?</summary><span>{text}</span></details>;
@@ -2499,7 +2374,6 @@ function SupplierManager({data,action}:{data:AppData;action:(name:string,payload
 }
 
 
-function joinCodes(values:unknown[]){return values.map((value)=>String(value||"").trim()).filter(Boolean).join("; ");}
 function userPermissionSpec(data:AppData,userId:string,mode:"grant"|"revoke"){return data.allModulePermissions.filter((p)=>String(p.userId)===String(userId)&&String(p.permissionSource)==="manual_override").filter((p)=>mode==="grant"?Boolean(p.canView||p.canUse||p.canCreate||p.canEdit||p.canApprove||p.canExport):!(p.canView||p.canUse||p.canCreate||p.canEdit||p.canApprove||p.canExport)).map((p)=>{const rights=[p.canView&&"view",p.canUse&&"use",p.canCreate&&"create",p.canEdit&&"edit",p.canApprove&&"approve",p.canExport&&"export"].filter(Boolean).join(",");return mode==="grant"?`${p.moduleKey}:${rights||"view,use"}`:String(p.moduleKey);}).join("; ");}
 function downloadUserBulkTemplate(data:AppData){downloadSimpleXlsx({sheetName:"Tai khoan",title:"MẪU IMPORT TÀI KHOẢN & PHÂN QUYỀN VNTECH ERP",subtitle:"Tạo mới/cập nhật hàng loạt. Không xuất mật khẩu hiện tại; tài khoản mới bắt buộc nhập mật khẩu đúng chính sách.",headers:USER_BULK_HEADERS,notes:["Tùy chọn, duy nhất","Bắt buộc","Bắt buộc, duy nhất","Bắt buộc khi tạo mới; để trống khi cập nhật để giữ mật khẩu","Email","Tên/mã phòng theo hệ thống","Mã chức danh canonical","Nhiều mã ngăn cách ;","Nhiều mã kho ngăn cách ;","VD boq:view,use,export; payments:view,use","Mã module ngăn cách ; để thu hồi toàn bộ quyền module","ACTIVE hoặc LOCKED"],widths:[18,28,22,24,30,24,22,28,28,42,36,16],freezeRows:4},"Mau_Import_Tai_Khoan_Phan_Quyen_VNTECH");}
 function exportUsersBulkXlsx(data:AppData){const rows=data.users.map((u)=>{const projects=data.userScopes.filter((s)=>String(s.userId)===String(u.id)).map((s)=>s.projectCode||data.projects.find((p)=>p.id===s.projectId)?.code||"");const warehouses=data.userWarehouseScopes.filter((s)=>String(s.userId)===String(u.id)).map((s)=>s.warehouseCode||data.warehouses.find((w)=>w.id===s.warehouseId)?.code||"");return [u.employeeCode||"",u.fullName||"",u.username||"","",u.email||"",u.department||"",u.role||"",joinCodes(projects),joinCodes(warehouses),userPermissionSpec(data,String(u.id),"grant"),userPermissionSpec(data,String(u.id),"revoke"),u.active?"ACTIVE":"LOCKED"];});downloadSimpleXlsx({sheetName:"Tai khoan",title:"DANH SÁCH TÀI KHOẢN & PHÂN QUYỀN VNTECH ERP",subtitle:"Cột Mật khẩu luôn để trống vì hệ thống không bao giờ xuất mật khẩu/hash. Có thể chỉnh dữ liệu và import lại để cập nhật hàng loạt.",headers:USER_BULK_HEADERS,rows,widths:[18,28,22,24,30,24,22,28,28,42,36,16],freezeRows:3},"Danh_Sach_Tai_Khoan_Phan_Quyen_VNTECH");}
@@ -2572,19 +2446,6 @@ function OrganizationUnitManager({data,action}:{data:AppData;action:(name:string
   return <section className="card"><CardHead title="Cơ cấu tổ chức canonical" note="Phòng ban và BCH dùng một danh mục gốc; hỗ trợ cấp trên, dự án, ngày hiệu lực và lưu trữ không mất lịch sử."/><form key={String(selected?.id||"new")} onSubmit={save}><div className="form-grid"><label><span>Mã đơn vị *</span><input name="code" required defaultValue={selected?.code||""}/></label><label><span>Tên đơn vị *</span><input name="name" required defaultValue={selected?.name||""}/></label><label><span>Loại *</span><select name="unitType" defaultValue={selected?.unitType||"department"}><option value="company">Công ty</option><option value="department">Phòng/Bộ phận</option><option value="site_command">Ban chỉ huy dự án</option></select></label><label><span>Đơn vị cấp trên</span><select name="parentId" defaultValue={selected?.parentId||""}><option value="">— Không có —</option>{parents.map((row)=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label><label><span>Dự án (cho BCH)</span><select name="projectId" defaultValue={selected?.projectId||""}><option value="">— Danh mục cha —</option>{data.adminProjects.map((row)=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label><label><span>Thứ tự</span><input name="sortOrder" type="number" defaultValue={selected?.sortOrder??100}/></label><label><span>Hiệu lực từ</span><input name="effectiveFrom" type="date" defaultValue={selected?.effectiveFrom||""}/></label><label><span>Hiệu lực đến</span><input name="effectiveTo" type="date" defaultValue={selected?.effectiveTo||""}/></label><label className="span-2"><span>Mô tả</span><input name="description" defaultValue={selected?.description||""}/></label></div><div className="row-actions"><button className="primary" type="submit">{selected?"Lưu đơn vị":"＋ Thêm đơn vị"}</button>{selected&&<button className="secondary" type="button" onClick={()=>setSelected(null)}>Hủy sửa</button>}</div></form><div className="table-wrap"><table><thead><tr><th>Mã</th><th>Đơn vị</th><th>Loại</th><th>Cấp trên / Dự án</th><th>Hiệu lực</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>{units.map((row)=><tr key={row.id}><td><strong>{row.code}</strong></td><td>{row.name}<small>{row.description||"—"}</small></td><td>{row.unitType}</td><td>{row.parentName||"—"}<small>{row.projectCode?`${row.projectCode} · ${row.projectName}`:""}</small></td><td>{row.effectiveFrom||"—"}<small>{row.effectiveTo?` đến ${row.effectiveTo}`:""}</small></td><td><StatusBadge value={row.active?"Đang dùng":"Đã lưu trữ"}/></td><td><div className="row-actions"><button className="export-mini" onClick={()=>setSelected(row)}>Sửa</button><button className="export-mini" disabled={Boolean(row.systemLocked&&row.active)} onClick={()=>void toggle(row)}>{row.active?"Lưu trữ":"Kích hoạt"}</button></div></td></tr>)}</tbody></table></div></section>;
 }
 
-// ---------------------------------------------------------------------------
-// ĐỢT P4 — WORKFLOW ĐA LUỒNG
-// Nhiều quy trình · mỗi quy trình nhiều bước · mỗi bước nhiều người duyệt đích danh.
-// approval_mode: single (1 người) · any_of (1 trong nhiều người là qua) · all_of (tất cả phải duyệt).
-// ---------------------------------------------------------------------------
-const APPROVAL_MODE_LABELS: Record<string, string> = {
-  single: "Một người duyệt",
-  any_of: "Một trong nhiều người duyệt là qua",
-  all_of: "Tất cả người duyệt phải xác nhận",
-};
-const APPROVAL_MODE_SHORT: Record<string, string> = { single: "1 người", any_of: "1 trong nhiều", all_of: "Tất cả" };
-
-/** Ứng viên người duyệt: ưu tiên người có quyền canApprove trên chức năng đang cấu hình. */
 function workflowApproverCandidates(data: AppData, moduleKey: string): Row[] {
   return (data.users || [])
     .filter((u) => Number(u.active ?? 1) === 1)
@@ -2687,11 +2548,6 @@ function AdminStaffList({ data, open, query }: { data: AppData; open: (name: str
   </div>;
 }
 
-const PERM_CAPS: { key: string; label: string }[] = [
-  { key: "canView", label: "Xem" }, { key: "canUse", label: "Thao tác" },
-  { key: "canCreate", label: "Tạo" }, { key: "canEdit", label: "Sửa" },
-  { key: "canApprove", label: "Duyệt" }, { key: "canExport", label: "Xuất" },
-];
 const EMPTY_CAPS: Row = { canView: 0, canUse: 0, canCreate: 0, canEdit: 0, canApprove: 0, canExport: 0 };
 const capsCount = (row: Row) => PERM_CAPS.reduce((n, c) => n + (Number(row?.[c.key]) === 1 ? 1 : 0), 0);
 
@@ -3989,7 +3845,6 @@ function exportInventoryXlsx(rows:Row[]){downloadSimpleXlsx({sheetName:"Ton kho"
 function paymentExportRows(rows:Row[]){return rows.map(row=>[row.contractNo||row.projectCode||"",row.description||"",row.referenceNo||"",row.paymentDate||"",Number(row.amount||0),row.projectName||row.projectCode||"",row.createdByName||""]);}
 function exportPaymentsXlsx(rows:Row[]){downloadSimpleXlsx({sheetName:"Thanh toan HD",title:"SỔ THANH TOÁN HỢP ĐỒNG",headers:["Hợp đồng","Đợt thanh toán","Chứng từ","Ngày","Giá trị (VND)","Dự án","Người nhập"],rows:paymentExportRows(rows),widths:[24,40,22,16,20,30,24],freezeRows:2},`So_thanh_toan_HD_${UI_TODAY}`);}
 function exportPaymentsCsv(rows:Row[]){downloadCsv(["Hợp đồng","Đợt thanh toán","Chứng từ","Ngày","Giá trị (VND)","Dự án","Người nhập"],paymentExportRows(rows),`So_thanh_toan_HD_${UI_TODAY}`);}
-function canvasJpegBytesForDownload(dataUrl:string){const binary=atob(dataUrl.split(",")[1]||"");const out=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)out[i]=binary.charCodeAt(i);return out;}
 function downloadTabularPdf(title:string,headers:string[],rows:(string|number)[][],fileName:string){
   const pageW=1600,pageH=1130,margin=34,headY=112,headerH=54,rowH=44,footer=44;const maxRows=Math.max(1,Math.floor((pageH-headY-headerH-footer)/rowH));const pages=Math.max(1,Math.ceil(Math.max(rows.length,1)/maxRows));const canvases:HTMLCanvasElement[]=[];const escText=(v:unknown)=>String(v??"");
   for(let pi=0;pi<pages;pi++){const c=document.createElement("canvas");c.width=pageW;c.height=pageH;const ctx=c.getContext("2d");if(!ctx)continue;ctx.fillStyle="#fff";ctx.fillRect(0,0,pageW,pageH);ctx.fillStyle="#0b66f6";ctx.fillRect(0,0,pageW,12);ctx.fillStyle="#0d203e";ctx.font='700 30px "Segoe UI",Arial';ctx.textAlign="left";ctx.fillText(title,margin,55);ctx.fillStyle="#687d96";ctx.font='500 14px "Segoe UI",Arial';ctx.fillText(`VNTECH ERP · ${new Intl.DateTimeFormat("vi-VN").format(new Date())}`,margin,82);const usable=pageW-margin*2;const colW=usable/Math.max(headers.length,1);headers.forEach((h,i)=>{const x=margin+i*colW;ctx.fillStyle="#eef5ff";ctx.fillRect(x,headY,colW,headerH);ctx.strokeStyle="#cfdae8";ctx.strokeRect(x,headY,colW,headerH);ctx.fillStyle="#17365f";ctx.font='700 12px "Segoe UI",Arial';ctx.textAlign="left";ctx.fillText(escText(h).slice(0,28),x+7,headY+31);});const start=pi*maxRows;const slice=rows.slice(start,start+maxRows);slice.forEach((row,ri)=>row.forEach((v,ci)=>{const x=margin+ci*colW,y=headY+headerH+ri*rowH;ctx.fillStyle=ri%2?"#fbfdff":"#fff";ctx.fillRect(x,y,colW,rowH);ctx.strokeStyle="#dce5ef";ctx.strokeRect(x,y,colW,rowH);ctx.fillStyle="#243f5f";ctx.font='500 11px "Segoe UI",Arial';ctx.textAlign="left";ctx.fillText(escText(v).slice(0,34),x+7,y+27);}));if(!slice.length){ctx.fillStyle="#687d96";ctx.font='500 18px "Segoe UI",Arial';ctx.textAlign="center";ctx.fillText("Chưa có dữ liệu trong phạm vi đã chọn",pageW/2,pageH/2);}ctx.fillStyle="#718198";ctx.font='500 11px "Segoe UI",Arial';ctx.textAlign="right";ctx.fillText(`Trang ${pi+1}/${pages}`,pageW-margin,pageH-20);canvases.push(c);}
@@ -4002,7 +3857,6 @@ function printTabularReport(title:string,headers:string[],rows:(string|number)[]
 }
 function downloadDeliveredPdf(rows:Row[]){downloadTabularPdf("ĐƠN HÀNG ĐÃ GIAO",["PO","Dự án","Nhà cung cấp","Kho nhận","Ngày giao","BCH xác nhận","Thời điểm xác nhận","SL chấp nhận","Chứng chỉ","Giấy giao hàng"],deliveredExportRows(rows),`Don_hang_da_giao_${UI_TODAY}`);}
 function downloadPaymentsPdf(rows:Row[]){downloadTabularPdf("SỔ THANH TOÁN HỢP ĐỒNG",["Hợp đồng","Đợt thanh toán","Chứng từ","Ngày","Giá trị (VND)","Dự án","Người nhập"],paymentExportRows(rows),`So_thanh_toan_HD_${UI_TODAY}`);}
-const CODE39:Record<string,string>={"0":"nnnwwnwnn","1":"wnnwnnnnw","2":"nnwwnnnnw","3":"wnwwnnnnn","4":"nnnwwnnnw","5":"wnnwwnnnn","6":"nnwwwnnnn","7":"nnnwnnwnw","8":"wnnwnnwnn","9":"nnwwnnwnn","A":"wnnnnwnnw","B":"nnwnnwnnw","C":"wnwnnwnnn","D":"nnnnwwnnw","E":"wnnnwwnnn","F":"nnwnwwnnn","G":"nnnnnwwnw","H":"wnnnnwwnn","I":"nnwnnwwnn","J":"nnnnwwwnn","K":"wnnnnnnww","L":"nnwnnnnww","M":"wnwnnnnwn","N":"nnnnwnnww","O":"wnnnwnnwn","P":"nnwnwnnwn","Q":"nnnnnnwww","R":"wnnnnnwwn","S":"nnwnnnwwn","T":"nnnnwnwwn","U":"wwnnnnnnw","V":"nwwnnnnnw","W":"wwwnnnnnn","X":"nwnnwnnnw","Y":"wwnnwnnnn","Z":"nwwnwnnnn","-":"nwnnnnwnw",".":"wwnnnnwnn"," ":"nwwnnnwnn","*":"nwnnwnwnn"};
 function code39Svg(value:string){const text=`*${String(value||"").toUpperCase().replace(/[^0-9A-Z. \-]/g,"-")}*`;let x=0;const unit=2;let bars="";for(const ch of text){const pattern=CODE39[ch]||CODE39["-"];for(let i=0;i<pattern.length;i++){const w=(pattern[i]==="w"?3:1)*unit;if(i%2===0)bars+=`<rect x="${x}" y="0" width="${w}" height="48"/>`;x+=w;}x+=unit;}return `<svg viewBox="0 0 ${x} 62" width="260" height="62" xmlns="http://www.w3.org/2000/svg"><g fill="#111">${bars}</g><text x="${x/2}" y="60" font-family="Segoe UI,Arial" font-size="9" text-anchor="middle">${text.slice(1,-1)}</text></svg>`;}
 function printInventoryBarcodes(rows:Row[]){const sample=rows.filter(row=>row.materialCode).slice(0,80);if(!sample.length)return;const popup=window.open("","_blank","width=1000,height=800");if(!popup){window.alert("Trình duyệt đang chặn cửa sổ in.");return;}popup.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Tem mã vật tư</title><style>body{font-family:"Segoe UI",Arial;margin:12px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.label{border:1px solid #cbd5e1;padding:8px;text-align:center;break-inside:avoid}.label b{display:block;font-size:11px}.label small{display:block;height:28px;overflow:hidden}@page{size:A4;margin:8mm}</style></head><body><div class="grid">${sample.map(row=>`<div class="label"><b>${String(row.materialCode)}</b><small>${String(row.materialName||"")}</small>${code39Svg(String(row.materialCode))}</div>`).join("")}</div><script>window.onload=()=>window.print()</script></body></html>`);popup.document.close();}
 function printInventoryLedger(rows:Row[]){printTabularReport("THẺ KHO / TỒN KHO",["Mã vật tư","Tên vật tư","ĐVT","Kho","Vị trí","Dự án","Nhập","Xuất","Tồn cuối","Tồn tối thiểu"],inventoryExportRows(rows));}

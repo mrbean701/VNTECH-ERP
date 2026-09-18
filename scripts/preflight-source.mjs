@@ -88,7 +88,14 @@ requireMarkers("app/page.tsx", [
   "Chào mừng bạn quay trở lại!",
   "VNTECH_BRAND.release.uiContractId",
 ]);
-const finalPageSource = source("app/page.tsx");
+// U-11 (18/09/2026) — CÁC PHÉP KIỂM NỘI DUNG PHẢI ĐỌC **HỢP NHẤT** NGUỒN GIAO DIỆN, KHÔNG CHỈ `app/page.tsx`.
+// Lý do: roadmap `U-11` yêu cầu **tách `page.tsx` thành module**, và bước 1 (đã làm) chuyển các helper/hằng
+// dùng chung — trong đó có `defaultMenuGroups` — sang `lib/ui-shared.tsx`. Nếu cổng vẫn chỉ đọc `page.tsx`
+// thì chính nó **chặn việc tách mà roadmap yêu cầu**, dù nội dung vẫn còn nguyên trong nguồn giao diện.
+// ⚠️ Cách sửa này KHÔNG nới lỏng phép kiểm: mọi literal vẫn phải tồn tại trong nguồn giao diện; chỉ đổi
+// phạm vi ĐỌC. Tệp nào không tồn tại thì bỏ qua (tương thích ngược với bản cũ chỉ có `app/page.tsx`).
+const CLIENT_SOURCE_FILES = ["app/page.tsx", "lib/ui-shared.tsx"].filter((relative) => existsSync(join(root, relative)));
+const finalPageSource = CLIENT_SOURCE_FILES.map((relative) => source(relative)).join("\n");
 for (const marker of ["vntech-erp-ui-v4:appearance:", "theme-switch", 'value=>value==="dark"?"light":"dark"', "root.dataset.theme=appearance"]) {
   if (!finalPageSource.includes(marker)) throw new Error(`app/page.tsx thiếu giao diện Sáng/Tối hai trạng thái: ${marker}`);
 }
