@@ -143,6 +143,29 @@ Kèm probe: **đối chứng dương** (chưa duyệt ⇒ có **cảnh báo** nh
 
 **✅ NGƯỜI DÙNG ĐÃ CHỐT (18/09):** nhập kho theo **PHƯƠNG ÁN A** — **thêm một bước duyệt mới cho phiếu nhập**, **giữ `confirm_delivery`** là bước BCH xác nhận hàng về (bước duyệt mới cấu hình được trong engine động).
 
+## 9. ✅ B1 ĐÃ LÀM + ĐÃ KIỂM CHỨNG (18/09)
+* **D1 + D2 áp dụng trên CẢ 2 CSDL:** `approvals` backfill **100/100** = `material_request` · `workflow_definitions` **1 → 4** · `workflow_steps` **5 → 11** · Flyway **V17 success = 1** · SQLite cũng có 2 cột mới + 4 definitions/11 steps.
+* **JS `approvalWarnings()`** (CHỈ CẢNH BÁO — quyết định 4) đã thêm và gắn vào **3 action ghi sổ**: `issue_stock` (`stock_issue`) · `create_po` (`purchase_order`) · `receive_goods` (`goods_receipt`). Kiểm: `node --check` **EXIT 0** · eslint **0 error** · 3 dịch vụ **200**.
+  * ⚠️ **Giới hạn đã biết:** `create_po` có thể phát hành **NHIỀU PO trong một lần** (thông điệp `Đã phát hành ${poNos.length} PO…`) nhưng cảnh báo hiện chỉ tính theo **PO đầu tiên** (`poId`, gán ở dòng 1321 trước `return` ở 1323). Việc đúng: cảnh báo theo **từng PO đã tạo** — ghi vào việc kế tiếp.
+* **Còn lại của B1:** bản **Java parity** · **màn quản trị quy trình ĐỘNG** (xem §10) · **cổng `WF-05`**.
+
+## 10. 🎨 YÊU CẦU MỚI CỦA NGƯỜI DÙNG (18/09) — MÀN CẤU HÌNH WORKFLOW: CHỌN NGƯỜI DUYỆT BẰNG **TÌM KIẾM**
+
+**Vấn đề người dùng nêu:** màn cấu hình hiện **hiển thị các bước + danh sách user được chỉ định** ⇒ **modal rất dài**, khó dùng.
+
+**Yêu cầu (nguyên văn ý):**
+1. **Chuyển sang dạng TÌM KIẾM user**: admin **gõ tên user** → chọn → **thêm vào bước duyệt** (không bày toàn bộ danh sách user ra modal).
+2. **Cách xác nhận:** nếu một bước cần **nhiều người duyệt** thì **hiển thị những user ĐƯỢC CHỈ ĐỊNH DUYỆT ở DƯỚI danh sách** (danh sách đã chọn nằm dưới, kèm khả năng bỏ chọn).
+
+**Đặc tả kỹ thuật đề xuất (để làm ở mục #9 của TODO):**
+* Ô tìm kiếm: dùng **API danh sách người dùng đã có** (`data.users`/`staffDirectory` trong bootstrap — **không thêm endpoint mới nếu không cần**), lọc theo **tên/mã nhân viên/email** (chuẩn hoá bỏ dấu như các màn khác).
+* Kết quả tìm: danh sách gợi ý **giới hạn** (ví dụ 8–10 dòng) + hiển thị `Họ tên · mã NV · phòng ban · vai trò` để admin chọn đúng người.
+* **Danh sách đã chọn** hiển thị **dưới** ô tìm kiếm, mỗi người một chip/dòng có nút **bỏ**; lưu vào **`workflow_step_approvers`** (`step_id` + `user_id`) — bảng đã có sẵn (đang **0 dòng** vì đợt B1 cố ý để trống).
+* Vì **nhiều bước** ⇒ mỗi bước một khối gọn: *tên bước · vai trò yêu cầu · ô tìm user · danh sách đã chọn* — **không** render toàn bộ user.
+* **Cảnh báo (đúng chế độ CHỈ CẢNH BÁO):** nếu một bước **không có ai được chỉ định** và cũng **không khai vai trò** ⇒ hiện **cảnh báo vàng** (không chặn lưu).
+* **Không đổi CSDL** cho yêu cầu này (bảng `workflow_step_approvers` đã đủ cột) ⇒ **không cần báo cáo CSDL mới**.
+* Kiểm chứng: `tsc` · eslint · build · **màn quản trị** thêm/xoá người duyệt cho 1 bước ⇒ đọc lại từ CSDL thấy đúng · cổng `probe-column-parity` giữ ĐẠT.
+
 ## 7. RỦI RO ĐÃ NHẬN DIỆN
 
 - **`approvals` đang có 35 dòng `pending`** ⇒ mọi thay đổi phải **không** làm hỏng luồng 5 bước đang chạy (P0 phải chứng minh bằng probe "100 dòng giữ nguyên").
