@@ -708,3 +708,11 @@ ode --check **0** (§14.18) + **đã nạp vào runtime** (UI restart, 200).
 | 4 | Phiếu **nhập chờ duyệt** | **ĐÃ CÓ** (4 phiếu ch_confirmation_status='pending') ⇒ **không cần seed** |
 **File hoàn tác:** docs/agent-progress/TASK-094-d5-po-cho-duyet-rollback.sql (trả PO về waiting_delivery).
 **CƠ HỘI KIỂM CHỨNG THÊM (đáng làm ngay):** PO này đang pending_approval ⇒ có thể **kiểm chứng nhánh pprove_po** (⇒ waiting_delivery) — nhánh **CHƯA từng được kiểm E2E** (mới chỉ kiểm eject_po) ⇒ gọi pprove_po rồi **hoàn tác về pending_approval** để giữ chứng từ test.
+
+### 14.21. ✅ KIỂM CHỨNG NHÁNH pprove_po (18/09) — bịt nốt lỗ hổng bằng chứng của B2
+**Trước đây chỉ kiểm eject_po** (cổng 8/8); **nhánh pprove_po chưa từng được kiểm E2E** ⇒ nay đã kiểm trên chứng từ test D5:
+* **TRƯỚC:** pending_approval | (null) | (null) (PO PO-PRJ-DEMO-01-2026-0006).
+* **pprove_po ⇒ HTTP 200:** {"ok":true,"message":"Đã duyệt PO PO-PRJ-DEMO-01-2026-0006; chuyển sang chờ giao hàng."}.
+* **SAU:** **waiting_delivery** · **decided_by = USR_2f435847-8a39-44fe-b620-6e52186526e0** · **decided_at = 2026-09-18 17:39:44** ⇒ **đúng nghiệp vụ**: duyệt PO ⇒ **nối vào luồng giao hàng sẵn có** + ghi **ai/khi nào**.
+* **HOÀN TÁC:** trả PO về **pending_approval** (đọc lại xác nhận) ⇒ **giữ chứng từ test cho D5**.
+**⇒ B2 giờ có bằng chứng ĐỦ CẢ 2 NHÁNH quyết định:** eject_po (⇒ cancelled, PR vẫn mở, có thông báo — cổng 8/8) và pprove_po (⇒ waiting_delivery, có người/thời điểm — vòng này).
