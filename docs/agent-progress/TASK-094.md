@@ -1488,3 +1488,19 @@ probe visual EXIT=0
 **TRẠNG THÁI CHỐT VÒNG NÀY:** 	sc **0** · 
 pm test **0** · **cổng ảnh 64/64 ĐẠT** · **3 dịch vụ 200** (Java · UI · proxy) · cây **SẠCH** (commit 49da107, 51023a).
 **TIẾN ĐỘ:** **PHASE 0B 10/10 ✅** · **PHASE 8 6/6 ✅** · **PHASE 1 13/17** (U-16/U-04: **LÔ A xong**, còn **LÔ B · LÔ C**) · **tổng ≈44/110 = 40 %**.
+
+### 32. [PHASE 1 · U-16/U-04 · LÔ B] GÁC 3 NÚT TẠO/SỬA — QUY TẮC AN TOÀN MỚI (19/09)
+**Quy tắc rút ra từ lỗi LÔ A (áp dụng cho mọi lô sau):**
+> **CHỈ gác một khối/nút khi TÊN CỜ đã xuất hiện NGAY TRONG chính đoạn đó.** Nếu cờ đã được dùng ở đó thì **chắc chắn định danh tồn tại** ⇒ **không thể lỗi TS2304**. Không đoán theo "khoảng dòng".
+**Khảo sát ĐÚNG CÁCH (theo PHẠM VI HÀM, không quét chuỗi):** liệt kê const|let can* = trong từng hàm ⇒ được bản đồ thật:
+WorkCenter(canAssign,canSelf) · **MaterialListTable(canCreate,canEdit,canMerge,canRetire)** · ProjectTeams(canManage) · WarehouseIssueTeams(canCreateTeam) · SupplierManager(canDeleteSupplier) · RequestDrawer(canDecide,canManageRequestFiles,canReturnedEdit) · ReceiptDrawer(canConfirm) · SiteCommandScreen(canManage)
+**ĐÃ GÁC (3 nút — cờ có trong chính nút):**
+| Dòng | Component | Cờ | Bằng chứng cờ có trong nút |
+|---|---|---|---|
+| **1265** | WarehouseReceipt | canUse | disabled={!canUse} |
+| **1365** | MaterialListTable | canCreate | disabled={!canCreate} |
+| **1384** | MaterialListTable | canEdit | disabled={!canEdit} |
+**CỐ Ý KHÔNG GÁC (ghi rõ lý do):** Requests dòng **1183** (＋ Lập phiếu đề nghị) — **KHÔNG có cờ can* nào trong scope** ⇒ **không đoán**, để lại cho lô sau (cần truyền/tính quyền qua modulePermission).
+**Công cụ:** 	ools/u16-lo-b-gac-nut-tao-sua.mjs — với mỗi dòng chỉ định: tìm **đúng 1** <button …>…</button>; **kiểm cờ có trong chính nút**; **tự chối** nếu thấy ≠1 nút / cờ không có / đã gác; in kế hoạch trước khi ghi; kiểm **cân bằng thẻ** <PermissionGuard> sau khi ghi.
+**BẰNG CHỨNG:** git diff --stat app/page.tsx ⇒ **3 insertions(+), 3 deletions(-)** · **
+px tsc --noEmit ⇒ EXIT 0** ⇒ nay có **5 chỗ gác**: dòng **675, 700 (LÔ A)** + **1265, 1365, 1384 (LÔ B)**.
