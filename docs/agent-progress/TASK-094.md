@@ -325,3 +325,14 @@ vl(payload.get("receivedByName")) ⇒ **NULL** ⇒ vi phạm NOT NULL ⇒ **409*
   vì ersion là **chuỗi** (so sánh từ điển: "9" > "18") ⇒ **phải dùng CAST(version AS UNSIGNED)** hoặc ORDER BY installed_rank DESC LIMIT 1.
   Bằng chứng ĐÚNG cho D3 là **cột đã tồn tại** (đã đo) chứ không phải con số MAX đó.
 * **Ý nghĩa:** nay luồng **TỪ CHỐI PO** có chỗ ghi **lý do + ai quyết + khi nào**; status là varchar nên cancelled/pending_approval/pproved dùng được ngay.
+
+### 14. [PHASE 8 · B2 logic] KHẢO SÁT XONG — điểm sửa đã khoanh (18/09)
+**Java** (PurchaseManagementUseCase.createPo):
+* **dòng ~177**: … principal.userId(), eta, "waiting_delivery", groupLines, sv(mr,"projectId"), … ⇒ **ĐÂY là chỗ đặt trạng thái PO** cần đổi thành **"pending_approval"**.
+* **dòng ~189**: store.updateRequestSupplyStatus(requestId, willComplete ? "waiting_delivery" : "awaiting_po", now) ⇒ cập nhật supply_status của MR (giữ nguyên, KHÔNG phải trạng thái PO).
+* **dòng ~142**: chặn MAR chưa pproved (liên quan MAR — B4).
+**JS** (scripts/system-route.mjs): create_po bắt đầu **dòng 1304**; các mốc liên quan: 1307-1308 (kiểm MR pproved + phạm vi dự án), 1313 (MAR), 1316 (tồn khả dụng), 1321-1322 (sequence + ordered_qty), 1323 (supply_status), 1332/1334 (closed_shortage / completed_with_shortage).
+⇒ **CÒN THIẾU chính xác 1 mỏ neo cho JS:** câu INSERT INTO purchase_orders (chuỗi trạng thái PO) nằm ngoài cửa sổ 45 dòng đã quét — vòng sau grep INSERT INTO purchase_orders để lấy dòng + đổi literal sang pending_approval (parity với Java).
+**Việc còn lại của B2:** (a) đổi trạng thái khởi tạo PO ⇒ pending_approval (Java + JS parity); (b) thêm action **eject_po** (PO ⇒ cancelled + decision_reason/decided_by/decided_at + **PR KHÔNG đổi** + **thông báo cho người tạo PO** qua 	ask_notifications/email_outbox); (c) **luật giá PO** trên purchase_order_items.unit_price (canEdit sửa giá · **KHÓA sau khi PO hoàn thành** · **không ghi ngược** danh mục).
+**Bài học lặp lại (lần 4 trong phiên):** lại dùng 
+ode -e và bị PowerShell phá nháy ⇒ **luôn viết tệp .mjs**.
