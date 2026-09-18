@@ -377,7 +377,10 @@ private static final List<String> COMPLETED_PO_STATUSES = List.of(
                 isFullyDelivered ? "awaiting_bch_confirmation" : "partial_delivery", now);
         long sla = store.supplyPoSlaHours();
         store.insertBchConfirmationStep(sv(po, "requestId"), poId, receiptId, now, sla);
-        return Map.of("message", receiptNo + " đã ghi nhận giao hàng; đơn chuyển sang chờ BCH kiểm tra ảnh và xác nhận.");
+        Map<String, Object> recvOut = new java.util.LinkedHashMap<>();
+        recvOut.put("message", receiptNo + " đã ghi nhận giao hàng; đơn chuyển sang chờ BCH kiểm tra ảnh và xác nhận.");
+        recvOut.put("receiptId", receiptId);
+        return recvOut;
     }
 
     /** confirm_delivery — BCH xác nhận; posting nhập kho + contract ledger nếu QC accepted. */

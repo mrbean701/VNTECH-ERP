@@ -731,3 +731,9 @@ ode --check **0** (§14.18) + **đã nạp vào runtime** (UI restart, 200).
 out.put("warnings", requestStore.approvalWarnings("goods_receipt", String.valueOf(result.getOrDefault("<khoá id phiếu nhập>",""))));
 ⇒ cần xác định **khoá id phiếu nhập** trong esult của eceiveGoods (JS trả eceiptId) ⇒ rồi dựng lại jar + **kiểm chứng chức năng** như đã làm với issue_stock (B1).
 **Lưu ý:** confirm_delivery **giữ nguyên** (đúng phương án A: *"thêm bước duyệt mới, giữ xác nhận giao hàng"*).
+
+### 14.23. [PHASE 8 · B3] BẢN VÁ PARITY ĐÃ BIÊN DỊCH + SỐNG (18/09) — còn **bằng chứng chức năng**
+* **Build:** mvn -q -DskipTests package ⇒ **exit 0**; Java khởi động sạch (**Flyway "Successfully validated 18 migrations"**, schema v18, Tomcat :18081).
+* **Nội dung bản vá (đã đọc lại xác nhận):** PurchaseManagementUseCase dòng **380-383** trả thêm **eceiptId**; SystemController dòng **1095-1097** gắn warnings = requestStore.approvalWarnings("goods_receipt", receiptId) ⇒ **Java ngang bằng JS** (JS dòng **1449**) ⇒ **hết lệch parity**.
+* ⚠️ **CÒN THIẾU: bằng chứng CHỨC NĂNG** cho eceive_goods (cần payload nhập kho đầy đủ: PO ở trạng thái nhận được + dòng + QC/hồ sơ) ⇒ **chưa tuyên bố B3 xong**. *(Bằng chứng chức năng đã có cho đường issue_stock từ B1: HTTP 200 kèm warnings đúng văn phong "CHỈ CẢNH BÁO".)*
+* **Trạng thái B3:** engine ✔ (WF-NHAPKHO-01 active) · JS ✔ (3 đường) · Java ✔ (3 đường, vừa vá) · confirm_delivery **giữ nguyên** ✔ theo phương án A · **thiếu**: 1 lần gọi eceive_goods thật để thấy warnings.

@@ -1092,7 +1092,9 @@ case "reject_po" -> {
                 case "receive_goods" -> {
                     AuthUseCase.CurrentUser cu = requireCurrentUser(request);
                     Map<String, Object> result = purchaseManagementUseCase.receiveGoods(asPurchasePrincipal(cu), payload);
-                    return ResponseEntity.ok(jsonResult(result));
+                    Map<String, Object> recvResult = new java.util.LinkedHashMap<>(result);
+                    recvResult.put("warnings", requestStore.approvalWarnings("goods_receipt", String.valueOf(result.getOrDefault("receiptId", ""))));
+                    return ResponseEntity.ok(jsonResult(recvResult));
                 }
                 case "confirm_delivery" -> {
                     AuthUseCase.CurrentUser cu = requireCurrentUser(request);
