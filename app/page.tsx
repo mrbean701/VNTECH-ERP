@@ -21,18 +21,10 @@ import {
   ListToolbar, PermissionGuard, StatusBadge,
   type ApprovalStep,
 } from "@/app/components/ui";
-import { ADMIN_HELP_TEXT, APPROVAL_MODE_LABELS, APPROVAL_MODE_SHORT, APPROVAL_STAGE_LABELS, BOQ_SYSTEM_CODES, CODE39, DEPT_MODULE_GROUP, NAV_ICON_TONE, NAV_ICON_TYPE, PERM_CAPS, PROJECT_STATUS_LABELS, UI_NOW_MS, WORK_CLOSED, WORK_STATUS_LABELS, boqStatusLabel, canvasJpegBytesForDownload, defaultMenuGroups, durationText, format, initials, joinCodes, kpiIconName, materialCatalogTemplateRows, normalizeBoqHeader, normalizeMasterHeader, normalizePaymentDate, projectPeriod, roleNames, sanitizeUiText, taskStatusLabel, truthyCatalog } from "@/lib/ui-shared";
+import { ADMIN_HELP_TEXT, APPROVAL_MODE_LABELS, APPROVAL_MODE_SHORT, APPROVAL_STAGE_LABELS, BOQ_SYSTEM_CODES, CODE39, DEPT_MODULE_GROUP, PERM_CAPS, PROJECT_STATUS_LABELS, UI_NOW_MS, WORK_CLOSED, WORK_STATUS_LABELS, canvasJpegBytesForDownload, defaultMenuGroups, durationText, format, initials, joinCodes, materialCatalogTemplateRows, normalizeBoqHeader, normalizeMasterHeader, normalizePaymentDate, projectPeriod, roleNames, sanitizeUiText, taskStatusLabel, truthyCatalog } from "@/lib/ui-shared";
 import type { ModuleKey, Row } from "@/lib/ui-shared";
-
-type AppData = {
-  user: Row; settings: Row; productIdentity: Row; projects: Row[]; adminProjects: Row[]; teams: Row[]; warehouses: Row[]; transferWarehouses: Row[]; materials: Row[]; adminMaterials: Row[]; materialCategories: Row[]; adminMaterialCategories: Row[]; materialSubcategories: Row[]; adminMaterialSubcategories: Row[]; materialNorms: Row[]; suppliers: Row[]; adminSuppliers: Row[]; contractPayments: Row[]; productionReports: Row[]; capitalRecoveryRecords: Row[]; teamSubcontracts: Row[]; teamProductionRecords: Row[]; teamPayments: Row[]; teamSettlements: Row[];
-  requests: Row[]; inventory: Row[]; centralInventory: Row[]; centralReturns: Row[]; companyAvailability: Row[]; transferOrders: Row[]; materialAliases: Row[]; boqItems: Row[]; boqSourceItems: Row[]; boqImportBatches: Row[]; boqChangeHistory: Row[]; projectContracts: Row[]; boqVersions: Row[]; contractStockLedger: Row[]; contractStockBalances: Row[]; stockReconciliations: Row[]; purchaseOrders: Row[]; receipts: Row[]; issues: Row[]; returns: Row[]; stockCounts: Row[]; users: Row[]; staffDirectory: Row[]; userScopes: Row[]; userWarehouseScopes: Row[]; modulePermissions: Row[]; allModulePermissions: Row[]; audits: Row[]; constructionDailyLogs: Row[]; constructionDailyLogItems: Row[]; paymentPlans: Row[]; advanceRequests: Row[]; siteExpenseClaims: Row[]; bankAccounts: Row[]; cashbookEntries: Row[]; accountingVouchers: Row[]; hrRecords: Row[]; laborContracts: Row[]; officialCorrespondence: Row[]; legalDocuments: Row[]; sealManagement: Row[]; benefitRecords: Row[]; workflowDefinitions: Row[]; workflowSteps: Row[]; workflowStepApprovers: Row[]; departmentModulePermissions: Row[]; systemLevelCatalog: Row[];
-  emailSettings: Row | null; emailRecipients: Row[]; workflowAssignments: Row[]; emailOutbox: Row[]; supplySteps: Row[]; engineRoleProfiles: Row[]; businessScopes: Row[]; businessRoleGroupScopes: Row[]; businessRoleGroups: Row[]; roleCatalog: Row[]; organizationUnits: Row[]; approvalStages: Row[]; menuGroups: Row[]; moduleCatalog: Row[];
-  workItems: Row[]; workItemEvents: Row[]; taskNotifications: Row[]; teamMembers?: Row[];
-  activeSessions?: Row[]; serverInfo?: Row | null; trustStatus?: Row | null; formFieldConfigs?: FormFieldConfig[];
-  uiDisplaySettings?: Row | null;
-  projectAccessAll?: boolean;
-};
+import { CardHead, Empty, Kpi, NavIcon, date, money } from "@/lib/ui-shared";
+import type { AppData } from "@/lib/ui-shared";
 
 const VNTECH_UI_CONTRACT_ID = VNTECH_BRAND.release.uiContractId;
 const VNTECH_UI_BUILD_MARKER = VNTECH_BRAND.release.uiBuildMarker;
@@ -252,15 +244,7 @@ function moduleUserDescription(key:ModuleKey){return USER_MODULE_DESCRIPTIONS[ke
 function moduleAdminGuidance(key:ModuleKey){const raw=titles[key][1].replace(/^ĐANG PHÁT TRIỂN\s*·\s*/i,"").trim();return raw===moduleUserDescription(key).replace(/[.]$/,"").trim()?"":raw;}
 function AdminModuleGuide({moduleKey}:{moduleKey:ModuleKey}){const text=moduleAdminGuidance(moduleKey);if(!text)return null;return <details className="admin-module-guide"><summary>ⓘ Hướng dẫn quản trị</summary><p>{text}</p></details>;}
 
-const money = (value: unknown) => `${format.format(Number(value || 0))} đ`;
 const moneyBillion = (value: unknown) => `${new Intl.NumberFormat("vi-VN",{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(value||0)/1e9)} tỷ`;
-const date = (value: unknown) => {
-  if (!value) return "—";
-  const parsed = new Date(String(value));
-  if (Number.isNaN(parsed.getTime())) return String(value);
-  const hasTime = String(value).includes("T");
-  return new Intl.DateTimeFormat("vi-VN", { day:"2-digit", month:"2-digit", year:"numeric", ...(hasTime?{hour:"2-digit",minute:"2-digit",hour12:false}:{}) }).format(parsed);
-};
 function roleBase(user: Row) { return String(user.roleBase || user.role || ""); }
 function isAdminUser(user: Row) { return user.role === "admin" || roleBase(user) === "admin"; }
 function roleLabel(data: AppData, code: string) { return data.roleCatalog?.find((row) => row.code === code)?.name || roleNames[code] || code; }
@@ -442,51 +426,6 @@ function LoginScreen({ onDone }: { onDone: () => void }) {
   const [busy, setBusy] = useState(false); const [error, setError] = useState(""); const [showPassword,setShowPassword]=useState(false); const [remember,setRemember]=useState(Boolean(rememberedUsername)); const [forgotOpen,setForgotOpen]=useState(false);
   async function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); setBusy(true); setError(""); const form=new FormData(event.currentTarget); const username=String(form.get("username")||"").trim(); const password=String(form.get("password")||""); try { if(typeof window!=="undefined"){if(remember)window.localStorage.setItem("vntech-login-username",username);else window.localStorage.removeItem("vntech-login-username");} await requestApi("login", {username,password}); await onDone(); } catch (submitError) { setError(submitError instanceof Error ? submitError.message : "Không thể đăng nhập."); } finally { setBusy(false); } }
   return <div className="auth-page auth-page-full auth-full-city-login" data-contract="VNTECH_FULL_W2_LOGIN_UI"><div className="auth-enterprise-shell"><section className="auth-enterprise-intro"><img className="auth-login-master-art" src="/vntech-login-r1-left.png" alt="" aria-hidden="true"/><img className="auth-city-art auth-city-light" src="/vntech-header-city-light.webp" alt="" aria-hidden="true"/><img className="auth-city-art auth-city-dark" src="/vntech-header-city-dark.webp" alt="" aria-hidden="true"/><div className="auth-enterprise-logo"><img src={VNTECH_BRAND.logoPath} alt="VNTECH TECHNOLOGY FOR LIFE"/></div><div className="auth-mobile-company">{VNTECH_COMPANY_DISPLAY_NAME}</div><div className="auth-enterprise-copy"><h1>NỀN TẢNG QUẢN TRỊ &amp;<br/>ĐIỀU HÀNH DOANH NGHIỆP</h1><h2><b>VNTECH</b> Enterprise Resource Planning <strong>(VNTECH ERP)</strong></h2></div><div className="auth-enterprise-visual" aria-hidden="true"><span className="erp-node node-project">DỰ ÁN</span><span className="erp-node node-purchase">MUA HÀNG</span><span className="erp-node node-warehouse">KHO VẬT TƯ</span><span className="erp-node node-approval">PHÊ DUYỆT</span></div><div className="auth-enterprise-wave" aria-hidden="true"><i/><i/><i/></div></section><form className="auth-login-panel" onSubmit={submit}><div className="auth-login-lock" aria-hidden="true"><span className="auth-lock-glyph">🔒</span><img className="auth-lock-logo" src={VNTECH_BRAND.logoPath} alt=""/></div><div className="auth-login-heading"><h2>Đăng nhập hệ thống</h2><p>Chào mừng bạn quay trở lại!</p></div>{error && <div className="auth-alert danger">{error}</div>}<label><span>Tên đăng nhập</span><input name="username" required autoComplete="username" autoFocus defaultValue={rememberedUsername} placeholder="Nhập tên đăng nhập" /></label><label><span>Mật khẩu</span><div className="auth-password-field"><input name="password" required type={showPassword?"text":"password"} autoComplete="current-password" placeholder="Nhập mật khẩu" /><button type="button" onClick={()=>setShowPassword(v=>!v)} aria-label={showPassword?"Ẩn mật khẩu":"Hiện mật khẩu"}>{showPassword?"ẨN":"◉"}</button></div></label><div className="auth-login-options"><label className="auth-remember"><input type="checkbox" checked={remember} onChange={(event)=>setRemember(event.target.checked)}/><span>Ghi nhớ đăng nhập</span></label><button type="button" className="auth-forgot" onClick={()=>setForgotOpen(v=>!v)}>Quên mật khẩu?</button></div>{forgotOpen&&<div className="auth-recovery-note">Liên hệ Quản trị viên hệ thống để <b>Reset mật khẩu</b>. Sau khi đăng nhập bằng mật khẩu tạm, hệ thống sẽ bắt buộc đổi mật khẩu mới.</div>}<button className="primary wide auth-login-submit" disabled={busy}>{busy ? "ĐANG KIỂM TRA…" : "ĐĂNG NHẬP"}</button><div className="auth-support-note"><span>◉</span><div><b>Liên hệ Quản trị viên nếu cần hỗ trợ</b><small>Tài khoản được quản lý tập trung và bảo vệ theo chính sách VNTECH ERP.</small></div></div><footer><span className="auth-footer-desktop">© 2026 {VNTECH_COMPANY_DISPLAY_NAME}</span><span className="auth-footer-mobile"><b>VNTECH ERP</b><small>Bảo mật • Ổn định • Hiệu quả</small></span></footer></form></div></div>;
-}
-
-function NavIcon({name,kind="module"}:{name:string;kind?:"module"|"group"}) {
-  const key=name.toLowerCase();
-  const tone=NAV_ICON_TONE[key] || (key.startsWith("dept_project_")?"blue":key.startsWith("dept_plan_")?"green":"blue");
-  const type=NAV_ICON_TYPE[key] || "grid";
-  const paths:Record<string,ReactNode>= {
-    home:<><path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V21h13V9.5"/><path d="M9 21v-7h6v7"/></>,
-    user:<><circle cx="12" cy="8" r="3.2"/><path d="M5 21c.8-4.4 3.1-6.6 7-6.6s6.2 2.2 7 6.6"/></>,
-    users:<><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3.5 20c.5-4 2.5-6 5.5-6s5 2 5.5 6M14 15c3.5-.5 5.5 1 6.5 4"/></>,
-    briefcase:<><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5c0-1 1-2 2-2h4c1 0 2 1 2 2v2M3 12h18M10 12v2h4v-2"/></>,
-    calendar:<><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18M7 14h2M11 14h2M15 14h2M7 18h2M11 18h2"/></>,
-    tasks:<><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4.5V3h6v1.5M9 10l1.4 1.4L13 8.8M9 15l1.4 1.4L13 13.8M14.5 10h2M14.5 15h2"/></>,
-    assign:<><circle cx="8" cy="8" r="3"/><path d="M3 19c.6-3.4 2.3-5.2 5-5.2 1.5 0 2.8.5 3.7 1.4M14 7h7M18 3l4 4-4 4M14 17h7M18 13l4 4-4 4"/></>,
-    cart:<><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/><path d="M3 4h2l2.5 11h10l2-7H7"/></>,
-    truck:<><path d="M3 6h11v10H3zM14 10h4l3 3v3h-7z"/><circle cx="7" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></>,
-    document:<><path d="M6 2h9l4 4v16H6z"/><path d="M14 2v5h5M9 12h7M9 16h7"/></>,
-    clipboard:<><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4.5V3h6v1.5M8.5 10h7M8.5 14h7M8.5 18h4"/></>,
-    handshake:<><path d="M8 8 5 5 2 9l5 5 3-1 4 4c1 1 3 0 3-1l-5-5"/><path d="m16 8 3-3 3 4-5 5-3-1-2-2 4-3Z"/></>,
-    coins:<><ellipse cx="8" cy="7" rx="4" ry="2.5"/><path d="M4 7v4c0 1.4 1.8 2.5 4 2.5s4-1.1 4-2.5V7M12 11c.7-.5 1.7-.8 3-.8 2.2 0 4 1.1 4 2.5v4c0 1.4-1.8 2.5-4 2.5s-4-1.1-4-2.5v-3"/></>,
-    chart:<><path d="M4 20V10M10 20V5M16 20v-8M22 20H2"/><path d="m4 8 6-4 6 5 5-4"/></>,
-    bell:<><path d="M6 16h12l-1.5-2V9a4.5 4.5 0 0 0-9 0v5L6 16Z"/><path d="M10 19a2 2 0 0 0 4 0"/></>,
-    hardhat:<><path d="M4 15v-2a8 8 0 0 1 16 0v2M8 13V8M16 13V8M3 15h18v3H3z"/></>,
-    compass:<><circle cx="12" cy="12" r="9"/><path d="m15 8-2 5-5 2 2-5 5-2Z"/></>,
-    blueprint:<><path d="M4 3h13l3 3v15H4z"/><path d="M15 3v5h5M8 12h8M8 16h5M7 8h4"/></>,
-    measure:<><rect x="3" y="7" width="18" height="10" rx="2"/><path d="M7 7v4M11 7v2M15 7v4M19 7v2"/></>,
-    box:<><path d="m3 7 9-4 9 4-9 4zM3 7v10l9 4 9-4V7M12 11v10"/></>,
-    alert:<><path d="M12 3 2.5 20h19L12 3Z"/><path d="M12 9v5M12 17h.01"/></>,
-    checkdoc:<><path d="M6 2h9l4 4v16H6z"/><path d="M14 2v5h5M9 14l2 2 4-5"/></>,
-    wallet:<><path d="M3 6h15a2 2 0 0 1 2 2v10H5a2 2 0 0 1-2-2V6Z"/><path d="M3 8V5a2 2 0 0 1 2-2h12M14 11h7v4h-7a2 2 0 0 1 0-4Z"/></>,
-    bid:<><path d="m4 18 8-8M9 6l4 4M5 10l4 4M12 5l3-3 4 4-3 3M3 14l3-3 4 4-3 3M12 20h9"/></>,
-    quote:<><path d="M4 5h16v12H8l-4 4V5Z"/><path d="M8 9h8M8 13h5"/></>,
-    check:<><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/></>,
-    deliver:<><path d="m3 7 9-4 9 4-9 4zM3 7v10l9 4 9-4V7M12 11v10"/><path d="m16 14 1.5 1.5L21 12"/></>,
-    receive:<><path d="m3 8 9-4 9 4-9 4zM3 8v9l9 4 9-4V8M12 12v9M12 2v7M9 6l3 3 3-3"/></>,
-    issue:<><path d="m3 8 9-4 9 4-9 4zM3 8v9l9 4 9-4V8M12 12v9M12 9V2M9 5l3-3 3 3"/></>,
-    transfer:<><path d="M4 7h14M15 4l3 3-3 3M20 17H6M9 14l-3 3 3 3"/><rect x="2" y="3" width="3" height="8" rx="1"/><rect x="19" y="13" width="3" height="8" rx="1"/></>,
-    stocktake:<><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4.5V3h6v1.5M8 10h8M8 14h5M16 15l1.5 1.5L20 14"/></>,
-    ruler:<><path d="m4 17 13-13 3 3L7 20H4v-3Z"/><path d="m12 9 3 3M9 12l2 2M15 6l2 2"/></>,
-    warehouse:<><path d="M3 9 12 3l9 6v12H3V9Z"/><path d="M7 13h10v8H7zM7 16h10"/></>,
-    boxes:<><path d="m4 6 4-2 4 2-4 2-4-2Zm0 0v5l4 2 4-2V6M12 12l4-2 4 2-4 2-4-2Zm0 0v5l4 2 4-2v-5"/></>,
-    gear:<><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.4-2.4 1A7 7 0 0 0 15 6l-.3-2.6h-5.4L9 6a7 7 0 0 0-1.5 1.1l-2.4-1-2 3.4L5.1 11A7 7 0 0 0 5 12c0 .3 0 .7.1 1l-2 1.5 2 3.4 2.4-1A7 7 0 0 0 9 18l.3 2.6h5.4L15 18a7 7 0 0 0 1.5-1.1l2.4 1 2-3.4-2-1.5c.1-.3.1-.7.1-1Z"/></>,
-    grid:<><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></>
-  };
-  return <i className={`nav-glyph nav-glyph-${tone} ${kind==="group"?"nav-glyph-group":""}`} data-nav-icon={type} aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{paths[type]}</svg></i>;
 }
 
 function useResizableColumnWidths(storageKey:string) {
@@ -1240,13 +1179,6 @@ function pendingForRole(requests: Row[], user: Row, stages: Row[] = []) { return
 function statusLabel(row: Row) { const labels: Row = { pending_approval: "Chờ duyệt", approval_pending: "Chờ duyệt", approved: "Đã duyệt", awaiting_po: "Chờ lập PO", waiting_delivery: "Chờ giao hàng", partial_delivery: "Giao một phần", delivered_pending_confirmation: "Chờ BCH xác nhận", awaiting_bch_confirmation: "Chờ BCH xác nhận", received_full_docs_pending: "Đã nhận đủ · Chờ hồ sơ", completed: "Đã hoàn tất", completed_with_exceptions: "Hoàn tất · Thiếu hồ sơ", completed_with_shortage: "Đóng đơn có thiếu", returned_to_requester: "Trả lại CHT", rejected: "Từ chối", cancelled: "Đã hủy", ordered: "Đang mua", partial: "Giao một phần", received: "Đã giao đủ", posted: "Đã ghi sổ", blocked: "Bị chặn" }; return labels[row.supplyStatus] || labels[row.status] || labels[row.postingStatus] || row.supplyStatus || row.status || "—"; }
 function approvalTiming(approval?: Row) { if (!approval?.queuedAt) return { text: "Chờ cấp trước hoàn tất", minutes: 0, late: false, active: false }; const end = approval.decidedAt ? new Date(approval.decidedAt).getTime() : Date.now(); const start = new Date(approval.queuedAt).getTime(); const due = approval.dueAt ? new Date(approval.dueAt).getTime() : 0; const minutes = Math.max(0, (end - start) / 60000); const late = Boolean(due && end > due); return { text: `${approval.decidedAt ? "Đã xử lý" : "Đang chờ"} ${durationText(minutes)} · ${late ? "Quá hạn" : "Trong hạn"}`, minutes, late, active: true }; }
 function workflowTiming(step?: Row) { if (!step?.queuedAt) return { text: "Chưa bắt đầu", minutes: 0, late: false }; const end = step.completedAt ? new Date(step.completedAt).getTime() : Date.now(); const start = new Date(step.queuedAt).getTime(); const due = step.dueAt ? new Date(step.dueAt).getTime() : 0; const minutes = Math.max(0, (end - start) / 60000); const late = Boolean(due && end > due); return { text: `${step.completedAt ? "Đã xử lý" : "Đang chờ"} ${durationText(minutes)} · ${late ? "Quá hạn" : "Trong hạn"}`, minutes, late }; }
-function Kpi({ icon, label, value, note, tone = "blue", percent }: { icon: string; label: string; value: string; note: string; tone?: string; percent?: number }) {
-  const bars=[42,68,54,82,61,92,73,100];
-  const pct=percent===undefined?null:Math.max(0,Math.min(100,Number(percent||0)));
-  return <article className={`kpi kpi-${tone}`}><span className={`kpi-pictogram ${tone}`}><NavIcon name={kpiIconName(label,icon)}/></span><div className="kpi-content"><small>{label}</small><strong>{value}</strong><p>{note}</p><div className="kpi-mini-visual"><div className="kpi-mini-columns" aria-hidden="true">{bars.map((height,index)=><i key={index} style={{height:`${height}%`}}/>)}</div>{pct!==null&&<b className="kpi-percent">{pct.toLocaleString("vi-VN",{maximumFractionDigits:1})}%</b>}</div></div></article>;
-}
-function CardHead({ title, note, action, onClick }: { title: string; note?: string; action?: string; onClick?: () => void }) { return <div className="card-head"><div><h2>{title}</h2>{note && <p>{note}</p>}</div>{action && <button onClick={onClick}>{action} →</button>}</div>; }
-function Empty({ text }: { text: string }) { return <div className="empty"><span>✓</span><strong>{text}</strong><p>Dữ liệu mới sẽ xuất hiện tại đây.</p></div>; }
 function SupplyExportButtons({ doc, compact = true, stopPropagation = false }: { doc: SupplyExportDocument; compact?: boolean; stopPropagation?: boolean }) {
   const cls = compact ? "export-mini" : "secondary";
   return <span className="supply-export-buttons"><button type="button" className={cls} onClick={(event) => { if (stopPropagation) event.stopPropagation(); downloadSupplyXlsx(doc); }}>⇩ Excel</button><button type="button" className={cls} onClick={(event) => { if (stopPropagation) event.stopPropagation(); downloadSupplyPdf(doc); }}>⇩ PDF</button></span>;

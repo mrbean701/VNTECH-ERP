@@ -1,14 +1,17 @@
-// PHASE 1 (U-11) — LÁT CẮT ĐẦU TIÊN TÁCH KHỎI `app/page.tsx`.
+// PHASE 1 (U-11) — MODULE DÙNG CHUNG TÁCH KHỎI `app/page.tsx`.
 //
 // Vì sao tách: `app/page.tsx` là MỘT tệp khổng lồ (hơn 4.000 dòng, hơn 250 khai báo top-level).
-// Thứ tự cắt ĐÚNG (đã ghi ở `docs/agent-progress/U14-U11-KHAO-SAT.md` mục 2) là:
-//   bước 1 tách HELPER DÙNG CHUNG trước (gỡ chặn IMPORT VÒNG), rồi mới tách từng màn.
-// Đây chính là bước 1.
+// Thứ tự cắt ĐÚNG (đã ghi ở `docs/agent-progress/U14-U11-KHAO-SAT.md` mục 2): tách HELPER DÙNG CHUNG trước
+// (gỡ chặn IMPORT VÒNG), rồi mới tách từng màn.
 //
-// ⚠️ ĐIỀU KIỆN AN TOÀN CỦA LÁT CẮT NÀY (do `tools/tach-lat-cat-page.mjs` tự kiểm trước khi ghi):
-//   mọi thứ trong tệp này CHỈ dùng hàm/kiểu có sẵn của JS và các khai báo CÙNG nằm trong tệp này —
-//   KHÔNG có JSX, KHÔNG import gì. Nhờ vậy nó KHÔNG THỂ tạo import vòng.
-//   Muốn thêm thứ cần JSX/import vào đây thì phải thêm import tương ứng — và phải chạy lại cổng ảnh.
+// ⚠️ ĐIỀU KIỆN AN TOÀN (do `tools/tach-lat-cat-page.mjs` tự kiểm TRƯỚC KHI GHI): mọi tên mà các khối ở đây
+// tham chiếu phải thuộc (a) khối cùng nằm trong tệp này, (b) tên có sẵn của JS, (c) tên đến từ `import` của
+// `page.tsx` — công cụ SINH LẠI import đó ở đây, hoặc (d) kiểu của React ⇒ `import type … from "react"`.
+// Không còn tên nào khác ⇒ KHÔNG thể tạo import vòng.
+
+import type { FormFieldConfig } from "@/lib/form-fields";
+import { ReactNode } from "react";
+
 // Dynamic rows are normalized by the server API and intentionally remain flexible here.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Row = Record<string, any>;
@@ -189,40 +192,124 @@ const PERM_CAPS: { key: string; label: string }[] = [
 function canvasJpegBytesForDownload(dataUrl:string){const binary=atob(dataUrl.split(",")[1]||"");const out=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)out[i]=binary.charCodeAt(i);return out;}
 
 const CODE39:Record<string,string>={"0":"nnnwwnwnn","1":"wnnwnnnnw","2":"nnwwnnnnw","3":"wnwwnnnnn","4":"nnnwwnnnw","5":"wnnwwnnnn","6":"nnwwwnnnn","7":"nnnwnnwnw","8":"wnnwnnwnn","9":"nnwwnnwnn","A":"wnnnnwnnw","B":"nnwnnwnnw","C":"wnwnnwnnn","D":"nnnnwwnnw","E":"wnnnwwnnn","F":"nnwnwwnnn","G":"nnnnnwwnw","H":"wnnnnwwnn","I":"nnwnnwwnn","J":"nnnnwwwnn","K":"wnnnnnnww","L":"nnwnnnnww","M":"wnwnnnnwn","N":"nnnnwnnww","O":"wnnnwnnwn","P":"nnwnwnnwn","Q":"nnnnnnwww","R":"wnnnnnwwn","S":"nnwnnnwwn","T":"nnnnwnwwn","U":"wwnnnnnnw","V":"nwwnnnnnw","W":"wwwnnnnnn","X":"nwnnwnnnw","Y":"wwnnwnnnn","Z":"nwwnwnnnn","-":"nwnnnnwnw",".":"wwnnnnwnn"," ":"nwwnnnwnn","*":"nwnnwnwnn"};
+
+type AppData = {
+  user: Row; settings: Row; productIdentity: Row; projects: Row[]; adminProjects: Row[]; teams: Row[]; warehouses: Row[]; transferWarehouses: Row[]; materials: Row[]; adminMaterials: Row[]; materialCategories: Row[]; adminMaterialCategories: Row[]; materialSubcategories: Row[]; adminMaterialSubcategories: Row[]; materialNorms: Row[]; suppliers: Row[]; adminSuppliers: Row[]; contractPayments: Row[]; productionReports: Row[]; capitalRecoveryRecords: Row[]; teamSubcontracts: Row[]; teamProductionRecords: Row[]; teamPayments: Row[]; teamSettlements: Row[];
+  requests: Row[]; inventory: Row[]; centralInventory: Row[]; centralReturns: Row[]; companyAvailability: Row[]; transferOrders: Row[]; materialAliases: Row[]; boqItems: Row[]; boqSourceItems: Row[]; boqImportBatches: Row[]; boqChangeHistory: Row[]; projectContracts: Row[]; boqVersions: Row[]; contractStockLedger: Row[]; contractStockBalances: Row[]; stockReconciliations: Row[]; purchaseOrders: Row[]; receipts: Row[]; issues: Row[]; returns: Row[]; stockCounts: Row[]; users: Row[]; staffDirectory: Row[]; userScopes: Row[]; userWarehouseScopes: Row[]; modulePermissions: Row[]; allModulePermissions: Row[]; audits: Row[]; constructionDailyLogs: Row[]; constructionDailyLogItems: Row[]; paymentPlans: Row[]; advanceRequests: Row[]; siteExpenseClaims: Row[]; bankAccounts: Row[]; cashbookEntries: Row[]; accountingVouchers: Row[]; hrRecords: Row[]; laborContracts: Row[]; officialCorrespondence: Row[]; legalDocuments: Row[]; sealManagement: Row[]; benefitRecords: Row[]; workflowDefinitions: Row[]; workflowSteps: Row[]; workflowStepApprovers: Row[]; departmentModulePermissions: Row[]; systemLevelCatalog: Row[];
+  emailSettings: Row | null; emailRecipients: Row[]; workflowAssignments: Row[]; emailOutbox: Row[]; supplySteps: Row[]; engineRoleProfiles: Row[]; businessScopes: Row[]; businessRoleGroupScopes: Row[]; businessRoleGroups: Row[]; roleCatalog: Row[]; organizationUnits: Row[]; approvalStages: Row[]; menuGroups: Row[]; moduleCatalog: Row[];
+  workItems: Row[]; workItemEvents: Row[]; taskNotifications: Row[]; teamMembers?: Row[];
+  activeSessions?: Row[]; serverInfo?: Row | null; trustStatus?: Row | null; formFieldConfigs?: FormFieldConfig[];
+  uiDisplaySettings?: Row | null;
+  projectAccessAll?: boolean;
+};
+
+
+const money = (value: unknown) => `${format.format(Number(value || 0))} đ`;
+
+const date = (value: unknown) => {
+  if (!value) return "—";
+  const parsed = new Date(String(value));
+  if (Number.isNaN(parsed.getTime())) return String(value);
+  const hasTime = String(value).includes("T");
+  return new Intl.DateTimeFormat("vi-VN", { day:"2-digit", month:"2-digit", year:"numeric", ...(hasTime?{hour:"2-digit",minute:"2-digit",hour12:false}:{}) }).format(parsed);
+};
+
+function CardHead({ title, note, action, onClick }: { title: string; note?: string; action?: string; onClick?: () => void }) { return <div className="card-head"><div><h2>{title}</h2>{note && <p>{note}</p>}</div>{action && <button onClick={onClick}>{action} →</button>}</div>; }
+
+function Empty({ text }: { text: string }) { return <div className="empty"><span>✓</span><strong>{text}</strong><p>Dữ liệu mới sẽ xuất hiện tại đây.</p></div>; }
+
+function NavIcon({name,kind="module"}:{name:string;kind?:"module"|"group"}) {
+  const key=name.toLowerCase();
+  const tone=NAV_ICON_TONE[key] || (key.startsWith("dept_project_")?"blue":key.startsWith("dept_plan_")?"green":"blue");
+  const type=NAV_ICON_TYPE[key] || "grid";
+  const paths:Record<string,ReactNode>= {
+    home:<><path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V21h13V9.5"/><path d="M9 21v-7h6v7"/></>,
+    user:<><circle cx="12" cy="8" r="3.2"/><path d="M5 21c.8-4.4 3.1-6.6 7-6.6s6.2 2.2 7 6.6"/></>,
+    users:<><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3.5 20c.5-4 2.5-6 5.5-6s5 2 5.5 6M14 15c3.5-.5 5.5 1 6.5 4"/></>,
+    briefcase:<><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5c0-1 1-2 2-2h4c1 0 2 1 2 2v2M3 12h18M10 12v2h4v-2"/></>,
+    calendar:<><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18M7 14h2M11 14h2M15 14h2M7 18h2M11 18h2"/></>,
+    tasks:<><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4.5V3h6v1.5M9 10l1.4 1.4L13 8.8M9 15l1.4 1.4L13 13.8M14.5 10h2M14.5 15h2"/></>,
+    assign:<><circle cx="8" cy="8" r="3"/><path d="M3 19c.6-3.4 2.3-5.2 5-5.2 1.5 0 2.8.5 3.7 1.4M14 7h7M18 3l4 4-4 4M14 17h7M18 13l4 4-4 4"/></>,
+    cart:<><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/><path d="M3 4h2l2.5 11h10l2-7H7"/></>,
+    truck:<><path d="M3 6h11v10H3zM14 10h4l3 3v3h-7z"/><circle cx="7" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></>,
+    document:<><path d="M6 2h9l4 4v16H6z"/><path d="M14 2v5h5M9 12h7M9 16h7"/></>,
+    clipboard:<><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4.5V3h6v1.5M8.5 10h7M8.5 14h7M8.5 18h4"/></>,
+    handshake:<><path d="M8 8 5 5 2 9l5 5 3-1 4 4c1 1 3 0 3-1l-5-5"/><path d="m16 8 3-3 3 4-5 5-3-1-2-2 4-3Z"/></>,
+    coins:<><ellipse cx="8" cy="7" rx="4" ry="2.5"/><path d="M4 7v4c0 1.4 1.8 2.5 4 2.5s4-1.1 4-2.5V7M12 11c.7-.5 1.7-.8 3-.8 2.2 0 4 1.1 4 2.5v4c0 1.4-1.8 2.5-4 2.5s-4-1.1-4-2.5v-3"/></>,
+    chart:<><path d="M4 20V10M10 20V5M16 20v-8M22 20H2"/><path d="m4 8 6-4 6 5 5-4"/></>,
+    bell:<><path d="M6 16h12l-1.5-2V9a4.5 4.5 0 0 0-9 0v5L6 16Z"/><path d="M10 19a2 2 0 0 0 4 0"/></>,
+    hardhat:<><path d="M4 15v-2a8 8 0 0 1 16 0v2M8 13V8M16 13V8M3 15h18v3H3z"/></>,
+    compass:<><circle cx="12" cy="12" r="9"/><path d="m15 8-2 5-5 2 2-5 5-2Z"/></>,
+    blueprint:<><path d="M4 3h13l3 3v15H4z"/><path d="M15 3v5h5M8 12h8M8 16h5M7 8h4"/></>,
+    measure:<><rect x="3" y="7" width="18" height="10" rx="2"/><path d="M7 7v4M11 7v2M15 7v4M19 7v2"/></>,
+    box:<><path d="m3 7 9-4 9 4-9 4zM3 7v10l9 4 9-4V7M12 11v10"/></>,
+    alert:<><path d="M12 3 2.5 20h19L12 3Z"/><path d="M12 9v5M12 17h.01"/></>,
+    checkdoc:<><path d="M6 2h9l4 4v16H6z"/><path d="M14 2v5h5M9 14l2 2 4-5"/></>,
+    wallet:<><path d="M3 6h15a2 2 0 0 1 2 2v10H5a2 2 0 0 1-2-2V6Z"/><path d="M3 8V5a2 2 0 0 1 2-2h12M14 11h7v4h-7a2 2 0 0 1 0-4Z"/></>,
+    bid:<><path d="m4 18 8-8M9 6l4 4M5 10l4 4M12 5l3-3 4 4-3 3M3 14l3-3 4 4-3 3M12 20h9"/></>,
+    quote:<><path d="M4 5h16v12H8l-4 4V5Z"/><path d="M8 9h8M8 13h5"/></>,
+    check:<><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/></>,
+    deliver:<><path d="m3 7 9-4 9 4-9 4zM3 7v10l9 4 9-4V7M12 11v10"/><path d="m16 14 1.5 1.5L21 12"/></>,
+    receive:<><path d="m3 8 9-4 9 4-9 4zM3 8v9l9 4 9-4V8M12 12v9M12 2v7M9 6l3 3 3-3"/></>,
+    issue:<><path d="m3 8 9-4 9 4-9 4zM3 8v9l9 4 9-4V8M12 12v9M12 9V2M9 5l3-3 3 3"/></>,
+    transfer:<><path d="M4 7h14M15 4l3 3-3 3M20 17H6M9 14l-3 3 3 3"/><rect x="2" y="3" width="3" height="8" rx="1"/><rect x="19" y="13" width="3" height="8" rx="1"/></>,
+    stocktake:<><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4.5V3h6v1.5M8 10h8M8 14h5M16 15l1.5 1.5L20 14"/></>,
+    ruler:<><path d="m4 17 13-13 3 3L7 20H4v-3Z"/><path d="m12 9 3 3M9 12l2 2M15 6l2 2"/></>,
+    warehouse:<><path d="M3 9 12 3l9 6v12H3V9Z"/><path d="M7 13h10v8H7zM7 16h10"/></>,
+    boxes:<><path d="m4 6 4-2 4 2-4 2-4-2Zm0 0v5l4 2 4-2V6M12 12l4-2 4 2-4 2-4-2Zm0 0v5l4 2 4-2v-5"/></>,
+    gear:<><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.4-2.4 1A7 7 0 0 0 15 6l-.3-2.6h-5.4L9 6a7 7 0 0 0-1.5 1.1l-2.4-1-2 3.4L5.1 11A7 7 0 0 0 5 12c0 .3 0 .7.1 1l-2 1.5 2 3.4 2.4-1A7 7 0 0 0 9 18l.3 2.6h5.4L15 18a7 7 0 0 0 1.5-1.1l2.4 1 2-3.4-2-1.5c.1-.3.1-.7.1-1Z"/></>,
+    grid:<><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></>
+  };
+  return <i className={`nav-glyph nav-glyph-${tone} ${kind==="group"?"nav-glyph-group":""}`} data-nav-icon={type} aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{paths[type]}</svg></i>;
+}
+
+
+function Kpi({ icon, label, value, note, tone = "blue", percent }: { icon: string; label: string; value: string; note: string; tone?: string; percent?: number }) {
+  const bars=[42,68,54,82,61,92,73,100];
+  const pct=percent===undefined?null:Math.max(0,Math.min(100,Number(percent||0)));
+  return <article className={`kpi kpi-${tone}`}><span className={`kpi-pictogram ${tone}`}><NavIcon name={kpiIconName(label,icon)}/></span><div className="kpi-content"><small>{label}</small><strong>{value}</strong><p>{note}</p><div className="kpi-mini-visual"><div className="kpi-mini-columns" aria-hidden="true">{bars.map((height,index)=><i key={index} style={{height:`${height}%`}}/>)}</div>{pct!==null&&<b className="kpi-percent">{pct.toLocaleString("vi-VN",{maximumFractionDigits:1})}%</b>}</div></div></article>;
+}
 export {
-  UI_NOW_MS,
-  defaultMenuGroups,
-  roleNames,
-  format,
-  projectPeriod,
-  NAV_ICON_TYPE,
-  NAV_ICON_TONE,
-  DEPT_MODULE_GROUP,
-  taskStatusLabel,
-  WORK_STATUS_LABELS,
-  WORK_CLOSED,
-  PROJECT_STATUS_LABELS,
-  initials,
-  durationText,
-  kpiIconName,
-  APPROVAL_STAGE_LABELS,
-  sanitizeUiText,
-  normalizeMasterHeader,
-  truthyCatalog,
-  materialCatalogTemplateRows,
-  normalizeBoqHeader,
-  BOQ_SYSTEM_CODES,
-  boqStatusLabel,
-  normalizePaymentDate,
   ADMIN_HELP_TEXT,
-  joinCodes,
   APPROVAL_MODE_LABELS,
   APPROVAL_MODE_SHORT,
-  PERM_CAPS,
-  canvasJpegBytesForDownload,
+  APPROVAL_STAGE_LABELS,
+  BOQ_SYSTEM_CODES,
   CODE39,
+  CardHead,
+  DEPT_MODULE_GROUP,
+  Empty,
+  Kpi,
+  NAV_ICON_TONE,
+  NAV_ICON_TYPE,
+  NavIcon,
+  PERM_CAPS,
+  PROJECT_STATUS_LABELS,
+  UI_NOW_MS,
+  WORK_CLOSED,
+  WORK_STATUS_LABELS,
+  boqStatusLabel,
+  canvasJpegBytesForDownload,
+  date,
+  defaultMenuGroups,
+  durationText,
+  format,
+  initials,
+  joinCodes,
+  kpiIconName,
+  materialCatalogTemplateRows,
+  money,
+  normalizeBoqHeader,
+  normalizeMasterHeader,
+  normalizePaymentDate,
+  projectPeriod,
+  roleNames,
+  sanitizeUiText,
+  taskStatusLabel,
+  truthyCatalog,
 };
 export type {
-  Row,
+  AppData,
   ModuleKey,
+  Row,
 };
