@@ -468,3 +468,14 @@ case "close_po_line" -> {
 * Tôi viết 	ools/do-phase-0b.mjs đọc TT bằng c[c.length-1] **KHÔNG LỌC ô rỗng** ⇒ luôn lấy ô **cuối rỗng** ⇒ **báo sai 0/10** (trong khi thực tế 9/10).
 * **Bộ đọc ĐÚNG:** các dòng lộ trình có **11 ô khi tách theo |** — **TT là ô[10]** (| ID | Module | Việc | Ưu tiên | Phụ thuộc | DB | API | UI | QUYỀN | TT |).
 * **Đã xoá** công cụ sai để không dùng lại; các con số phase khác (PHASE 1 = 12/17, PHASE 8 = 3/6, tổng 39/110) đọc bằng bộ lọc **last-non-empty** nên **vẫn đúng** — nhưng **từ nay dùng ô[10] là chuẩn**.
+
+### 16. [PHASE 0B · S-05] KHOANH VÙNG XONG — endpoint /api/files (18/09)
+**Đã xác định:**
+* **Java:** FileController.java — **@RequestMapping("/api/files") (dòng 40)**, ghi rõ trong chú thích: *"endpoint **ngoài** /api/system"* ⇒ **KHÔNG đi qua ActionRbacRegistry** (đúng như mô tả của S-05).
+* **Node:** pp/api/files/route.ts (SSOT — scripts/master-baseline-gate.mjs chốt *"/api/files chỉ có một SSOT"*, cấm scripts/files-route.mjs).
+* **Hợp đồng hiện có (ghi trong chú thích Java):** POST multipart → 201 · GET ?entityType=&entityId= → danh sách · GET ?id= → nhị phân · DELETE ?id= → ok · **GET ?projectArchive= → ZIP (*chỉ admin*)**.
+* **Đã tiêm sẵn AuthUseCase authUseCase** trong FileController ⇒ **có sẵn phương tiện để kiểm quyền**, chưa rõ đã dùng cho những method nào.
+**VIỆC KẾ TIẾP (chính xác):**
+1. Đọc **4 method** trong FileController + pp/api/files/route.ts ⇒ **đối chiếu xem method nào THIẾU kiểm quyền** (POST/GET ?id=/DELETE — nguy cơ cao nhất: tải/xoá tệp của thực thể KHÔNG thuộc phạm vi người dùng).
+2. Thêm **kiểm quyền theo phạm vi thực thể** (canAccessProject/canAccessWarehouse theo entityType+entityId) — **parity Java + Node**.
+3. Cổng kiểm chứng: gọi /api/files **không có phiên** ⇒ **401**; tài khoản **ngoài phạm vi** ⇒ **403**; tài khoản **trong phạm vi** ⇒ **200** (3 ca, có đối chứng dương).
