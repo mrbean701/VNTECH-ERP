@@ -316,3 +316,12 @@ vl(payload.get("receivedByName")) ⇒ **NULL** ⇒ vi phạm NOT NULL ⇒ **409*
 * ⚠️ **ĐÍNH CHÍNH giả thuyết cũ của tôi:** trước đó tôi nghi *"kho nguồn chưa có tồn"* — **SAI**; hệ thống **cho phép** xuất dù tồn 0 (không có trigger/FK chặn) ⇒ ghi nhận để không lặp lại suy đoán.
 
 **Dữ liệu test đã sinh (đúng yêu cầu "nạp sẵn dữ liệu để test"):** phiếu xuất **PX-PRJ-DEMO-01-2026-0012** / ISS_8ea44725…, 1 dòng (vật tư MAT_c3ff35ff…), đã ghi stock_issue_items + stock_movements + contract_stock_ledger ⇒ **chính là 1 trong 4 chứng từ test của D5**.
+
+### 13. [PHASE 8 · B2/D3] ĐÃ ÁP DỤNG + KIỂM CHỨNG (18/09)
+* **MySQL (Flyway V18)**: purchase_orders có **decision_reason · decided_by · decided_at** ✔
+* **SQLite (drizzle 0144)**: đúng **3 cột** đó ✔ ⇒ **parity 2 chuỗi**.
+* Dịch vụ: Java :18081 **200** · UI :8787 **200** · proxy :9000 **200**.
+* ⚠️ **Bài học đo lường nhỏ (ghi để không mắc lại):** khi kiểm Flyway bằng MAX(version), MySQL trả **"9"** chứ không phải 18
+  vì ersion là **chuỗi** (so sánh từ điển: "9" > "18") ⇒ **phải dùng CAST(version AS UNSIGNED)** hoặc ORDER BY installed_rank DESC LIMIT 1.
+  Bằng chứng ĐÚNG cho D3 là **cột đã tồn tại** (đã đo) chứ không phải con số MAX đó.
+* **Ý nghĩa:** nay luồng **TỪ CHỐI PO** có chỗ ghi **lý do + ai quyết + khi nào**; status là varchar nên cancelled/pending_approval/pproved dùng được ngay.
