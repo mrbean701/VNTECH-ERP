@@ -985,3 +985,17 @@ GRN-PRJ-DEMO-01-2026-0004 | confirmed | 2026-02-09 08:30:00
 * **DỰNG LẠI theo quy ước dự án (KHÔNG phải giá trị gốc):** eceipt_no = …-0003/…-0004 · các cột qc_status='accepted'/document_status='complete'/posting_status='posted'/certificate_status='complete'/delivery_document_status='complete' (nhất quán với phiếu **đã xác nhận**: app **bắt buộc** hồ sơ đầy đủ trước khi xác nhận).
 **FILE HOÀN TÁC:** docs/agent-progress/TASK-094-phuc-hoi-2-phieu-nhap-rollback.sql — xoá **đúng 2 ID** (theo ID cụ thể, KHÔNG dùng khoá ngoại — đúng bài học đã trả giá).
 **KỲ VỌNG KIỂM CHỨNG CHÉO:** nếu lệch  6-warehouse trong cổng ảnh là **do dữ liệu** (giả thuyết 2) thì **sau phục hồi, màn đó phải trở về 0 px** ⇒ chạy lại cổng ảnh để **xác nhận**.
+
+### 17.1. 🎯 KIỂM CHỨNG CHÉO ĐÃ XÁC NHẬN —  6-warehouse VỀ   px sau khi phục hồi (18/09)
+**Chạy lại cổng ảnh SAU phục hồi dữ liệu:**
+`
+01-dashboard · 02-project · 03-work · 04-team · 05-material  → ✅ 0 px (0.0000%) cả 4 kích thước
+06-warehouse — Kho Tổng                                      → ✅ 0 px (0.0000%) CẢ 4 KÍCH THƯỚC   ← TRƯỚC ĐÓ lệch 1,9% (desktop)
+07-admin · 08-requests · 09-dept-assign-kh · 10-dept-assign-da · 11-modal-request → ✅ 0 px cả 4 kích thước
+12-drawer-request-detail — Phiếu đề nghị — drawer chi tiết   → ❌ desktop 65,8957% · laptop 64,3624% · tablet 50,1607% · phone 51,5931%
+`
+**⇒ XÁC NHẬN 2 ĐIỀU (đây là giá trị của việc KHÔNG cập nhật baseline vội):**
+1. **Lệch  6-warehouse là DO DỮ LIỆU** (không phải regression mã) — sau khi phục hồi 2 phiếu nhập, màn **tự về 0 px** ✔
+2. **Bản phục hồi là ĐÚNG và ĐỦ** để đưa giao diện về baseline ⇒ **bằng chứng độc lập** cho chất lượng phục hồi (mạnh hơn việc chỉ đếm số dòng) ✔
+**⇒ HÀNH ĐỘNG TIẾP:** chỉ cần **cập nhật baseline ảnh cho ĐÚNG màn 12-drawer-request-detail** (thay đổi **có chủ đích** của U-14: vỏ drawer ⇒ modal). **Không** đụng baseline các màn khác (đang khớp 0 px).
+**BÀI HỌC ĐÃ CHỨNG MINH:** *"Không cập nhật baseline để che lỗi"* là quyết định ĐÚNG — nhờ vậy mà (a) phân biệt được regression mã vs thay đổi dữ liệu, (b) **kiểm chứng chéo** được chất lượng phục hồi.
