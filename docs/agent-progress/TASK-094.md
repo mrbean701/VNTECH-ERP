@@ -1402,3 +1402,29 @@ WF-03 DONE / XOA-COT-DEAD-V19         WF-06 DONE / SAN-SANG-MO-RONG
 `
 **NGOÀI LỘ TRÌNH:** toàn bộ **nhánh B của PHASE 8 đã xong** (B1 · B2 · B3 · B4 · D5).
 **⇒ TIẾP THEO:** chuyển sang **PHASE 1 — còn 4 mục**: **U-16 + U-04** (PermissionGuard ~50 chỗ — giá trị thật lớn nhất) · **U-11 bước 4** (tách WorkCenter/Requests/BoqControl) · **U-12.2/12.3** (dọn !important/override có bằng chứng).
+
+## 29. [PHASE 1 · U-16 + U-04] KHẢO SÁT PermissionGuard — RỦI RO/GIÁ TRỊ & KẾ HOẠCH CHIA LÔ (18/09)
+**Hiện trạng đo được:**
+* **PermissionGuard** tại pp/components/ui/PermissionGuard.tsx — API: llow / ny={[]} / ll={[]} / allback + helper hasPermission(). Tính 	ruthy chấp nhận 	rue | 1 | "1" | "true".
+* **Chính header của component ghi rõ (quan trọng):** *"component này **CHỈ ẩn/hiện giao diện**. Nó **KHÔNG phải là lớp bảo vệ**. Backend PHẢI kiểm quyền độc lập — và từ **PHASE 0B**, SystemController đã gọi **equireActionModule cho MỌI action**."*
+  ⇒ **Ẩn nút chỉ để UI không mời bấm việc không được làm**; **bảo mật thật đã có ở PHASE 0B** ✔
+* **SỐ LẦN DÙNG THẬT: 1 chỗ** (EntityDetailModal.tsx:152, bên trong UI kit). pp/page.tsx:21 **import nhưng KHÔNG dùng lần nào** ⇒ đúng mô tả U-04 *"khung xong, áp dụng 0"*.
+* **Cờ quyền sẵn có trong pp/page.tsx:** canUse ×15 · canExport ×13 · canEdit ×9 · canCreate ×9 · canView ×6 · canApprove ×6 · canCreateTeam ×1 · canUseActive ×1.
+* **Quy mô chỗ cần gác:** **190 dòng** có <button hoặc onClick — trong đó ~50 là **nút hành động có cờ quyền rõ**.
+**⚠️ PHÂN TÍCH RỦI RO / GIÁ TRỊ (lý do KHÔNG gói bừa 50 chỗ một lượt):**
+| | |
+|---|---|
+| **Rủi ro** | pp/page.tsx là **3.400 dòng đã minify**, nhiều **dòng dài >9.000 ký tự** ⇒ chèn <PermissionGuard> quanh 50 nút riêng lẻ = **rủi ro phá JSX rất cao** (đúng loại lỗi đã gặp ở U-14) |
+| **Giá trị bảo mật** | **BẰNG 0** — guard là UI-only; backend đã gác từ PHASE 0B (equireActionModule cho mọi action) |
+| **Giá trị UX** | **Có thật**: người dùng không thấy nút họ không được bấm ⇒ giảm bấm-rồi-bị-từ-chối |
+| **Khả năng kiểm chứng** | Cổng ảnh chạy bằng **admin** (đủ mọi quyền) ⇒ nếu guard ĐÚNG thì **ảnh phải KHÔNG đổi (64/64)**; **ảnh đổi = guard SAI (ẩn nhầm thứ admin phải thấy)** ⇒ đây là **lưới an toàn tốt** |
+**⇒ KẾ HOẠCH CHIA LÔ (an toàn, kiểm được, làm tăng dần):**
+* **Lô A (ưu tiên, rủi ro thấp — gác ở MỨC KHỐI, không phải từng nút):** gác các **thanh hành động cấp màn** — ví dụ <div className="screen-actions approved-progress-actions"> (page.tsx **1005**) và các screen-actions/ow-actions khác ⇒ **1 lần chèn bao cả khối** thay vì 5–10 nút riêng lẻ ⇒ **giảm mạnh số điểm chèn**.
+* **Lô B:** các nút **Tạo mới / Sửa** ở đầu mỗi màn (gác canCreate / canEdit).
+* **Lô C:** các nút **Duyệt / Trả lại / Từ chối** (gác canApprove) và **Xuất** (gác canExport).
+* **Công cụ áp dụng:** theo mẫu đã chứng minh — **đếm thẻ/ngoặc**, **mặc định chạy khô**, **tự chối ghi nếu không cân**, in **cấu trúc trước/sau**.
+* **Cổng mỗi lô:** 
+px tsc --noEmit **0** + **cổng ảnh 64/64 (admin — phải KHÔNG đổi)** + 
+pm test **0**.
+* **DoD của U-16/U-04:** các **khối hành động chính** đã được gác + **ghi danh sách chỗ còn lại** (nếu cố ý không gác) kèm lý do; **cập nhật lộ trình**.
+**BÀI HỌC ĐÃ RÚT RA:** với tệp **minify + dòng siêu dài**, ưu tiên **gác ở mức KHỐI** (số điểm chèn ít, dễ kiểm) hơn là **gói từng nút** (nhiều điểm chèn, dễ phá JSX).
