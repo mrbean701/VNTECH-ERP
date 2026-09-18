@@ -11,6 +11,7 @@
 //
 //   node tools/chuyen-drawer-sang-edm.mjs [--apply]
 import { readFileSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
 
 const PAGE = "app/page.tsx";
 const APPLY = process.argv.includes("--apply");
@@ -175,7 +176,22 @@ for (const gone of ["drawer-body", "request-drawer", "page-mode", "overlay"]) {
 }
 if (!newJsx.includes("request.requestNo")) failures.push("[bất biến] mất `request.requestNo` ⇒ DỪNG");
 
-// ── 7. In kế hoạch ───────────────────────────────────────────────────────────────────────
+// ── 7. In kế hoạch ─────────────────────────────────────────────────────────────────────── (bài học đã trả giá: bất biến ĐẾM là chưa đủ)
+// Lượt `--apply` đầu tiên ĐÃ GHI một JSX **LỆCH CÂN** (fragment/thẻ) mà mọi bất biến đếm đều qua;
+// `tsc` mới là thứ bắt được (`TS1109/TS1005/TS2657`). Nay công cụ **tự parse bản JSX mới** trước khi ghi:
+// nếu `typescript` báo bất kỳ lỗi cú pháp nào ⇒ **TỪ CHỐI GHI** và in chẩn đoán.
+try {
+  const ts = createRequire(import.meta.url)("typescript");
+  const draft = lines.slice(); draft[jsxLineIdx] = newJsx;
+  const sf = ts.createSourceFile(PAGE, draft.join("\n"), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const diags = (sf.parseDiagnostics || []).map((d) => `TS${d.code}@${d.start}: ${ts.flattenDiagnosticMessageText(d.messageText, " ")}`);
+  if (diags.length) {
+    failures.push(`[tự kiểm PARSE] JSX mới có ${diags.length} lỗi cú pháp ⇒ TỪ CHỐI GHI. Đầu tiên: ${diags.slice(0, 4).join(" · ")}`);
+    notes.push("⚠️ Đây chính là lớp lỗi đã lọt qua bất biến ĐẾM ở lượt --apply đầu (đã hoàn tác bằng git checkout).");
+  } else notes.push("tự kiểm PARSE: JSX mới HỢP LỆ (0 lỗi cú pháp)");
+} catch (e) { failures.push(`[tự kiểm PARSE] không chạy được typescript: ${String(e.message).slice(0, 80)}`); }
+
+
 console.log(`\n=== KẾ HOẠCH CHUYỂN (dòng ${jsxLineIdx + 1}) ===`);
 for (const n of notes) console.log("  • " + n);
 console.log(`  • tiêu đề (nguyên văn): ${JSON.stringify(titleText)} · subtitle: {${subMatch[1].replace(/^\{|\}$/g, "")}} · entityId: {request.requestNo}`);

@@ -102,6 +102,47 @@ Kèm probe: **đối chứng dương** (chưa duyệt ⇒ có **cảnh báo** nh
 ### 6.5. Cập nhật thứ tự thi hành (sau khi chốt)
 **P0** khung + engine động (+ màn quản trị sửa quy trình) → **P1** PO (+ luồng từ chối PO ở §6.2) → **P2** cấp phát/xuất → **P3** nhập kho (theo A/B) → **P4** chuẩn hoá 3 action duyệt rời rạc → **P5** MAR. **Chế độ CẢNH BÁO** ở mọi bước; **seed test data** ở §6.3 nạp cùng P1–P3.
 
+## 8. 📌 ĐỐI CHIẾU MASTER TASK + BÁO CÁO THAY ĐỔI CSDL/BACKEND (gửi TRƯỚC khi thực hiện — theo yêu cầu người dùng 18/09)
+
+### 8.1. Việc này là **mục nào** trong MASTER TASK? → **PHASE 8 — WORKFLOW** (`docs/25_TODO_ROADMAP.md`, 110 mục)
+
+| Mục | Nội dung | Ưu tiên | Phụ thuộc | TT hiện tại | Việc này tác động |
+|---|---|---|---|---|---|
+| **`WF-04`** | **Hợp nhất 2 hệ (`workflow_*` và `approval_stage_catalog`)** hoặc ghi rõ hệ nào là chính | P3 *(cờ MODEL)* | WF-02 | **TODO** | ⭐ **ĐÂY LÀ MỤC CỐT LÕI** — "workflow ĐỘNG" của người dùng chính là WF-04 |
+| **`WF-02`** | **Snapshot danh sách người được chỉ định** vào phiếu (bịt rủi ro §20.3) | **P1** | — | **TODO** | ⭐ Bắt buộc để "đổi quy trình mà phiếu đang chờ không bị đổi luồng" |
+| **`WF-05`** | **Kiểm thử: đổi workflow khi có phiếu đang chờ ⇒ phiếu cũ GIỮ NGUYÊN luồng** | **P1** | WF-02 | **TODO** | ⭐ Chính là **cổng kiểm chứng** của thiết kế động |
+| `WF-03` | Dùng cột `workflow_definitions.version` hoặc xoá nếu không dùng | P3 | WF-02 | TODO | Dùng `version` để phân biệt bản quy trình |
+| `WF-01` | Đổi tên tab thành **Workflow** | P3 | — | TODO | Màn quản trị sửa quy trình |
+| `WF-06` | Chuẩn bị mở rộng: nghỉ phép · tăng ca · chấm công bù · form tương lai | P4 | WF-04 | TODO | Ngoài phạm vi đợt này |
+| `S-08` | Snapshot **danh sách người được chỉ định**, không đọc live | **P1** | — | TODO | ⭐ Cùng bản chất WF-02 (làm chung) |
+| `T-10` | Tách **Approval Center** thành module độc lập (§12) | P2 | U-06 | TODO | Hộp duyệt dùng chung (P0 của em chạm tới) |
+
+**⇒ Đợt này = `WF-04` + `WF-02` + `WF-05` (+`S-08` cùng bản chất) + mở rộng ra 3 module mới** — tức **PHASE 8 chuyển từ `0/6` sang có tiến độ**, kèm 3 module nghiệp vụ mới có duyệt.
+
+### 8.2. ⚠️ THAY ĐỔI CSDL CẦN ANH BIẾT TRƯỚC (parity **cả 2 chuỗi**: drizzle/SQLite + Flyway/MySQL)
+
+| # | Thay đổi | Vì sao cần | Rủi ro / cách giảm |
+|---|---|---|---|
+| D1 | `approvals`: thêm **`entity_type`** + **`entity_id`**, cho `request_id` **nullable**, **backfill** `entity_type='material_request'`, `entity_id=request_id` | Để **một bảng duyệt dùng cho MỌI loại chứng từ** (PO · xuất · nhập) thay vì chỉ phiếu đề nghị | Giữ nguyên `request_id` + backfill ⇒ **100 dòng duyệt hiện có không đổi hành vi**; probe phải chứng minh "phiếu cũ giữ nguyên luồng" (WF-05) |
+| D2 | Seed **`workflow_definitions` + `workflow_steps` + `workflow_step_approvers`** cho 3 `module_key`: `purchasing` · `warehouse_issue` · `warehouse_receipt` | Engine ĐỘNG cần định nghĩa cho từng module | Chỉ **thêm dòng**; không xoá/không sửa định nghĩa `requests` đang chạy |
+| D3 | `purchase_orders`: cần trạng thái `pending_approval`/`approved`/**`cancelled`** + **lý do/người quyết/thời điểm** (kiểm cột hiện có trước khi thêm) | Luồng **từ chối PO** (§6.2): PO bị hủy, PR vẫn mở, thông báo người tạo | Thêm cột **nullable**, backfill `approved` cho PO cũ ⇒ không đổi dữ liệu đang chạy |
+| D4 | Phiếu **xuất kho** / **nhập kho**: thêm trường trạng thái duyệt (hoặc dùng bảng instance D1) | Để cảnh báo + theo dõi duyệt cho 2 luồng này | **Chỉ cảnh báo** ⇒ không chặn nghiệp vụ hiện tại |
+| D5 | **Seed dữ liệu test** (4 chứng từ mẫu ở §6.3) + thông báo mẫu trong `task_notifications`/`email_outbox` | Người dùng yêu cầu *"nạp sẵn dữ liệu để test"* | Có probe **dọn sạch/khôi phục đúng số dòng**; ghi rõ mã mẫu để dễ nhận biết |
+
+**KHÔNG cần thay đổi:** `approval_stage_catalog` (giữ nguyên 5 bước của phiếu đề nghị) · mọi bảng nghiệp vụ khác · **không có ngưỡng tiền** (đã bỏ theo quyết định 2).
+
+### 8.3. Thay đổi BACKEND (Java **và** JS parity)
+1. Hàm dùng chung **`approvalWarnings(entityType, entityId)`** — **CHỈ trả cảnh báo, KHÔNG ném lỗi** (quyết định 4).
+2. Gắn cảnh báo vào **`create_po` · `issue_stock` · `receive_goods`** (3 action "ghi sổ").
+3. Action **`decide_approval`** mở rộng nhận `entity_type`/`entity_id`; nhánh **PO bị từ chối** ⇒ `cancelled` + **thông báo người tạo PO** + **PR không đổi** (§6.2).
+4. API + màn **quản trị quy trình** (đọc/ghi definitions/steps/approvers) — chính là "động".
+5. Parity: **làm ở cả `BootstrapDataAdapter`/use-case Java và `scripts/system-route.mjs`**, kèm cổng `probe-column-parity` (đã có) để không lệch cột.
+
+### 8.4. Thứ tự thực hiện đề xuất (sau khi anh xác nhận báo cáo này)
+**B1** = D1 + D2 + WF-02/WF-05 (engine động + snapshot + probe "đổi quy trình không đổi luồng phiếu cũ") → **B2** = D3 + P1 PO (+ luồng từ chối PO) → **B3** = D4 + P2/P3 (cấp phát/xuất + nhập kho **theo phương án A**: thêm bước duyệt mới, giữ `confirm_delivery`) → **B4** = P4/P5 + D5 seed dữ liệu test.
+
+**✅ NGƯỜI DÙNG ĐÃ CHỐT (18/09):** nhập kho theo **PHƯƠNG ÁN A** — **thêm một bước duyệt mới cho phiếu nhập**, **giữ `confirm_delivery`** là bước BCH xác nhận hàng về (bước duyệt mới cấu hình được trong engine động).
+
 ## 7. RỦI RO ĐÃ NHẬN DIỆN
 
 - **`approvals` đang có 35 dòng `pending`** ⇒ mọi thay đổi phải **không** làm hỏng luồng 5 bước đang chạy (P0 phải chứng minh bằng probe "100 dòng giữ nguyên").
