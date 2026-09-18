@@ -1381,3 +1381,24 @@ verify:fingerprint => HỎNG (do sửa java-backend/**) ⇒ làm mới định d
 `
 **LỘ TRÌNH:** WF-03 → **DONE / XOA-COT-DEAD-V19** ⇒ **PHASE 8 = 5/6** (còn **WF-06**).
 **BÀI HỌC:** mvn repackage **KHÔNG chạy được khi app đang chạy** (khoá jar) ⇒ quy trình đúng: **tìm PID theo cổng → xác nhận cmdline → dừng → build → khởi động lại → kiểm bằng số** (không đoán).
+
+### 28. 🎉 ✅ PHASE 8 ĐÓNG TRỌN — **6/6 DONE** (18/09)
+**WF-06 — mục cuối của PHASE 8 — HOÀN THÀNH:** hồ sơ **docs/agent-progress/WF-06-SAN-SANG-MO-RONG.md**.
+**Kết luận cốt lõi (đo được):** **engine phê duyệt ĐÃ đủ tổng quát** để nhận loại phiếu mới (nghỉ phép · tăng ca · chấm công bù) **mà KHÔNG cần sửa mã engine** — chỉ cần:
+1. **1 dòng** workflow_definitions (định danh qua **module_key**) · 2. **N dòng** workflow_steps · 3. **module chủ + form** (phần **CHƯA CÓ** — việc của phase sau).
+**Bằng chứng engine tổng quát:** 4 module khác nhau (equests · purchasing · warehouse_issue · warehouse_receipt) **dùng CÙNG engine**; pproval_stage_catalog có **12 cột** đủ cho mọi biến thể duyệt (stage_no · **llowed_role_codes** · **sla_hours** · **uto_approve_on_submit** · **pproval_mode single/any_of/all_of**); liên kết bước chỉ bằng **workflow_steps.workflow_id** ⇒ engine **không biết** "phiếu mua hàng" là gì, chỉ biết **quy trình + bước + vai trò**.
+**Đã ghi rõ CÒN THIẾU (6 việc)** khi mở rộng thật: module chủ HR (+bảng) · module_key · quy trình + bước · form/màn duyệt · quyền · test.
+**Vì sao KHÔNG dựng form HR ngay:** mục là **P4 "chuẩn bị"**; dựng form khi **chưa chốt nghiệp vụ** (ai duyệt/mấy cấp/SLA/đồng thời hay tuần tự/có trừ phép không) sẽ **vi phạm nguyên tắc "KHÔNG tự suy đoán nghiệp vụ"** ⇒ hồ sơ đã liệt kê **5 câu hỏi cần chốt** + điều kiện mở lại.
+**BẰNG CHỨNG ĐÓNG MỤC:** 
+pm test ⇒ **EXIT 0** · **KHÔNG thay đổi mã/dữ liệu nào** (engine nguyên trạng) ⇒ rủi ro bằng 0.
+**ĐO LẠI LỘ TRÌNH (áp dụng đúng bài học mới):**
+* Mỏ neo ^\|\s*WF-06` khớp **ĐÚNG 1 dòng** (đã kiểm **trước** khi sửa — bài học từ lỗi vừa rồi) · dòng có **12 ô** ⇒ đặt TT ở [10] ✔
+* Kết quả: **WF: 6 mục · DONE 6/6** · **tổng ID = 110** (không mất id nào) · **dòng rác = 0** · git diff = **CHỈ dòng WF-06** ✔
+`
+WF-01 DONE / DOI-TEN-TAB-WORKFLOW     WF-04 DONE / GHI-RO-HE-CHINH
+WF-02 DONE / AP-DUNG 100              WF-05 DONE
+WF-03 DONE / XOA-COT-DEAD-V19         WF-06 DONE / SAN-SANG-MO-RONG
+⇒ PHASE 8 = 6/6
+`
+**NGOÀI LỘ TRÌNH:** toàn bộ **nhánh B của PHASE 8 đã xong** (B1 · B2 · B3 · B4 · D5).
+**⇒ TIẾP THEO:** chuyển sang **PHASE 1 — còn 4 mục**: **U-16 + U-04** (PermissionGuard ~50 chỗ — giá trị thật lớn nhất) · **U-11 bước 4** (tách WorkCenter/Requests/BoqControl) · **U-12.2/12.3** (dọn !important/override có bằng chứng).
