@@ -20,9 +20,15 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const PAGE = join(root, "app", "page.tsx");
-// `@/*` trỏ về GỐC dự án (`tsconfig.json`: `"@/*": ["./*"]`) ⇒ phải ghi vào `lib/` ở GỐC (không phải `app/lib/`).
-const OUT = join(root, "lib", "ui-shared.tsx");
-const TARGET = "lib/ui-shared.tsx";
+// `@/*` trỏ về GỐC dự án (`tsconfig.json`: `"@/*": ["./*"]`) ⇒ ghi vào `lib/` ở GỐC (không phải `app/lib/`).
+// `--out=<đường dẫn tương đối>` cho phép tách MÀN ra tệp riêng (bước 3 của U-11), ví dụ:
+//   node tools/tach-lat-cat-page.mjs --move=SealScreen --out=app/screens/SealScreen.tsx
+const OUT_ARG = (process.argv.find((a) => a.startsWith("--out=")) || "").slice(6);
+const OUT = OUT_ARG ? join(root, OUT_ARG.replace(/[\\/]/g, "/")) : join(root, "lib", "ui-shared.tsx");
+const TARGET = OUT_ARG ? OUT_ARG.replace(/\\/g, "/") : "lib/ui-shared.tsx";
+// Câu import chèn ngược vào `page.tsx` trỏ tới tệp mới (mặc định suy ra từ `--out`).
+const BACK_SPEC = (process.argv.find((a) => a.startsWith("--back=")) || "").slice(7)
+  || (OUT_ARG ? "@/" + OUT_ARG.replace(/\\/g, "/").replace(/\.tsx?$/, "") : "@/lib/ui-shared");
 const DRY = process.argv.includes("--dry");
 const MOVE_ARG = (process.argv.find((a) => a.startsWith("--move=")) || "").slice(7);
 
@@ -182,8 +188,8 @@ if (lastImport < 0) throw new Error("Không tìm thấy câu import nào hoàn c
 const typeNames = moving.filter((d) => d.kind === "type" || d.kind === "interface").map((d) => d.name).sort();
 const valueNames = moving.filter((d) => d.kind !== "type" && d.kind !== "interface").map((d) => d.name).sort();
 const backImports = [];
-if (valueNames.length) backImports.push(`import { ${valueNames.join(", ")} } from "@/lib/ui-shared";`);
-if (typeNames.length) backImports.push(`import type { ${typeNames.join(", ")} } from "@/lib/ui-shared";`);
+if (valueNames.length) backImports.push(`import { ${valueNames.join(", ")} } from "${BACK_SPEC}";`);
+if (typeNames.length) backImports.push(`import type { ${typeNames.join(", ")} } from "${BACK_SPEC}";`);
 kept.splice(lastImport + 1, 0, ...backImports);
 
 const header = [
