@@ -5615,12 +5615,14 @@ c5f996678311b5ebede35fcd817581223ed860046cdcc2cd9a8dd356baf29433  ./.dsh-vision-
 35c3b36a23e8c9b7a37388b815a86453124b322ada2e01f76268c66671d0b2df  ./.dsh-vision-toolkit/artifacts/u08-admin/report.json
 09bcf44e878462c598f38bcb85b4944810a42bc8add2c7e80d06a8a899f88115  ./.dsh-vision-toolkit/artifacts/u08-warehouse/heatmap.png
 daf241f23a4040823c77f49c38f9d3e69f8949910b6e4d91ad1a21c21edf03b9  ./.dsh-vision-toolkit/artifacts/u08-warehouse/report.json
+221dd6182f54da56e60f1c2621ae7a8a1af31724a60c428b76c9c8540e78d689  ./.dsh-vision-toolkit/artifacts/uv-window.png
+221dd6182f54da56e60f1c2621ae7a8a1af31724a60c428b76c9c8540e78d689  ./.dsh-vision-toolkit/tmp/pasted-images/715b3faa0aed5a7ae3b8/attachment-b2956efdda7cc21028e1499a3797820a.png
 3c3df54995719784621163efe23acfc0ec4d4a3d132f42337495e817c62f0990  ./.env.example
 c7bafa2b25bf9fbfa8f27f0beeaf7ba782e77ac82d57a52054fa6d45456f6bc6  ./.gitignore
 be5993e97c75a38c59fb4532c0897e5e60f43627b10ff9c8a044971e3e7ffa1f  ./.memsearch/memory/2026-09-15.md
 7447d5850f8fa0c0084a391939b00817b42ad0c447a6b5099d8c8103e60a287b  ./.memsearch/memory/2026-09-16.md
 1c797548e98c69cf2d4c54b0bad6c47b81330d726cdffce7c050fcfd384ba024  ./.memsearch/memory/2026-09-17.md
-aa7d763cb61801222b758a27d6ccf729ee04740d770983f815e9855fdc5126d6  ./.memsearch/memory/2026-09-18.md
+29967c7d478db0972ba7851534c04d83d953ebcaa35282232b3ab13f09c6a1be  ./.memsearch/memory/2026-09-18.md
 494e64a8818b6158e89321250500ad5ad018e33ad5cfea06a1cacd2cf4da75fa  ./.npmrc
 0c8112872080635eb712d0b77bac53c68d73ed519cc32063ce8f82652c833255  ./.openai/hosting.json
 7c240586c6a4e7885776068d1fad3620de018b8a720af0aa3389c9ffc5bad0d1  ./00_CAI_MOI_SERVER_WINDOWS.bat
@@ -5637,7 +5639,7 @@ b7e1924845eaba99b2831c531441fe86657022a836a2b2abc6efd2d75c7ba9a1  ./app/componen
 4982e08747f99e82eaebfe6f34c3e4e2093e97d1c5a6e2b9a7a80ce79b7dd1fe  ./app/components/ui/PermissionGuard.tsx
 e8d2750cb330daf75bf7158d0bffad36683599ba80469e6b744c3da38755bc2b  ./app/components/ui/StatusBadge.tsx
 c11d6d87919b3b6a3e55a6b22c83ebe3a2fe557a51a6986f94122093a35a2401  ./app/components/ui/Timeline.tsx
-ab847018e3c50ee2a7f27e721b53a7df9656a54d393b66a3ac06b1059e8fb539  ./app/globals.css
+0a0672a2419bed08f1b66a1ab97e166e88ab9ededb0dd05f9b6cfca3a8ca49e4  ./app/globals.css
 728272ec719506f737c1d9d9072931abbc7277fc9391e35029be88e2f594a553  ./app/layout.tsx
 1c0ac11cdb07caf99fc841b1b06b876076abffe78b0674ab9e0587549c9759b9  ./app/page.tsx
 d15d1d47e7d143d27f4abd6c9ebbcfc9ba7ffb960fe7247c0d8579e01a4fc3f5  ./app/screens/BenefitsScreen.tsx
@@ -5656,7 +5658,7 @@ f1198c6eee6c8034b0aec9b10935439eca95367f33d14b30be49772817e84036  ./app/screens/
 047a01cfc7928ae7f24e992666a0deb534cff7a1df37500a6e3d7fca140895da  ./app/screens/SealScreen.tsx
 f36515948773fe123a01d8530aebb95ba7449007d964ef0ec78ce627c4dda818  ./app/screens/SiteCostScreen.tsx
 3e511c843fce53a27bc3425165b6625373cec733ec8a9b465b49cc710f4912ec  ./app/screens/TeamManagement.tsx
-6ec6249d539a510eeaf4f1b753ecbeca20192e7e4ad5b443a001d3c0e62133d6  ./app/styles/canonical.css
+67485665c4b23ba414d868d7d9ac0fe567e148d58c08d7fb68a05fe87a196de9  ./app/styles/canonical.css
 e9fdea16090b6c9c93ccec893bd68370527f7e06796012aea63025b3c0ea0382  ./app/styles/font-floor.css
 fff2e154d3c551c293fd59b9bf8c2cc7e80de38533ff221a16ce6d427a4afb8d  ./app/styles/tokens.css
 81b7cbfaeb970611572256aba0e313425beb3809f6426f63750696c15d9c756b  ./build/sites-vite-plugin.ts
@@ -5669,6 +5671,8 @@ d9cc9b90ccf70442a5b2d6448feb238dab2b836319de790483da329e571828dd  ./deploy/compo
 fd6fef7f4365a5ebbcb0f3fa676e4c97bf36f75637995326250dc9fe8a34da97  ./deploy/docker-compose.yml
 88fa56788fecac1b110f250b49590d5c4c0d728b611889e84aa0abd3b933a15f  ./deploy/docker-entrypoint.sh
 aca4764532dc45a0a711220c4b6632be0b90186cae1e4c1ac32754cd061a5467  ./Dockerfile
+c201111058e916c451d1655b6febe449156752264ac342ce90af70907323c882  ./doublecheck-report.md
+fedd1744c521e0c2828f002f539f5660b20526702148de96c4b187ff0011ae0d  ./doublecheck-spec.md
 af081f7384aaeb0082cf422e29f139d137ca2f6a57c69b2c37b9fb1f8479867b  ./drizzle.config.ts
 1207738690a3c0a0cf15a312d5febae63bb4725db9301253db632ea0d46bb247  ./drizzle/0000_sour_gamma_corps.sql
 a4c2cb73c9ad28cde49cb08c2eb0ef368fcc6821b1e71faa06e63f93fe8045e2  ./drizzle/0001_soft_roxanne_simpson.sql
@@ -5816,6 +5820,7 @@ c0c39446810311ed0ed9e76c49635c7d0357a2643041b0c45e22312c1c1b0fab  ./drizzle/0141
 80b23479af332af6e6ed738f65a14c767992172c8415a78b8d067a91421977b9  ./drizzle/0143_wf_ui_approver_search_identity.sql
 0ca36dfb501b8a4f72e8f3cfc95727dec2c1081a33cf3eb5cc70fbba4ef41c8d  ./drizzle/0144_wf_b2_po_decision.sql
 da66e252fa0d905402abfc4df982ab9fd3a1c2f13ecadcbafea5a2ea4132a5d7  ./drizzle/0145_u14_drawer_to_modal_identity.sql
+0bf91f80583cee567b23edcd333c5170d305448443eddb00fb8a43455b215c8e  ./drizzle/0146_u12_don_css_request_drawer.sql
 870f1adccecf3051cbcd9fd307cef51d7633cf510979c181a81f4b1797273493  ./eslint.config.mjs
 7f47c57e035d4bb3f3fd449b795dfa51b7db8f0720ae6457a3a37868e07e3178  ./java-backend/.gitignore
 4d4bf7821823e4011771702449065544347784ecf4cbde265125a36c0d8e31b0  ./java-backend/.idea/.gitignore
@@ -6304,7 +6309,7 @@ a650e892769428cb727534390ba6544c213f128bf1d993407da6ee4ecac60c3a  ./lib/trust/in
 6647a2069fe00ed99916c7847a1de10cca12088ce62cf3d185f1dc6f29679495  ./lib/trust/source-fingerprint.mjs
 12e7dbdf6e9b48698c565c4a83904b230b101ac4120ad36d2b220c386909fcad  ./lib/ui-shared.tsx
 de95cd69830545dce32ba5e3d2a05fd7f16656849ee95ef9856f187e5d83d662  ./lib/vntech-brand.ts
-cfe1a95150152d31748392cdd5e3a0c486a6cead48e1fe3d8106c2ae1e656060  ./lib/vntech-identity-data.mjs
+781ed15fedb7fa18bd3f746817583cf44058a6076b2a5894b0efe9bfc2d41a84  ./lib/vntech-identity-data.mjs
 cd24eebc4022ebf74ffae54cf0851131a1cff84bb016241cc966c01947d90123  ./MASTER_BASELINE_CLEANUP_DIFF.txt
 2623000ac3b162675c9e4e68d364ef1af3f2761ba64c3f050f6250245afca1b4  ./MASTER_BASELINE_CLEANUP_REPORT.md
 cb6a409cc283707a072acc211fbe159b48828d3cffbeaf894b9afd6e0320df8c  ./MASTER_BASELINE_CLEANUP_VALIDATION.md
@@ -6364,7 +6369,7 @@ e5537eb5d04945a3c5e44d21b56bd720f265469d1280c3ed9b2ea4495f7c41b8  ./scripts/pref
 fca50f98328a33794d04aa8b7ea9d84632c151d6ac238adf2543fa4750751ac6  ./scripts/release-static-gate.mjs
 a2f567f91d9bdb084d8910358dd8253b13fbe342f9bbc2b4097ce4737163771b  ./scripts/server-self-test.mjs
 df86ebfc27d2f00860036658e933ac0ddd7b5f6879aa5d51218f0863c7e1fb60  ./scripts/sites-env.sh
-6f82c1885f68ce4b273cba35ff218070121c3029953354095c085ee7bfe47fbe  ./scripts/system-route.mjs
+5daff2423f7917c3daf4e257b9bc891dea0e98de0c99c2bbd2adf2c0baaed806  ./scripts/system-route.mjs
 2f0f2dba7068e03cbd46a0f935f138fe109417a22d331fea1b58eea26a6dbda2  ./scripts/template-preflight.mjs
 4d218d86989fa90a5ffeb96420601cf7290712da4bd65a906138161bc9a9ae66  ./scripts/trust-startup.mjs
 7e7993fe78e94ec36743fb8cfea60d99471b173edf4fcf65f1103231b9403d70  ./scripts/universal-installer.mjs
@@ -6391,7 +6396,7 @@ ab31cc487c38d98053285f6734ad561d2915b1804970290f783c50c566d064ef  ./tests/runtim
 833f39a74f8fb350b6da99b4f4f2f0e5bed25fa743e9320825c57e2ec74bbff2  ./tests/security-regression.test.mjs
 fd59176304be9766f7e91d85e672fe22719b59a81ca9a3e07d9d8cb93659b484  ./tests/trust-lock-foundation.test.mjs
 e39e486f11d48540226cb905e03c0bc1f26084113e8fa62513b1b725cba29916  ./tests/w2-admin-import-role-org.test.mjs
-32691c1aa533b7d2f337fb5160b040246f9e50801eca25dcd06f2573f05ab944  ./tests/workflow-direct.test.ts
+95f965ec0f92201cd8ecdd4ec2541a0417752247208839f2a914b8665f25e4bf  ./tests/workflow-direct.test.ts
 4a15cedb602b02f0d084c4392d682d25dcbc91c93dae558f4c1acba032c0ef2f  ./tools/_b1-tiem-requeststore.mjs
 76ac9244d5e2b8deca99a7bceda35de8545d6e0e481da9dc3bdcd74d04cf5235  ./tools/_b1-va-java-canhbao.mjs
 517228accb9ba518c40441d94f19bbf99ac77bfb219811d96a126af847370014  ./tools/_b2-handler-insert.txt
@@ -6408,6 +6413,7 @@ ab9916b38ffde8e2cbe96858d884476e9fe66483a184a4c1f853b4150df89b7a  ./tools/_backu
 1e993840768c0a41ed28b979146fbe8d422dd65962229cfbb8c847cbcefdb5e6  ./tools/_diff/crop-2.png
 135ff1d367f5a32aeaacb269411abfae6963e868adf1fa1f96de1ddbc5a192fd  ./tools/_live-schema.tsv
 ed70291bd3869c921fb96ecf47a1dfbfa13eb9a194231cced97296cf2b2489cd  ./tools/_old-adapter-positive-control.java.txt
+815cd43c9a0ef3b028d2f7a696a614d0ace5f8f74f2dcadfc14a16eae3f61ea6  ./tools/_phuc-hoi-kiem-sqlite.mjs
 7c5dce933bd077518f9a6f4bc5258009b46b59e12609c76c963c9cbdd89dd777  ./tools/_q1-chen-pham-vi.mjs
 ff7555ebdc065b82b7493e0efcfc5256e5236a963509e1546da705fa6c50bf00  ./tools/_q3-boc-payload-nhap-vat-tu.mjs
 7a01f8fbec0d6e1be23e2ba46bd4b7a397b2b06a3246b53f2b92972aad3472bb  ./tools/_q3-tim-nguyen-nhan-409.mjs
@@ -6415,6 +6421,7 @@ ff7555ebdc065b82b7493e0efcfc5256e5236a963509e1546da705fa6c50bf00  ./tools/_q3-bo
 118100e9cd027daf37169d7a5a4cdee1230542de28ea11f4443c3a19cbaa6366  ./tools/_q4-do-truoc.mjs
 ef86da42812d6b6c98b9f5e9761c43b9c796982c39ab39c6ccf0947112dfa882  ./tools/_q5-ap-dung-thuky.mjs
 3f5c87fafe8194567486eacda94f154b0f06e4718a6bbf9d3c860c44e163a6eb  ./tools/_q5-khao-sat-thuky.mjs
+433cebc73d1c15b57086b11955d100dd8b96ad47fc8c2804de1319d9a018602b  ./tools/_u12-don-css-request-drawer.mjs
 32f2a2a7bbb82985d8150a5b005c5b0d8ec1fae83c9b1056a99b044ca1479445  ./tools/_u14-them-stack.mjs
 0e30a91b10bc5de9be967455b741af76b9ae2d95909b210b9bae5ca6e61d1a43  ./tools/_u14-tim-offset.mjs
 a41c46af54dcaba2aabb50bb7158706bf2dfeef663ad51bffc06d843dc88cbbc  ./tools/_u14-trich-header-footer.mjs
@@ -6485,10 +6492,10 @@ f4b7c105c642246b9a06f05c3e70941e63840a25f25289edc94246fef4afab54  ./tools/baseli
 595cbe2a4675a53057803f0ef7d4324d09898e871be0c3001ce9297e057ef7c9  ./tools/baseline/11-modal-request__laptop.png
 c04c88a4f5c364951a9d8a74681f9c4d155799f1591f1ee1f4d674071a9c664e  ./tools/baseline/11-modal-request__phone.png
 1f45d7384304a1310bb7556cc7e4e63e4f8103214d3a0480928462e056158f99  ./tools/baseline/11-modal-request__tablet.png
-f5aa7e61cbffb66396be1f2b753019c243886f8e114a52878ff0063a35667560  ./tools/baseline/12-drawer-request-detail__desktop.png
-4250e5291861e3accc8863edf975d44ec8f87b3d151b800e87b3b071122fc21b  ./tools/baseline/12-drawer-request-detail__laptop.png
-bad9428dbe37a1545ffb0b4999a26f28ec3c26a703d6f8082132d58e64c11f19  ./tools/baseline/12-drawer-request-detail__phone.png
-a3dcfad6f2716b4887c15ff6f28a4a07357e4ec398190d9c6ce50f058ee95104  ./tools/baseline/12-drawer-request-detail__tablet.png
+e4d9dc4a1939aa0626882bacf7abfd590d66a71f8a8efd5fb65f0d0c70715ac7  ./tools/baseline/12-drawer-request-detail__desktop.png
+a4d90d3f8695098f99feb80b922977ea9500b1a07ea5c23acfbec677a504e58b  ./tools/baseline/12-drawer-request-detail__laptop.png
+a027cbcc4ffa91befa587dcd0b5ada7d533021c5bfa625c417fd7952b0d80d43  ./tools/baseline/12-drawer-request-detail__phone.png
+1eef28a2bc8b3f88f24e2f9bb00626ba338fd690e76f0336a8802bc6b578ab77  ./tools/baseline/12-drawer-request-detail__tablet.png
 5ddabfc287a60664ea7f14534ad2752038a225dfc7c112b903476a51f1924fd9  ./tools/baseline/13-modal-material__desktop.png
 52dfcff787b80ef15ecab633ccd21b412c2b548895e7b26b76a914b8d507b0df  ./tools/baseline/13-modal-material__laptop.png
 52d8189ad631ffbbcdb2a8baa93c1302ee266626dbc586f07f245530a722cffb  ./tools/baseline/13-modal-material__phone.png
@@ -6663,7 +6670,7 @@ af924177ff1c39b12d110ab535108e0dbeb0173ca8c6b1b60042b55de99ed30a  ./tools/probe-
 1ff178186c294efb03d307d2449fdb8e333c4ba86cc171650f6e56668e806411  ./tools/probe-ui-data.mjs
 391bf721766504df25c74f0b27755a6b0c2bf12d0338cfef2479659d8044aebb  ./tools/probe-user-profile.mjs
 374d135a24419564b34aabf4e5cad1c095940ced3d7df7d7c07f0072ce4c5dfa  ./tools/probe-visual-regression.mjs
-805da22f7ba59140781482756687087027afa2308c67baac3007be16ca77ec24  ./tools/probe-wf02-snapshot-nguoi-chi-dinh.mjs
+68fddd715907e61138f64b538e871041d89b225b8a906ee56664a5d84ed7ee95  ./tools/probe-wf02-snapshot-nguoi-chi-dinh.mjs
 ec623198a1b68ce354ddea9b30e119766fdd11159bf775c44efaed7165105be4  ./tools/probe-wf04-hop-nhat-2-he.mjs
 9d4aba5794bd625fa84148587621e73f19646996d924d4d9628299a7a8ebc30f  ./tools/probe-wf05-doi-quy-trinh.mjs
 d835bb2944bd76013194b789bf44ddcb0d7f1a7c798fb44a44cd63ed3eec7559  ./tools/probe-work-center.mjs
@@ -6700,6 +6707,7 @@ ba04748853889cff750be56df583d5a2051edb7a62df1fb646d97f461c6c162d  ./tools/task08
 be89365c8102ff6cf201804cb416884f15bdceca6b4c5d331d632ed0c9f9d6a8  ./tools/task080e-fix-boq-source-link.sql
 623e195405bba20e200fb664ec1f1381260a6f158b6ea2afdcdb7ebdfcf22b8e  ./tools/task081-rebuild-parents.mjs
 c87be5cba60e26dee240823f05e9df886e24f4e223a654819469a70322da6ed9  ./tools/u14b-doi-vo-modal.mjs
+d733c4c40d7d31d5b00008cc98cb69564e61815be4e8c9fc9b8f1894722170dc  ./tools/uv-lay-id-password.ps1
 dc7c6a97813096959c54588c193aee135d05f309a12a52a47095da6b2e11cb69  ./tools/verify-java-compile.ps1
 d0ebd44bbc0abeafaefdfac74a712faa4873825315a6c70e25cb87c2f926b6c7  ./tools/verify-seed-v3.mjs
 43ef6dae40b1dffd644cfe75946675711713c628aa67c3638e7f843137d2355b  ./tools/vntech-license-generator/generate-license.mjs
@@ -6711,10 +6719,10 @@ a4fbd6cd7b62f1e5ca990765df515316c21721d33b6f8a65f319db8ae74edcc6  ./tsconfig.jso
 6477f43fd1dc0e9c5ef6229949a3f01c45967e1ad75447df9c0fa651d0fcf64b  ./types/cloudflare.d.ts
 43e5f02f727ca043f08ebf34789f330580a7a0cb90f426c92f4a454d066988fc  ./vite.config.ts
 21fa7f72849b31e4ddf726c1922a82ef97fe7770c4a4ebb4087b6edca38357b5  ./VNTECH_ERP_FULL_CONSOLIDATION_CHANGE_REPORT.md
-a454c2502944aadd82b47b00457e957b845cc53805e77283fce7995f1dae51ac  ./VNTECH_FINGERPRINT.json
-a71013e8f314cdff6b7ce34cc07741d76c724f1a92f4a620ee4fb156fdf4fcfb  ./VNTECH_FULL_W2_ID.txt
-a71013e8f314cdff6b7ce34cc07741d76c724f1a92f4a620ee4fb156fdf4fcfb  ./VNTECH_PACKAGE_ID.txt
-e5fecba821570f199efe31681fdf18ee8f43386f1741726d0f31bafc46e9f6d3  ./VNTECH_PRODUCT_IDENTITY.txt
+aa5d9110365955a9ed8607f28bd847bc859b048c2cba3d4cf53b71d9055c89af  ./VNTECH_FINGERPRINT.json
+efee7172fe5af0517759f14fc4d8b1ec32d459f491b9d624ae20d48e48bfb770  ./VNTECH_FULL_W2_ID.txt
+efee7172fe5af0517759f14fc4d8b1ec32d459f491b9d624ae20d48e48bfb770  ./VNTECH_PACKAGE_ID.txt
+c72604e926255c9388e6948d6a0248811b93f012b3313575948787a6d1c168c4  ./VNTECH_PRODUCT_IDENTITY.txt
 562f841d82e5a77078d55fdbc040ebe9e3288767c6da8916359db69290ca37db  ./VNTECH_SERVER.sh
 a521385f192c37b4fd352cf229fc0bf26ed974febef7d968d5bc16585605942f  ./worker/index.ts
 65bc26dddd31afe34f03934d029a76bc94a1dbe18623467c56d86a83d4420856  ./wrangler.local.jsonc

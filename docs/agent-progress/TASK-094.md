@@ -1162,3 +1162,14 @@ CSS BASELINE AUDIT: ĐẠT · 2535 lines · 367473 bytes · **4472 !important** 
 (phụ trợ cho **U-12**: !important giảm **4652 → 4472** = **-180** do các rule chết bị xoá)
 **CÒN LẠI để đóng trọn mục này:** ① **cổng ảnh 64/64** (xác nhận **KHÔNG đổi giao diện** — các class là chết nên kỳ vọng   px mọi màn; nếu có lệch ⇒ chứng tỏ class **chưa chết** ⇒ phải điều tra lại) ② 
 pm test ③ **làm mới định danh + build** (CSS nằm trong tập hash nguồn ⇒ vân tay sẽ đổi như lần U-14).
+
+### 23.1. ✅ DỌN CSS — ĐỊNH DANH + BUILD ĐẠT (18/09)
+* **
+pm test ⇒ EXIT 0** (lint · typecheck · hồi quy · workflow ĐẠT) — CSS không gây hồi quy.
+* **Làm mới định danh** cho thay đổi CSS: head **drizzle/0146_u12_don_css_request_drawer.sql** (comment-only) ⇒
+  Fixed point stable: OK · **SOURCE 2f8366fe6f1ffefbb732f33cf5d71c75a3f2b906cf25ccab7bdd130bf33328fe** · **SHORT VNTECH-FP-2F8366FE6F1FFEFB** · BRAND 7b6c6e24… · RELEASE aabb404… · HEAD  146.
+* set-local-identity: Trước: VNTECH-FP-86BBC6285E599BA5 | SSOT: VNTECH-FP-2F8366FE6F1FFEFB → Sau: VNTECH-FP-2F8366FE6F1FFEFB · trigger bảo vệ đã tạo lại · **KHỚP: true**.
+* Manifest: **6728 files**.
+* **
+pm run build ⇒ EXIT 0** · **BUILT ARTIFACT VALIDATION: ĐẠT · 5.3.0-MASTER-BASELINE-R1.1.1-FINAL-20260908** · Đã ghi dấu bản chạy VNTECH ERP V5.3.0 FULL W2.
+**CÒN 1 CỔNG:** **cổng ảnh 64/64** (đang chạy nền) — kỳ vọng **  px mọi màn** vì các class đã xoá là **CSS chết**; **nếu có lệch ⇒ chứng tỏ class CHƯA chết** ⇒ phải điều tra lại (không được cập nhật baseline để che).
