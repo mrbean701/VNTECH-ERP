@@ -238,3 +238,13 @@ không chỉ PO đầu tiên (bản JS hiện đang chỉ tính PO đầu tiên)
 * Công cụ 	ools/_b1-va-java-canhbao.mjs đã viết xong (mỏ neo + tự chối) cho **3 tệp**: RequestStore (port) · RequestStoreAdapter (native SQL, trả MẢNG, không ném lỗi) · SystemController (3 case).
 * **Chạy khô ĐẦU TIÊN: TỪ CHỐI GHI** vì SystemController **KHÔNG có sẵn bean RequestStore** ⇒ in ra đúng chỗ cần sửa: **constructor ở dòng ~77**.
 * **VIỆC KẾ TIẾP (đúng 1 bước, rất nhỏ):** thêm tham số RequestStore requestStore vào constructor SystemController (dòng ~77) + gán vào field, rồi chạy lại công cụ (chạy khô → --apply) ⇒ sau đó mvn -q -DskipTests package (**CHỜ NHẢ TỆP JAR**) → restart → thử 1 action thấy warnings → hồi quy 61/61.
+
+### 12.2. Kết quả dựng jar + khởi động lại (18/09) — ĐÃ CHẠY, còn thiếu BẰNG CHỨNG CHỨC NĂNG
+* mvn -q -DskipTests package ⇒ **exit 0**. Java khởi động sạch: Flyway **validate 17 migrations** (schema v17 — đã gồm V17 workflow của B1),
+  Hibernate OK, Tomcat trên :18081. **Spring tiêm được RequestStore** (nếu không thì startup đã FAIL) ⇒ chứng minh phần TIÊM hợp lệ.
+* Dịch vụ: Java :18081 **200** · UI :8787 **200** · proxy :9000 **200**.
+* ⚠️ **CHƯA có bằng chứng chức năng** rằng response THẬT SỰ có trường warnings:
+  * grep chuỗi trong jar **không kết luận được** (jar lồng, nén) — đã ghi rõ, không suy diễn thành "đã có".
+  * Gọi create_po/issue_stock để thấy warnings sẽ **TẠO chứng từ thật** (đột biến dữ liệu) ⇒ cố ý KHÔNG làm khi chưa tới bước B2/B3 có **dữ liệu test dùng-một-lần + dọn sạch**.
+* **⇒ Việc kiểm chứng chức năng của B1 được GỘP vào B2/B3** (khi có D5 seed 4 chứng từ test): gọi action trên chứng từ test ⇒ **PHẢI thấy warnings** ⇒ mới đánh giá B1 = xong.
+* Trạng thái hồ sơ: WF-05/WF-02/S-08/WF-04 đã đóng; **B1 = "đã viết mã + đã dựng bản chạy", chưa đóng** vì thiếu 1 bằng chứng chức năng.
