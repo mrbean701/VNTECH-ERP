@@ -826,3 +826,26 @@ px tsc --noEmit ⇒ exit 0** ✔ (JSX hợp lệ)
 **CÒN LẠI để đóng U-14:** 
 pm run build · **cổng ảnh 64/64** · **WF-02 5/5 · WF-05 5/5** · hồi quy **61/61** · **kiểm thao tác duyệt thật** (Trả lại/Duyệt) trên 1 phiếu pending_approval.
 **BÀI HỌC ĐÃ CHỨNG MINH:** với dòng JSX lớn, cách đúng là **công cụ có mốc + kiểm nội dung + chạy khô trước**, KHÔNG sửa tay mò — nhờ vậy **1 lần chạy là đúng, 	sc sạch**.
+
+### 16.3. [U-14 bước B] BUILD DỪNG Ở **CỔNG VÂN TAY NGUỒN** — KHÔNG phải lỗi mã (18/09)
+**Bằng chứng (
+pm run build ⇒ exit 1):**
+`
+FULL W2 SOURCE PREFLIGHT: ĐẠT · 5.3.0-MASTER-BASELINE-R1.1.1-FINAL-20260908 · Trust Development Mode
+Error: Source fingerprint không hợp lệ:
+  expected 1209fb66eb20c598c057df36eb46b766a042aa80b5381f589734effbff9c5459
+  actual   d34a7a5b133fa84d6d61fb352e081cff0741b3705945b0874cbb84b33ef0a59c
+`
+**Diễn giải:** đây là **cơ chế toàn vẹn của dự án** — sửa mã nguồn ⇒ **vân tay nguồn đổi** ⇒ guard **chặn build** cho tới khi **làm mới định danh**. **KHÔNG phải** lỗi cú pháp/kiểu (đã có 	sc exit=0 trước đó).
+**QUY TRÌNH LÀM MỚI ĐỊNH DANH (đã dùng trong dự án):**
+1. Tạo head **comment-only**: drizzle/0145_u14_drawer_to_modal_identity.sql.
+2. 
+ode tools/refresh-phase-identity.mjs drizzle/0145_u14_drawer_to_modal_identity.sql "U-14 DRAWER→MODAL"
+   ⇒ UPDATE MySQL ntech_product_identity + ntech_trust_settings.
+3. 
+ode tools/set-local-identity.mjs ⇒ cập nhật .env/định danh local.
+4. 
+ode scripts/generate-release-manifest.mjs ⇒ sinh manifest phát hành.
+5. 
+pm run build ⇒ kỳ vọng **exit 0** + **BUILT ARTIFACT VALIDATION ĐẠT**.
+**TRẠNG THÁI U-14:** bước B **đã vào mã** (	sc exit=0, diff 1 dòng) — **còn**: làm mới định danh ⇒ build ⇒ **cổng ảnh** (dự kiến lệch ⇒ **cập nhật baseline**, vì vỏ đổi có chủ đích) ⇒ **WF-02/WF-05** ⇒ hồi quy ⇒ **duyệt thật**.
