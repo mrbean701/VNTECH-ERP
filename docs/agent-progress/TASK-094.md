@@ -895,3 +895,25 @@ const writesSnapshot = java.includes("allowed_role_codes_snapshot") && java.incl
 *(2 cảnh báo ⚠️ dòng đã không còn TODO là bước tự-ghi-trạng-thái của probe khi dòng lộ trình đã DONE — **vô hại**, exit vẫn 0.)*
 **⇒ BỘ CỔNG SAU U-14 BƯỚC B (đầy đủ):** hồi quy **61/61 exit 0** · **WF-05 5/5 exit 0** · **WF-02/S-08 5/5 exit 0** · 	sc exit 0 · **build exit 0 + ARTIFACT VALIDATION ĐẠT**.
 **BÀI HỌC ĐÃ ĐƯỢC CHỨNG MINH:** **phép kiểm neo vào SỐ DÒNG sẽ hỏng khi mã dịch chuyển** — phải neo vào **nội dung/ký hiệu**.
+
+### 16.7. 🎯 
+pm test BẮT ĐƯỢC 1 LỖI THẬT (JS) + 1 KỲ VỌNG CŨ CẦN CẬP NHẬT (18/09)
+**Cổng gộp 
+pm test (lint + typecheck + hồi quy + workflow) ⇒ EXIT 1** với 2 phát hiện **theo thứ tự**:
+**(1) LỖI THẬT TRONG LÕI JS — đã sửa:**
+`
+tests/workflow-direct.test.ts:169 — AssertionError: poId is not defined · 400 !== 200
+`
+* Trong scripts/system-route.mjs handler create_po, tôi trả warnings: await approvalWarnings("purchase_order", **poId**) — nhưng **poId KHÔNG tồn tại trong scope** (biến đúng là **irstPoId**, đã dùng ở udit(...) cùng handler) ⇒ **ReferenceError** ⇒ HTTP **400**.
+* **Đã sửa:** poId → **irstPoId** (công cụ vá có tự chối: mỏ neo phải đúng 1 lần + phải thấy irstPoId) · 
+ode --check **exit 0**.
+* **Đây là regression THẬT do B1 của tôi** — và **bộ test của dự án đã bắt được** (đường HTTP của tôi không phủ lõi JS vì **đường chạy thật là Java**).
+**(2) KỲ VỌNG CŨ CẦN CẬP NHẬT (không phải bug):**
+`
+tests/workflow-direct.test.ts:171 — actual: 'pending_approval' · expected: 'waiting_delivery'
+`
+* Test mã hoá **hành vi CŨ** (PO tạo ra là waiting_delivery). **B2/bước 1** (đã được người dùng duyệt) **cố ý** đổi PO khởi tạo ⇒ **pending_approval** (PO phải có bước duyệt).
+* ⇒ **Cần cập nhật test theo hợp đồng MỚI**: kỳ vọng pending_approval, và **nên bổ sung** bước gọi pprove_po ⇒ waiting_delivery (phản ánh đúng luồng mới).
+**BÀI HỌC:** 
+pm test (gồm 	ests/workflow-direct) **phủ lõi JS** — trong khi các cổng HTTP của tôi chỉ phủ **Java**. ⇒ **Từ nay luôn chạy 
+pm test** như cổng đóng mục, vì **2 lõi là 2 đường khác nhau**.
