@@ -65,6 +65,9 @@ const actionsJsx = collapseBtn ? collapseBtn[0].replace(/\{isPage && /, "").repl
 // Vì sao: bản đầu tách theo cặp `<section>…</section>` ⇒ các khối **CÓ ĐIỀU KIỆN** (`{cond && <section …>…}`)
 // bị cắt đôi giữa hai đoạn (`}` thừa ở đoạn sau) ⇒ JSX lệch ngoặc. Nay tách theo **biểu thức `{…}` có đếm ngoặc
 // + chuỗi/template**, phần còn lại là các "run" markup ⇒ nối lại LUÔN bằng thân gốc (kiểm bên dưới).
+// Cân bằng thẻ của một đoạn: số thẻ MỞ THẬT (bỏ thẻ tự đóng và thẻ 1 ký tự như <p>) = số thẻ ĐÓNG.
+const isBalanced = (t) => ((t.match(/<[a-zA-Z]([^>]*[^/])?>/g) || []).length === (t.match(/<\/[a-zA-Z][^>]*>/g) || []).length);
+
 function splitChildren(text) {
   const out = [];
   let buf = "";
@@ -109,7 +112,7 @@ function splitChildren(text) {
       // ⚠️ LỖI ĐÃ GẶP: chỉ cắt tại biểu thức `{…}` ⇒ hai `<section>` LIỀN NHAU (không có biểu thức ở giữa) bị gộp
       // vào CÙNG một con ⇒ tab "Tổng quan" và "Hồ sơ" biến mất (bị hút vào tab khác). Nay **cắt tại MỌI `<section`
       // ở độ sâu 0** (tức `tagDepth === 0` TRƯỚC khi tăng) — đúng như bản đồ khối văn bản.
-      if (!close && tagDepth === 0 && fragDepth === 0 && /^<\s*section\b/i.test(tagText) && buf) {
+      if (!close && tagDepth === 0 && fragDepth === 0 && /^<\s*section\b/i.test(tagText) && buf && isBalanced(buf)) {
         out.push({ kind: "markup", text: buf });
         buf = "";
       }
@@ -123,6 +126,16 @@ function splitChildren(text) {
   return out;
 }
 const children = splitChildren(bodyInner);
+// [U-14] Chế độ soi: DUMP_CHILDREN=1 ⇒ in nguyên văn từng con + đếm THẺ MỞ THẬT (bỏ thẻ tự đóng) vs THẺ ĐÓNG
+// để tìm con "mở mà không đóng" — thay vì đoán bằng mắt.
+if (process.env.DUMP_CHILDREN) {
+  children.forEach((c, i) => {
+    const opens = (c.text.match(/<[a-zA-Z][^>]*[^/]>/g) || []).length;
+    const closes = (c.text.match(/<\/[a-zA-Z][^>]*>/g) || []).length;
+    console.log(`con ${i} [${c.kind}] dài ${c.text.length} · thẻMở=${opens} thẻĐóng=${closes}${opens !== closes ? "  ⟵ LỆCH" : ""}`);
+    console.log("   " + JSON.stringify(c.text.slice(0, 160)));
+  });
+}
 const rebuilt = children.map((c) => c.text).join("");
 if (rebuilt !== bodyInner) failures.push("[body] nối các con KHÔNG bằng thân gốc ⇒ DỪNG (nguy cơ mất nội dung)");
 notes.push(`thân drawer-body ${bodyInner.length} ký tự → ${children.length} con (${children.filter((c) => c.kind === "expr").length} biểu thức {…} + ${children.filter((c) => c.kind === "markup").length} run markup)`);

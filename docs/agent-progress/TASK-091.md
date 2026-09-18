@@ -161,3 +161,23 @@ LATEST COMMIT  : #195 (docs checkpoint) → #196 (docs + cảnh báo công cụ)
   rồi chạy `DUMP_CHILDREN=1 node tools/chuyen-drawer-sang-edm.mjs` ⇒ thấy đúng ranh giới các con và biết con nào mở mà không đóng.
   **Sau đó mới sửa bộ tách (không đoán thêm).**
 * **Tình trạng mã:** `app/page.tsx` **NGUYÊN VẸN** (công cụ tự chối ghi ở mọi lượt có lỗi) · `tsc` không bị ảnh hưởng.
+
+### 6.3. Manh mối quyết định: offset lỗi KHÔNG ĐỔI (18/09)
+
+* **Đã soi NGUYÊN VĂN từng con** (chế độ `DUMP_CHILDREN=1` mới thêm) — 7 con:
+  `0 markup 1199` · `1 markup 1379` · `2 expr 798` · `3 markup 677` · `4 expr 1287` · `5 expr 144` · `6 markup 333`.
+* **Đã thử 4 cấu hình khác nhau của bộ tách:** (a) chỉ theo độ sâu thẻ; (b) + độ sâu fragment (`fragDepth`);
+  (c) + loại bỏ mảnh chỉ-thẻ; (d) + chỉ cắt khi `buf` **cân bằng thẻ**. **CẢ 4 ĐỀU CHO ĐÚNG MỘT LỖI:**
+  `TS17015@505254` — **cùng một offset, không nhúc nhích** dù nội dung các tab đổi (677→333, thêm/bớt mảnh vụn).
+* **SUY RA (có căn cứ, không đoán):** khiếm khuyết **KHÔNG nằm trong nội dung các tab** (vì offset đứng yên),
+  mà nằm ở **PHẦN CỐ ĐỊNH ĐẦU JSX** — tức các prop được dựng bằng chuỗi mẫu:
+  `title=…` · **`subtitle={<>{…}</>}`** · `entityId=…` · **`actions={<>…<StatusBadge …/></>}`** · `tabs={[…` · `footer={<>…</>}`.
+  Lỗi *"Expected corresponding closing tag for JSX fragment"* khớp với việc **một `<>` ở phần đầu không được đóng**.
+* **VIỆC KẾ TIẾP (1 dòng, 10 giây):** trong công cụ, in thẳng **phần đầu JSX mới** khi bật chế độ soi:
+  `if (process.env.DUMP_HEAD) console.log(newJsx.slice(0, 500));`
+  ⇒ nhìn thấy ngay `subtitle`/`actions`/`tabs` có **thừa/thiếu `<>` hoặc `{}`** hay không, rồi sửa **chuỗi mẫu dựng chúng** (không cần đụng bộ tách nữa).
+* **Nghi vấn cụ thể cần kiểm bằng mắt (giả thuyết mạnh):** dòng dựng `subtitle` dùng
+  `subMatch[1].replace(/^\{|\}$/g, "")` — **cắt dấu ngoặc nhọn đầu/cuối của biểu thức**; nếu biểu thức chứa **2 cặp `{…}`**
+  (như `{request.projectCode} · {request.projectName}`) thì phép cắt đó có thể tạo ra **chuỗi JSX sai** ⇒ phải **xem nguyên văn** rồi thay bằng cách dựng an toàn hơn
+  (ví dụ: `subtitle={<>{request.projectCode} · {request.projectName}</>}` dựng thẳng từ các biến, không cắt chuỗi bằng regex).
+* **Tình trạng mã:** `app/page.tsx` **NGUYÊN VẸN** — công cụ **tự chối ghi** ở cả 4 cấu hình (chỉ 1 lượt ghi hỏng duy nhất ở vòng đầu, đã hoàn tác).
