@@ -1324,3 +1324,18 @@ pm test ⇒ EXIT 0** (lint · typecheck · hồi quy · workflow ĐẠT)
   * Đã xong: **WF-02** (DONE / AP-DUNG 100) · **WF-04** (DONE / GHI-RO-HE-CHINH) · **WF-05** (DONE) + **toàn bộ nhánh B** (B1 · B2 · B3 · B4 · D5).
 **KẾ HOẠCH ĐÓNG 2 PHASE:** ① **WF-01** ② **WF-03** ③ **WF-06** ⇒ đóng **PHASE 8**; rồi ④ **U-16 + U-04** (áp dụng PermissionGuard) ⑤ **U-11 bước 4** ⑥ **U-12.2 → U-12.3** ⇒ đóng **PHASE 1**.
 **ĐÃ BÁO CÁO QUA TELEGRAM** — nói thẳng **CẢ HAI PHASE CHƯA XONG** kèm danh sách còn lại + kế hoạch.
+
+### 26. [PHASE 8 · WF-01] ĐỔI TÊN TAB THÀNH **“Workflow”** — đã áp dụng (18/09)
+**Mục lộ trình WF-01:** *"Đổi tên tab thành **Workflow**"* (P3).
+**Định vị:** pp/page.tsx **dòng 102**:
+`	s
+{ key: "approvals", label: "Phê duyệt đơn hàng", icon: "PD", groupKey: "purchasing" },   // TRƯỚC
+{ key: "approvals", label: "Workflow",           icon: "PD", groupKey: "purchasing" },   // SAU
+`
+**Công cụ vá:** 	ools/wf01-doi-ten-tab-workflow.mjs — mỏ neo **ASCII thuần**, **tự chối** nếu mỏ neo không khớp **đúng 1 lần**, hoặc nếu đã có nhãn Workflow ở chỗ khác (tránh nhầm), **mặc định CHẠY KHÔ**.
+**Bằng chứng đã áp dụng:**
+* git diff --stat app/page.tsx ⇒ **1 file changed, 1 insertion(+), 1 deletion(-)** (đúng 1 dòng)
+* Kiểm lại tệp: dòng 102: { key: "approvals", label: "Workflow", icon: "PD", groupKey: "purchasing" }
+* **
+px tsc --noEmit ⇒ EXIT 0**
+**LƯU Ý ẢNH:** nhãn tab nằm ở **sidebar**; cổng ảnh chụp **vùng nội dung** cho hầu hết màn (khung=340,… — KHÔNG gồm sidebar) nhưng **một số màn chụp từ x=0** (ví dụ modal) ⇒ nếu có lệch thì đó là **thay đổi CÓ CHỦ ĐÍCH** (đổi nhãn) ⇒ **chụp lại baseline đúng các màn bị ảnh hưởng**, KHÔNG coi là regression.

@@ -99,7 +99,7 @@ const modules: { key: ModuleKey; label: string; icon: string; groupKey?: string;
   { key: "payments", label: "Thanh toán HĐ", icon: "TT", groupKey: "project_management" },
   { key: "teams", label: "Tổ đội theo dự án", icon: "TĐ", groupKey: "project_management" },
   { key: "requests", label: "Phiếu đề nghị mua hàng", icon: "ĐN", groupKey: "purchasing" },
-  { key: "approvals", label: "Phê duyệt đơn hàng", icon: "PD", groupKey: "purchasing" },
+  { key: "approvals", label: "Workflow", icon: "PD", groupKey: "purchasing" },
   { key: "purchasing", label: "Mua hàng & PO", icon: "PO", groupKey: "purchasing" },
   { key: "supplier_catalog", label: "Danh mục Nhà cung cấp", icon: "NC", groupKey: "purchasing" },
   { key: "receiving", label: "Kế hoạch giao hàng", icon: "GH", groupKey: "purchasing" },
