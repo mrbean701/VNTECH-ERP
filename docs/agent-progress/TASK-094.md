@@ -716,3 +716,18 @@ ode --check **0** (§14.18) + **đã nạp vào runtime** (UI restart, 200).
 * **SAU:** **waiting_delivery** · **decided_by = USR_2f435847-8a39-44fe-b620-6e52186526e0** · **decided_at = 2026-09-18 17:39:44** ⇒ **đúng nghiệp vụ**: duyệt PO ⇒ **nối vào luồng giao hàng sẵn có** + ghi **ai/khi nào**.
 * **HOÀN TÁC:** trả PO về **pending_approval** (đọc lại xác nhận) ⇒ **giữ chứng từ test cho D5**.
 **⇒ B2 giờ có bằng chứng ĐỦ CẢ 2 NHÁNH quyết định:** eject_po (⇒ cancelled, PR vẫn mở, có thông báo — cổng 8/8) và pprove_po (⇒ waiting_delivery, có người/thời điểm — vòng này).
+
+### 14.22. [PHASE 8 · B3] KẾT QUẢ KHẢO SÁT — chỉ còn **1 điểm lệch parity** (18/09)
+**(1) Engine ĐÃ có bước duyệt nhập kho (đúng phương án A):** workflow_definitions (đọc từ MySQL):
+| code | name | active |
+|---|---|---|
+| WF-MUAHANG-01 | Quy trình mua hàng chuẩn | 1 |
+| **WF-NHAPKHO-01** | **Quy trình nhập kho (có bước duyệt mới)** | **1** ✔ |
+| WF-PO-01 | Quy trình phát hành PO | 1 |
+| WF-XUATKHO-01 | Quy trình cấp phát / xuất kho | 1 |
+**(2) JS đã phát cảnh báo ở CẢ 3 đường:** dòng **1323** create_po → pprovalWarnings("purchase_order", poId) · dòng **1449** eceive_goods → **pprovalWarnings("goods_receipt", receiptId)** ✔ · dòng **1581** issue_stock → pprovalWarnings("stock_issue", issueId) ✔
+**(3) ❌ JAVA THIẾU cảnh báo cho eceive_goods:** SystemController chỉ có dòng **1070** (purchase_order) và **1176** (stock_issue) — **KHÔNG có goods_receipt** ⇒ **lệch parity giữa 2 lõi** (JS có, Java không).
+**⇒ VIỆC CỦA B3 (nhỏ, chính xác):** thêm vào case eceive_goods của SystemController (theo đúng khuôn dòng 1070):
+out.put("warnings", requestStore.approvalWarnings("goods_receipt", String.valueOf(result.getOrDefault("<khoá id phiếu nhập>",""))));
+⇒ cần xác định **khoá id phiếu nhập** trong esult của eceiveGoods (JS trả eceiptId) ⇒ rồi dựng lại jar + **kiểm chứng chức năng** như đã làm với issue_stock (B1).
+**Lưu ý:** confirm_delivery **giữ nguyên** (đúng phương án A: *"thêm bước duyệt mới, giữ xác nhận giao hàng"*).
