@@ -160,6 +160,23 @@ Công cụ thêm `--out=<đường dẫn>` + `--back=<spec>`; **câu import tron
 | Bản phục vụ | `VNTECH-FP-864B84D9F05AE3DF` | `VNTECH-FP-DD4569AE8642395F` | **`VNTECH-FP-2002BED16DE89A0B`** |
 | `page.tsx` | 3890 | 3822 | **3767** |
 
+
+### 7.4. Bước 3 vòng 2 — TÁCH THÊM 4 MÀN — commit `#186`
+
+`app/screens/HrScreen.tsx` (9 dòng) · `DocumentsScreen` (12) · `ConstructionScreen` (25) · `LegalDocsScreen` (8).
+`app/page.tsx` **3767 → 3717 dòng**; eslint `page.tsx` **63 warning** (nền 72). **Luỹ kế cả 4 vòng: 4037 → 3717 = giảm 320 dòng.**
+
+**Một màn bị LOẠI và ghi rõ lý do (không đoán):** `FinanceRecoveryScreen` còn phụ thuộc `reportRows` · `reportExport` ·
+`reportPdf` · `printReport` (đang ở `page.tsx`) ⇒ tách ngay sẽ tạo **import vòng**; công cụ **từ chối ghi** nên nó không bị đụng tới.
+
+**🔎 PHÁT HIỆN VỀ CHÍNH PHƯƠNG PHÁP KIỂM CHỨNG (quan trọng):** vòng này hash báo cáo cổng ảnh **ĐỔI**
+(`B7E70927…6530` → `625D357C…E841`). Đã **đối chiếu từng dòng** bằng `Compare-Object`: **chỉ khác DUY NHẤT** phần ghi chú
+*(lần đầu N px)* của màn `01-dashboard` desktop/laptop (8913 → **8923** px · 3653 → **3663** px), còn **mọi con số kết luận
+và số ảnh lệch (27/56) giống hệt**. ⇒ Đó là **NHIỄU NỀN ĐÃ BIẾT của cổng ảnh (KP #1)** — không phải thay đổi do tách module.
+**Bài học:** khi dùng **so HASH báo cáo** để chứng minh "refactor thuần", phải **bỏ qua phần ghi chú "(lần đầu N px)"**
+(đó là số của lần chụp THỨ NHẤT, có thể lệch do nhiễu) và so **CON SỐ KẾT LUẬN**; hash khác thì **chạy lại cổng** hoặc dùng
+`--selftest` trước khi kết luận có hồi quy.
+
 ## 8. Việc kế tiếp của `U-11` (bước 3 vòng sau / bước 4)
 
 1. **Tách tiếp các màn còn "sạch phụ thuộc":** chạy `tools/kiem-tra-phu-thuoc-man.mjs <TênMàn…>` để tìm màn có
