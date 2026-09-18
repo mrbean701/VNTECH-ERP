@@ -1339,3 +1339,16 @@ pm test ⇒ EXIT 0** (lint · typecheck · hồi quy · workflow ĐẠT)
 * **
 px tsc --noEmit ⇒ EXIT 0**
 **LƯU Ý ẢNH:** nhãn tab nằm ở **sidebar**; cổng ảnh chụp **vùng nội dung** cho hầu hết màn (khung=340,… — KHÔNG gồm sidebar) nhưng **một số màn chụp từ x=0** (ví dụ modal) ⇒ nếu có lệch thì đó là **thay đổi CÓ CHỦ ĐÍCH** (đổi nhãn) ⇒ **chụp lại baseline đúng các màn bị ảnh hưởng**, KHÔNG coi là regression.
+
+### 26.1. ✅ WF-01 ĐÓNG TRỌN VẸN — CỔNG ẢNH **64/64 ĐẠT**, KHÔNG cần đổi baseline (18/09)
+**Bằng chứng cuối cùng của WF-01:**
+| Cổng | Kết quả |
+|---|---|
+| 
+px tsc --noEmit | **EXIT 0** |
+| 
+pm test (lint · typecheck · hồi quy · workflow) | **EXIT 0** |
+| **Cổng ảnh** | **KẾT LUẬN: ĐẠT ✅ — không có vùng lệch nào (64 ảnh đã đối chiếu) · EXIT=0** |
+**PHÁT HIỆN TỐT:** đổi **nhãn tab** (sidebar) **KHÔNG** xuất hiện trong **khung chụp** của cổng ảnh (probe chụp **vùng nội dung**, phần lớn bắt đầu ở x=340 — **không gồm sidebar**) ⇒ **KHÔNG phải cập nhật baseline nào** ⇒ thay đổi UI thuần nhãn này **an toàn với cổng ảnh**.
+*(Điều này cũng cho biết: các thay đổi **chỉ ở sidebar/nav** sẽ không bị cổng ảnh bắt — cần lưu ý khi đánh giá độ phủ của cổng.)*
+**LỘ TRÌNH:** WF-01 → **DONE / DOI-TEN-TAB-WORKFLOW** (ô TT [10]) ⇒ **PHASE 8 = 4/6**.
