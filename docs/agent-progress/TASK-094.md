@@ -458,3 +458,13 @@ case "close_po_line" -> {
 3. PurchaseManagementUseCase: thêm pprovePo(...) (⇒ waiting_delivery) + ejectPo(...) (⇒ cancelled + gọi queueTaskNotice cho uyerUserId) — copy khuôn closePoLine.
 4. SystemController: thêm 2 case (copy khuôn close_po_line).
 **⑤ Kiểm chứng sau khi port:** mvn package (**chờ nhả tệp jar**) → restart → gọi pprove_po/eject_po qua **Java :18081** ⇒ **không còn** thông điệp *"chưa được triển khai trên backend Java"* ⇒ rồi mới **kiểm chứng chức năng trên PO test**.
+
+### 15. [PHASE 0B] CÒN ĐÚNG 1 MỤC — S-05 (đo bằng bộ đọc ĐÚNG, 18/09)
+**Kết quả đo lại: PHASE 0B = 9/10 DONE · còn 1 mục:**
+* **S-05** · Module **Tệp** · *"Kiểm quyền cho /api/files (endpoint riêng, **không đi qua action**)"* · **ưu tiên P0** · không phụ thuộc mục nào.
+⇒ Đây là **lỗ hổng P0 còn lại của phase bảo mật**: /api/files là endpoint **riêng**, không đi qua ActionRbacRegistry nên **không được RBAC theo action che** ⇒ cần **kiểm quyền riêng** ở endpoint đó.
+
+⚠️ **TỰ PHÁT HIỆN MỘT LỖI ĐO CỦA CHÍNH MÌNH (ghi lại để không lặp):**
+* Tôi viết 	ools/do-phase-0b.mjs đọc TT bằng c[c.length-1] **KHÔNG LỌC ô rỗng** ⇒ luôn lấy ô **cuối rỗng** ⇒ **báo sai 0/10** (trong khi thực tế 9/10).
+* **Bộ đọc ĐÚNG:** các dòng lộ trình có **11 ô khi tách theo |** — **TT là ô[10]** (| ID | Module | Việc | Ưu tiên | Phụ thuộc | DB | API | UI | QUYỀN | TT |).
+* **Đã xoá** công cụ sai để không dùng lại; các con số phase khác (PHASE 1 = 12/17, PHASE 8 = 3/6, tổng 39/110) đọc bằng bộ lọc **last-non-empty** nên **vẫn đúng** — nhưng **từ nay dùng ô[10] là chuẩn**.
