@@ -686,3 +686,11 @@ CA B ⇒ HTTP 400: {"ok":false,"error":"PO đã hoàn thành (completed) — kh�
 **Kiểm:** 
 ode --check scripts/system-route.mjs ⇒ **exit 0** ✔
 **⇒ B2/bước 3:** **Java (đã kiểm 6/6) + JS parity (đã chèn)** — *còn lại: **restart UI** để nạp handler JS (không phải đường chạy thật, vì đường thật là Java :9000 → :18081).*
+
+### 14.19. ✅ B2/bƯỚC 3 ĐÓNG HOÀN TOÀN — 3 dịch vụ đã 200 (18/09)
+* **UI đã restart** để nạp handler JS update_po_price; kiểm ngay sau đó: **Java :18081 200 · UI :8787 200 · proxy :9000 200** ✔
+* **⇒ B2/bước 3 (luật giá PO) ĐÓNG ở cả 2 lõi:**
+  * **Java**: cổng **6/6 ĐẠT · mã thoát 0** (§14.17) — sửa được khi chưa xong · **KHOÁ** khi đã hoàn thành · **materials checksum không đổi** · hoàn tác sạch.
+  * **JS**: handler dòng **1348-1366** + 
+ode --check **0** (§14.18) + **đã nạp vào runtime** (UI restart, 200).
+* **PHASE 8 — tiến độ các nhánh B:** **B1 ✔** · **B2/bước 0–3 ✔ (đóng trọn B2)** · còn **B3** (cấp phát/xuất + nhập kho **phương án A**) · **B4** (3 action duyệt rời + MAR) · **D5** (2 chứng từ test còn lại).
