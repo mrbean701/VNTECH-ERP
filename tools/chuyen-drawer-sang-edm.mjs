@@ -68,6 +68,19 @@ const actionsJsx = collapseBtn ? collapseBtn[0].replace(/\{isPage && /, "").repl
 // Cân bằng thẻ của một đoạn: số thẻ MỞ THẬT (bỏ thẻ tự đóng và thẻ 1 ký tự như <p>) = số thẻ ĐÓNG.
 const isBalanced = (t) => ((t.match(/<[a-zA-Z]([^>]*[^/])?>/g) || []).length === (t.match(/<\/[a-zA-Z][^>]*>/g) || []).length);
 
+// Ngăn xếp phần tử: duyệt các thẻ theo thứ tự, đẩy tên thẻ khi MỞ, lấy ra khi ĐÓNG (bỏ qua thẻ tự đóng).
+// Trả về true nếu kết thúc mà NGĂN XẾP RỖNG ⇒ đoạn đó là "giữa hai phần tử hoàn chỉnh" ⇒ mới được cắt.
+const stackBalanced = (t) => {
+  const stack = [];
+  for (const m of t.matchAll(/<(\/?)([a-zA-Z][\w.:-]*)([^>]*)>/g)) {
+    const isClose = m[1] === "/";
+    const selfClose = /\/\s*$/.test(m[3]);
+    if (isClose) { if (stack[stack.length - 1] === m[2]) stack.pop(); else return false; }
+    else if (!selfClose) stack.push(m[2]);
+  }
+  return stack.length === 0;
+};
+
 function splitChildren(text) {
   const out = [];
   let buf = "";
@@ -112,7 +125,7 @@ function splitChildren(text) {
       // ⚠️ LỖI ĐÃ GẶP: chỉ cắt tại biểu thức `{…}` ⇒ hai `<section>` LIỀN NHAU (không có biểu thức ở giữa) bị gộp
       // vào CÙNG một con ⇒ tab "Tổng quan" và "Hồ sơ" biến mất (bị hút vào tab khác). Nay **cắt tại MỌI `<section`
       // ở độ sâu 0** (tức `tagDepth === 0` TRƯỚC khi tăng) — đúng như bản đồ khối văn bản.
-      if (!close && tagDepth === 0 && fragDepth === 0 && /^<\s*section\b/i.test(tagText) && buf && isBalanced(buf)) {
+      if (!close && tagDepth === 0 && fragDepth === 0 && /^<\s*section\b/i.test(tagText) && buf && stackBalanced(buf)) {
         out.push({ kind: "markup", text: buf });
         buf = "";
       }
