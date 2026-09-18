@@ -256,3 +256,10 @@ không chỉ PO đầu tiên (bản JS hiện đang chỉ tính PO đầu tiên)
 * **⇒ KHÔNG có đột biến dữ liệu** (400 = bị chặn trước khi ghi) ⇒ số dòng vẫn như TRƯỚC. Không cần dọn.
 * **VIỆC KẾ TIẾP (đúng 1 bước):** khi gọi lại, **đọc thân lỗi 400** ($_.Exception.Response / ErrorDetails) để biết trường thiếu, HOẶC đọc StockManagementUseCase.issueStock để lấy đúng danh sách trường bắt buộc;
   sau đó mới kết luận B1. Cách khác rẻ hơn: làm cùng lúc với **D5 seed 4 chứng từ test** (đã nằm trong kế hoạch B4) rồi kiểm B1 trên đó.
+
+### 12.4. Đã ĐỌC ĐƯỢC thân lỗi 400 (18/09) — khoanh đúng điều kiện, chuyển sang D5
+* **Cách đọc thân lỗi trên Windows PowerShell 5.1** (KHÔNG có -SkipHttpErrorCheck): catch { .Exception.Response.GetResponseStream() | StreamReader.ReadToEnd() }.
+* **Thân lỗi thật:** {"ok":false,"error":"Dòng 1: cấp phát không hợp lệ."} ⇒ không phải lỗi quyền/dự án/tổ đội, mà là **kiểm tra TỪNG DÒNG**.
+* **Đã loại trừ:** tổ đội đúng dự án (TEAM_8c1fecd9… thuộc PRJ_fdbfab20…) · MR pproved (nằm trong danh sách trạng thái cho phép) · kho nguồn thuộc dự án · role dmin hợp lệ (login 200, không bị 403).
+* **Nghi vấn còn lại (cần dữ liệu test để kiểm):** dòng cấp phát phải khớp **vật tư CÓ TỒN** ở kho nguồn và **khớp dòng phiếu đề nghị**. Truy vấn tồn kho theo tên dự đoán (stock_balances) **không trả kết quả** ⇒ **tên bảng/cột tồn khác** ⇒ **DỪNG, KHÔNG ĐOÁN** (đúng §45).
+* **⇒ Chuyển sang D5 (seed 4 chứng từ test)**: khi có chứng từ test + dòng phiếu test, việc kiểm chứng B1 trở nên trực tiếp. **Số dòng vẫn nguyên** (chưa có đột biến nào).
