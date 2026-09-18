@@ -865,3 +865,14 @@ ode scripts/generate-release-manifest.mjs ⇒ **6720 files**.
 pm run build ⇒ BUILD EXIT = 0** · **BUILT ARTIFACT VALIDATION: ĐẠT · 5.3.0-MASTER-BASELINE-R1.1.1-FINAL-20260908** · Đã ghi dấu bản chạy VNTECH ERP V5.3.0 FULL W2.
 **⇒ U-14 bước B nay QUA BUILD.** Định danh mới là **hệ quả tất yếu** của việc sửa mã nguồn (đúng cơ chế).
 **CÒN LẠI để đóng U-14:** **cổng ảnh 64/64** *(dự kiến **LỆCH** vì vỏ đổi drawer→modal ⇒ **cập nhật baseline**, không coi là regression)* · **WF-02 + WF-05** · hồi quy **61/61** · **kiểm duyệt thật** (Trả lại/Duyệt) trên phiếu pending_approval.
+
+### 16.5. ⚠️ WF-02 báo 4/5 — ĐÃ CHỨNG MINH LÀ **HỎNG GIẢ** do probe dò theo SỐ DÒNG (18/09)
+**Bối cảnh:** sau U-14 bước B, chạy lại các cổng: **WF-05 = 5/5 ĐẠT (exit 0)** · **hồi quy = 61/61 (exit 0)** · **WF-02/S-08 = 4/5 (exit 1)** với dòng hỏng:
+[HỎNG] mã nguồn: lúc TẠO phiếu duyệt CÓ ghi 2 cột snapshot (RequestStoreAdapter ~dòng 255) :: KHÔNG thấy
+**KIỂM CHỨNG THẬT (không đoán):**
+* Code ghi snapshot **VẪN TỒN TẠI**: RequestStoreAdapter.java **dòng 271** = llowed_role_codes_snapshot,approval_mode_snapshot,created_at,updated_at) (danh sách cột của INSERT).
+* Logic **ưu tiên snapshot** cũng còn: **dòng 309-310** và **320-321** = COALESCE(NULLIF(a.allowed_role_codes_snapshot,''),cfg.allowed_role_codes,'') AS allowedRoleCodes + … approval_mode_snapshot … AS approvalMode.
+* Probe (dòng 29-32) đọc tệp rồi **dò theo số dòng (~255)**; **các sửa đổi B2 (Java) của tôi đã dịch INSERT từ ~255 ⇒ 271** ⇒ probe **không thấy** ⇒ **HỎNG GIẢ**.
+**⇒ KẾT LUẬN:** **KHÔNG phải regression** — tính năng WF-02/S-08 **nguyên vẹn**; **lỗi ở PHÉP KIỂM**.
+**VIỆC CẦN LÀM (chất lượng kiểm thử):** sửa 	ools/probe-wf02-snapshot-nguoi-chi-dinh.mjs để **dò theo NỘI DUNG toàn tệp** (ví dụ java.includes("allowed_role_codes_snapshot") && java.includes("INSERT INTO approvals")) **thay vì theo số dòng** ⇒ hết bị lệch mốc khi mã dịch chuyển.
+**BÀI HỌC (đã trả giá):** **phép kiểm KHÔNG được neo vào SỐ DÒNG** — mã dịch chuyển là chuyện bình thường; neo vào nội dung/ký hiệu mới bền.
