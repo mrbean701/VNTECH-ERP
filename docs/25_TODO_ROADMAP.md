@@ -197,7 +197,7 @@
 |---|---|---|---|---|---|---|---|---|---|
 | `WF-01` | Workflow | Đổi tên tab thành **Workflow** | P3 | — | - | - | FIX | - | **DONE / DOI-TEN-TAB-WORKFLOW** |
 | `WF-02` | Workflow | **Snapshot danh sách người được chỉ định** vào phiếu (bịt rủi ro §20.3) | **P1** | — | COL | - | - | - | **DONE / AP-DUNG 100** |
-||| |`|W|F|-|0|3|`| **DONE / XOA-COT-DEAD-V19** ||| |W|o|r|k|f|l|o|w| ||| |D|ù|n|g| |c|ộ|t| |`|w|o|r|k|f|l|o|w|_|d|e|f|i|n|i|t|i|o|n|s|.|v|e|r|s|i|o|n|`| |h|o|ặ|c| |x|o|á| |n|ế|u| |k|h|ô|n|g| |d|ù|n|g| ||| |P|3| ||| |W|F|-|0|2| ||| |-| ||| |-| ||| |-| ||| |-| ||| |T|O|D|O| |||
+| `WF-03` | Workflow | Dùng cột `workflow_definitions.version` hoặc xoá nếu không dùng | P3 | WF-02 | - | - | - | - | **DONE / XOA-COT-DEAD-V19** |
 | `WF-04` | Workflow | Hợp nhất 2 hệ (`workflow_*` và `approval_stage_catalog`) hoặc ghi rõ hệ nào là chính | P3 | WF-02 | - | - | - | MODEL | **DONE / GHI-RO-HE-CHINH** |
 | `WF-05` | Workflow | Kiểm thử: đổi workflow khi có phiếu đang chờ → phiếu cũ phải giữ nguyên luồng | **P1** | WF-02 | - | - | - | - | **DONE** |
 | `WF-06` | Workflow | Chuẩn bị mở rộng: nghỉ phép · tăng ca · chấm công bù · form tương lai | P4 | WF-04 | - | - | - | - | TODO |
