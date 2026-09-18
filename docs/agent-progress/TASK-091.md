@@ -50,17 +50,34 @@ riêng màn này để chốt ảnh chuẩn mới (ghi rõ trong hồ sơ là **
 ## 5. Việc kế tiếp (bước 2/6)
 
 1. ~~Đọc trọn dòng 2894~~ → **ĐÃ THỬ bằng công cụ bóc cấu trúc: THẤT BẠI, ghi lại trung thực.**
-   `tools/boc-cau-truc-jsx.mjs` (mới viết) chạy trên dòng 2894 chỉ bóc được **41 mục và DỪNG ở offset ~2.000/9.254**
-   ⇒ bộ đếm ngoặc nhọn **bị kẹt ở mức > 0** (gặp `{`/`}` trong template literal hoặc chữ JSX) nên **phần lớn thẻ bị bỏ qua**,
-   và nhãn thẻ **ghép cặp SAI** (`close <aside>` in ra đoạn `</header>`).
-   ⇒ **Đã dán cảnh báo ngay đầu tệp công cụ: "CHƯA ĐÁNG TIN — KHÔNG dùng để lập kế hoạch sửa mã"**
-   (đúng bài học #21/#25: *công cụ đo sai còn nguy hiểm hơn không đo* — nếu sửa theo bản đồ sai thì `tsc` có thể
-   vẫn xanh mà giao diện hỏng im lặng).
-2. **Bước 3/6 (làm lại cho đúng):** thay bộ quét bằng **AST thật** — dự án đã có `typescript` trong devDependencies,
-   dùng `ts.createSourceFile` + `ts.forEachChild` để lấy **vị trí thẻ JSX chính xác** (không tự viết parser).
-3. Sau khi có bản đồ ĐÚNG: viết `tools/chuyen-drawer-sang-edm.mjs` (mỏ neo + **tự chối ghi**), chạy khô → áp dụng.
-4. Kiểm chứng bước 6 (mục 3.6) rồi `--update` **riêng màn** `12-drawer-request-detail` (thay đổi **có chủ đích**).
-5. Khảo sát `ReceiptDrawer` (`page.tsx:2903`, 4.635 ký tự — ứng viên thứ 2) **sau khi** màn đầu xong ⇒ tách vòng riêng.
+   `tools/boc-cau-truc-jsx.mjs` (bản tự viết, **đã xoá**) chạy trên dòng 2894 chỉ bóc được **41 mục và DỪNG ở offset ~2.000/9.254**
+   ⇒ bộ đếm ngoặc nhọn **bị kẹt ở mức > 0** nên **phần lớn thẻ bị bỏ qua**, và nhãn thẻ **ghép cặp SAI**.
+2. **Bước 2/6 — HOÀN TẤT bằng BẢN ĐỒ VĂN BẢN** (`tools/ban-do-khoi-drawer.mjs`, mỗi mốc **có offset** để dùng làm mỏ neo):
+
+```
+dòng 2894 · 9.254 ký tự
+@161   <aside>
+@288   <header>                                  → tiêu đề + nút thu gọn/Quay lại (…@728)
+@882   </header>
+@891   <div class="drawer-body">
+@920   <section class="summary-grid request-summary">            … @2109 </section>   → TAB "Tổng quan"  (10 ô)
+@2119  <section class="drawer-section">  CardHead "Tiến trình phê duyệt & thời gian xử lý"  … @3488 → TAB "Phê duyệt"
+@4296  <section class="drawer-section">  CardHead "Tổng hợp giao nhận về phiếu đề nghị gốc"  … @4963 → TAB "Giao nhận"
+@5074  CardHead "CHT sửa phiếu bị trả lại"  … (nút "Lưu chỉnh sửa" @6200 — nút submit của <form>) → TAB "Sửa phiếu" (chỉ khi bị trả lại)
+@6280  <section class="drawer-section document-note">  CardHead "Mục đích / Ghi chú"  … @6393   → TAB "Ghi chú"
+@6404  <section class="drawer-section request-special-files">  CardHead "Ảnh / Hồ sơ vật tư đặc thù" … @6721 → TAB "Hồ sơ"
+@6737  <footer>  "Xóa phiếu & lập mới" @6765 · "Gửi lại từ đầu →" @6860 … @7442 </footer>
+@7451  </aside>
+```
+
+3. ⚠️ **Hai lỗi của công cụ AST đã ghi lại trong CHÍNH tệp công cụ** (`tools/boc-cau-truc-jsx-ast.mjs`):
+   (a) truyền `depth` không `+1` ⇒ mọi nút là depth 0; (b) lọc theo độ sâu **AST** thì JSX nằm ở depth ~8 nên bị chặn hết.
+   Đã sửa cả hai (tách `jsxDepth`), **nhưng bộ lọc theo thẻ vẫn chưa in ra được** ⇒ công cụ AST **giữ ở trạng thái "chưa dùng được"**;
+   bước 2 đã hoàn tất bằng bản đồ văn bản nên **không chặn** công việc.
+4. **Bước 3/6:** viết `tools/chuyen-drawer-sang-edm.mjs` dùng **các offset trên làm mỏ neo** (cắt theo mốc ⇒ không cần parser),
+   tự **TỪ CHỐI GHI** nếu bất kỳ mốc nào không khớp đúng 1 lần.
+5. Kiểm chứng bước 6 (mục 3.6) rồi `--update` **riêng màn** `12-drawer-request-detail` (thay đổi **có chủ đích**).
+6. Khảo sát `ReceiptDrawer` (`page.tsx:2903`, 4.635 ký tự — ứng viên thứ 2) **sau khi** màn đầu xong ⇒ tách vòng riêng.
 
 ## 6. Trạng thái bàn giao (để vòng sau tiếp tục ngay)
 

@@ -48,31 +48,29 @@ const idOf = (node) => {
 };
 
 let printed = 0;
-function walk(node, depth) {
-  if (ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node) || ts.isJsxFragment(node)) {
-    if (ts.isJsxElement(node) || ts.isJsxFragment(node)) {
-      const open = node.openingElement ?? node;
-      const start = open.getStart(sf), end = node.getEnd();
-      if (start >= lineStart - 1 && end <= lineEnd + 1) {
-        const isFrag = ts.isJsxFragment(node);
-        if (isFrag ? depth <= 1 : (TAGS.has(tagName(node)) || depth <= 1)) {
-          const name = isFrag ? "{…}" : "<" + tagName(node) + ">";
-          const cn = isFrag ? "" : classNameOf(node);
-          const extra = isFrag ? "" : idOf(node);
-          console.log(`${"  ".repeat(depth)}[${String(start - lineStart).padStart(5)}..${String(end - lineStart).padStart(5)}] ${name} len=${end - start} ${cn ? `class="${cn}"` : ""} ${extra}`.trimEnd());
-          printed++;
-        }
-      }
-    } else {
-      const start = node.getStart(sf), end = node.getEnd();
-      if (start >= lineStart - 1 && end <= lineEnd + 1 && TAGS.has(tagName(node))) {
-        console.log(`${"  ".repeat(depth)}[${String(start - lineStart).padStart(5)}..${String(end - lineStart).padStart(5)}] <${tagName(node)}/> self len=${end - start}`);
+// `jsxDepth` = độ sâu CHỈ tính trong cây JSX (không tính các nút AST trung gian như SourceFile/ReturnStatement).
+// ⚠️ Hai lỗi đã gặp thật ở công cụ này: (1) truyền `depth` không +1 ⇒ mọi nút là depth 0; (2) lọc theo độ sâu
+// AST ⇒ JSX nằm ở depth ~8 nên bị chặn hết. Nay tách hẳn `jsxDepth`.
+function walk(node, jsxDepth) {
+  const isJsx = ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node) || ts.isJsxFragment(node);
+  let nextDepth = jsxDepth;
+  if (isJsx) {
+    const isFrag = ts.isJsxFragment(node);
+    const open = ts.isJsxElement(node) ? node.openingElement : node;
+    const start = open.getStart(sf), end = node.getEnd();
+    if (start >= lineStart - 1 && end <= lineEnd + 1) {
+      const tag = isFrag ? "{…}" : tagName(node);
+      if (isFrag ? jsxDepth <= 1 : TAGS.has(tagName(node))) {
+        const cn = isFrag ? "" : classNameOf(node);
+        const extra = isFrag ? "" : idOf(node);
+        console.log(`${"  ".repeat(jsxDepth)}[${String(start - lineStart).padStart(5)}..${String(end - lineStart).padStart(5)}] ${isFrag ? tag : "<" + tag + ">"} len=${end - start} ${cn ? `class="${cn}"` : ""} ${extra}`.trimEnd());
         printed++;
       }
     }
-    if (depth >= MAX_DEPTH) return;
+    nextDepth = jsxDepth + 1;
+    if (nextDepth > MAX_DEPTH) return;
   }
-  ts.forEachChild(node, (child) => walk(child, depth));
+  ts.forEachChild(node, (child) => walk(child, nextDepth));
 }
 
 // Chỉ bắt đầu từ các JSX nằm TRONG dòng cần đo (bỏ qua phần còn lại của tệp).
