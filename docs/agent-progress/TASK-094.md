@@ -419,3 +419,12 @@ if (action === "reject_po") {
 }
 ``
 *(pprove_po tương tự, chỉ khác status='waiting_delivery' + audit "APPROVE" + không có thông báo hủy.)*
+
+### 14.6. 🔎 PHÁT HIỆN QUAN TRỌNG: Java CHẶN action chưa triển khai (Strangler Fig) (18/09)
+* **Đã nạp lại UI** (job mới) ⇒ UI :8787 **200**. Gọi thử pprove_po / eject_po qua **Java :18081** với id KHÔNG tồn tại (an toàn, không đột biến) và nhận:
+  {"ok":false,"error":"Action 'approve_po' chưa được triển khai trên backend Java (Strangler Fig)."} (tương tự với eject_po).
+* **Ý nghĩa (quan trọng cho kiến trúc):** backend Java có **cơ chế chặn tường minh** với mọi action **chưa port** ⇒
+  **viết handler ở JS là CHƯA ĐỦ**: đường chạy thật (:9000 → Java) sẽ **từ chối** cho tới khi **port sang Java**.
+  ⇒ **PARITY JAVA KHÔNG PHẢI TUỲ CHỌN — nó là CỔNG BẮT BUỘC** cho cả 3 action mới (pprove_po, eject_po, và các action của B3).
+* **Ghi nhận về kiểm chứng:** không thể kiểm chứng chức năng qua **Node :8787** bằng HTTP vì đăng nhập ở đó trả **401** (runtime Node dùng **SQLite riêng** — đã biết từ trước) ⇒ **mọi kiểm chứng chức năng phải đi qua Java :18081**.
+* **⇒ VIỆC KẾ TIẾP BẮT BUỘC:** thêm case "approve_po" / case "reject_po" vào SystemController + method tương ứng ở PurchaseManagementUseCase/PurchaseStore (theo khuôn có sẵn, ví dụ closePoLine/pproveCentralReturn nếu có) ⇒ **dựng lại jar (chờ nhả tệp jar)** ⇒ restart ⇒ **kiểm chứng chức năng** trên PO test.
