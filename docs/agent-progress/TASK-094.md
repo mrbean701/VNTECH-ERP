@@ -1476,3 +1476,15 @@ root cause: java.sql.SQLSyntaxErrorException: **Unknown column 'version' in 'fie
 3. Khi app hỏng toàn cục: **kiểm HTTP asset trước, rồi đọc LOG server** — không đoán.
 4. mvn phải chạy **trong java-backend/** (không phải thư mục gốc) — nếu không sẽ MissingProjectException.
 5. **Nhận sai rõ ràng:** WF-03 tôi đã đánh dấu DONE trong khi **chưa kiểm bootstrap** ⇒ **mục đó chỉ thực sự xong SAU bản sửa này**.
+
+### 31.1. ✅ CỔNG ẢNH **64/64 ĐẠT** SAU KHI SỬA — XÁC NHẬN 2 ĐIỀU (19/09)
+`
+KẾT LUẬN: ĐẠT ✅ — không có vùng lệch nào (64 ảnh đã đối chiếu)
+probe visual EXIT=0
+`
+**Một lượt chạy xác nhận ĐỒNG THỜI:**
+1. **App ĐÃ LÀNH hoàn toàn** sau khi sửa regression WF-03 (2 truy vấn bootstrap bỏ ersion) — 16 màn × 4 kích thước đều   px.
+2. **LÔ A (U-16/U-04) ĐẠT** — 2 khối được gác (canSelf @675 · canAssign @700) **KHÔNG ẩn nhầm gì** đối với admin (nếu guard sai ⇒ admin mất nút ⇒ ảnh phải lệch ⇒ **đây là lưới an toàn đã hoạt động đúng**).
+**TRẠNG THÁI CHỐT VÒNG NÀY:** 	sc **0** · 
+pm test **0** · **cổng ảnh 64/64 ĐẠT** · **3 dịch vụ 200** (Java · UI · proxy) · cây **SẠCH** (commit 49da107, 51023a).
+**TIẾN ĐỘ:** **PHASE 0B 10/10 ✅** · **PHASE 8 6/6 ✅** · **PHASE 1 13/17** (U-16/U-04: **LÔ A xong**, còn **LÔ B · LÔ C**) · **tổng ≈44/110 = 40 %**.
