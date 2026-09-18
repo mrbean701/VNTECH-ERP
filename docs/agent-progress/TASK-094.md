@@ -491,3 +491,19 @@ case "close_po_line" -> {
 **VIỆC KẾ TIẾP (chính xác):**
 1. Thêm **kiểm phạm vi** cho upload/get/delete (và bản Node pp/api/files/route.ts): theo entityType (material_request, goods_receipt, purchase_order…) tra **project/kho** của thực thể rồi canAccessProject/canAccessWarehouse; nhánh ?id= phải tra ngược về thực thể chủ.
 2. **Cổng 3 ca:** không phiên ⇒ **401** · đăng nhập nhưng **ngoài phạm vi** ⇒ **403** · **trong phạm vi** ⇒ **200** (có đối chứng dương).
+
+### 16.2. [PHASE 0B · S-05] KHẢ THI + KẾ HOẠCH VÁ CHÍNH XÁC (18/09)
+**Đo được:**
+* Bảng **ttachments** (11 dòng): id, entity_type, entity_id, file_name, storage_key, mime_type, uploaded_by, created_at, updated_at
+  ⇒ **KHÔNG có project_id/warehouse_id** ⇒ **phải tra ngược** project/kho từ (entity_type, entity_id).
+* FileUseCase (API công khai): upload(user, entityType, entityId, …) (**dòng 47**) · list(user, entityType, entityId) (**78**) ·
+  download(user, attachmentId) (**85**) · delete(user, attachmentId) (**99**) · projectArchive(user, projectId) (**120**)
+  ⇒ **cả 4 method ĐÃ nhận user** ⇒ **logic phân quyền thuộc tầng này** (đúng chỗ, không nhét vào controller).
+**KẾ HOẠCH VÁ (4 bước):**
+1. Thêm **bộ tra ngược** projectIdOf(entityType, entityId) (mới, ở FileStore port + adapter) phủ các loại chính:
+   material_request · purchase_order · goods_receipt · stock_issue · central_return · stock_count · project … ⇒ trả projectId (hoặc rỗng nếu không xác định).
+2. Trong upload/list: **tra project từ input** ⇒ ccessScope.requireProjectAccess(...) ⇒ **403** nếu ngoài phạm vi.
+   Trong download/delete: **tra attachment → (entityType, entityId) → project** ⇒ kiểm tương tự (đây là chỗ nguy hiểm nhất: ?id= không kèm ngữ cảnh).
+3. **Parity Node** ở pp/api/files/route.ts (cùng 4 nhánh).
+4. **Cổng 3 ca:** không phiên ⇒ **401** · đăng nhập nhưng **ngoài phạm vi** ⇒ **403** · **trong phạm vi** ⇒ **200** (có đối chứng dương).
+**Lưu ý an toàn khi thi hành:** các loại thực thể **không tra được project** (ví dụ entity_type lạ) ⇒ **mặc định TỪ CHỐI (403)**, không mặc định cho qua — đúng nguyên tắc *fail-closed*.
