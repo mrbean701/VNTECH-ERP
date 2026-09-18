@@ -78,11 +78,30 @@ Sau khi tách helper, `npm run test:regression` tụt từ **59/61 → 57/61** (
 * `tests/project-navigation-consolidation.test.mjs` + `tests/mobile-menu-interaction.test.mjs`: mỗi tệp 1 chỗ.
 ⇒ **Vì sao bắt buộc phải vá:** nếu không, **chính tầng kiểm thử chặn việc tách mà roadmap `U-11` yêu cầu**.
 
-## 6. Việc kế tiếp (bước 2–4 của `U-11`)
+## 6. Việc kế tiếp (bước 2–4 của `U-11`) — ĐÃ ĐO PHỤ THUỘC, KHÔNG ĐOÁN
 
-1. **Bước 2:** tách **1 màn NHỎ, tự chứa** (ví dụ `CashbankScreen` / `SiteCostScreen`) ra `app/screens/…`, giữ
-   **nguyên văn** mọi chữ; kiểm bằng **cổng ảnh** (màn đó đã có ảnh chuẩn).
-2. **Bước 3:** mỗi vòng tách **1–2 màn**, ưu tiên màn **đã được cổng ảnh phủ** (01–13, 16) ⇒ luôn có bằng chứng tự động.
-3. **Bước 4:** **KHÔNG** tách `WorkCenter` / `Requests` / `BoqControl` trong các vòng đầu (phụ thuộc nhiều helper + modal).
-4. ⚠️ **Mỗi lần tách phải chạy lại**: `tools/phan-tich-phu-thuoc-page.mjs` (tìm lát cắt mới), rồi
-   `tsc` + eslint + build + **cổng ảnh trùng byte** + `test:regression` + `preflight` (**chúng là lưới bắt hồi quy**).
+Công cụ mới **`tools/kiem-tra-phu-thuoc-man.mjs <TênMàn…>`** trả lời được câu "màn này cần gì còn nằm ở `page.tsx`".
+Đo 6 màn nhỏ nhất (18/09/2026):
+
+| Màn | Dòng | Phụ thuộc **còn ở `page.tsx`** | Từ `import` |
+|---|---|---|---|
+| `SealScreen` | 2193–2199 **(7 dòng)** | `AppData` · `CardHead` · `date` · `Empty` | `Row` · `FormEvent` |
+| `CorrespondenceScreen` | 2208–2215 (8) | `AppData` · `Kpi` · `CardHead` · `date` · `Empty` | `Row` · `FormEvent` |
+| `BenefitsScreen` | 2184–2192 (9) | `AppData` · `Kpi` · `money` · `CardHead` · `date` · `Empty` | `Row` · `FormEvent` |
+| `LaborScreen` | 2216–2225 (10) | `AppData` · `Kpi` · `CardHead` · `date` · `money` · `Empty` | `Row` · `FormEvent` · **`UI_NOW_MS`** (⚠️ đang ở `page.tsx`, sẽ phải nhập từ `ui-shared`) |
+| `SiteCostScreen` | 2262–2273 (12) | như trên | `Row` · `useState` · `FormEvent` · `ChangeEvent` |
+| `CashbankScreen` | 2247–2261 (15) | như trên | `Row` · `useState` · `FormEvent` · `ChangeEvent` |
+
+⇒ **KẾT LUẬN CÓ CĂN CỨ:** tách màn **ngay bây giờ là KHÔNG được** — mọi màn đều cần **`AppData` · `Kpi` · `money` · `CardHead` ·
+`date` · `Empty`** đang nằm ở `page.tsx`, tách ra sẽ **import ngược ⇒ import vòng**.
+**Việc ĐÚNG của bước 2 (thay cho "tách màn"):** **mở rộng `tools/tach-lat-cat-page.mjs` để chuyển được các khối CÓ JSX và CÓ import**
+(nó sẽ phải **sinh dòng import tương ứng trong tệp mới**, ví dụ `import type { ReactNode } from "react"`, `import { StatusBadge } from "@/app/components/ui"`),
+rồi chuyển **lô 2** gồm đúng 6 thứ trên + `AppData`. Sau lô 2 thì `SealScreen` (7 dòng) là màn **đầu tiên tách được**.
+
+1. **Bước 2a:** mở rộng công cụ để chuyển khối có JSX/import (giữ nguyên nguyên tắc: **từ chối ghi nếu không chắc**).
+2. **Bước 2b:** chuyển **lô 2** (`CardHead` · `Empty` · `Kpi` · `money` · `date` · `AppData`) ⇒ kiểm bằng **cổng ảnh trùng byte**.
+3. **Bước 3:** tách `SealScreen` ra `app/screens/SealScreen.tsx` ⇒ lại kiểm **cổng ảnh trùng byte**; sau đó `CorrespondenceScreen`, `BenefitsScreen`…
+4. **Bước 4:** **KHÔNG** tách `WorkCenter` / `Requests` / `BoqControl` trong các vòng đầu (phụ thuộc nhiều helper + modal).
+5. ⚠️ **Mỗi lần tách phải chạy lại:** `tsc` + eslint + build + **cổng ảnh trùng byte** + `test:regression` + `preflight`
+   (**chúng là lưới bắt hồi quy** — chính lưới này đã bắt được 2 test đỏ oan + build EXIT 1 ở bước 1).
+
