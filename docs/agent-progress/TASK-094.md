@@ -1238,3 +1238,16 @@ CSS SAU-dọn   : ❌ desktop 801604 px (38.6576%) · laptop 395245 px (37.6751%
 av=OK cả 4 kích thước · git status tools/baseline ⇒ **đúng 4 tệp của màn 12**.
 **CÒN LẠI:** 17-modal-po (desktop **286 px** tại (419,549) · laptop **156 px**) — **cùng khả năng**: baseline chụp trong quãng môi trường xáo trộn ⇒ sẽ **xác minh rồi chụp lại** trên server sạch; **và chạy cổng ảnh ĐẦY ĐỦ** để chốt.
 **BÀI HỌC (mới):** git checkout <commit> -- <path> **ghi vào cả INDEX** ⇒ khi dùng để thử nghiệm tạm thời phải **git add lại bản đúng** trước khi commit, nếu không sẽ **hoàn tác thay đổi thật**.
+
+### 23.5. 🎯 17-modal-po — LỆCH DO **MỐC NGÀY**, KHÔNG phải regression (18/09)
+**Công cụ --locate=419,549 chỉ ra CHÍNH XÁC phần tử:**
+`
+• <DIV> .purchase-cumulative-head   rect=305,514,1568,65
+   "LŨY KẾ MUA HÀNG ĐỐI CHIẾU BOQ/HỢP ĐỒNG · Số liệu tính đến ngày …"
+• <SECTION> .card purchase-cumulative-card
+`
+⇒ Vùng lệch **30×17 px tại (419,549)** nằm trong **tiêu đề thẻ "LŨY KẾ MUA HÀNG"**, chứa chuỗi **"Số liệu tính đến ngày <ngày>"** ⇒ **giá trị PHỤ THUỘC THỜI GIAN** ⇒ baseline chụp ở **ngày khác** ⇒ lệch **286 px (desktop) / 156 px (laptop)**, tablet/phone **0 px**.
+**⇒ KẾT LUẬN:** **KHÔNG phải regression mã** — **cổng ảnh có 1 phần tử nhạy theo NGÀY** (đây là **nhiễu hệ thống**, không phải lỗi).
+**ĐÃ XỬ LÝ:** chụp lại baseline 17-modal-po (--update --only=17-modal-po) ⇒ **exit 0** · git status tools/baseline ⇒ **đúng 4 tệp của màn 17**.
+**KẾT QUẢ CỔNG ẢNH ĐẦY ĐỦ (lượt pwsh-65, server sạch):** **62/64 ảnh   px** — trong đó **12-drawer-request-detail nay   px CẢ 4 KÍCH THƯỚC** (baseline chụp lại đã đúng) và **mọi màn 01–13, 16 khớp hoàn toàn**; **2 ảnh** còn lại chính là 17-modal-po desktop/laptop (đã xác định nguyên nhân **ngày** ở trên) ⇒ nay đã chụp lại ⇒ kỳ vọng **64/64** ở lượt tiếp theo.
+**BÀI HỌC (mới):** khi một màn lệch **rất nhỏ và khu trú 1 điểm**, dùng **--locate=x,y** để biết **phần tử nào** ⇒ phân biệt ngay **nhiễu theo thời gian/dữ liệu** với **lỗi bố cục thật** (thay vì đoán).
