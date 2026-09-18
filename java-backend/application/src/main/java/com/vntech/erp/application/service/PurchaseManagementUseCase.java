@@ -174,7 +174,7 @@ public final class PurchaseManagementUseCase {
             String eta = groupLines.stream().map(l -> sv(l, "plannedDeliveryAt")).sorted().findFirst().orElse(defaultEta);
             store.insertPurchaseOrderWithItems(poId, poNo, requestId, sv(mr, "projectId"),
                     nvl(mr.get("contractId")), nvl(mr.get("boqVersionId")), supplierId, warehouseId,
-                    principal.userId(), eta, "waiting_delivery", groupLines, sv(mr, "projectId"),
+                    principal.userId(), eta, "pending_approval", groupLines, sv(mr, "projectId"),
                     sv(mr, "contractId"), sv(mr, "boqVersionId"), sv(mr, "requestNo"), now);
         }
         // cập nhật ordered_qty / line_status
