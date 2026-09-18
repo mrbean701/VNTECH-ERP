@@ -807,3 +807,22 @@ pm run build · **cổng ảnh 64/64** · **WF-02/WF-05** · hồi quy **61/61**
 **CỔNG cho bước B:** 	sc (hoặc 
 pm run build) · **cổng ảnh 64/64** · **WF-02 5/5 · WF-05 5/5** · hồi quy **61/61** · **kiểm thao tác duyệt thật** (Trả lại/Duyệt) trên 1 phiếu pending_approval.
 **TRẠNG THÁI:** U-14 **chưa xong**; kế hoạch đã **được sửa theo bằng chứng** (không phải theo giả định ban đầu).
+
+### 16.2. ✅ U-14 BƯỚC B ĐÃ ÁP DỤNG — RequestDrawer nay render qua EntityDetailModal (18/09)
+**Bằng chứng chạy khô TRƯỚC khi ghi** (công cụ 	ools/u14b-doi-vo-modal.mjs, mốc + tự chối):
+`
+RequestDrawer @ dòng 2900; return @ dòng 2918 (dài 9254 ký tự)
+  mốc asideOpenAlt 1 lần · drawerBodyOpen 1 lần · asideClose 1 lần · summaryModal 1 lần
+  tách: đầu 161 · thân 7163 · đuôi 1795 ký tự  →  dòng mới 9422 (+168)
+  kiểm nội dung: data-contract ✔ · 4 nút hành động ✔   ("Trả lại CHT"/"Duyệt bước"/"Tải Excel"/"Tải PDF")
+CHẠY KHÔ: mốc hợp lệ, nội dung đủ ⇒ sẵn sàng ghi
+`
+**Sau khi áp dụng:**
+* ĐÃ GHI: app/page.tsx — RequestDrawer nay render qua EntityDetailModal.
+* **
+px tsc --noEmit ⇒ exit 0** ✔ (JSX hợp lệ)
+* git diff --stat ⇒ **pp/page.tsx | 2 +- · 1 file changed, 1 insertion(+), 1 deletion(-)** ⇒ **đúng MỘT dòng được thay** (surgical, không lan rộng).
+**Thay đổi thực chất:** vỏ <aside className="drawer request-drawer …">…</aside> ⇒ **<EntityDetailModal open onClose={close} title={…} subtitle={…} entityId={request.requestNo} width="wide" tabs={[{ key:"request-detail", label:"Chi tiết phiếu", content: <>…thân cũ…</> }]} />** — **giữ nguyên 7163 ký tự thân** (header/summary-grid/ApprovalTimeline/ActivityTimeline/khối tổng hợp/form sửa phiếu/FileUpload/footer 4 nút) và **giữ modal tổng hợp** ở đuôi.
+**CÒN LẠI để đóng U-14:** 
+pm run build · **cổng ảnh 64/64** · **WF-02 5/5 · WF-05 5/5** · hồi quy **61/61** · **kiểm thao tác duyệt thật** (Trả lại/Duyệt) trên 1 phiếu pending_approval.
+**BÀI HỌC ĐÃ CHỨNG MINH:** với dòng JSX lớn, cách đúng là **công cụ có mốc + kiểm nội dung + chạy khô trước**, KHÔNG sửa tay mò — nhờ vậy **1 lần chạy là đúng, 	sc sạch**.
