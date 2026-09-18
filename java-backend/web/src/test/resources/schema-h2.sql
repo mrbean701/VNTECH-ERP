@@ -2225,7 +2225,6 @@ CREATE TABLE IF NOT EXISTS `workflow_definitions` (
   `project_id`  varchar(64)  NULL ,
   `is_default`  tinyint(1)   NOT NULL DEFAULT 0,
   `active`      tinyint(1)   NOT NULL DEFAULT 1,
-  `version`     int          NOT NULL DEFAULT 1,
   `sort_order`  int          NOT NULL DEFAULT 0,
   `created_by`  text         NULL,
   `created_at` TIMESTAMP(3)  NOT NULL,

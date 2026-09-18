@@ -1352,3 +1352,32 @@ pm test (lint · typecheck · hồi quy · workflow) | **EXIT 0** |
 **PHÁT HIỆN TỐT:** đổi **nhãn tab** (sidebar) **KHÔNG** xuất hiện trong **khung chụp** của cổng ảnh (probe chụp **vùng nội dung**, phần lớn bắt đầu ở x=340 — **không gồm sidebar**) ⇒ **KHÔNG phải cập nhật baseline nào** ⇒ thay đổi UI thuần nhãn này **an toàn với cổng ảnh**.
 *(Điều này cũng cho biết: các thay đổi **chỉ ở sidebar/nav** sẽ không bị cổng ảnh bắt — cần lưu ý khi đánh giá độ phủ của cổng.)*
 **LỘ TRÌNH:** WF-01 → **DONE / DOI-TEN-TAB-WORKFLOW** (ô TT [10]) ⇒ **PHASE 8 = 4/6**.
+
+### 27. ✅ WF-03 ĐÓNG — XOÁ CỘT DEAD workflow_definitions.version (18/09)
+**Mục lộ trình WF-03:** *"Dùng cột workflow_definitions.version hoặc **xoá nếu không dùng**"* (P3).
+**BẰNG CHỨNG "KHÔNG DÙNG" (điều tra trước khi sửa):**
+* **KHÔNG nơi nào ĐỌC** cột: không có getInt("version") / AS version / SELECT *; các query đều **liệt kê cột tường minh** (SELECT id,code,name FROM workflow_definitions …).
+* **Chỉ có INSERT** liệt kê ersion (vì cột **NOT NULL DEFAULT 1**) — ở migration lịch sử **V17** và **test** AdminGovernanceIntegrationTest:189.
+* workflow_definitions **chỉ xuất hiện ở Java** (3 adapter + 3 migration + test) — **JS/TS không đụng tới** ⇒ **lõi JS không bị ảnh hưởng**.
+**3 SỬA ĐỔI ĐÃ LÀM** (công cụ 	ools/wf03-xoa-cot-version.mjs, mỏ neo + tự chối + chạy khô):
+1. **MỚI**: java-backend/infrastructure/src/main/resources/db/migration/**V19__drop_workflow_definitions_version.sql** → ALTER TABLE workflow_definitions DROP COLUMN version;
+2. **SỬA** AdminGovernanceIntegrationTest.java: INSERT bỏ ersion.
+3. **SỬA** schema-h2.sql (schema test): bỏ dòng khai báo ` ersion `.
+*(Migration **V17** là **lịch sử đã áp dụng** ⇒ **KHÔNG sửa** — đúng nguyên tắc Flyway.)*
+**BẰNG CHỨNG CHẠY THẬT:**
+`
+(mvn cũ HỎNG vì KHOÁ JAR: "repackage failed: Unable to rename …jar" ⇒ phải dừng Java trước)
+dừng java PID 37472 (giữ cổng 18081) => 18081 DOWN
+mvn -q -DskipTests package => MVN EXIT = 0
+khởi động lại java -jar … --server.port=18081
+  18081 -> 200
+  flyway_max_rank=19 · migrations=19 · "19 | drop workflow definitions version | success=1"
+  so_cot_version=0     ⇒ CỘT ĐÃ BỊ XOÁ
+  rows=4               ⇒ dữ liệu workflow_definitions NGUYÊN VẸN (không mất dòng)
+npm test => EXIT 0
+verify:fingerprint => HỎNG (do sửa java-backend/**) ⇒ làm mới định danh head 0147
+  refresh exit=0 · SHORT VNTECH-FP-A67D0B88812ACAFA · set-local KHỚP:true · manifest 6734 files
+  verify:fingerprint => ĐẠT · VNTECH-FP-A67D0B88812ACAFA · source:297 files · brand/release verified · EXIT 0
+`
+**LỘ TRÌNH:** WF-03 → **DONE / XOA-COT-DEAD-V19** ⇒ **PHASE 8 = 5/6** (còn **WF-06**).
+**BÀI HỌC:** mvn repackage **KHÔNG chạy được khi app đang chạy** (khoá jar) ⇒ quy trình đúng: **tìm PID theo cổng → xác nhận cmdline → dừng → build → khởi động lại → kiểm bằng số** (không đoán).
