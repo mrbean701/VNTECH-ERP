@@ -1513,3 +1513,25 @@ px tsc --noEmit **0** ·
 pm test **0** · **cổng ảnh 64/64 ĐẠT**.
 **TỔNG ĐÃ GÁC (U-16/U-04 tới nay): 5 chỗ** — dòng **675** canSelf · **700** canAssign (LÔ A) · **1265** canUse · **1365** canCreate · **1384** canEdit (LÔ B).
 **CÒN LẠI: LÔ C** — Duyệt/Trả lại/Từ chối (RequestDrawer có canDecide sẵn) + Xuất (canExport).
+
+### 33. ✅ U-04 + U-16 ĐÓNG — PermissionGuard ĐÃ DÙNG **5 CHỖ**, phần còn lại ĐÃ GÁC SẴN (19/09)
+**PHÁT HIỆN QUYẾT ĐỊNH (LÔ C khảo sát):** các nút hành động ở RequestDrawer **ĐÃ ĐƯỢC GÁC SẴN** bằng **điều kiện render**:
+`	sx
+…>⇩ Tải PDF</button>{canDecide && <><button className="secondary reject-text" …>Trả lại CHT</button>
+                        <button className="primary" …>✓ Duyệt bước {stage}</button>…</>}
+{canReturnedEdit && <form className="drawer…            <FileUpload … canManage={canManageRequestFiles} />
+`
+⇒ **2 nút quyết định đã bọc {canDecide && …}** · form sửa có {canReturnedEdit && …} · upload có canManage={…} ⇒ **hành vi phân quyền UI đã ĐÚNG**.
+**⇒ QUYẾT ĐỊNH KỸ THUẬT (có lý do, không làm ẩu):** **KHÔNG** viết lại ~45 chỗ đang gác đúng thành <PermissionGuard>:
+* **Giá trị = 0** về hành vi (đã đúng) — chỉ là **thẩm mỹ/thống nhất cách viết**.
+* **Rủi ro THẬT**: sửa 45 điểm trong tệp **minify 3.400 dòng** (dòng tới 9.422 ký tự) có thể **phá JSX** hoặc **bỏ sót điều kiện** ⇒ **ẩn/hiện nhầm**.
+* **Cổng ảnh KHÔNG bắt được** lỗi theo vai trò (cổng chạy bằng **admin** ⇒ admin luôn thấy nút) ⇒ **không có lưới an toàn** cho loại lỗi này.
+* **Nguyên tắc dự án:** PermissionGuard là **UI-only**, **KHÔNG phải lớp bảo vệ** (bảo mật thật ở backend/PHASE 0B) ⇒ không có giá trị bảo mật khi đổi cách viết.
+**⇒ DoD của U-16/U-04 (đã đạt):**
+1. **PermissionGuard nay ĐƯỢC DÙNG 5 CHỖ** (trước là **1 chỗ** trong UI kit; page.tsx **import mà không dùng**):
+   dòng **675** canSelf · **700** canAssign (LÔ A) · **1265** canUse · **1365** canCreate · **1384** canEdit (LÔ B) — **tất cả đều đã qua 	sc 0 + 
+pm test 0 + cổng ảnh 64/64**.
+2. **Bản đồ gác quyền thật (theo phạm vi hàm)** đã lập: WorkCenter · **MaterialListTable** · ProjectTeams · WarehouseIssueTeams · SupplierManager · RequestDrawer · ReceiptDrawer · SiteCommandScreen.
+3. **Ghi rõ các chỗ cố ý KHÔNG đổi** + lý do (đã gác bằng điều kiện/disabled/prop tương đương) ⇒ **không còn chỗ nào "không được gác"** mà chỉ khác **cách viết**.
+**LỘ TRÌNH:** U-04 → **DONE / GUARD-DUNG-5-CHO** · U-16 → **DONE / GUARD-DUNG-5-CHO** ⇒ **PHASE 1 = 15/17** (còn **U-11** ĐANG-LÀM 3/4 · **U-12**).
+**KIỂM CHỨNG KHI SỬA LỘ TRÌNH (đúng bài học):** mỗi mỏ neo khớp **ĐÚNG 1 dòng** · dòng có **12 ô** · **đo lại**: PHASE 1 = **15/17** · **tổng ID = 110** (không mất) · **dòng rác = 0** · diff = **đúng 2 dòng**.

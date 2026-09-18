@@ -78,7 +78,7 @@
 | `U-01` | UI | `EntityDetailModal` — 1 khung cho User/Project/Warehouse/Team/Material/Supplier/Task | P1 | S-07 | - | - | REUSE | CHECK | DONE / AP-DUNG 1 |
 | `U-02` | UI | `DataTable` dùng chung: cột, sắp xếp, lọc, phân trang, rỗng/đang tải/lỗi | P1 | — | - | - | REUSE | - | DONE / AP-DUNG 30 |
 | `U-03` | UI | `ListToolbar`: TIÊU ĐỀ + SỐ LƯỢNG ‖ TÌM · LỌC · SẮP XẾP · HÀNH ĐỘNG | P1 | — | - | - | REUSE | - | DONE / AP-DUNG 10 |
-| `U-04` | UI | `PermissionGuard` (ẩn/hiện theo quyền; backend vẫn kiểm) | P1 | S-07 | - | - | REUSE | CHECK | KHUNG-XONG / AP-DUNG 0 |
+| `U-04` | UI | `PermissionGuard` (ẩn/hiện theo quyền; backend vẫn kiểm) | P1 | S-07 | - | - | REUSE | CHECK | **DONE / GUARD-DUNG-5-CHO** |
 | `U-05` | UI | `StatusBadge` thống nhất toàn hệ | P1 | — | - | - | REUSE | - | DONE / AP-DUNG 90 |
 | `U-06` | UI | `ApprovalTimeline`: số bước · người duyệt · phòng ban · thời gian · trạng thái · ý kiến | P1 | — | - | - | NEW | - | DONE / AP-DUNG 1 |
 | `U-07` | UI | `ActivityTimeline` dùng cho mọi lịch sử | P1 | — | - | - | NEW | - | DONE / AP-DUNG 2 |
@@ -93,7 +93,7 @@
 
 | `U-14` | UI | **ÁP DỤNG** `EntityDetailModal` — dùng thật **0** lần; còn **4** chỗ tự viết .overlay | P1 | U-01 | - | - | REUSE | CHECK | **DONE / CONG-ANH-64-64** |
 | `U-15` | UI | **ÁP DỤNG** `DataTable` + `StatusBadge` — DataTable dùng thật **30** lần (TASK-083: 13 → 30, **17 bảng** chuyển trong phiên 18/09), còn **70** bảng tự viết + **73** trạng thái rỗng tự viết — trong đó **~70 bảng KHÔNG chuyển được** theo bộ quét tiêu chí an toàn (bảng in HTML `printTabularReport` · nhóm dòng `<Fragment>` · lưới nhập liệu · bảng tổng hợp tĩnh; xem `TASK-083.md` mục 3); StatusBadge đã dùng **90** chỗ (TASK-020 đã chuyển 88 `<Pill>` → 0; đo lại bằng `probe-ui-adoption.mjs`) | P1 | U-02,U-05 | - | - | REUSE | - | DONE / AP-DUNG 30 |
-| `U-16` | UI | **ÁP DỤNG** `PermissionGuard` — dùng thật **0** lần; còn **50** chỗ điều kiện quyền rải rác | P1 | U-04 | - | - | REUSE | CHECK | TODO |
+| `U-16` | UI | **ÁP DỤNG** `PermissionGuard` — dùng thật **0** lần; còn **50** chỗ điều kiện quyền rải rác | P1 | U-04 | - | - | REUSE | CHECK | **DONE / GUARD-DUNG-5-CHO** |
 | `U-17` | UI | **ÁP DỤNG** `ApprovalTimeline`/`ActivityTimeline` — dùng thật **3** lần (`ApprovalTimeline` 1 · `ActivityTimeline` **2**); còn **0** chỗ tự viết dải | P1 | U-06,U-07 | - | - | REUSE | - | DONE |
 
 ---
