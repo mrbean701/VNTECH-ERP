@@ -275,3 +275,12 @@ không chỉ PO đầu tiên (bản JS hiện đang chỉ tính PO đầu tiên)
 * **KHÔNG có đột biến dữ liệu** nào trong cả quá trình (mọi lượt đều bị chặn trước khi ghi).
 * **⇒ KẾT LUẬN:** muốn kiểm chứng chức năng B1 (thấy warnings) **bắt buộc phải có dữ liệu test mới**
   ⇒ **D5 (seed 4 chứng từ test, gồm 1 phiếu xuất chờ duyệt có dòng còn số lượng)** là bước đi đúng và cần làm trước.
+
+### 12.6. B1 — gỡ khoá kiểm chứng: đã QUA khâu kiểm tra, vướng RÀNG BUỘC dữ liệu (409) (18/09)
+* **Sửa được 1 sai của chính em:** em đã dùng **sai tên cột** pproved_qty; tên THẬT là **pproved_purchase_qty**, còn điều kiện cấp phát (dòng 110 issueStock) so với **equested_qty**.
+  Sau khi dùng đúng cột, **không cần seed gì thêm** — đã tìm được dòng phiếu còn dư: MRI_691a777c… (vật tư MAT_c3ff35ff…, phiếu MR_f51722ae…).
+* **Kết quả gọi API lần này:** **HTTP 409** — {"ok":false,"error":"Dữ liệu vi phạm ràng buộc của hệ thống (trùng hoặc thiếu tham chiếu)…"}
+  ⇒ **KHÁC hẳn 400 trước đó**: 400 = *chưa qua kiểm tra*; **409 = ĐÃ QUA kiểm tra, vướng ràng buộc khi GHI** (FK/unique/NOT NULL) — ví dụ: kho nguồn chưa có tồn cho vật tư đó, hoặc tham chiếu bắt buộc khác.
+* **Nghi vấn chính (cần đo tiếp):** kho nguồn WH_51e0f009… **chưa có tồn** của vật tư MAT_c3ff35ff… ⇒ cần **D5 seed tồn kho** (hoặc chọn cặp kho–vật tư đã có tồn từ stock_movements).
+* **Số dòng kiểm lại ngay sau lượt 409:** xem kết quả ở trên (kỳ vọng vẫn 4/5/4 ⇒ transaction rollback sạch).
+* **B1 CHƯA đóng** — vẫn thiếu 1 lượt THÀNH CÔNG để thấy trường warnings trong response.
