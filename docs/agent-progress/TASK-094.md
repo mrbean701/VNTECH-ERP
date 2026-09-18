@@ -876,3 +876,22 @@ pm run build ⇒ BUILD EXIT = 0** · **BUILT ARTIFACT VALIDATION: ĐẠT · 5.3.
 **⇒ KẾT LUẬN:** **KHÔNG phải regression** — tính năng WF-02/S-08 **nguyên vẹn**; **lỗi ở PHÉP KIỂM**.
 **VIỆC CẦN LÀM (chất lượng kiểm thử):** sửa 	ools/probe-wf02-snapshot-nguoi-chi-dinh.mjs để **dò theo NỘI DUNG toàn tệp** (ví dụ java.includes("allowed_role_codes_snapshot") && java.includes("INSERT INTO approvals")) **thay vì theo số dòng** ⇒ hết bị lệch mốc khi mã dịch chuyển.
 **BÀI HỌC (đã trả giá):** **phép kiểm KHÔNG được neo vào SỐ DÒNG** — mã dịch chuyển là chuyện bình thường; neo vào nội dung/ký hiệu mới bền.
+
+### 16.6. ✅ SỬA PHÉP KIỂM WF-02 — hết hỏng giả, **5/5 ĐẠT · exit 0** (18/09)
+**Đã sửa 	ools/probe-wf02-snapshot-nguoi-chi-dinh.mjs:** bỏ **neo SỐ DÒNG (~255)**, thay bằng **kiểm theo NỘI DUNG toàn tệp**:
+``js
+const writesSnapshot = java.includes("allowed_role_codes_snapshot") && java.includes("approval_mode_snapshot") && /INSERT\s+INTO\s+approvals/i.test(java);
+``
+(đồng thời đổi nhãn khỏi gây hiểu nhầm: *"RequestStoreAdapter — kiểm theo NỘI DUNG (bỏ neo số dòng)"*)
+**Kết quả chạy lại:**
+`
+[ĐẠT] mọi phiếu duyệt đều có SNAPSHOT vai trò/mode (không đọc live) :: 100/100 dòng
+[ĐẠT] người được chỉ định (pprover_user_id) là trường CỦA TỪNG PHIẾU, không tra live :: 100/100 dòng có người chỉ định
+[ĐẠT] đổi catalog ⇒ snapshot phiếu cũ KHÔNG đổi :: [commander,cht] → [commander,cht]
+[ĐẠT] đã khôi phục catalog :: [commander,cht]
+[ĐẠT] mã nguồn: … CÓ ghi 2 cột snapshot … :: thấy INSERT + cả 2 cột snapshot
+=== KẾT QUẢ WF-02/S-08: 5/5 ĐẠT · 0 HỎNG ===   WF-02 EXIT = 0
+`
+*(2 cảnh báo ⚠️ dòng đã không còn TODO là bước tự-ghi-trạng-thái của probe khi dòng lộ trình đã DONE — **vô hại**, exit vẫn 0.)*
+**⇒ BỘ CỔNG SAU U-14 BƯỚC B (đầy đủ):** hồi quy **61/61 exit 0** · **WF-05 5/5 exit 0** · **WF-02/S-08 5/5 exit 0** · 	sc exit 0 · **build exit 0 + ARTIFACT VALIDATION ĐẠT**.
+**BÀI HỌC ĐÃ ĐƯỢC CHỨNG MINH:** **phép kiểm neo vào SỐ DÒNG sẽ hỏng khi mã dịch chuyển** — phải neo vào **nội dung/ký hiệu**.

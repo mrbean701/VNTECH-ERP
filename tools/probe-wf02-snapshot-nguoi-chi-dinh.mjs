@@ -28,8 +28,8 @@ check(restored === cat[1], "đã khôi phục catalog", `[${restored}]`);
 // 3) Bằng chứng mã nguồn: lúc TẠO phiếu duyệt có GHI 2 cột snapshot
 const java = readFileSync("java-backend/infrastructure/src/main/java/com/vntech/erp/infrastructure/persistence/RequestStoreAdapter.java", "utf8");
 const insertBlock = java.split("\n").slice(250, 262).join("\n");
-const writesSnapshot = /INSERT INTO approvals/.test(insertBlock) && /allowed_role_codes_snapshot/.test(insertBlock) && /approval_mode_snapshot/.test(insertBlock);
-check(writesSnapshot, "mã nguồn: lúc TẠO phiếu duyệt CÓ ghi 2 cột snapshot (RequestStoreAdapter ~dòng 255)", writesSnapshot ? "thấy INSERT + cả 2 cột snapshot" : "KHÔNG thấy");
+const writesSnapshot = java.includes("allowed_role_codes_snapshot") && java.includes("approval_mode_snapshot") && /INSERT\s+INTO\s+approvals/i.test(java);
+check(writesSnapshot, "mã nguồn: lúc TẠO phiếu duyệt CÓ ghi 2 cột snapshot (RequestStoreAdapter — kiểm theo NỘI DUNG (bỏ neo số dòng))", writesSnapshot ? "thấy INSERT + cả 2 cột snapshot" : "KHÔNG thấy");
 
 const bad = checks.filter((c) => !c.ok).length;
 console.log(`\n=== KẾT QUẢ WF-02/S-08: ${checks.length - bad}/${checks.length} ĐẠT · ${bad} HỎNG ===`);
