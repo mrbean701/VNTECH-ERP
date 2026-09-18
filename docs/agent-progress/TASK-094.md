@@ -1138,3 +1138,27 @@ pm test exit 0**.
 * **Kiến trúc đã xác nhận:** SystemController chỉ **uỷ nhiệm mỏng** (equireCurrentUser → use case → jsonResult) ⇒ **guard nằm trong use case** ⇒ **mọi kiểm parity sau này phải đọc use case**, không phải controller.
 **⇒ PHASE 8: toàn bộ các nhánh B **ĐÃ XONG** (B1 ✔ · B2 ✔ · B3 ✔ có bằng chứng · **B4 ✔ đóng** · **D5 ✔ đóng**) — cùng với 3/6 mục lộ trình (WF-02 · WF-04 · WF-05).
 **⇒ TIẾP THEO:** **PHASE 1** còn **3 mục** — U-11 bước 4 · U-16+U-04 · U-12.
+
+## 23. ✅ PHASE 1 · DỌN CSS CHẾT SAU U-14 — CỔNG CSS VỀ **ĐẠT** (18/09)
+**PHÁT HIỆN (do chính U-14):** sau khi đổi <aside className="drawer request-drawer"> ⇒ EntityDetailModal, class **equest-drawer không còn trong markup** ⇒ cổng erify:css-baseline **HỎNG**:
+CSS BASELINE AUDIT: KHÔNG ĐẠT · dead CSS classes remain: request-drawer (**exit 1**).
+*(
+pm test **không** gồm cổng này ⇒ khi đóng U-14 tôi đã bỏ sót ⇒ ghi nhận thẳng.)*
+**CƠ CHẾ CỦA AUDIT:** deadClasses = cssClasses.filter(name => !source.includes(name) && !dynamicPrefixes...) ⇒ class "chết" khi **tên không còn xuất hiện trong mã nguồn**.
+**CÁCH SỬA (công cụ mới 	ools/_u12-don-css-request-drawer.mjs):**
+* Quét CSS theo **CẶP NGOẶC** (không regex tham lam), xử lý được **rule lồng trong @media**, **selector-list**, và **CSS minify**.
+* Quy tắc: rule mà **mọi** phần selector chứa equest-drawer ⇒ **xoá hẳn**; rule mà **chỉ một số** phần chết ⇒ **cắt đúng phần chết**, giữ phần sống.
+* **An toàn:** mặc định **CHẠY KHÔ**; **kiểm cân bằng ngoặc trước/sau**; **TỰ CHỐI GHI** nếu lệch.
+**LỖI BẢN 1 (đã tự sửa — công cụ ĐÃ TỰ CHỐI, không ghi tệp):** globals.css bị **minify** (nhiều rule/dòng) nên mốc selector không được cập nhật sau mỗi } ⇒ selector bị kéo dài ⇒ **1373 "cắt" giả** + **ngoặc lệch 3259/3258** ⇒ tool **từ chối ghi** ✔
+**KẾT QUẢ BẢN 2 (đã áp dụng):**
+`
+app/globals.css           : xoá hẳn 32 rule · cắt 3 rule · ngoặc 3306/3306 → 3274/3274 (OK) · giảm 3.401 ký tự
+app/styles/canonical.css  : xoá hẳn 13 rule · cắt 7 rule · ngoặc  226/226  →  213/213  (OK) · giảm 2.940 ký tự
+TỔNG: xoá hẳn 45 rule · cắt 10 rule · còn chuỗi 'request-drawer' trong CSS = 0
+git diff --stat: 2 files changed, 14 insertions(+), 137 deletions(-)
+`
+**CỔNG SAU KHI SỬA:**
+CSS BASELINE AUDIT: ĐẠT · 2535 lines · 367473 bytes · **4472 !important** · **dead classes=0** · **dead vars=0** · dynamic contracts=PASS · empty media=0 · historical patch markers=0 ⇒ **EXIT 0** ✔
+(phụ trợ cho **U-12**: !important giảm **4652 → 4472** = **-180** do các rule chết bị xoá)
+**CÒN LẠI để đóng trọn mục này:** ① **cổng ảnh 64/64** (xác nhận **KHÔNG đổi giao diện** — các class là chết nên kỳ vọng   px mọi màn; nếu có lệch ⇒ chứng tỏ class **chưa chết** ⇒ phải điều tra lại) ② 
+pm test ③ **làm mới định danh + build** (CSS nằm trong tập hash nguồn ⇒ vân tay sẽ đổi như lần U-14).

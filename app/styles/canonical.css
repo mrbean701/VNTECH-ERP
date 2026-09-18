@@ -34,23 +34,7 @@
    thuộc tính chuẩn `scrollbar-color` + `scrollbar-width: auto` (thanh cuộn đủ
    rộng, có màu) và KHÔNG khai báo ::-webkit-scrollbar ở đây.
    --------------------------------------------------------------------------- */
-.table-wrap,
-.boq-table-wrap,
-.matching-table-wrap,
-.material-subgroup-table-wrap,
-.staff-table,
-.dashboard-chart-scroll,
-.request-drawer .table-wrap,
-.modal .table-wrap,
-.drawer .table-wrap,
-.embedded-account-permissions .table-wrap,
-.boq-history-panel .table-wrap,
-.dynamic-fields .table-wrap,
-.boq-main,
-.boq-column-panel,
-.sidebar .tree-nav,
-.approval-meta-pane,
-.user-display-panel .column-list {
+.table-wrap, .boq-table-wrap, .matching-table-wrap, .material-subgroup-table-wrap, .staff-table, .dashboard-chart-scroll, .modal .table-wrap, .drawer .table-wrap, .embedded-account-permissions .table-wrap, .boq-history-panel .table-wrap, .dynamic-fields .table-wrap, .boq-main, .boq-column-panel, .sidebar .tree-nav, .approval-meta-pane, .user-display-panel .column-list {
   scrollbar-color: var(--vt-scroll-thumb) var(--vt-scroll-track);
   scrollbar-width: auto;
   scrollbar-gutter: stable;
@@ -75,11 +59,7 @@
   border: 1px solid var(--line, #dbe4ee);
   border-radius: var(--vt-radius);
   background: var(--surface, #fff);
-}
-
-.modal .table-wrap,
-.drawer .table-wrap,
-.request-drawer .table-wrap {
+}.modal .table-wrap, .drawer .table-wrap {
   max-height: min(58vh, 640px);
 }
 
@@ -260,9 +240,7 @@ thead th {
 @media (max-width: 520px) {
   .table-wrap > table { min-width: 620px; }
   .card-head { flex-direction: column; align-items: flex-start; gap: var(--vt-gap-1); }
-}
-
-/* ---------------------------------------------------------------------------
+}/* ---------------------------------------------------------------------------
    6. CHẾ ĐỘ TRANG ĐẦY ĐỦ (GĐ2) — phiếu mua hàng thay vì drawer/modal
    ---------------------------------------------------------------------------
    Yêu cầu người dùng: "phiếu mua hàng thay vì chỉ hiển thị theo dạng modal thì có
@@ -271,61 +249,21 @@ thead th {
    Vì sao KHÔNG dùng `position: static`: RequestDrawer được render SAU nội dung
    chính trong <main>, nên nếu đưa về luồng tài liệu nó sẽ nằm DƯỚI nội dung module
    chứ không thay thế. Cách đúng: giữ `position: fixed` nhưng phủ TOÀN màn hình và
-   bỏ mọi dấu hiệu "drawer" (bo góc, đổ bóng, nền mờ).
-
-   Lưu ý: globals.css có tới 6 rule `!important` chi phối chiều rộng .drawer
-   (L2100/2171/2221/2252…). Khối dưới đây dùng độ ưu tiên CAO HƠN
-   (.overlay.page-mode > .drawer.request-drawer.is-page = 5 lớp) nên thắng tất cả.
-   --------------------------------------------------------------------------- */
-.overlay.page-mode {
+   bỏ mọi dấu hiệu "drawer" (bo góc, đổ bóng {
   background: var(--shell-bg, #f4f7fa) !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   display: block !important;
   padding: 0 !important;
   z-index: 130 !important;
-}
-
-.overlay.page-mode > .drawer.request-drawer.is-page {
-  width: 100% !important;
-  min-width: 0 !important;
-  max-width: 100% !important;
-  height: 100vh !important;
-  max-height: 100vh !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  background: var(--shell-bg, #f4f7fa) !important;
-}
-
-/* Đầu trang dính trên cùng, có nút "← Quay lại" */
-.overlay.page-mode > .drawer.request-drawer.is-page > header {
+}/* Đầu trang dính trên cùng {
   position: sticky !important;
   top: 0 !important;
   z-index: 6 !important;
   min-height: 68px !important;
   padding: 14px 26px !important;
   box-shadow: 0 1px 0 var(--line, #dbe4ee) !important;
-}
-
-.overlay.page-mode .request-drawer .page-back {
-  width: auto !important;
-  min-width: 0 !important;
-  height: var(--vt-control-h) !important;
-  padding: 0 16px !important;
-  border-radius: 8px !important;
-  background: #eef3f8 !important;
-  color: #24507d !important;
-  font-size: calc(10.5px * var(--user-font-scale, 1)) !important;
-  font-weight: 800 !important;
-  white-space: nowrap !important;
-}
-.overlay.page-mode .request-drawer .page-back:hover {
-  background: #e2ecf6 !important;
-}
-
-/* Thân trang: bỏ giới hạn chiều cao của drawer, cho cuộn theo trang */
-.overlay.page-mode > .drawer.request-drawer.is-page > .drawer-body {
+}/* Thân trang: bỏ giới hạn chiều cao của drawer {
   max-height: none !important;
   overflow-y: auto !important;
   padding: 20px 26px 48px !important;
@@ -333,44 +271,16 @@ thead th {
   background: transparent !important;
 }
 
-/* Rộng rãi hơn khi ở chế độ trang */
-.overlay.page-mode .request-drawer .request-summary {
-  grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
-}
-.overlay.page-mode .request-drawer .table-wrap {
-  max-height: min(72vh, 820px) !important;
-}
-
 @media (max-width: 1440px) {
-  .overlay.page-mode .request-drawer .request-summary {
-    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-  }
 }
 @media (max-width: 1024px) {
-  .overlay.page-mode .request-drawer .request-summary {
-    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-  }
-  .overlay.page-mode > .drawer.request-drawer.is-page > .drawer-body {
-    padding: 16px 16px 40px !important;
-  }
 }
 @media (max-width: 768px) {
-  .overlay.page-mode .request-drawer .request-summary {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-  }
-  .overlay.page-mode > .drawer.request-drawer.is-page > header {
-    padding: 12px 14px !important;
-  }
-}
-
-/* ---------------------------------------------------------------------------
+}/* ---------------------------------------------------------------------------
    6b. THU GỌN KHỐI ("dropbox nếu muốn ẩn bớt cho gọn")
    ---------------------------------------------------------------------------
    Giữ TIÊU ĐỀ từng khối, ẩn phần thân — người dùng vẫn biết khối nào tồn tại.
-   Không dùng <details> vì các khối nằm trong chuỗi JSX rất dài, thêm cặp thẻ
-   đóng/mở sẽ rủi ro cao; chỉ cần 1 class trên .request-drawer là đủ.
-   --------------------------------------------------------------------------- */
-.overlay.page-mode .request-drawer .page-collapse {
+   Không dùng <details> vì các khối nằm trong chuỗi JSX rất dài {
   width: auto !important;
   min-width: 0 !important;
   height: var(--vt-control-h) !important;
@@ -383,20 +293,7 @@ thead th {
   font-size: calc(10.5px * var(--user-font-scale, 1)) !important;
   font-weight: 800 !important;
   white-space: nowrap !important;
-}
-.overlay.page-mode .request-drawer .page-collapse:hover {
-  background: #eef3f8 !important;
-}
-
-/* Chỉ ẩn phần THÂN, giữ lại tiêu đề khối */
-.request-drawer.is-page.sections-collapsed .drawer-section > *:not(.card-head) {
-  display: none !important;
-}
-.request-drawer.is-page.sections-collapsed .drawer-section {
-  padding-bottom: 10px !important;
-}
-.request-drawer.is-page.sections-collapsed .drawer-body > .request-summary,
-.request-drawer.is-page.sections-collapsed .request-summary {
+}/* Chỉ ẩn phần THÂN {
   display: none !important;
 }
 
