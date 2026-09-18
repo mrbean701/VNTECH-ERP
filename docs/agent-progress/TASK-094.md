@@ -795,3 +795,15 @@ DELETE FROM goods_receipts WHERE purchase_order_id='PO_0843c57c-…' ⇒ **xoá 
 pm run build · **cổng ảnh 64/64** · **WF-02/WF-05** · hồi quy **61/61**.
 * **Bước B — ĐỔI VỎ:** thay vỏ <aside> bằng EntityDetailModal (dùng đúng data-contract + tabs), ariant="page" vẫn hoạt động. **Cổng:** như bước A **+ kiểm thao tác duyệt thật** (Trả lại/Duyệt) trên 1 phiếu pending_approval.
 **TRẠNG THÁI:** U-14 **chưa xong**; đã có **phạm vi chính xác + kế hoạch 2 bước + cổng kiểm chứng**. *Không viết lại JSX lớn khi chưa có kế hoạch từng bước — vì đây là bề mặt đang được 3 cổng bảo vệ.*
+
+### 16.1. U-14 — ĐÍNH CHÍNH KẾ HOẠCH: "DI CHUYỂN THUẦN" KHÔNG THUẦN (18/09)
+**Bằng chứng (khối import page.tsx dòng 6-40):** các ký hiệu JSX đang dùng thuộc **3 nhóm khác nhau**:
+* **Nhập từ ngoài:** FormEvent/useState (react) · ActivityTimeline/ApprovalTimeline/EntityDetailModal/StatusBadge/	ype ApprovalStep (@/app/components/ui) · CardHead/date/ormat (@/lib/ui-shared) · downloadRequestPdf/downloadRequestXlsx (@/lib/request-export).
+* **ĐỊNH NGHĨA NGAY TRONG page.tsx:** statusLabel · decide · stageAllowedForUser · isAdminUser · oleBase · pprovalTiming · workflowTiming · savedRequestDocument · **FileUpload** · 	ype AppData/Row (2 type này có nguồn ngoài, nhưng nhóm hàm trên là **nội bộ tệp**).
+**⇒ HỆ QUẢ:** tách JSX ra pp/screens/RequestDetail.tsx như kế hoạch A **sẽ buộc** page.tsx **export ngược** 9 ký hiệu nội bộ ⇒ **import vòng** (page.tsx → RequestDetail → page.tsx) ⇒ **rủi ro cao, lợi ích thấp**.
+**⇒ ĐẢO THỨ TỰ (kế hoạch sửa):**
+* **BƯỚC B LÀM TRƯỚC — đổi vỏ NGAY TRONG page.tsx:** bọc nội dung hiện có vào EntityDetailModal (thay <aside className="drawer request-drawer"> bằng modal dùng chung; giữ nguyên **mọi handler/nội dung/data-contract**), **không tạo tệp mới, không đổi import** ⇒ **không có import vòng**.
+* **BƯỚC A LÀM SAU (tuỳ chọn):** chỉ khi **đã** chuyển các hàm nội bộ (statusLabel, decide, pprovalTiming, …) sang **mô-đun dùng chung** ⇒ khi đó việc tách tệp mới an toàn.
+**CỔNG cho bước B:** 	sc (hoặc 
+pm run build) · **cổng ảnh 64/64** · **WF-02 5/5 · WF-05 5/5** · hồi quy **61/61** · **kiểm thao tác duyệt thật** (Trả lại/Duyệt) trên 1 phiếu pending_approval.
+**TRẠNG THÁI:** U-14 **chưa xong**; kế hoạch đã **được sửa theo bằng chứng** (không phải theo giả định ban đầu).
