@@ -33,6 +33,11 @@ function walkUi(directory) {
   }
 }
 walkUi(join(root, "app"));
+// U-11 (18/09/2026) — SỬA PHẠM VI ĐỌC, KHÔNG NỚI PHÉP KIỂM: sau khi `U-11` tách component dùng chung khỏi
+// `app/page.tsx` sang `lib/`, các lớp CSS do chúng phát ra (`attachment-*`, `kpi-*`, `nav-glyph*`, …) không
+// còn nằm trong `app/` ⇒ cổng báo "lớp chết" OAN (26 lớp, đo được). Nay quét HỢP NHẤT `app/` + `lib/` —
+// đúng cùng cách đã vá cho `scripts/preflight-source.mjs` và 3 tệp test ở KP #94.
+walkUi(join(root, "lib"));
 const source = sourceParts.join("\n");
 const dynamicPrefixes = new Set([...source.matchAll(/([A-Za-z_][\w-]*-)\$\{/g)].map((match) => match[1]));
 const cssClasses = new Set([...css.matchAll(/(?<![\w-])\.([A-Za-z_][\w-]*)/g)].map((match) => match[1]));
@@ -68,9 +73,17 @@ const navBase = css.match(/\.nav-glyph\{([^}]*)\}/)?.[1] || "";
 for (const prop of ["width", "height", "min-width", "display", "place-items", "background", "color", "border"]) requireCssProp(navBase, prop, ".nav-glyph base contract");
 for (const tone of [...navTones].sort()) if (tone !== "blue") requireClass(`nav-glyph-${tone}`, `NAV_ICON_TONE ${tone}`);
 
-for (const tone of ["plan", "project", "finance", "legal"]) {
-  requireClass(`nav-subgroup-${tone}`, `department subgroup ${tone}`);
-  requireClass(`nav-child-dept-${tone}`, `department child ${tone}`);
+// KP #89 + KP #96 (18/09/2026) — ĐẢO PHÉP KIỂM (mạnh hơn, KHÔNG nới lỏng): hai nhánh render CHẾT đã dọn:
+//   • KP #89 — 4 nhóm con phòng ban (`menu_group_catalog` chỉ 12 nhóm, KHÔNG nhóm nào có
+//     group_key='department_management' ⇒ `data-dept: plan/project/finance/legal` không thể chạy).
+//   • KP #96 — cây "workspace theo dự án" (sentinel không bao giờ khớp; nhóm `project_management` còn bị
+//     `configuredMenuGroups()` LỌC BỎ).
+// Sau khi dọn, KHÔNG nguồn giao diện nào phát ra các họ lớp dưới đây ⇒ phải VẮNG MẶT trong CSS.
+for (const name of ["nav-subgroup", "nav-child-dept", "nav-child-bch", "mobile-nav-subgroup", "mobile-nav-grandchildren", "dept-chevron", "mobile-nav-expanded", "project-workspace"]) {
+  if (new RegExp(`\\.${name}(?![A-Za-z0-9_])`).test(css)) failures.push(`mã chết KP #89/#96 quay lại: .${name} (nhánh render không bao giờ chạy)`);
+}
+for (const attr of ['[data-nav-group="department_management"]', '[data-nav-group="project_management"]']) {
+  if (css.includes(attr)) failures.push(`mã chết KP #89/#96 quay lại: ${attr} (nhóm không tồn tại trong menu)`);
 }
 for (const status of ["exact", "review", "not_found", "manual"]) requireClass(`request-match-${status}`, `request match ${status}`);
 for (const status of ["already_mapped", "exact", "very_high", "high", "review", "low", "not_found", "conflict"]) requireClass(`mapping-status-${status}`, `mapping status ${status}`);

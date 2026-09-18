@@ -107,8 +107,20 @@ if (!finalPageSource.includes('sidebar-collapse-toggle') || !finalPageSource.inc
 if (!finalPageSource.includes('{ key: "production", label: "Sản lượng", icon: "SL", groupKey: "project_management" }')) throw new Error("Module Sản lượng chưa được nối vào menu Quản lý dự án.");
 if (!finalPageSource.includes('{ groupKey: "site_command", name: "QUẢN LÝ DỰ ÁN", icon: "DA", sortOrder: 25')) throw new Error("Navigation hợp nhất Project → BCH chưa đổi nhóm site_command thành QUẢN LÝ DỰ ÁN.");
 if (finalPageSource.includes('{ groupKey: "project_management", name: "QUẢN LÝ DỰ ÁN"')) throw new Error("Navigation vẫn còn nhóm QUẢN LÝ DỰ ÁN cũ bị trùng.");
-for (const marker of ["PROJECT_WORKSPACE_ITEMS", "1. Tổng quan & Nhân sự dự án", "2. Kế hoạch & Tiến độ thi công", "3. Đề xuất & Nhu cầu dự án", "4. Nhật ký & Điều hành hiện trường", "5. Sản lượng & Nghiệm thu chất lượng", "6. Thầu phụ & Nhân công", "7. Phát sinh (V.O) & BOQ/HĐ", "8. Tài chính & Thanh quyết toán", "project-context-lock", "activateProjectModule"]) {
-  if (!finalPageSource.includes(marker)) throw new Error(`Navigation Project workspace thiếu marker: ${marker}`);
+// KP #96 (18/09/2026) — NGƯỜI DÙNG QUYẾT "dọn luôn cây workspace theo dự án": 11 marker ở đây TRƯỚC ĐÂY
+// thuộc nhánh render CHẾT (sentinel không nhóm menu nào có + nhóm `project_management` bị `configuredMenuGroups`
+// LỌC BỎ ⇒ 8 mục/dự án + hộp "DỰ ÁN ĐANG LÀM VIỆC" + khoá ngữ cảnh dự án KHÔNG BAO GIỜ chạy).
+// ⚠️ KHÔNG nới lỏng: danh sách marker nay giữ ĐÚNG những gì **còn sống** của hợp nhất navigation — 7 module
+// dự án trong MỘT nhóm cấp 1 + danh sách con phẳng + chọn dự án bằng `ProjectScopeSelect` — và **CẤM** cây chết quay lại.
+for (const marker of [
+  "group.children.map((item) => {",
+  "group.children.map((item)=>{",
+  "<ProjectScopeSelect projects={data.projects} project={project} onChange={setProject} allowAll={data.projects.length>1}/>",
+]) {
+  if (!finalPageSource.includes(marker)) throw new Error(`Navigation hợp nhất thiếu marker còn sống: ${marker}`);
+}
+for (const dead of ["__site_command_tree_disabled__", "PROJECT_WORKSPACE_ITEMS", "PROJECT_WORKSPACE_CONTEXT_KEYS", "project-context-lock", "activateProjectModule", "projectWorkspaceId"]) {
+  if (finalPageSource.includes(dead)) throw new Error(`Mã chết KP #96 đã dọn không được quay lại: ${dead}`);
 }
 if (!finalPageSource.includes('{ key: "requests", label: "Phiếu đề nghị mua hàng", icon: "ĐN", groupKey: "purchasing" }')) throw new Error("Phiếu đề nghị mua hàng đã bị chuyển khỏi module Mua hàng; yêu cầu chỉ alias navigation, không đổi ownership module.");
 if (!/DEVELOPMENT_MODULES[\s\S]*?"material_norms"/.test(finalPageSource)) throw new Error("material_norms chưa được đánh dấu ĐANG PHÁT TRIỂN nhất quán.");

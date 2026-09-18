@@ -22,7 +22,7 @@ type ModuleKey = "dashboard" | "dept_plan_tasks" | "dept_plan_assign" | "dept_pl
 
 const UI_NOW_MS = new Date().getTime();
 
-// Menu 11 mục theo nghiệp vụ. Nhóm "department_management" cũ đã được tách thành
+// Menu theo nghiệp vụ. Nhóm quản lý phòng ban cũ đã được tách thành
 // my_work / mep / finance / hr_legal / reports (xem migration V4__menu_restructure.sql).
 const defaultMenuGroups = [
   { groupKey: "overview", name: "TỔNG QUAN", icon: "OV", sortOrder: 10, active: true, collapsible: false },
@@ -50,7 +50,7 @@ function projectPeriod(start:unknown,end:unknown){const fmt=(value:unknown)=>{if
 
 const NAV_ICON_TYPE: Record<string,string> = {
   overview:"home", dashboard:"home",
-  department_management:"users", site_command:"hardhat", "phòng kế hoạch":"calendar", "phòng dự án":"hardhat", "tài chính kế toán":"coins", "hành chính pháp chế":"document",
+  site_command:"hardhat",
   project_management:"briefcase", purchasing:"cart", warehouse:"warehouse", system_admin:"gear",
   dept_plan_tasks:"tasks", dept_plan_assign:"assign", dept_plan_supply_plan:"calendar", dept_plan_tender:"bid", dept_plan_rfq:"quote",
   dept_plan_purchasing:"cart", dept_plan_supply:"truck", dept_plan_contracts:"document", dept_plan_suppliers:"handshake", dept_plan_price_data:"coins", dept_plan_kpi:"chart", dept_plan_alerts:"bell",
@@ -64,7 +64,7 @@ const NAV_ICON_TYPE: Record<string,string> = {
 };
 
 const NAV_ICON_TONE: Record<string,string> = {
-  overview:"blue",dashboard:"blue",my_work:"green",mep:"blue",finance:"orange",hr_legal:"purple",reports:"slate",department_management:"indigo",site_command:"orange","phòng kế hoạch":"green","phòng dự án":"blue","tài chính kế toán":"orange","hành chính pháp chế":"purple",project_management:"orange",
+  overview:"blue",dashboard:"blue",my_work:"green",mep:"blue",finance:"orange",hr_legal:"purple",reports:"slate",site_command:"orange",project_management:"orange",
   purchasing:"red",warehouse:"purple",system_admin:"slate",admin:"slate",
   project_progress:"orange",construction:"orange",production:"orange",capital_recovery:"orange",boq:"orange",payments:"orange",teams:"orange",
   requests:"red",approvals:"red",receiving:"red",delivered:"red",

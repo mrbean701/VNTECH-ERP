@@ -331,10 +331,16 @@ test('FULL W2 responsive contract: login PC, mobile tree, collapsed hover flyout
   assert.doesNotMatch(page,/Hệ thống quản trị phòng ban, dự án, mua hàng, kho vật tư,[\s\S]{0,100}phê duyệt và điều hành doanh nghiệp\.?/,'Login không được chứa dòng mô tả đã bị loại bỏ');
   assert.match(page,/VNTECH_FULL_W2_MOBILE_NAV/,'Mobile menu phải có tree contract');
   assert.match(page,/VNTECH_FULL_MOBILE_NAV_INTERACTION/,'Mobile menu phải có interaction contract');
-  assert.match(page,/mobile-nav-grandchildren/,'Mobile phải hiển thị được cấp cháu');
+  assert.match(page,/className="mobile-nav-children"/,'Mobile phải hiển thị được cấp con');
   assert.match(page,/mobile-brand-lockup/,'Mobile header phải có nhận diện VNTECH');
   assert.match(page,/opened \|\| sidebarCollapsed/,'Sidebar collapsed phải render branch để hover flyout');
-  assert.match(page,/hidden=\{!subOpen&&!sidebarCollapsed\}/,'Collapsed flyout phải cho phép thấy cấp cháu dù branch desktop đang đóng');
+  // KP #89 + KP #96 (18/09/2026): các biểu thức cũ (`hidden={!subOpen&&!sidebarCollapsed}`, cây workspace theo
+  // dự án) thuộc 2 NHÁNH RENDER CHẾT đã DỌN — xem tools/probe-kp89-dead-dept-branch.mjs (25/25) và
+  // tools/probe-kp96-dead-project-tree.mjs (31/31). Bất biến CÒN SỐNG: khung menu THU GỌN vẫn phải xổ được
+  // cấp con khi hover, và nhánh desktop vẫn render cấp con trong `.nav-children`.
+  assert.match(page,/className="nav-children" data-nav-label=\{group\.name\}/,'Nhánh desktop phải render cấp con trong .nav-children');
+  assert.match(css,/\.app-shell\.sidebar-collapsed \.nav-tree-group:hover>\.nav-children/,'Khung thu gọn phải xổ cấp con khi hover (kể cả khi nhánh desktop đang đóng)');
+  assert.doesNotMatch(css,/\.nav-subgroup|\.mobile-nav-grandchildren|\.project-workspace|\[data-nav-group="project_management"\]/,'Họ lớp của 2 cây chết (KP #89/#96) không được quay lại');
   assert.match(css,/VNTECH_MASTER_BASELINE_CSS_R1_1_1_BEGIN/);
   assert.match(css,/\.app-shell\.sidebar-collapsed \.nav-tree-group:hover>\.nav-children/,'Collapsed sidebar phải hover xổ flyout');
   assert.match(css,/width:min\(86vw,360px\)/,'Mobile drawer phải gọn và không tràn màn hình');

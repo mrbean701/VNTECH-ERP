@@ -18,30 +18,35 @@ const mobileEnd = page.indexOf('<main><header', mobileStart);
 assert.ok(mobileStart >= 0 && mobileEnd > mobileStart, 'Không tìm thấy block mobile navigation canonical.');
 const mobile = page.slice(mobileStart, mobileEnd);
 
-test('Mobile department tree persists instead of resetting on each open', () => {
-  assert.match(page, /mobileDepartmentStorageKey/);
-  assert.match(page, /localStorage\.setItem\(mobileDepartmentStorageKey,mobileDepartmentExpanded\?"1":"0"\)/);
-  assert.doesNotMatch(mobile, /setOpenDeptSubgroups\(\[\]\)/);
-  assert.doesNotMatch(mobile, /setMobileDepartmentExpanded\(false\)/);
+test('Mobile menu group expansion persists instead of resetting on each open', () => {
+  assert.match(page, /localStorage\.setItem\(menuStorageKey, JSON\.stringify\(openGroups\.slice\(0, 2\)\)\)/);
+  assert.doesNotMatch(mobile, /setOpenGroups\(\[\]\)/);
+  // KP #89 (18/09/2026): cơ chế "nhóm con phòng ban" đã dọn (nhánh render không bao giờ chạy — xem
+  // tools/probe-kp89-dead-dept-branch.mjs). Phép kiểm nay CẤM nó quay lại, mạnh hơn phép kiểm cũ.
+  assert.doesNotMatch(page, /openDeptSubgroups|mobileDepartmentExpanded|department_management/);
 });
 
-test('Active department branch auto-opens and active leaf is scrolled into view', () => {
-  assert.match(page, /setMobileDepartmentExpanded\(true\)/);
+test('Active group auto-opens and active leaf is scrolled into view', () => {
+  assert.match(page, /const activeGroup = allowedModules\.find\(\(item\) => item\.key === active\)\?\.groupKey/);
+  assert.match(page, /setOpenGroups\(\(current\) => current\.includes\(String\(activeGroup\)\)/);
   assert.match(page, /querySelector<HTMLElement>\('\.mobile-nav-panel \[aria-current="page"\]'\)/);
   assert.match(page, /scrollIntoView\(\{block:"nearest",inline:"nearest"\}\)/);
 });
 
 test('Single-child mobile groups navigate directly instead of acting like dead display rows', () => {
-  assert.match(mobile, /const directChild=singleChild&&groupKey!=="department_management"&&groupKey!=="site_command"\?singleChild:null/);
+  assert.match(mobile, /const directChild=singleChild&&groupKey!=="site_command"\?singleChild:null/);
   assert.match(mobile, /if\(directChild\)return <button/);
   assert.match(mobile, /activateModule\(directChild\.key\)/);
 });
 
-test('Project management always expands to project workspace nodes instead of an empty BCH list', () => {
-  assert.match(mobile, /groupKey==="site_command" \? activeSiteProjects\.map/);
-  assert.match(mobile, /project-workspace-mobile/);
-  assert.match(mobile, /projectWorkspaceItems\.map/);
-  assert.match(mobile, /activateProjectModule\(projectId,item\.key\)/);
+test('Project management renders its LIVE child modules (dead workspace tree removed)', () => {
+  // KP #96 (18/09/2026): "cây workspace theo dự án" (8 mục/dự án) treo trên một sentinel KHÔNG nhóm menu nào
+  // có (`menu_group_catalog` chỉ 12 nhóm thật, cả MySQL lẫn SQLite) ⇒ đã DỌN. Giao diện THẬT của nhóm
+  // «QUẢN LÝ DỰ ÁN» là danh sách con phẳng. Phép kiểm nay khẳng định cái ĐANG chạy và CẤM cây chết quay lại.
+  assert.match(page, /groupKey: "site_command", name: "QUẢN LÝ DỰ ÁN"/);
+  assert.match(mobile, /group\.children\.map\(\(item\)=>\{/);
+  assert.match(mobile, /activateModule\(item\.key\)/);
+  assert.doesNotMatch(page, /__site_command_tree_disabled__|project-workspace|projectWorkspaceItems|PROJECT_WORKSPACE_ITEMS|activateProjectModule/);
 });
 
 test('Parent/subgroup rows are expand actions and leaf rows are navigation actions', () => {
@@ -54,8 +59,10 @@ test('Parent/subgroup rows are expand actions and leaf rows are navigation actio
 test('Mobile tap targets remain usable for nested menu levels', () => {
   assert.match(css, /\.mobile-nav-panel \.mobile-nav-dashboard,[\s\S]*?min-height:44px!important/);
   assert.match(css, /\.mobile-nav-panel \.mobile-nav-children>button\{[\s\S]*?min-height:40px!important/);
-  assert.match(css, /\.mobile-nav-panel \.mobile-nav-grandchildren button\{[\s\S]*?min-height:38px!important/);
   assert.match(css, /touch-action:manipulation!important/);
+  // Cấp "cháu" của cây menu KHÔNG còn (chỉ nhánh chết phát ra `mobile-nav-grandchildren`) ⇒ CẤM quay lại.
+  assert.doesNotMatch(page, /mobile-nav-grandchildren/);
+  assert.doesNotMatch(css, /mobile-nav-grandchildren/);
 });
 
 test('Project management exposes Production module that was previously orphaned', () => {
