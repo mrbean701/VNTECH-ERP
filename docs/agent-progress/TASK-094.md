@@ -344,3 +344,22 @@ ode -e và bị PowerShell phá nháy ⇒ **luôn viết tệp .mjs**.
   **dòng 994, 1099, 1491, 1496, 1561, 1578**. Cùng tệp còn có "draft" ×10, "approved" ×41, "waiting_delivery" ×4 (1321, 1323, 1378, 1442), "partial_delivery" ×4, "delivery_waiting_bch", "completed_with_exceptions", "delivery_completed", "delivery_partial".
   ⇒ **VÒNG SAU phải đọc 6 dòng đó** để biết pending_approval hiện dùng cho **thực thể nào** (nếu **đã dùng cho PO** thì KHÔNG thêm cơ chế mới, chỉ nối vào luồng sẵn có; nếu dùng cho thực thể khác thì mới thêm cho PO).
 * Công cụ: 	ools/b2-mo-neo-js-po-status.mjs (in mỏ neo INSERT + liệt kê literal trạng thái kèm số dòng — **viết dạng .mjs theo đúng bài học**).
+
+### 14.2. 🎯 BƯỚC 0 XONG — PHÁT HIỆN MẪU KIẾN TRÚC ĐÃ CÓ SẴN (18/09)
+Đã đọc 6 chỗ dùng "pending_approval" — **KHÔNG chỗ nào thuộc PO**, mà là **3 thực thể khác**, và chúng cho thấy **một mẫu thống nhất**:
+| Dòng | Action | Thực thể |
+|---|---|---|
+| 994 | create_request | **MR (phiếu đề nghị)** khởi tạo ở pending_approval (nếu không auto-complete) |
+| 1099 | decide_approval | kiểm MR đang pending_approval |
+| 1491 | create_central_return | **phiếu hoàn trả kho tổng** khởi tạo pending_approval |
+| 1496 | pprove_central_return | **duyệt** phiếu hoàn trả (kiểm đang pending_approval) |
+| 1561 | create_stock_count | **phiếu kiểm kê** khởi tạo pending_approval |
+| 1578 | pprove_stock_count | **duyệt** phiếu kiểm kê |
+
+**⇒ MẪU ĐÃ CÓ (không phải phát minh mới):** create_<entity> ⇒ bản ghi ở **pending_approval** → action **pprove_<entity>** kiểm status === "pending_approval" ⇒ chuyển sang trạng thái kế tiếp.
+**⇒ KẾT LUẬN CHO B2:** KHÔNG tạo cơ chế mới; **PO đi theo đúng mẫu này**:
+1. create_po ⇒ PO ở **pending_approval** (đổi literal: **JS dòng 1321** + **Java ~dòng 177**).
+2. Thêm **pprove_po** ⇒ PO sang trạng thái vận hành (nối vào luồng giao hàng sẵn có) — **theo mẫu pprove_central_return/pprove_stock_count**.
+3. Thêm **eject_po** ⇒ PO **cancelled** + decision_reason/decided_by/decided_at + **PR KHÔNG đổi** + **thông báo người tạo PO**.
+4. **Luật giá PO** (unit_price): canEdit được sửa giá · **KHÓA sau khi PO hoàn thành** · **không ghi ngược** danh mục.
+**Giá trị của bước 0:** nếu bỏ qua bước này, tôi đã có thể **dựng một luồng duyệt thứ hai song song** cho PO — đúng loại lỗi kiến trúc cần tránh.
