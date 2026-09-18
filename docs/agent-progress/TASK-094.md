@@ -576,3 +576,20 @@ Công cụ: 	ools/b2-e2e-reject-po.mjs (dựng PO test ⇒ gọi API thật ⇒ 
 2. **Kênh thông báo**: dùng **email_outbox** (gắn theo equest_id — PO **có** equest_id ✔; stage='po_reject', event=…) tới **email người tạo PO** ⇒ **KHÔNG** dùng 	ask_notifications (vì bắt buộc work item). **Cần bổ sung join** lấy email người tạo: LEFT JOIN users bu ON bu.id=po.buyer_user_id + u.email AS buyerEmail.
 3. **Đồng bộ JS**: bản JS eject_po phải theo cùng kênh (bỏ 	ask_notifications).
 **TRẠNG THÁI NÓI THẬT:** lỗi **CHƯA đóng**; cổng E2E hiện **6/8** (trước đó 6/7 — số ca tăng vì thêm ca hoàn tác). **Chưa được coi là xong.**
+
+### 14.12. THIẾT KẾ SỬA 3 LỖI — CHỐT (18/09): GỘP 2 GHI VÀO **MỘT METHOD ADAPTER CÓ @Transactional**
+**Vì sao gộp:** nếu để 2 lời gọi rời (decidePo + insertTaskNotification) thì **mỗi lời gọi một giao dịch riêng** ⇒ **vẫn không nguyên tử**. Đặt @Transactional ở use-case thì phụ thuộc **proxy của Spring** trên lớp use-case (bean tạo bằng @Bean) — **rủi ro không đáng**. ⇒ **Gộp cả 2 câu ghi vào MỘT method của adapter** (adapter **đã** dùng @Transactional thành công ở closePoLine) ⇒ **nguyên tử chắc chắn**.
+**SỬA CỤ THỂ (4 vị trí):**
+1. **PurchaseStore (port)** — thay 2 method tôi đã thêm bằng **1 method**:
+   oid decidePo(String poId, String status, String reason, String userId, String notifyUserId, String notifyTitle, String notifyBody, Instant now);
+2. **PurchaseStoreAdapter** — cài đặt **1 method @Transactional** chứa **cả 2 câu**:
+   * UPDATE purchase_orders SET status=?,decision_reason=?,decided_by=?,decided_at=?,updated_at=? WHERE id=?
+   * **Nếu 
+otifyUserId không rỗng** ⇒ INSERT INTO task_notifications(...) với **work_item_id = poId** (bảng **bắt buộc** work item; **không có FK** nên nhận id PO) + **status='SENT'** (theo quy ước JS).
+   * 
+otifyUserId rỗng ⇒ **chỉ UPDATE** (không nổ, không nửa vời).
+3. **PurchaseManagementUseCase.decidePo** — gọi **1 lời** store.decidePo(poId, status, approve?null:reason, principal.userId(), approve?"":buyer, title, body, now); **bỏ** lời gọi insertTaskNotification rời.
+4. **JS eject_po** (đồng bộ kênh): đổi 
+ull → **poId** cho work_item_id và "sent" → **"SENT"**.
+**CỔNG KIỂM CHỨNG (chạy lại sau khi dựng jar): kỳ vọng 8/8**, và **đặc biệt** kiểm thêm ca **"không còn 409"** + **"có đúng 1 dòng 	ask_notifications với work_item_id = id PO"** + **"MR không đổi"**.
+**GHI CHÚ TRUNG THỰC:** 3 lỗi này **chưa đóng**; cổng E2E hiện **6/8**.
