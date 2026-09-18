@@ -2632,6 +2632,8 @@ function WorkflowModal({ data, row, close, submit }: { data: AppData; row?: Row;
   const [isDefault, setIsDefault] = useState(Number(row?.isDefault) === 1);
   const [sortOrder, setSortOrder] = useState(String(row?.sortOrder ?? 10));
   const [onlyPermitted, setOnlyPermitted] = useState(false);
+  // [WF] Đặc tả 18/09: chọn người duyệt bằng TÌM KIẾM (không bày hết danh sách ⇒ modal gọn).
+  const [approverQuery, setApproverQuery] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
   const existingSteps = (data.workflowSteps || []).filter((s) => String(s.workflowId) === String(row?.id))
     .sort((a, b) => Number(a.stepNo) - Number(b.stepNo))
@@ -2650,6 +2652,13 @@ function WorkflowModal({ data, row, close, submit }: { data: AppData; row?: Row;
   const permittedCount = candidates.filter((c) => c.hasApprovePermission).length;
   const shown = onlyPermitted ? candidates.filter((c) => c.hasApprovePermission) : candidates;
   const moduleOptions = configuredModules(data).filter((m) => m.key !== "admin");
+  // [WF] Đặc tả 18/09: gợi ý người duyệt theo TỪ KHOÁ (bỏ dấu như các màn khác) — tối đa 8 dòng cho modal gọn.
+  const normApproverText = (value: unknown) => String(value || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const suggestionsFor = (stepKey: string): Row[] => {
+    const query = normApproverText(approverQuery[stepKey] ?? "").trim();
+    if (!query) return [];
+    return shown.filter((u) => [u.fullName, u.employeeCode, u.username, u.organizationName, u.department].some((value) => normApproverText(value).includes(query))).slice(0, 8);
+  };
   const patchStep = (index: number, patch: Row) => setSteps((list) => list.map((s, i) => (i === index ? { ...s, ...patch } : s)));
   const toggleApprover = (index: number, userId: string) => setSteps((list) => list.map((s, i) => {
     if (i !== index) return s;
@@ -2725,14 +2734,29 @@ function WorkflowModal({ data, row, close, submit }: { data: AppData; row?: Row;
               <label><span>SLA (giờ)</span><input type="number" min="1" value={String(s.slaHours ?? 8)} onChange={(e) => patchStep(index, { slaHours: e.target.value })} /></label>
               <label><span>Mô tả bước</span><input value={String(s.description || "")} onChange={(e) => patchStep(index, { description: e.target.value })} /></label>
             </div>
-            <div className="admin-mini-list">
-              {shown.map((u) => <button type="button" key={u.id} className={selected.includes(String(u.id)) ? "is-selected" : ""} onClick={() => toggleApprover(index, String(u.id))} style={selected.includes(String(u.id)) ? { outline: "2px solid #1769e0" } : undefined}>
+                        <label><span>Tìm người duyệt (gõ tên / mã nhân viên / phòng ban)</span>
+              <input value={approverQuery[String(s.key)] ?? ""} onChange={(e) => setApproverQuery((q) => ({ ...q, [String(s.key)]: e.target.value }))} placeholder="Ví dụ: Nguyễn, NV001, Kế hoạch…" />
+            </label>
+            {(approverQuery[String(s.key)] ?? "").trim().length > 0 && <div className="admin-mini-list">
+              {suggestionsFor(String(s.key)).map((u) => <button type="button" key={u.id} className={selected.includes(String(u.id)) ? "is-selected" : ""} onClick={() => toggleApprover(index, String(u.id))}>
                 <i className="mini-avatar">{initials(String(u.fullName || "NV"))}</i>
                 <span><strong>{u.fullName}</strong><small>{u.employeeCode || u.username} · {u.organizationName || u.department || "—"}</small></span>
                 <b>{selected.includes(String(u.id)) ? "✓ Đã chọn" : u.hasApprovePermission ? "Có quyền duyệt" : "Chưa có quyền duyệt"}</b>
               </button>)}
-              {!shown.length && <div className="menu-drop-empty">Không có ứng viên nào.</div>}
+              {!suggestionsFor(String(s.key)).length && <div className="menu-drop-empty">Không tìm thấy người phù hợp.</div>}
+            </div>}
+            <div className="admin-mini-list">
+              {selected.map((userId) => {
+                const person = candidates.find((c) => String(c.id) === String(userId));
+                return <button type="button" key={userId} className="is-selected" onClick={() => toggleApprover(index, String(userId))} title="Bấm để bỏ khỏi bước này">
+                  <i className="mini-avatar">{initials(String(person?.fullName || "NV"))}</i>
+                  <span><strong>{person?.fullName || userId}</strong><small>{person ? `${person.employeeCode || person.username} · ${person.organizationName || person.department || "—"}` : "Không còn trong danh sách ứng viên"}</small></span>
+                  <b>✕ Bỏ</b>
+                </button>;
+              })}
+              {!selected.length && <div className="menu-drop-empty">Chưa chỉ định người duyệt cho bước này.</div>}
             </div>
+            {!selected.length && <div className="inline-alert">Bước {index + 1} chưa có người duyệt — theo chế độ CHỈ CẢNH BÁO, quy trình VẪN lưu được.</div>}
           </section>;
         })}
       </div>
