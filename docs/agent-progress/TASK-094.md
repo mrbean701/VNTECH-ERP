@@ -749,3 +749,21 @@ out.put("warnings", requestStore.approvalWarnings("goods_receipt", String.valueO
 **⚠️ VÌ SAO CHƯA CHẠY PROBE:** eceive_goods **GHI THẬT** nhiều bảng ⇒ probe phải **hoàn tác nhiều bảng** (goods_receipts + goods_receipt_items + trạng thái PO + delivered_qty/eceived_qty của purchase_order_items + có thể material_requests/supply_workflow_steps). Với dữ liệu đang là **baseline chuẩn**, tôi **không chạy mutation khi chưa có kịch bản hoàn tác đầy đủ** — tránh làm bẩn baseline.
 **⇒ VIỆC KẾ TIẾP:** viết script probe **có hoàn tác đầy đủ** (chụp trước/sau các bảng bị ảnh hưởng, hoàn tác trong inally, ghi file rollback) rồi mới chạy ⇒ lấy bằng chứng warnings cho eceive_goods.
 **TRẠNG THÁI B3:** engine ✔ · JS ✔ · Java ✔ (biên dịch + sống) · **bằng chứng chức năng: còn thiếu** (có kế hoạch rõ).
+
+### 15. 🚨 SỰ CỐ DỮ LIỆU DO ROLLBACK PROBE (18/09) — BÁO CÁO TRUNG THỰC + ĐỀ XUẤT PHỤC HỒI
+**Bối cảnh:** probe eceive_goods (B3) — mục tiêu: lấy bằng chứng có warnings.
+**KẾT QUẢ TỐT (đã đạt mục tiêu):** eceive_goods ⇒ **HTTP 200** {"ok":true,"message":"GRN-PRJ-DEMO-01-2026-0010 đã ghi nhận giao hàng; …","receiptId":"GRN_8eaedee9-3c9c-4741-8a23-86d4ae760895","warnings":["goods_receipt GRN_8eaedee9-3c9…"]} ⇒ **có warnings** ✔ và có eceiptId (bản vá parity hoạt động).
+**SỰ CỐ:** câu hoàn tác của tôi **thiếu bộ lọc "chỉ dòng mới"**:
+DELETE FROM goods_receipts WHERE purchase_order_id='PO_0843c57c-…' ⇒ **xoá CẢ 2 phiếu nhập có sẵn** của PO đó.
+* Đo được: goods_receipts **16 → 17 (tạo) → 14** ⇒ **mất 2 bản ghi baseline** (PO PO-PRJ-DEMO-01-2026-0006 nay eceipts=0).
+* **Dấu vết còn lại (để phục hồi):** 2 tệp đính kèm **mồ côi** trong ttachments ⇒ ID 2 phiếu đã mất:
+  **GRN_1792713f-faaf-4986-b8c3-9c32714cea28** (nh-giao-hang-demo.png) · **GRN_e5f9763c-cacf-4e4e-8dec-0f077a619aee** (nh-giao-hang-404767.png)
+  ⇒ **cả 2 đều CÓ ảnh giao hàng** ⇒ **không phải phiếu nháp**.
+* ⚠️ Rủi ro thêm: câu hoàn tác cuối của tôi trên supply_workflow_steps dùng mẹo *"giữ N dòng đầu"* (thứ tự tuỳ ý) ⇒ **có thể đã xoá nhầm** ⇒ **chưa xác định được baseline đúng**.
+**ĐÃ THỬ PHỤC HỒI:** ① binlog: **log_bin=ON** và mysqlbinlog.exe **có sẵn**, nhưng **Access to the path 'C:\ProgramData\MySQL\MySQL Server 8.0\Data' is denied** ⇒ **không đọc được binlog** (cần quyền Administrator). ② backup/dump trong repo: **không có**.
+**⇒ TRẠNG THÁI: BLOCKED — CẦN QUYẾT ĐỊNH/QUYỀN CỦA NGƯỜI DÙNG.** Các lựa chọn:
+1. **Khôi phục từ backup CSDL** (nếu có bản dump gần nhất) — an toàn nhất.
+2. **Cấp quyền đọc thư mục Data (Administrator)** để tôi trích binlog ⇒ **dựng lại chính xác** 2 dòng đã xoá (row-based) + kiểm supply_workflow_steps.
+3. **Cấp user MySQL có SUPER/REPLICATION CLIENT** ⇒ dùng SHOW BINLOG EVENTS để lấy lại dữ liệu.
+*Tôi **KHÔNG** tự dựng lại dữ liệu bằng suy đoán* (§45) — dữ liệu bịa còn tệ hơn dữ liệu thiếu.
+**BÀI HỌC (nghiêm trọng):** mọi script probe **PHẢI** hoàn tác theo **ID cụ thể của bản ghi do mình tạo** (ghi lại ID trước khi xoá), **TUYỆT ĐỐI KHÔNG** dùng DELETE … WHERE <khoá ngoại>; và **phải kiểm số dòng TRƯỚC/SAU của MỌI bảng** trước khi kết luận.
