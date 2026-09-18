@@ -1309,3 +1309,18 @@ pm run build | **EXIT 0** + **BUILT ARTIFACT VALIDATION: ĐẠT** |
 * **U-12.2** = **bỏ !important ở nơi nó THỪA** (rule đã thắng theo độ đặc hiệu/thứ tự) ⇒ **phải phân tích cascade TỪNG CA** + kiểm ảnh **từng lô 20–30 chỗ**.
 * **U-12.3** = xoá **khối override dài** (962 · 1003-1011 · 2072-2074) **sau khi** chứng minh rule gốc đã đủ mạnh.
 **BÀI HỌC:** con số trong lộ trình **không được tin tuyệt đối** — phải **đo lại** (506 trùng ⇒ chỉ **5** thực sự trùng) trước khi lên kế hoạch sửa; nếu làm theo con số cũ sẽ **phá hành vi** của 501 nhóm override.
+
+### 25.1. ✅ U-12.1 ĐÓNG TRỌN VẸN + ĐO LẠI PHASE 1 / PHASE 8 (18/09)
+**Cổng của U-12.1:**
+* 
+pm run verify:css-baseline ⇒ **ĐẠT** (2.531 lines · **4464 !important** · dead classes=0 · dead vars=0)
+* **Cổng ảnh ⇒ KẾT LUẬN: ĐẠT ✅ — không có vùng lệch nào (64 ảnh đã đối chiếu) · EXIT=0** ⇒ 5 khối xoá là **byte-identical** ⇒ **giao diện KHÔNG đổi** (đúng như chứng minh lý thuyết)
+* **
+pm test ⇒ EXIT 0** (lint · typecheck · hồi quy · workflow ĐẠT)
+**ĐO LẠI LỘ TRÌNH (không tin số cũ — đúng bài học):**
+* **PHASE 1 = 13/17 DONE** — còn **4 mục**: **U-04** (KHUNG-XONG / ÁP-DỤNG 0) · **U-11** (ĐANG-LÀM 3/4 — còn bước 4 tách WorkCenter/Requests/BoqControl) · **U-12** (TODO, nay đã tiến **U-12.1**) · **U-16** (TODO — PermissionGuard ~50 chỗ).
+  * Đã xong: U-01 · U-02 · U-03 · U-05 · U-06 · U-07 · U-08 · U-09 · U-10 · U-13 · **U-14** (CONG-ANH-64-64) · U-15 · U-17
+* **PHASE 8 = 3/6 DONE** — còn **3 mục (đều ưu tiên thấp)**: **WF-01** (đổi tên tab thành *Workflow*) · **WF-03** (dùng cột workflow_definitions.version **hoặc xoá nếu không dùng**) · **WF-06** (chuẩn bị mở rộng: nghỉ phép · tăng ca · chấm công bù).
+  * Đã xong: **WF-02** (DONE / AP-DUNG 100) · **WF-04** (DONE / GHI-RO-HE-CHINH) · **WF-05** (DONE) + **toàn bộ nhánh B** (B1 · B2 · B3 · B4 · D5).
+**KẾ HOẠCH ĐÓNG 2 PHASE:** ① **WF-01** ② **WF-03** ③ **WF-06** ⇒ đóng **PHASE 8**; rồi ④ **U-16 + U-04** (áp dụng PermissionGuard) ⑤ **U-11 bước 4** ⑥ **U-12.2 → U-12.3** ⇒ đóng **PHASE 1**.
+**ĐÃ BÁO CÁO QUA TELEGRAM** — nói thẳng **CẢ HAI PHASE CHƯA XONG** kèm danh sách còn lại + kế hoạch.
