@@ -694,3 +694,17 @@ ode --check scripts/system-route.mjs ⇒ **exit 0** ✔
   * **JS**: handler dòng **1348-1366** + 
 ode --check **0** (§14.18) + **đã nạp vào runtime** (UI restart, 200).
 * **PHASE 8 — tiến độ các nhánh B:** **B1 ✔** · **B2/bước 0–3 ✔ (đóng trọn B2)** · còn **B3** (cấp phát/xuất + nhập kho **phương án A**) · **B4** (3 action duyệt rời + MAR) · **D5** (2 chứng từ test còn lại).
+
+### 14.20. [PHASE 8 · D5] KẾT QUẢ KHẢO SÁT + SEED (18/09) — D5 thực chất chỉ còn **1 việc**
+**Khảo sát trạng thái thật:**
+* **PO:** completed ×2 · delivered_pending_confirmation ×4 · waiting_delivery ×1 ⇒ **KHÔNG có PO nào ở pending_approval**.
+* **goods_receipts:** cột gồm ch_confirmation_status (giá trị thật: confirmed ×12 · **pending ×4**) ⇒ **ĐÃ CÓ SẴN 4 phiếu nhập ở trạng thái chờ** ✔
+**⇒ Đối chiếu 4 mục D5:**
+| # | Chứng từ test | Trạng thái |
+|---|---|---|
+| 1 | Phiếu **xuất** test | **ĐÃ CÓ** PX-PRJ-DEMO-01-2026-0012 |
+| 2 | **PO bị từ chối** | **ĐÃ CHỨNG MINH** bằng cổng E2E eject_po (8/8, §14.13–14.14) |
+| 3 | **PO chờ duyệt** | **CHƯA có ⇒ ĐÃ SEED:** PO **PO-PRJ-DEMO-01-2026-0006** (PO_0843c57c-8531-483a-919e-d99712e3da9e) nay ở **pending_approval**, người tạo USR_2f435847-8a39-44fe-b620-6e52186526e0. **Đọc lại xác nhận**; phân bố sau seed: completed 2 · delivered_pending_confirmation 4 · **pending_approval 1** |
+| 4 | Phiếu **nhập chờ duyệt** | **ĐÃ CÓ** (4 phiếu ch_confirmation_status='pending') ⇒ **không cần seed** |
+**File hoàn tác:** docs/agent-progress/TASK-094-d5-po-cho-duyet-rollback.sql (trả PO về waiting_delivery).
+**CƠ HỘI KIỂM CHỨNG THÊM (đáng làm ngay):** PO này đang pending_approval ⇒ có thể **kiểm chứng nhánh pprove_po** (⇒ waiting_delivery) — nhánh **CHƯA từng được kiểm E2E** (mới chỉ kiểm eject_po) ⇒ gọi pprove_po rồi **hoàn tác về pending_approval** để giữ chứng từ test.
