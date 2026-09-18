@@ -1016,3 +1016,23 @@ KẾT LUẬN: ĐÃ GHI 4 ẢNH CHUẨN vào tools/baseline/
 **KIỂM TÍNH CHÍNH XÁC (quan trọng — tránh cập nhật lan rộng):** git status --porcelain tools/baseline cho thấy **ĐÚNG 4 tệp** thay đổi, **tất cả đều của màn 12**: 12-drawer-request-detail__{desktop,laptop,phone,tablet}.png ⇒ **KHÔNG** đụng 60 tệp baseline còn lại ✔
 **LÝ DO CẬP NHẬT LÀ HỢP LỆ:** 4 ảnh này lệch vì **U-14 đổi vỏ drawer ⇒ modal** — **thay đổi CÓ CHỦ ĐÍCH** đã được duyệt trong kế hoạch 2 bước; **60 ảnh còn lại khớp   px** ⇒ baseline vẫn là chuẩn thật cho phần không đổi.
 **ĐANG CHẠY:** cổng ảnh đầy đủ (job nền) ⇒ kỳ vọng **64/64 ĐẠT** ⇒ **đóng U-14**.
+
+### 18. ✅ ✅ U-14 ĐÓNG HOÀN TOÀN — RequestDrawer render qua EntityDetailModal (18/09)
+**Chuỗi bằng chứng (mỗi bước đều đo được):**
+| Bước | Bằng chứng |
+|---|---|
+| Đo phạm vi | khối RequestDrawer = **dòng 2900–2919** (20 dòng); **dòng 2918 = MỘT dòng JSX 9.254 ký tự** chứa toàn bộ UI |
+| Sửa (bước B) | --apply với công cụ **có MỐC + tự chối + chạy khô**: tách *đầu 161 · thân 7163 · đuôi 1795* ký tự; giữ **data-contract="VNTECH_REQUEST_DETAIL_ALL_LINES_V1"** + **4 nút hành động** |
+| Kiểu | **
+px tsc --noEmit ⇒ exit 0** · git diff --stat ⇒ **pp/page.tsx | 2 +-** (1 insertion, 1 deletion = **đúng 1 dòng**) |
+| Định danh + build | làm mới định danh (VNTECH-FP-86BBC6285E599BA5, head ** 145_u14_drawer_to_modal_identity.sql**, *Fixed point stable: OK*) ⇒ **
+pm run build exit 0** + **BUILT ARTIFACT VALIDATION ĐẠT** |
+| Cổng gộp | **
+pm test exit 0** — lint · typecheck · **hồi quy 61/61** · **workflow ĐẠT** |
+| Cổng workflow | **WF-05 5/5 (exit 0)** · **WF-02/S-08 5/5 (exit 0)** |
+| **Cổng ảnh** | **KẾT LUẬN: ĐẠT ✅ — không có vùng lệch nào (64 ảnh đã đối chiếu) · EXIT=0** |
+**Quá trình cổng ảnh (3 lần chạy — có phân tích nguyên nhân từng lần):**
+1. Lần 1 (foreground): **timeout 600 s** ⇒ chuyển sang **chạy NỀN** (bài học: tác vụ dài phải chạy nền).
+2. Lần 2 (sau phục hồi dữ liệu): **60/64 ĐẠT** · 4 ảnh lệch = **đúng màn 12-drawer-request-detail** (65,9 % desktop · 64,4 % laptop · 50,2 % tablet · 51,6 % phone) = **thay đổi CÓ CHỦ ĐÍCH của U-14**; ** 6-warehouse đã về   px** ⇒ **xác nhận lệch trước đó là DO DỮ LIỆU**, không phải regression mã.
+3. Cập nhật baseline **hẹp**: --update --only=12-drawer-request-detail ⇒ **đúng 4 tệp** 12-drawer-request-detail__*.png (kiểm bằng git status) ⇒ lần 3: **64/64 ĐẠT**.
+**LỘ TRÌNH CẬP NHẬT:** U-14 → **DONE / CONG-ANH-64-64** (ô TT ô[10]) ⇒ **PHASE 1 = 13/17** (đo lại) ⇒ **tổng 41/110 = 37,3 %**.
