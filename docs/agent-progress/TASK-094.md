@@ -553,3 +553,26 @@ Công cụ: 	ools/b2-e2e-reject-po.mjs (dựng PO test ⇒ gọi API thật ⇒ 
 **BÀI HỌC (lần này là giá trị của cổng kiểm chứng):** nếu chỉ **đọc mã** và thấy if (!buyer.isEmpty()) store.insertTaskNotification(...) thì rất dễ kết luận "đã có thông báo"; **chạy thật** mới lộ ra **không có dòng nào được ghi**. ⇒ *Không được tuyên bố "xong" cho tới khi đo.*
 **HOÀN TÁC:** PO đã trả về delivered_pending_confirmation (đúng gốc) · 	ask_notifications về **3** (đúng gốc) ⇒ **không để lại rác test**; file hoàn tác: docs/agent-progress/TASK-094-d5-b2-rollback.sql.
 **VIỆC KẾ TIẾP:** (1) kiểm SQL của indPoForReceiving có uyer_user_id AS buyerUserId không; (2) nếu thiếu ⇒ bổ sung (hoặc thêm port poBuyerId(poId)) — **JS đã select tường minh uyer_user_id AS buyerUserId** nên chỉ Java cần sửa; (3) chạy lại cổng ⇒ kỳ vọng **7/7**.
+
+### 14.11. 🎯 NGUYÊN NHÂN GỐC #2 (ĐO ĐƯỢC): 	ask_notifications.work_item_id là **NOT NULL** (18/09)
+**Sau khi sửa #1 và dựng lại jar, cổng E2E cho kết quả MỚI: 6/8 — kiểu lỗi ĐÃ ĐỔI** (rất có giá trị chẩn đoán):
+* eject_po ⇒ **HTTP 409** {"error":"Dữ liệu vi phạm ràng buộc của hệ thống (trùng hoặc thiếu tham chiếu)…","ok":false}
+* **NHƯNG** PO **vẫn** ghi cancelled + decision_reason + decided_by ⇒ **câu UPDATE đã commit**, chỉ câu **INSERT thông báo** nổ.
+**ĐO RÀNG BUỘC (information_schema):**
+| cột | NULL? | default |
+|---|---|---|
+| id | **NO** | — |
+| **work_item_id** | **NO** | — (không default) |
+| user_id | **NO** | — |
+| channel | NO | in_app |
+| status | NO | PENDING |
+**⇒ Em truyền work_item_id = null ⇒ vi phạm NOT NULL ⇒ 409** ✔ (khớp chính xác)
+**Và so với JS (dòng 265):** … VALUES (?,?,?…) bind id("NTF"), **task.id**, assignee.id, "in_app", …, **"SENT"**, null, stamp, null, stamp, stamp
+⇒ **2 khác biệt:** (1) JS truyền **một work item THẬT**; (2) JS dùng status = "SENT" (chữ HOA), em dùng "sent" (lệch quy ước).
+**⚠️ HỆ QUẢ QUAN TRỌNG (đã kiểm cả 2 lõi):** 	ask_notifications **gắn chặt với work item** ⇒ **KHÔNG thể dùng bảng này cho thông báo hủy PO** nếu không có work item ⇒ **bản JS eject_po của tôi CŨNG có lỗi tiềm ẩn tương tự** (cũng truyền work_item_id: null).
+**⚠️ LỖI THỨ 3 PHÁT HIỆN:** **không nguyên tử** — UPDATE PO đã commit nhưng INSERT lỗi ⇒ trạng thái **nửa vời**; decidePo (adapter do tôi thêm) **THIẾU @Transactional**.
+**ĐỀ XUẤT SỬA (có căn cứ):**
+1. **Nguyên tử hoá**: thêm @Transactional cho decidePo (adapter) ⇒ hoặc tất cả, hoặc không gì cả.
+2. **Kênh thông báo**: dùng **email_outbox** (gắn theo equest_id — PO **có** equest_id ✔; stage='po_reject', event=…) tới **email người tạo PO** ⇒ **KHÔNG** dùng 	ask_notifications (vì bắt buộc work item). **Cần bổ sung join** lấy email người tạo: LEFT JOIN users bu ON bu.id=po.buyer_user_id + u.email AS buyerEmail.
+3. **Đồng bộ JS**: bản JS eject_po phải theo cùng kênh (bỏ 	ask_notifications).
+**TRẠNG THÁI NÓI THẬT:** lỗi **CHƯA đóng**; cổng E2E hiện **6/8** (trước đó 6/7 — số ca tăng vì thêm ca hoàn tác). **Chưa được coi là xong.**

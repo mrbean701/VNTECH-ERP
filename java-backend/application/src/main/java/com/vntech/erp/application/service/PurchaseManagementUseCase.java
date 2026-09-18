@@ -247,6 +247,7 @@ private Map<String, Object> decidePo(Principal principal, Map<String, Object> pa
     store.decidePo(poId, status, approve ? null : reason, principal.userId(), now);
     if (!approve) {
         String buyer = sv(po, "buyerUserId");
+if (buyer.isEmpty()) buyer = sv(po, "requesterId");
         if (!buyer.isEmpty()) store.insertTaskNotification(buyer, "PO " + sv(po, "poNo") + " đã bị hủy",
             "PO " + sv(po, "poNo") + " đã bị từ chối — hãy tạo lại/xử lý lại. Lý do: " + (reason.isEmpty() ? "(không nêu)" : reason), now);
     }

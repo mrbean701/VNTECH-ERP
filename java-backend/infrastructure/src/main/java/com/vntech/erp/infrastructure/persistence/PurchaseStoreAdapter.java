@@ -305,6 +305,7 @@ public void closePoLine(String poItemId, double shortage, String reason, String 
                 SELECT po.id,po.po_no AS poNo,po.request_id AS requestId,po.project_id AS projectId,
                        po.contract_id AS contractId,po.boq_version_id AS boqVersionId,
                        po.receiving_warehouse_id AS warehouseId,po.status,po.eta,
+po.buyer_user_id AS buyerUserId,mr.requested_by AS requesterId,
                        mr.request_no AS requestNo,p.code AS projectCode,p.name AS projectName,
                        u.email AS requesterEmail
                 FROM purchase_orders po
