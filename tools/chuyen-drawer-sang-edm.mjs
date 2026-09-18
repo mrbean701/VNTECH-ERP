@@ -69,11 +69,12 @@ function splitChildren(text) {
   const out = [];
   let buf = "";
   let i = 0;
-  let tagDepth = 0;   // ⚠️ LỖI ĐÃ GẶP: bản trước KHÔNG theo dõi độ sâu thẻ nên coi cả `{…}` nằm TRONG markup
+  let tagDepth = 0;
+  let fragDepth = 0;   // độ sâu FRAGMENT `<>…</>` (bài học: chỉ theo dõi thẻ là CHƯA ĐỦ)   // ⚠️ LỖI ĐÃ GẶP: bản trước KHÔNG theo dõi độ sâu thẻ nên coi cả `{…}` nằm TRONG markup
                       // (ví dụ ô `summary-grid`: `<small>…</small><strong>{request.requestedBy}</strong>`) là con
                       // mức ngoài cùng ⇒ xé rời nội dung. Nay chỉ coi `{` là mốc khi **độ sâu thẻ = 0**.
   while (i < text.length) {
-    if (tagDepth === 0 && text[i] === "{") {
+    if (tagDepth === 0 && fragDepth === 0 && text[i] === "{") {
       let depth = 0, j = i, q = null, tpl = false;
       for (; j < text.length; j++) {
         const c = text[j];
@@ -94,7 +95,7 @@ function splitChildren(text) {
     if (text[i] === "<") {
       const close = text.startsWith("</", i);
       const m = text.slice(i).match(close ? /^<\/\s*([A-Za-z][\w.:-]*)/ : /^<\s*([A-Za-z][\w.:-]*)/);
-      if (!m) { buf += text[i]; i++; continue; }                    // `<>` / `</>` (fragment) ⇒ bỏ qua, không đổi độ sâu
+      if (!m) { if (text.startsWith("<>", i)) fragDepth++; else if (text.startsWith("</>", i)) fragDepth = Math.max(0, fragDepth - 1); buf += text[i]; i++; continue; }                    // `<>` / `</>` (fragment) ⇒ bỏ qua, không đổi độ sâu
       let j = i + 1, q = null, brace = 0;
       for (; j < text.length; j++) {
         const c = text[j];
@@ -108,7 +109,7 @@ function splitChildren(text) {
       // ⚠️ LỖI ĐÃ GẶP: chỉ cắt tại biểu thức `{…}` ⇒ hai `<section>` LIỀN NHAU (không có biểu thức ở giữa) bị gộp
       // vào CÙNG một con ⇒ tab "Tổng quan" và "Hồ sơ" biến mất (bị hút vào tab khác). Nay **cắt tại MỌI `<section`
       // ở độ sâu 0** (tức `tagDepth === 0` TRƯỚC khi tăng) — đúng như bản đồ khối văn bản.
-      if (!close && tagDepth === 0 && /^<\s*section\b/i.test(tagText) && buf) {
+      if (!close && tagDepth === 0 && fragDepth === 0 && /^<\s*section\b/i.test(tagText) && buf) {
         out.push({ kind: "markup", text: buf });
         buf = "";
       }

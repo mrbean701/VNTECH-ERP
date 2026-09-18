@@ -126,3 +126,18 @@ LATEST COMMIT  : #195 (docs checkpoint) → #196 (docs + cảnh báo công cụ)
   3. đổi điều kiện cắt `section` thành `if (!close && tagDepth === 0 && fragDepth === 0 && /^<\s*section\b/i.test(tagText) && buf)`.
   Sau đó chạy khô: **kỳ vọng tự kiểm PARSE báo HỢP LỆ (0 lỗi)** ⇒ mới `--apply`.
 * **Kỷ luật đã giữ:** mọi bước **chạy khô trước**, công cụ **tự chối ghi** khi có lỗi, và lượt hỏng duy nhất đã được **hoàn tác tức thì** bằng `git checkout` (không có mã sai nào nằm lại trong cây).
+
+### 6.1. Vòng sửa `fragDepth` — GIẢ THUYẾT SAI + NGHI PHẠM MỚI (18/09)
+
+* **ĐÃ THỬ:** thêm `fragDepth` (độ sâu fragment) vào `splitChildren` — 4 mỏ neo khớp đủ, công cụ sửa thành công
+  (`tools/_u14-them-fragdepth.mjs`, có `--apply` + tự chối).
+* **KẾT QUẢ: KHÔNG GIẢI QUYẾT.** Chạy khô vẫn báo **đúng 18 lỗi cú pháp**, **cùng offset `TS17015@505204`**
+  ⇒ **giả thuyết "fragment bị cắt đôi" là SAI** (ghi lại trung thực, không giấu).
+* **NGHI PHẠM MỚI (rõ hơn, có căn cứ từ bản đồ khối):** bản đồ khối cho thấy có **mảnh vụn `</div>`** (6 ký tự) nằm giữa các khối.
+  Bộ tách coi đó là *"con vụn"* (`isFragmentary`) và **GỘP vào con trước**, NHƯNG **thẻ MỞ của nó (`<div className="drawer-body">`)
+  đã bị BỎ** khi dựng modal ⇒ **thẻ ĐÓNG THỪA** ⇒ JSX lệch cân ⇒ lỗi *"Expected corresponding closing tag"*.
+* **CÁCH SỬA ĐỀ XUẤT (việc kế tiếp):** khi dựng các con, **LOẠI BỎ** (không gộp) các mảnh chỉ gồm **thẻ đóng của khung đã bỏ**
+  (`</div>` …), và đổi bất biến "không mất nội dung" thành `nối các con === bodyInner ĐÃ LÀM SẠCH` (ghi rõ phần đã loại bỏ),
+  thay vì so với `bodyInner` nguyên bản. Sau đó chạy khô: **kỳ vọng tự kiểm PARSE báo HỢP LỆ** ⇒ mới `--apply` → `tsc`.
+* **Bằng chứng công cụ an toàn:** suốt 2 vòng sửa, công cụ **luôn tự chối ghi** khi tự kiểm PARSE phát hiện lỗi ⇒
+  `app/page.tsx` **vẫn nguyên vẹn** (chỉ có 1 lượt ghi hỏng ở vòng đầu, đã `git checkout` hoàn tác).
