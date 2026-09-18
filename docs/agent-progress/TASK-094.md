@@ -393,3 +393,29 @@ if (action === "approve_<entity>") {
   · **THÔNG BÁO người tạo PO**: purchase_orders.buyer_user_id chính là người tạo ⇒ ghi 	ask_notifications (nội dung: *"PO <số> đã bị hủy — hãy tạo lại/xử lý lại"*) + udit · KHÔNG chặn cứng (đúng chế độ **CHỈ CẢNH BÁO** nếu còn cảnh báo khác).
 * **Parity Java:** thêm case "approve_po" / case "reject_po" trong SystemController + method tương ứng ở PurchaseManagementUseCase/PurchaseStore (theo khuôn pproveCentralReturn nếu có).
 * **Kiểm chứng (gộp D5):** tạo 1 PO test ⇒ status = pending_approval ⇒ eject_po ⇒ PO cancelled + decision_reason có giá trị + **MR KHÔNG đổi** + **có dòng 	ask_notifications** cho người tạo.
+
+### 14.5. Cơ chế THÔNG BÁO + AUDIT đã ĐO xong (18/09) — đủ để viết handler
+* **Audit chuẩn:** sync function audit(userId, action, entityType, entityId, before, after, request) — **dòng 174**.
+  Cách gọi thực tế trong mã: wait audit(user.id, "<ACTION>", "<entity_type>", <id>, null, { … }, request);
+* **Thông báo trong hệ:** INSERT INTO task_notifications — **dòng 265**, **danh sách cột CHÍNH XÁC (12 cột)**:
+  (id, work_item_id, user_id, channel, title, body, status, read_at, sent_at, last_error, created_at, updated_at)
+  với id sinh bằng id("NTF…"); user_id = người nhận. ⇒ **Dùng kênh này cho thông báo hủy PO** (không dùng email_outbox vì bảng đó **gắn theo equest_id/stage** — đã đo ở dòng 530/551/1649, không phù hợp cho PO).
+* **Đã xác nhận có action đánh dấu đã đọc:** mark_task_notification_read (dòng 1192) ⇒ thông báo hiển thị được cho người dùng.
+**⇒ ĐỦ ĐIỀU KIỆN VIẾT pprove_po / eject_po mà KHÔNG cần khảo sát thêm.** Khuôn:
+``js
+if (action === "reject_po") {
+  requireRole(user, ["procurement", "accountant", "admin"]);
+  const poId = clean(payload.purchaseOrderId), reason = clean(payload.reason), stamp = new Date().toISOString();
+  const po = await first(SELECT id,po_no AS poNo,project_id AS projectId,buyer_user_id AS buyerUserId,status FROM purchase_orders WHERE id=?, poId);
+  if (!po || po.status !== "pending_approval") throw new Error("PO không tồn tại hoặc đã xử lý.");
+  if (!(await canAccessProject(user, String(po.projectId), true))) throw new Error("Tài khoản không có quyền từ chối PO tại dự án này.");
+  await env.DB.batch([
+    env.DB.prepare(UPDATE purchase_orders SET status='cancelled',decision_reason=?,decided_by=?,decided_at=?,updated_at=? WHERE id=?).bind(reason, user.id, stamp, stamp, poId),
+    env.DB.prepare(INSERT INTO task_notifications(id,work_item_id,user_id,channel,title,body,status,read_at,sent_at,last_error,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?))
+      .bind(id("NTF"), null, po.buyerUserId, "in_app", PO  đã bị hủy, PO  đã bị từ chối — hãy tạo lại/xử lý lại. Lý do: , "sent", null, stamp, null, stamp, stamp)
+  ]);
+  await audit(user.id, "REJECT", "purchase_order", poId, { status: "pending_approval" }, { status: "cancelled", reason }, request);
+  return { message: Đã từ chối PO ; PR vẫn mở để xử lý lại. };
+}
+``
+*(pprove_po tương tự, chỉ khác status='waiting_delivery' + audit "APPROVE" + không có thông báo hủy.)*
