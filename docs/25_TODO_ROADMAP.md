@@ -85,7 +85,7 @@
 | `U-08` | UI | Kiểm responsive 4 kích thước cho mọi màn sau khi chuẩn hoá | P1 | U-02,U-03 | - | - | FIX | - | DONE |
 | `U-09` | UI | Chuyển các danh sách sang khuôn Toolbar chuẩn (§5) | P1 | U-03 | - | - | FIX | - | DONE / AP-DUNG 25 |
 | `U-10` | UI | Sửa modal vượt viewport | P1 | — | - | - | FIX | - | DONE |
-| `U-11` | Kiến trúc | Tách `page.tsx` (4.057 dòng) thành module theo màn hình | P1 | U-01…U-05 | - | - | - | - | DANG-LAM 1/4 |
+| `U-11` | Kiến trúc | Tách `page.tsx` (4.057 dòng) thành module theo màn hình | P1 | U-01…U-05 | - | - | - | - | DANG-LAM 3/4 |
 | `U-12` | CSS | Loại `!important` theo từng nhóm; gộp 1.183 selector trùng | P2 | U-11 | - | - | FIX | - | TODO |
 | `U-13` | Kiến trúc | Tách `TaskTable` ra khỏi thân render của `WorkCenter` — nợ có sẵn: `react-hooks/static-components` tại page.tsx:774, dùng ở 837/862/866 | P2 | U-11 | - | - | - | - | DONE |
 

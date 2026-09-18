@@ -105,3 +105,69 @@ rồi chuyển **lô 2** gồm đúng 6 thứ trên + `AppData`. Sau lô 2 thì 
 5. ⚠️ **Mỗi lần tách phải chạy lại:** `tsc` + eslint + build + **cổng ảnh trùng byte** + `test:regression` + `preflight`
    (**chúng là lưới bắt hồi quy** — chính lưới này đã bắt được 2 test đỏ oan + build EXIT 1 ở bước 1).
 
+## 7. NHẬT KÝ ĐÃ THỰC HIỆN (bước 2 và bước 3) — cùng ngày 18/09/2026
+
+### 7.1. Bước 2 — LÔ 2 (7 khối có JSX + có import) — commit `#182`
+Chuyển sang `lib/ui-shared.tsx`: **`AppData`** (kiểu dữ liệu bootstrap) · **`money`** · **`date`** · **`CardHead`** ·
+**`Empty`** · **`NavIcon`** · **`Kpi`**. Kết quả: `app/page.tsx` **3890 → 3822**, module **228 → 314 dòng**.
+Công cụ được nâng lên **chế độ 2** (`--move=A,B,C`): chuyển được khối **có JSX và có import** và **SINH IMPORT** cho tệp mới
+(ánh xạ tên → module lấy từ chính các câu `import` của `page.tsx`; `ReactNode`… → `react`).
+
+**Ba lỗi của chính tôi trong lô 2 (đều bị CỔNG bắt, không lọt):**
+1. Công cụ sinh `import … from "@/lib/ui-shared"` **ngay trong chính `lib/ui-shared.tsx`** cho các tên **đã chuyển ở lô 1**
+   (`format` · `NAV_ICON_TYPE` · `Row`…) ⇒ `tsc` **`TS2440: Import declaration conflicts with local declaration`**.
+   Đã sửa bằng tập **`selfNames`** (tên đã nằm trong module đích thì KHÔNG import lại).
+2. Bộ lọc an toàn **báo động giả**: nó coi **mọi ký hiệu** là "tên không rõ nguồn", kể cả **dữ liệu path SVG**
+   (`M3 16h13…`), khoá object, tên thuộc tính, biến cục bộ ⇒ in ra hàng trăm dòng buộc tội vô nghĩa.
+   Đã thu hẹp về **đúng câu hỏi cần hỏi**: chỉ **CHẶN** khi khối chuyển đi còn tham chiếu một **khai báo top-level của
+   `page.tsx` mà không được chuyển** (nguy cơ import vòng).
+3. Chú thích `// eslint-disable-next-line @typescript-eslint/no-explicit-any` của `type Row` **bị rơi** khi công cụ ghi lại
+   tệp ở lần chạy thứ hai (đoạn "giữ nội dung cũ" cắt từ **dòng khai báo đầu tiên** nên bỏ mất chú thích ngay trên nó)
+   ⇒ eslint báo **1 error**. Đã khôi phục chú thích và **dọn 4 tên import thừa** (`NAV_ICON_TONE` · `NAV_ICON_TYPE` ·
+   `kpiIconName` · `boqStatusLabel` — nay do module dùng) ⇒ eslint **0 error · 71 warning** (nền 72).
+
+### 7.2. Bước 3 — TÁCH 6 MÀN ĐẦU TIÊN ra `app/screens/` — commit `#183`
+Sau lô 2, đo lại bằng `tools/kiem-tra-phu-thuoc-man.mjs`: **6 màn nhỏ nhất đều có cột *"CÒN Ở page.tsx" = 0***
+⇒ tách được ngay, không còn nguy cơ import vòng:
+
+| Tệp mới | Dòng | `page.tsx` sau mỗi lần |
+|---|---|---|
+| `app/screens/SealScreen.tsx` | 7 | 3822 → 3817 |
+| `app/screens/CorrespondenceScreen.tsx` | 8 | 3817 → 3810 |
+| `app/screens/BenefitsScreen.tsx` | 9 | 3810 → 3802 |
+| `app/screens/LaborScreen.tsx` | 10 | 3802 → 3793 |
+| `app/screens/SiteCostScreen.tsx` | 12 | 3793 → 3782 |
+| `app/screens/CashbankScreen.tsx` | 15 | 3782 → **3768** |
+
+Công cụ thêm `--out=<đường dẫn>` + `--back=<spec>`; **câu import trong mỗi tệp màn do công cụ SINH TỰ ĐỘNG**, ví dụ
+`SealScreen.tsx` nhận đúng **4 câu**: `StatusBadge` (`@/app/components/ui`) · `CardHead, Empty, date` (`@/lib/ui-shared`) ·
+`type AppData, Row` · `FormEvent` (`react`).
+
+**Kết quả luỹ kế cả 3 bước:** `app/page.tsx` **4037 → 3767 dòng (−270)**; **`app/screens/` 6 tệp mới**;
+`lib/ui-shared.tsx` **314 dòng**; eslint **`app/page.tsx` 65 warning** (nền 72 ⇒ **giảm 6**, vì cảnh báo "tham số không dùng"
+đi theo màn sang tệp mới), **0 error** toàn bộ.
+
+### 7.3. Bằng chứng kiểm chứng (cả 3 bước — refactor THUẦN nên bằng chứng phải là ẢNH)
+
+| Cổng | Bước 1 | Lô 2 | Tách 6 màn |
+|---|---|---|---|
+| 🔬 **cổng ảnh 56 ảnh (14 màn × 4 kích thước)** | **TRÙNG BYTE** `B7E70927…6530` | **TRÙNG BYTE** `B7E70927…6530` | **TRÙNG BYTE** `B7E70927…6530` |
+| `tsc --noEmit` | EXIT 0 | EXIT 0 | EXIT 0 |
+| eslint | 0 error · 72 warning | 0 error · 71 warning | 0 error · **65 warning** (page.tsx) |
+| `npm run build` | EXIT 0 | EXIT 0 | EXIT 0 + BUILT ARTIFACT VALIDATION ĐẠT |
+| `test:regression` | 59/61 (đúng nền) | 59/61 | 59/61 |
+| `master-baseline-gate` | ĐẠT | ĐẠT | ĐẠT |
+| Bản phục vụ | `VNTECH-FP-864B84D9F05AE3DF` | `VNTECH-FP-DD4569AE8642395F` | **`VNTECH-FP-2002BED16DE89A0B`** |
+| `page.tsx` | 3890 | 3822 | **3767** |
+
+## 8. Việc kế tiếp của `U-11` (bước 3 vòng sau / bước 4)
+
+1. **Tách tiếp các màn còn "sạch phụ thuộc":** chạy `tools/kiem-tra-phu-thuoc-man.mjs <TênMàn…>` để tìm màn có
+   *"CÒN Ở page.tsx" = 0*; dự kiến lô kế tiếp: `HrScreen` · `DocumentsScreen` · `ConstructionScreen` ·
+   `FinanceRecoveryScreen` · `LegalDocsScreen` (kiểm trước, **không đoán**).
+2. **Bước 4 (còn lại của `U-11`):** các màn lớn `WorkCenter` / `Requests` / `BoqControl` cần thêm helper ⇒
+   lặp lại chu trình: **đo phụ thuộc → chuyển helper sang `ui-shared` → kiểm cổng ảnh trùng byte → tách màn**.
+3. ⚠️ **Luôn giữ đủ lưới:** `tsc` + eslint + `npm run build` + **cổng ảnh trùng byte** + `test:regression` + `preflight`
+   — chính lưới này đã bắt được **2 test đỏ oan + build EXIT 1** (bước 1), **TS2440** (lô 2), **1 error eslint** (lô 2).
+
+
