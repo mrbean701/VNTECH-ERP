@@ -60,45 +60,62 @@ const collapseBtn = headerInner.match(/\{isPage && <button type="button" classNa
 if (!collapseBtn) failures.push("[header] không thấy nút thu gọn khối để chuyển sang `actions` ⇒ DỪNG");
 const actionsJsx = collapseBtn ? collapseBtn[0].replace(/\{isPage && /, "").replace(/\}$/, "") : "";
 
-// ── 4. Tách thân thành [khoảng trống] + [section] theo thứ tự, kiểm "không mất nội dung" ────
-const segs = [];
-let cursor = 0;
-const sections = [];
-while (true) {
-  const s = bodyInner.indexOf("<section", cursor);
-  if (s < 0) break;
-  const e = bodyInner.indexOf("</section>", s);
-  if (e < 0) { failures.push("[body] có <section> không có </section> ⇒ DỪNG"); break; }
-  sections.push({ start: s, end: e + "</section>".length });
-  cursor = e + "</section>".length;
+// ── 4. Tách thân thành các CON MỨC NGOÀI CÙNG bằng ĐẾM NGOẶC (sửa lỗi của bản tách theo `<section>`) ────
+// Vì sao: bản đầu tách theo cặp `<section>…</section>` ⇒ các khối **CÓ ĐIỀU KIỆN** (`{cond && <section …>…}`)
+// bị cắt đôi giữa hai đoạn (`}` thừa ở đoạn sau) ⇒ JSX lệch ngoặc. Nay tách theo **biểu thức `{…}` có đếm ngoặc
+// + chuỗi/template**, phần còn lại là các "run" markup ⇒ nối lại LUÔN bằng thân gốc (kiểm bên dưới).
+function splitChildren(text) {
+  const out = [];
+  let buf = "";
+  let i = 0;
+  while (i < text.length) {
+    if (text[i] !== "{") { buf += text[i]; i++; continue; }
+    let depth = 0, j = i, q = null, tpl = false;
+    for (; j < text.length; j++) {
+      const c = text[j];
+      if (q) { if (c === "\\") { j++; continue; } if (c === q) q = null; continue; }
+      if (tpl) { if (c === "\\") { j++; continue; } if (c === "`") tpl = false; continue; }
+      if (c === '"' || c === "'") { q = c; continue; }
+      if (c === "`") { tpl = true; continue; }
+      if (c === "{") depth++;
+      else if (c === "}") { depth--; if (depth === 0) { j++; break; } }
+    }
+    if (depth !== 0) { failures.push("[thân] có `{` không có `}` đóng ⇒ DỪNG"); break; }
+    if (buf) out.push({ kind: "markup", text: buf });
+    out.push({ kind: "expr", text: text.slice(i, j) });
+    buf = "";
+    i = j;
+  }
+  if (buf) out.push({ kind: "markup", text: buf });
+  return out;
 }
-if (!sections.length) failures.push("[body] không tìm thấy <section> nào ⇒ DỪNG");
-let pos = 0;
-for (const sec of sections) {
-  if (sec.start > pos) segs.push({ kind: "gap", text: bodyInner.slice(pos, sec.start) });
-  segs.push({ kind: "section", text: bodyInner.slice(sec.start, sec.end) });
-  pos = sec.end;
-}
-if (pos < bodyInner.length) segs.push({ kind: "gap", text: bodyInner.slice(pos) });
-const rebuilt = segs.map((s) => s.text).join("");
-if (rebuilt !== bodyInner) failures.push("[body] nối các đoạn KHÔNG bằng thân gốc ⇒ DỪNG (nguy cơ mất nội dung)");
-notes.push(`thân drawer-body ${bodyInner.length} ký tự → ${segs.length} đoạn (${sections.length} section + ${segs.filter((s) => s.kind === "gap").length} khoảng)`);
+const children = splitChildren(bodyInner);
+const rebuilt = children.map((c) => c.text).join("");
+if (rebuilt !== bodyInner) failures.push("[body] nối các con KHÔNG bằng thân gốc ⇒ DỪNG (nguy cơ mất nội dung)");
+notes.push(`thân drawer-body ${bodyInner.length} ký tự → ${children.length} con (${children.filter((c) => c.kind === "expr").length} biểu thức {…} + ${children.filter((c) => c.kind === "markup").length} run markup)`);
 
 const labelFor = (text) => {
-  if (text.includes("Tiến trình phê duyệt")) return "Phê duyệt";
   if (text.includes("Tổng hợp giao nhận")) return "Giao nhận";
+  if (text.includes("Tiến trình phê duyệt")) return "Phê duyệt";
   if (text.includes("CHT sửa phiếu")) return "Sửa phiếu";
   if (text.includes("Mục đích / Ghi chú")) return "Ghi chú";
   if (text.includes("Ảnh / Hồ sơ")) return "Hồ sơ";
   if (text.includes("summary-grid request-summary")) return "Tổng quan";
+  if (text.includes("Tiến trình mua và giao hàng")) return "Tiến trình mua";
   return null;
 };
+// Con "vụn" (chỉ khoảng trắng hoặc chỉ thẻ đóng) ⇒ GỘP vào con trước để không sinh tab rác và không mất nội dung.
+const isFragmentary = (text) => !text.trim() || /^(\s*<\/?[a-zA-Z][^>]*>\s*)+$/.test(text);
 const tabs = [];
-for (const s of segs) {
-  if (s.kind === "gap" && !s.text.trim()) continue;                       // khoảng trống ⇒ bỏ
-  const label = labelFor(s.text);
-  if (!label) failures.push(`[tab] không suy được NHÃN cho đoạn ${s.kind} dài ${s.text.length} ký tự (bắt đầu: ${JSON.stringify(s.text.slice(0, 80))}) ⇒ DỪNG`);
-  else tabs.push({ key: label.toLowerCase().replace(/\s+/g, "-"), label, jsx: s.text });
+for (const c of children) {
+  if (tabs.length && isFragmentary(c.text)) { tabs[tabs.length - 1].jsx += c.text; continue; }
+  const label = labelFor(c.text);
+  if (!label) {
+    if (isFragmentary(c.text)) continue;
+    failures.push(`[tab] không suy được NHÃN cho con ${c.kind} dài ${c.text.length} ký tự (bắt đầu: ${JSON.stringify(c.text.slice(0, 90))}) ⇒ DỪNG`);
+    continue;
+  }
+  tabs.push({ key: label.toLowerCase().replace(/\s+/g, "-"), label, jsx: c.text });
 }
 if (!tabs.length) failures.push("[tab] không dựng được tab nào ⇒ DỪNG");
 
