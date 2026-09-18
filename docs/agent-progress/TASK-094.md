@@ -627,3 +627,21 @@ HOÀN TÁC: PO về 'delivered_pending_confirmation' · task_notifications về 
 * JS + Java **parity**: pprove_po/eject_po (JS dòng 1325/1335 · Java port 46 · adapter 234 @Transactional · use-case 227/232 · controller 1073/1078).
 * **3 lỗi thật đã vá**: ① thiếu uyer_user_id ⇒ người nhận rỗng ② work_item_id NOT NULL ⇒ 409 ③ **ghi không nguyên tử**.
 * **Hành vi đúng như yêu cầu:** PO ⇒ cancelled + lý do/ai/khi nào · **PR VẪN MỞ** (MR pproved → pproved) · **thông báo tới đúng uyer_user_id** · **hoàn tác sạch** (không rác test).
+
+### 14.15. [PHASE 8 · B2/bước 3] KHẢO SÁT: **CHƯA CÓ** action sửa giá PO ⇒ đây là TÍNH NĂNG MỚI (18/09)
+**Đo được (không đoán):**
+* **JS** scripts/system-route.mjs: unit_price chỉ xuất hiện trong các câu **SELECT** (ví dụ dòng 624 — đọc poi.unit_price AS unitPrice để hiển thị). **KHÔNG có** action update_po/update_po_item/edit_po nào (grep ction === "update_po…" ⇒ **0 kết quả**).
+* **Java**: các chỗ ghi unitPrice đều thuộc **BOQ**: BoqStore.updatePbiPrice(...) (BoqStore.java:106) · BoqManagementUseCase (dòng 99/161/341/355) · AdminOpsManagementUseCase (229-231). **KHÔNG có** chỗ nào ghi purchase_order_items.unit_price.
+⇒ **Kết luận:** yêu cầu *"người có quyền sửa PO được sửa giá PO; sau khi PO hoàn thành thì không cho sửa"* **chưa được cài đặt** ⇒ **B2/bước 3 = TÍNH NĂNG MỚI** (không phải fix).
+**THIẾT KẾ (bám đúng yêu cầu, không suy đoán thêm):**
+* **Action mới update_po_price** (JS + Java **parity**):
+  * Đầu vào: purchaseOrderId + lines: [{ purchaseOrderItemId, unitPrice }].
+  * **Quyền:** equireRole(["procurement","accountant","admin"]) **+** ccessScope.requireProjectAccess(...) theo dự án của PO (nhất quán với pprove_po/eject_po vừa làm).
+  * **KHOÁ theo trạng thái (đúng yêu cầu "sau khi PO hoàn thành không cho sửa"):** **TỪ CHỐI** khi purchase_orders.status thuộc nhóm **đã hoàn thành**: completed, completed_with_shortage, completed_with_exceptions (và cancelled) ⇒ thông điệp rõ: *"PO đã hoàn thành — không được sửa giá."*
+  * Cho sửa khi PO còn đang chạy: pending_approval, pproved, waiting_delivery, partial_delivery, delivered_pending_confirmation.
+  * **Ghi DUY NHẤT** purchase_order_items.unit_price (+updated_at) **trong MỘT giao dịch**; **TUYỆT ĐỐI KHÔNG** ghi materials.standard_price/materials.* (yêu cầu: **không ghi ngược danh mục**) ⇒ thêm udit(...) để truy vết.
+* **CỔNG KIỂM CHỨNG 3 CA:**
+  1. PO **chưa** hoàn thành ⇒ sửa được, **đọc lại thấy giá mới** đúng.
+  2. PO **đã** hoàn thành ⇒ **bị CHẶN** (thông điệp rõ, giá **không đổi**).
+  3. **Danh mục KHÔNG đổi** — chụp materials (số dòng + giá liên quan) **trước/sau** ⇒ **phải giống hệt**.
+**TRẠNG THÁI:** chưa cài đặt; đây là việc kế tiếp sau khi B2/bước 2 đã đóng (§14.14).
