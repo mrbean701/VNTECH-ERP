@@ -197,9 +197,14 @@ const SCREENS = [
   { id: "12-drawer-request-detail", label: "Phiếu đề nghị — drawer chi tiết", steps: [{ group: "purchasing", child: 0 }, { click: ".request-list-card .icon-mini" }] },
   { id: "13-modal-material", label: "Danh mục vật tư — modal thêm/sửa vật tư", steps: [{ group: "material_master", child: 0 }, { click: ".material-list-filters button.primary" }] },
   { id: "16-modal-receipt", label: "Nhập kho — modal tạo phiếu nhập", steps: [{ group: "warehouse", child: 0 }, { click: ".list-toolbar-actions button.primary" }] },
-  // ⚠️ CHƯA PHỦ ĐƯỢC 2 khung (ghi lại để vòng sau làm, KHÔNG đoán selector):
-  //   • `open("po")`     — màn Mua hàng & PO không có `.list-toolbar-actions button.primary` (cổng báo NO_CLICK_TARGET).
-  //   • `open("teamCreate")` — màn Tổ đội cũng vậy.
+  // Q7 (18/09/2026) — ĐÃ KHẢO SÁT NÚT THẬT cho 2 khung còn thiếu (trước đây cổng báo NO_CLICK_TARGET):
+  //   • PO: nút thật nằm ở `.purchase-action-bar` của `app/screens/Purchasing.tsx:28` — `＋ PHÁT HÀNH PO`
+  //     (`<button className="primary" … onClick={()=>requests[0]&&open("po",requests[0])}>`), KHÔNG phải toolbar danh sách.
+  //   • Tổ đội: nút do `CardHead` render (`<div className="card-head">…<button>＋ Thêm tổ đội →</button>`) nên KHÔNG có
+  //     lớp riêng ⇒ phải bấm theo NHÃN (`clickText`), và nút nằm ở **bước 2** của wizard Quản trị
+  //     (`.permission-steps button:nth-child(2)`).
+  { id: "17-modal-po", label: "Mua hàng & PO — modal phát hành PO", steps: [{ group: "purchasing", child: 1 }, { click: ".purchase-action-bar button.primary" }] },
+  { id: "18-modal-team-create", label: "Quản trị — modal tạo tổ đội dự án (bước 2)", steps: [{ group: "system_admin", child: 0 }, { click: ".permission-steps button:nth-child(2)" }, { clickText: "Thêm tổ đội" }] },
 ];
 
 const SCREENS_TO_RUN = ONLY ? SCREENS.filter((s) => s.id.includes(ONLY)) : SCREENS;
@@ -326,9 +331,19 @@ async function clickSteps(steps) {
   for (const st of steps) {
     // BƯỚC MỞ MODAL/DRAWER (U-10) — KHÔNG có `group` nên phải xử lý TRƯỚC khối điều hướng,
     // nếu không `[data-nav-group="undefined"]` sẽ trả NO_GROUP (lỗi đã gặp thật 18/09).
-    if (st.click) {
+    if (st.click || st.clickText) {
       // Chẩn đoán rõ: không tìm thấy · BỊ VÔ HIỆU (thiếu quyền) · nút không phải <button> ⇒ mỗi ca một kết luận khác nhau.
-      const hit = await evaluate(`(()=>{const el=document.querySelector(${JSON.stringify(st.click)});
+      // Q7 (18/09/2026) — thêm `clickText`: nhiều nút thật KHÔNG có lớp CSS riêng (ví dụ nút do `CardHead`
+      // render: `<div className="card-head">…<button>＋ Thêm tổ đội →</button>`); bấm theo NHÃN NÚT là cách
+      // duy nhất không phải đoán selector. So khớp sau khi bỏ khoảng trắng/ký tự trang trí để không phụ thuộc
+      // dấu `＋`/`→` hay khoảng trắng.
+      const norm = (s) => String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "");
+      const target = st.clickText ? norm(st.clickText) : null;
+      const hit = await evaluate(`(()=>{const wanted=${JSON.stringify(target)};
+        const norm=(s)=>String(s).toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/[^a-z0-9]+/g,'');
+        const el = wanted
+          ? [...document.querySelectorAll('button,a,label')].find((b)=>norm(b.textContent||'').includes(wanted))
+          : document.querySelector(${JSON.stringify(st.click || "")});
         if(!el)return 'NO_CLICK_TARGET';
         if(el.disabled)return 'CLICK_TARGET_DISABLED';
         el.click();return 'CLICKED_UI';})()`);
