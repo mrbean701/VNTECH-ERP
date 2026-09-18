@@ -479,3 +479,15 @@ case "close_po_line" -> {
 1. Đọc **4 method** trong FileController + pp/api/files/route.ts ⇒ **đối chiếu xem method nào THIẾU kiểm quyền** (POST/GET ?id=/DELETE — nguy cơ cao nhất: tải/xoá tệp của thực thể KHÔNG thuộc phạm vi người dùng).
 2. Thêm **kiểm quyền theo phạm vi thực thể** (canAccessProject/canAccessWarehouse theo entityType+entityId) — **parity Java + Node**.
 3. Cổng kiểm chứng: gọi /api/files **không có phiên** ⇒ **401**; tài khoản **ngoài phạm vi** ⇒ **403**; tài khoản **trong phạm vi** ⇒ **200** (3 ca, có đối chứng dương).
+
+### 16.1. [PHASE 0B · S-05] KẾT QUẢ ĐỌC THÂN — ĐÍNH CHÍNH CÁCH HIỂU (18/09)
+**Điều ĐÃ CÓ trong FileController:**
+* equireUser(request) (**dòng 128-131**) → uthUseCase.currentUser(SessionCookieFactory.decode(...)) → **ném ApiError("Chưa đăng nhập.", 401)** nếu không có phiên.
+* Được gọi ở **cả 3 method**: upload (**dòng 57**) · get (**dòng 83**) · delete (**dòng 116**).
+⇒ **/api/files KHÔNG phải "ai cũng tải được"**: nó **đã yêu cầu đăng nhập** (401).
+**Điều CÒN THIẾU (đúng là nội dung S-05):** **kiểm PHẠM VI theo thực thể** — không có canAccessProject/canAccessWarehouse trong tệp
+⇒ người dùng **đã đăng nhập** vẫn có thể **đọc/xoá tệp của thực thể NGOÀI phạm vi được phép** (chỉ cần biết entityType+entityId hoặc id).
+**⇒ Phát biểu CHÍNH XÁC cho S-05:** *"/api/files: **đã có xác thực (401)**, **thiếu phân quyền theo phạm vi thực thể (403)"*. (Trước đó mô tả là *"kiểm quyền cho /api/files"* — cần nói rõ như trên để **không báo thừa**.)
+**VIỆC KẾ TIẾP (chính xác):**
+1. Thêm **kiểm phạm vi** cho upload/get/delete (và bản Node pp/api/files/route.ts): theo entityType (material_request, goods_receipt, purchase_order…) tra **project/kho** của thực thể rồi canAccessProject/canAccessWarehouse; nhánh ?id= phải tra ngược về thực thể chủ.
+2. **Cổng 3 ca:** không phiên ⇒ **401** · đăng nhập nhưng **ngoài phạm vi** ⇒ **403** · **trong phạm vi** ⇒ **200** (có đối chứng dương).
