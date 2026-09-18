@@ -228,8 +228,6 @@ public class PurchaseStoreAdapter implements PurchaseStore {
         return rows.isEmpty() ? Optional.empty() : Optional.of(new LinkedHashMap<>(rows.get(0)));
     }
 
-    @Override
-    @Transactional
     /** [WF] PHASE 8 (B2) — ghi quyết định cho PO (native SQL, cùng khuôn các method khác của adapter). */
 @Override
 public void decidePo(String poId, String status, String reason, String userId, Instant now) {
@@ -246,6 +244,8 @@ public void insertTaskNotification(String userId, String title, String body, Ins
         "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
         "NTF_" + java.util.UUID.randomUUID(), null, userId, "in_app", title, body, "sent", null, now, null, now, now);
 }
+    @Override
+    @Transactional
 public void closePoLine(String poItemId, double shortage, String reason, String userId, Instant now) {
         jdbcTemplate.update("""
                 UPDATE purchase_order_items SET closed_qty=closed_qty+?,close_reason=?,closed_by=?,
