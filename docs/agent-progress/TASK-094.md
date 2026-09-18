@@ -1294,3 +1294,18 @@ pm run build | **EXIT 0** + **BUILT ARTIFACT VALIDATION: ĐẠT** |
 4. Còn **17-modal-po 286 px** ⇒ **--locate=419,549** ⇒ **.purchase-cumulative-head "Số liệu tính đến ngày …"** ⇒ **do MỐC NGÀY** ⇒ **chụp lại**.
 5. **Kết quả cuối: 64/64 ĐẠT.** **Không lần nào cập nhật baseline để che lỗi** — chỉ chụp lại **sau khi đã chứng minh nguyên nhân không phải mã**.
 **LƯU Ý VẬN HÀNH:** màn **17-modal-po có phần tử nhạy theo NGÀY** (.purchase-cumulative-head) ⇒ **sang ngày khác cổng ảnh có thể báo lệch lại đúng vùng (419,549)** — đó là **nhiễu hệ thống đã biết**, không phải regression.
+
+### 25. [PHASE 1 · U-12.1] GỘP SELECTOR TRÙNG — **TIỀN ĐỀ LỘ TRÌNH SAI, chỉ 5 khối an toàn** (18/09)
+**Công cụ 	ools/u12-1-gop-selector-trung.mjs** (đếm ngoặc · theo ngữ cảnh @media · chạy khô · **tự chối ghi nếu ngoặc lệch**).
+**CHẠY KHÔ — số liệu:**
+| Tệp | Rule | Nhóm selector trùng | Nhóm **khai báo GIỐNG HỆT TỪNG BYTE** | Xoá |
+|---|---|---|---|---|
+| pp/globals.css | 3.177 | **506** | **CHỈ 5** | 5 khối (−523 ký tự · ngoặc 3274→3269 **OK**) |
+| pp/styles/canonical.css | 192 | 13 | **0** | 0 |
+**⇒ PHÁT HIỆN QUAN TRỌNG (đính chính lộ trình):** **506 nhóm selector trùng nhưng CHỈ 5 nhóm có khai báo giống nhau** ⇒ **501 nhóm còn lại là OVERRIDE CÓ CHỦ ĐÍCH** (nhiều lớp ghi đè), **KHÔNG phải trùng lặp rác**. Vì vậy **tiền đề "gộp 1.183 selector trùng" của U-12 là SAI** — **gộp bừa sẽ ĐỔI HÀNH VI** (chính các lớp override này mới là thứ đang tạo ra **4.472 !important**).
+**⇒ ĐÃ ÁP DỤNG 5 KHỐI AN TOÀN** (khai báo **byte-identical** ⇒ **hoán vị thuần** ⇒ **không thể đổi giao diện**).
+**⇒ U-12 ĐƯỢC TÁI PHẠM VI (đúng bản chất):**
+* **U-12.1** = gộp **chỉ** trùng **byte-identical** ⇒ **XONG** (5 khối; phần còn lại **không phải việc**).
+* **U-12.2** = **bỏ !important ở nơi nó THỪA** (rule đã thắng theo độ đặc hiệu/thứ tự) ⇒ **phải phân tích cascade TỪNG CA** + kiểm ảnh **từng lô 20–30 chỗ**.
+* **U-12.3** = xoá **khối override dài** (962 · 1003-1011 · 2072-2074) **sau khi** chứng minh rule gốc đã đủ mạnh.
+**BÀI HỌC:** con số trong lộ trình **không được tin tuyệt đối** — phải **đo lại** (506 trùng ⇒ chỉ **5** thực sự trùng) trước khi lên kế hoạch sửa; nếu làm theo con số cũ sẽ **phá hành vi** của 501 nhóm override.
