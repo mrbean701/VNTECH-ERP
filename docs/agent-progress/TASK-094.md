@@ -537,3 +537,19 @@ case "close_po_line" -> {
   *(dùng id PO không tồn tại ⇒ **không đột biến dữ liệu**; lỗi 400 là do Api(...) của use-case, không phải lỗi framework.)*
 * **⇒ Trạng thái B2/bước 2:** **JS ✔ + Java ✔ + cổng "action được nhận" ✔**. **Còn lại:** kiểm chứng **end-to-end trên PO thật** (tạo PO pending_approval ⇒ eject_po ⇒ PO cancelled + decision_reason + **MR không đổi** + có 	ask_notifications) ⇒ **gộp vào D5** (cần dữ liệu test).
 **Bài học đã trả giá trong bước này:** khi chèn trước **một chữ ký method**, phải kiểm **annotation ngay trên nó** (@Override/@Transactional) — nếu không sẽ **tách annotation khỏi method** gây lỗi biên dịch *"@Override is not a repeatable annotation"*.
+
+### 14.10. 🧪 KIỂM CHỨNG END-TO-END B2 (eject_po) — **6/7 ĐẠT · 1 HỎNG** (18/09)
+Công cụ: 	ools/b2-e2e-reject-po.mjs (dựng PO test ⇒ gọi API thật ⇒ kiểm ⇒ **hoàn tác trong inally**; PO dùng: PO-PRJ-DEMO-01-2026-0010, MR MR_63fe9433-..., buyer USR_8869ca60-...).
+| # | Điều kiện | Kết quả |
+|---|---|---|
+| 1 | Dựng được PO test ở pending_approval | **ĐẠT** |
+| 2 | eject_po qua Java | **ĐẠT** — HTTP 200 {"ok":true,"message":"Đã từ chối PO PO-PRJ-DEMO-01-2026-0010; PR vẫn mở để xử lý lại."} |
+| 3 | PO ⇒ cancelled | **ĐẠT** (status='cancelled') |
+| 4 | Ghi decision_reason | **ĐẠT** ('KIỂM THỬ end-to-end B2 (tự động, sẽ hoàn tác)') |
+| 5 | Ghi decided_by | **ĐẠT** (USR_2f435847-...) |
+| 6 | **MR KHÔNG ĐỔI** (PR vẫn mở) | **ĐẠT** (pproved → pproved) |
+| 7 | **Có thêm 1 dòng 	ask_notifications cho người tạo PO** | ❌ **HỎNG** — 	rước=3 · sau=3 (**không có dòng nào được ghi**) |
+**Chẩn đoán (giả thuyết mạnh nhất, chưa xác minh):** trong PurchaseManagementUseCase.decidePo(...) tôi đọc người tạo bằng sv(po, "buyerUserId") từ store.findPoForReceiving(poId) — nếu SQL của adapter **không select uyer_user_id AS buyerUserId** thì sv(...) trả **chuỗi rỗng** ⇒ nhánh if (!buyer.isEmpty()) **không chạy** ⇒ **im lặng không gửi thông báo** (đúng kiểu lỗi *"thất bại im lặng"*).
+**BÀI HỌC (lần này là giá trị của cổng kiểm chứng):** nếu chỉ **đọc mã** và thấy if (!buyer.isEmpty()) store.insertTaskNotification(...) thì rất dễ kết luận "đã có thông báo"; **chạy thật** mới lộ ra **không có dòng nào được ghi**. ⇒ *Không được tuyên bố "xong" cho tới khi đo.*
+**HOÀN TÁC:** PO đã trả về delivered_pending_confirmation (đúng gốc) · 	ask_notifications về **3** (đúng gốc) ⇒ **không để lại rác test**; file hoàn tác: docs/agent-progress/TASK-094-d5-b2-rollback.sql.
+**VIỆC KẾ TIẾP:** (1) kiểm SQL của indPoForReceiving có uyer_user_id AS buyerUserId không; (2) nếu thiếu ⇒ bổ sung (hoặc thêm port poBuyerId(poId)) — **JS đã select tường minh uyer_user_id AS buyerUserId** nên chỉ Java cần sửa; (3) chạy lại cổng ⇒ kỳ vọng **7/7**.
