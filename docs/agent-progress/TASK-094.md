@@ -657,3 +657,25 @@ umberValue** + kiểm âm tại chỗ · ② khối updatePoItemPrice bị chèn
 2. **SystemController có NHIỀU switch** ⇒ case mới phải chèn **vào đúng switch** — bám case "approve_po", **KHÔNG** bám case "close_po_line" (case này thuộc switch khác).
 **CÒN LẠI của B2/bước 3:** ① **cổng 3 ca** (chưa xong ⇒ sửa được + đọc lại đúng giá mới · **đã xong ⇒ BỊ CHẶN**, giá không đổi · **danh mục KHÔNG đổi**) ② **JS parity** update_po_price.
 **TRẠNG THÁI:** tính năng **đã sống** nhưng **CHƯA có bằng chứng chức năng** ⇒ **chưa coi là xong**.
+
+### 14.17. ✅ CỔNG update_po_price **6/6 ĐẠT · 0 HỎNG · MÃ THOÁT THẬT = 0** (18/09)
+Công cụ: 	ools/b2b3-cong-gia-po.mjs (dựng dữ liệu ⇒ gọi API thật ⇒ kiểm ⇒ **hoàn tác trong inally**; PO PO-PRJ-DEMO-01-2026-0010, dòng POI_f86a77e1-…, giá gốc  ).
+`
+CHECKSUM TABLE materials TRƯỚC = 4026259885
+CA A ⇒ HTTP 200: {"ok":true,"message":"Đã cập nhật đơn giá 1 dòng của PO PO-PRJ-DEMO-01-2026-0010; danh mục vật tư KHÔNG thay đổi."}
+  [ĐẠT] CA A: sửa giá khi PO CHƯA hoàn thành :: HTTP 200
+  [ĐẠT] CA A: ĐỌC LẠI thấy đúng giá mới :: 0 → 1234.56
+CA B ⇒ HTTP 400: {"ok":false,"error":"PO đã hoàn thành (completed) — không được sửa giá."}
+  [ĐẠT] CA B: PO ĐÃ hoàn thành ⇒ BỊ CHẶN (nêu rõ lý do) :: HTTP 400
+  [ĐẠT] CA B: giá KHÔNG đổi khi bị chặn :: vẫn = 1234.56
+  [ĐẠT] CA C: DANH MỤC (materials) KHÔNG ĐỔI :: checksum 4026259885 → 4026259885
+  HOÀN TÁC: PO status='delivered_pending_confirmation' · giá=0
+  [ĐẠT] đã HOÀN TÁC về đúng gốc
+=== CỔNG update_po_price: 6/6 ĐẠT · 0 HỎNG === ; MÃ THOÁT THẬT: 0
+`
+**Đối chiếu ĐÚNG 3 yêu cầu của anh:**
+1. *"Cho phép người có quyền sửa PO được sửa giá PO"* ⇒ **CA A HTTP 200** + **đọc lại thấy giá mới** (  → 1234.56).
+2. *"Sau khi PO hoàn thành không cho sửa nữa"* ⇒ **CA B HTTP 400** "PO đã hoàn thành (completed) — không được sửa giá." + **giá KHÔNG đổi** ⇒ **KHOÁ hoạt động**.
+3. *"Không ghi ngược danh mục"* ⇒ **CA C**: CHECKSUM TABLE materials **4026259885 → 4026259885** (giống hệt).
+**Không để lại rác test:** hoàn tác đưa PO về delivered_pending_confirmation và giá về   ✔.
+**CÒN LẠI của B2/bước 3:** **JS parity** — thêm update_po_price vào scripts/system-route.mjs (hiện chỉ có phía Java).
