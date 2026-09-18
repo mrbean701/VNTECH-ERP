@@ -11,7 +11,9 @@
 
 import type { FormFieldConfig } from "@/lib/form-fields";
 import { ReactNode } from "react";
-
+import { pdfFromJpegs } from "@/lib/boq-export";
+import { downloadBlob, downloadCsv, downloadSimpleXlsx } from "@/lib/tabular-export";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 // Dynamic rows are normalized by the server API and intentionally remain flexible here.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Row = Record<string, any>;
@@ -271,11 +273,61 @@ function Kpi({ icon, label, value, note, tone = "blue", percent }: { icon: strin
 }
 
 const UI_TODAY = new Date(UI_NOW_MS).toISOString().slice(0, 10);
+
+function deliveredExportRows(rows:Row[]) { return rows.map(row=>[row.poNo||"",row.projectName||row.projectCode||"",row.supplierName||"",row.warehouseName||"",String(row.receivedAt||""),row.bchConfirmedByName||"",String(row.bchConfirmedAt||""),Number(row.acceptedQty||0),row.certificateStatus||"",row.deliveryDocumentStatus||""]); }
+
+function exportDeliveredXlsx(rows:Row[]) { downloadSimpleXlsx({sheetName:"Don da giao",title:"ĐƠN HÀNG ĐÃ GIAO",headers:["PO","Dự án","Nhà cung cấp","Kho nhận","Ngày giao","BCH xác nhận","Thời điểm xác nhận","SL chấp nhận","Chứng chỉ","Giấy giao hàng"],rows:deliveredExportRows(rows),widths:[20,30,32,26,20,24,22,16,18,20],freezeRows:2},`Don_hang_da_giao_${UI_TODAY}`); }
+
+function exportDeliveredCsv(rows:Row[]) { downloadCsv(["PO","Dự án","Nhà cung cấp","Kho nhận","Ngày giao","BCH xác nhận","Thời điểm xác nhận","SL chấp nhận","Chứng chỉ","Giấy giao hàng"],deliveredExportRows(rows),`Don_hang_da_giao_${UI_TODAY}`); }
+
+function downloadDeliveredPdf(rows:Row[]){downloadTabularPdf("ĐƠN HÀNG ĐÃ GIAO",["PO","Dự án","Nhà cung cấp","Kho nhận","Ngày giao","BCH xác nhận","Thời điểm xác nhận","SL chấp nhận","Chứng chỉ","Giấy giao hàng"],deliveredExportRows(rows),`Don_hang_da_giao_${UI_TODAY}`);}
+
+function downloadTabularPdf(title:string,headers:string[],rows:(string|number)[][],fileName:string){
+  const pageW=1600,pageH=1130,margin=34,headY=112,headerH=54,rowH=44,footer=44;const maxRows=Math.max(1,Math.floor((pageH-headY-headerH-footer)/rowH));const pages=Math.max(1,Math.ceil(Math.max(rows.length,1)/maxRows));const canvases:HTMLCanvasElement[]=[];const escText=(v:unknown)=>String(v??"");
+  for(let pi=0;pi<pages;pi++){const c=document.createElement("canvas");c.width=pageW;c.height=pageH;const ctx=c.getContext("2d");if(!ctx)continue;ctx.fillStyle="#fff";ctx.fillRect(0,0,pageW,pageH);ctx.fillStyle="#0b66f6";ctx.fillRect(0,0,pageW,12);ctx.fillStyle="#0d203e";ctx.font='700 30px "Segoe UI",Arial';ctx.textAlign="left";ctx.fillText(title,margin,55);ctx.fillStyle="#687d96";ctx.font='500 14px "Segoe UI",Arial';ctx.fillText(`VNTECH ERP · ${new Intl.DateTimeFormat("vi-VN").format(new Date())}`,margin,82);const usable=pageW-margin*2;const colW=usable/Math.max(headers.length,1);headers.forEach((h,i)=>{const x=margin+i*colW;ctx.fillStyle="#eef5ff";ctx.fillRect(x,headY,colW,headerH);ctx.strokeStyle="#cfdae8";ctx.strokeRect(x,headY,colW,headerH);ctx.fillStyle="#17365f";ctx.font='700 12px "Segoe UI",Arial';ctx.textAlign="left";ctx.fillText(escText(h).slice(0,28),x+7,headY+31);});const start=pi*maxRows;const slice=rows.slice(start,start+maxRows);slice.forEach((row,ri)=>row.forEach((v,ci)=>{const x=margin+ci*colW,y=headY+headerH+ri*rowH;ctx.fillStyle=ri%2?"#fbfdff":"#fff";ctx.fillRect(x,y,colW,rowH);ctx.strokeStyle="#dce5ef";ctx.strokeRect(x,y,colW,rowH);ctx.fillStyle="#243f5f";ctx.font='500 11px "Segoe UI",Arial';ctx.textAlign="left";ctx.fillText(escText(v).slice(0,34),x+7,y+27);}));if(!slice.length){ctx.fillStyle="#687d96";ctx.font='500 18px "Segoe UI",Arial';ctx.textAlign="center";ctx.fillText("Chưa có dữ liệu trong phạm vi đã chọn",pageW/2,pageH/2);}ctx.fillStyle="#718198";ctx.font='500 11px "Segoe UI",Arial';ctx.textAlign="right";ctx.fillText(`Trang ${pi+1}/${pages}`,pageW-margin,pageH-20);canvases.push(c);}
+  const images=canvases.map(c=>({bytes:canvasJpegBytesForDownload(c.toDataURL("image/jpeg",.94)),width:c.width,height:c.height}));downloadBlob(new Blob([pdfFromJpegs(images)],{type:"application/pdf"}),`${fileName}.pdf`);
+}
+
+function printTabularReport(title:string,headers:string[],rows:(string|number)[][]){
+  const popup=window.open("","_blank","width=1280,height=900"); if(!popup){window.alert("Trình duyệt đang chặn cửa sổ in. Hãy cho phép popup cho VNTECH ERP.");return;}
+  const esc=(v:unknown)=>String(v??"").replace(/[&<>"']/g,(c)=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]||c));
+  popup.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(title)}</title><style>body{font-family:"Segoe UI",Arial,sans-serif;color:#10213d;margin:28px}h1{font-size:20px}p{color:#64748b}table{width:100%;border-collapse:collapse;font-size:11px}th,td{border:1px solid #d8e1ec;padding:7px 8px;text-align:left}th{background:#eef5ff;color:#17365f;font-weight:700}@page{size:A4 landscape;margin:10mm}</style></head><body><h1>${esc(title)}</h1><p>VNTECH ERP · Xuất ngày ${esc(new Intl.DateTimeFormat("vi-VN").format(new Date()))}</p><table><thead><tr>${headers.map(h=>`<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${rows.map(row=>`<tr>${row.map(cell=>`<td>${esc(cell)}</td>`).join("")}</tr>`).join("")}</tbody></table><script>window.onload=()=>{window.print();}</script></body></html>`); popup.document.close();
+}
+
+function AttachmentPanel({ entityType, entityId, canManage=true }: { entityType: string; entityId: string; canManage?: boolean }) {
+  const [status, setStatus] = useState(""); const [files, setFiles] = useState<Row[]>([]);
+  const loadFiles = useCallback(async () => { const response = await fetch(`/api/files?entityType=${encodeURIComponent(entityType)}&entityId=${encodeURIComponent(entityId)}`, { cache: "no-store" }); if (response.ok) { const result = await response.json(); setFiles(result.attachments || []); } }, [entityType, entityId]);
+  useEffect(() => {
+    let active = true;
+    fetch(`/api/files?entityType=${encodeURIComponent(entityType)}&entityId=${encodeURIComponent(entityId)}`, { cache: "no-store" })
+      .then((response) => response.ok ? response.json() : { attachments: [] })
+      .then((result) => { if (active) setFiles(result.attachments || []); })
+      .catch(() => { if (active) setFiles([]); });
+    return () => { active = false; };
+  }, [entityType, entityId]);
+  async function upload(event: FormEvent<HTMLFormElement>) { event.preventDefault(); const formElement = event.currentTarget; const form = new FormData(formElement); form.set("entityType", entityType); form.set("entityId", entityId); setStatus("Đang tải…"); const response = await fetch("/api/files", { method: "POST", body: form }); const result = await response.json(); setStatus(response.ok ? `Đã lưu ${result.attachment.fileName}` : result.error); if (response.ok) { formElement.reset(); await loadFiles(); } }
+  async function removeFile(file:Row){if(!canManage)return;if(!window.confirm(`Xóa tệp ${file.fileName}?`))return;setStatus("Đang xóa…");const response=await fetch(`/api/files?id=${encodeURIComponent(file.id)}`,{method:"DELETE"});const result=await response.json().catch(()=>({error:"Không thể xóa tệp."}));setStatus(response.ok?"Đã xóa tệp.":String(result.error||"Không thể xóa tệp."));if(response.ok)await loadFiles();}
+  // TASK-075 (§8.3): ảnh phải XEM ĐƯỢC, không chỉ có chip chữ "ẢNH" + link tải.
+  const imageFiles = files.filter((file) => String(file.mimeType || "").startsWith("image/"));
+  return <div className="attachment-panel">{canManage?<form className="file-upload" onSubmit={upload}><label className="attachment-pick"><span>Chọn ảnh / hồ sơ</span><input name="file" type="file" required accept=".pdf,.jpg,.jpeg,.png,.webp,.xlsx,.doc,.docx" /></label><button className="secondary">↑ TẢI LÊN</button>{status && <span>{status}</span>}</form>:<div className="attachment-readonly-note">Chỉ Chỉ huy trưởng hoặc Nhân viên Phòng Dự án được bổ sung/xóa hồ sơ vật tư đặc thù. Bạn có thể xem và tải xuống.</div>}{imageFiles.length > 0 && <div className="attachment-photos">{imageFiles.map((file) => <a className="attachment-photo" key={file.id} href={`/api/files?id=${encodeURIComponent(file.id)}`} target="_blank" rel="noreferrer" title={file.fileName}><img src={`/api/files?id=${encodeURIComponent(file.id)}`} alt={file.fileName} loading="lazy"/><span>{file.fileName}</span></a>)}</div>}<div className="attachment-list">{files.map((file) => <div className="attachment-row" key={file.id}><a href={`/api/files?id=${encodeURIComponent(file.id)}`} target="_blank" rel="noreferrer"><span>{String(file.mimeType).startsWith("image/") ? <img className="attachment-thumb" src={`/api/files?id=${encodeURIComponent(file.id)}`} alt={file.fileName} loading="lazy"/> : "TỆP"}</span><div><strong>{file.fileName}</strong><small>{file.uploadedByName} · {date(file.createdAt)}</small></div><b>↓</b></a>{canManage&&<button type="button" className="attachment-delete" onClick={()=>void removeFile(file)}>Xóa</button>}</div>)}{!files.length && <small>Chưa có ảnh hoặc hồ sơ vật tư đặc thù được tải lên.</small>}</div></div>;
+}
+
+function inventoryExportRows(rows:Row[]){return rows.map(row=>[row.materialCode||"",row.materialName||"",row.unit||"",row.warehouseCode||row.warehouseName||"",row.locationCode||"",row.projectName||row.projectCode||"",Number(row.receivedQty||0),Number(row.issuedQty||0),Number(row.balance||0),Number(row.minStock||0)]);}
+
+function exportInventoryXlsx(rows:Row[]){downloadSimpleXlsx({sheetName:"Ton kho",title:"TỒN KHO VẬT TƯ",headers:["Mã vật tư","Tên vật tư","ĐVT","Kho","Vị trí","Dự án","Nhập","Xuất","Tồn cuối","Tồn tối thiểu"],rows:inventoryExportRows(rows),widths:[20,42,10,22,14,28,14,14,14,14],freezeRows:2},`Ton_kho_vat_tu_${UI_TODAY}`);}
+
+function printInventoryBarcodes(rows:Row[]){const sample=rows.filter(row=>row.materialCode).slice(0,80);if(!sample.length)return;const popup=window.open("","_blank","width=1000,height=800");if(!popup){window.alert("Trình duyệt đang chặn cửa sổ in.");return;}popup.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Tem mã vật tư</title><style>body{font-family:"Segoe UI",Arial;margin:12px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.label{border:1px solid #cbd5e1;padding:8px;text-align:center;break-inside:avoid}.label b{display:block;font-size:11px}.label small{display:block;height:28px;overflow:hidden}@page{size:A4;margin:8mm}</style></head><body><div class="grid">${sample.map(row=>`<div class="label"><b>${String(row.materialCode)}</b><small>${String(row.materialName||"")}</small>${code39Svg(String(row.materialCode))}</div>`).join("")}</div><script>window.onload=()=>window.print()</script></body></html>`);popup.document.close();}
+
+function printInventoryLedger(rows:Row[]){printTabularReport("THẺ KHO / TỒN KHO",["Mã vật tư","Tên vật tư","ĐVT","Kho","Vị trí","Dự án","Nhập","Xuất","Tồn cuối","Tồn tối thiểu"],inventoryExportRows(rows));}
+
+
+function code39Svg(value:string){const text=`*${String(value||"").toUpperCase().replace(/[^0-9A-Z. \-]/g,"-")}*`;let x=0;const unit=2;let bars="";for(const ch of text){const pattern=CODE39[ch]||CODE39["-"];for(let i=0;i<pattern.length;i++){const w=(pattern[i]==="w"?3:1)*unit;if(i%2===0)bars+=`<rect x="${x}" y="0" width="${w}" height="48"/>`;x+=w;}x+=unit;}return `<svg viewBox="0 0 ${x} 62" width="260" height="62" xmlns="http://www.w3.org/2000/svg"><g fill="#111">${bars}</g><text x="${x/2}" y="60" font-family="Segoe UI,Arial" font-size="9" text-anchor="middle">${text.slice(1,-1)}</text></svg>`;}
 export {
   ADMIN_HELP_TEXT,
   APPROVAL_MODE_LABELS,
   APPROVAL_MODE_SHORT,
   APPROVAL_STAGE_LABELS,
+  AttachmentPanel,
   BOQ_SYSTEM_CODES,
   CODE39,
   CardHead,
@@ -293,11 +345,19 @@ export {
   WORK_STATUS_LABELS,
   boqStatusLabel,
   canvasJpegBytesForDownload,
+  code39Svg,
   date,
   defaultMenuGroups,
+  deliveredExportRows,
+  downloadDeliveredPdf,
+  downloadTabularPdf,
   durationText,
+  exportDeliveredCsv,
+  exportDeliveredXlsx,
+  exportInventoryXlsx,
   format,
   initials,
+  inventoryExportRows,
   joinCodes,
   kpiIconName,
   materialCatalogTemplateRows,
@@ -305,6 +365,9 @@ export {
   normalizeBoqHeader,
   normalizeMasterHeader,
   normalizePaymentDate,
+  printInventoryBarcodes,
+  printInventoryLedger,
+  printTabularReport,
   projectPeriod,
   roleNames,
   sanitizeUiText,
