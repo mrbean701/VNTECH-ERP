@@ -1056,3 +1056,36 @@ pm test):**
 * **B4.2** — **đồng nhất kiểm phạm vi**: thêm canAccessProject/canAccessWarehouse cho 2 action như pprove_stock_count.
 * **B4.3** — **đồng nhất audit + trả về**: cùng khuôn { message } + udit(...); cân nhắc **đổi tên/tách** hành động *nhận hàng* thành action riêng (eceive_transfer_order/eceive_central_return) — **chỉ làm sau khi B4.1-2 đã xanh**, vì đây là thay đổi hợp đồng API (ảnh hưởng UI).
 **MAR:** xác định rõ MAR *đang được kiểm ở đâu* (indMarApproval/material_mar_approvals) rồi mới quyết định có cần dữ liệu mẫu.
+
+## 20. ⚠️ CHẨN ĐOÁN "DSH TỰ ĐỘNG DỪNG" + CÁCH SỬA (18/09) — theo chỉ đạo người dùng
+**Triệu chứng:** sau mỗi vòng, vòng lặp **tự dừng** (không tự chạy tiếp).
+**Chẩn đoán (đo bằng get_goal):**
+`json
+{ "goal": { "phase": "active", "roundsStarted": 202, "maxGoalRounds": 256 },
+  "activation": "disarmed" }
+`
+**⇒ HAI nguyên nhân cụ thể:**
+1. **ctivation: "disarmed"** — mục tiêu **bị "tháo nạp"** (theo thiết kế: *sau khi session resume/fork, mục tiêu đang active bị disarmed*). Khi disarmed ⇒ **hết lượt là DỪNG**, không tự tiếp.
+2. **oundsStarted 202 / maxGoalRounds 256** ⇒ **chỉ còn 54 vòng** ⇒ sẽ **tự dừng vì hết hạn mức** dù chưa xong MASTER TASK.
+**CÁCH SỬA (chính xác):**
+* Sửa ①: gọi update_goal action=resume (rearm) — **BẮT BUỘC trong một LƯỢT NGƯỜI DÙNG TRỰC TIẾP** (không phải lượt tự động).
+  **Bằng chứng đã thử:** trong lượt tự động (goal_round) hệ thống trả **Error: this goal operation requires a direct human turn on a top-level agent** ⇒ **không thể tự rearm từ trong vòng lặp**.
+* Sửa ②: gọi update_goal action=edit maxGoalRounds=<lớn hơn> (ví dụ **1000**) để **không dừng vì hết hạn mức** — cũng cần **lượt người dùng trực tiếp**.
+**⇒ VIỆC NGƯỜI DÙNG CẦN LÀM (1 câu là đủ):** gửi **một tin nhắn trực tiếp** bất kỳ dạng *"tiếp tục"* ⇒ **ngay đầu lượt đó** tôi sẽ gọi esume (+ edit maxGoalRounds) ⇒ vòng lặp **tự chạy tiếp** cho tới khi MASTER TASK xong.
+**GHI CHÚ PHÒNG NGỪA:** dù bị disarmed, **checkpoint vẫn được ghi đầy đủ** ở mục 21 dưới đây để phiên sau **đọc và tiếp tục** mà không mất ngữ cảnh.
+
+## 21. 🧭 CHECKPOINT PHIÊN (§10) — đọc mục này để tiếp tục
+* **MASTER TASK:** IN PROGRESS — **lộ trình 41/110 = 37,3 %** · **PHASE 0B 10/10 ✅** · **PHASE 8 3/6 + B1/B2/B3/D5** · **PHASE 1 13/17**.
+* **CURRENT TASK:** PHASE 8 · **B4** (chuẩn hoá 3 action duyệt rời + MAR).
+* **CURRENT STEP:** **B4.1 — thêm GUARD PHA** cho pprove_transfer_order (JS **1519** / Java **1114**) và pprove_central_return (JS **1539** / Java **1129**): nhánh **duyệt** chỉ chạy khi status === "pending_approval"; nhánh **nhận** chỉ chạy khi **in_transit**.
+* **COMPLETED (phiên này):** U-14 đóng (ảnh **64/64**) · phục hồi **2 phiếu nhập** (14→16, confirmed 12, orphan 0) + kiểm chứng chéo ( 6-warehouse về 0 px) · **7 lỗi thật đã sửa** · 
+pm test **exit 0** · build **exit 0 + ARTIFACT VALIDATION ĐẠT** · WF-05 **5/5** · WF-02/S-08 **5/5** · B4 khảo sát xong.
+* **IN PROGRESS:** B4.1 (guard pha) — **chưa viết mã**.
+* **REMAINING PHASE 8:** B4.1 → B4.2 (đồng nhất canAccessProject/canAccessWarehouse) → B4.3 (đồng nhất audit/return; cân nhắc tách action nhận hàng) · **MAR** (material_mar_approvals **0 dòng**).
+* **REMAINING PHASE 1 (3 mục):** **U-11 bước 4** (tách WorkCenter/Requests/BoqControl) · **U-16+U-04** (PermissionGuard ~50 chỗ, **dùng 0 lần**) · **U-12** (bỏ !important, gộp **1.183** selector trùng).
+* **NEXT ACTION:** viết guard pha (theo DÒNG, mỏ neo **ASCII thuần**) ⇒ 
+ode --check ⇒ **
+pm test exit 0**.
+* **BLOCKER:** **KHÔNG** (1 mục **quy trình**: cần **1 lượt người dùng trực tiếp** để esume + nâng maxGoalRounds).
+* **FILES CHANGED (chính):** pp/page.tsx · scripts/system-route.mjs · java-backend/** (port/adapter/use-case/controller) · 	ests/workflow-direct.test.ts · 	ools/* · 	ools/baseline/12-drawer-request-detail__*.png (4 tệp) · drizzle/0145_* + file định danh.
+* **LATEST COMMIT:** xem git log --oneline -1 (các mốc: U-14 đóng 485da4a · baseline 5bcae25 · phục hồi e3aadf8 · B4 khảo sát 8ae8cf).
