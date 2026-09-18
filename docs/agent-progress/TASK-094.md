@@ -931,3 +931,20 @@ Workflow VNTECH ERP V5.3.0 FULL W2 passed: five-stage approvals/email/SLA → mu
 ⇒ **Test của dự án nay phủ LUỒNG MỚI** (PO pending_approval ⇒ pprove_po ⇒ waiting_delivery ⇒ nhập kho) — bằng chứng mạnh cho **B2 + lõi JS**.
 **
 pm test (lint + typecheck + hồi quy + workflow) ⇒ EXIT = 0**
+
+### 16.9. 🔎 CỔNG ẢNH (chạy nền) — 05 màn đầu KHỚP 100%, màn  6-warehouse LỆCH 1,9 % (18/09)
+**Kết quả bước đầu từ job nền (đang chạy tiếp):**
+`
+01-dashboard · 02-project · 03-work · 04-team · 05-material
+  → CẢ 4 kích thước (desktop/laptop/tablet/phone): ✅ lệch 0 px (0.0000%)   [20/20 ảnh KHỚP]
+06-warehouse — Kho Tổng
+  → ❌ desktop lệch 39426 px (1.9013%) · vùng lệch 1661×982 tại (259,98)
+       vùng lệch nặng nhất: (1472,448) 349px · (960,448) 348px · (1216,448) 345px · (832,448) 344px
+       "đã chụp lại (lần đầu 39426 px)" ⇒ ỔN ĐỊNH, không phải nhiễu tạm thời
+`
+**ĐẶC ĐIỂM VÙNG LỆCH:** cùng **một hàng ngang ở y=448**, trải ở x=832…1472 ⇒ **trông như vùng BẢNG/DANH SÁCH** (nhiều ô cùng hàng), không phải một khối modal.
+**HAI GIẢ THUYẾT CẦN PHÂN BIỆT (chưa kết luận):**
+1. **Do U-14 (mã):** nếu màn Kho Tổng có render **chi tiết phiếu đề nghị** thì việc đổi vỏ drawer→modal sẽ đổi bố cục ⇒ lệch.
+2. **Do DỮ LIỆU em đã thay đổi (rất đáng nghi):** màn Kho Tổng có thể hiển thị **số liệu/phiếu** — mà em đã (a) **xoá 2 phiếu nhập** (goods_receipts 16→14), (b) **seed PO pending_approval**, (c) chạy probe nhập/xuất có hoàn tác ⇒ **con số hiển thị đổi** ⇒ lệch.
+**CÁCH PHÂN BIỆT (bước kế tiếp):** dùng ision_glance so **ảnh baseline vs ảnh mới** của  6-warehouse (và/hoặc crop đúng vùng (832,448)-(1472,500)) để **đọc nội dung khác nhau** ⇒ biết là **bố cục** hay **số liệu**.
+**LƯU Ý TRUNG THỰC:** 05 màn đầu **khớp tuyệt đối** ⇒ thay đổi của em **không** ảnh hưởng diện rộng; khác biệt **khu trú ở 1 màn** — cần xác định nguyên nhân trước khi kết luận "regression" hay "cập nhật baseline".
