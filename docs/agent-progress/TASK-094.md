@@ -645,3 +645,15 @@ HOÀN TÁC: PO về 'delivered_pending_confirmation' · task_notifications về 
   2. PO **đã** hoàn thành ⇒ **bị CHẶN** (thông điệp rõ, giá **không đổi**).
   3. **Danh mục KHÔNG đổi** — chụp materials (số dòng + giá liên quan) **trước/sau** ⇒ **phải giống hệt**.
 **TRẠNG THÁI:** chưa cài đặt; đây là việc kế tiếp sau khi B2/bước 2 đã đóng (§14.14).
+
+### 14.16. ✅ CHUỖI 3 LỖI BIÊN DỊCH ĐÃ GIẢI QUYẾT — update_po_price ĐÃ SỐNG (18/09)
+**Bằng chứng cuối (sau khi sửa cả 3 lỗi):**
+* health -> 200 ⇒ **build thành công** (Java chỉ khởi động khi mvn exit=0).
+* update_po_price (id PO không tồn tại) ⇒ **HTTP 400** {"ok":false,"error":"**PO không tồn tại.**"} = **thông điệp của chính ứng dụng** (từ updatePoPrice → indPoForReceiving(...).orElseThrow(...)) ⇒ **action đã được Java nhận và thực thi**, **không đột biến dữ liệu**.
+**3 lỗi + cách sửa (đã ghi ở từng commit):** ① strictNonNegative không có trong lớp ⇒ dùng **
+umberValue** + kiểm âm tại chỗ · ② khối updatePoItemPrice bị chèn **vào giữa thân decidePo** ⇒ chuyển ra sau, **cân bằng ngoặc 56 = 56** · ③ case "update_po_price" **ngoài switch** ⇒ chuyển vào **cùng switch với pprove_po** (1073 → 1078 → 1083), **ngoặc 314 = 314**.
+**2 BÀI HỌC MỚI (đã trả giá 2 vòng build):**
+1. **Tìm dấu } đóng METHOD phải ĐẾM NGOẶC** — cách "lấy dấu } đầu tiên sau dòng X" **đã chèn sai vào thân method**.
+2. **SystemController có NHIỀU switch** ⇒ case mới phải chèn **vào đúng switch** — bám case "approve_po", **KHÔNG** bám case "close_po_line" (case này thuộc switch khác).
+**CÒN LẠI của B2/bước 3:** ① **cổng 3 ca** (chưa xong ⇒ sửa được + đọc lại đúng giá mới · **đã xong ⇒ BỊ CHẶN**, giá không đổi · **danh mục KHÔNG đổi**) ② **JS parity** update_po_price.
+**TRẠNG THÁI:** tính năng **đã sống** nhưng **CHƯA có bằng chứng chức năng** ⇒ **chưa coi là xong**.

@@ -1070,6 +1070,11 @@ public class SystemController {
                     out.put("warnings", requestStore.approvalWarnings("purchase_order", String.valueOf(result.getOrDefault("poId", ""))));
                     return ResponseEntity.ok(jsonResult(out));
                 }
+case "update_po_price" -> {
+    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+    Map<String, Object> result = purchaseManagementUseCase.updatePoPrice(asPurchasePrincipal(cu), payload);
+    return ResponseEntity.ok(jsonResult(result));
+}
                 case "approve_po" -> {
     AuthUseCase.CurrentUser cu = requireCurrentUser(request);
     Map<String, Object> result = purchaseManagementUseCase.approvePo(asPurchasePrincipal(cu), payload);
@@ -1079,11 +1084,6 @@ case "reject_po" -> {
     AuthUseCase.CurrentUser cu = requireCurrentUser(request);
     Map<String, Object> result = purchaseManagementUseCase.rejectPo(asPurchasePrincipal(cu), payload);
     return ResponseEntity.ok(jsonResult(result));
-case "update_po_price" -> {
-    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
-    Map<String, Object> result = purchaseManagementUseCase.updatePoPrice(asPurchasePrincipal(cu), payload);
-    return ResponseEntity.ok(jsonResult(result));
-}
 }case "close_po_line" -> {
                     AuthUseCase.CurrentUser cu = requireCurrentUser(request);
                     Map<String, Object> result = purchaseManagementUseCase.closePoLine(asPurchasePrincipal(cu), payload);
