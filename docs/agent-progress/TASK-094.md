@@ -767,3 +767,18 @@ DELETE FROM goods_receipts WHERE purchase_order_id='PO_0843c57c-…' ⇒ **xoá 
 3. **Cấp user MySQL có SUPER/REPLICATION CLIENT** ⇒ dùng SHOW BINLOG EVENTS để lấy lại dữ liệu.
 *Tôi **KHÔNG** tự dựng lại dữ liệu bằng suy đoán* (§45) — dữ liệu bịa còn tệ hơn dữ liệu thiếu.
 **BÀI HỌC (nghiêm trọng):** mọi script probe **PHẢI** hoàn tác theo **ID cụ thể của bản ghi do mình tạo** (ghi lại ID trước khi xoá), **TUYỆT ĐỐI KHÔNG** dùng DELETE … WHERE <khoá ngoại>; và **phải kiểm số dòng TRƯỚC/SAU của MỌI bảng** trước khi kết luận.
+
+### 15.1. LƯỢNG HOÁ ĐẦY ĐỦ THIỆT HẠI + DỌN RÁC CỦA CHÍNH MÌNH (18/09) — đọc-only rồi mới sửa
+**Số đo (baseline ghi ngay trước probe: receipts=16 · items=11 · swf=57 · attachments=11):**
+| Bảng | Trước | Sau | Kết luận |
+|---|---|---|---|
+| goods_receipts | 16 | **14** | **MẤT 2** (đều ch_confirmation_status='confirmed' — có ảnh giao hàng) |
+| goods_receipt_items | 11 | **11** | **0 mất** ✔ (2 phiếu đó không có dòng item) |
+| supply_workflow_steps | 57 | **58 → đã dọn** | **0 mất** ✔; dư 1 dòng là **rác của tôi** (trỏ eceipt_id=GRN_8eaedee9-… là phiếu probe) ⇒ **đã xoá đúng dòng đó** (lọc theo eceipt_id của chính tôi, KHÔNG dùng khoá ngoại) |
+| ttachments | 11 | **11** | 0 mất ✔ — 2 tệp **mồ côi** giữ nguyên ⇒ **manh mối phục hồi** |
+**⇒ Thiệt hại CHÍNH XÁC: 2 dòng tiêu đề goods_receipts** (kèm giữ nguyên 2 tệp ảnh trong ttachments):
+* GRN_1792713f-faaf-4986-b8c3-9c32714cea28 — ảnh nh-giao-hang-demo.png
+* GRN_e5f9763c-cacf-4e4e-8dec-0f077a619aee — ảnh nh-giao-hang-404767.png
+**ĐIỀU TRA PHỤC HỒI (đã thử, có bằng chứng):** ① log_bin=ON, mysqlbinlog.exe có sẵn, **nhưng** Access to the path 'C:\ProgramData\MySQL\MySQL Server 8.0\Data' is denied ⇒ cần **Administrator**; ② SHOW MASTER STATUS ⇒ **ERROR 1227 thiếu SUPER/REPLICATION CLIENT**; ③ **không có** file backup/dump trong repo.
+**SQL PHỤC HỒI SẴN SÀNG (chờ dữ liệu từ binlog/backup):** INSERT INTO goods_receipts (…) VALUES (…) cho **2 id trên** — **sẽ điền đúng giá trị trích từ binlog**, KHÔNG suy đoán.
+**TRẠNG THÁI:** ⛔ **BLOCKED — chờ người dùng** (backup / quyền Administrator / user MySQL có SUPER).
