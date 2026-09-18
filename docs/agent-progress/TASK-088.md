@@ -177,6 +177,30 @@ và số ảnh lệch (27/56) giống hệt**. ⇒ Đó là **NHIỄU NỀN ĐÃ
 (đó là số của lần chụp THỨ NHẤT, có thể lệch do nhiễu) và so **CON SỐ KẾT LUẬN**; hash khác thì **chạy lại cổng** hoặc dùng
 `--selftest` trước khi kết luận có hồi quy.
 
+
+### 7.5. Bước 3 vòng 4 — LÔ HELPER XUẤT BÁO CÁO + 2 MÀN `Delivered`/`Inventory` — commit `#190`
+
+**Đúng thứ tự «đo → chuyển phụ thuộc → tách màn»:** đo bằng `tools/kiem-tra-phu-thuoc-man.mjs` thấy
+`Delivered` còn phụ thuộc 4 khối và `Inventory` còn 3 khối ⇒ **chuyển 12 helper** sang `lib/ui-shared.tsx`:
+`deliveredExportRows` · `exportDeliveredXlsx` · `exportDeliveredCsv` · `downloadDeliveredPdf` · `downloadTabularPdf` ·
+`printTabularReport` · **`AttachmentPanel`** · `inventoryExportRows` · `exportInventoryXlsx` · `printInventoryBarcodes` ·
+`printInventoryLedger` · `code39Svg` — rồi mới tách **`app/screens/Delivered.tsx`** và **`app/screens/Inventory.tsx`**.
+
+| Bước | `page.tsx` |
+|---|---|
+| Trước vòng 4 | 3585 |
+| Sau khi chuyển 12 helper | 3550 |
+| Sau khi tách `Delivered` | 3544 |
+| Sau khi tách `Inventory` | **3517** |
+
+**Luỹ kế cả 5 vòng tách: `app/page.tsx` 4037 → 3517 dòng = GIẢM 520 dòng**; `app/screens/` **14 màn**;
+`lib/ui-shared.tsx` nay có **53 khối** (helper + giao diện + hằng).
+
+**Kiểm chứng vòng 4:** `tsc` **EXIT 0** · eslint **0 error** (`page.tsx` 72 = đúng nền · `ui-shared` 2 · `app/screens` 19) ·
+`npm run build` **EXIT 0** + BUILT ARTIFACT VALIDATION **ĐẠT** · `master-baseline-gate` **ĐẠT** ·
+`test:regression` **59/61 (đúng nền)** · cổng ảnh: so báo cáo **sau khi bỏ ghi chú nhiễu `(lần đầu N px)`** ⇒
+**0 DÒNG KHÁC BIỆT** ⇒ không đổi 1 điểm ảnh · UI `:8787`/proxy `:9000`/Java `:18081` đều **200**.
+
 ## 8. Việc kế tiếp của `U-11` (bước 3 vòng sau / bước 4)
 
 1. **Tách tiếp các màn còn "sạch phụ thuộc":** chạy `tools/kiem-tra-phu-thuoc-man.mjs <TênMàn…>` để tìm màn có
