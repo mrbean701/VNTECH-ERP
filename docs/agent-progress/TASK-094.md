@@ -1123,3 +1123,18 @@ pm test exit 0**.
 **⇒ B4 THU LẠI THÀNH 2 VIỆC THẬT:**
 * **B4-A (parity):** so **guard trong USE CASE Java** với **guard JS** cho 3 action ⇒ tìm lệch thật giữa 2 lõi.
 * **B4-B (ghi nhận):** tài liệu hoá khác biệt từ vựng trạng thái (equested vs pending_approval) + trạng thái MAR **rỗng** như **phát hiện**, **không đổi mã khi chưa có quyết định người dùng**.
+
+### 19.2. ✅ B4-A — PARITY 2 LÕI **ĐẠT 3/3** ⇒ **B4 ĐÓNG** (18/09)
+**Bảng đối chiếu guard (đọc thật, không lọc dòng):**
+| Action | Guard JS | Guard Java (use case) | Kết quả |
+|---|---|---|---|
+| pprove_transfer_order | if(!t\|\|clean(t.status)!=='requested') throw new Error("Phiếu điều chuyển không ở trạng thái chờ duyệt.") — JS **1519** | if (!"requested".equals(sv(t, "status"))) — StockManagementUseCase.java **361** | ✅ **KHỚP** |
+| pprove_central_return | if(!row\|\|row.status!=="pending_approval") throw new Error("Phiếu không còn ở trạng thái chờ duyệt.") — JS **1540** | if (!"pending_approval".equals(sv(row, "status"))) throw Api("Phiếu không còn ở trạng thái chờ duyệt.") — **524** | ✅ **KHỚP** (khớp **cả thông điệp lỗi**) |
+| pprove_stock_count | if (!count \|\| count.status !== "pending_approval") throw new Error("Phiếu kiểm kê không tồn tại hoặc đã xử lý.") — JS **1622** | if (!"pending_approval".equals(sv(count, "status"))) — **667** | ✅ **KHỚP** |
+**KẾT LUẬN B4 (đóng):**
+* **Parity 2 lõi ĐẠT 3/3** cho cả 3 action duyệt rời ⇒ **không còn lệch hành vi** giữa Java và JS.
+* **Khác biệt từ vựng trạng thái** (equested cho phiếu điều chuyển vs pending_approval cho phiếu trả/kiểm kê) **tồn tại GIỐNG NHAU ở cả 2 lõi** ⇒ **có chủ đích theo nghiệp vụ**, **KHÔNG phải lỗi** ⇒ **không tự đổi** (đổi = thay đổi hành vi + hợp đồng API).
+* **MAR material_mar_approvals**: **đã nối tại 9 nơi** (port + 4 adapter + controller + lõi JS + migration + preflight) ⇒ **không phải mã chết**; hiện **rỗng dữ liệu** (0 dòng) ⇒ **ghi nhận là phát hiện**, không phải việc phải sửa.
+* **Kiến trúc đã xác nhận:** SystemController chỉ **uỷ nhiệm mỏng** (equireCurrentUser → use case → jsonResult) ⇒ **guard nằm trong use case** ⇒ **mọi kiểm parity sau này phải đọc use case**, không phải controller.
+**⇒ PHASE 8: toàn bộ các nhánh B **ĐÃ XONG** (B1 ✔ · B2 ✔ · B3 ✔ có bằng chứng · **B4 ✔ đóng** · **D5 ✔ đóng**) — cùng với 3/6 mục lộ trình (WF-02 · WF-04 · WF-05).
+**⇒ TIẾP THEO:** **PHASE 1** còn **3 mục** — U-11 bước 4 · U-16+U-04 · U-12.
