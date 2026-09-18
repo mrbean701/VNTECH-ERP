@@ -422,7 +422,7 @@ public class OpsTaskStoreAdapter implements OpsTaskStore {
     public List<Map<String, Object>> workflowDefinitions() {
         return jdbcTemplate.queryForList("""
                 SELECT id,code,name,description,module_key AS moduleKey,project_id AS projectId,
-                       is_default AS isDefault,active,version,sort_order AS sortOrder,created_by AS createdBy
+                       is_default AS isDefault,active,sort_order AS sortOrder,created_by AS createdBy
                 FROM workflow_definitions ORDER BY sort_order,code""");
     }
 

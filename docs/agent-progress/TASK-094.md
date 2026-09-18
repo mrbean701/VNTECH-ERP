@@ -1449,3 +1449,30 @@ const canAssign = modulePermission(data,"dept_plan_assign").canCreate || moduleP
 **BÀI HỌC (mới):** **KHÔNG suy ra biến trong scope bằng cách QUÉT CHUỖI trên một khoảng dòng** (dễ bắt phải tên nằm trong chuỗi/nhãn/component khác). Phải **tìm khai báo const/let <tên> =** thật **trong đúng phạm vi hàm** — và **luôn để 	sc làm trọng tài** (nó bắt ngay, và hoàn tác sạch).
 **CÒN LẠI CỦA U-16/U-04:** LÔ B (nút Tạo/Sửa) · LÔ C (Duyệt/Trả lại + Xuất) · gác MaterialListTable (dòng 1383 — **canEdit có sẵn trong scope**).
 **SỰ CỐ MÔI TRƯỜNG (ghi nhận):** sau khi phiên DSH khởi động lại, **cả 3 dịch vụ (Java :18081 · UI :8787 · proxy :9000) đều DOWN** — đúng như đã ghi nhớ *"restart DSH giết mọi tiến trình con do agent chạy nền"* ⇒ **phải khởi động lại cả 3** trước khi chạy cổng ảnh.
+
+### 31. 🚨 REGRESSION DO WF-03 — ĐÃ TÌM RA NGUYÊN NHÂN THẬT + ĐÃ SỬA (19/09)
+**TRIỆU CHỨNG:** cổng ảnh báo **MỌI màn lệch 80–99 %**; --locate cho thấy app hiện **trang ĐĂNG NHẬP kèm .auth-alert danger "Internal Server Error"**.
+**CHẨN ĐOÁN (theo bài học có sẵn):** ① kiểm HTTP của CSS ⇒ **200** (KHÔNG phải CSS-404) ② lấy **log Java** ⇒ **stack trace chính xác**:
+`
+BadSqlGrammarException: bad SQL grammar [SELECT id,code,name,description,module_key AS moduleKey,project_id AS projectId,
+  is_default AS isDefault,active,**version**,sort_order AS sortOrder,created_by AS createdBy FROM workflow_definitions …]
+root cause: java.sql.SQLSyntaxErrorException: **Unknown column 'version' in 'field list'**
+  at BootstrapDataAdapter.query(BootstrapDataAdapter.java:1741) → BootstrapDataAdapter.load(:943)
+  → BootstrapUseCase.load(:60) → SystemController.get(:164)
+`
+**⇒ NGUYÊN NHÂN GỐC:** trong **WF-03** tôi đã **xoá cột workflow_definitions.version** (migration **V19**) nhưng **2 truy vấn bootstrap VẪN SELECT cột đó** ⇒ **GET /api/system ném 500** ⇒ **toàn bộ giao diện hiện trang lỗi**.
+**VÌ SAO TÔI BỎ SÓT (bài học cốt lõi):** phép quét tĩnh trước đó của tôi tìm workflow_definitions **và** ersion **TRÊN CÙNG MỘT DÒNG**, nhưng **câu SQL viết NHIỀU DÒNG** ⇒ **không bắt được**. Sau đó tôi kết luận "KHÔNG nơi nào đọc ersion" ⇒ **SAI**.
+**ĐÃ SỬA (2 chỗ, quét lại bằng regex ĐA DÒNG (?s)SELECT.{0,900}?FROM\s+workflow_definitions):**
+1. BootstrapDataAdapter.java — bỏ ersion khỏi SELECT.
+2. OpsTaskStoreAdapter.java — bỏ ersion khỏi SELECT (**chỗ thứ 2 mà quét cũ bỏ sót**).
+* Quét lại toàn bộ java-backend/**: **0 chỗ còn select ersion** ✔
+* **Build lại Java ⇒ mvn -q -DskipTests package ⇒ EXIT 0** *(lần đầu HỎNG MissingProjectException vì tôi chạy ở thư mục gốc — phải chạy trong java-backend/)*
+* Dừng Java cũ (giữ khoá jar) ⇒ khởi động lại ⇒ **18081 -> 200**
+**BẰNG CHỨNG ĐÃ HỒI PHỤC:** --locate=960,540 trên màn dashboard nay trả **nội dung dashboard THẬT**:
+.card dashboard-variation-card · .approved-dashboard-grid · .dashboard-main-column · .dashboard-final-layout (KHÔNG còn .auth-alert "Internal Server Error") ✔ · 8787 -> 200 · 9000 -> 200
+**BÀI HỌC (ghi đậm):**
+1. **Quét SQL phải ĐA DÒNG** — tìm …version…FROM <bảng> trên cùng dòng là **sai**; dùng regex (?s)SELECT.{0,N}?FROM <bảng>.
+2. **Xoá cột ⇒ phải KIỂM BẰNG CÁCH GỌI THẬT** (gọi /api/system bootstrap ngay sau khi đổi schema) — **tìm tĩnh KHÔNG đủ**.
+3. Khi app hỏng toàn cục: **kiểm HTTP asset trước, rồi đọc LOG server** — không đoán.
+4. mvn phải chạy **trong java-backend/** (không phải thư mục gốc) — nếu không sẽ MissingProjectException.
+5. **Nhận sai rõ ràng:** WF-03 tôi đã đánh dấu DONE trong khi **chưa kiểm bootstrap** ⇒ **mục đó chỉ thực sự xong SAU bản sửa này**.

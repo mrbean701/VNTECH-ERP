@@ -942,7 +942,7 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
         // Người duyệt chỉ trả về họ tên/mã/vai trò (không lộ email) để màn cấu hình hiển thị được.
         data.put("workflowDefinitions", query("""
                 SELECT id,code,name,description,module_key AS moduleKey,project_id AS projectId,
-                       is_default AS isDefault,active,version,sort_order AS sortOrder,created_by AS createdBy
+                       is_default AS isDefault,active,sort_order AS sortOrder,created_by AS createdBy
                 FROM workflow_definitions ORDER BY sort_order,code"""));
         data.put("workflowSteps", query("""
                 SELECT id,workflow_id AS workflowId,step_no AS stepNo,name,description,
