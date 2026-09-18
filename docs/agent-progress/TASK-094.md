@@ -428,3 +428,33 @@ if (action === "reject_po") {
   ⇒ **PARITY JAVA KHÔNG PHẢI TUỲ CHỌN — nó là CỔNG BẮT BUỘC** cho cả 3 action mới (pprove_po, eject_po, và các action của B3).
 * **Ghi nhận về kiểm chứng:** không thể kiểm chứng chức năng qua **Node :8787** bằng HTTP vì đăng nhập ở đó trả **401** (runtime Node dùng **SQLite riêng** — đã biết từ trước) ⇒ **mọi kiểm chứng chức năng phải đi qua Java :18081**.
 * **⇒ VIỆC KẾ TIẾP BẮT BUỘC:** thêm case "approve_po" / case "reject_po" vào SystemController + method tương ứng ở PurchaseManagementUseCase/PurchaseStore (theo khuôn có sẵn, ví dụ closePoLine/pproveCentralReturn nếu có) ⇒ **dựng lại jar (chờ nhả tệp jar)** ⇒ restart ⇒ **kiểm chứng chức năng** trên PO test.
+
+### 14.7. KẾ HOẠCH PARITY JAVA cho pprove_po / eject_po (đã có đủ mẫu — 18/09)
+**① Mẫu USE-CASE (Java)** — PurchaseManagementUseCase.closePoLine (**dòng 202-224**):
+``java
+public Map<String, Object> closePoLine(Principal principal, Map<String, Object> payload) {
+  rbac.requireRole(principalAsCurrent(principal), List.of("procurement", "project", "admin"));
+  … store.findPoLine(poItemId).orElseThrow(() -> Api("…"));
+  accessScope.requireProjectAccess(principal.userId(), principal.role(), sv(line,"projectId"), true, "…");
+  … store.<cap nhat>(…);
+  return Map.of("message", "…");
+}
+``
+**② Mẫu CONTROLLER** — case "close_po_line" (**dòng 1073-1077**), đúng 4 dòng:
+``java
+case "close_po_line" -> {
+  AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+  Map<String, Object> result = purchaseManagementUseCase.closePoLine(asPurchasePrincipal(cu), payload);
+  return ResponseEntity.ok(jsonResult(result));
+}
+``
+**③ THÔNG BÁO trong Java — ĐÃ CÓ SẴN (không phải tự viết):**
+* OpsTaskStore.java:29 — *"Thông báo trong ứng dụng cho người nhận việc — JS :265 (bảng 	ask_notifications, status SENT)"*.
+* OpsTaskManagementUseCase có queueTaskNotice — ghi **	ask_notifications** và **thêm email_outbox nếu người nhận có email** (chú thích dòng 119/131).
+⇒ **eject_po (Java) nên DÙNG LẠI queueTaskNotice** cho người tạo PO (uyer_user_id) ⇒ **không tự chế cơ chế mới**.
+**④ Kế hoạch tệp (3 tệp):**
+1. PurchaseStore (port): thêm Optional<Map<String,Object>> findPoForDecision(String poId) · oid decidePo(String poId, String status, String reason, String userId, Instant now).
+2. PurchaseStoreAdapter: cài đặt 2 method trên (native SQL, UPDATE purchase_orders SET status=?,decision_reason=?,decided_by=?,decided_at=?).
+3. PurchaseManagementUseCase: thêm pprovePo(...) (⇒ waiting_delivery) + ejectPo(...) (⇒ cancelled + gọi queueTaskNotice cho uyerUserId) — copy khuôn closePoLine.
+4. SystemController: thêm 2 case (copy khuôn close_po_line).
+**⑤ Kiểm chứng sau khi port:** mvn package (**chờ nhả tệp jar**) → restart → gọi pprove_po/eject_po qua **Java :18081** ⇒ **không còn** thông điệp *"chưa được triển khai trên backend Java"* ⇒ rồi mới **kiểm chứng chức năng trên PO test**.
