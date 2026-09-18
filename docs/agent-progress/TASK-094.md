@@ -1036,3 +1036,23 @@ pm test exit 0** — lint · typecheck · **hồi quy 61/61** · **workflow Đ�
 2. Lần 2 (sau phục hồi dữ liệu): **60/64 ĐẠT** · 4 ảnh lệch = **đúng màn 12-drawer-request-detail** (65,9 % desktop · 64,4 % laptop · 50,2 % tablet · 51,6 % phone) = **thay đổi CÓ CHỦ ĐÍCH của U-14**; ** 6-warehouse đã về   px** ⇒ **xác nhận lệch trước đó là DO DỮ LIỆU**, không phải regression mã.
 3. Cập nhật baseline **hẹp**: --update --only=12-drawer-request-detail ⇒ **đúng 4 tệp** 12-drawer-request-detail__*.png (kiểm bằng git status) ⇒ lần 3: **64/64 ĐẠT**.
 **LỘ TRÌNH CẬP NHẬT:** U-14 → **DONE / CONG-ANH-64-64** (ô TT ô[10]) ⇒ **PHASE 1 = 13/17** (đo lại) ⇒ **tổng 41/110 = 37,3 %**.
+
+### 19. [PHASE 8 · B4] KHẢO SÁT XONG — 3 ACTION DUYỆT RỜI **KHÁC NHAU VỀ CẤU TRÚC** (18/09)
+| Action | JS | Java | Cấu trúc thực tế |
+|---|---|---|---|
+| pprove_transfer_order | **1519** | **1114** | ⚠️ **2 PHA trong 1 action**: nhánh **duyệt** (UPDATE transfer_orders SET status='in_transit', shipped_by/shipped_at, dòng 1521-1524) **+ nhánh NHẬN HÀNG** (từ ~1526: eceived_with_loss/eceived + INSERT stock_movements, dòng 1526-1532) |
+| pprove_central_return | **1539** | **1129** | ⚠️ **2 PHA**: nhánh **duyệt** (status='in_transit', approved_by/approved_at, 1540-1543) **+ nhánh NHẬN/KIỂM ĐẾM** (~1545-1551: eceived_with_rejection…) |
+| pprove_stock_count | **1618** | **1159** | ✅ **KHUÔN SẠCH**: equireRole(["commander","project","admin"]) → đọc + **guard status !== "pending_approval"** → **canAccessProject + canAccessWarehouse** → statements (update phiếu + từng dòng) |
+**MAR:** material_mar_approvals = **0 dòng**; cột (id, project_id, material_id, approval_no, status, approved_at, approved_by, note, created_at, updated_at) ⇒ **chưa có dữ liệu MAR** ⇒ luồng MAR chưa được dùng thực tế.
+**⇒ "CHUẨN HOÁ" NGHĨA LÀ GÌ (cụ thể):**
+1. **2 action đang mang tên duyệt nhưng làm 2 việc** (duyệt **và** nhận hàng) ⇒ **lệch quy ước mới** (pprove_<entity> = **chỉ quyết định**) và lệch với pprove_stock_count (1 việc).
+2. **Thiếu guard pha**: nhánh duyệt **không** kiểm status === "pending_approval"; nhánh nhận **không** kiểm trạng thái đang vận chuyển ⇒ **có thể chạy SAI PHA** (rủi ro thật về tồn kho).
+3. **Thiếu kiểm phạm vi đồng nhất**: pprove_stock_count có canAccessProject + canAccessWarehouse; 2 action kia dùng kiểm ad-hoc.
+**RỦI RO NẾU TÁCH LỚN NGAY:** 2 action này chạm **	ransfer_orders / central_returns / stock_movements** (logic tồn kho) — bán kính ảnh hưởng rộng; lõi JS chỉ được 
+pm test phủ.
+**⇒ KẾ HOẠCH B4 AN TOÀN (tăng dần, mỗi bước qua 
+pm test):**
+* **B4.1** — **thêm GUARD PHA** cho 2 action: nhánh **duyệt** chỉ chạy khi status === "pending_approval"; nhánh **nhận** chỉ chạy khi trạng thái **đang vận chuyển** (in_transit) ⇒ **chặn chạy sai pha** (đây là **lỗ hổng an toàn thật**, không phải trang trí).
+* **B4.2** — **đồng nhất kiểm phạm vi**: thêm canAccessProject/canAccessWarehouse cho 2 action như pprove_stock_count.
+* **B4.3** — **đồng nhất audit + trả về**: cùng khuôn { message } + udit(...); cân nhắc **đổi tên/tách** hành động *nhận hàng* thành action riêng (eceive_transfer_order/eceive_central_return) — **chỉ làm sau khi B4.1-2 đã xanh**, vì đây là thay đổi hợp đồng API (ảnh hưởng UI).
+**MAR:** xác định rõ MAR *đang được kiểm ở đâu* (indMarApproval/material_mar_approvals) rồi mới quyết định có cần dữ liệu mẫu.
