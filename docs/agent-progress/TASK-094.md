@@ -216,3 +216,20 @@ Kèm probe: **đối chứng dương** (chưa duyệt ⇒ có **cảnh báo** nh
   — theo đúng quy ước SQLite đang dùng và cùng phong cách `domain.action` của `ActionRbacRegistry`.
 * **Việc cần làm khi tới bước đó:** bổ sung phép so sánh ở cả **Java + JS**, kèm probe "thiếu quyền ⇒ chặn" (2 lõi),
   rồi mới điền dữ liệu cho MySQL theo dạng đã chốt.
+
+## 12. PHASE 8 · B1 (parity Java) — KẾ HOẠCH CHÍNH XÁC + ĐIỂM CHÈN (chốt 18/09)
+**Đã khảo sát:** 3 action "ghi sổ" trong java-backend/web/.../SystemController.java đều là 1 dòng rất gọn:
+* case "create_po" — dòng **1061-1065**: Map<String,Object> result = purchaseManagementUseCase.createPo(...); return ResponseEntity.ok(jsonResult(result));
+* case "receive_goods" — dòng **1071-...**: cùng khuôn (gọi use-case rồi jsonResult(result)).
+* case "issue_stock" — dòng **1151-1155**: stockManagementUseCase.issueStock(...) rồi jsonResult(result).
+**KẾ HOẠCH 3 tệp (tối thiểu, đúng kiến trúc — KHÔNG viết SQL trong controller):**
+1. pplication/.../port/out/RequestStore.java — thêm 1 method: List<String> approvalWarnings(String entityType, String entityId);
+2. infrastructure/.../persistence/RequestStoreAdapter.java — cài đặt: đếm tổng bước + số bước pproved trên pprovals
+   theo (entity_type, entity_id); **trả MẢNG cảnh báo, KHÔNG ném lỗi** (người dùng chốt **CHỈ CẢNH BÁO**, không chặn).
+3. SystemController.java — ở cả 3 case: tạo LinkedHashMap từ esult, thêm warnings, rồi jsonResult(...).
+   ⚠️ **KHÔNG put trực tiếp vào esult** (có thể là map bất biến ⇒ ném UnsupportedOperationException).
+**Kiểm chứng sau khi làm:** 
+ode --check-tương-đương là mvn -q -DskipTests package **CHỜ NHẢ TỆP JAR** (bài học: dừng Java xong phải chờ,
+nếu không jar hỏng + API down) → restart → **curl thử 1 action** thấy có warnings → chạy lại probe JS probe-task049-owner-checks + hồi quy 61/61.
+**LƯU Ý GIỚI HẠN ĐÃ BIẾT (phải xử lý trong/after B1):** create_po có thể phát hành **NHIỀU PO trong 1 lần** ⇒ cảnh báo phải tính **theo TỪNG PO**,
+không chỉ PO đầu tiên (bản JS hiện đang chỉ tính PO đầu tiên).
