@@ -999,3 +999,20 @@ GRN-PRJ-DEMO-01-2026-0004 | confirmed | 2026-02-09 08:30:00
 2. **Bản phục hồi là ĐÚNG và ĐỦ** để đưa giao diện về baseline ⇒ **bằng chứng độc lập** cho chất lượng phục hồi (mạnh hơn việc chỉ đếm số dòng) ✔
 **⇒ HÀNH ĐỘNG TIẾP:** chỉ cần **cập nhật baseline ảnh cho ĐÚNG màn 12-drawer-request-detail** (thay đổi **có chủ đích** của U-14: vỏ drawer ⇒ modal). **Không** đụng baseline các màn khác (đang khớp 0 px).
 **BÀI HỌC ĐÃ CHỨNG MINH:** *"Không cập nhật baseline để che lỗi"* là quyết định ĐÚNG — nhờ vậy mà (a) phân biệt được regression mã vs thay đổi dữ liệu, (b) **kiểm chứng chéo** được chất lượng phục hồi.
+
+### 17.2. ✅ CẬP NHẬT BASELINE ẢNH — CHỈ MÀN 12-drawer-request-detail (18/09)
+**Cơ chế (đọc từ chính probe):** 
+ode tools/probe-visual-regression.mjs **--update** (chụp lại ảnh chuẩn) + **--only=<màn>** (giới hạn 1 màn); baseline = 	ools/baseline/ (**64 tệp** = 16 màn × 4 kích thước).
+**Đã chạy:** 
+ode tools/probe-visual-regression.mjs --update --only=12-drawer-request-detail ⇒ **exit 0**
+`
+▸ 12-drawer-request-detail
+   ✅ desktop  đã ghi ảnh chuẩn (134 KB) · nav=OK · khung=340,27 → 1580,1053 (khung nhìn 1920×1080)
+   ✅ laptop   đã ghi ảnh chuẩn (83 KB)  · nav=OK · khung=219,19 → 1147,749  (khung nhìn 1366×768)
+   ✅ tablet   đã ghi ảnh chuẩn (85 KB)  · nav=OK · khung=22,26 → 746,998    (khung nhìn 768×1024)
+   ✅ phone    đã ghi ảnh chuẩn (53 KB)  · nav=OK · khung=0,0 → 390,844      (khung nhìn 390×844)
+KẾT LUẬN: ĐÃ GHI 4 ẢNH CHUẨN vào tools/baseline/
+`
+**KIỂM TÍNH CHÍNH XÁC (quan trọng — tránh cập nhật lan rộng):** git status --porcelain tools/baseline cho thấy **ĐÚNG 4 tệp** thay đổi, **tất cả đều của màn 12**: 12-drawer-request-detail__{desktop,laptop,phone,tablet}.png ⇒ **KHÔNG** đụng 60 tệp baseline còn lại ✔
+**LÝ DO CẬP NHẬT LÀ HỢP LỆ:** 4 ảnh này lệch vì **U-14 đổi vỏ drawer ⇒ modal** — **thay đổi CÓ CHỦ ĐÍCH** đã được duyệt trong kế hoạch 2 bước; **60 ảnh còn lại khớp   px** ⇒ baseline vẫn là chuẩn thật cho phần không đổi.
+**ĐANG CHẠY:** cổng ảnh đầy đủ (job nền) ⇒ kỳ vọng **64/64 ĐẠT** ⇒ **đóng U-14**.
