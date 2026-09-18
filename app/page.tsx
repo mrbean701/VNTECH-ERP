@@ -672,7 +672,7 @@ function WorkCenter({ data, action, refresh }: { data: AppData; action: (name: s
             <label><span>Kết quả cần có</span><input name="requiredOutput" placeholder="Đầu ra mong đợi"/></label>
             <label className="full"><span>Mô tả</span><textarea name="description" rows={2}/></label>
           </div>
-          <div className="row-actions"><button className="primary" disabled={busy}>＋ Tạo việc cho tôi</button></div>
+          <PermissionGuard allow={canSelf}><div className="row-actions"><button className="primary" disabled={busy}>＋ Tạo việc cho tôi</button></div></PermissionGuard>
         </form>
       </section>}
       <section className="card">
@@ -697,7 +697,7 @@ function WorkCenter({ data, action, refresh }: { data: AppData; action: (name: s
             <label><span>Ưu tiên</span><select name="priority"><option value="normal">Bình thường</option><option value="high">Cao</option><option value="urgent">Khẩn</option></select></label>
             <label><span>Kết quả cần có</span><input name="requiredOutput"/></label>
           </div>
-          <div className="row-actions"><button className="primary" disabled={busy}>＋ Giao việc</button></div>
+          <PermissionGuard allow={canAssign}><div className="row-actions"><button className="primary" disabled={busy}>＋ Giao việc</button></div></PermissionGuard>
         </form>
       </section>}
       <section className="card">

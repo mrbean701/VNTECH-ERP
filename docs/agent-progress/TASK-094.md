@@ -1428,3 +1428,24 @@ px tsc --noEmit **0** + **cổng ảnh 64/64 (admin — phải KHÔNG đổi)** 
 pm test **0**.
 * **DoD của U-16/U-04:** các **khối hành động chính** đã được gác + **ghi danh sách chỗ còn lại** (nếu cố ý không gác) kèm lý do; **cập nhật lộ trình**.
 **BÀI HỌC ĐÃ RÚT RA:** với tệp **minify + dòng siêu dài**, ưu tiên **gác ở mức KHỐI** (số điểm chèn ít, dễ kiểm) hơn là **gói từng nút** (nhiều điểm chèn, dễ phá JSX).
+
+### 30. [PHASE 1 · U-16/U-04 · LÔ A] GÁC 2 KHỐI HÀNH ĐỘNG — có 1 lần VÁ SAI đã tự phát hiện & HOÀN TÁC (18/09)
+**Mục tiêu LÔ A:** gác **ở MỨC KHỐI** (không gói từng nút) để giảm số điểm chèn trong tệp minify.
+**Kết quả áp dụng (2 khối, đều trong WorkCenter):**
+* dòng **675**: <PermissionGuard allow={canSelf}>  quanh khối <div className="row-actions"><button className="primary" disabled={busy}>＋ Tạo việc cho tôi</button></div>
+* dòng **700**: <PermissionGuard allow={canAssign}> quanh khối ＋ Giao việc
+* git diff --stat app/page.tsx ⇒ **2 insertions(+), 2 deletions(-)** (thay **CHUỖI CHÍNH XÁC**, khối ngắn tự chứa nên **không cần đếm thẻ**)
+* **
+px tsc --noEmit ⇒ EXIT 0** ✔ · **
+pm test ⇒ EXIT 0** ✔
+**🚨 MỘT LẦN VÁ SAI — tự phát hiện bằng 	sc và HOÀN TÁC NGAY:**
+* Lần 1 gác ＋ Tạo việc cho tôi bằng **canCreate** ⇒ **	sc: pp/page.tsx(675,35): error TS2304: Cannot find name 'canCreate'** ⇒ **khảo sát trước đó SAI** (các tên can* tìm thấy trong khoảng dòng 611→675 **không phải biến trong scope**, mà là chuỗi ở chỗ khác — không phải khai báo biến).
+* **Xử lý đúng quy trình:** git checkout -- app/page.tsx ⇒ **hoàn tác ngay** (kiểm git status sạch) ⇒ **khảo sát lại ĐÚNG**: WorkCenter khai báo **canSelf** (dòng 620) và **canAssign** (dòng 621), **KHÔNG có canCreate**:
+`	s
+const canSelf   = modulePermission(data,"dept_plan_tasks").canUse || modulePermission(data,"dept_project_tasks").canUse;
+const canAssign = modulePermission(data,"dept_plan_assign").canCreate || modulePermission(data,"dept_project_assign").canCreate;
+`
+* Sửa công cụ (675 ⇒ canSelf) ⇒ áp dụng lại ⇒ **	sc EXIT 0** ✔
+**BÀI HỌC (mới):** **KHÔNG suy ra biến trong scope bằng cách QUÉT CHUỖI trên một khoảng dòng** (dễ bắt phải tên nằm trong chuỗi/nhãn/component khác). Phải **tìm khai báo const/let <tên> =** thật **trong đúng phạm vi hàm** — và **luôn để 	sc làm trọng tài** (nó bắt ngay, và hoàn tác sạch).
+**CÒN LẠI CỦA U-16/U-04:** LÔ B (nút Tạo/Sửa) · LÔ C (Duyệt/Trả lại + Xuất) · gác MaterialListTable (dòng 1383 — **canEdit có sẵn trong scope**).
+**SỰ CỐ MÔI TRƯỜNG (ghi nhận):** sau khi phiên DSH khởi động lại, **cả 3 dịch vụ (Java :18081 · UI :8787 · proxy :9000) đều DOWN** — đúng như đã ghi nhớ *"restart DSH giết mọi tiến trình con do agent chạy nền"* ⇒ **phải khởi động lại cả 3** trước khi chạy cổng ảnh.
