@@ -1504,3 +1504,12 @@ WorkCenter(canAssign,canSelf) · **MaterialListTable(canCreate,canEdit,canMerge,
 **Công cụ:** 	ools/u16-lo-b-gac-nut-tao-sua.mjs — với mỗi dòng chỉ định: tìm **đúng 1** <button …>…</button>; **kiểm cờ có trong chính nút**; **tự chối** nếu thấy ≠1 nút / cờ không có / đã gác; in kế hoạch trước khi ghi; kiểm **cân bằng thẻ** <PermissionGuard> sau khi ghi.
 **BẰNG CHỨNG:** git diff --stat app/page.tsx ⇒ **3 insertions(+), 3 deletions(-)** · **
 px tsc --noEmit ⇒ EXIT 0** ⇒ nay có **5 chỗ gác**: dòng **675, 700 (LÔ A)** + **1265, 1365, 1384 (LÔ B)**.
+
+### 32.1. ✅ LÔ B — CỔNG ẢNH **64/64 ĐẠT** (19/09)
+KẾT LUẬN: ĐẠT ✅ — không có vùng lệch nào (64 ảnh đã đối chiếu) · EXIT=0
+⇒ **3 nút mới gác (1265 canUse · 1365 canCreate · 1384 canEdit) KHÔNG ẩn nhầm gì với admin.**
+**Bộ cổng của LÔ B (đều xanh):** 
+px tsc --noEmit **0** · 
+pm test **0** · **cổng ảnh 64/64 ĐẠT**.
+**TỔNG ĐÃ GÁC (U-16/U-04 tới nay): 5 chỗ** — dòng **675** canSelf · **700** canAssign (LÔ A) · **1265** canUse · **1365** canCreate · **1384** canEdit (LÔ B).
+**CÒN LẠI: LÔ C** — Duyệt/Trả lại/Từ chối (RequestDrawer có canDecide sẵn) + Xuất (canExport).
