@@ -140,8 +140,10 @@ const labelFor = (text) => {
 // Con "vụn" (chỉ khoảng trắng hoặc chỉ thẻ đóng) ⇒ GỘP vào con trước để không sinh tab rác và không mất nội dung.
 const isFragmentary = (text) => !text.trim() || /^(\s*<\/?[a-zA-Z][^>]*>\s*)+$/.test(text);
 const tabs = [];
+const dropped = [];   // mảnh vụn (thẻ đóng của khung đã bỏ) ⇒ LOẠI BỎ, không gộp (nếu gộp sẽ THỪA thẻ đóng ⇒ JSX lệch cân)
 for (const c of children) {
-  if (tabs.length && isFragmentary(c.text)) { tabs[tabs.length - 1].jsx += c.text; continue; }
+  // LUẬT CHÍNH XÁC: chỉ bỏ khi (a) chỉ khoảng trắng, hoặc (b) CHỈ GỒM THẺ ĐÓNG (opener của chúng đã bị bỏ cùng khung).
+  if (!c.text.trim() || /^(\s*<\/[a-zA-Z][^>]*>\s*)+$/.test(c.text)) { dropped.push(c.text); continue; }
   const label = labelFor(c.text);
   if (!label) {
     if (isFragmentary(c.text)) continue;
@@ -150,6 +152,16 @@ for (const c of children) {
   }
   tabs.push({ key: label.toLowerCase().replace(/\s+/g, "-"), label, jsx: c.text });
 }
+// BẤT BIẾN MỚI: sau khi LOẠI các mảnh vụn, nối các TAB phải bằng đúng thân gốc đã trừ các mảnh đó.
+let cleaned = bodyInner;
+let cleanOk = true;
+for (const d of dropped) {
+  const at = cleaned.indexOf(d);
+  if (at < 0) { failures.push("[body] mảnh vụn đã loại không tìm thấy trong thân gốc ⇒ DỪNG"); cleanOk = false; break; }
+  cleaned = cleaned.slice(0, at) + cleaned.slice(at + d.length);
+}
+if (cleanOk && tabs.map((t) => t.jsx).join("") !== cleaned) failures.push("[body] nối các TAB KHÔNG bằng thân gốc sau khi loại mảnh vụn ⇒ DỪNG (nguy cơ mất nội dung)");
+notes.push(`đã LOẠI ${dropped.length} mảnh vụn (${dropped.reduce((s, d) => s + d.length, 0)} ký tự) là thẻ đóng của khung đã bỏ`);
 if (!tabs.length) failures.push("[tab] không dựng được tab nào ⇒ DỪNG");
 
 // ── 5. Dựng JSX mới ───────────────────────────────────────────────────────────────────────

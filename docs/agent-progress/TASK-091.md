@@ -141,3 +141,23 @@ LATEST COMMIT  : #195 (docs checkpoint) → #196 (docs + cảnh báo công cụ)
   thay vì so với `bodyInner` nguyên bản. Sau đó chạy khô: **kỳ vọng tự kiểm PARSE báo HỢP LỆ** ⇒ mới `--apply` → `tsc`.
 * **Bằng chứng công cụ an toàn:** suốt 2 vòng sửa, công cụ **luôn tự chối ghi** khi tự kiểm PARSE phát hiện lỗi ⇒
   `app/page.tsx` **vẫn nguyên vẹn** (chỉ có 1 lượt ghi hỏng ở vòng đầu, đã `git checkout` hoàn tác).
+
+### 6.2. Bằng chứng nguyên văn + phương pháp kết luận (18/09)
+
+* **Luật loại bỏ đã tinh chỉnh (đúng):** chỉ bỏ mảnh **khoảng trắng** hoặc **CHỈ GỒM THẺ ĐÓNG** (`^(\s*<\/[a-zA-Z][^>]*>\s*)+$`).
+  Bản trước bỏ mọi mảnh "chỉ có thẻ" ⇒ **bỏ nhầm 1 `<section>` + 1 `CardHead`**; chính **bất biến ĐẾM đã bắt được**
+  (`"<section": 5 → 4` · `"CardHead": 5 → 4`) ⇒ bài học: **bất biến đếm có giá trị thật**, đừng gỡ nó.
+* **Trạng thái hiện tại (2 cấu hình, cả hai đều ĐÚNG MỘT NỬA):**
+  | Cấu hình | Tự kiểm PARSE | Bất biến đếm | Kết luận |
+  |---|---|---|---|
+  | **BỎ** mảnh chỉ-thẻ (333 ký tự) | **HỢP LỆ (0 lỗi)** | ✖ mất 1 `<section>` + 1 `CardHead` | JSX cân nhưng **mất 1 khối thật** |
+  | **GIỮ** mảnh đó làm tab "Hồ sơ" (7 tab) | ✖ 18 lỗi `TS17015` | ✔ đủ 5 section/5 CardHead | đủ nội dung nhưng **JSX lệch cân** |
+* **Bằng chứng nguyên văn (in từ dòng 2918, quanh `request-special-files`, vị trí 6887/9887):**
+  `…</tbody></table></div><button className="secondary">Lưu chỉnh sửa</button></form>}{request.purpose && <section className="drawer-section document-note"><CardHead title="Mục đích / Ghi chú" /><p>{request.purpose}</p></section>}<section className="drawer-section request-special-files"><CardHead title="Ảnh / Hồ sơ vật tư đặc thù" note="…" /><FileUpload entityType="material_request" entityId={request.id} canManage={canManageRequestFiles} /></section>…`
+  ⇒ **`{request.purpose && <section…>…</section>}` là BIỂU THỨC** (một con, cân đối) và **`<section …request-special-files>…</section>`** là một run markup
+  **chỉ gồm thẻ** (không có chữ trực tiếp) — nhìn **cân đối**, nên **không thể kết luận bằng mắt**.
+* **PHƯƠNG PHÁP KẾT LUẬN (việc kế tiếp, 10 giây):** thêm 1 dòng vào `chuyen-drawer-sang-edm.mjs` để **in NGUYÊN VĂN từng con**:
+  `if (process.env.DUMP_CHILDREN) children.forEach((c, i) => console.log(i, c.kind, JSON.stringify(c.text)));`
+  rồi chạy `DUMP_CHILDREN=1 node tools/chuyen-drawer-sang-edm.mjs` ⇒ thấy đúng ranh giới các con và biết con nào mở mà không đóng.
+  **Sau đó mới sửa bộ tách (không đoán thêm).**
+* **Tình trạng mã:** `app/page.tsx` **NGUYÊN VẸN** (công cụ tự chối ghi ở mọi lượt có lỗi) · `tsc` không bị ảnh hưởng.
