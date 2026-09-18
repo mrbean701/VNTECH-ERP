@@ -41,6 +41,12 @@ public interface PurchaseStore {
     // ---- close_po_line ----
     Optional<Map<String, Object>> findPoLine(String poItemId);              // + po/request context
     void closePoLine(String poItemId, double shortage, String reason, String userId, Instant now);
+
+    /** [WF] PHASE 8 (B2) — ghi QUYẾT ĐỊNH cho PO: approve ⇒ waiting_delivery; reject ⇒ cancelled + lý do/người quyết/thời điểm. */
+    void decidePo(String poId, String status, String reason, String userId, Instant now);
+
+    /** [WF] PHASE 8 (B2) — thông báo trong ứng dụng cho người tạo PO (bảng task_notifications). */
+    void insertTaskNotification(String userId, String title, String body, Instant now);
     void closeRequestItemForShortage(String requestItemId, double shortage, String reason, Instant now);
     long countPoOpenLines(String purchaseOrderId);
     long countRequestOpenLines(String requestId);

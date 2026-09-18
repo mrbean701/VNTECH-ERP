@@ -230,7 +230,23 @@ public class PurchaseStoreAdapter implements PurchaseStore {
 
     @Override
     @Transactional
-    public void closePoLine(String poItemId, double shortage, String reason, String userId, Instant now) {
+    /** [WF] PHASE 8 (B2) — ghi quyết định cho PO (native SQL, cùng khuôn các method khác của adapter). */
+@Override
+public void decidePo(String poId, String status, String reason, String userId, Instant now) {
+    jdbcTemplate.update(
+        "UPDATE purchase_orders SET status=?, decision_reason=?, decided_by=?, decided_at=?, updated_at=? WHERE id=?",
+        status, reason, userId, now, now, poId);
+}
+
+/** [WF] PHASE 8 (B2) — thông báo trong ứng dụng (12 cột task_notifications; ghi thẳng, không phụ thuộc use-case khác). */
+@Override
+public void insertTaskNotification(String userId, String title, String body, Instant now) {
+    jdbcTemplate.update(
+        "INSERT INTO task_notifications (id,work_item_id,user_id,channel,title,body,status,read_at,sent_at,last_error,created_at,updated_at) " +
+        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+        "NTF_" + java.util.UUID.randomUUID(), null, userId, "in_app", title, body, "sent", null, now, null, now, now);
+}
+public void closePoLine(String poItemId, double shortage, String reason, String userId, Instant now) {
         jdbcTemplate.update("""
                 UPDATE purchase_order_items SET closed_qty=closed_qty+?,close_reason=?,closed_by=?,
                        closed_at=?,status='closed_shortage',updated_at=? WHERE id=?""",

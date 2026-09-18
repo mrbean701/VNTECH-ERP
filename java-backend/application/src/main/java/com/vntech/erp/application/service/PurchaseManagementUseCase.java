@@ -223,7 +223,38 @@ public final class PurchaseManagementUseCase {
         return Map.of("message", "Đã đóng thiếu " + shortage + " cho dòng PO; phiếu gốc vẫn giữ số lượng đề nghị và lý do chênh lệch.");
     }
 
-    /** receive_goods — ghi nhận giao hàng, chưa posting (chờ BCH xác nhận). */
+    /** [WF] PHASE 8 (B2) — approve_po: PO đang pending_approval ⇒ waiting_delivery (nối luồng giao hàng sẵn có). */
+public Map<String, Object> approvePo(Principal principal, Map<String, Object> payload) {
+    return decidePo(principal, payload, true);
+}
+
+/** [WF] PHASE 8 (B2) — reject_po: PO ⇒ cancelled + lý do; **PR KHÔNG đổi**; THÔNG BÁO cho người tạo PO. */
+public Map<String, Object> rejectPo(Principal principal, Map<String, Object> payload) {
+    return decidePo(principal, payload, false);
+}
+
+private Map<String, Object> decidePo(Principal principal, Map<String, Object> payload, boolean approve) {
+    rbac.requireRole(principalAsCurrent(principal), List.of("procurement", "accountant", "admin"));
+    String poId = trim(payload.get("purchaseOrderId"));
+    String reason = trim(payload.get("reason"));
+    Map<String, Object> po = store.findPoForReceiving(poId)
+        .orElseThrow(() -> Api("PO không tồn tại hoặc đã xử lý."));
+    if (!"pending_approval".equals(sv(po, "status"))) throw Api("PO không tồn tại hoặc đã xử lý.");
+    accessScope.requireProjectAccess(principal.userId(), principal.role(), sv(po, "projectId"), true,
+        "Tài khoản không có quyền duyệt PO tại dự án này.");
+    Instant now = Instant.now();
+    String status = approve ? "waiting_delivery" : "cancelled";
+    store.decidePo(poId, status, approve ? null : reason, principal.userId(), now);
+    if (!approve) {
+        String buyer = sv(po, "buyerUserId");
+        if (!buyer.isEmpty()) store.insertTaskNotification(buyer, "PO " + sv(po, "poNo") + " đã bị hủy",
+            "PO " + sv(po, "poNo") + " đã bị từ chối — hãy tạo lại/xử lý lại. Lý do: " + (reason.isEmpty() ? "(không nêu)" : reason), now);
+    }
+    return Map.of("message", approve
+        ? "Đã duyệt PO " + sv(po, "poNo") + "; chuyển sang chờ giao hàng."
+        : "Đã từ chối PO " + sv(po, "poNo") + "; PR vẫn mở để xử lý lại.");
+}
+/** receive_goods — ghi nhận giao hàng, chưa posting (chờ BCH xác nhận). */
     public Map<String, Object> receiveGoods(Principal principal, Map<String, Object> payload) {
         rbac.requireRole(principalAsCurrent(principal), List.of("warehouse", "admin"));
         String poId = trim(payload.get("purchaseOrderId"));
