@@ -917,3 +917,17 @@ tests/workflow-direct.test.ts:171 — actual: 'pending_approval' · expected: 'w
 **BÀI HỌC:** 
 pm test (gồm 	ests/workflow-direct) **phủ lõi JS** — trong khi các cổng HTTP của tôi chỉ phủ **Java**. ⇒ **Từ nay luôn chạy 
 pm test** như cổng đóng mục, vì **2 lõi là 2 đường khác nhau**.
+
+### 16.8. ✅ CẬP NHẬT TEST THEO HỢP ĐỒNG MỚI → 
+pm test (18/09)
+**Đã sửa 	ests/workflow-direct.test.ts dòng 171** (theo DÒNG, mỏ neo ASCII, có tự chối):
+* ssert.equal(po.status, "waiting_delivery") ⇒ **ssert.equal(po.status, "pending_approval")** (PO khởi tạo theo B2/bước 1).
+* **Chèn bước DUYỆT PO** ngay sau đó để phần còn lại của luồng chạy đúng hợp đồng mới:
+  const poApproved = await api("approve_po", { purchaseOrderId: po.id }); assert.equal(poApproved.response.status, 200, …);
+  data = await load(); const poApprovedRow = data.purchaseOrders.find(…); assert.equal(poApprovedRow.status, "waiting_delivery");
+  *(dùng biến MỚI vì po là const — không gán lại.)*
+**Kết quả 	ests/workflow-direct ⇒ EXIT 0:**
+Workflow VNTECH ERP V5.3.0 FULL W2 passed: five-stage approvals/email/SLA → multi-PO/multi-delivery → strict material master → contract stock → inherited/override permissions → configurable groups/roles/UI → user safety.
+⇒ **Test của dự án nay phủ LUỒNG MỚI** (PO pending_approval ⇒ pprove_po ⇒ waiting_delivery ⇒ nhập kho) — bằng chứng mạnh cho **B2 + lõi JS**.
+**
+pm test (lint + typecheck + hồi quy + workflow) ⇒ EXIT = 0**

@@ -168,7 +168,10 @@ assert(data.emailOutbox.some((row: any) => row.requestId === request.id && row.e
 
 const supplier = data.suppliers[0]; const poCreated = await api("create_po", { requestId: request.id, supplierId: supplier.id, warehouseId: warehouse.id, eta: "2026-08-24", lines: [{ requestItemId: request.items[0].id, quantity: 12, unitPrice: 1000 }] }); assert.equal(poCreated.response.status, 200, poCreated.result.error);
 data = await load(); const po = data.purchaseOrders[0]; request = data.requests.find((row: any) => row.id === request.id);
-assert.equal(po.items.length, 1); assert.equal(po.status, "waiting_delivery"); assert.equal(po.eta, "2026-08-24"); assert.equal(request.supplyStatus, "waiting_delivery");
+assert.equal(po.items.length, 1); assert.equal(po.status, "pending_approval"); assert.equal(po.eta, "2026-08-24"); assert.equal(request.supplyStatus, "waiting_delivery");
+// [B2/bước 1] Hợp đồng MỚI: PO phải được DUYỆT trước khi sang giao hàng.
+const poApproved = await api("approve_po", { purchaseOrderId: po.id }); assert.equal(poApproved.response.status, 200, poApproved.result.error);
+data = await load(); const poApprovedRow = data.purchaseOrders.find((row: any) => row.id === po.id); assert.equal(poApprovedRow.status, "waiting_delivery");
 assert.equal(request.supplySteps.find((row: any) => row.step === "po_creation").status, "completed");
 assert.equal(request.supplySteps.find((row: any) => row.step === "delivery").status, "pending");
 assert(data.emailOutbox.some((row: any) => row.requestId === request.id && row.event === "po_waiting_delivery" && row.recipients === "thukho@example.com"));
