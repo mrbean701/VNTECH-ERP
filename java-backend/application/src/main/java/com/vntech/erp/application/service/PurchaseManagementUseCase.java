@@ -272,7 +272,8 @@ public Map<String, Object> updatePoPrice(Principal principal, Map<String, Object
     for (Object raw : lines) {
         if (!(raw instanceof Map<?, ?> line)) continue;
         String itemId = trim(line.get("purchaseOrderItemId"));
-        double price = strictNonNegative(line.get("unitPrice"), "Đơn giá PO");
+        double price = numberValue(line.get("unitPrice"));
+        if (price < 0) throw Api("Đơn giá PO không được âm.");
         if (itemId.isEmpty()) throw Api("Thiếu mã dòng PO.");
         store.updatePoItemPrice(poId, itemId, price, now);
         changed++;
