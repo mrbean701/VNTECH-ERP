@@ -1340,7 +1340,7 @@ async function handleAction(action, payload, user, request) {
         if(!(await canAccessProject(user,String(po.projectId),true)))throw new Error("Tài khoản không có quyền từ chối PO tại dự án này.");
         await env.DB.batch([
             env.DB.prepare(`UPDATE purchase_orders SET status='cancelled',decision_reason=?,decided_by=?,decided_at=?,updated_at=? WHERE id=?`).bind(reason,user.id,stamp,stamp,poId),
-            env.DB.prepare(`INSERT INTO task_notifications(id,work_item_id,user_id,channel,title,body,status,read_at,sent_at,last_error,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`).bind(id("NTF"),null,po.buyerUserId,"in_app",`PO ${po.poNo} đã bị hủy`,`PO ${po.poNo} đã bị từ chối — hãy tạo lại/xử lý lại. Lý do: ${reason||"(không nêu)"}`,"sent",null,stamp,null,stamp,stamp)
+            env.DB.prepare(`INSERT INTO task_notifications(id,work_item_id,user_id,channel,title,body,status,read_at,sent_at,last_error,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`).bind(id("NTF"),poId,po.buyerUserId,"in_app",`PO ${po.poNo} đã bị hủy`,`PO ${po.poNo} đã bị từ chối — hãy tạo lại/xử lý lại. Lý do: ${reason||"(không nêu)"}`,"SENT",null,stamp,null,stamp,stamp)
         ]);
         await audit(user.id,"REJECT","purchase_order",poId,{status:"pending_approval"},{status:"cancelled",reason},request);
         return { message: `Đã từ chối PO ${po.poNo}; PR vẫn mở để xử lý lại.` };
