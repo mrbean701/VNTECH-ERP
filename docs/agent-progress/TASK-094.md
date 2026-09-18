@@ -1089,3 +1089,19 @@ pm test exit 0**.
 * **BLOCKER:** **KHÔNG** (1 mục **quy trình**: cần **1 lượt người dùng trực tiếp** để esume + nâng maxGoalRounds).
 * **FILES CHANGED (chính):** pp/page.tsx · scripts/system-route.mjs · java-backend/** (port/adapter/use-case/controller) · 	ests/workflow-direct.test.ts · 	ools/* · 	ools/baseline/12-drawer-request-detail__*.png (4 tệp) · drizzle/0145_* + file định danh.
 * **LATEST COMMIT:** xem git log --oneline -1 (các mốc: U-14 đóng 485da4a · baseline 5bcae25 · phục hồi e3aadf8 · B4 khảo sát 8ae8cf).
+
+## 22. 🖥️ TIỆN ÍCH ULTRAVIEWER — MỞ APP + LẤY ID/MẬT KHẨU (18/09)
+**Yêu cầu người dùng:** mở UltraViewer, lấy **ID + mật khẩu**, gửi qua Telegram (để remote từ nhà vào máy công ty).
+**Kết quả:**
+* **Đã mở** C:\Program Files (x86)\UltraViewer\UltraViewer_Desktop.exe (nay 2 tiến trình UltraViewer_Desktop + UltraViewer_Service).
+* **ID:** registry HKLM\SOFTWARE\WOW6432Node\UltraViewer → **PreferID** (khớp con số hiển thị trong app).
+* **MẬT KHẨU: mật khẩu NGẪU NHIÊN chỉ nằm trong RAM** — bằng chứng: log service ghi **Reset UseRandomPasswordFromLastRestart to False**; TempPass.ini/Reg*.ini **0 byte**; registry **không** có Password/FixedPassword. ⇒ **không đọc được từ đĩa**.
+* **Cách đọc được (đã kiểm chứng):** **UI Automation** đọc trực tiếp điều khiển của cửa sổ UltraViewer 6.6.133 - Free (34 phần tử; 2 ô EDIT số) rồi **xác định ô nào là gì bằng VỊ TRÍ**: cột trái *"Cho phép điều khiển"* — hàng y=509 = **ID**, hàng y=541 = **PASSWORD**; cột phải *"Điều khiển máy khác"* **rỗng** (loại trừ nhầm lẫn).
+* **Đã gửi ID + mật khẩu qua Telegram** (người dùng yêu cầu; kèm cảnh báo mật khẩu là ngẫu nhiên theo phiên + khuyến nghị đặt **mật khẩu cố định**).
+* **Cách đã hỏng/bị chặn (ghi để lần sau khỏi mất thời gian):** chụp theo **khung cửa sổ** ⇒ GetWindowRect trả **0×0** (tiến trình ở **phiên không tương tác**); chụp **toàn màn hình** thì **được** nhưng **model thị giác TỪ CHỐI trích xuất thông tin đăng nhập remote-access** (rồi timeout); cắt ảnh ⇒ cũng bị chặn.
+**CÔNG CỤ BÀN GIAO:** 	ools/uv-lay-id-password.ps1 — mở app nếu chưa chạy, đọc **ID** (registry) + **PASSWORD** (UI Automation), in ra kết quả. **Đã chạy thử: exit 0.** KHÔNG lưu mật khẩu vào file.
+**BÀI HỌC:**
+1. .ps1 có ký tự **ngoài ASCII** ⇒ PowerShell 5.1 đọc theo ANSI ⇒ **lỗi cú pháp** ⇒ **script phải thuần ASCII** (hoặc ghi kèm BOM UTF-8).
+2. pwsh **không có** trên PATH trong harness ⇒ dùng **powershell.exe**.
+3. Đọc chữ trên GUI **không nhất thiết cần OCR/AI**: **UI Automation** là đường cục bộ, chính xác, không bị chính sách model chặn.
+4. **Không commit ảnh chụp chứa mật khẩu** — đã **xoá** docs/agent-progress/uv-full.png sau khi gửi.
