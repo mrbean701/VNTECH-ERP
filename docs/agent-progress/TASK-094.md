@@ -948,3 +948,19 @@ pm test (lint + typecheck + hồi quy + workflow) ⇒ EXIT = 0**
 2. **Do DỮ LIỆU em đã thay đổi (rất đáng nghi):** màn Kho Tổng có thể hiển thị **số liệu/phiếu** — mà em đã (a) **xoá 2 phiếu nhập** (goods_receipts 16→14), (b) **seed PO pending_approval**, (c) chạy probe nhập/xuất có hoàn tác ⇒ **con số hiển thị đổi** ⇒ lệch.
 **CÁCH PHÂN BIỆT (bước kế tiếp):** dùng ision_glance so **ảnh baseline vs ảnh mới** của  6-warehouse (và/hoặc crop đúng vùng (832,448)-(1472,500)) để **đọc nội dung khác nhau** ⇒ biết là **bố cục** hay **số liệu**.
 **LƯU Ý TRUNG THỰC:** 05 màn đầu **khớp tuyệt đối** ⇒ thay đổi của em **không** ảnh hưởng diện rộng; khác biệt **khu trú ở 1 màn** — cần xác định nguyên nhân trước khi kết luận "regression" hay "cập nhật baseline".
+
+### 16.10. 📊 PHÂN LOẠI 2 NHÓM LỆCH ẢNH — RÕ RA ĐÂU LÀ U-14, ĐÂU LÀ DỮ LIỆU (18/09)
+**Kết quả cổng ảnh (job nền):**
+| Màn | Lệch | Nhận định |
+|---|---|---|
+| 01–05 (dashboard/project/work/team/material) | **0 px · 0,0000 %** (cả 4 kích thước = **20/20 ảnh**) | **KHỚP TUYỆT ĐỐI** |
+| **06-warehouse** (Kho Tổng) | desktop **1,9013 %** · laptop **0,0300 %** · tablet **0,0315 %** · phone **0,0073 %** | Lệch **RẤT NHỎ, khu trú 1 hàng ngang (y=448)** ⇒ nghi **DỮ LIỆU** |
+| 07-admin · 08-requests · 09-dept-assign-kh · 10-dept-assign-da · 11-modal-request | **0 px** (cả 4 kích thước) | **KHỚP TUYỆT ĐỐI** |
+| **12-drawer-request-detail** (Phiếu đề nghị — **drawer chi tiết**) | desktop **65,8957 %** (1.366.414 px · vùng 1920×1080) | **CHÍNH LÀ U-14** — vỏ **drawer ⇒ modal** ⇒ **thay đổi CÓ CHỦ ĐÍCH** |
+**⇒ KẾT LUẬN BƯỚC ĐẦU:**
+* **12-* (65,9 %)**: do **U-14** — đúng như dự kiến ⇒ **cần cập nhật baseline ảnh** cho màn này (thay đổi **có chủ đích**, đã được duyệt trong kế hoạch 2 bước).
+* ** 6-* (≤1,9 %, khu trú)**: **CHƯA kết luận** — nghi do **DỮ LIỆU em đã đổi** (đã xoá 2 phiếu nhập goods_receipts 16→14 · seed PO pending_approval · chạy probe nhập/xuất) làm **con số hiển thị** khác.
+* **Các màn còn lại KHỚP 0 px** ⇒ thay đổi của em **không ảnh hưởng diện rộng**; khác biệt **khu trú đúng 1 màn của U-14 + 1 màn nghi dữ liệu**.
+**⇒ KHÔNG cập nhật baseline vội** — nếu lệch  6 do **dữ liệu em làm thay đổi** thì cập nhật baseline là **CHE LỖI**. Phải chứng minh trước.
+**CÁCH CHỨNG MINH  6-warehouse (bước kế tiếp):** đọc mã màn Kho Tổng (screen render KPI/bảng) ⇒ xem có trường nào **suy ra từ goods_receipts/stock_*** mà em đã thay đổi (số phiếu, tồn…) ⇒ nếu có ⇒ **kết luận do dữ liệu**; nếu **không** ⇒ phải coi là **regression thật** và điều tra tiếp.
+**Ghi chú kỹ thuật:** probe **không lưu ảnh mới ra tệp** (so trực tiếp với 	ools/baseline/, chỉ in % lệch) ⇒ không thể "đọc" nội dung khác nhau từ ảnh; muốn so bằng mắt phải **xuất ảnh mới** (chạy lại probe với cờ lưu ảnh nếu có) hoặc **chụp lại chính màn đó**.
