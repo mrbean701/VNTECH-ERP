@@ -182,3 +182,22 @@ Kèm probe: **đối chứng dương** (chưa duyệt ⇒ có **cảnh báo** nh
 - **Nhánh duyệt song song `all_roles` đang là mã chết ở cả hai lõi** (KP #54: JS ghi snapshot `single` cho mọi bước có Owner) ⇒ nếu P0–P5 dùng tới `all_roles`, phải **sửa cả gốc snapshot** trước, nếu không sẽ lặp lại đúng lỗi cũ.
 - **Ngưỡng tiền** (câu 2) nếu có ⇒ phải thêm cột cấu hình + luật so tiền ở **cả hai đường**; dễ phát sinh lệch JS↔Java (đã có tiền lệ).
 - **Tồn kho**: P2/P3 đụng trực tiếp số lượng tồn ⇒ mọi probe phải **đo tồn trước/sau** và **khôi phục đúng** số dòng (đã có mẫu ở các probe kho hiện tại).
+
+## 11. [WF-04] QUYET DINH: HE NAO LA CHINH (18/09)
+
+**Yêu cầu lộ trình:** hop nhat 2 he (workflow_* va approval_stage_catalog) HOAC ghi ro he nao la chinh (muc co co MODEL).
+
+**Bằng chứng đo được** (tools/probe-wf04-hop-nhat-2-he.mjs):
+* Đối chiếu 1:1 cho phiếu đề nghị: **5/5 bước KHỚP TÊN** giữa approval_stage_catalog (5 bước đang chạy) và
+  workflow_definitions **WF-MUAHANG-01** (module=requests, v2, mặc định, active) => hệ mới PHẢN CHIẾU ĐÚNG hệ cũ.
+* **3 module MỚI** chỉ có ở hệ mới: WF-PO-01 (purchasing) · WF-XUATKHO-01 (warehouse_issue) · WF-NHAPKHO-01 (warehouse_receipt)
+  — mỗi định nghĩa 2 bước, bước khai required_permission='canApprove'.
+* LỆCH THẬT ĐÃ PHÁT HIỆN (ghi rõ, không giấu): bước 5 hệ cũ dùng approval_mode='all_roles', hệ mới dùng 'all_of'
+  (KHÁC TỪ VỰNG); required_permission của định nghĩa requests đang TRỐNG => ghi thành việc kế tiếp **WF-04-followup**.
+
+**QUYẾT ĐỊNH (đúng nhánh "hoặc" của yêu cầu):**
+1. Phiếu đề nghị mua hàng => **approval_stage_catalog LÀ CHÍNH**; KHÔNG di trú, KHÔNG xoá (100 dòng approvals đang chạy).
+2. 3 module mới (PO · cấp phát/xuất kho · nhập kho) => **workflow_* LÀ CHÍNH**.
+3. **Cầu nối an toàn = SNAPSHOT**: quyết định luôn đọc snapshot trước, cấu hình chỉ là dự phòng
+   => đổi hệ nào cũng KHÔNG làm lệch phiếu đang chạy (đã chứng minh ở WF-05: 5/5 ĐẠT + 100/100 dòng có snapshot).
+4. Sau khi chuẩn hoá từ vựng (WF-04-followup) thì 2 hệ là MỘT engine thống nhất về mặt khái niệm.
