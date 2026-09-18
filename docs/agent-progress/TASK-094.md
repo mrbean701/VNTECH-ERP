@@ -614,3 +614,16 @@ HOÀN TÁC: PO về 'delivered_pending_confirmation' · task_notifications về 
 **Điều kiện tiên quyết đã kiểm trước đó:** build **mvn exit=0**; adapter có **@Override + @Transactional + public void decidePo(... notifyUserId, notifyTitle, notifyBody, Instant now)** (đọc lại dòng 231-236) ⇒ **nguyên tử thật**.
 **⚠️ LƯU Ý TRUNG THỰC VỀ MÃ THOÁT:** dòng tổng kết của script in **"8/8 ĐẠT · 0 HỎNG"** nhưng mã thoát do công cụ báo là **1**. Tôi **chưa chứng minh** nguyên nhân; giả thuyết: ống dẫn bị cắt sớm do Select-Object -First 18 (không phải lỗi phép kiểm). **⇒ VÒNG SAU phải chạy lại KHÔNG cắt output để xác nhận mã thoát = 0** trước khi coi eject_po là "xong tuyệt đối".
 **Trạng thái B2:** 3 lỗi đã vá ở mã **và** đã có bằng chứng chạy **8/8**; còn **1 xác nhận kỹ thuật** (mã thoát) ⇒ **gần xong, chưa tuyên bố xong**.
+
+### 14.14. ✅ XÁC NHẬN DỨT ĐIỂM: mã thoát THẬT = **0** (18/09) ⇒ **ĐÓNG B2/bước 2**
+**Chạy lại KHÔNG cắt output ($out = node … rồi $LASTEXITCODE):**
+`
+=== B2 END-TO-END: 8/8 ĐẠT · 0 HỎNG ===
+=== MÃ THOÁT THẬT: 0 ===
+`
+⇒ **Chứng minh được** nghi vấn ở §14.13: mã thoát "1" trước đó là **do Select-Object -First 18 cắt ống dẫn**, **KHÔNG phải** phép kiểm thất bại.
+**⚠️ BÀI HỌC MỚI (đã trả giá 1 vòng):** cmd | Select-Object -First N có thể làm **mã thoát bị báo sai** ⇒ **khi cần mã thoát, phải gán $out = cmd rồi đọc $LASTEXITCODE, KHÔNG cắt ống dẫn.**
+**⇒ TRẠNG THÁI B2/bước 2: ĐÓNG (đủ bằng chứng 2 lõi + cổng E2E 8/8 + mã thoát 0):**
+* JS + Java **parity**: pprove_po/eject_po (JS dòng 1325/1335 · Java port 46 · adapter 234 @Transactional · use-case 227/232 · controller 1073/1078).
+* **3 lỗi thật đã vá**: ① thiếu uyer_user_id ⇒ người nhận rỗng ② work_item_id NOT NULL ⇒ 409 ③ **ghi không nguyên tử**.
+* **Hành vi đúng như yêu cầu:** PO ⇒ cancelled + lý do/ai/khi nào · **PR VẪN MỞ** (MR pproved → pproved) · **thông báo tới đúng uyer_user_id** · **hoàn tác sạch** (không rác test).
