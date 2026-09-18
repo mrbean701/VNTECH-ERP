@@ -228,22 +228,22 @@ public class PurchaseStoreAdapter implements PurchaseStore {
         return rows.isEmpty() ? Optional.empty() : Optional.of(new LinkedHashMap<>(rows.get(0)));
     }
 
-    /** [WF] PHASE 8 (B2) — ghi quyết định cho PO (native SQL, cùng khuôn các method khác của adapter). */
+/** [WF] PHASE 8 (B2) — QUYẾT ĐỊNH cho PO + (tuỳ chọn) thông báo cho người tạo, trong MỘT giao dịch. */
 @Override
-public void decidePo(String poId, String status, String reason, String userId, Instant now) {
+@Transactional
+public void decidePo(String poId, String status, String reason, String userId, String notifyUserId,
+        String notifyTitle, String notifyBody, Instant now) {
     jdbcTemplate.update(
         "UPDATE purchase_orders SET status=?, decision_reason=?, decided_by=?, decided_at=?, updated_at=? WHERE id=?",
         status, reason, userId, now, now, poId);
+    if (notifyUserId != null && !notifyUserId.isBlank()) {
+        jdbcTemplate.update(
+            "INSERT INTO task_notifications (id,work_item_id,user_id,channel,title,body,status,read_at,sent_at,last_error,created_at,updated_at) " +
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+            "NTF_" + java.util.UUID.randomUUID(), poId, notifyUserId, "in_app", notifyTitle, notifyBody, "SENT", null, now, null, now, now);
+    }
 }
 
-/** [WF] PHASE 8 (B2) — thông báo trong ứng dụng (12 cột task_notifications; ghi thẳng, không phụ thuộc use-case khác). */
-@Override
-public void insertTaskNotification(String userId, String title, String body, Instant now) {
-    jdbcTemplate.update(
-        "INSERT INTO task_notifications (id,work_item_id,user_id,channel,title,body,status,read_at,sent_at,last_error,created_at,updated_at) " +
-        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
-        "NTF_" + java.util.UUID.randomUUID(), null, userId, "in_app", title, body, "sent", null, now, null, now, now);
-}
     @Override
     @Transactional
 public void closePoLine(String poItemId, double shortage, String reason, String userId, Instant now) {

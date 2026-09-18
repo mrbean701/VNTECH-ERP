@@ -244,13 +244,11 @@ private Map<String, Object> decidePo(Principal principal, Map<String, Object> pa
         "Tài khoản không có quyền duyệt PO tại dự án này.");
     Instant now = Instant.now();
     String status = approve ? "waiting_delivery" : "cancelled";
-    store.decidePo(poId, status, approve ? null : reason, principal.userId(), now);
-    if (!approve) {
-        String buyer = sv(po, "buyerUserId");
-if (buyer.isEmpty()) buyer = sv(po, "requesterId");
-        if (!buyer.isEmpty()) store.insertTaskNotification(buyer, "PO " + sv(po, "poNo") + " đã bị hủy",
+        String buyer = approve ? "" : sv(po, "buyerUserId");
+        if (!approve && buyer.isEmpty()) buyer = sv(po, "requesterId");
+        store.decidePo(poId, status, approve ? null : reason, principal.userId(),
+            buyer, "PO " + sv(po, "poNo") + " đã bị hủy",
             "PO " + sv(po, "poNo") + " đã bị từ chối — hãy tạo lại/xử lý lại. Lý do: " + (reason.isEmpty() ? "(không nêu)" : reason), now);
-    }
     return Map.of("message", approve
         ? "Đã duyệt PO " + sv(po, "poNo") + "; chuyển sang chờ giao hàng."
         : "Đã từ chối PO " + sv(po, "poNo") + "; PR vẫn mở để xử lý lại.");
