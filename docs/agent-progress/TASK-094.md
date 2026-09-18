@@ -964,3 +964,24 @@ pm test (lint + typecheck + hồi quy + workflow) ⇒ EXIT = 0**
 **⇒ KHÔNG cập nhật baseline vội** — nếu lệch  6 do **dữ liệu em làm thay đổi** thì cập nhật baseline là **CHE LỖI**. Phải chứng minh trước.
 **CÁCH CHỨNG MINH  6-warehouse (bước kế tiếp):** đọc mã màn Kho Tổng (screen render KPI/bảng) ⇒ xem có trường nào **suy ra từ goods_receipts/stock_*** mà em đã thay đổi (số phiếu, tồn…) ⇒ nếu có ⇒ **kết luận do dữ liệu**; nếu **không** ⇒ phải coi là **regression thật** và điều tra tiếp.
 **Ghi chú kỹ thuật:** probe **không lưu ảnh mới ra tệp** (so trực tiếp với 	ools/baseline/, chỉ in % lệch) ⇒ không thể "đọc" nội dung khác nhau từ ảnh; muốn so bằng mắt phải **xuất ảnh mới** (chạy lại probe với cờ lưu ảnh nếu có) hoặc **chụp lại chính màn đó**.
+
+### 17. ✅ ĐÃ PHỤC HỒI 2 PHIẾU NHẬP — TỪ BẰNG CHỨNG + QUY ƯỚC SEED CỦA DỰ ÁN (18/09)
+**Kết quả (đọc lại xác nhận):**
+`
+goods_receipts TRƯỚC = 14  →  SAU = 16   ✔ về đúng số gốc
+confirmed              = 12              ✔ khớp phân bố gốc (12 confirmed + 4 pending = 16)
+orphan_attachments     = 0               ✔ 2 ảnh KHÔNG còn mồ côi ⇒ 2 ID đã tồn tại trở lại
+GRN-PRJ-DEMO-01-2026-0003 | confirmed | 2026-02-02 08:30:00
+GRN-PRJ-DEMO-01-2026-0004 | confirmed | 2026-02-09 08:30:00
+`
+**NGUỒN ĐÃ ĐIỀU TRA (nói rõ cái nào KHÔNG dùng được):**
+* Binlog: log_bin=ON + mysqlbinlog có sẵn **nhưng** Access to the path 'C:\ProgramData\MySQL\MySQL Server 8.0\Data' is denied (cần Administrator) ⇒ **không dùng được**.
+* udit_logs: **0 dòng** cho goods_receipt (bảng không ghi nhận phiếu nhập) ⇒ **không dùng được**.
+* SQLite .local-data/warehouse.sqlite (+ -wal 600KB): có bảng **nhưng 0 dòng** ⇒ **không dùng được**.
+* Backup/dump: **không có** trong repo và các thư mục backup phổ biến ⇒ **không dùng được**.
+* **DÙNG ĐƯỢC:** ① **attachments** (2 ID chính xác + người tải USR_8984cf69-… + mốc thời gian) ② **quan hệ PO** (kho nhận WH_51e0f009-…, contract PCON_78092ea4-…, BOQ BQVER_0390dda6-…) ③ **phân bố trạng thái gốc** (12 confirmed) ④ **quy ước seed của chính dự án** (	ools/task081-rebuild-parents.mjs dòng 63-66: eceipt_no = GRN-PRJ-DEMO-01-2026-<số>, đủ cột).
+**PHÂN LOẠI TRUNG THỰC từng trường:**
+* **TỪ BẰNG CHỨNG:** id (khớp attachment) · purchase_order_id · warehouse_id · contract_id · oq_version_id · ch_confirmation_status='confirmed' · eceived_by/ch_confirmed_by (người tải ảnh) · eceived_at/ch_confirmed_at (mốc ảnh).
+* **DỰNG LẠI theo quy ước dự án (KHÔNG phải giá trị gốc):** eceipt_no = …-0003/…-0004 · các cột qc_status='accepted'/document_status='complete'/posting_status='posted'/certificate_status='complete'/delivery_document_status='complete' (nhất quán với phiếu **đã xác nhận**: app **bắt buộc** hồ sơ đầy đủ trước khi xác nhận).
+**FILE HOÀN TÁC:** docs/agent-progress/TASK-094-phuc-hoi-2-phieu-nhap-rollback.sql — xoá **đúng 2 ID** (theo ID cụ thể, KHÔNG dùng khoá ngoại — đúng bài học đã trả giá).
+**KỲ VỌNG KIỂM CHỨNG CHÉO:** nếu lệch  6-warehouse trong cổng ảnh là **do dữ liệu** (giả thuyết 2) thì **sau phục hồi, màn đó phải trở về 0 px** ⇒ chạy lại cổng ảnh để **xác nhận**.
