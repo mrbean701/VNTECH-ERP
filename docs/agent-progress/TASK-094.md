@@ -1217,3 +1217,24 @@ pm run build khi server UI đang chạy** — (a) làm probe ảnh chụp **tr�
 * Kiểm xem EntityDetailModal/RequestDrawer có dùng **class con** nào nằm trong các rule đã xoá (.request-drawer .table-wrap, .request-drawer .timeline, .request-drawer .request-summary…) ⇒ nếu **modal chứa** .table-wrap/.timeline/.request-summary thì rule cha .request-drawer xoá đi **có thể làm mất style con** (vì khối !important cũ có thể vẫn khớp nếu tổ tiên còn class khác).
 * Với 17-modal-po: soi vùng (419,549) (dùng --locate=419,549) để biết **phần tử nào** khác.
 **KHẲNG ĐỊNH LẠI:** **KHÔNG** cập nhật baseline cho 12-*/17-* cho tới khi xác định được nguyên nhân (tránh **che lỗi** — đúng bài học đã áp dụng 2 lần trước).
+
+### 23.4. 🎯 KẾT LUẬN CUỐI VỀ 2 ĐIỂM LỆCH ẢNH — **BASELINE CŨ SAI (chụp lúc CSS 404)**, KHÔNG phải lỗi mã (18/09)
+**THÍ NGHIỆM A/B QUYẾT ĐỊNH (đã làm, có số liệu):** đưa **CSS TRƯỚC khi dọn** (git checkout b01a56d~1 -- app/globals.css app/styles/canonical.css) rồi chụp riêng màn 12:
+`
+CSS TRƯỚC-dọn : ❌ desktop 801604 px (38.6576%) · laptop 395245 px (37.6751%) · tablet 82838 px (10.5334%) · phone 134 px (0.0407%)
+CSS SAU-dọn   : ❌ desktop 801604 px (38.6576%) · laptop 395245 px (37.6751%) · tablet 82838 px (10.5334%) · phone 134 px (0.0407%)
+`
+⇒ **TRÙNG KHÍT TỪNG CON SỐ** ⇒ **việc dọn CSS KHÔNG gây lệch** ⇒ **loại trừ hoàn toàn** giả thuyết "rule .request-drawer vẫn tác động" ✔
+**BẰNG CHỨNG QUYẾT ĐỊNH THỨ HAI — kích thước ảnh baseline:**
+| Ảnh baseline CŨ | Ảnh baseline MỚI (chụp lại trên server sạch) |
+|---|---|
+| desktop **134 KB** | desktop **279 KB** |
+⇒ Trang **KHÔNG có CSS** cho ảnh **nhỏ hơn nhiều**; baseline cũ **134 KB** đúng bằng dấu vết **trạng thái không có CSS** ⇒ **baseline cũ được chụp trong lúc server phục vụ CSS 404** ⇒ **SAI**.
+*(Điều này cũng giải thích vì sao lượt pwsh-60 trước đây "đạt 64/64" cho màn 12: lúc đó **cả baseline lẫn ảnh chụp đều đang ở trạng thái mất CSS** ⇒ khớp nhau.)*
+**ĐÃ XỬ LÝ:**
+1. **Khôi phục CSS đã dọn** (từ TEMP) ⇒ equest-drawer trong CSS = **0 dòng** · audit **ĐẠT** (2535 lines · 4472 !important · dead classes=0 · dead vars=0).
+2. ⚠️ **git checkout đã đưa CSS CŨ vào INDEX** (git status báo MM) ⇒ **đã git add lại để index = bản ĐÃ DỌN** (nếu không, commit sẽ **âm thầm hoàn tác** việc dọn CSS — một cái bẫy nguy hiểm của git checkout <commit> -- <path>).
+3. **Chụp lại baseline màn 12 TRÊN SERVER SẠCH**: --update --only=12-drawer-request-detail ⇒ **exit 0** · *"ĐÃ GHI 4 ẢNH CHUẨN"* · 
+av=OK cả 4 kích thước · git status tools/baseline ⇒ **đúng 4 tệp của màn 12**.
+**CÒN LẠI:** 17-modal-po (desktop **286 px** tại (419,549) · laptop **156 px**) — **cùng khả năng**: baseline chụp trong quãng môi trường xáo trộn ⇒ sẽ **xác minh rồi chụp lại** trên server sạch; **và chạy cổng ảnh ĐẦY ĐỦ** để chốt.
+**BÀI HỌC (mới):** git checkout <commit> -- <path> **ghi vào cả INDEX** ⇒ khi dùng để thử nghiệm tạm thời phải **git add lại bản đúng** trước khi commit, nếu không sẽ **hoàn tác thay đổi thật**.
