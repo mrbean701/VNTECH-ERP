@@ -849,3 +849,19 @@ ode scripts/generate-release-manifest.mjs ⇒ sinh manifest phát hành.
 5. 
 pm run build ⇒ kỳ vọng **exit 0** + **BUILT ARTIFACT VALIDATION ĐẠT**.
 **TRẠNG THÁI U-14:** bước B **đã vào mã** (	sc exit=0, diff 1 dòng) — **còn**: làm mới định danh ⇒ build ⇒ **cổng ảnh** (dự kiến lệch ⇒ **cập nhật baseline**, vì vỏ đổi có chủ đích) ⇒ **WF-02/WF-05** ⇒ hồi quy ⇒ **duyệt thật**.
+
+### 16.4. ✅ U-14 bước B — BUILD **exit 0** sau khi làm mới định danh (18/09)
+**Quy trình đã chạy đủ 5 bước:**
+1. Head **comment-only**: drizzle/0145_u14_drawer_to_modal_identity.sql (174 bytes).
+2. 
+ode tools/refresh-phase-identity.mjs 0145_u14_drawer_to_modal_identity.sql "U-14 DRAWER-TO-MODAL" ⇒ **exit 0**
+   * Fixed point stable: OK · **SOURCE 86bbc6285e599ba5cb4ddadd2b815f011f8e2976ad19e73ef98ee0bcf7d779d0** · **SHORT VNTECH-FP-86BBC6285E599BA5** · BRAND 4e1f4812… · RELEASE 3a472ac5… · HEAD  145_u14_drawer_to_modal_identity.sql
+   * ⚠️ **Cách gọi đúng:** tham số là **TÊN TỆP TRẦN** ( 145_….sql), **KHÔNG** kèm drizzle/ — lần đầu tôi truyền drizzle/0145_….sql ⇒ **exit 64 "Cần tham số"**.
+3. 
+ode tools/set-local-identity.mjs ⇒ **exit 0**: Trước: VNTECH-FP-1209FB66EB20C598 | SSOT: VNTECH-FP-86BBC6285E599BA5 → Sau: VNTECH-FP-86BBC6285E599BA5 · trigger bảo vệ đã tạo lại · **KHỚP: true**.
+4. 
+ode scripts/generate-release-manifest.mjs ⇒ **6720 files**.
+5. **
+pm run build ⇒ BUILD EXIT = 0** · **BUILT ARTIFACT VALIDATION: ĐẠT · 5.3.0-MASTER-BASELINE-R1.1.1-FINAL-20260908** · Đã ghi dấu bản chạy VNTECH ERP V5.3.0 FULL W2.
+**⇒ U-14 bước B nay QUA BUILD.** Định danh mới là **hệ quả tất yếu** của việc sửa mã nguồn (đúng cơ chế).
+**CÒN LẠI để đóng U-14:** **cổng ảnh 64/64** *(dự kiến **LỆCH** vì vỏ đổi drawer→modal ⇒ **cập nhật baseline**, không coi là regression)* · **WF-02 + WF-05** · hồi quy **61/61** · **kiểm duyệt thật** (Trả lại/Duyệt) trên phiếu pending_approval.
