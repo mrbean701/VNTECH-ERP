@@ -181,3 +181,31 @@ LATEST COMMIT  : #195 (docs checkpoint) → #196 (docs + cảnh báo công cụ)
   (như `{request.projectCode} · {request.projectName}`) thì phép cắt đó có thể tạo ra **chuỗi JSX sai** ⇒ phải **xem nguyên văn** rồi thay bằng cách dựng an toàn hơn
   (ví dụ: `subtitle={<>{request.projectCode} · {request.projectName}</>}` dựng thẳng từ các biến, không cắt chuỗi bằng regex).
 * **Tình trạng mã:** `app/page.tsx` **NGUYÊN VẸN** — công cụ **tự chối ghi** ở cả 4 cấu hình (chỉ 1 lượt ghi hỏng duy nhất ở vòng đầu, đã hoàn tác).
+
+### 6.4. KẾT LUẬN PHƯƠNG PHÁP: DỪNG GHÉP CHUỖI — chuyển sang refactor thủ công/AST (18/09)
+
+**Phép đo quyết định (đã chạy):** bật `DUMP_HEAD=1` in ra đầu JSX mới:
+```
+return <EntityDetailModal open onClose={close} title="PHIẾU ĐỀ NGHỊ MUA HÀNG"
+  subtitle={<>{request.projectCode} · {request.projectName}</>} entityId={request.requestNo}
+  actions={<><button …>…</button><StatusBadge value={statusLabel(request)} /></>}
+  tabs={[{ key: "tổng-quan", label: "Tổng quan", content: <><section className=…
+```
+và **đếm fragment: `<>` = 13 · `</>` = 13 ⇒ CÂN BẰNG**.
+
+**⇒ Mâu thuẫn:** JSX *trông đúng* và *đếm cân*, nhưng `tsc` vẫn báo `TS17015` *(fragment chưa đóng)* ở vị trí **sau** dòng mới
+⇒ kết luận: **ghép chuỗi (string-splicing) là phương pháp KHÔNG đáng tin cho tệp này** — bộ đếm của tôi bị đánh lừa bởi ký tự
+`<>`/`</>` **nằm trong chuỗi/template** của nội dung drawer, nên "cân bằng 13/13" là **số đếm giả**.
+
+**QUYẾT ĐỊNH (đổi phương pháp — không đốt thêm vòng):**
+1. **DỪNG** hướng "cắt chuỗi rồi ghép lại" cho `RequestDrawer`.
+2. **Chuyển sang REFACTOR THỦ CÔNG** cho riêng component này: đọc trọn dòng 9.255 ký tự, tự tay bọc 5 section + 2 khối vào
+   `EntityDetailModal` (tabs + footer + actions). Với **một** component thì việc này **bounded** và **kiểm chứng được ngay**
+   bằng `tsc` + cổng ảnh, thay vì tiếp tục tin vào công cụ ghép chuỗi.
+3. **Giữ** công cụ `chuyen-drawer-sang-edm.mjs` ở trạng thái **tự chối ghi** (nó vẫn có giá trị: tự kiểm PARSE + bất biến đếm),
+   nhưng **ghi rõ trong tệp là KHÔNG dùng để tự động chuyển** cho tới khi có bộ dựng bằng AST.
+4. Nếu sau này cần tự động hoá: dùng **TypeScript factory/AST** (dựng node JSX từ chính cây AST gốc), **không** cắt chuỗi.
+
+**Đã loại trừ bằng thực nghiệm (5 giả thuyết, ghi để không lặp lại):** độ sâu thẻ · độ sâu fragment (`fragDepth`) ·
+loại mảnh chỉ-thẻ · chỉ cắt khi `buf` cân bằng · lỗi ở phần cố định đầu JSX (đã đo: **đầu JSX ĐÚNG**).
+**Chi phí đã trả:** chỉ **1 lượt ghi hỏng** (đã `git checkout` hoàn tác) — `app/page.tsx` **nguyên vẹn** suốt quá trình.

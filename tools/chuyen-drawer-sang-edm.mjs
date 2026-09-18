@@ -207,6 +207,13 @@ if (!newJsx.includes("request.requestNo")) failures.push("[bất biến] mất `
 // `tsc` mới là thứ bắt được (`TS1109/TS1005/TS2657`). Nay công cụ **tự parse bản JSX mới** trước khi ghi:
 // nếu `typescript` báo bất kỳ lỗi cú pháp nào ⇒ **TỪ CHỐI GHI** và in chẩn đoán.
 try {
+  if (process.env.DUMP_HEAD) {
+    console.log("=== ĐẦU JSX MỚI (520 ký tự) ===");
+    console.log(newJsx.slice(0, 520));
+    // Cân đối fragment CỦA CẢ JSX MỚI (không chỉ từng con) — đây là phép đo quyết định.
+    const o = (newJsx.match(/<>/g) || []).length, c = (newJsx.match(/<\/>/g) || []).length;
+    console.log(`=== đếm <> = ${o} · </> = ${c}${o !== c ? "  ⟵ LỆCH FRAGMENT" : "  ⇒ fragment cân"} ===`);
+  }
   const ts = createRequire(import.meta.url)("typescript");
   const draft = lines.slice(); draft[jsxLineIdx] = newJsx;
   const sf = ts.createSourceFile(PAGE, draft.join("\n"), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
