@@ -242,6 +242,15 @@ public void decidePo(String poId, String status, String reason, String userId, S
             "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
             "NTF_" + java.util.UUID.randomUUID(), poId, notifyUserId, "in_app", notifyTitle, notifyBody, "SENT", null, now, null, now, now);
     }
+
+/** [WF] PHASE 8 (B2/b3) — cập nhật đơn giá 1 dòng PO; ràng buộc theo poId để KHÔNG sửa chéo sang PO khác. */
+@Override
+@Transactional
+public void updatePoItemPrice(String poId, String poItemId, double unitPrice, Instant now) {
+    jdbcTemplate.update(
+        "UPDATE purchase_order_items SET unit_price=?, updated_at=? WHERE id=? AND purchase_order_id=?",
+        unitPrice, now, poItemId, poId);
+}
 }
 
     @Override

@@ -253,6 +253,38 @@ private Map<String, Object> decidePo(Principal principal, Map<String, Object> pa
         ? "Đã duyệt PO " + sv(po, "poNo") + "; chuyển sang chờ giao hàng."
         : "Đã từ chối PO " + sv(po, "poNo") + "; PR vẫn mở để xử lý lại.");
 }
+/** [WF] PHASE 8 (B2/b3) — update_po_price: người có quyền sửa PO được sửa ĐƠN GIÁ; KHOÁ khi PO đã hoàn thành. */
+public Map<String, Object> updatePoPrice(Principal principal, Map<String, Object> payload) {
+    rbac.requireRole(principalAsCurrent(principal), List.of("procurement", "accountant", "admin"));
+    String poId = trim(payload.get("purchaseOrderId"));
+    Map<String, Object> po = store.findPoForReceiving(poId)
+        .orElseThrow(() -> Api("PO không tồn tại."));
+    String status = sv(po, "status");
+    if (COMPLETED_PO_STATUSES.contains(status)) {
+        throw Api("PO đã hoàn thành (" + status + ") — không được sửa giá.");
+    }
+    accessScope.requireProjectAccess(principal.userId(), principal.role(), sv(po, "projectId"), true,
+        "Tài khoản không có quyền sửa PO tại dự án này.");
+    List<?> lines = payload.get("lines") instanceof List<?> l ? l : List.of();
+    if (lines.isEmpty()) throw Api("Chưa chọn dòng PO nào để sửa giá.");
+    Instant now = Instant.now();
+    int changed = 0;
+    for (Object raw : lines) {
+        if (!(raw instanceof Map<?, ?> line)) continue;
+        String itemId = trim(line.get("purchaseOrderItemId"));
+        double price = strictNonNegative(line.get("unitPrice"), "Đơn giá PO");
+        if (itemId.isEmpty()) throw Api("Thiếu mã dòng PO.");
+        store.updatePoItemPrice(poId, itemId, price, now);
+        changed++;
+    }
+    return Map.of("message", "Đã cập nhật đơn giá " + changed + " dòng của PO " + sv(po, "poNo")
+        + "; danh mục vật tư KHÔNG thay đổi.");
+}
+
+/** Nhóm trạng thái PO ĐÃ HOÀN THÀNH ⇒ KHOÁ sửa giá (theo yêu cầu nghiệp vụ). */
+private static final List<String> COMPLETED_PO_STATUSES = List.of(
+    "completed", "completed_with_shortage", "completed_with_exceptions", "cancelled");
+
 /** receive_goods — ghi nhận giao hàng, chưa posting (chờ BCH xác nhận). */
     public Map<String, Object> receiveGoods(Principal principal, Map<String, Object> payload) {
         rbac.requireRole(principalAsCurrent(principal), List.of("warehouse", "admin"));

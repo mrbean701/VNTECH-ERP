@@ -1079,6 +1079,11 @@ case "reject_po" -> {
     AuthUseCase.CurrentUser cu = requireCurrentUser(request);
     Map<String, Object> result = purchaseManagementUseCase.rejectPo(asPurchasePrincipal(cu), payload);
     return ResponseEntity.ok(jsonResult(result));
+case "update_po_price" -> {
+    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+    Map<String, Object> result = purchaseManagementUseCase.updatePoPrice(asPurchasePrincipal(cu), payload);
+    return ResponseEntity.ok(jsonResult(result));
+}
 }case "close_po_line" -> {
                     AuthUseCase.CurrentUser cu = requireCurrentUser(request);
                     Map<String, Object> result = purchaseManagementUseCase.closePoLine(asPurchasePrincipal(cu), payload);

@@ -45,6 +45,9 @@ public interface PurchaseStore {
     /** [WF] PHASE 8 (B2) — QUYẾT ĐỊNH PO + (tuỳ chọn) thông báo người tạo, trong MỘT giao dịch (work_item_id = poId). */
     void decidePo(String poId, String status, String reason, String userId, String notifyUserId,
             String notifyTitle, String notifyBody, Instant now);
+
+    /** [WF] PHASE 8 (B2/b3) — SỬA GIÁ một dòng PO (chỉ khi PO CHƯA hoàn thành; gọi trong 1 giao dịch). */
+    void updatePoItemPrice(String poId, String poItemId, double unitPrice, Instant now);
     void closeRequestItemForShortage(String requestItemId, double shortage, String reason, Instant now);
     long countPoOpenLines(String purchaseOrderId);
     long countRequestOpenLines(String requestId);
