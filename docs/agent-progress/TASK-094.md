@@ -1195,3 +1195,25 @@ pm run build **exit 0 + BUILT ARTIFACT VALIDATION ĐẠT**.
 pm run build khi server UI đang chạy** — (a) làm probe ảnh chụp **trạng thái không nhất quán** (đã gặp ở lượt trước), (b) khiến server **phục vụ HTML cũ + asset 404 ⇒ mất toàn bộ CSS** (lượt này).
 2. Trước khi kết luận "regression thị giác", **phải kiểm HTTP của tài nguyên CSS/JS mà HTML tham chiếu** — nếu 404 thì mọi khác biệt ảnh là **GIẢ**.
 3. Cổng ảnh chỉ đáng tin khi: **server vừa được restart sạch** và **không có tác vụ ghi tệp nào chạy song song**.
+
+### 23.3. 📊 CỔNG ẢNH LƯỢT SẠCH (pwsh-64) — 16/16 MÀN KHỚP, CÒN **2 ĐIỂM CẦN ĐIỀU TRA** (18/09)
+**Xác nhận chẩn đoán CSS-404 là ĐÚNG** — sau khi restart server sạch:
+`
+01-dashboard · 02-project · 03-work · 04-team · 05-material · 06-warehouse · 07-admin ·
+08-requests · 09-dept-assign-kh · 10-dept-assign-da · 11-modal-request · 13-modal-material · 16-modal-receipt
+   → ✅ 0 px (0.0000%) CẢ 4 KÍCH THƯỚC
+`
+*(đặc biệt:  9/10 trước đó báo **"kích thước ảnh khác"** 2203×1730 vs 1920×1080 — nay **KHỚP HOÀN TOÀN** ⇒ chứng minh nguyên nhân là **CSS 404**, không phải nội dung trang)*
+**CÒN LẠI 2 ĐIỂM (ghi để điều tra, KHÔNG cập nhật baseline để che):**
+| Màn | Lệch | Nhận xét |
+|---|---|---|
+| **12-drawer-request-detail** | desktop **38,66 %** · laptop **37,68 %** · tablet **10,53 %** · phone **0,04 %** | **giảm dần theo kích thước màn** ⇒ dạng lệch **bố cục/chiều rộng**, không phải nội dung |
+| **17-modal-po** | desktop **286 px** tại (419,549) · laptop **156 px** | **rất nhỏ, khu trú 1 điểm** ⇒ nghi chênh lệch 1 phần tử nhỏ (nhãn/nút) |
+**GIẢ THUYẾT CẦN KIỂM (chưa kết luận):**
+1. **Baseline 12-* được ghi TRƯỚC khi dọn CSS** ⇒ nếu một phần rule .request-drawer **vẫn tác động** tới màn này (qua **cascade** hoặc do EntityDetailModal dùng lại class con) thì việc xoá chúng **đổi bố cục thật** ⇒ **KHÔNG phải lỗi cổng ảnh**, mà là **tác động thật cần xác định**.
+2. Hoặc baseline 12-* được chụp khi **server chưa sạch** (quãng thời gian có build/identity chạy song song) ⇒ baseline **sai** ⇒ phải chụp lại **trên server sạch** — nhưng **chỉ sau khi** loại trừ giả thuyết 1.
+**BƯỚC ĐIỀU TRA KẾ TIẾP (đã định):**
+* **So 12-* giữa "CSS trước khi dọn" và "CSS sau khi dọn"** để biết rule nào **thực sự tác động** (dùng ảnh: chụp màn 12 bằng CSS cũ vs CSS mới, hoặc ision_pixel_diff).
+* Kiểm xem EntityDetailModal/RequestDrawer có dùng **class con** nào nằm trong các rule đã xoá (.request-drawer .table-wrap, .request-drawer .timeline, .request-drawer .request-summary…) ⇒ nếu **modal chứa** .table-wrap/.timeline/.request-summary thì rule cha .request-drawer xoá đi **có thể làm mất style con** (vì khối !important cũ có thể vẫn khớp nếu tổ tiên còn class khác).
+* Với 17-modal-po: soi vùng (419,549) (dùng --locate=419,549) để biết **phần tử nào** khác.
+**KHẲNG ĐỊNH LẠI:** **KHÔNG** cập nhật baseline cho 12-*/17-* cho tới khi xác định được nguyên nhân (tránh **che lỗi** — đúng bài học đã áp dụng 2 lần trước).
