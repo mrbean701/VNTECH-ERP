@@ -384,6 +384,17 @@ async function materialFromGovernedCode({materialId="", internalCode="", contrac
     return null;
 }
 const COMPANY_LEADERSHIP_ROLE_CODES = new Set(["director","tgd","ptgd","giam_doc","pho_giam_doc","thuky","thu_ky_tgd"]);
+// Q2 (18/09/2026) — NGƯỜI DÙNG QUYẾT: "giữ Java, sửa JS" cho lớp lệch `isCompanyLeadership` (TASK-024).
+// Java có **HAI** khái niệm "Ban lãnh đạo" KHÁC NHAU, JS trước đây chỉ có MỘT ⇒ lệch CẢ HAI CHIỀU:
+//   • `RbacService.isCompanyLeadership` = `List.of("director","accountant")` → dùng cho CỔNG QUYỀN HÀNH ĐỘNG
+//     (`requireActionModule` bỏ qua kiểm module) ⇒ Java cấp THỪA cho `accountant`, cấp THIẾU cho
+//     `thuky`/`tgd`/`giam_doc`/`hcpc_truong` (base_role='director').
+//   • `BootstrapDataAdapter.isCompanyLeadership` = **7 mã vai trò** + `base_role='director'` → dùng cho BỘ LỌC
+//     DỮ LIỆU BOOTSTRAP (đã port khớp JS từ TASK-050).
+// Nay JS phản chiếu ĐÚNG cả hai: cổng quyền dùng tập {director, accountant}; bộ lọc bootstrap giữ tập cũ.
+// Bằng chứng: `tools/probe-task024-leadership-parity.mjs` (đối chiếu 3 tệp nguồn + in tài khoản ĐỔI quyền).
+const COMPANY_LEADERSHIP_ACTION_CODES = new Set(["director","accountant"]);
+function isCompanyLeadershipActionGate(user){ return COMPANY_LEADERSHIP_ACTION_CODES.has(clean(user?.role).toLowerCase()); }
 function isCompanyLeadership(user){ return !isAdmin(user) && (COMPANY_LEADERSHIP_ROLE_CODES.has(clean(user?.role).toLowerCase()) || effectiveRole(user)==="director"); }
 function departmentCodeForUser(user){ const dep=clean(user?.department).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase(); const role=clean(user?.role).toLowerCase(); const base=effectiveRole(user); if(dep.includes("ke hoach")||dep==="kh"||base==="procurement") return "KH"; if(dep.includes("du an")||dep==="da"||base==="project") return "DA"; if(dep.includes("tai chinh")||dep.includes("ke toan")||dep==="tckt"||base==="accountant") return "TCKT"; if(dep.includes("hanh chinh")||dep.includes("phap che")||dep==="hcpc"||role==="thuky"||role==="thu_ky_tgd") return "HCPC"; if(dep.includes("ban chi huy")||dep==="bch"||["commander","engineer","warehouse"].includes(base)) return "BCH"; return ""; }
 function isDepartmentApprover(user,department){ const role=clean(user?.role).toLowerCase(); return department==="KH"?role==="kh_truong":department==="DA"?role==="da_truong":false; }
@@ -394,7 +405,7 @@ function normalizeBulkStatus(value){const status=clean(value||"ACTIVE").toUpperC
 
 function defaultDepartmentPermission(user,moduleKey){
     if(moduleKey==="dashboard") return {canView:1,canUse:1,canCreate:0,canEdit:0,canApprove:0,canExport:1};
-    if(isCompanyLeadership(user) && moduleKey!=="admin") return {canView:1,canUse:1,canCreate:1,canEdit:1,canApprove:1,canExport:1};
+    if(isCompanyLeadershipActionGate(user) && moduleKey!=="admin") return {canView:1,canUse:1,canCreate:1,canEdit:1,canApprove:1,canExport:1};
     const dep=departmentCodeForUser(user); let matches=false;
     if(dep==="KH") matches=moduleKey.startsWith("dept_plan_")||moduleKey==="supplier_catalog";
     else if(dep==="DA") matches=moduleKey.startsWith("dept_project_");
@@ -415,7 +426,7 @@ async function replaceDepartmentDefaults(userId){
 }
 async function canUseModule(user, moduleKey, capability = "canUse") {
     if (isAdmin(user)) return true;
-    if (isCompanyLeadership(user) && moduleKey!=="admin") return true;
+    if (isCompanyLeadershipActionGate(user) && moduleKey!=="admin") return true;
     const columns = { canView: "can_view", canUse: "can_use", canCreate: "can_create", canEdit: "can_edit", canApprove: "can_approve", canExport: "can_export" };
     const column = columns[capability] || columns.canUse;
     const row = await first(`SELECT ump.${column} AS allowed FROM user_module_permissions ump JOIN module_catalog mc ON mc.module_key=ump.module_key AND mc.active=1 LEFT JOIN menu_group_catalog mg ON mg.group_key=mc.group_key WHERE ump.user_id=? AND ump.module_key=? AND (ump.permission_expires_at IS NULL OR ump.permission_expires_at>?) AND (mc.group_key IS NULL OR mg.active=1)`, user.id, moduleKey, now());

@@ -569,11 +569,18 @@ public final class MaterialCatalogManagementUseCase {
                 createdSubcategories++;
                 store.insertSubcategory(subcategoryId, categoryId, subcategoryCode, subcategoryName,
                         ungrouped ? "Nhóm mặc định" : "Tạo từ file danh mục vật tư V5.0.0",
-                        // 3 tham số này để null — ĐÚNG như JS `system-route.mjs:2593`: câu INSERT của luồng
-                        // NHẬP DANH MỤC VẬT TƯ không ghi scope_examples/review_status/adjustment_note.
-                        null, null, null,
-                        ungrouped ? 9999 : 999, principal.userId(), now);
-            } else if (!subcategoryName.isEmpty() && !subcategoryName.equals(sv(subcategory, "name"))) {
+                        // Q3 (18/09/2026) — 🔴 SỬA LỖI 409 KHI NHẬP DANH MỤC VẬT TƯ:
+                        // JS `system-route.mjs:2604` chèn **9 cột** cho luồng NHẬP
+                        // (`id,category_id,code,name,description,sort_order,active,created_at,updated_at`) ⇒ cột
+                        // `review_status` nhận **GIÁ TRỊ MẶC ĐỊNH của CSDL = 'approved'**.
+                        // Bản Java gọi hàm dùng chung `insertSubcategory` (12 cột, phục vụ MÀN nhóm con) và truyền
+                        // **null** cho `review_status` — cột này **NOT NULL DEFAULT 'approved'** ⇒
+                        // `DataIntegrityViolationException` ⇒ HTTP **409**; cả lô nằm trong 1 transaction nên
+                        // **nhóm vừa tạo bị giữ lại, còn nhóm con + vật tư KHÔNG được ghi** — đúng triệu chứng
+                        // "vật tư nhập vào mất nhóm". Nay truyền giá trị mặc định ⇒ **giá trị lưu GIỐNG HỆT JS**.
+                        // (Hai cột còn lại `scope_examples`/`adjustment_note` là NULLABLE — JS cũng không ghi.)
+                        null, "approved", null,
+                        ungrouped ? 9999 : 999, principal.userId(), now);            } else if (!subcategoryName.isEmpty() && !subcategoryName.equals(sv(subcategory, "name"))) {
                 subcategory.put("name", subcategoryName);
                 store.renameSubcategoryActive(sv(subcategory, "id"), subcategoryName, now);
             }
