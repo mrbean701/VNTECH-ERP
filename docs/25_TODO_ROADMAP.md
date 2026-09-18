@@ -49,7 +49,7 @@
 | `S-02` | Toàn hệ | **Bật `requireActionModule`** tại một điểm kiểm duy nhất trong `SystemController` | **P0** | S-01 | - | - | - | CHECK | **DONE** |
 | `S-03` | Toàn hệ | Đổi mặc định thành **TỪ CHỐI** khi action chưa khai module + `PUBLIC_ACTIONS` allowlist 5 hành động | **P0** | S-02 | - | - | - | CHECK | **DONE** |
 | `S-04` | Toàn hệ | Bật an toàn: thu hẹp phạm vi còn 29 action nghiệp vụ, không đụng 41 action đã che | **P0** | S-03 | - | - | - | CHECK | **DONE** |
-| `S-05` | Tệp | Kiểm quyền cho `/api/files` (endpoint riêng, không đi qua action) | **P0** | — | - | CHG | - | CHECK | TODO |
+| `S-05` | Tệp | Kiểm quyền cho `/api/files` (endpoint riêng, không đi qua action) | **P0** | — | - | CHG | - | CHECK | **DONE / KIEM-CHUNG-3-CA** |
 | `S-06` | Phòng ban | Cấp `canApprove` cho BCH trên `receiving`/`warehouse_receipt` để bước "BCH xác nhận giao hàng" chạy được | **P0** | S-01 | - | - | - | MODEL | **DONE** |
 | `S-07` | Toàn hệ | Chạy `tools/probe-security-rbac.mjs` — viết lại để đo theo **quyền thật** của tài khoản | **P0** | S-04 | - | - | - | CHECK | **DONE** |
 | `S-08` | Workflow | Snapshot **danh sách người được chỉ định**, không đọc live | P1 | — | COL | - | - | - | **DONE / AP-DUNG 100** |

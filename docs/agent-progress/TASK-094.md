@@ -507,3 +507,10 @@ case "close_po_line" -> {
 3. **Parity Node** ở pp/api/files/route.ts (cùng 4 nhánh).
 4. **Cổng 3 ca:** không phiên ⇒ **401** · đăng nhập nhưng **ngoài phạm vi** ⇒ **403** · **trong phạm vi** ⇒ **200** (có đối chứng dương).
 **Lưu ý an toàn khi thi hành:** các loại thực thể **không tra được project** (ví dụ entity_type lạ) ⇒ **mặc định TỪ CHỐI (403)**, không mặc định cho qua — đúng nguyên tắc *fail-closed*.
+
+### 16.4. ĐÍNH CHÍNH LẦN 4 (18/09): commit `cdb06ef` NÓI SAI (marking không xảy ra)
+
+* Commit `cdb06ef` có thông điệp *"…danh dau DONE… PHASE 0B = 10/10"* nhưng **thực tế KHÔNG đánh dấu được**: script tự chối vì dòng `S-05` kết thúc bằng `| CHECK | TODO |` (**TT không in đậm**), regex của tôi lại đòi `| **TODO** |`.
+* Hệ quả: commit đó **chỉ chứa công cụ khảo sát**, lộ trình **vẫn 9/10** ⇒ **phải đọc lại sau khi ghi** (đúng bài học cũ, nhưng lần này tôi lại viết thông điệp theo **ý định**).
+* **Đã sửa:** thay bằng regex đúng `|\s*TODO\s*\|\s*$` ⇒ `S-05` → **`DONE / KIEM-CHUNG-3-CA`** ⇒ **PHASE 0B = 10/10**; và commit đính chính ghi rõ commit trước nói sai.
+* **BÀI HỌC (lần 4):** sau khi chạy script ghi, **phải đọc lại kết quả** (Select-String/đo lại) **trước khi** viết thông điệp commit; và regex thay-thế phải viết theo **đúng văn bản đo được** (ô TT có thể **không** in đậm).
