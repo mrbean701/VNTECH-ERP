@@ -74,6 +74,11 @@ public class SystemController {
     /** TASK-023b — kiểm PHẠM VI dự án ở tầng web (đúng chú thích của ProjectContractUseCase). */
     private final com.vntech.erp.application.rbac.AccessScopeService accessScopeService;
 
+    /** [WF] PHASE 8 (B1, 18/09) — bean cho CẢNH BÁO phê duyệt (CHỈ CẢNH BÁO, KHÔNG chặn).
+     *  Dùng TIÊM TRƯỜNG để không phải sửa constructor dài; Spring tự tiêm theo kiểu. */
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.vntech.erp.application.port.out.RequestStore requestStore;
+
     public SystemController(AuthUseCase authUseCase, SessionCookieFactory sessionCookieFactory,
                             BootstrapUseCase bootstrapUseCase,
                             BoqManagementUseCase boqManagementUseCase,
@@ -1061,7 +1066,9 @@ public class SystemController {
                 case "create_po" -> {
                     AuthUseCase.CurrentUser cu = requireCurrentUser(request);
                     Map<String, Object> result = purchaseManagementUseCase.createPo(asPurchasePrincipal(cu), payload);
-                    return ResponseEntity.ok(jsonResult(result));
+                    Map<String, Object> out = new java.util.LinkedHashMap<>(result);
+                    out.put("warnings", requestStore.approvalWarnings("purchase_order", String.valueOf(result.getOrDefault("poId", ""))));
+                    return ResponseEntity.ok(jsonResult(out));
                 }
                 case "close_po_line" -> {
                     AuthUseCase.CurrentUser cu = requireCurrentUser(request);
@@ -1151,7 +1158,9 @@ public class SystemController {
                 case "issue_stock" -> {
                     AuthUseCase.CurrentUser cu = requireCurrentUser(request);
                     Map<String, Object> result = stockManagementUseCase.issueStock(asStockPrincipal(cu), payload);
-                    return ResponseEntity.ok(jsonResult(result));
+                    Map<String, Object> out = new java.util.LinkedHashMap<>(result);
+                    out.put("warnings", requestStore.approvalWarnings("stock_issue", String.valueOf(result.getOrDefault("issueId", ""))));
+                    return ResponseEntity.ok(jsonResult(out));
                 }
                 case "save_supplier" -> {
                     AuthUseCase.CurrentUser cu = requireCurrentUser(request);

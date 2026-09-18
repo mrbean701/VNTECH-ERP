@@ -17,6 +17,22 @@ public class RequestStoreAdapter implements RequestStore {
 
     private final JdbcTemplate jdbcTemplate;
 
+    /** [WF] PHASE 8 (B1) — CHẾ ĐỘ CHỈ CẢNH BÁO: TRẢ MẢNG cảnh báo, TUYỆT ĐỐI KHÔNG ném lỗi. */
+    @Override
+    public List<String> approvalWarnings(String entityType, String entityId) {
+        if (entityType == null || entityType.isBlank() || entityId == null || entityId.isBlank()) return List.of();
+        try {
+            Map<String, Object> row = jdbcTemplate.queryForMap(
+                "SELECT COUNT(*) AS total, COALESCE(SUM(CASE WHEN status='approved' THEN 1 ELSE 0 END),0) AS approved " +
+                "FROM approvals WHERE entity_type=? AND entity_id=?", entityType, entityId);
+            long total = ((Number) row.getOrDefault("total", 0)).longValue();
+            long approved = ((Number) row.getOrDefault("approved", 0)).longValue();
+            if (total == 0) return List.of(entityType + " " + entityId + ": chưa có bản ghi phê duyệt nào (quy trình động chưa khởi tạo) — vẫn cho phép theo chế độ CHỈ CẢNH BÁO.");
+            if (approved < total) return List.of(entityType + " " + entityId + ": còn " + (total - approved) + "/" + total + " bước CHƯA duyệt — vẫn cho phép theo chế độ CHỈ CẢNH BÁO.");
+            return List.of();
+        } catch (RuntimeException ex) { return List.of(); }
+    }
+
     public RequestStoreAdapter(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }

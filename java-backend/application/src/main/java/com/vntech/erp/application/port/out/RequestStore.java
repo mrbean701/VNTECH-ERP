@@ -11,6 +11,9 @@ import java.util.Optional;
  */
 public interface RequestStore {
 
+    /** [WF] PHASE 8 (B1) — CẢNH BÁO phê duyệt (KHÔNG chặn) cho một chứng từ theo (entityType, entityId). */
+    List<String> approvalWarnings(String entityType, String entityId);
+
     Optional<Map<String, Object>> findActiveProject(String projectId);       // {code,name,status}
     Optional<Map<String, Object>> findContract(String projectId, String contractId);
     Optional<Map<String, Object>> defaultContract(String projectId);          // is_primary=1 active, fallback active đầu tiên
