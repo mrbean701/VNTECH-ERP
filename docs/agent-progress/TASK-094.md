@@ -526,3 +526,14 @@ case "close_po_line" -> {
 3. **PurchaseManagementUseCase** — thêm pprovePo (⇒ status='waiting_delivery' + decidePo) và ejectPo (⇒ status='cancelled' + decision_reason + decidePo + insertTaskNotification cho **uyer_user_id**), theo khuôn closePoLine (**dòng 202-224**), dùng indPoForReceiving để đọc.
 4. **SystemController** — thêm 2 case theo khuôn close_po_line (**dòng 1073-1077**).
 **Kiểm chứng:** mvn package (**CHỜ NHẢ TỆP JAR**) → restart → gọi pprove_po/eject_po qua Java ⇒ **hết** thông điệp *"chưa được triển khai trên backend Java"* ⇒ rồi kiểm chứng chức năng trên **PO test**.
+
+### 14.9. ✅ PARITY JAVA pprove_po/eject_po ĐÃ SỐNG (18/09) — BẰNG CHỨNG
+* **Build:** mvn -q -DskipTests package ⇒ **exit 0**; Java khởi động sạch: **Flyway "Successfully validated 18 migrations"**, schema **v18**, Tomcat :18081.
+* **Trước khi port:** gọi qua Java ⇒ {"ok":false,"error":"Action 'approve_po' **chưa được triển khai trên backend Java (Strangler Fig)**."}
+* **Sau khi port (đo lại ngay):**
+  * pprove_po ⇒ **HTTP 400** {"ok":false,"error":"**PO không tồn tại hoặc đã xử lý.**"}
+  * eject_po ⇒ **HTTP 400** {"ok":false,"error":"**PO không tồn tại hoặc đã xử lý.**"}
+  ⇒ **Đây là thông điệp CỦA CHÍNH ỨNG DỤNG** (từ decidePo(...) của tôi), **không còn** thông điệp Strangler Fig ⇒ **2 action đã được Java nhận và thực thi** ✔
+  *(dùng id PO không tồn tại ⇒ **không đột biến dữ liệu**; lỗi 400 là do Api(...) của use-case, không phải lỗi framework.)*
+* **⇒ Trạng thái B2/bước 2:** **JS ✔ + Java ✔ + cổng "action được nhận" ✔**. **Còn lại:** kiểm chứng **end-to-end trên PO thật** (tạo PO pending_approval ⇒ eject_po ⇒ PO cancelled + decision_reason + **MR không đổi** + có 	ask_notifications) ⇒ **gộp vào D5** (cần dữ liệu test).
+**Bài học đã trả giá trong bước này:** khi chèn trước **một chữ ký method**, phải kiểm **annotation ngay trên nó** (@Override/@Transactional) — nếu không sẽ **tách annotation khỏi method** gây lỗi biên dịch *"@Override is not a repeatable annotation"*.
