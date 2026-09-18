@@ -514,3 +514,15 @@ case "close_po_line" -> {
 * Hệ quả: commit đó **chỉ chứa công cụ khảo sát**, lộ trình **vẫn 9/10** ⇒ **phải đọc lại sau khi ghi** (đúng bài học cũ, nhưng lần này tôi lại viết thông điệp theo **ý định**).
 * **Đã sửa:** thay bằng regex đúng `|\s*TODO\s*\|\s*$` ⇒ `S-05` → **`DONE / KIEM-CHUNG-3-CA`** ⇒ **PHASE 0B = 10/10**; và commit đính chính ghi rõ commit trước nói sai.
 * **BÀI HỌC (lần 4):** sau khi chạy script ghi, **phải đọc lại kết quả** (Select-String/đo lại) **trước khi** viết thông điệp commit; và regex thay-thế phải viết theo **đúng văn bản đo được** (ô TT có thể **không** in đậm).
+
+### 14.8. [PHASE 8 · B2 · parity Java] TINH CHỈNH KẾ HOẠCH — tận dụng method ĐÃ CÓ (18/09)
+**Đo lại PurchaseStore (port) — các method TÁI DÙNG ĐƯỢC:**
+* Optional<Map<String,Object>> findPoForReceiving(String poId) — **dòng 51** — *"po + request + project info"* ⇒ **dùng để ĐỌC PO** (có trạng thái + dự án + thông tin người tạo).
+* oid updatePoReceivedStatus(String purchaseOrderId, String status, Instant now) — **dòng 71** — **cập nhật trạng thái PO KHÔNG đụng MR** ✔ (đúng yêu cầu *"PR vẫn mở"* cho eject_po).
+* ⚠️ **KHÔNG dùng** updatePoStatusAndMr(...) (**dòng 64**) cho eject_po vì tên nó cho thấy **có đụng MR**.
+**⇒ KẾ HOẠCH RÚT GỌN CÒN 4 TỆP + 2 METHOD MỚI (thay vì dựng từ đầu):**
+1. **PurchaseStore (port)** — thêm **2 method**: oid decidePo(String poId, String status, String reason, String userId, Instant now); (ghi decision_reason/decided_by/decided_at) và oid insertTaskNotification(String userId, String title, String body, Instant now); (12 cột 	ask_notifications, tự chứa — không phải đấu dây chéo use-case).
+2. **PurchaseStoreAdapter** — cài đặt 2 method trên (native SQL).
+3. **PurchaseManagementUseCase** — thêm pprovePo (⇒ status='waiting_delivery' + decidePo) và ejectPo (⇒ status='cancelled' + decision_reason + decidePo + insertTaskNotification cho **uyer_user_id**), theo khuôn closePoLine (**dòng 202-224**), dùng indPoForReceiving để đọc.
+4. **SystemController** — thêm 2 case theo khuôn close_po_line (**dòng 1073-1077**).
+**Kiểm chứng:** mvn package (**CHỜ NHẢ TỆP JAR**) → restart → gọi pprove_po/eject_po qua Java ⇒ **hết** thông điệp *"chưa được triển khai trên backend Java"* ⇒ rồi kiểm chứng chức năng trên **PO test**.
