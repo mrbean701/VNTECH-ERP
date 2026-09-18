@@ -782,3 +782,16 @@ DELETE FROM goods_receipts WHERE purchase_order_id='PO_0843c57c-…' ⇒ **xoá 
 **ĐIỀU TRA PHỤC HỒI (đã thử, có bằng chứng):** ① log_bin=ON, mysqlbinlog.exe có sẵn, **nhưng** Access to the path 'C:\ProgramData\MySQL\MySQL Server 8.0\Data' is denied ⇒ cần **Administrator**; ② SHOW MASTER STATUS ⇒ **ERROR 1227 thiếu SUPER/REPLICATION CLIENT**; ③ **không có** file backup/dump trong repo.
 **SQL PHỤC HỒI SẴN SÀNG (chờ dữ liệu từ binlog/backup):** INSERT INTO goods_receipts (…) VALUES (…) cho **2 id trên** — **sẽ điền đúng giá trị trích từ binlog**, KHÔNG suy đoán.
 **TRẠNG THÁI:** ⛔ **BLOCKED — chờ người dùng** (backup / quyền Administrator / user MySQL có SUPER).
+
+### 16. [PHASE 1 · U-14] PHẠM VI ĐÃ ĐO CHÍNH XÁC — và lý do CHIA 2 BƯỚC (18/09)
+**Đo được trong pp/page.tsx (3409 dòng):**
+* EntityDetailModal **đã được import** (dòng 20) và **đã được dùng** ở cuối RequestDrawer (dòng 2918) cho modal phụ *"Tổng hợp giao nhận"*.
+* Khối RequestDrawer = **dòng 2900–2919 (20 dòng)**: 2901-2911 props + cờ dẫn xuất + 3 handler (updateReturned/esubmit/deleteReturned); 2914 collapsed; 2917 summaryOpen.
+* **Dòng 2918 là MỘT dòng JSX khổng lồ** chứa **toàn bộ UI drawer**: header + summary-grid + ApprovalTimeline + ActivityTimeline + khối "Tổng hợp giao nhận" + form "CHT sửa phiếu bị trả lại" + FileUpload + footer 4 nút + EntityDetailModal.
+⇒ **Việc còn lại của U-14:** thay **vỏ <aside class="drawer request-drawer">** bằng EntityDetailModal làm **bề mặt chi tiết dùng chung** (giữ nguyên handlers/state/logic đã có).
+**⚠️ RỦI RO (vì sao KHÔNG làm một phát trong 1 vòng):** drawer này **chính là UI chi tiết phê duyệt** đang được **3 cổng phủ**: WF-02 (5/5) · WF-05 (5/5) · **cổng ảnh 16 màn × 4 = 64/64** — ngoài ra có **hợp đồng dữ liệu** data-contract="VNTECH_REQUEST_DETAIL_ALL_LINES_V1" và 4 nút hành động (Trả lại CHT · Duyệt bước · Xóa phiếu & lập mới · Gửi lại) ⇒ một bản viết lại JSX lớn có **bán kính ảnh hưởng rộng**.
+**⇒ CHIA 2 BƯỚC AN TOÀN (đề xuất, có kiểm chứng từng bước):**
+* **Bước A — DI CHUYỂN THUẦN (không đổi hành vi):** tách JSX của drawer ra component riêng pp/screens/RequestDetail.tsx (nhận đúng props hiện có), RequestDrawer chỉ còn gọi component đó. **Cổng:** 	sc · 
+pm run build · **cổng ảnh 64/64** · **WF-02/WF-05** · hồi quy **61/61**.
+* **Bước B — ĐỔI VỎ:** thay vỏ <aside> bằng EntityDetailModal (dùng đúng data-contract + tabs), ariant="page" vẫn hoạt động. **Cổng:** như bước A **+ kiểm thao tác duyệt thật** (Trả lại/Duyệt) trên 1 phiếu pending_approval.
+**TRẠNG THÁI:** U-14 **chưa xong**; đã có **phạm vi chính xác + kế hoạch 2 bước + cổng kiểm chứng**. *Không viết lại JSX lớn khi chưa có kế hoạch từng bước — vì đây là bề mặt đang được 3 cổng bảo vệ.*
