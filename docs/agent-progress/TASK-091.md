@@ -49,7 +49,30 @@ riêng màn này để chốt ảnh chuẩn mới (ghi rõ trong hồ sơ là **
 
 ## 5. Việc kế tiếp (bước 2/6)
 
-1. Đọc trọn dòng 2894 (9.254 ký tự) + phần còn lại của `EntityDetailModal` (dòng 90–158).
-2. Viết công cụ chuyển `tools/chuyen-drawer-sang-edm.mjs` (mỏ neo + tự chối) — **không sửa tay dòng khổng lồ**.
-3. Chạy khô → in kế hoạch → áp dụng → chạy chuỗi kiểm chứng bước 6.
-4. Khảo sát `ReceiptDrawer` (ứng viên thứ 2) **sau khi** màn đầu xong ⇒ tách thành vòng riêng.
+1. ~~Đọc trọn dòng 2894~~ → **ĐÃ THỬ bằng công cụ bóc cấu trúc: THẤT BẠI, ghi lại trung thực.**
+   `tools/boc-cau-truc-jsx.mjs` (mới viết) chạy trên dòng 2894 chỉ bóc được **41 mục và DỪNG ở offset ~2.000/9.254**
+   ⇒ bộ đếm ngoặc nhọn **bị kẹt ở mức > 0** (gặp `{`/`}` trong template literal hoặc chữ JSX) nên **phần lớn thẻ bị bỏ qua**,
+   và nhãn thẻ **ghép cặp SAI** (`close <aside>` in ra đoạn `</header>`).
+   ⇒ **Đã dán cảnh báo ngay đầu tệp công cụ: "CHƯA ĐÁNG TIN — KHÔNG dùng để lập kế hoạch sửa mã"**
+   (đúng bài học #21/#25: *công cụ đo sai còn nguy hiểm hơn không đo* — nếu sửa theo bản đồ sai thì `tsc` có thể
+   vẫn xanh mà giao diện hỏng im lặng).
+2. **Bước 3/6 (làm lại cho đúng):** thay bộ quét bằng **AST thật** — dự án đã có `typescript` trong devDependencies,
+   dùng `ts.createSourceFile` + `ts.forEachChild` để lấy **vị trí thẻ JSX chính xác** (không tự viết parser).
+3. Sau khi có bản đồ ĐÚNG: viết `tools/chuyen-drawer-sang-edm.mjs` (mỏ neo + **tự chối ghi**), chạy khô → áp dụng.
+4. Kiểm chứng bước 6 (mục 3.6) rồi `--update` **riêng màn** `12-drawer-request-detail` (thay đổi **có chủ đích**).
+5. Khảo sát `ReceiptDrawer` (`page.tsx:2903`, 4.635 ký tự — ứng viên thứ 2) **sau khi** màn đầu xong ⇒ tách vòng riêng.
+
+## 6. Trạng thái bàn giao (để vòng sau tiếp tục ngay)
+
+```
+CURRENT TASK   : TASK-091 — U-14 chuyển RequestDrawer sang EntityDetailModal
+CURRENT STEP   : 2/6 (bản đồ cấu trúc ĐÚNG) — bước 1/6 đã xong và đã commit #195
+COMPLETED      : khảo sát · API EntityDetailModal · công thức 6 bước · bằng chứng TRƯỚC (4 ảnh ĐẠT 0 px)
+IN PROGRESS    : công cụ bóc cấu trúc JSX (bản đầu SAI — đã dán cảnh báo, phải thay bằng AST `typescript`)
+REMAINING      : bước 3 → 6 (công cụ chuyển · áp dụng · kiểm chứng · chốt ảnh chuẩn màn 12 · khảo sát ReceiptDrawer)
+NEXT ACTION    : viết `tools/boc-cau-truc-jsx-ast.mjs` bằng `ts.createSourceFile`
+BLOCKER        : không (10 việc chờ người dùng duyệt KHÔNG chặn U-14)
+FILES CHANGED  : docs/agent-progress/TASK-091.md · tools/boc-cau-truc-jsx.mjs (mới) · MASTER_STATUS · TASK_INDEX
+LATEST COMMIT  : #195 (docs checkpoint) → #196 (docs + cảnh báo công cụ)
+```
+
