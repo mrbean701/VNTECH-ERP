@@ -336,3 +336,11 @@ vl(payload.get("receivedByName")) ⇒ **NULL** ⇒ vi phạm NOT NULL ⇒ **409*
 **Việc còn lại của B2:** (a) đổi trạng thái khởi tạo PO ⇒ pending_approval (Java + JS parity); (b) thêm action **eject_po** (PO ⇒ cancelled + decision_reason/decided_by/decided_at + **PR KHÔNG đổi** + **thông báo cho người tạo PO** qua 	ask_notifications/email_outbox); (c) **luật giá PO** trên purchase_order_items.unit_price (canEdit sửa giá · **KHÓA sau khi PO hoàn thành** · **không ghi ngược** danh mục).
 **Bài học lặp lại (lần 4 trong phiên):** lại dùng 
 ode -e và bị PowerShell phá nháy ⇒ **luôn viết tệp .mjs**.
+
+### 14.1. Mỏ neo JS đã lấy được + PHÁT HIỆN quan trọng (18/09)
+* **JS INSERT INTO purchase_orders** nằm **trong dòng 1321** (dòng dài, chứa cả INSERT INTO document_sequences và INSERT INTO purchase_orders với literal **'waiting_delivery'**).
+  ⇒ Sửa parity với Java: đổi literal trạng thái PO khởi tạo ⇒ **pending_approval** ở **cả** Java (PurchaseManagementUseCase ~dòng 177) **và** JS (dòng 1321).
+* ⚠️ **PHÁT HIỆN PHẢI ĐIỀU TRA TRƯỚC KHI SỬA (tránh làm trùng cơ chế):** chuỗi **"pending_approval" ĐÃ XUẤT HIỆN 6 chỗ** trong scripts/system-route.mjs:
+  **dòng 994, 1099, 1491, 1496, 1561, 1578**. Cùng tệp còn có "draft" ×10, "approved" ×41, "waiting_delivery" ×4 (1321, 1323, 1378, 1442), "partial_delivery" ×4, "delivery_waiting_bch", "completed_with_exceptions", "delivery_completed", "delivery_partial".
+  ⇒ **VÒNG SAU phải đọc 6 dòng đó** để biết pending_approval hiện dùng cho **thực thể nào** (nếu **đã dùng cho PO** thì KHÔNG thêm cơ chế mới, chỉ nối vào luồng sẵn có; nếu dùng cho thực thể khác thì mới thêm cho PO).
+* Công cụ: 	ools/b2-mo-neo-js-po-status.mjs (in mỏ neo INSERT + liệt kê literal trạng thái kèm số dòng — **viết dạng .mjs theo đúng bài học**).
