@@ -166,6 +166,16 @@ Kèm probe: **đối chứng dương** (chưa duyệt ⇒ có **cảnh báo** nh
 * **Không đổi CSDL** cho yêu cầu này (bảng `workflow_step_approvers` đã đủ cột) ⇒ **không cần báo cáo CSDL mới**.
 * Kiểm chứng: `tsc` · eslint · build · **màn quản trị** thêm/xoá người duyệt cho 1 bước ⇒ đọc lại từ CSDL thấy đúng · cổng `probe-column-parity` giữ ĐẠT.
 
+### 10.1. Hiện trạng mã + HAI MỎ NEO ĐÃ CHỐT (để vòng sau sửa ngay, không phải khảo sát lại)
+* Màn cấu hình = **`WorkflowModal`** tại **`app/page.tsx:2626`**; dữ liệu lấy từ bootstrap `workflowDefinitions` **`page.tsx:372`** · `workflowSteps` **`:373`** · `workflowStepApprovers` **`:374`**.
+* Khối "bày toàn bộ ứng viên" (nguyên nhân modal dài) = **`page.tsx:2728–2735`**: `<div className="admin-mini-list">{shown.map((u) => …toggleApprover(index, String(u.id))…)}</div>`.
+  Đây là chỗ DUY NHẤT cần thay: → ô **tìm kiếm** + gợi ý (≤8) + **danh sách đã chỉ định ở dưới** + **cảnh báo vàng** khi bước chưa có ai.
+* Hàm phụ trợ đã có sẵn, **không cần viết mới**: `candidates = workflowApproverCandidates(data, moduleKey)` (`:2649`) · `shown` (`:2651`) · `patchStep` (`:2653`) · `toggleApprover` (`:2654`, đã xử lý đúng `single` = giữ 1 người).
+* **Công cụ đã viết:** `tools/_wf-ui-tim-nguoi-duyet.mjs` (mỏ neo + tự chối) — lượt chạy khô đầu **DỪNG, không ghi tệp**, đúng 2 lỗi mỏ neo cần sửa ở vòng sau:
+  1. `[thêm suggestionsFor] khớp 2 lần` vì `async function save(event: FormEvent<HTMLFormElement>) {` **xuất hiện 2 lần trong tệp** ⇒ phải đổi sang mỏ neo DUY NHẤT, ví dụ dòng `const moduleOptions = configuredModules(data).filter((m) => m.key !== "admin");` (trong `WorkflowModal`).
+  2. `[thay khối chọn người duyệt] khớp 0 lần` ⇒ khối OLD chép lại **chưa khớp byte** (khác khoảng trắng/`style={…}`); vòng sau phải **đọc lại đúng dòng 2728–2735** rồi dán nguyên văn làm mỏ neo (bài học: mỏ neo dài phải lấy bằng máy, không chép tay).
+* **Kiểm chứng đã chạy tới đâu:** chỉ mới **chạy khô công cụ** (chưa sửa mã) ⇒ `app/page.tsx` **nguyên vẹn**, cây làm việc sạch.
+
 ## 7. RỦI RO ĐÃ NHẬN DIỆN
 
 - **`approvals` đang có 35 dòng `pending`** ⇒ mọi thay đổi phải **không** làm hỏng luồng 5 bước đang chạy (P0 phải chứng minh bằng probe "100 dòng giữ nguyên").
