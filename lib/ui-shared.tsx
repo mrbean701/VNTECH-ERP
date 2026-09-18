@@ -10,10 +10,10 @@
 // Không còn tên nào khác ⇒ KHÔNG thể tạo import vòng.
 
 import type { FormFieldConfig } from "@/lib/form-fields";
-import { ReactNode } from "react";
 import { pdfFromJpegs } from "@/lib/boq-export";
 import { downloadBlob, downloadCsv, downloadSimpleXlsx } from "@/lib/tabular-export";
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, ReactNode, useCallback, useEffect, useState } from "react";
+
 // Dynamic rows are normalized by the server API and intentionally remain flexible here.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Row = Record<string, any>;
@@ -38,7 +38,6 @@ const defaultMenuGroups = [
   { groupKey: "material_master", name: "DANH MỤC VẬT TƯ GỐC", icon: "MV", sortOrder: 70, active: true, collapsible: false },
   { groupKey: "system_admin", name: "QUẢN TRỊ HỆ THỐNG", icon: "QT", sortOrder: 80, active: true, collapsible: true },
 ];
-
 
 const roleNames: Record<string, string> = {
   admin: "Quản trị hệ thống", engineer: "Kỹ sư dự án", commander: "Chỉ huy trưởng",
@@ -97,7 +96,6 @@ const WORK_STATUS_LABELS: Record<string, string> = {
 };
 
 const WORK_CLOSED = ["COMPLETED", "CANCELLED"];
-
 
 const PROJECT_STATUS_LABELS: Record<string,string> = { active:"Đang hoạt động", paused:"Tạm dừng", closed:"Đã đóng", purged:"Đã xoá", pending:"Chờ khởi động" };
 
@@ -167,7 +165,6 @@ const ADMIN_HELP_TEXT = {
   activate: "Hiển thị/kích hoạt lại mục đã ẩn. Dữ liệu lịch sử trước đó vẫn được giữ nguyên.",
 } as const;
 
-
 function joinCodes(values:unknown[]){return values.map((value)=>String(value||"").trim()).filter(Boolean).join("; ");}
 
 // ---------------------------------------------------------------------------
@@ -204,7 +201,6 @@ type AppData = {
   uiDisplaySettings?: Row | null;
   projectAccessAll?: boolean;
 };
-
 
 const money = (value: unknown) => `${format.format(Number(value || 0))} đ`;
 
@@ -265,7 +261,6 @@ function NavIcon({name,kind="module"}:{name:string;kind?:"module"|"group"}) {
   return <i className={`nav-glyph nav-glyph-${tone} ${kind==="group"?"nav-glyph-group":""}`} data-nav-icon={type} aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{paths[type]}</svg></i>;
 }
 
-
 function Kpi({ icon, label, value, note, tone = "blue", percent }: { icon: string; label: string; value: string; note: string; tone?: string; percent?: number }) {
   const bars=[42,68,54,82,61,92,73,100];
   const pct=percent===undefined?null:Math.max(0,Math.min(100,Number(percent||0)));
@@ -320,8 +315,69 @@ function printInventoryBarcodes(rows:Row[]){const sample=rows.filter(row=>row.ma
 
 function printInventoryLedger(rows:Row[]){printTabularReport("THẺ KHO / TỒN KHO",["Mã vật tư","Tên vật tư","ĐVT","Kho","Vị trí","Dự án","Nhập","Xuất","Tồn cuối","Tồn tối thiểu"],inventoryExportRows(rows));}
 
-
 function code39Svg(value:string){const text=`*${String(value||"").toUpperCase().replace(/[^0-9A-Z. \-]/g,"-")}*`;let x=0;const unit=2;let bars="";for(const ch of text){const pattern=CODE39[ch]||CODE39["-"];for(let i=0;i<pattern.length;i++){const w=(pattern[i]==="w"?3:1)*unit;if(i%2===0)bars+=`<rect x="${x}" y="0" width="${w}" height="48"/>`;x+=w;}x+=unit;}return `<svg viewBox="0 0 ${x} 62" width="260" height="62" xmlns="http://www.w3.org/2000/svg"><g fill="#111">${bars}</g><text x="${x/2}" y="60" font-family="Segoe UI,Arial" font-size="9" text-anchor="middle">${text.slice(1,-1)}</text></svg>`;}
+
+function mapBoqPriceRows(rows:string[][], boqRows:Row[]){
+  const aliases={boqItemId:["ma dong boq","id dong boq"],sourceOrder:["thu tu nguon","thu tu excel"],internalMaterialCode:["ma vat tu noi bo","ma noi bo"],contractMaterialCode:["ma vat tu theo hop dong","ma vat tu hop dong"],unitPrice:["don gia hop dong","don gia hd","don gia phat sinh","don gia hop dong phat sinh"]};
+  // Mẫu giá do chính hệ thống sinh có tiêu đề “Đơn giá hợp đồng / phát sinh”.
+  // normalizeBoqHeader() biến tiêu đề này thành “don gia hop dong phat sinh”, vì vậy
+  // bộ đọc phải chấp nhận cả tiêu đề chính xác lẫn biến thể có hậu tố như “/ phát sinh”, “(chưa VAT)”.
+  const headerMatches=(header:string,candidates:string[])=>candidates.some(alias=>header===alias||header.startsWith(`${alias} `));
+  const headerIndex=rows.findIndex(row=>{const hs=row.map(normalizeBoqHeader);return hs.some(h=>headerMatches(h,aliases.unitPrice))&&hs.some(h=>headerMatches(h,aliases.boqItemId));});
+  if(headerIndex<0)throw new Error("Không tìm thấy cột Mã dòng BOQ và cột Đơn giá hợp đồng. Hãy tải mẫu giá từ đúng dự án.");
+  const headers=rows[headerIndex].map(normalizeBoqHeader),idx=Object.fromEntries(Object.entries(aliases).map(([k,a])=>[k,headers.findIndex(h=>headerMatches(h,a))]));
+  const operative=boqRows.filter(r=>["material","component"].includes(String(r.rowRole||"material"))); const byId=new Map(operative.map(r=>[String(r.id),r])); const result:Row[]=[]; const errors:string[]=[];const seen=new Set<string>();
+  rows.slice(headerIndex+1).forEach((row,offset)=>{
+    const excelRow=headerIndex+offset+2,get=(k:string)=>Number(idx[k])>=0?String(row[Number(idx[k])]??"").trim():"";
+    const boqItemId=get("boqItemId"),priceRaw=get("unitPrice");
+    // buildSimpleXlsxBytes() chèn một dòng hướng dẫn ngay dưới tiêu đề (ví dụ:
+    // “KHÓA ĐỐI CHIẾU” / “NHẬP GIÁ CHƯA VAT”). Đây không phải dữ liệu BOQ và
+    // phải được bỏ qua tự động. Không được bắt người dùng xóa/sửa chính mẫu do hệ thống sinh.
+    const idHint=normalizeBoqHeader(boqItemId), priceHint=normalizeBoqHeader(priceRaw);
+    const isTemplateInstructionRow=
+      ["khoa doi chieu","giu nguyen","tham chieu"].some(v=>idHint===v||idHint.startsWith(`${v} `)) ||
+      ["nhap gia chua vat","nhap don gia","he thong xac dinh","cong thuc tu tinh"].some(v=>priceHint===v||priceHint.startsWith(`${v} `));
+    if(isTemplateInstructionRow)return;
+    if(!boqItemId&&!priceRaw)return;
+    if(!priceRaw)return; // Ô giá trống = không cập nhật, tuyệt đối không đổi thành 0.
+    if(!boqItemId){errors.push(`Dòng ${excelRow}: thiếu Mã dòng BOQ.`);return;}
+    const target=byId.get(boqItemId); if(!target){errors.push(`Dòng ${excelRow}: Mã dòng BOQ không thuộc dự án hiện tại.`);return;}
+    if(seen.has(boqItemId)){errors.push(`Dòng ${excelRow}: Mã dòng BOQ bị lặp trong file.`);return;}seen.add(boqItemId);
+    const normalizedPrice=priceRaw.replace(/\s/g,"").replace(/\.(?=\d{3}(\D|$))/g,"").replace(",",".");
+    const price=Number(normalizedPrice); if(!Number.isFinite(price)||price<0){errors.push(`Dòng ${excelRow}: Đơn giá hợp đồng không hợp lệ.`);return;}
+    const code=get("internalMaterialCode").toUpperCase(),contractCode=get("contractMaterialCode").toUpperCase();
+    if(code&&code!==String(target.internalMaterialCode||target.materialCode||"").toUpperCase())errors.push(`Dòng ${excelRow}: mã nội bộ không khớp Mã dòng BOQ.`);
+    if(contractCode&&contractCode!==String(target.contractMaterialCode||"").toUpperCase())errors.push(`Dòng ${excelRow}: mã HĐ không khớp Mã dòng BOQ.`);
+    result.push({boqItemId:target.id,sourceOrder:Number(target.sourceOrder||target.lineNo),unitPrice:price,oldUnitPrice:Number(target.unitPrice||0),materialCode:target.materialCode,materialName:target.materialName,itemType:target.itemType,changed:Math.abs(price-Number(target.unitPrice||0))>1e-9});
+  });
+  if(errors.length)throw new Error(errors.slice(0,20).join("\n"));if(!result.length)throw new Error("File không có đơn giá hợp đồng cần cập nhật (ô trống được bỏ qua).");return result;
+}
+
+function normalizeBoqSystemCode(value:unknown){const raw=normalizeBoqHeader(value).replaceAll(" ","").toUpperCase();if(!raw)return "KHAC";if(["ELV","DNHE","DIENNHE"].includes(raw)||raw.startsWith("DNHE")||raw.startsWith("ELV")||raw.startsWith("DIENNHE"))return "DNHE";if(["DIEN","ELECTRICAL"].includes(raw)||raw.startsWith("DIEN"))return "DIEN";if(["CTN","NUOC","CAPTHOATNUOC","PLUMBING"].includes(raw)||raw.startsWith("CTN"))return "CTN";if(["HVAC","DIEUHOATHONGGIO"].includes(raw)||raw.startsWith("HVAC"))return "HVAC";if(["PCCC","FIRE"].includes(raw)||raw.startsWith("PCCC"))return "PCCC";return "KHAC";}
+
+function boqSystemName(code:unknown){const c=normalizeBoqSystemCode(code);return c==="DIEN"?"Điện":c==="CTN"?"Cấp thoát nước":c==="HVAC"?"Điều hòa thông gió":c==="DNHE"?"Điện nhẹ":c==="PCCC"?"Phòng cháy chữa cháy":"Khác";}
+
+function boqControlQty(row: Row) { if (row.itemType === "outside_contract") return row.variationStatus === "approved" ? Number(row.remeasuredQty || 0) : 0; return row.variationStatus === "approved" ? Number(row.remeasuredQty || 0) : Number(row.contractQty || 0); }
+
+function mapPaymentRows(rows:string[][]){const aliases={paymentDate:["ngay thanh toan","ngay tt"],referenceNo:["so ho so","so chung tu","so ho so chung tu","tham chieu"],description:["noi dung","noi dung thanh toan"],amount:["gia tri thanh toan","so tien","gia tri"],note:["ghi chu"]};const normalized=rows.map(row=>row.map(normalizeBoqHeader));const headerIndex=normalized.findIndex(row=>aliases.paymentDate.some(a=>row.includes(a))&&aliases.amount.some(a=>row.includes(a)));if(headerIndex<0)throw new Error("Không tìm thấy dòng tiêu đề thanh toán. Hãy tải đúng Mẫu Excel Thanh toán HĐ từ phần mềm.");const headers=normalized[headerIndex];const index=(keys:string[])=>headers.findIndex(h=>keys.includes(h));const idx={paymentDate:index(aliases.paymentDate),referenceNo:index(aliases.referenceNo),description:index(aliases.description),amount:index(aliases.amount),note:index(aliases.note)};const result:Row[]=[];rows.slice(headerIndex+1).forEach((row,offset)=>{const get=(i:number)=>i>=0?String(row[i]??"").trim():"";if(!row.some(cell=>String(cell??"").trim()))return;const paymentDateHint=normalizeBoqHeader(get(idx.paymentDate)),amountHint=normalizeBoqHeader(get(idx.amount)),descriptionHint=normalizeBoqHeader(get(idx.description));if(paymentDateHint.startsWith("nhap yyyy")||paymentDateHint.includes("dd mm yyyy")||amountHint.includes("so tien vnd")||(descriptionHint==="bat buoc"&&amountHint.includes("khong am")))return;const dateValue=normalizePaymentDate(get(idx.paymentDate));const amountText=get(idx.amount).replace(/\s/g,"").replace(/\.(?=\d{3}(\D|$))/g,"").replace(",",".");const amount=Number(amountText);const description=get(idx.description);if(!/^\d{4}-\d{2}-\d{2}$/.test(dateValue))throw new Error(`Dòng ${headerIndex+offset+2}: Ngày thanh toán không hợp lệ.`);if(!description)throw new Error(`Dòng ${headerIndex+offset+2}: thiếu Nội dung thanh toán.`);if(!Number.isFinite(amount)||amount<0)throw new Error(`Dòng ${headerIndex+offset+2}: Giá trị thanh toán không hợp lệ.`);result.push({paymentDate:dateValue,referenceNo:get(idx.referenceNo),description,amount,note:get(idx.note)});});if(!result.length)throw new Error("File không có dòng thanh toán hợp lệ.");return result;}
+
+function paymentExportRows(rows:Row[]){return rows.map(row=>[row.contractNo||row.projectCode||"",row.description||"",row.referenceNo||"",row.paymentDate||"",Number(row.amount||0),row.projectName||row.projectCode||"",row.createdByName||""]);}
+
+function exportPaymentsXlsx(rows:Row[]){downloadSimpleXlsx({sheetName:"Thanh toan HD",title:"SỔ THANH TOÁN HỢP ĐỒNG",headers:["Hợp đồng","Đợt thanh toán","Chứng từ","Ngày","Giá trị (VND)","Dự án","Người nhập"],rows:paymentExportRows(rows),widths:[24,40,22,16,20,30,24],freezeRows:2},`So_thanh_toan_HD_${UI_TODAY}`);}
+
+function exportPaymentsCsv(rows:Row[]){downloadCsv(["Hợp đồng","Đợt thanh toán","Chứng từ","Ngày","Giá trị (VND)","Dự án","Người nhập"],paymentExportRows(rows),`So_thanh_toan_HD_${UI_TODAY}`);}
+
+function downloadPaymentsPdf(rows:Row[]){downloadTabularPdf("SỔ THANH TOÁN HỢP ĐỒNG",["Hợp đồng","Đợt thanh toán","Chứng từ","Ngày","Giá trị (VND)","Dự án","Người nhập"],paymentExportRows(rows),`So_thanh_toan_HD_${UI_TODAY}`);}
+
+const moneyBillion = (value: unknown) => `${new Intl.NumberFormat("vi-VN",{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(value||0)/1e9)} tỷ`;
+
+function downloadPoPlanningTemplate(data:AppData,request:Row){const items=poRemainingItems(request);const suppliers=data.suppliers.filter(row=>row.active!==0);downloadSimpleXlsx({sheetName:"Lap PO",title:`MẪU LẬP PO - ${request.requestNo}`,subtitle:`Dự án ${request.projectCode} · Có thể gán nhiều NCC; hệ thống tự tách thành nhiều PO`,headers:["Mã dòng đề nghị","STT","Mã vật tư","Tên vật tư","ĐVT","SL còn được phép đặt","SL lập PO","Mã nhà cung cấp","Hệ M&E","Ngày giao dự kiến"],notes:["GIỮ NGUYÊN","Tham chiếu","Tham chiếu","Tham chiếu","Tham chiếu","Tham chiếu","Có thể giảm nếu đặt một phần","Chọn mã NCC trong danh mục","DIEN/CTN/HVAC/DNHE/PCCC/KHAC","DD/MM/YYYY"],rows:items.map((item:Row,index:number)=>{const material=data.materials.find(mat=>mat.id===item.materialId);const remaining=Math.max(0,Number(item.approvedPurchaseQty)-Number(item.orderedQty));return [item.id,index+1,item.materialCode,item.materialName,item.unit,remaining,remaining,"",normalizeBoqSystemCode(material?.system||"KHAC"),DEFAULT_PO_ETA];}),widths:[30,8,20,48,10,20,16,22,14,20],freezeRows:4,listValidations:[{columnIndex:7,values:suppliers.map(row=>String(row.code)),startRow:5,endRow:Math.max(50,items.length+4),promptTitle:"Nhà cung cấp",prompt:"Chọn Mã NCC đã khai trong Quản trị"},{columnIndex:8,values:[...BOQ_SYSTEM_CODES],startRow:5,endRow:Math.max(50,items.length+4)}]},`Mau_Lap_PO_${request.requestNo}`);}
+
+function downloadBlankPoPlanningTemplate(data:AppData){const suppliers=data.suppliers.filter(row=>row.active!==0);downloadSimpleXlsx({sheetName:"Lap PO",title:"MẪU LẬP PO VNTECH",subtitle:"Chọn phiếu đã duyệt trên hệ thống để lấy Mã dòng đề nghị; file trắng dùng để chuẩn bị dữ liệu và kiểm tra định dạng",headers:["Mã dòng đề nghị","STT","Mã vật tư","Tên vật tư","ĐVT","SL còn được phép đặt","SL lập PO","Mã nhà cung cấp","Hệ M&E","Ngày giao dự kiến"],notes:["Bắt buộc khi nhập","Tham chiếu","Tham chiếu","Tham chiếu","Tham chiếu","Tham chiếu","Số dương","Chọn mã NCC trong danh mục","DIEN/CTN/HVAC/DNHE/PCCC/KHAC","DD/MM/YYYY"],rows:[],widths:[30,8,20,48,10,20,16,22,14,20],freezeRows:4,listValidations:[{columnIndex:7,values:suppliers.map(row=>String(row.code)),startRow:5,endRow:100,promptTitle:"Nhà cung cấp",prompt:"Chọn Mã NCC đã khai trong Quản trị"},{columnIndex:8,values:[...BOQ_SYSTEM_CODES],startRow:5,endRow:100}]},"Mau_Lap_PO_VNTECH");}
+
+function poRemainingItems(request:Row){return (request?.items||[]).filter((item:Row)=>Number(item.orderedQty)<Number(item.approvedPurchaseQty));}
+
+const DEFAULT_PO_ETA = new Date(UI_NOW_MS + 7 * 86400000).toISOString().slice(0, 10);
 export {
   ADMIN_HELP_TEXT,
   APPROVAL_MODE_LABELS,
@@ -331,6 +387,7 @@ export {
   BOQ_SYSTEM_CODES,
   CODE39,
   CardHead,
+  DEFAULT_PO_ETA,
   DEPT_MODULE_GROUP,
   Empty,
   Kpi,
@@ -343,28 +400,41 @@ export {
   UI_TODAY,
   WORK_CLOSED,
   WORK_STATUS_LABELS,
+  boqControlQty,
   boqStatusLabel,
+  boqSystemName,
   canvasJpegBytesForDownload,
   code39Svg,
   date,
   defaultMenuGroups,
   deliveredExportRows,
+  downloadBlankPoPlanningTemplate,
   downloadDeliveredPdf,
+  downloadPaymentsPdf,
+  downloadPoPlanningTemplate,
   downloadTabularPdf,
   durationText,
   exportDeliveredCsv,
   exportDeliveredXlsx,
   exportInventoryXlsx,
+  exportPaymentsCsv,
+  exportPaymentsXlsx,
   format,
   initials,
   inventoryExportRows,
   joinCodes,
   kpiIconName,
+  mapBoqPriceRows,
+  mapPaymentRows,
   materialCatalogTemplateRows,
   money,
+  moneyBillion,
   normalizeBoqHeader,
+  normalizeBoqSystemCode,
   normalizeMasterHeader,
   normalizePaymentDate,
+  paymentExportRows,
+  poRemainingItems,
   printInventoryBarcodes,
   printInventoryLedger,
   printTabularReport,

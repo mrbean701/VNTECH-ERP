@@ -170,7 +170,10 @@ const cut = new Set();
 const blocks = [];
 for (const d of moving) {
   for (let i = d.line; i <= d.end; i++) cut.add(i);
-  blocks.push(lines.slice(d.line - 1, d.end).join("\n"));
+  // ⚠️ BỎ tiền tố `export ` khi chuyển sang module đích: nếu giữ, tệp đích vừa `export function X`
+  // vừa được trailer `export { X }` ⇒ tsc báo `TS2323/TS2484: Cannot redeclare exported variable`.
+  blocks.push(lines.slice(d.line - 1, d.end).join("\n")
+    .replace(/^(\s*)export\s+((?:async\s+)?(?:function|const|let|var|type|interface)\s)/, "$1$2"));
 }
 const kept = lines.filter((_, idx) => !cut.has(idx + 1));
 
@@ -197,7 +200,27 @@ kept.splice(lastImport + 1, 0, ...backImports);
 // tệp đích bị ghi lại **mất** `FormFieldConfig` / `ReactNode` mà phần thân cũ vẫn dùng ⇒ `tsc` báo `TS2304`.
 const existingImports = [];
 try {
-  for (const line of readFileSync(OUT, "utf8").split(/\r?\n/)) if (/^import\b/.test(line)) existingImports.push(line.trim());
+  const raw = readFileSync(OUT, "utf8");
+  // GỘP theo ĐÚNG đặc tả module (không so khớp cả dòng): hai dòng cùng `from "x"` với danh sách tên khác nhau
+  // từng làm tệp đích có `import { downloadCsv, downloadSimpleXlsx }` HAI LẦN ⇒ `TS2300: Duplicate identifier`.
+  const bySpec = new Map();
+  for (const line of raw.split(/\r?\n/)) {
+    const m = line.match(/^import\s+(type\s+)?\{([^}]*)\}\s+from\s+["']([^"']+)["'];?$/);
+    if (!m) continue;
+    const spec = m[3];
+    if (!bySpec.has(spec)) bySpec.set(spec, { values: new Set(), types: new Set() });
+    for (const raw2 of m[2].split(",")) {
+      const t = raw2.trim();
+      if (!t) continue;
+      const isType = Boolean(m[1]) || /^type\s+/.test(t);
+      const name = t.replace(/^type\s+/, "").split(/\s+as\s+/).pop().trim();
+      if (name) (isType ? bySpec.get(spec).types : bySpec.get(spec).values).add(name);
+    }
+  }
+  for (const [spec, g] of bySpec) {
+    if (g.values.size) existingImports.push(`import { ${[...g.values].sort().join(", ")} } from "${spec}";`);
+    if (g.types.size) existingImports.push(`import type { ${[...g.types].sort().join(", ")} } from "${spec}";`);
+  }
 } catch { /* chạy lần đầu */ }
 const importLinesFinal = [...new Set([...existingImports, ...importLines])];
 
