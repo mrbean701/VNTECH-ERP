@@ -1251,3 +1251,21 @@ av=OK cả 4 kích thước · git status tools/baseline ⇒ **đúng 4 tệp c�
 **ĐÃ XỬ LÝ:** chụp lại baseline 17-modal-po (--update --only=17-modal-po) ⇒ **exit 0** · git status tools/baseline ⇒ **đúng 4 tệp của màn 17**.
 **KẾT QUẢ CỔNG ẢNH ĐẦY ĐỦ (lượt pwsh-65, server sạch):** **62/64 ảnh   px** — trong đó **12-drawer-request-detail nay   px CẢ 4 KÍCH THƯỚC** (baseline chụp lại đã đúng) và **mọi màn 01–13, 16 khớp hoàn toàn**; **2 ảnh** còn lại chính là 17-modal-po desktop/laptop (đã xác định nguyên nhân **ngày** ở trên) ⇒ nay đã chụp lại ⇒ kỳ vọng **64/64** ở lượt tiếp theo.
 **BÀI HỌC (mới):** khi một màn lệch **rất nhỏ và khu trú 1 điểm**, dùng **--locate=x,y** để biết **phần tử nào** ⇒ phân biệt ngay **nhiễu theo thời gian/dữ liệu** với **lỗi bố cục thật** (thay vì đoán).
+
+## 24. [PHASE 1 · U-12] KHẢO SÁT QUY MÔ — !important & SELECTOR TRÙNG (18/09, chỉ đọc)
+**Số liệu đo được:**
+| Hạng mục | Số liệu |
+|---|---|
+| !important trong pp/globals.css | **4.472** |
+| !important trong pp/styles/canonical.css | **70** |
+| Dòng nhiều !important nhất | **2072 (47 lần, dài 1.523 ký tự)** · 2074 (46×, 1.590) · 962 (46×, 2.213) · 1011 (45×, 3.133) · 1007 (44×) · 1003 (43×) |
+| Tổng selector quét được | **3.316** |
+| Nhóm selector xuất hiện **>1 lần** | **526** |
+| Trùng nhiều nhất | **.topbar ×23** · .main-content ×17 · .sidebar ×17 · .kpi ×15 · .page-heading h1 ×15 · .page-heading small ×14 · .app-shell ×13 · :root ×12 |
+**ĐẶC ĐIỂM QUAN TRỌNG:** globals.css **bị minify** — nhiều rule/dòng, có **dòng dài tới 3.133 ký tự chứa 45 !important** ⇒ **sửa bằng regex tham lam là NGUY HIỂM**; phải dùng **đếm ngoặc** (đúng cách đã dùng cho công cụ dọn CSS chết, và đã được chứng minh: bản 1 sai ⇒ **công cụ tự chối ghi**).
+**⇒ KẾ HOẠCH CHIA BƯỚC (mỗi bước phải qua cổng: erify:css-baseline + **cổng ảnh 64/64** + 
+pm test):**
+* **U-12.1 (AN TOÀN NHẤT — gộp trùng KHÔNG đổi hiển thị):** chỉ gộp các nhóm selector trùng khi **khai báo GIỐNG HỆT TỪNG BYTE** ⇒ gộp là **hoán vị thuần**, **không thể đổi giao diện**. Kỳ vọng: giảm số nhóm trùng mà **cổng ảnh vẫn 0 px**.
+* **U-12.2 (bỏ !important có bằng chứng):** với mỗi nhóm, **xác định rule nào đang THẮNG** (độ đặc hiệu/thứ tự) ⇒ chỉ bỏ !important ở rule **đã thắng tự nhiên**; **kiểm bằng cổng ảnh sau từng lô nhỏ** (ví dụ 20–30 chỗ/lô) để **truy vết được** nếu có thay đổi.
+* **U-12.3 (bỏ hẳn khối override):** sau khi U-12.2 xong, xem xét **xoá các khối override dài** (dòng 962/1003-1011/2072-2074) nếu các rule gốc đã đủ mạnh ⇒ **kiểm ảnh kỹ**.
+**NGUYÊN TẮC BẤT DI BẤT DỊCH (đã trả giá 1 lần):** mọi công cụ sửa CSS phải **đếm ngoặc**, **mặc định CHẠY KHÔ**, và **TỰ CHỐI GHI nếu ngoặc lệch**; **không chạy uild khi server UI đang chạy**; **không chạy tác vụ ghi tệp song song với cổng ảnh**.
