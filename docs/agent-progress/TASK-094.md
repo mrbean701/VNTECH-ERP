@@ -1105,3 +1105,21 @@ pm test exit 0**.
 2. pwsh **không có** trên PATH trong harness ⇒ dùng **powershell.exe**.
 3. Đọc chữ trên GUI **không nhất thiết cần OCR/AI**: **UI Automation** là đường cục bộ, chính xác, không bị chính sách model chặn.
 4. **Không commit ảnh chụp chứa mật khẩu** — đã **xoá** docs/agent-progress/uv-full.png sau khi gửi.
+
+### 19.1. 🚨 ĐÍNH CHÍNH MỤC 19 — KẾT LUẬN B4 TRƯỚC ĐÓ **SAI** (18/09)
+**Điều em đã nói SAI ở mục 19:** *"pprove_transfer_order và pprove_central_return là **2 PHA trong 1 action** (duyệt + nhận hàng), **thiếu guard pha**"*.
+**SỰ THẬT (đọc ĐẦY ĐỦ khối mã, không lọc dòng):**
+* pprove_transfer_order (JS **1519**) là **MỘT action sạch**, **CÓ guard**: if(!t||clean(t.status)!=='requested') throw new Error("Phiếu điều chuyển không ở trạng thái chờ duyệt.") + kiểm phạm vi canAccessWarehouse(user, t.source_warehouse_id, true) || isAdmin(user).
+* ship_transfer_order (dòng **1520**) và eceive_transfer_order (dòng **1525**) là **ACTION RIÊNG**, mỗi cái có guard riêng (status !== 'approved' …).
+* pprove_central_return (JS **1539-1542**) là **MỘT action sạch**, **CÓ guard**: if(!row||row.status!=="pending_approval") throw new Error("Phiếu không còn ở trạng thái chờ duyệt.") + canAccessProject(user, row.projectId, true).
+* eceive_central_return (dòng **1544**) là **action riêng**.
+**⇒ NGUYÊN NHÂN SAI:** em đọc bằng cách **LỌC DÒNG theo cửa sổ hẹp** (1519-1534 · 1539-1554) nên **thấy mã của ACTION KẾ TIẾP** và **tưởng nhầm là "nhánh thứ hai" của cùng action**.
+**BÀI HỌC (quan trọng):** **muốn kết luận về cấu trúc mã thì phải đọc ĐẦY ĐỦ khối, KHÔNG được kết luận từ ảnh chụp đã lọc dòng.**
+**KẾT LUẬN B4 ĐÚNG (bằng chứng mới):**
+1. **3 action đều ĐƠN MỤC ĐÍCH và ĐÃ CÓ guard** (trạng thái + phạm vi) ⇒ **không có vấn đề "2 pha"**.
+2. **Khác biệt TỪ VỰNG trạng thái:** pprove_transfer_order dùng **'requested'** (vòng đời riêng của phiếu điều chuyển) trong khi pprove_central_return/pprove_stock_count dùng **'pending_approval'** (chuẩn engine phê duyệt) ⇒ **khác biệt CÓ CHỦ ĐÍCH theo nghiệp vụ**, **KHÔNG tự đổi** (đổi = thay đổi hành vi + hợp đồng API) — cần người dùng quyết nếu muốn thống nhất.
+3. **Java = uỷ nhiệm mỏng:** cả 3 case (1114/1129/1159) chỉ equireCurrentUser(request) → gọi **use case** → jsonResult(result) ⇒ **guard nằm trong USE CASE** ⇒ **kiểm parity phải đọc use case**, không phải controller.
+4. **MAR material_mar_approvals ĐÃ ĐƯỢC NỐI** tại **9 nơi** (port PurchaseStore · FileStoreAdapter · OpsTaskStoreAdapter · ProjectAdminStoreAdapter · PurchaseStoreAdapter · SystemController · scripts/system-route.mjs · migrate-sqlite-to-mysql.mjs · preflight-postgres-runtime.mjs) ⇒ **KHÔNG phải mã chết**; chỉ là **bảng chưa có dữ liệu**.
+**⇒ B4 THU LẠI THÀNH 2 VIỆC THẬT:**
+* **B4-A (parity):** so **guard trong USE CASE Java** với **guard JS** cho 3 action ⇒ tìm lệch thật giữa 2 lõi.
+* **B4-B (ghi nhận):** tài liệu hoá khác biệt từ vựng trạng thái (equested vs pending_approval) + trạng thái MAR **rỗng** như **phát hiện**, **không đổi mã khi chưa có quyết định người dùng**.
