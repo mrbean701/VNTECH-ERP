@@ -68,23 +68,47 @@ function splitChildren(text) {
   const out = [];
   let buf = "";
   let i = 0;
+  let tagDepth = 0;   // ⚠️ LỖI ĐÃ GẶP: bản trước KHÔNG theo dõi độ sâu thẻ nên coi cả `{…}` nằm TRONG markup
+                      // (ví dụ ô `summary-grid`: `<small>…</small><strong>{request.requestedBy}</strong>`) là con
+                      // mức ngoài cùng ⇒ xé rời nội dung. Nay chỉ coi `{` là mốc khi **độ sâu thẻ = 0**.
   while (i < text.length) {
-    if (text[i] !== "{") { buf += text[i]; i++; continue; }
-    let depth = 0, j = i, q = null, tpl = false;
-    for (; j < text.length; j++) {
-      const c = text[j];
-      if (q) { if (c === "\\") { j++; continue; } if (c === q) q = null; continue; }
-      if (tpl) { if (c === "\\") { j++; continue; } if (c === "`") tpl = false; continue; }
-      if (c === '"' || c === "'") { q = c; continue; }
-      if (c === "`") { tpl = true; continue; }
-      if (c === "{") depth++;
-      else if (c === "}") { depth--; if (depth === 0) { j++; break; } }
+    if (tagDepth === 0 && text[i] === "{") {
+      let depth = 0, j = i, q = null, tpl = false;
+      for (; j < text.length; j++) {
+        const c = text[j];
+        if (q) { if (c === "\\") { j++; continue; } if (c === q) q = null; continue; }
+        if (tpl) { if (c === "\\") { j++; continue; } if (c === "`") tpl = false; continue; }
+        if (c === '"' || c === "'") { q = c; continue; }
+        if (c === "`") { tpl = true; continue; }
+        if (c === "{") depth++;
+        else if (c === "}") { depth--; if (depth === 0) { j++; break; } }
+      }
+      if (depth !== 0) { failures.push("[thân] có `{` không có `}` đóng ⇒ DỪNG"); break; }
+      if (buf) out.push({ kind: "markup", text: buf });
+      out.push({ kind: "expr", text: text.slice(i, j) });
+      buf = "";
+      i = j;
+      continue;
     }
-    if (depth !== 0) { failures.push("[thân] có `{` không có `}` đóng ⇒ DỪNG"); break; }
-    if (buf) out.push({ kind: "markup", text: buf });
-    out.push({ kind: "expr", text: text.slice(i, j) });
-    buf = "";
-    i = j;
+    if (text[i] === "<") {
+      const close = text.startsWith("</", i);
+      const m = text.slice(i).match(close ? /^<\/\s*([A-Za-z][\w.:-]*)/ : /^<\s*([A-Za-z][\w.:-]*)/);
+      if (!m) { buf += text[i]; i++; continue; }                    // `<>` / `</>` (fragment) ⇒ bỏ qua, không đổi độ sâu
+      let j = i + 1, q = null, brace = 0;
+      for (; j < text.length; j++) {
+        const c = text[j];
+        if (q) { if (c === "\\") { j++; continue; } if (c === q) q = null; continue; }
+        if (c === '"' || c === "'") { q = c; continue; }
+        if (c === "{") brace++;
+        else if (c === "}") brace--;
+        else if (c === ">" && brace === 0) break;
+      }
+      const tagText = text.slice(i, j + 1);
+      if (close) tagDepth = Math.max(0, tagDepth - 1);
+      else if (!/\/>$/.test(tagText)) tagDepth++;
+      buf += tagText; i = j + 1; continue;
+    }
+    buf += text[i]; i++;
   }
   if (buf) out.push({ kind: "markup", text: buf });
   return out;

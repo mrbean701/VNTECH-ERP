@@ -85,15 +85,17 @@ dòng 2894 · 9.254 ký tự
      **LỆCH NGOẶC** (nếu ghi thì `tsc` sẽ đỏ hoặc tệ hơn là giao diện hỏng im lặng).
    * **`onClick=` 9 → 8** ⇒ mất 1 handler nếu ghép sai.
    ⇒ **Đây chính là giá trị của cơ chế tự chối: nó chặn một bản sửa SAI trước khi vào mã.**
-5. **Bước 3/6 — lượt sửa thứ hai: VẪN TỰ CHỐI, nhưng đã khoanh đúng nguyên nhân còn lại.**
-   Đã thay bộ tách theo `<section>` bằng **bộ tách con có đếm ngoặc `{}`** (xử lý chuỗi/template) ⇒ 24 biểu thức + 24 run markup.
-   Kết quả: **48 con QUÁ NHỎ** — bộ quét chạy **từng ký tự trên toàn thân** nên nó coi cả các biểu thức **NẰM BÊN TRONG** markup
-   là con mức ngoài cùng: các ô của `summary-grid` (`<small>Người đề nghị</small><strong>{request.requestedBy}</strong>`) bị **xé rời**
-   ⇒ báo 20+ lỗi *"không suy được NHÃN cho con expr 21 ký tự `{request.requestedBy}`"* và **DỪNG, không ghi tệp** ✔ (cơ chế an toàn vẫn đúng).
-   **Cách sửa đã xác định chính xác (việc kế tiếp, không còn mơ hồ):** theo dõi **độ sâu thẻ JSX** khi quét —
-   chỉ coi `{` là **mốc con mức ngoài cùng khi độ sâu thẻ = 0**; `{…}` nằm trong `<section>` (độ sâu ≥ 1) phải **giữ nguyên trong run markup**.
-   Cần: khi gặp `<`, phân tích thẻ (tên thẻ + quét tới `>` có tôn trọng chuỗi/ngoặc) ⇒ `</x>` giảm độ sâu, `/>` và thẻ rỗng không đổi, còn lại tăng độ sâu.
-   *Kỳ vọng sau khi sửa:* `onClick` **9→9** · `<form` **1→1** · `type="submit"` **1→1** · 0 lỗi bất biến ⇒ mới cho `--apply`.
+5. **Bước 3/6 — lượt sửa thứ ba: ĐÃ ĐÚNG HƯỚNG, còn 1 lỗi bất biến.**
+   Đã thêm **theo dõi độ sâu thẻ JSX** (chỉ `{` ở độ sâu 0 mới là mốc con) ⇒ bộ tách cho ra **6 con** (thay vì 48)
+   và công cụ dựng được **5 tab**: `Phê duyệt`(2.578) · `Tiến trình mua`(798) · `Giao nhận`(677) · `Sửa phiếu`(1.287) · `Ghi chú`(477).
+   **NHƯNG vẫn DỪNG, không ghi tệp**, với **1 lỗi bất biến**: `onClick=` **9 → 8** (mất 1 handler) — và 2 khối bị "hút" vào tab khác:
+   * **`Tổng quan` (summary-grid) MẤT**: vì `<section summary-grid>` và `<section drawer-section>` **liền nhau không có biểu thức ở giữa**
+     ⇒ bộ tách gộp cả hai vào **cùng một run markup** ⇒ thành một tab `Phê duyệt` 2.578 ký tự;
+   * **`Hồ sơ` (Ảnh/Hồ sơ) bị hút** vào `Ghi chú` (477 ký tự).
+   **Cách sửa đã xác định (việc kế tiếp, rất cụ thể):** chuyển sang **lai**: ranh giới tab lấy theo **mốc khối đã có trong bản đồ văn bản**
+   (`<section …>` ở độ sâu 0 **VÀ** các biểu thức `{…}` ở độ sâu 0), tức là **bắt buộc cắt tại MỌI `<section` mức 0** (không chỉ tại biểu thức),
+   rồi mới gộp con vụn — và **vẫn giữ 2 bất biến** (`nối lại === thân gốc` + `onClick=` 9→9, `<form` 1→1, `type="submit"` 1→1).
+   Đây là bước cuối để bước 3/6 xanh; sau đó mới `--apply` và sang bước 4–6.
 6. Kiểm chứng bước 6 (mục 3.6) rồi `--update` **riêng màn** `12-drawer-request-detail` (thay đổi **có chủ đích**).
 7. Khảo sát `ReceiptDrawer` (`page.tsx:2903`, 4.635 ký tự — ứng viên thứ 2) **sau khi** màn đầu xong ⇒ tách vòng riêng.
 
