@@ -1269,3 +1269,28 @@ pm test):**
 * **U-12.2 (bỏ !important có bằng chứng):** với mỗi nhóm, **xác định rule nào đang THẮNG** (độ đặc hiệu/thứ tự) ⇒ chỉ bỏ !important ở rule **đã thắng tự nhiên**; **kiểm bằng cổng ảnh sau từng lô nhỏ** (ví dụ 20–30 chỗ/lô) để **truy vết được** nếu có thay đổi.
 * **U-12.3 (bỏ hẳn khối override):** sau khi U-12.2 xong, xem xét **xoá các khối override dài** (dòng 962/1003-1011/2072-2074) nếu các rule gốc đã đủ mạnh ⇒ **kiểm ảnh kỹ**.
 **NGUYÊN TẮC BẤT DI BẤT DỊCH (đã trả giá 1 lần):** mọi công cụ sửa CSS phải **đếm ngoặc**, **mặc định CHẠY KHÔ**, và **TỰ CHỐI GHI nếu ngoặc lệch**; **không chạy uild khi server UI đang chạy**; **không chạy tác vụ ghi tệp song song với cổng ảnh**.
+
+### 23.6. ✅ CỔNG ẢNH **64/64 ĐẠT** — MỤC DỌN CSS ĐÓNG TRỌN VẸN (18/09)
+`
+KẾT LUẬN: ĐẠT ✅ — không có vùng lệch nào (64 ảnh đã đối chiếu)
+probe visual EXIT=0
+`
+**Toàn bộ 16 màn × 4 kích thước = 64 ảnh đều   px (0.0000 %)** — bao gồm **12-drawer-request-detail** và **17-modal-po** (2 màn vừa chụp lại baseline).
+**BỘ CỔNG ĐẦY ĐỦ CỦA MỤC DỌN CSS (sau U-14):**
+| Cổng | Kết quả |
+|---|---|
+| 
+pm run verify:css-baseline | **ĐẠT** · 2.535 lines · **4472 !important** · **dead classes=0** · **dead vars=0** |
+| 
+pm test (lint · typecheck · hồi quy · workflow) | **EXIT 0** |
+| Làm mới định danh | head ** 146** · **VNTECH-FP-2F8366FE6F1FFEFB** · KHỚP: true · manifest 6.728 files |
+| 
+pm run build | **EXIT 0** + **BUILT ARTIFACT VALIDATION: ĐẠT** |
+| **Cổng ảnh** | **64/64 ĐẠT** ✅ |
+**DIỄN BIẾN ĐẦY ĐỦ CỦA VÒNG NÀY (giá trị kiểm chứng):**
+1. Cổng CSS **hỏng** do U-14 bỏ class equest-drawer ⇒ **xoá 45 rule chết + cắt 10 rule** ⇒ cổng **ĐẠT**.
+2. Cổng ảnh báo **mọi màn lệch 30–80 %** ⇒ **chẩn đoán: CSS 404** (do **chạy uild khi server đang chạy**) ⇒ **restart server** ⇒ hết.
+3. Còn **12-* lệch 38 %** ⇒ **thí nghiệm A/B** (CSS trước-dọn vs sau-dọn: **trùng khít**) ⇒ **minh oan cho việc dọn CSS** + phát hiện **baseline cũ 134 KB = trạng thái mất CSS** ⇒ **chụp lại**.
+4. Còn **17-modal-po 286 px** ⇒ **--locate=419,549** ⇒ **.purchase-cumulative-head "Số liệu tính đến ngày …"** ⇒ **do MỐC NGÀY** ⇒ **chụp lại**.
+5. **Kết quả cuối: 64/64 ĐẠT.** **Không lần nào cập nhật baseline để che lỗi** — chỉ chụp lại **sau khi đã chứng minh nguyên nhân không phải mã**.
+**LƯU Ý VẬN HÀNH:** màn **17-modal-po có phần tử nhạy theo NGÀY** (.purchase-cumulative-head) ⇒ **sang ngày khác cổng ảnh có thể báo lệch lại đúng vùng (419,549)** — đó là **nhiễu hệ thống đã biết**, không phải regression.
