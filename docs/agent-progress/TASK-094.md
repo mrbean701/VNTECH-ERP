@@ -284,3 +284,15 @@ không chỉ PO đầu tiên (bản JS hiện đang chỉ tính PO đầu tiên)
 * **Nghi vấn chính (cần đo tiếp):** kho nguồn WH_51e0f009… **chưa có tồn** của vật tư MAT_c3ff35ff… ⇒ cần **D5 seed tồn kho** (hoặc chọn cặp kho–vật tư đã có tồn từ stock_movements).
 * **Số dòng kiểm lại ngay sau lượt 409:** xem kết quả ở trên (kỳ vọng vẫn 4/5/4 ⇒ transaction rollback sạch).
 * **B1 CHƯA đóng** — vẫn thiếu 1 lượt THÀNH CÔNG để thấy trường warnings trong response.
+
+### 12.7. Đã đọc LOG Java cho lượt 409 (18/09) — không lộ ràng buộc, cần đọc insertStockIssue
+* Log Java xác nhận lượt **400 framework** (16:03:05) = HttpMessageNotReadableException: Required request body is missing
+  ⇒ đúng lượt em gửi payload lỗi (mảng null) — **phân loại được lỗi của mình**.
+* Lượt **409 KHÔNG có stack trace** trong log ⇒ ứng dụng **chủ động map lỗi ràng buộc DB thành 409 sạch** (không lộ tên cột/index).
+  ⇒ **Không thể suy ra ràng buộc từ log.**
+* Đường ghi của issueStock (đã đọc mã): store.insertStockIssue(header, items, now) — header gồm cả 	oWarehouseId = team.warehouseId
+  (⚠️ bảng stock_issues **KHÔNG có cột 	o_warehouse_id** theo lược đồ đã đo ⇒ cần kiểm cách adapter map trường này),
+  sau đó updateRequestItemIssued · eleaseReservationsForRequest · insertSupplyWorkflowStepIssued.
+* **VIỆC KẾ TIẾP (đúng 1 bước):** đọc **insertStockIssue** trong adapter để biết **danh sách cột ghi thật + cột NOT NULL/UNIQUE/FK**
+  ⇒ từ đó seed **đúng chỗ** (hoặc chọn cặp kho–vật tư có sẵn tồn) ⇒ chạy lại issue_stock ⇒ thấy warnings ⇒ **đóng B1**.
+* Trạng thái: **B1 chưa đóng**; dữ liệu vẫn nguyên (4/5/4).
