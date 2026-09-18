@@ -737,3 +737,15 @@ out.put("warnings", requestStore.approvalWarnings("goods_receipt", String.valueO
 * **Nội dung bản vá (đã đọc lại xác nhận):** PurchaseManagementUseCase dòng **380-383** trả thêm **eceiptId**; SystemController dòng **1095-1097** gắn warnings = requestStore.approvalWarnings("goods_receipt", receiptId) ⇒ **Java ngang bằng JS** (JS dòng **1449**) ⇒ **hết lệch parity**.
 * ⚠️ **CÒN THIẾU: bằng chứng CHỨC NĂNG** cho eceive_goods (cần payload nhập kho đầy đủ: PO ở trạng thái nhận được + dòng + QC/hồ sơ) ⇒ **chưa tuyên bố B3 xong**. *(Bằng chứng chức năng đã có cho đường issue_stock từ B1: HTTP 200 kèm warnings đúng văn phong "CHỈ CẢNH BÁO".)*
 * **Trạng thái B3:** engine ✔ (WF-NHAPKHO-01 active) · JS ✔ (3 đường) · Java ✔ (3 đường, vừa vá) · confirm_delivery **giữ nguyên** ✔ theo phương án A · **thiếu**: 1 lần gọi eceive_goods thật để thấy warnings.
+
+### 14.24. [PHASE 8 · B3] ĐÃ GIẢI MÃ PAYLOAD eceive_goods → chuẩn bị probe CÓ HOÀN TÁC (18/09)
+**Payload (đo từ JS dòng 1381-1440 + cột bảng):**
+* purchaseOrderId (bắt buộc) · lines: [{ purchaseOrderItemId, quantity }] (≥1 dòng; JS dòng 1411-1414).
+* **deliveryDocumentStatus PHẢI = "complete"** — nếu không: *"Thiếu giấy giao hàng/biên bản bắt buộc; không được xác nhận nhập kho."* (dòng 1405).
+* **certificateStatus PHẢI = "complete"** nếu có vật tư đòi CO/CQ (dòng 1404-1406).
+* qcOk (bool) · role **warehouse/dmin** · **PO phải liên kết được phiếu đề nghị nguồn** (dòng 1397).
+* Trạng thái PO sau đó (dòng 1422): đủ ⇒ delivered_pending_confirmation · một phần ⇒ partial_delivery · chưa nhận ⇒ waiting_delivery.
+* Bảng liên quan: goods_receipts (id, receipt_no, purchase_order_id, …, qc_status, posting_status, bch_confirmation_status, …) · goods_receipt_items (id, receipt_id, purchase_order_item_id, **received_qty, accepted_qty, rejected_qty**, lot_no, qc_result, …).
+**⚠️ VÌ SAO CHƯA CHẠY PROBE:** eceive_goods **GHI THẬT** nhiều bảng ⇒ probe phải **hoàn tác nhiều bảng** (goods_receipts + goods_receipt_items + trạng thái PO + delivered_qty/eceived_qty của purchase_order_items + có thể material_requests/supply_workflow_steps). Với dữ liệu đang là **baseline chuẩn**, tôi **không chạy mutation khi chưa có kịch bản hoàn tác đầy đủ** — tránh làm bẩn baseline.
+**⇒ VIỆC KẾ TIẾP:** viết script probe **có hoàn tác đầy đủ** (chụp trước/sau các bảng bị ảnh hưởng, hoàn tác trong inally, ghi file rollback) rồi mới chạy ⇒ lấy bằng chứng warnings cho eceive_goods.
+**TRẠNG THÁI B3:** engine ✔ · JS ✔ · Java ✔ (biên dịch + sống) · **bằng chứng chức năng: còn thiếu** (có kế hoạch rõ).
