@@ -74,10 +74,23 @@ dòng 2894 · 9.254 ký tự
    (a) truyền `depth` không `+1` ⇒ mọi nút là depth 0; (b) lọc theo độ sâu **AST** thì JSX nằm ở depth ~8 nên bị chặn hết.
    Đã sửa cả hai (tách `jsxDepth`), **nhưng bộ lọc theo thẻ vẫn chưa in ra được** ⇒ công cụ AST **giữ ở trạng thái "chưa dùng được"**;
    bước 2 đã hoàn tất bằng bản đồ văn bản nên **không chặn** công việc.
-4. **Bước 3/6:** viết `tools/chuyen-drawer-sang-edm.mjs` dùng **các offset trên làm mỏ neo** (cắt theo mốc ⇒ không cần parser),
-   tự **TỪ CHỐI GHI** nếu bất kỳ mốc nào không khớp đúng 1 lần.
-5. Kiểm chứng bước 6 (mục 3.6) rồi `--update` **riêng màn** `12-drawer-request-detail` (thay đổi **có chủ đích**).
-6. Khảo sát `ReceiptDrawer` (`page.tsx:2903`, 4.635 ký tự — ứng viên thứ 2) **sau khi** màn đầu xong ⇒ tách vòng riêng.
+4. **Bước 3/6 — công cụ chuyển ĐÃ VIẾT và ĐÃ CHẠY KHÔ: nó TỰ CHỐI GHI (đúng thiết kế).**
+   `tools/chuyen-drawer-sang-edm.mjs` — cắt 4 khối (`header`/`drawer-body`/`footer`/đuôi), bóc **tiêu đề nguyên văn**
+   (`"PHIẾU ĐỀ NGHỊ MUA HÀNG"`), `subtitle`, `entityId`, dựng `tabs[]` + `footer` + `actions`, và **kiểm bất biến
+   "không mất nội dung"** trước khi ghi. Lượt chạy khô đầu tiên **DỪNG, không ghi tệp**, với **4 lỗi thật**:
+   * **`gap` 798 ký tự KHÔNG nằm trong `<section>`** — khối `{request.supplySteps?.length > 0 && <ActivityTimeline
+     title="Tiến trình mua và giao hàng" …>}` ⇒ cần nhãn/tab riêng ("Tiến trình mua").
+   * **`gap` 1 ký tự `}` và 6 ký tự `</div>`** ⇒ **các khối CÓ ĐIỀU KIỆN bị cắt đôi giữa hai đoạn**
+     (`{cond && <section …>` mở ở đoạn trước, `}` đóng ở đoạn sau) ⇒ cách tách theo `<section>` cho ra JSX
+     **LỆCH NGOẶC** (nếu ghi thì `tsc` sẽ đỏ hoặc tệ hơn là giao diện hỏng im lặng).
+   * **`onClick=` 9 → 8** ⇒ mất 1 handler nếu ghép sai.
+   ⇒ **Đây chính là giá trị của cơ chế tự chối: nó chặn một bản sửa SAI trước khi vào mã.**
+5. **Bước 3/6 (sửa cho đúng — việc kế tiếp):** thay cách tách theo `<section>` bằng **bộ tách con ở mức NGOÀI CÙNG
+   có đếm ngoặc `{}`**: duyệt thân `drawer-body`, mỗi con cấp 1 là một trong ba loại — *biểu thức* `{…}` (đếm ngoặc),
+   *thẻ* `<section>…</section>`, hoặc *văn bản* — rồi nối lại và **vẫn kiểm `nối lại === thân gốc`**.
+   Sau đó chạy khô lại: kỳ vọng `onClick` 9→9 · `<form` 1→1 · `type="submit"` 1→1 và **0 lỗi bất biến** mới `--apply`.
+6. Kiểm chứng bước 6 (mục 3.6) rồi `--update` **riêng màn** `12-drawer-request-detail` (thay đổi **có chủ đích**).
+7. Khảo sát `ReceiptDrawer` (`page.tsx:2903`, 4.635 ký tự — ứng viên thứ 2) **sau khi** màn đầu xong ⇒ tách vòng riêng.
 
 ## 6. Trạng thái bàn giao (để vòng sau tiếp tục ngay)
 
