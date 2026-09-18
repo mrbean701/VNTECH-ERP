@@ -263,3 +263,15 @@ không chỉ PO đầu tiên (bản JS hiện đang chỉ tính PO đầu tiên)
 * **Đã loại trừ:** tổ đội đúng dự án (TEAM_8c1fecd9… thuộc PRJ_fdbfab20…) · MR pproved (nằm trong danh sách trạng thái cho phép) · kho nguồn thuộc dự án · role dmin hợp lệ (login 200, không bị 403).
 * **Nghi vấn còn lại (cần dữ liệu test để kiểm):** dòng cấp phát phải khớp **vật tư CÓ TỒN** ở kho nguồn và **khớp dòng phiếu đề nghị**. Truy vấn tồn kho theo tên dự đoán (stock_balances) **không trả kết quả** ⇒ **tên bảng/cột tồn khác** ⇒ **DỪNG, KHÔNG ĐOÁN** (đúng §45).
 * **⇒ Chuyển sang D5 (seed 4 chứng từ test)**: khi có chứng từ test + dòng phiếu test, việc kiểm chứng B1 trở nên trực tiếp. **Số dòng vẫn nguyên** (chưa có đột biến nào).
+
+### 12.5. Nguyên nhân cuối cùng của 400 đã XÁC ĐỊNH (18/09) — chuyển hẳn sang D5
+* Với **đúng bộ ba** (equestItemId + materialId + equestId lấy từ chính dòng phiếu), truy vấn chọn dòng cấp phát được:
+  WHERE mr.status='approved' AND mri.approved_qty > COALESCE(mri.issued_qty,0) ⇒ **TRẢ VỀ RỖNG**
+  ⇒ **không còn dòng phiếu nào còn số lượng để cấp phát** trong PRJ-DEMO-01.
+* ⇒ Vì vậy mọi lượt gọi issue_stock trên dữ liệu hiện tại đều rơi vào Dòng 1: cấp phát không hợp lệ
+  (dòng 94 StockManagementUseCase: equestLine == null) — **không phải lỗi mã, không phải lỗi quyền**.
+* **Lượt gọi cuối bị payload lỗi** (mảng null) nên trả **400 mặc định của Spring** ({"status":400,"error":"Bad Request"})
+  — phân biệt rõ với **400 của ứng dụng** ({"ok":false,"error":"…"}): dùng thân lỗi để PHÂN LOẠI lỗi là framework hay nghiệp vụ.
+* **KHÔNG có đột biến dữ liệu** nào trong cả quá trình (mọi lượt đều bị chặn trước khi ghi).
+* **⇒ KẾT LUẬN:** muốn kiểm chứng chức năng B1 (thấy warnings) **bắt buộc phải có dữ liệu test mới**
+  ⇒ **D5 (seed 4 chứng từ test, gồm 1 phiếu xuất chờ duyệt có dòng còn số lượng)** là bước đi đúng và cần làm trước.
