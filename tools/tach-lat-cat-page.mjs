@@ -192,6 +192,15 @@ if (valueNames.length) backImports.push(`import { ${valueNames.join(", ")} } fro
 if (typeNames.length) backImports.push(`import type { ${typeNames.join(", ")} } from "${BACK_SPEC}";`);
 kept.splice(lastImport + 1, 0, ...backImports);
 
+// ⚠️ PHẢI GIỮ LẠI các câu `import` đã sinh ở các lần chạy TRƯỚC của tệp đích.
+// Lỗi đã gặp thật (18/09): lần chạy sau chỉ chuyển 1 khối KHÔNG cần import ⇒ danh sách import sinh ra RỖNG ⇒
+// tệp đích bị ghi lại **mất** `FormFieldConfig` / `ReactNode` mà phần thân cũ vẫn dùng ⇒ `tsc` báo `TS2304`.
+const existingImports = [];
+try {
+  for (const line of readFileSync(OUT, "utf8").split(/\r?\n/)) if (/^import\b/.test(line)) existingImports.push(line.trim());
+} catch { /* chạy lần đầu */ }
+const importLinesFinal = [...new Set([...existingImports, ...importLines])];
+
 const header = [
   "// PHASE 1 (U-11) — MODULE DÙNG CHUNG TÁCH KHỎI `app/page.tsx`.",
   "//",
@@ -204,7 +213,7 @@ const header = [
   "// `page.tsx` — công cụ SINH LẠI import đó ở đây, hoặc (d) kiểu của React ⇒ `import type … from \"react\"`.",
   "// Không còn tên nào khác ⇒ KHÔNG thể tạo import vòng.",
   "",
-  ...importLines,
+  ...importLinesFinal,
   "",
 ].join("\n");
 
@@ -215,9 +224,13 @@ let existingNames = [];
 try {
   const raw = readFileSync(OUT, "utf8");
   const rawLines = raw.split(/\r?\n/);
-  const firstDecl = rawLines.findIndex((l) => /^(?:export\s+)?(?:async\s+)?(function|const|type|interface)\s+[A-Za-z_$]/.test(l));
+  const firstDecl0 = rawLines.findIndex((l) => /^(?:export\s+)?(?:async\s+)?(function|const|type|interface)\s+[A-Za-z_$]/.test(l));
+  // ⚠️ PHẢI KÉO THEO các dòng CHÚ THÍCH ngay trên khai báo đầu tiên — nếu không, mỗi lần ghi lại tệp sẽ
+  // **rơi mất** `// eslint-disable-next-line …` của `type Row` ⇒ eslint báo 1 error (lỗi đã gặp 2 lần).
+  let firstDecl = firstDecl0;
+  while (firstDecl > 0 && /^\s*(\/\/|\/\*|\*|\*\/)/.test(rawLines[firstDecl - 1])) firstDecl--;
   const exportAt = rawLines.findIndex((l) => /^export\s+(type\s+)?\{/.test(l));
-  if (firstDecl >= 0) {
+  if (firstDecl0 >= 0) {
     existingText = rawLines.slice(firstDecl, exportAt > firstDecl ? exportAt : rawLines.length).join("\n").trim();
     existingNames = [...existingText.matchAll(/^(?:async\s+)?(function|const|type|interface)\s+([A-Za-z_$][\w$]*)/gm)].map((m) => m[2]);
   }

@@ -35,6 +35,9 @@ import { HrScreen } from "@/app/screens/HrScreen";
 import { DocumentsScreen } from "@/app/screens/DocumentsScreen";
 import { ConstructionScreen } from "@/app/screens/ConstructionScreen";
 import { LegalDocsScreen } from "@/app/screens/LegalDocsScreen";
+import { TeamManagement } from "@/app/screens/TeamManagement";
+import { UI_TODAY } from "@/lib/ui-shared";
+import { Receiving } from "@/app/screens/Receiving";
 
 const VNTECH_UI_CONTRACT_ID = VNTECH_BRAND.release.uiContractId;
 const VNTECH_UI_BUILD_MARKER = VNTECH_BRAND.release.uiBuildMarker;
@@ -42,7 +45,6 @@ const VNTECH_FUNCTIONAL_UI_MARKER = VNTECH_BRAND.release.functionalUiMarker;
 const VNTECH_UI_DISPLAY_VERSION = VNTECH_BRAND.release.uiGeneration;
 const VNTECH_RUNTIME_REGRESSION_LOCK = VNTECH_BRAND.release.regressionContract;
 const VNTECH_COMPANY_DISPLAY_NAME = VNTECH_BRAND.company.displayName;
-const UI_TODAY = new Date(UI_NOW_MS).toISOString().slice(0, 10);
 const DEFAULT_PO_ETA = new Date(UI_NOW_MS + 7 * 86400000).toISOString().slice(0, 10);
 
 const modules: { key: ModuleKey; label: string; icon: string; groupKey?: string; subGroup?: string }[] = [
@@ -791,132 +793,6 @@ function WorkCenter({ data, action, refresh }: { data: AppData; action: (name: s
   </div>;
 }
 
-// =============================================================================
-// GĐ5 — TỔ ĐỘI: DANH SÁCH + CHI TIẾT
-// Yêu cầu: danh sách tổ đội → chi tiết gồm dự án đang/đã tham gia, sĩ số, THỜI GIAN
-// THAM GIA VÀ RỜI ĐI của từng người, click user → hồ sơ, và tab ĐƠN TỪ tổng hợp.
-// Dữ liệu: data.teams + data.teamMembers (bảng mới ở migration V14) + chứng từ.
-// =============================================================================
-function TeamManagement({ data, open }: { data: AppData; open: (name: string, row?: Row) => void }) {
-  const [view, setView] = useState<"list" | "detail">("list");
-  const [detailId, setDetailId] = useState("");
-  const [tab, setTab] = useState(0);
-  const [q, setQ] = useState("");
-
-  const teams: Row[] = data.teams || [];
-  const members: Row[] = data.teamMembers || [];
-  const projOf = (id: unknown) => (data.projects || []).find((p) => String(p.id) === String(id));
-  const whOf = (id: unknown) => (data.warehouses || []).find((w) => String(w.id) === String(id));
-  const membersOf = (tid: string) => members.filter((m) => String(m.teamId) === String(tid));
-
-  const filtered = teams.filter((t) => !q.trim() ||
-    `${t.code || ""} ${t.name || ""} ${t.trade || ""} ${projOf(t.projectId)?.code || ""}`
-      .toLocaleLowerCase("vi").includes(q.trim().toLocaleLowerCase("vi")));
-
-  const detail = teams.find((t) => String(t.id) === String(detailId));
-
-  if (view === "detail" && detail) {
-    const tid = String(detail.id);
-    const all = membersOf(tid);
-    const activeMembers = all.filter((m) => Number(m.active ?? 1) === 1 && !m.leftAt);
-    const past = all.filter((m) => m.leftAt || Number(m.active ?? 1) === 0);
-    const proj = projOf(detail.projectId);
-    const wh = whOf(detail.warehouseId);
-    // Đơn từ của tổ đội: phiếu của dự án + phiếu xuất/hoàn gắn đúng teamId
-    const docs = [
-      { label: "Phiếu đề nghị mua hàng của dự án", noKey: "requestNo", statusKey: "status", whoKey: "requestedBy", atKey: "requestedAt",
-        rows: (data.requests || []).filter((r) => String(r.projectId) === String(detail.projectId)) },
-      { label: "Phiếu xuất kho cho tổ đội", noKey: "issueNo", statusKey: "status", whoKey: "receivedByName", atKey: "issuedAt",
-        rows: (data.issues || []).filter((r) => String(r.teamId) === tid) },
-      { label: "Phiếu hoàn trả vật tư", noKey: "returnNo", statusKey: "status", whoKey: "returnedByName", atKey: "returnedAt",
-        rows: (data.returns || []).filter((r) => String(r.teamId) === tid) },
-    ];
-    const totalDocs = docs.reduce((s, g) => s + g.rows.length, 0);
-    const TABS = ["Tổng quan", "Thành viên", `Đơn từ (${totalDocs})`];
-
-    return <div className="stack team-management">
-      <section className="card project-detail-head">
-        <div className="table-toolbar">
-          <div><strong>{detail.code} · {detail.name}</strong>
-            <span>{detail.trade || "Chưa ghi hạng mục"} · {activeMembers.length} thành viên đang hoạt động · {past.length} đã rời</span></div>
-          <div className="row-actions"><button type="button" className="page-back" onClick={() => setView("list")}>← Quay lại danh sách</button></div>
-        </div>
-        <div className="project-scope-tabs" role="tablist">
-          {TABS.map((label, i) => <button key={label} type="button" role="tab" aria-selected={tab === i} className={tab === i ? "active" : ""} onClick={() => setTab(i)}>{label}</button>)}
-        </div>
-      </section>
-
-      {tab === 0 && <div className="stack">
-        <div className="kpi-grid small">
-          <Kpi icon="DA" label="Dự án" value={proj?.code || "—"} note={proj?.name || "Chưa gắn dự án"} tone="blue"/>
-          <Kpi icon="K" label="Kho của tổ đội" value={wh?.code || "—"} note={wh?.name || "Chưa có kho riêng"} tone="violet"/>
-          <Kpi icon="TV" label="Thành viên" value={String(activeMembers.length)} note={`${past.length} người đã rời`} tone="green"/>
-          <Kpi icon="TT" label="Trạng thái" value={detail.active === 0 ? "Đã ngừng" : "Đang hoạt động"} note={detail.active === 0 ? "Không còn nhận việc" : "Đang nhận cấp phát vật tư"} tone={detail.active === 0 ? "red" : "green"}/>
-        </div>
-        <section className="card">
-          <CardHead title="Dự án tổ đội đang tham gia" note="Theo quy tắc nghiệp vụ hiện hành, mỗi tổ đội thuộc đúng một dự án"/>
-          <DataTable rows={proj ? [proj] : []} rowKey={(row) => String(row.id)} emptyText="Tổ đội chưa gắn dự án nào." columns={[{ key: "c1", header: "Mã dự án", render: (row) => <strong className="code">{row.code}</strong> }, { key: "c2", header: "Tên dự án", render: (row) => row.name }, { key: "c3", header: "Trạng thái", render: (row) => <StatusBadge value={PROJECT_STATUS_LABELS[String(row.status || "active")] || String(row.status || "—")} /> }, { key: "c4", header: "Bắt đầu", render: (row) => date(row.startDate) }, { key: "c5", header: "Kết thúc dự kiến", render: (row) => date(row.plannedEndDate) }, { key: "c6", header: "Vai trò tổ đội", render: () => "Thi công / cấp phát vật tư" }]} />
-        </section>
-      </div>}
-
-      {tab === 1 && <div className="stack">
-        <section className="card">
-          <CardHead title="Thành viên đang hoạt động" note="Sắp xếp theo NGÀY THAM GIA · bấm “Hồ sơ” để xem dự án / phòng ban / tổ đội của người đó"/>
-          <DataTable rows={[...activeMembers].sort((a, b) => String(a.joinedAt || "").localeCompare(String(b.joinedAt || "")))} rowKey={(m) => String(m.id)} emptyText="Tổ đội chưa ghi nhận thành viên. Bảng team_members đã sẵn sàng (migration V14) — cần bổ sung dữ liệu." columns={[
-            { key: "c1", header: "Họ tên", render: (m) => <strong>{m.fullName || "—"}</strong> },
-            { key: "c2", header: "Mã NV", render: (m) => m.employeeCode || "—" },
-            { key: "c3", header: "Chức vụ", render: (m) => m.roleName || m.role || "—" },
-            { key: "c4", header: "Phòng ban", render: (m) => m.department || "—" },
-            { key: "c5", header: "Vai trò trong tổ đội", render: (m) => m.roleInTeam || "Thành viên" },
-            { key: "c6", header: "Ngày tham gia", render: (m) => (m.joinedAt ? date(m.joinedAt) : "—") },
-            { key: "c7", header: "Ngày rời", render: () => "—" },
-            { key: "c8", header: "", render: (m) => <button type="button" className="export-mini" onClick={() => open("userProfile", { ...m, id: m.userId })}>Hồ sơ ›</button> },
-          ]} />
-        </section>
-        {past.length > 0 && <section className="card">
-          <CardHead title="Thành viên đã rời tổ đội" note="Lưu vết thời gian tham gia và rời đi"/>
-          <DataTable rows={past} rowKey={(m) => String(m.id)} columns={[
-            { key: "c1", header: "Họ tên", render: (m) => <strong>{m.fullName || "—"}</strong> },
-            { key: "c2", header: "Mã NV", render: (m) => m.employeeCode || "—" },
-            { key: "c3", header: "Vai trò", render: (m) => m.roleInTeam || "Thành viên" },
-            { key: "c4", header: "Ngày tham gia", render: (m) => (m.joinedAt ? date(m.joinedAt) : "—") },
-            { key: "c5", header: "Ngày rời", render: (m) => (m.leftAt ? date(m.leftAt) : "—") },
-            { key: "c6", header: "Thời gian tham gia", render: (m) => { const days = m.joinedAt && m.leftAt ? Math.max(0, Math.round((new Date(String(m.leftAt)).getTime() - new Date(String(m.joinedAt)).getTime()) / 86400000)) : null; return days === null ? "—" : `${days} ngày`; } },
-          ]} />
-        </section>}
-      </div>}
-
-      {tab === 2 && <div className="stack">
-        {docs.map((g) => <section className="card" key={g.label}>
-          <CardHead title={g.label} note={`${g.rows.length} chứng từ`}/>
-          <DataTable rows={g.rows} rowKey={(r, i) => String(String(r.id || i))} columns={[{ key: "c1", header: "Số chứng từ", render: (r) => <><strong className="code">{String(r[g.noKey] || r.id || "—")}</strong></> }, { key: "c2", header: "Trạng thái", render: (r) => <><StatusBadge value={String(r[g.statusKey] || "—")}/></> }, { key: "c3", header: "Người liên quan", render: (r) => <>{String(r[g.whoKey] || "—")}</> }, { key: "c4", header: "Thời điểm", render: (r) => <>{date(r[g.atKey] || r.createdAt)}</> }]} emptyText="Không có chứng từ." />
-        </section>)}
-      </div>}
-    </div>;
-  }
-
-  return <div className="stack team-management">
-    <section className="card">
-      <ListToolbar
-        title="DANH SÁCH TỔ ĐỘI"
-        note={`${filtered.length}/${teams.length} tổ đội · mỗi tổ đội thuộc đúng một dự án`}
-        search={{ value: q, onChange: setQ, placeholder: "Tìm mã, tên tổ đội, hạng mục, dự án…" }}
-      />
-      <DataTable rows={filtered} rowKey={(t) => String(t.id)} emptyText="Không có tổ đội phù hợp." columns={[
-        { key: "c1", header: "Mã tổ đội", render: (t) => <strong className="code">{t.code}</strong> },
-        { key: "c2", header: "Tên tổ đội", render: (t) => t.name },
-        { key: "c3", header: "Hạng mục", render: (t) => t.trade || "—" },
-        { key: "c4", header: "Dự án", render: (t) => { const p = projOf(t.projectId); return p ? `${p.code} · ${p.name}` : "—"; } },
-        { key: "c5", header: "Kho của tổ đội", render: (t) => { const wh = whOf(t.warehouseId); return wh ? `${wh.code} · ${wh.name}` : "—"; } },
-        { key: "c6", header: "Thành viên", render: (t) => { const act = membersOf(String(t.id)).filter((m) => Number(m.active ?? 1) === 1 && !m.leftAt).length; return act > 0 ? `${act} người` : <span className="muted">Chưa ghi nhận</span>; } },
-        { key: "c7", header: "Quyết toán", render: (t) => { const settled = (data.teamSettlements || []).some((s) => String(s.teamId) === String(t.id) && String(s.status) === "closed"); return <StatusBadge value={settled ? "Đã quyết toán" : "Chưa quyết toán"} />; } },
-        { key: "c8", header: "Trạng thái", render: (t) => <StatusBadge value={t.active === 0 ? "Đã ngừng" : "Đang hoạt động"} /> },
-        { key: "c9", header: "", render: (t) => <button type="button" className="export-mini" onClick={() => { setDetailId(String(t.id)); setView("detail"); setTab(0); }}>Chi tiết ›</button> },
-      ]} />
-    </section>
-  </div>;
-}
-
 function daysFromToday(iso: unknown): number | null {
   const s = String(iso ?? "").slice(0, 10);
   if (!s) return null;
@@ -1431,14 +1307,6 @@ function Purchasing({ data, project, open, action, canUse }: { data: AppData; pr
   { key: "c9", header: "Đã nhận", render: (row) => <>{format.format(Number(row.receivedQty||0))}</> },
   { key: "c10", header: "Còn phải mua", render: (row) => <strong>{format.format(Math.max(0,boqControlQty(row)-Number(row.orderedQty||0)))}</strong> },
 ]}/></section>
-  </div>;
-}
-function Receiving({ data, project, open, canUse }: { data: AppData; project: string; open: (name: string, row?: Row) => void; canUse: boolean }) {
-  const [supplierFilter,setSupplierFilter]=useState("ALL"); const [statusFilter,setStatusFilter]=useState("ALL"); const [fromDate,setFromDate]=useState(""); const [toDate,setToDate]=useState("");
-  const pos=data.purchaseOrders.filter((row)=>(project==="ALL"||row.projectId===project)&&!["completed","completed_with_exceptions","completed_with_shortage"].includes(String(row.status))); const filteredPos=pos.filter(r=>(supplierFilter==="ALL"||String(r.supplierId||r.supplierName)===supplierFilter)&&(statusFilter==="ALL"||String(r.status)===statusFilter)&&(!fromDate||String(r.eta||"").slice(0,10)>=fromDate)&&(!toDate||String(r.eta||"").slice(0,10)<=toDate)); const now=UI_NOW_MS; const late=pos.filter((row)=>row.eta&&new Date(row.eta).getTime()<now).length; const soon=pos.filter((row)=>{const t=new Date(row.eta||0).getTime();return t>=now&&t<=now+3*86400000;}).length; const activeSuppliers=new Set(pos.map((row)=>row.supplierId||row.supplierName).filter(Boolean)).size;
-  return <div className="stack module-screen receiving-screen baseline-screen"><div className="kpi-grid"><Kpi icon="HN" label="Lịch giao hôm nay" value={format.format(pos.filter((row)=>String(row.eta||"").slice(0,10)===UI_TODAY).length)} note="↑ so với hôm qua"/><Kpi icon="TH" label="Trễ hẹn" value={format.format(late)} note="↑ cần xử lý ngay" tone="red"/><Kpi icon="SH" label="Sắp đến hạn (3 ngày)" value={format.format(soon)} note="↑ cần chủ động xác nhận" tone="amber"/><Kpi icon="NCC" label="Nhà cung cấp đang giao" value={format.format(activeSuppliers)} note="↑ PO đang thực hiện" tone="green"/></div>
-    <section className="card baseline-filter-card"><div className="filter-grid receiving-filter-grid"><label><span>Nhà cung cấp</span><select value={supplierFilter} onChange={e=>setSupplierFilter(e.target.value)}><option value="ALL">Tất cả nhà cung cấp</option>{data.suppliers.map((row)=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label><label><span>Trạng thái</span><select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}><option value="ALL">Tất cả trạng thái</option><option value="approved">Đã duyệt</option><option value="ordered">Đã đặt</option><option value="partial">Giao một phần</option></select></label><label><span>Từ ngày</span><input type="date" value={fromDate} onChange={e=>setFromDate(e.target.value)}/></label><label><span>Đến ngày</span><input type="date" value={toDate} onChange={e=>setToDate(e.target.value)}/></label><button type="button" className="secondary" onClick={()=>{setSupplierFilter("ALL");setStatusFilter("ALL");setFromDate("");setToDate("");}}>Đặt lại</button></div></section>
-    <section className="card delivery-main-card"><ListToolbar title="Kế hoạch giao hàng" count={filteredPos.length} unit="bản ghi" /><DataTable rows={filteredPos} rowKey={(row) => String(row.id)} emptyText="Không còn PO phù hợp bộ lọc." columns={[{ key: "c1", header: "PO", render: (row) => <strong>{row.poNo}</strong> }, { key: "c2", header: "DỰ ÁN", render: (row) => row.projectName || row.projectCode }, { key: "c3", header: "NHÀ CUNG CẤP", render: (row) => row.supplierName }, { key: "c4", header: "HỆ M&E", render: (row) => <StatusBadge value={row.systemCode || "Điện"} /> }, { key: "c5", header: "NGÀY GIAO DỰ KIẾN", render: (row) => <><strong>{date(row.eta)}</strong><small className={row.eta && new Date(row.eta).getTime() < now ? "red-text" : "link"}>{row.eta && String(row.eta).slice(0, 10) === UI_TODAY ? "Hôm nay" : row.eta && new Date(row.eta).getTime() < now ? "Trễ hẹn" : "Sắp đến hạn"}</small></> }, { key: "c6", header: "KHỐI LƯỢNG ĐẶT", render: (row) => <>{format.format(Number(row.orderedQty || 0))}<small>PCS</small></> }, { key: "c7", header: "KHỐI LƯỢNG ĐÃ GIAO", render: (row) => { const ordered = Number(row.orderedQty || 0), actual = Number(row.actualDeliveredQty || 0), pct = ordered ? Math.min(100, actual / ordered * 100) : 0; return <>{format.format(actual)}<small>{pct.toFixed(0)}%</small></>; } }, { key: "c8", header: "CÒN THIẾU", render: (row) => { const remain = Math.max(0, Number(row.orderedQty || 0) - Number(row.actualDeliveredQty || 0)); return <><strong className={remain ? "red-text" : "green-text"}>{format.format(remain)}</strong><small>PCS</small></>; } }, { key: "c9", header: "CHỨNG CHỈ", render: (row) => <span>▧ {row.certificateCount || 0}</span> }, { key: "c10", header: "ẢNH", render: (row) => <span>▧ {row.attachmentCount || 0}</span> }, { key: "c11", header: "TRẠNG THÁI", render: (row) => { const remain = Math.max(0, Number(row.orderedQty || 0) - Number(row.actualDeliveredQty || 0)); return <StatusBadge value={remain <= 0 ? "Đã giao đủ" : row.eta && new Date(row.eta).getTime() < now ? "Trễ hẹn" : Number(row.actualDeliveredQty || 0) > 0 ? "Đang giao" : "Chưa giao"} />; } }, { key: "c12", header: "THAO TÁC", render: () => <button className="icon-mini" onClick={() => open("receipt")}>⋮</button> }]} /><div className="table-pagination functional-summary"><span>Đang hiển thị toàn bộ {filteredPos.length} bản ghi.</span></div></section>
   </div>;
 }
 function WarehouseReceipt({ data, project, open, canUse }: { data: AppData; project: string; open: (name: string, row?: Row) => void; canUse: boolean }) {

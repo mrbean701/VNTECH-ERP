@@ -269,6 +269,8 @@ function Kpi({ icon, label, value, note, tone = "blue", percent }: { icon: strin
   const pct=percent===undefined?null:Math.max(0,Math.min(100,Number(percent||0)));
   return <article className={`kpi kpi-${tone}`}><span className={`kpi-pictogram ${tone}`}><NavIcon name={kpiIconName(label,icon)}/></span><div className="kpi-content"><small>{label}</small><strong>{value}</strong><p>{note}</p><div className="kpi-mini-visual"><div className="kpi-mini-columns" aria-hidden="true">{bars.map((height,index)=><i key={index} style={{height:`${height}%`}}/>)}</div>{pct!==null&&<b className="kpi-percent">{pct.toLocaleString("vi-VN",{maximumFractionDigits:1})}%</b>}</div></div></article>;
 }
+
+const UI_TODAY = new Date(UI_NOW_MS).toISOString().slice(0, 10);
 export {
   ADMIN_HELP_TEXT,
   APPROVAL_MODE_LABELS,
@@ -286,6 +288,7 @@ export {
   PERM_CAPS,
   PROJECT_STATUS_LABELS,
   UI_NOW_MS,
+  UI_TODAY,
   WORK_CLOSED,
   WORK_STATUS_LABELS,
   boqStatusLabel,
