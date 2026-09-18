@@ -363,3 +363,10 @@ ode -e và bị PowerShell phá nháy ⇒ **luôn viết tệp .mjs**.
 3. Thêm **eject_po** ⇒ PO **cancelled** + decision_reason/decided_by/decided_at + **PR KHÔNG đổi** + **thông báo người tạo PO**.
 4. **Luật giá PO** (unit_price): canEdit được sửa giá · **KHÓA sau khi PO hoàn thành** · **không ghi ngược** danh mục.
 **Giá trị của bước 0:** nếu bỏ qua bước này, tôi đã có thể **dựng một luồng duyệt thứ hai song song** cho PO — đúng loại lỗi kiến trúc cần tránh.
+
+### 14.3. ✅ B2/bước 1 ĐÃ ÁP DỤNG + HỆ THỐNG LÀNH MẠNH (18/09)
+* **Java dựng lại: mvn exit=0** — log khởi động xác nhận: *"Successfully validated **18 migrations**"* · *"Current version of schema ntech_erp: **18**"*
+  ⇒ **V18 (D3 — 3 cột quyết định) đã ghi vào lịch sử Flyway** ✔ (đây cũng là **cách đọc ĐÚNG** — dùng log Flyway/installed_rank, không dùng MAX(version) trên cột chuỗi).
+* **UI nạp lại** ⇒ route Node nhận thay đổi; **Java :18081 200 · UI :8787 200 · proxy :9000 200**.
+* **Kiểm tĩnh 2 lõi:** JS dòng 1321: pending_approval ✔ · JAVA dòng 177: pending_approval ✔ ⇒ **parity**.
+* **CÒN LẠI của bước 1:** kiểm chứng **chức năng** (tạo 1 PO test ⇒ status phải là pending_approval) — nặng hơn (cần nhà cung cấp + kiểm MAR + payload) ⇒ **gộp vào bước 2 + D5** (tạo PO test rồi duyệt/từ chối luôn).
