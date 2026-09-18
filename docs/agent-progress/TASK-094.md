@@ -593,3 +593,24 @@ otifyUserId rỗng ⇒ **chỉ UPDATE** (không nổ, không nửa vời).
 ull → **poId** cho work_item_id và "sent" → **"SENT"**.
 **CỔNG KIỂM CHỨNG (chạy lại sau khi dựng jar): kỳ vọng 8/8**, và **đặc biệt** kiểm thêm ca **"không còn 409"** + **"có đúng 1 dòng 	ask_notifications với work_item_id = id PO"** + **"MR không đổi"**.
 **GHI CHÚ TRUNG THỰC:** 3 lỗi này **chưa đóng**; cổng E2E hiện **6/8**.
+
+### 14.13. ✅ CỔNG E2E B2 **8/8 ĐẠT · 0 HỎNG** sau khi nguyên tử hoá (18/09)
+**Bằng chứng (chạy thật, PO test PO-PRJ-DEMO-01-2026-0010):**
+`
+reject_po ⇒ HTTP 200: {"ok":true,"message":"Đã từ chối PO PO-PRJ-DEMO-01-2026-0010; PR vẫn mở để xử lý lại."}
+[ĐẠT] dựng được PO test ở pending_approval
+[ĐẠT] reject_po chạy thành công qua Java :: HTTP 200
+[ĐẠT] PO chuyển sang cancelled
+[ĐẠT] có ghi decision_reason
+[ĐẠT] có ghi decided_by
+[ĐẠT] MR KHÔNG ĐỔI (PR vẫn mở) :: 'approved' → 'approved'
+[ĐẠT] có THÊM 1 dòng task_notifications cho người tạo PO :: trước=3 sau=4 ·
+       USR_8869ca60-7c6a-4e7f-bebd-0547f38bcdb8 | "PO PO-PRJ-DEMO-01-2026-0010 đã bị hủy"
+HOÀN TÁC: PO về 'delivered_pending_confirmation' · task_notifications về 3
+[ĐẠT] đã HOÀN TÁC PO về trạng thái gốc
+=== B2 END-TO-END: 8/8 ĐẠT · 0 HỎNG ===
+`
+**Điểm quan trọng:** người nhận là **USR_8869ca60-… = đúng uyer_user_id** của PO (không rơi vào nhánh dự phòng) ⇒ **đúng người tạo PO** như yêu cầu.
+**Điều kiện tiên quyết đã kiểm trước đó:** build **mvn exit=0**; adapter có **@Override + @Transactional + public void decidePo(... notifyUserId, notifyTitle, notifyBody, Instant now)** (đọc lại dòng 231-236) ⇒ **nguyên tử thật**.
+**⚠️ LƯU Ý TRUNG THỰC VỀ MÃ THOÁT:** dòng tổng kết của script in **"8/8 ĐẠT · 0 HỎNG"** nhưng mã thoát do công cụ báo là **1**. Tôi **chưa chứng minh** nguyên nhân; giả thuyết: ống dẫn bị cắt sớm do Select-Object -First 18 (không phải lỗi phép kiểm). **⇒ VÒNG SAU phải chạy lại KHÔNG cắt output để xác nhận mã thoát = 0** trước khi coi eject_po là "xong tuyệt đối".
+**Trạng thái B2:** 3 lỗi đã vá ở mã **và** đã có bằng chứng chạy **8/8**; còn **1 xác nhận kỹ thuật** (mã thoát) ⇒ **gần xong, chưa tuyên bố xong**.
