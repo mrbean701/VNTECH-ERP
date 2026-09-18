@@ -370,3 +370,26 @@ ode -e và bị PowerShell phá nháy ⇒ **luôn viết tệp .mjs**.
 * **UI nạp lại** ⇒ route Node nhận thay đổi; **Java :18081 200 · UI :8787 200 · proxy :9000 200**.
 * **Kiểm tĩnh 2 lõi:** JS dòng 1321: pending_approval ✔ · JAVA dòng 177: pending_approval ✔ ⇒ **parity**.
 * **CÒN LẠI của bước 1:** kiểm chứng **chức năng** (tạo 1 PO test ⇒ status phải là pending_approval) — nặng hơn (cần nhà cung cấp + kiểm MAR + payload) ⇒ **gộp vào bước 2 + D5** (tạo PO test rồi duyệt/từ chối luôn).
+
+### 14.4. MẪU CHUẨN + ĐẶC TẢ pprove_po / eject_po (lấy xong 18/09)
+**Mẫu chuẩn (JS pprove_stock_count, dòng 1574-1595) — PO sẽ bắt chước ĐÚNG khuôn này:**
+``js
+if (action === "approve_<entity>") {
+  requireRole(user, [...]);                                     // 1. quyền
+  const row = await first(SELECT id, project_id AS projectId, status FROM <bảng> WHERE id=?, id);
+  if (!row || row.status !== "pending_approval") throw new Error("… đã xử lý.");   // 2. trạng thái
+  if (!(await canAccessProject(user, String(row.projectId), true))) throw new Error("… không có quyền …");
+  await env.DB.batch([env.DB.prepare(UPDATE <bảng> SET status='approved', … WHERE id=?).bind(...)]);  // 3. cập nhật
+  // 4. audit + return { message }
+}
+``
+**ĐẶC TẢ CHO PO (dùng đúng cột đã thêm ở D3):**
+* **pprove_po** — equireRole(["procurement","accountant","admin"]) (KH + Kế toán, theo nghiệp vụ đã đề xuất) ·
+  kiểm status === "pending_approval" · canAccessProject ·
+  UPDATE purchase_orders SET status='waiting_delivery', decided_by=?, decided_at=?, updated_at=? WHERE id=?
+  ⇒ **nối vào luồng giao hàng sẵn có** (trạng thái vận hành hiện tại là waiting_delivery) · audit.
+* **eject_po** — cùng quyền/kiểm tra · UPDATE purchase_orders SET status='cancelled', decision_reason=?, decided_by=?, decided_at=?, updated_at=? WHERE id=?
+  · **KHÔNG cập nhật material_requests** (đúng yêu cầu: **PR vẫn mở**) ·
+  · **THÔNG BÁO người tạo PO**: purchase_orders.buyer_user_id chính là người tạo ⇒ ghi 	ask_notifications (nội dung: *"PO <số> đã bị hủy — hãy tạo lại/xử lý lại"*) + udit · KHÔNG chặn cứng (đúng chế độ **CHỈ CẢNH BÁO** nếu còn cảnh báo khác).
+* **Parity Java:** thêm case "approve_po" / case "reject_po" trong SystemController + method tương ứng ở PurchaseManagementUseCase/PurchaseStore (theo khuôn pproveCentralReturn nếu có).
+* **Kiểm chứng (gộp D5):** tạo 1 PO test ⇒ status = pending_approval ⇒ eject_po ⇒ PO cancelled + decision_reason có giá trị + **MR KHÔNG đổi** + **có dòng 	ask_notifications** cho người tạo.
