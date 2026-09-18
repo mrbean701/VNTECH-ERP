@@ -679,3 +679,10 @@ CA B ⇒ HTTP 400: {"ok":false,"error":"PO đã hoàn thành (completed) — kh�
 3. *"Không ghi ngược danh mục"* ⇒ **CA C**: CHECKSUM TABLE materials **4026259885 → 4026259885** (giống hệt).
 **Không để lại rác test:** hoàn tác đưa PO về delivered_pending_confirmation và giá về   ✔.
 **CÒN LẠI của B2/bước 3:** **JS parity** — thêm update_po_price vào scripts/system-route.mjs (hiện chỉ có phía Java).
+
+### 14.18. ✅ JS PARITY update_po_price (18/09) — 2 lõi đã đồng bộ
+**Đã chèn vào scripts/system-route.mjs** (xác nhận bằng đọc lại): **dòng 1348** if (action === "update_po_price") { · **dòng 1354** khoá trạng thái if(LOCKED_PO.includes(String(po.status))) throw new Error(\PO đã hoàn thành () — không được sửa giá.\) · **dòng 1366** wait audit(user.id,"UPDATE","purchase_order_price",poId,…).
+**Cùng ngữ nghĩa với Java:** equireRole([procurement, accountant, admin]) · đọc PO (po_no, project_id, status) · **KHOÁ** ["completed","completed_with_shortage","completed_with_exceptions","cancelled"] · canAccessProject · vòng lặp lines (purchaseOrderItemId + unitPrice, **không âm**) · **chỉ** UPDATE purchase_order_items SET unit_price=? … WHERE id=? AND purchase_order_id=? (**không đụng materials**) · udit.
+**Kiểm:** 
+ode --check scripts/system-route.mjs ⇒ **exit 0** ✔
+**⇒ B2/bước 3:** **Java (đã kiểm 6/6) + JS parity (đã chèn)** — *còn lại: **restart UI** để nạp handler JS (không phải đường chạy thật, vì đường thật là Java :9000 → :18081).*
