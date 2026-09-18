@@ -248,3 +248,11 @@ không chỉ PO đầu tiên (bản JS hiện đang chỉ tính PO đầu tiên)
   * Gọi create_po/issue_stock để thấy warnings sẽ **TẠO chứng từ thật** (đột biến dữ liệu) ⇒ cố ý KHÔNG làm khi chưa tới bước B2/B3 có **dữ liệu test dùng-một-lần + dọn sạch**.
 * **⇒ Việc kiểm chứng chức năng của B1 được GỘP vào B2/B3** (khi có D5 seed 4 chứng từ test): gọi action trên chứng từ test ⇒ **PHẢI thấy warnings** ⇒ mới đánh giá B1 = xong.
 * Trạng thái hồ sơ: WF-05/WF-02/S-08/WF-04 đã đóng; **B1 = "đã viết mã + đã dựng bản chạy", chưa đóng** vì thiếu 1 bằng chứng chức năng.
+
+### 12.3. Thử kiểm chứng chức năng B1 qua API Java (18/09) — CHƯA ĐẠT, ghi rõ để vòng sau xử lý
+* **Đã làm:** lấy id hợp lệ (dự án PRJ_fdbfab20…, kho WH_51e0f009…, tổ đội TEAM_8c1fecd9…, phiếu đã duyệt MR_194680cc…, dòng phiếu MRI_8be4ecb4…, vật tư MAT_082196e5…),
+  ghi **số dòng TRƯỚC** (stock_issues **4** · stock_issue_items **5** · stock_movements **4**), rồi gọi API Java.
+* **Kết quả:** login ⇒ **200** ✔ (đường Java/MySQL chạy đúng) nhưng issue_stock ⇒ **HTTP 400 Bad Request** ⇒ **payload chưa đủ/đúng shape** (chưa đọc được thân lỗi để biết thiếu trường nào).
+* **⇒ KHÔNG có đột biến dữ liệu** (400 = bị chặn trước khi ghi) ⇒ số dòng vẫn như TRƯỚC. Không cần dọn.
+* **VIỆC KẾ TIẾP (đúng 1 bước):** khi gọi lại, **đọc thân lỗi 400** ($_.Exception.Response / ErrorDetails) để biết trường thiếu, HOẶC đọc StockManagementUseCase.issueStock để lấy đúng danh sách trường bắt buộc;
+  sau đó mới kết luận B1. Cách khác rẻ hơn: làm cùng lúc với **D5 seed 4 chứng từ test** (đã nằm trong kế hoạch B4) rồi kiểm B1 trên đó.
