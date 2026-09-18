@@ -104,6 +104,13 @@ function splitChildren(text) {
         else if (c === ">" && brace === 0) break;
       }
       const tagText = text.slice(i, j + 1);
+      // ⚠️ LỖI ĐÃ GẶP: chỉ cắt tại biểu thức `{…}` ⇒ hai `<section>` LIỀN NHAU (không có biểu thức ở giữa) bị gộp
+      // vào CÙNG một con ⇒ tab "Tổng quan" và "Hồ sơ" biến mất (bị hút vào tab khác). Nay **cắt tại MỌI `<section`
+      // ở độ sâu 0** (tức `tagDepth === 0` TRƯỚC khi tăng) — đúng như bản đồ khối văn bản.
+      if (!close && tagDepth === 0 && /^<\s*section\b/i.test(tagText) && buf) {
+        out.push({ kind: "markup", text: buf });
+        buf = "";
+      }
       if (close) tagDepth = Math.max(0, tagDepth - 1);
       else if (!/\/>$/.test(tagText)) tagDepth++;
       buf += tagText; i = j + 1; continue;
@@ -149,10 +156,17 @@ const newJsx = `return <EntityDetailModal open onClose={close} title=${JSON.stri
 
 // ── 6. BẤT BIẾN "KHÔNG MẤT NỘI DUNG" ─────────────────────────────────────────────────────
 const count = (text, needle) => text.split(needle).length - 1;
-for (const needle of ["<section", "onClick=", "action(", "<form", 'type="submit"', "CardHead"]) {
+for (const needle of ["<section", "action(", "<form", 'type="submit"', "CardHead"]) {
   const a = count(line, needle), b = count(newJsx, needle);
   if (a !== b) failures.push(`[bất biến] "${needle}": bản cũ ${a} → bản mới ${b} ⇒ DỪNG`);
 }
+// `onClick` GIẢM ĐÚNG 1 là CÓ CHỦ ĐÍCH: nút "← Quay lại" trong `<header>` bị thay bằng nút × của
+// `EntityDetailModal` (chuỗi `close` KHÔNG mất — nay nằm ở `onClose={close}`). Nếu giảm khác 1 ⇒ DỪNG.
+const onClickOld = count(line, "onClick="), onClickNew = count(newJsx, "onClick=");
+const hasBackButton = /className=\{isPage \? "page-back"/.test(headerInner);
+const expectedNew = onClickOld - (hasBackButton ? 1 : 0);
+if (onClickNew !== expectedNew) failures.push(`[bất biến] "onClick=": bản cũ ${onClickOld} → bản mới ${onClickNew} (kỳ vọng ${expectedNew}; chỉ được giảm 1 do nút "← Quay lại" thay bằng × của modal) ⇒ DỪNG`);
+if (!newJsx.includes("onClose={close}")) failures.push("[bất biến] mất dây nối `onClose={close}` ⇒ DỪNG");
 for (const label of ["Xóa phiếu & lập mới", "Gửi lại từ đầu", "⇩ Tải Excel", "⇩ Tải PDF"]) {
   if (!newJsx.includes(label)) failures.push(`[bất biến] mất nút "${label}" ⇒ DỪNG`);
 }

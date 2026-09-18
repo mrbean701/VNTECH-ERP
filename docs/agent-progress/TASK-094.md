@@ -50,7 +50,59 @@
 4. **Chặn cứng hay chỉ cảnh báo?** (đề xuất **chặn cứng**: chưa duyệt thì không được nhập/xuất — đúng chữ *"phải có workflow phê duyệt"*)
 5. **Nhập kho:** **thêm** một bước duyệt mới, hay **nâng cấp** `confirm_delivery` (BCH xác nhận giao hàng) thành bước duyệt chính thức?
 
-## 5. RỦI RO ĐÃ NHẬN DIỆN
+## 6. ✅ CHỐT NGHIỆP VỤ CỦA NGƯỜI DÙNG (18/09) + THIẾT KẾ CHI TIẾT
+
+**Người dùng chốt (nguyên văn ý):**
+1. *"Làm theo nghiệp vụ được đề xuất, **thiết kế workflow ĐỘNG** để có thể thay đổi quy trình được. **Nạp sẵn dữ liệu để test** đối với các luồng mới này."*
+2. *"Chưa cần đặt **ngưỡng tiền**. User có quyền từ chối PO sẽ tự ra quyết định thủ công. **Logic: PR được duyệt nhưng PO bị từ chối thì PR VẪN MỞ**, đồng thời **HỦY PO đó** và **yêu cầu user tạo PO đó làm lại / xử lý lại** (gửi **thông báo** đến user tạo PO)."*
+3. *"Tạm thời phiếu đề nghị mua hàng cứ **giữ nguyên** như vậy, miễn đang là workflow động thì có thể chỉnh sửa được."*
+4. *"**Chỉ cảnh báo**"* (KHÔNG chặn cứng).
+
+### 6.1. Hệ quả kỹ thuật (đã sửa lại so với phương án ban đầu)
+
+| Điểm | Phương án ban đầu | **CHỐT LẠI theo người dùng** |
+|---|---|---|
+| Cổng | `requireApproved()` **chặn** action | **CHỈ CẢNH BÁO**: action **vẫn chạy**, kèm `warning` + bản ghi duyệt `pending` + biểu ngữ trên giao diện. **Không** ném lỗi chặn. |
+| Ngưỡng tiền | có thể cấu hình ngưỡng | **KHÔNG làm** (bỏ hẳn khỏi phạm vi P1–P3, ghi vào non-goals) |
+| Cấu hình | sửa trong migration | **WORKFLOW ĐỘNG**: `workflow_definitions` + `workflow_steps` + `workflow_step_approvers` **sửa được qua giao diện quản trị** (đổi bước / đổi vai trò / bật-tắt / nhân bản định nghĩa theo `module_key` + `version`) |
+| Phiếu đề nghị (PR) | có thể đổi | **GIỮ NGUYÊN 5 bước hiện tại**, chỉ **đưa vào engine động** để chỉnh được về sau |
+| Dữ liệu test | chỉ probe tạm | **NẠP SẴN dữ liệu test** cho các luồng mới (xem §6.3) |
+
+### 6.2. Luồng **PO bị từ chối** (nghiệp vụ mới, phải làm đúng)
+
+```
+PR đã duyệt  ──► tạo PO (pending_approval)
+                     │
+        ┌────────────┴─────────────┐
+        ▼                          ▼
+   PO được DUYỆT              PO bị TỪ CHỐI
+   → approved                → cancelled (kèm lý do, người quyết, thời điểm)
+   → cho phép nhận hàng      → **PR VẪN MỞ** (không đổi trạng thái PR)
+                             → **THÔNG BÁO cho user đã tạo PO đó**: "PO <số> đã bị hủy — hãy tạo lại/xử lý lại"
+                             → UI PO hiện rõ "Đã hủy — cần xử lý lại" + nút tạo lại
+                             → ghi audit (ai từ chối, lý do) + vào hộp thư người tạo
+```
+* Dùng lại hạ tầng thông báo đang chạy: `task_notifications` + `email_outbox` (đã kiểm chứng ở TASK-080 đợt 2D).
+* **Quyền từ chối PO** = `canApprove` trên module mua hàng (đã có sẵn cơ chế).
+
+### 6.3. Dữ liệu test nạp sẵn cho các luồng mới (yêu cầu 1)
+Seed (parity **drizzle + Flyway**) tạo **workflow definitions cho 3 module mới** (`purchasing` · `warehouse_issue` · `warehouse_receipt`) + **4 chứng từ mẫu** để test ngay trên UI:
+1. PO `pending_approval` (để bấm Duyệt) · 2. PO `cancelled` do bị từ chối **kèm thông báo đã gửi cho người tạo** (để xem luồng xử lý lại) · 3. phiếu **xuất kho** `pending_approval` · 4. phiếu **nhập kho** `pending_approval`.
+Kèm probe: **đối chứng dương** (chưa duyệt ⇒ có **cảnh báo** nhưng action vẫn chạy; sau duyệt ⇒ không còn cảnh báo) + **dọn sạch/khôi phục đúng số dòng** khi cần.
+
+### 6.4. ⏸️ CÂU HỎI CÒN LẠI — mục 5 (nhập kho), người dùng yêu cầu em đề xuất rồi xác nhận
+
+**Đề xuất của em: PHƯƠNG ÁN A — THÊM một bước duyệt mới cho phiếu nhập** (giữ `confirm_delivery` là bước BCH xác nhận hàng về).
+* **Vì sao:** hai việc **khác nhau về bản chất** — `confirm_delivery` = *"hàng đã về đúng/sai so với chứng từ"* (xác nhận thực tế, do BCH/CHT), còn **duyệt phiếu nhập** = *"cho phép ghi TĂNG tồn kho"* (trách nhiệm thủ kho/kế toán). Trộn hai ý nghĩa vào một bước sẽ **mất truy vết** đúng như lớp lỗi đã gặp ở các module khác.
+* **Phương án B (để anh cân nhắc):** **nâng cấp** chính `confirm_delivery` thành bước duyệt chính thức — ít bước hơn, nhưng **một bước mang hai nghĩa**, và sau này rất khó tách nếu cần báo cáo "hàng về đúng giờ" tách khỏi "đã cho nhập kho".
+* **Đề xuất kèm (cho cả A và B):** bước duyệt phiếu nhập cấu hình được trong engine động ⇒ sau này có thể gộp/tách mà **không cần sửa mã**.
+
+**👉 Cần anh xác nhận: A hay B?** (mặc định em làm **A** nếu anh không phản hồi, vì A giữ được truy vết và vẫn đổi được cấu hình sau).
+
+### 6.5. Cập nhật thứ tự thi hành (sau khi chốt)
+**P0** khung + engine động (+ màn quản trị sửa quy trình) → **P1** PO (+ luồng từ chối PO ở §6.2) → **P2** cấp phát/xuất → **P3** nhập kho (theo A/B) → **P4** chuẩn hoá 3 action duyệt rời rạc → **P5** MAR. **Chế độ CẢNH BÁO** ở mọi bước; **seed test data** ở §6.3 nạp cùng P1–P3.
+
+## 7. RỦI RO ĐÃ NHẬN DIỆN
 
 - **`approvals` đang có 35 dòng `pending`** ⇒ mọi thay đổi phải **không** làm hỏng luồng 5 bước đang chạy (P0 phải chứng minh bằng probe "100 dòng giữ nguyên").
 - **Nhánh duyệt song song `all_roles` đang là mã chết ở cả hai lõi** (KP #54: JS ghi snapshot `single` cho mọi bước có Owner) ⇒ nếu P0–P5 dùng tới `all_roles`, phải **sửa cả gốc snapshot** trước, nếu không sẽ lặp lại đúng lỗi cũ.
