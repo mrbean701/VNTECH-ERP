@@ -213,7 +213,12 @@ export const materialRequestItems = sqliteTable("material_request_items", {
 }, (table) => [uniqueIndex("request_items_line_uidx").on(table.requestId, table.lineNo), index("request_items_material_idx").on(table.materialId), index("request_items_boq_item_idx").on(table.boqItemId)]);
 
 export const approvals = sqliteTable("approvals", {
-  id: text("id").primaryKey(), requestId: text("request_id").notNull().references(() => materialRequests.id),
+  id: text("id").primaryKey(),
+  // [WF] PHASE 8 (18/09) — D1: một bảng duyệt dùng cho MỌI loại chứng từ. `requestId` nay KHÔNG bắt buộc
+  // (phiếu đề nghị vẫn dùng; PO/xuất/nhập kho dùng `entityType`+`entityId`). Bản SQLite KHÔNG đổi được
+  // nullability tại chỗ nên cột thật vẫn NOT NULL — xem ghi chú trong `drizzle/0141_wf_dynamic_approvals.sql`.
+  entityType: text("entity_type"), entityId: text("entity_id"),
+  requestId: text("request_id").references(() => materialRequests.id),
   stage: integer("stage").notNull(), department: text("department").notNull(), approverUserId: text("approver_user_id").references(() => users.id),
   status: text("status").notNull().default("pending"), queuedAt: text("queued_at"), dueAt: text("due_at"), notifiedAt: text("notified_at"), reminderSentAt: text("reminder_sent_at"), decidedAt: text("decided_at"),
   comment: text("comment"), decisionSnapshot: text("decision_snapshot"),
