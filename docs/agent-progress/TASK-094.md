@@ -1173,3 +1173,25 @@ pm test ⇒ EXIT 0** (lint · typecheck · hồi quy · workflow ĐẠT) — CSS
 * **
 pm run build ⇒ EXIT 0** · **BUILT ARTIFACT VALIDATION: ĐẠT · 5.3.0-MASTER-BASELINE-R1.1.1-FINAL-20260908** · Đã ghi dấu bản chạy VNTECH ERP V5.3.0 FULL W2.
 **CÒN 1 CỔNG:** **cổng ảnh 64/64** (đang chạy nền) — kỳ vọng **  px mọi màn** vì các class đã xoá là **CSS chết**; **nếu có lệch ⇒ chứng tỏ class CHƯA chết** ⇒ phải điều tra lại (không được cập nhật baseline để che).
+
+### 23.2. 🚨 CỔNG ẢNH BÁO MỌI MÀN LỆCH 30–80 % — NGUYÊN NHÂN THẬT: **CSS BỊ 404** (18/09)
+**Triệu chứng (job nền):** MỌI màn × MỌI kích thước lệch **30–80 %**; riêng 2 màn còn báo **kích thước ảnh khác**:
+ 9-dept-assign-kh: chuẩn 2203×1730 vs nay 1920×1080 · 10-dept-assign-da: chuẩn 2166×1894 vs nay 1920×1080 ⇒ trang **THẤP hơn nhiều** (mất nội dung).
+**CHẨN ĐOÁN (đo trực tiếp, không đoán):**
+`
+HTTP / (8787)          -> 200 · 7123 ký tự
+HTML có: <link rel="stylesheet" href="/assets/index-CJAyX6n6.css" ...>
+Tải /assets/index-CJAyX6n6.css  ->  HTTP 404 Not Found
+`
+⇒ **Trang web mất HOÀN TOÀN CSS** (stylesheet **404**) ⇒ render **không có style** ⇒ mọi màn khác baseline 30–80 % ✔ **giải thích trọn vẹn triệu chứng.**
+**NGUYÊN NHÂN GỐC:** tôi đã chạy **
+pm run build trong lúc server UI đang chạy** ⇒ build **sinh tên asset băm MỚI**, nhưng **server đang phục vụ HTML cũ** trỏ tới **tên asset CŨ** ⇒ **404**.
+**⇒ KHÔNG PHẢI lỗi CSS của tôi:** CSS **nguồn** vẫn tốt — erify:css-baseline **ĐẠT** (audit **parse** tệp CSS nên nếu cú pháp hỏng là đã báo), 
+pm test **exit 0**, 
+pm run build **exit 0 + BUILT ARTIFACT VALIDATION ĐẠT**.
+**KHẮC PHỤC:** **khởi động lại server UI** để HTML và asset về **cùng một thế hệ build** ⇒ rồi **chạy lại cổng ảnh** (kỳ vọng   px mọi màn).
+**BÀI HỌC (mới, quan trọng):**
+1. **KHÔNG chạy 
+pm run build khi server UI đang chạy** — (a) làm probe ảnh chụp **trạng thái không nhất quán** (đã gặp ở lượt trước), (b) khiến server **phục vụ HTML cũ + asset 404 ⇒ mất toàn bộ CSS** (lượt này).
+2. Trước khi kết luận "regression thị giác", **phải kiểm HTTP của tài nguyên CSS/JS mà HTML tham chiếu** — nếu 404 thì mọi khác biệt ảnh là **GIẢ**.
+3. Cổng ảnh chỉ đáng tin khi: **server vừa được restart sạch** và **không có tác vụ ghi tệp nào chạy song song**.
