@@ -1802,3 +1802,17 @@ assert.match(page, /data-contract="VNTECH_BOQ_HEADING_MATCHING_EXCLUSION_V1"/);
 **⚠️ LỖ HỔNG ĐỘ PHỦ ĐÃ PHÁT HIỆN:** **16 màn của probe KHÔNG có màn BOQ** ⇒ việc tách **BoqControl (36KB)** chỉ được bảo chứng bởi **	sc 0 + hồi quy 61/61 + không có thay đổi phụ ở 16 màn khác** ⇒ **KHÔNG có bằng chứng ảnh trực tiếp cho màn BOQ**.
 ⇒ **ĐỀ XUẤT (việc kế tiếp, cần cân nhắc):** ① **thêm 1 màn BOQ** vào probe (tăng độ phủ) ② **ghim đồng hồ (fixed clock)** cho màn 17 để baseline **không trôi theo ngày** ⇒ cổng ảnh ổn định **64/64**.
 **TỔNG KẾT U-11 bước 4:** WorkCenter (4 khối) + **BoqControl (9 khối)** đã tách ⇒ **page.tsx 2878 → 2557 dòng (−321 = −11 %)** · **	sc 0** · **hồi quy 61/61** · **cổng ảnh 63/64** (1 drift ngày) ⇒ **ĐỦ ĐIỀU KIỆN ĐÁNH DẤU U-11 = DONE** (còn 2 việc cải thiện độ phủ ghi ở trên).
+
+### 41. 🎉 U-11 = **DONE** ⇒ **PHASE 1 = 16/17** · TỔNG LỘ TRÌNH **47/110 = 42,7 %** (20/09)
+**Kiểm chứng cuối của U-11 bước 4:**
+* **pp/page.tsx: 2878 → 2557 dòng (−321 = −11 %)** nhờ tách **3 màn** khỏi tệp khổng lồ:
+  Requests (đã tách trước đó) · **WorkCenter** (4 khối) · **BoqControl** (9 khối) ⇒ pp/screens/ nay có **26 file**.
+* **
+px tsc --noEmit ⇒ 0** ✔
+* **
+pm run test:regression ⇒ 61/61 PASS · EXIT 0** ✔ *(sửa **5 test cũ**: 4 do **phạm vi ĐỌC** thiếu module đã tách + 1 do **đọc thẳng page.tsx** thay vì eadUiSource())*
+* **Cổng ảnh ⇒ mọi màn   px** ✔ *(màn 17-modal-po **nhạy theo NGÀY** đã được --locate xác minh và **chụp lại baseline**; kiểm lại --only=17-modal-po ⇒ **ĐẠT 4/4**) *
+**LỘ TRÌNH:** U-11 → **DONE / TACH-3-MAN-WORKCENTER-REQUESTS-BOQCONTROL** (ô [10]) ⇒ **PHASE 1 = 16/17** — còn **duy nhất U-12**.
+**ĐO LẠI (đúng quy trình an toàn):** mỏ neo khớp **đúng 1 dòng** · **12 ô** · **tổng ID = 110** (không mất) · **dòng rác = 0** · **tổng lộ trình 47/110 = 42,7 %**.
+**⚠️ 2 LỖ HỔNG ĐỘ PHỦ CÒN LẠI (đã ghi, đề xuất cải thiện):** ① probe **không có màn BOQ** ⇒ tách BoqControl chỉ được bảo chứng bằng 	sc + hồi quy + không đổi 16 màn khác ② màn 17-modal-po **nhạy ngày** ⇒ nên **ghim đồng hồ** để cổng ảnh ổn định.
+**⇒ TIẾP THEO: U-12 (mục CUỐI của PHASE 1)** — U-12.2 bỏ !important **thừa** (từng lô 20–30 chỗ + kiểm ảnh) → U-12.3 xoá **khối override dài** (dòng 962 · 1003-1011 · 2072-2074) ⇒ **PHASE 1 = 17/17** ⇒ sang **PHASE 9 (Báo cáo & Dashboard)**.
