@@ -16,11 +16,11 @@
 
 | Phân loại (nguyên văn cột TT) | Số mục | % |
 |---|---|---|
-| **DONE** (`**DONE**` + `DONE` + `DONE / AP-DUNG n`) | **50** | **45,5 %** |
+| **DONE** (`**DONE**` + `DONE` + `DONE / AP-DUNG n`) | **51** | **46,4 %** |
 | ĐANG LÀM | 0 | 0 % |
 | KHUNG XONG nhưng **ÁP DỤNG 0** | 0 | 0 % |
 | **BỊ CHẶN** (`**BLOCKED**` = F-01) | 1 | 0,9 % |
-| TODO | 59 | 53,6 % |
+| TODO | 58 | 52,7 % |
 
 | Phase | DONE / tổng | Ghi chú |
 |---|---|---|
@@ -34,7 +34,7 @@
 | PHASE 6 — ĐỘI NHÓM | 0 / 6 | |
 | PHASE 7 — QUẢN TRỊ | 0 / 16 | |
 | PHASE 8 — WORKFLOW | **6 / 6** | ĐÓNG TRỌN (WF-01…WF-06 + nhánh B) |
-| PHASE 9 — BÁO CÁO | **2 / 5** | `R-01` DONE (kiến trúc dùng chung + ảnh 4/4) · `R-02` DONE (Mua hàng: 3 định nghĩa + **thời gian xử lý từ cột DB thật** + ảnh runtime) |
+| PHASE 9 — BÁO CÁO | **3 / 5** | `R-01` DONE (kiến trúc dùng chung) · `R-02` DONE (Mua hàng + thời gian xử lý) · `R-03` DONE (Kho: 4 định nghĩa + fan-out dấu từ stock_movements, engine 73/73) |
 | PHASE 10 — TƯƠNG LAI | 0 / 5 | 1 mục bị chặn (F-01) |
 
 **Phần KHÔNG cộng vào 110 mục — nhánh đang chạy thực tế:** TASK-048 → TASK-071 là **vá lỗi

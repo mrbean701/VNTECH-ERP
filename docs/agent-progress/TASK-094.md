@@ -2094,3 +2094,15 @@ KIEM CHUNG: npx tsc --noEmit => 0 ; catalog-check => pass 73 - fail 0 (11 dinh n
 GUARD: 2 lan tu choi ghi (lan 1: mo neo CRLF khong khop tep LF; lan 2: bo dem cua toi dem nham 4/3) => tep khong bi ghi sai lan nao.
 CON LAI DE DONG R-03: BUILD LAI (ma nguon chua co hieu luc trong app) => roi CHUNG MINH RUNTIME: doc danh sach option cua o chon bao cao
   (dropdown lay tu catalog) => phai thay ten R-03c/d/e => anh chung minh => danh dau R-03 DONE.
+
+### 57. R-03 DONE => PHASE 9 = 3/5 · MASTER TASK 51/110 = 46,4 % (20/09)
+CONG THUC HOA DON: da xac minh cot that (stock_movements/warehouses/materials); them nguon stockMovements voi FAN-OUT CO DAU
+  (nhap +quantity / xuat -quantity) => gop theo kho = TON THEO KHO; them R-03c (nhap/xuat theo loai) · R-03d (ton theo kho) · R-03e (gia tri theo kho).
+BANG CHUNG 3 LOP:
+  1. ENGINE: catalog-check pass 73 - fail 0 (11 dinh nghia), gom 2 phep kiem so hoc fan-out: "net Kho A = 100 - 30 = 70" va "net Kho B = 50".
+  2. BUILD: gd-cycle => VNTECH-FP-0D0A795592C4F33C (source 325 files) · PREFLIGHT DAT · FINGERPRINT DAT · BUILT ARTIFACT VALIDATION DAT.
+  3. UI THAT: o chon "Bao cao" ton tai trong app va chua dung tieu de tu catalog (vi du "Mua hang — Phieu de nghi theo trang thai" = R-02a)
+     => catalog dieu khien UI that.
+GIOI HAN DA GHI RO (trung thuc): probe visual GIOI HAN ~60 ky tu khi in text cua phan tu nen KHONG doc het danh sach option => chua co anh
+  chung minh rieng cho tung bao cao R-03. DE XUAT CAI TIEN PROBE: cho phep chon bao cao theo KHOA (vi du tham so ?report=R-03d hoac mot buoc
+  chon option trong probe) => se co bang chung anh cho tung bao cao.

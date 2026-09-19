@@ -210,7 +210,7 @@
 |---|---|---|---|---|---|---|---|---|---|
 | `R-01` | Báo cáo | Kiến trúc báo cáo dùng chung (không hard-code từng báo cáo) | P4 | U-02 | - | NEW | NEW | - | **DONE / ENGINE + MAN DUNG CHUNG + 8 DINH NGHIA + ANH CHUAN 4/4** |
 | `R-02` | Báo cáo | Báo cáo Mua hàng: số lượng MR/PR/PO · chờ · xong · từ chối · thời gian xử lý | P4 | R-01 | - | - | NEW | - | **DONE / 3-DINH-NGHIA + THOI-GIAN-XU-LY-TU-COT-DB-THAT + ANH-RUNTIME** |
-| `R-03` | Báo cáo | Báo cáo Kho: tồn theo kho · giá trị · sắp hết · nhập/xuất | P4 | R-01 | - | - | NEW | - | TODO |
+| `R-03` | Báo cáo | Báo cáo Kho: tồn theo kho · giá trị · sắp hết · nhập/xuất | P4 | R-01 | - | - | NEW | - | **DONE / 4-DINH-NGHIA + FAN-OUT-DAU-TU-COT-DB-THAT + ENGINE-73-73** |
 | `R-04` | Báo cáo | Báo cáo Dự án: trạng thái · thành viên · số tổ đội · số kho · tiến độ | P4 | R-01 | - | - | NEW | - | TODO |
 | `R-05` | Báo cáo | Báo cáo Công việc: tỉ lệ hoàn thành · quá hạn · khối lượng · theo phòng | P4 | T-08 | - | - | NEW | - | TODO |
 
