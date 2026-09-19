@@ -59,6 +59,11 @@ import { configuredMenuGroups, modules } from "@/lib/menu-helpers";
 import { requestLineContext } from "@/lib/request-context";
 import { isBoqTemplateInstructionRow, normalizeBoqRowRole, normalizeBoqType } from "@/lib/boq-normalize";
 import { daysFromToday } from "@/lib/date-helpers";
+import { decide, savedRequestDocument } from "@/lib/request-actions";
+import { configuredModules, workflowApproverCandidates } from "@/lib/workflow-helpers";
+import { ReceiptDrawer } from "@/app/screens/ReceiptDrawer";
+import { RequestDrawer } from "@/app/screens/RequestDrawer";
+import { WorkflowModal } from "@/app/screens/WorkflowModal";
 
 const VNTECH_UI_CONTRACT_ID = VNTECH_BRAND.release.uiContractId;
 const VNTECH_UI_BUILD_MARKER = VNTECH_BRAND.release.uiBuildMarker;
@@ -200,22 +205,6 @@ function AdminModuleGuide({moduleKey}:{moduleKey:ModuleKey}){const text=moduleAd
 
 function roleLabel(data: AppData, code: string) { return data.roleCatalog?.find((row) => row.code === code)?.name || roleNames[code] || code; }
 function engineRoleLabel(data: AppData, engineKey: string) { const profile=data.engineRoleProfiles?.find((row) => row.engineKey === engineKey);return profile?`${profile.companyCode} · ${profile.displayName}`:roleNames[engineKey]||engineKey; }
-function configuredModules(data: AppData, includeHidden = false) {
-  const catalog = data.moduleCatalog || [];
-  const groups = configuredMenuGroups(data, true);
-  return modules.map((item) => {
-    const config = catalog.find((row) => row.moduleKey === item.key);
-    let groupKey = item.key==="material_catalog" ? "material_master" : String(config?.groupKey ?? item.groupKey ?? "").trim() || null;
-    if (groupKey === "project_management") groupKey = "site_command";
-    let group = groups.find((row) => String(row.groupKey) === groupKey);
-    if (!group && config?.groupName) {
-      const normalizedName = String(config.groupName).trim().toLocaleLowerCase("vi");
-      group = groups.find((row) => String(row.name || "").trim().toLocaleLowerCase("vi") === normalizedName);
-      if (group) groupKey = String(group.groupKey);
-    }
-    return { ...item, label: item.key==="material_catalog" ? "Danh mục vật tư gốc" : item.key==="central_warehouse" ? "Kho Tổng" : (config?.label || item.label), icon: config?.icon || item.icon, groupKey, group: group?.name || config?.groupName || null, active: config ? Boolean(config.active) : true, sortOrder: Number(config?.sortOrder ?? modules.indexOf(item) * 10) };
-  }).filter((item) => includeHidden || item.active).sort((a, b) => a.sortOrder - b.sortOrder);
-}
 function permissionMenuStructure(data: AppData) {
   const groupRows=configuredMenuGroups(data);
   const moduleRows=configuredModules(data).filter((item)=>item.key!=="admin");
@@ -1061,12 +1050,6 @@ function StaffDirectory({ rows }: { rows: Row[] }) {
   /><div className="staff-table"><div className="staff-table-head"><span>#</span><span>HỌ TÊN</span><span>BỘ PHẬN</span><span>EMAIL</span><span>TRẠNG THÁI</span></div>{filtered.map((row,index)=>{const dept=String(row.department||row.roleName||"Chưa phân bộ phận");return <article className="staff-row" key={row.id} tabIndex={0}><span className="staff-index">{index+1}</span><div className="staff-person"><div className="staff-avatar">{initials(String(row.fullName||"NS"))}<i className={row.online?"online":"offline"}/></div><div><strong>{row.fullName}</strong><small>{row.roleName||row.role||"—"}</small></div></div><strong className="staff-department">{dept}</strong><span className="staff-email">{row.email||"Chưa cập nhật email"}</span><span className={`staff-status ${row.online?"online":"offline"}`}>● {row.online?"ONLINE":"OFFLINE"}</span><div className="staff-hover"><strong>{row.fullName}</strong><dl><div><dt>BỘ PHẬN</dt><dd>{dept}</dd></div><div><dt>CHỨC DANH / NHÓM QUYỀN</dt><dd>{row.roleName||row.role||"—"}</dd></div><div><dt>EMAIL</dt><dd>{row.email||"Chưa cập nhật"}</dd></div><div><dt>TRẠNG THÁI</dt><dd className={row.online?"online-text":"offline-text"}>{row.online?"ONLINE":"OFFLINE"}</dd></div></dl></div></article>})}{!filtered.length&&<div className="staff-empty">Không tìm thấy nhân sự phù hợp.</div>}</div></section>;
 }
 
-async function decide(requestId: string, stage: number, decision: "approved"|"rejected", action: (name:string,payload:Row)=>Promise<boolean>, comment?: string) {
-  const resolved = comment === undefined ? (window.prompt(decision === "approved" ? "Bình luận duyệt (có thể để trống):" : "Lý do trả lại / từ chối:") ?? "") : comment;
-  if (decision === "rejected" && !String(resolved).trim()) { window.alert("Vui lòng nhập lý do trả lại / từ chối."); return false; }
-  return action("decide_approval", { requestId, stage, decision, comment: String(resolved).trim() });
-}
-
 function ApprovalDots({ approvals }: { approvals: Row[] }) { const sorted = [...(approvals || [])].sort((a,b) => Number(a.stage)-Number(b.stage)); return <div className="approval-dots">{sorted.map((item) => <span key={item.stage} className={item?.status || "pending"} title={`${item.department || `Bước ${item.stage}`}: ${item?.status || "pending"}`}>{item.stage}</span>)}</div>; }
 
 function Approvals({ data, rows, projects, project, onProject, user, action, open, canUse, refresh }: { data: AppData; rows: Row[]; projects:Row[]; project:string; onProject:(value:string)=>void; user: Row; action: (name: string, payload: Row) => Promise<boolean>; open: (name: string, row?: Row) => void; canUse: boolean; refresh:()=>void }) {
@@ -1722,30 +1705,6 @@ function OrganizationUnitManager({data,action}:{data:AppData;action:(name:string
   return <section className="card"><CardHead title="Cơ cấu tổ chức canonical" note="Phòng ban và BCH dùng một danh mục gốc; hỗ trợ cấp trên, dự án, ngày hiệu lực và lưu trữ không mất lịch sử."/><form key={String(selected?.id||"new")} onSubmit={save}><div className="form-grid"><label><span>Mã đơn vị *</span><input name="code" required defaultValue={selected?.code||""}/></label><label><span>Tên đơn vị *</span><input name="name" required defaultValue={selected?.name||""}/></label><label><span>Loại *</span><select name="unitType" defaultValue={selected?.unitType||"department"}><option value="company">Công ty</option><option value="department">Phòng/Bộ phận</option><option value="site_command">Ban chỉ huy dự án</option></select></label><label><span>Đơn vị cấp trên</span><select name="parentId" defaultValue={selected?.parentId||""}><option value="">— Không có —</option>{parents.map((row)=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label><label><span>Dự án (cho BCH)</span><select name="projectId" defaultValue={selected?.projectId||""}><option value="">— Danh mục cha —</option>{data.adminProjects.map((row)=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label><label><span>Thứ tự</span><input name="sortOrder" type="number" defaultValue={selected?.sortOrder??100}/></label><label><span>Hiệu lực từ</span><input name="effectiveFrom" type="date" defaultValue={selected?.effectiveFrom||""}/></label><label><span>Hiệu lực đến</span><input name="effectiveTo" type="date" defaultValue={selected?.effectiveTo||""}/></label><label className="span-2"><span>Mô tả</span><input name="description" defaultValue={selected?.description||""}/></label></div><div className="row-actions"><button className="primary" type="submit">{selected?"Lưu đơn vị":"＋ Thêm đơn vị"}</button>{selected&&<button className="secondary" type="button" onClick={()=>setSelected(null)}>Hủy sửa</button>}</div></form><div className="table-wrap"><table><thead><tr><th>Mã</th><th>Đơn vị</th><th>Loại</th><th>Cấp trên / Dự án</th><th>Hiệu lực</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>{units.map((row)=><tr key={row.id}><td><strong>{row.code}</strong></td><td>{row.name}<small>{row.description||"—"}</small></td><td>{row.unitType}</td><td>{row.parentName||"—"}<small>{row.projectCode?`${row.projectCode} · ${row.projectName}`:""}</small></td><td>{row.effectiveFrom||"—"}<small>{row.effectiveTo?` đến ${row.effectiveTo}`:""}</small></td><td><StatusBadge value={row.active?"Đang dùng":"Đã lưu trữ"}/></td><td><div className="row-actions"><button className="export-mini" onClick={()=>setSelected(row)}>Sửa</button><button className="export-mini" disabled={Boolean(row.systemLocked&&row.active)} onClick={()=>void toggle(row)}>{row.active?"Lưu trữ":"Kích hoạt"}</button></div></td></tr>)}</tbody></table></div></section>;
 }
 
-function workflowApproverCandidates(data: AppData, moduleKey: string): Row[] {
-  return (data.users || [])
-    .filter((u) => Number(u.active ?? 1) === 1)
-    .map((u): Row => {
-      const perm = (data.allModulePermissions || []).find(
-        (p) => String(p.userId) === String(u.id) && String(p.moduleKey) === moduleKey);
-      const isAdmin = String(u.role) === "admin";
-      return { ...u, hasApprovePermission: isAdmin || Number(perm?.canApprove) === 1 };
-    })
-    .sort((a, b) => Number(b.hasApprovePermission) - Number(a.hasApprovePermission)
-      || String(a.fullName || "").localeCompare(String(b.fullName || ""), "vi"));
-}
-
-// ---------------------------------------------------------------------------
-// ĐỢT P5 — PHÂN QUYỀN PHÒNG BAN · PHÂN QUYỀN NGƯỜI DÙNG · CẤP BẬC HỆ THỐNG
-// ---------------------------------------------------------------------------
-// =============================================================================
-// MỤC 7/8 — DANH SÁCH NHÂN SỰ FULL MÀN
-// Yêu cầu: «danh sách nhân sự đang không hiển thị đúng danh sách mà bị chia đôi màn
-// hình ra rồi, tôi muốn nó phải hiển thị dạng danh sách full màn và có các chức năng
-// crud search sort fillter».
-// → Bảng toàn màn hình + tìm kiếm + lọc (phòng ban / chức danh / trạng thái) +
-//   sắp xếp + phân trang + nút CRUD (Hồ sơ / Sửa / Quyền) dùng chung modal với admin.
-// =============================================================================
 function AdminStaffList({ data, open, query }: { data: AppData; open: (name: string, row?: Row) => void; query: string }) {
   const [dept, setDept] = useState("ALL");
   const [role, setRole] = useState("ALL");
@@ -2360,148 +2319,6 @@ function WorkflowManager({ data, open, action }: { data: AppData; open: (name: s
   </div>;
 }
 
-function WorkflowModal({ data, row, close, submit }: { data: AppData; row?: Row; close: () => void; submit: (name: string, payload: Row) => Promise<boolean> }) {
-  const [code, setCode] = useState(String(row?.code || ""));
-  const [name, setName] = useState(String(row?.name || ""));
-  const [description, setDescription] = useState(String(row?.description || ""));
-  const [moduleKey, setModuleKey] = useState(String(row?.moduleKey || "requests"));
-  const [projectId, setProjectId] = useState(String(row?.projectId || ""));
-  const [isDefault, setIsDefault] = useState(Number(row?.isDefault) === 1);
-  const [sortOrder, setSortOrder] = useState(String(row?.sortOrder ?? 10));
-  const [onlyPermitted, setOnlyPermitted] = useState(false);
-  // [WF] Đặc tả 18/09: chọn người duyệt bằng TÌM KIẾM (không bày hết danh sách ⇒ modal gọn).
-  const [approverQuery, setApproverQuery] = useState<Record<string, string>>({});
-  const [error, setError] = useState("");
-  const existingSteps = (data.workflowSteps || []).filter((s) => String(s.workflowId) === String(row?.id))
-    .sort((a, b) => Number(a.stepNo) - Number(b.stepNo))
-    .map((s) => ({
-      key: String(s.id),
-      name: String(s.name || ""),
-      description: String(s.description || ""),
-      approvalMode: String(s.approvalMode || "single"),
-      slaHours: String(s.slaHours ?? 8),
-      approverUserIds: (data.workflowStepApprovers || []).filter((a) => String(a.stepId) === String(s.id)).map((a) => String(a.userId)),
-    }));
-  const [steps, setSteps] = useState<Row[]>(existingSteps.length ? existingSteps : [{
-    key: "new-1", name: "", description: "", approvalMode: "single", slaHours: "8", approverUserIds: [],
-  }]);
-  const candidates = workflowApproverCandidates(data, moduleKey);
-  const permittedCount = candidates.filter((c) => c.hasApprovePermission).length;
-  const shown = onlyPermitted ? candidates.filter((c) => c.hasApprovePermission) : candidates;
-  const moduleOptions = configuredModules(data).filter((m) => m.key !== "admin");
-  // [WF] Đặc tả 18/09: gợi ý người duyệt theo TỪ KHOÁ (bỏ dấu như các màn khác) — tối đa 8 dòng cho modal gọn.
-  const normApproverText = (value: unknown) => String(value || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  const suggestionsFor = (stepKey: string): Row[] => {
-    const query = normApproverText(approverQuery[stepKey] ?? "").trim();
-    if (!query) return [];
-    return shown.filter((u) => [u.fullName, u.employeeCode, u.username, u.organizationName, u.department].some((value) => normApproverText(value).includes(query))).slice(0, 8);
-  };
-  const patchStep = (index: number, patch: Row) => setSteps((list) => list.map((s, i) => (i === index ? { ...s, ...patch } : s)));
-  const toggleApprover = (index: number, userId: string) => setSteps((list) => list.map((s, i) => {
-    if (i !== index) return s;
-    const current: string[] = Array.isArray(s.approverUserIds) ? s.approverUserIds : [];
-    if (String(s.approvalMode) === "single") return { ...s, approverUserIds: current.includes(userId) ? [] : [userId] };
-    return { ...s, approverUserIds: current.includes(userId) ? current.filter((x) => x !== userId) : [...current, userId] };
-  }));
-  async function save(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError("");
-    if (!code.trim() || !name.trim()) return setError("Nhập mã và tên quy trình.");
-    const stages: Row[] = [];
-    for (let i = 0; i < steps.length; i++) {
-      const s = steps[i];
-      const users: string[] = Array.isArray(s.approverUserIds) ? s.approverUserIds : [];
-      if (!String(s.name || "").trim()) return setError(`Bước ${i + 1} chưa có tên.`);
-      if (!users.length) return setError(`Bước ${i + 1} (“${s.name}”) chưa chỉ định người duyệt.`);
-      if (String(s.approvalMode) === "single" && users.length > 1)
-        return setError(`Bước ${i + 1} chọn “Một người duyệt” thì chỉ được chỉ định đúng một người.`);
-      stages.push({
-        stepNo: i + 1, name: String(s.name).trim(), description: s.description,
-        approvalMode: s.approvalMode, slaHours: Number(s.slaHours || 8),
-        approverUserIds: users,
-      });
-    }
-    const ok = await submit("save_workflow", {
-      workflowId: row?.id, code: code.trim(), name: name.trim(), description,
-      moduleKey, projectId, isDefault: isDefault ? 1 : 0, sortOrder: Number(sortOrder || 0), stages,
-    });
-    if (ok) close();
-  }
-  return <BaseModal title={row ? `Sửa quy trình: ${row.name}` : "Thêm quy trình phê duyệt"} note="Mỗi bước chọn cách xác nhận và chỉ định đích danh người duyệt." close={close}>
-    <form onSubmit={save}>
-      <div className="modal-body">
-        {error && <div className="inline-alert">{error}</div>}
-        <div className="form-grid">
-          <label><span>Mã quy trình *</span><input value={code} onChange={(e) => setCode(e.target.value)} placeholder="WF-MUAHANG-02" required /></label>
-          <label><span>Tên quy trình *</span><input value={name} onChange={(e) => setName(e.target.value)} placeholder="Quy trình mua hàng rút gọn" required /></label>
-          <label><span>Áp dụng cho chức năng</span><select value={moduleKey} onChange={(e) => { setModuleKey(e.target.value); }}>
-            <option value="">— Dùng chung —</option>
-            {moduleOptions.map((m) => <option key={m.key} value={m.key}>{m.label}</option>)}
-          </select></label>
-          <label><span>Áp dụng cho dự án</span><select value={projectId} onChange={(e) => setProjectId(e.target.value)}>
-            <option value="">— Toàn công ty —</option>
-            {data.projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select></label>
-          <label><span>Thứ tự hiển thị</span><input type="number" value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} /></label>
-          <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <input type="checkbox" checked={isDefault} onChange={(e) => setIsDefault(e.target.checked)} />
-            <span style={{ margin: 0 }}>Là quy trình mặc định</span>
-          </label>
-          <label className="span-2"><span>Mô tả</span><input value={description} onChange={(e) => setDescription(e.target.value)} /></label>
-        </div>
-        <div style={{ marginTop: 14 }}><ListToolbar title={"CÁC BƯỚC DUYỆT"} note={<>{steps.length} bước · {candidates.length - permittedCount} người chưa có quyền duyệt trên chức năng này</>} extra={<><label className="secondary" style={{ display: "flex", alignItems: "center", gap: 6, padding: "0 8px" }}>
-              <input type="checkbox" checked={onlyPermitted} onChange={(e) => setOnlyPermitted(e.target.checked)} />
-              <span style={{ margin: 0, fontSize: 12 }}>Chỉ hiện người có quyền duyệt</span>
-            </label>
-            <button type="button" className="primary" onClick={() => setSteps((list) => [...list, { key: `new-${Date.now()}`, name: "", description: "", approvalMode: "any_of", slaHours: "8", approverUserIds: [] }])}>＋ Thêm bước</button></>} /></div>
-        {onlyPermitted && !shown.length && <div className="inline-alert">Chưa có ai được cấp quyền duyệt (canApprove) trên chức năng này. Bỏ chọn “Chỉ hiện người có quyền duyệt” để chỉ định thủ công.</div>}
-        {steps.map((s, index) => {
-          const selected: string[] = Array.isArray(s.approverUserIds) ? s.approverUserIds : [];
-          return <section className="card" key={String(s.key)}>
-            <ListToolbar title={<>BƯỚC {index + 1}</>} note={<>{selected.length} người duyệt được chỉ định</>} actions={<><button type="button" className="export-mini" disabled={index === 0} onClick={() => setSteps((list) => { const next = [...list]; [next[index - 1], next[index]] = [next[index], next[index - 1]]; return next; })}>↑</button>
-                <button type="button" className="export-mini" disabled={index === steps.length - 1} onClick={() => setSteps((list) => { const next = [...list]; [next[index + 1], next[index]] = [next[index], next[index + 1]]; return next; })}>↓</button>
-                {steps.length > 1 && <button type="button" className="export-mini danger" onClick={() => setSteps((list) => list.filter((_, i) => i !== index))}>Xóa bước</button>}</>} />
-            <div className="form-grid">
-              <label><span>Tên bước *</span><input value={String(s.name || "")} onChange={(e) => patchStep(index, { name: e.target.value })} placeholder="CHT xác nhận nhu cầu" /></label>
-              <label><span>Cách xác nhận *</span><select value={String(s.approvalMode || "single")} onChange={(e) => patchStep(index, { approvalMode: e.target.value, approverUserIds: e.target.value === "single" ? (Array.isArray(s.approverUserIds) ? s.approverUserIds.slice(0, 1) : []) : s.approverUserIds })}>
-                <option value="single">Một người duyệt</option>
-                <option value="any_of">Một trong nhiều người duyệt là qua</option>
-                <option value="all_of">Tất cả người duyệt phải xác nhận</option>
-              </select></label>
-              <label><span>SLA (giờ)</span><input type="number" min="1" value={String(s.slaHours ?? 8)} onChange={(e) => patchStep(index, { slaHours: e.target.value })} /></label>
-              <label><span>Mô tả bước</span><input value={String(s.description || "")} onChange={(e) => patchStep(index, { description: e.target.value })} /></label>
-            </div>
-                        <label><span>Tìm người duyệt (gõ tên / mã nhân viên / phòng ban)</span>
-              <input value={approverQuery[String(s.key)] ?? ""} onChange={(e) => setApproverQuery((q) => ({ ...q, [String(s.key)]: e.target.value }))} placeholder="Ví dụ: Nguyễn, NV001, Kế hoạch…" />
-            </label>
-            {(approverQuery[String(s.key)] ?? "").trim().length > 0 && <div className="admin-mini-list">
-              {suggestionsFor(String(s.key)).map((u) => <button type="button" key={u.id} className={selected.includes(String(u.id)) ? "is-selected" : ""} onClick={() => toggleApprover(index, String(u.id))}>
-                <i className="mini-avatar">{initials(String(u.fullName || "NV"))}</i>
-                <span><strong>{u.fullName}</strong><small>{u.employeeCode || u.username} · {u.organizationName || u.department || "—"}</small></span>
-                <b>{selected.includes(String(u.id)) ? "✓ Đã chọn" : u.hasApprovePermission ? "Có quyền duyệt" : "Chưa có quyền duyệt"}</b>
-              </button>)}
-              {!suggestionsFor(String(s.key)).length && <div className="menu-drop-empty">Không tìm thấy người phù hợp.</div>}
-            </div>}
-            <div className="admin-mini-list">
-              {selected.map((userId) => {
-                const person = candidates.find((c) => String(c.id) === String(userId));
-                return <button type="button" key={userId} className="is-selected" onClick={() => toggleApprover(index, String(userId))} title="Bấm để bỏ khỏi bước này">
-                  <i className="mini-avatar">{initials(String(person?.fullName || "NV"))}</i>
-                  <span><strong>{person?.fullName || userId}</strong><small>{person ? `${person.employeeCode || person.username} · ${person.organizationName || person.department || "—"}` : "Không còn trong danh sách ứng viên"}</small></span>
-                  <b>✕ Bỏ</b>
-                </button>;
-              })}
-              {!selected.length && <div className="menu-drop-empty">Chưa chỉ định người duyệt cho bước này.</div>}
-            </div>
-            {!selected.length && <div className="inline-alert">Bước {index + 1} chưa có người duyệt — theo chế độ CHỈ CẢNH BÁO, quy trình VẪN lưu được.</div>}
-          </section>;
-        })}
-      </div>
-      <footer className="modal-footer"><button className="secondary" type="button" onClick={close}>Hủy</button><button className="primary">{row ? "Lưu quy trình" : "Tạo quy trình"}</button></footer>
-    </form>
-  </BaseModal>;
-}
-
 function Admin({ data, open, action }: { data: AppData; open: (name: string, row?: Row) => void; action: (name: string, payload: Row) => Promise<boolean> }) {
   const [step,setStep]=useState(1); const [showHelp,setShowHelp]=useState(false); const [adminQuery,setAdminQuery]=useState(""); const [bulkUserMessage,setBulkUserMessage]=useState(""); const [bulkProjectMessage,setBulkProjectMessage]=useState(""); const roles=canonicalRoleOptions(data.roleCatalog||[]); const groups=(data.businessRoleGroups||[]).filter(row=>row.code!=="admin"); const activeUsers=data.users.filter(row=>row.active); const roleCount=(code:string)=>data.users.filter(row=>String(row.role)===String(code)).length;
   const filteredAdminUsers=data.users.filter(row=>!adminQuery||`${row.fullName||""} ${row.email||""} ${row.username||""} ${row.phone||""}`.toLocaleLowerCase("vi").includes(adminQuery.toLocaleLowerCase("vi")));
@@ -2580,12 +2397,6 @@ function Admin({ data, open, action }: { data: AppData; open: (name: string, row
   </div>;
 }
 
-function savedRequestDocument(data: AppData, request: Row): RequestExportDocument {
-  return {
-    requestNo: request.requestNo || "De_nghi_cap_vat_tu", projectCode: request.projectCode, projectName: request.projectName, requestedBy: request.requestedBy, requestedAt: request.requestedAt, neededAt: request.neededAt, priority: request.priority, area: request.area, purpose: request.purpose, status: statusLabel(request), fieldConfigs: data.formFieldConfigs,
-    lines: (request.items || []).map((item: Row, index: number) => requestLineContext(data, request.projectId, item, index)),
-  };
-}
 function draftRequestDocument(data: AppData, projectId: string, lines: Row[], form: HTMLFormElement): RequestExportDocument {
   const values = Object.fromEntries(new FormData(form)); const project = data.projects.find((item) => item.id === projectId);
   return {
@@ -2594,35 +2405,6 @@ function draftRequestDocument(data: AppData, projectId: string, lines: Row[], fo
   };
 }
 
-function RequestDrawer({ data, request, approvalStages, close, action, user, variant = "drawer" }: { data: AppData; request: Row; approvalStages: Row[]; close: () => void; action: (name: string, payload: Row) => Promise<boolean>; user: Row; variant?: "drawer" | "page" }) {
-  const stage = Number(request.approvalStage);
-  const stageConfig = approvalStages.find((row) => Number(row.stageNo) === stage);
-  const currentApproval = request.approvals?.find((row:Row)=>Number(row.stage)===stage);
-  const stageRule = currentApproval?.allowedRoleCodes ? currentApproval : stageConfig;
-  const canDecide = request.status === "pending_approval" && Number(request.itemCount||0)===Number(request.items?.length||0) && stageAllowedForUser(stageRule, user);
-  const returned = request.status === "returned_to_requester";
-  const canReturnedEdit = returned && (isAdminUser(user) || ["commander"].includes(roleBase(user)) || String(user.role)==="cht");
-  const canManageRequestFiles = isAdminUser(user) || ["commander","project"].includes(roleBase(user)) || ["cht","da_nv","da_truong"].includes(String(user.role));
-  async function updateReturned(event:FormEvent<HTMLFormElement>){event.preventDefault();const fd=new FormData(event.currentTarget);const lines=(request.items||[]).map((item:Row)=>({id:item.id,requestedQty:Number(fd.get(`qty-${item.id}`)||item.requestedQty||0)}));await action("update_returned_request",{requestId:request.id,neededAt:fd.get("neededAt"),priority:fd.get("priority"),area:fd.get("area"),purpose:fd.get("purpose"),lines});}
-  async function resubmit(){if(!window.confirm("Bạn có chắc chắn muốn gửi lại phiếu này?\n\nSau khi gửi, phiếu được xem là CHT đã xác nhận và chuyển sang Chờ Thư ký TGĐ. Phiếu không thể tự thu hồi; muốn sửa phải được trả lại theo quy trình."))return;const note=window.prompt("Ghi chú gửi lại (có thể để trống):")||"";if(await action("resubmit_request",{requestId:request.id,comment:note}))close();}
-  async function deleteReturned(){const reason=window.prompt(`Nhập lý do xóa ${request.requestNo} để lập phiếu mới:`)?.trim();if(!reason)return;if(!window.confirm("Xóa toàn bộ phiếu bị trả lại này? Thao tác chỉ được phép khi chưa phát sinh PO."))return;if(await action("delete_request",{requestId:request.id,reason}))close();}
-  const isPage = variant === "page";
-  // Chế độ trang: cho phép thu gọn các khối để "ẩn bớt cho gọn" theo yêu cầu người dùng.
-  const [collapsed, setCollapsed] = useState(false);
-  // TASK-074 (MASTER TASK §8.2) — "Tổng hợp giao nhận" KHÔNG còn bị ép vào layout chi tiết:
-  // nó mở ra MODAL RIÊNG bằng component dùng chung `EntityDetailModal` (U-01).
-  const [summaryOpen, setSummaryOpen] = useState(false);
-  return <div className={isPage ? "overlay page-mode" : "overlay"} onMouseDown={isPage ? undefined : (event) => event.target === event.currentTarget && close()}><EntityDetailModal open onClose={close} title={`PHIẾU ĐỀ NGHỊ MUA HÀNG · ${request.requestNo}`} subtitle={<>{request.projectCode} · {request.projectName} · {statusLabel(request)}</>} entityId={request.requestNo} width="wide" tabs={[{ key: "request-detail", label: "Chi tiết phiếu", content: <><header><div><small className="document-name">PHIẾU ĐỀ NGHỊ MUA HÀNG</small><strong>{request.requestNo}</strong><StatusBadge value={statusLabel(request)} /><p>{request.projectCode} · {request.projectName}</p></div>{isPage && <button type="button" className="page-collapse" onClick={() => setCollapsed((value) => !value)} title={collapsed ? "Mở rộng các khối" : "Thu gọn các khối"}>{collapsed ? "⌄ Mở rộng khối" : "⌃ Thu gọn khối"}</button>}<button className={isPage ? "page-back" : undefined} onClick={close} title={isPage ? "Quay lại danh sách" : "Đóng"}>{isPage ? "← Quay lại" : "×"}</button></header><div className="drawer-body"><section className="summary-grid request-summary"><div><small>Người đề nghị</small><strong>{request.requestedBy}</strong></div><div><small>Ngày lập phiếu</small><strong>{date(request.requestedAt)}</strong></div><div><small>Ngày cần hàng</small><strong>{date(request.neededAt)}</strong></div><div><small>Mức độ</small><strong>{request.priority === "urgent" ? "Khẩn" : request.priority === "high" ? "Cao" : "Bình thường"}</strong></div><div><small>Dự án</small><strong>{request.projectCode} · {request.projectName}</strong></div><div><small>Hợp đồng</small><strong>{request.contractNo || "Chưa xác định"}</strong></div><div><small>BOQ Version</small><strong>{request.boqVersionCode || "Chưa xác định"}</strong></div><div><small>Khu vực / Hạng mục</small><strong>{request.area || "—"}</strong></div><div><small>Số dòng vật tư</small><strong>{request.itemCount} dòng</strong></div><div><small>Tổng số lượng đề nghị</small><strong>{format.format(Number(request.totalQty||0))}</strong></div><div><small>Trạng thái hiện tại</small><strong>{statusLabel(request)}</strong></div><div><small>Người/Bộ phận đang xử lý</small><strong>{stageConfig?.name || (returned?"CHT xử lý lại":"—")}</strong></div></section><section className="drawer-section"><CardHead title="Tiến trình phê duyệt & thời gian xử lý" note="Đo từ lúc cấp nhận hồ sơ đến khi ra quyết định" /><ApprovalTimeline steps={([...(request.approvals || [])] as Row[]).sort((a: Row, b: Row) => Number(a.stage) - Number(b.stage)).map((approval: Row): ApprovalStep => { const stageNo = Number(approval.stage); const cfg = approvalStages.find((row: Row) => Number(row.stageNo) === stageNo); const timing = approvalTiming(approval); const decided = approval.status === "approved" ? "approved" : approval.status === "rejected" ? "rejected" : approval.status === "cancelled" ? "skipped" : ""; return { no: stageNo, name: cfg?.name || approval.department || `Bước ${stageNo}`, approver: approval.approverName || "Chưa xác định người duyệt", department: approval.department || data.staffDirectory?.find((u: Row) => u.id === approval.approverUserId)?.department || "", status: (decided || (Number(request.approvalStage) === stageNo ? "pending" : "waiting")) as ApprovalStep["status"], at: approval.decidedAt || null, comment: approval.comment || null, dueAt: approval.dueAt || null, queuedAt: approval.queuedAt || null, notifiedAt: approval.notifiedAt || null, timingText: timing?.text || null, late: Boolean(timing?.late) }; })} note={`${(request.approvals || []).length} bước · đo từ lúc cấp nhận hồ sơ đến khi ra quyết định`} /></section>{request.supplySteps?.length > 0 &&  <ActivityTimeline title="Tiến trình mua và giao hàng" note="Hồ sơ tự chạy sang bước kế tiếp và bắt đầu tính giờ" items={request.supplySteps.map((step: Row, index: number) => { const timing = workflowTiming(step); const name = step.step === "po_creation" ? "Lập và phát hành PO" : step.step === "delivery" ? "Nhà cung cấp giao hàng" : "BCH xác nhận chuyến giao"; return { action: `${index + 1}. ${name}`, actor: step.completedByName || undefined, at: step.completedAt || step.queuedAt || null, tone: step.completedAt ? "green" : undefined, detail: <><span>Nhận việc: {date(step.queuedAt)} · Hạn: {date(step.dueAt)}</span><span className={timing.late ? "red-text" : ""}> · {timing.text}</span>{step.comment ? <small> · {step.comment}</small> : null}</> }; })} />}<section className="drawer-section"><CardHead title="Tổng hợp giao nhận về phiếu đề nghị gốc" note={`${request.items.length}/${request.itemCount||request.items.length} dòng đang hiển thị · mọi PO và chuyến giao đều cộng theo đúng dòng phiếu ban đầu`} />{Number(request.itemCount||0)!==Number(request.items?.length||0)&&<div className="inline-alert danger"><b>Cảnh báo dữ liệu:</b> Số dòng chi tiết tải về không khớp số dòng của phiếu. Không được duyệt cho tới khi tải đủ dữ liệu.</div>}<div className="row-actions"><button type="button" className="secondary" onClick={() => setSummaryOpen(true)}>◉ Tổng hợp giao nhận ({request.items?.length || 0} dòng)</button></div></section>{canReturnedEdit&&<form className="drawer-section returned-request-editor" onSubmit={updateReturned}><CardHead title="CHT sửa phiếu bị trả lại" note="Lưu chỉnh sửa trước khi gửi lại; luồng duyệt sẽ bắt đầu lại từ Thư ký TGĐ."/><div className="form-grid"><label><span>Ngày cần hàng</span><input type="date" name="neededAt" defaultValue={String(request.neededAt||"").slice(0,10)}/></label><label><span>Mức độ</span><select name="priority" defaultValue={request.priority||"normal"}><option value="normal">Bình thường</option><option value="high">Cao</option><option value="urgent">Khẩn</option></select></label><label><span>Khu vực / Hạng mục</span><input name="area" defaultValue={request.area||""}/></label><label><span>Ghi chú / Mục đích</span><input name="purpose" defaultValue={request.purpose||""}/></label></div><div className="table-wrap"><table><thead><tr><th>Mã vật tư</th><th>Tên vật tư</th><th>ĐVT</th><th>SL đề nghị sửa</th></tr></thead><tbody>{(request.items||[]).map((item:Row)=><tr key={item.id}><td>{item.materialCode}</td><td>{item.materialName}</td><td>{item.unit}</td><td><input name={`qty-${item.id}`} type="number" min="0.001" step="0.001" defaultValue={item.requestedQty}/></td></tr>)}</tbody></table></div><button className="secondary">Lưu chỉnh sửa</button></form>}{request.purpose && <section className="drawer-section document-note"><CardHead title="Mục đích / Ghi chú" /><p>{request.purpose}</p></section>}<section className="drawer-section request-special-files"><CardHead title="Ảnh / Hồ sơ vật tư đặc thù" note="Ảnh mẫu, catalog, thông số hoặc tài liệu giúp cấp duyệt và Phòng Kế hoạch nhận diện đúng vật tư cần mua." /><FileUpload entityType="material_request" entityId={request.id} canManage={canManageRequestFiles} /></section></div><footer>{canReturnedEdit&&<><button className="secondary reject-text" onClick={deleteReturned}>Xóa phiếu & lập mới</button><button className="primary" onClick={resubmit}>Gửi lại từ đầu →</button></>}<button className="secondary" onClick={() => downloadRequestXlsx(savedRequestDocument(data, request))}>⇩ Tải Excel</button><button className="secondary" onClick={() => downloadRequestPdf(savedRequestDocument(data, request))}>⇩ Tải PDF</button>{canDecide && <><button className="secondary reject-text" onClick={() => decide(request.id, stage, "rejected", action)}>Trả lại CHT</button><button className="primary" onClick={() => decide(request.id, stage, "approved", action)}>✓ Duyệt bước {stage}</button></>}</footer></> }]} /><EntityDetailModal open={summaryOpen} onClose={() => setSummaryOpen(false)} title="Tổng hợp giao nhận về phiếu đề nghị gốc" subtitle={<>{request.requestNo} · {request.projectCode} · {request.projectName}</>} entityId={request.requestNo} width="wide" tabs={[{ key: "summary", label: "Tổng hợp giao nhận", badge: request.items?.length || 0, content: <div className="table-wrap" data-contract="VNTECH_REQUEST_DETAIL_ALL_LINES_V1"><table><thead><tr><th>STT</th><th>Mã / Tên vật tư</th><th>BOQ / Đầu việc</th><th>Yêu cầu</th><th>Đã đặt</th><th>Thực giao</th><th>Chờ BCH</th><th>BCH xác nhận</th><th>Từ chối</th><th>Đóng thiếu</th><th>Còn lại</th><th>PO / Chuyến</th><th>Trạng thái</th></tr></thead><tbody>{request.items.map((item: Row) => <tr key={item.id}><td>{item.lineNo}</td><td><strong className="code">{item.materialCode}</strong><small>{item.materialName} · {item.unit}</small></td><td>{item.boqCode || "—"}<small>{item.workPackageCode || "—"}</small></td><td>{format.format(item.requestedQty)}</td><td>{format.format(item.orderedQty)}</td><td>{format.format(item.actualDeliveredQty)}</td><td>{format.format(item.pendingBchQty)}</td><td><strong>{format.format(item.receivedQty)}</strong></td><td>{format.format(item.rejectedQty)}</td><td>{format.format(item.closedQty)}{item.closeReason && <small>{item.closeReason}</small>}</td><td><strong>{format.format(item.remainingQty)}</strong></td><td>{item.linkedPoCount || 0} / {item.linkedReceiptCount || 0}</td><td><StatusBadge value={item.missingDocumentCount > 0 && Number(item.remainingQty) <= 0 ? "Đủ hàng · thiếu hồ sơ" : item.lineStatus === "closed_shortage" ? "Đóng thiếu có lý do" : Number(item.remainingQty) <= 0 ? "Đã đủ" : Number(item.receivedQty) > 0 ? "Đã nhận một phần" : "Chờ giao"} /></td></tr>)}</tbody></table></div> }]} /></div>;
-}
-
-function ReceiptDrawer({ data, receipt, user, close, action }: { data: AppData; receipt: Row; user: Row; close: () => void; action: (name: string, payload: Row) => Promise<boolean> }) {
-  const canConfirm = receipt.bchConfirmationStatus === "pending" && Boolean(modulePermission(data,"receiving").canApprove) && (isAdminUser(user) || ["commander", "project"].includes(roleBase(user)));
-  async function confirm(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); const form = new FormData(event.currentTarget);
-    if (await action("confirm_delivery", { receiptId: receipt.id, certificateStatus: form.get("certificateStatus"), deliveryDocumentStatus: form.get("deliveryDocumentStatus"), comment: form.get("comment") })) close();
-  }
-  return <div className="overlay" onMouseDown={(event) => event.target === event.currentTarget && close()}><aside className="drawer receipt-drawer"><header><div><small className="document-name">XÁC NHẬN GIAO HÀNG THỰC TẾ</small><strong>{receipt.receiptNo}</strong><StatusBadge value={receipt.bchConfirmationStatus === "confirmed" ? "BCH đã xác nhận" : "Chờ BCH xác nhận"} /><p>{receipt.poNo} · {receipt.projectCode} · {receipt.supplierName}</p></div><button onClick={close}>×</button></header><div className="drawer-body"><section className="summary-grid request-summary"><div><small>Thời điểm nhận</small><strong>{date(receipt.receivedAt)}</strong></div><div><small>Kho nhận</small><strong>{receipt.warehouseName}</strong></div><div><small>Phiếu giao hàng</small><strong>{receipt.deliveryNoteNo || "Chưa nhập"}</strong></div><div><small>QC</small><StatusBadge value={receipt.qcStatus === "accepted" ? "Đạt" : "Không đạt"} /></div><div><small>Tổng thực giao</small><strong>{format.format(receipt.actualDeliveredQty)}</strong></div><div><small>Được chấp nhận</small><strong>{format.format(receipt.acceptedQty)}</strong></div><div><small>Loại / thừa</small><strong className={Number(receipt.rejectedQty) ? "red-text" : ""}>{format.format(receipt.rejectedQty)}</strong></div><div><small>Ghi sổ</small><StatusBadge value={receipt.postingStatus === "posted" ? "Đã ghi sổ" : "Bị chặn"} /></div></section><section className="drawer-section"><CardHead title="Đối chiếu PO và thực giao" note="Thực giao được lưu nguyên trạng; phần chấp nhận không vượt số lượng PO" /><div className="table-wrap"><table><thead><tr><th>Mã / Tên vật tư</th><th>SL PO</th><th>Thực giao</th><th>Chấp nhận</th><th>Chênh lệch</th><th>Lô / serial</th></tr></thead><tbody>{(receipt.items || []).map((item: Row) => { const variance = Number(item.actualQty) - Number(item.orderedQty); return <tr key={item.id}><td><strong className="code">{item.materialCode}</strong><small>{item.materialName} · {item.unit}</small></td><td>{format.format(item.orderedQty)}</td><td>{format.format(item.actualQty)}</td><td>{format.format(item.acceptedQty)}</td><td><strong className={variance ? "red-text" : ""}>{variance > 0 ? "+" : ""}{format.format(variance)}</strong></td><td>{item.lotNo || "—"}</td></tr>; })}</tbody></table></div></section><section className="drawer-section"><CardHead title="Ảnh và hồ sơ giao hàng" note="BCH chỉ được xác nhận sau khi có ít nhất một ảnh thực tế" /><FileUpload entityType="goods_receipt" entityId={receipt.id} /></section>{receipt.bchConfirmationStatus === "confirmed" ? <section className="drawer-section confirmation-box"><CardHead title="Kết quả xác nhận BCH" /><p><b>{receipt.bchConfirmedByName || "BCH"}</b> xác nhận lúc {date(receipt.bchConfirmedAt)}.</p><p>Chứng chỉ: <b>{receipt.certificateStatus === "complete" ? "Đã có" : receipt.certificateStatus === "not_required" ? "Không yêu cầu" : "Chưa có"}</b> · Giấy giao hàng: <b>{receipt.deliveryDocumentStatus === "complete" ? "Đã có" : "Chưa có"}</b></p>{receipt.bchComment && <p>Ý kiến: {receipt.bchComment}</p>}</section> : <form className="drawer-section confirmation-form" onSubmit={confirm}><CardHead title="BCH xác nhận hoàn tất chuyến giao" note="Có thể xác nhận thiếu hồ sơ để hệ thống giữ cảnh báo" /><div className="form-grid"><label><span>Chứng chỉ / CO-CQ *</span><select name="certificateStatus" defaultValue={receipt.certificateStatus || "missing"}><option value="complete">Đã có</option><option value="missing">Chưa có</option><option value="not_required">Không yêu cầu</option></select></label><label><span>Giấy giao hàng kèm theo *</span><select name="deliveryDocumentStatus" defaultValue={receipt.deliveryDocumentStatus || "missing"}><option value="complete">Đã có</option><option value="missing">Chưa có</option></select></label><label className="span-2"><span>Ý kiến xác nhận</span><textarea name="comment" placeholder="Đã kiểm đếm thực tế, tình trạng hàng, ảnh và hồ sơ kèm theo…" /></label></div>{canConfirm ? <button className="primary">✓ BCH xác nhận đã nhận hàng</button> : <p className="permission-note">Tài khoản BCH/Phòng Dự án hoặc Quản trị viên mới được xác nhận.</p>}</form>}</div><footer><div className="drawer-export-group"><span><b>Giao hàng:</b><SupplyExportButtons doc={receiptSupplyDocument(data, receipt)} compact={false} /></span>{data.purchaseOrders.find((row) => row.id === receipt.purchaseOrderId) && <span><b>PO:</b><SupplyExportButtons doc={poSupplyDocument(data, data.purchaseOrders.find((row) => row.id === receipt.purchaseOrderId)!)} compact={false} /></span>}</div><button className="primary" onClick={close}>Đóng</button></footer></aside></div>;
-}
 function RequestModal({ data, contextProject, close, submit }: { data: AppData; contextProject:string; close: () => void; submit: (name: string, payload: Row) => Promise<boolean> }) {
   const firstMaterial = data.materials[0];
   const [lines, setLines] = useState<Row[]>([{ materialId:firstMaterial?.id,materialCode:firstMaterial?.code,materialName:firstMaterial?.name,unit:firstMaterial?.unit,quantity:1,unitPrice:firstMaterial?.standardPrice||0,boqItemId:"",contractLineNo:"",origin:"",approvedSupplier:"",installationArea:"",note:"",customFields:{} }]);

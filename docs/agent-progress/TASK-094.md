@@ -1706,3 +1706,23 @@ ormalizeBoqType | |
 px tsc --noEmit **0** · **cổng ảnh 4/64 lệch — TOÀN BỘ là 17-modal-po với CON SỐ Y HỆT mọi lượt trước** (181/170/185/109 px tại (704,192)) ⇒ **nhiễu NGÀY, không do refactor** ✔
 **TIẾN TRIỂN GỠ CHẶN:** ReceiptDrawer **hết chặn (chuyển được ngay)** · RequestDrawer từ **7 → 2 chặn** · WorkflowModal từ **3 → 2 chặn** · WorkCenter còn isTaskLate/workRate/TaskTable · BoqControl còn 5 helper (vướng oqAssessment/oqExportRows).
 **LÔ #5 ĐÃ CHẠY KHÔ VÀ ĐƯỢC CHẤP NHẬN (chờ áp dụng):** savedRequestDocument, decide → lib/request-actions.ts · workflowApproverCandidates, configuredModules → lib/workflow-helpers.ts.
+
+## 35. [PHASE 1 · U-11 bước 4] KHẢO SÁT TÁCH COMPONENT — **PHẦN LỚN ĐÃ XONG** (19/09)
+**PHÁT HIỆN QUAN TRỌNG:** pp/screens/ **ĐÃ CÓ 24 FILE TÁCH SẴN**:
+BenefitsScreen · CashbankScreen · ConstructionScreen · CorrespondenceScreen · Delivered · DocumentsScreen · HrScreen · Inventory · LaborScreen · LegalDocsScreen · **MaterialListTable** · Payments · ProjectTeams · Purchasing · **ReceiptDrawer** · Receiving · **RequestDrawer** · **Requests** · SealScreen · SiteCostScreen · Stocktake · SupplierManager · TeamManagement · WorkflowModal
+⇒ **3 mục của U-11 bước 4** (WorkCenter · Requests · BoqControl):
+* **Requests** ⇒ **ĐÃ TÁCH XONG** (pp/screens/Requests.tsx 9KB) — **không còn trong page.tsx** ✔
+* **WorkCenter** ⇒ **CÒN trong page.tsx** (dòng **518–655** · 138 dòng · 11KB)
+* **BoqControl** ⇒ **CÒN trong page.tsx** (dòng **1322–1382** · 61 dòng · **21KB**)
+*(page.tsx nay **2.877 dòng · 583 KB** — đã giảm mạnh so với trước)*
+**PHÂN TÍCH PHỤ THUỘC (đã lọc nhiễu):**
+* Phép quét thô bắt **736 định danh** nhưng phần lớn là **biến cục bộ/từ chung** (,d,p,row,name,get,find,key,label,text,user,value,status,project,rows,selected…) ⇒ **KHÔNG phải phụ thuộc thật**.
+* **Phụ thuộc THẬT:**
+  * WorkCenter ⇒ cần **TaskTable** (dòng **511**, component cùng tệp) ⇒ **chỉ 1 phụ thuộc thật**.
+  * BoqControl ⇒ cần **BoqExportButtons** (1233) · **oqCellValue** (1263) · **mapBoqRows** (1187) · **useResizableColumnWidths** (341) · **withBoqGroupContext** (1311) ⇒ **cụm helper lớn**.
+**⇒ KẾ HOẠCH (an toàn, tăng dần — đúng bài học U-14 "di chuyển phải kèm phụ thuộc"):**
+1. **Lượt tới — tách WorkCenter:** đọc **mẫu 1 file đã tách** (pp/screens/Requests.tsx) để theo đúng quy ước import/props ⇒ tạo pp/screens/WorkCenter.tsx gồm **WorkCenter + TaskTable** ⇒ sửa page.tsx thành **import** ⇒ cổng: **	sc 0** + **cổng ảnh 64/64** + **
+pm test 0**.
+2. **Sau đó — tách BoqControl:** kèm **5 helper** (BoqExportButtons, oqCellValue, mapBoqRows, useResizableColumnWidths, withBoqGroupContext) ⇒ cùng bộ cổng.
+3. **Cập nhật lộ trình U-11** sau khi cả 2 tách xong (đủ bước 4 ⇒ DONE).
+**BÀI HỌC:** trước khi tách, **phải đếm phụ thuộc THẬT** (không tin số thô — 736 "phụ thuộc" nhưng thật chỉ **1** cho WorkCenter).
