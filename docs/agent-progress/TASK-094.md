@@ -1881,3 +1881,16 @@ pm test **tests 61 · pass 61 · fail 0 · EXIT 0** · **cổng ảnh 64/64 Đ�
 pm test + **cổng ảnh** ⇒ **ĐẠT ⇒ commit** / **KHÔNG ⇒ revert** ✔
 **CÒN LẠI:** **822 − 25 = 797** token (≈ 32 lô) ⇒ tiếp tục theo lô cho tới hết ⇒ **đóng U-12**.
 **TRẠNG THÁI:** globals.css = **4.439** !important · cây SẠCH sau commit · cổng ảnh **tất định** (2 lần liên tiếp ĐẠT).
+
+### 46. [PHASE 9 · R-01] LỚP TỔNG HỢP BÁO CÁO DÙNG CHUNG — XONG LÕI & ĐÃ KIỂM (20/09)
+**MỤC TIÊU R-01:** *“Kiến trúc báo cáo dùng chung (không hard-code từng báo cáo)”* ⇒ mọi báo cáo sau (R-02 Mua hàng · R-03 Kho · R-04 Dự án · R-05 Công việc) **chỉ KHAI BÁO**, không viết lại vòng lặp lọc/gộp/tính.
+**ĐÃ TẠO lib/report-engine.ts** (hàm THUẦN, có kiểu đầy đủ, không phụ thuộc React/DB):
+* ReportDefinition { key, title, note?, groupBy?: string[], filter?: FilterSpec[], metrics: MetricSpec[], columns?, dateField?, dateRange?, sortBy?, sortDir?, limit? }
+* MetricSpec { key, label, agg: count|sum|avg|min|max|distinct, field?, format? } · FilterSpec { field, op: eq|neq|in|nin|contains|gte|lte|truthy|exists, value? }
+* **API:** uildReport(def, rows) ⇒ { rows[], totals, columns[], sourceCount, totalCount } · ilterRows(rows, def) · ormatMetric(v, format) (number/money/percent)
+* **Bảo đảm:** không đột biến dữ liệu vào (có test) · gộp **nhiều cấp** · **tổng** tính lại trên toàn bộ dòng đã lọc (đúng cho count/sum/distinct) · sắp xếp + giới hạn dòng.
+**TỰ KIỂM THẬT (	ools/r01-selfcheck.ts, chạy 
+px tsx):** **pass 22 · fail 0 · EXIT 0** — phủ: lọc eq/in/gte/contains/truthy · lọc khoảng NGÀY · gộp 1 cấp & 2 cấp · count/sum/avg/max/distinct · tổng · sắp xếp desc · limit · cột mặc định · **thuần (không đột biến)** · định dạng tiền/%. · **
+px tsc --noEmit ⇒ 0** ✔
+**🐞 1 PHÁT HIỆN TỐT TỪ SELF-CHECK:** ca contains "appro" cho **3** kết quả (không phải 2) vì "pending_approval" **cũng chứa "appro"** ⇒ **MÃ ĐÚNG, KỲ VỌNG CỦA TÔI SAI** ⇒ sửa **kỳ vọng** (ghi rõ lý do trong tệp), **KHÔNG** sửa mã.
+**TIẾP THEO (PHASE 9):** pp/screens/ReportView.tsx (màn DÙNG CHUNG render mọi định nghĩa) + **catalog** định nghĩa cho R-02/R-03/R-04/R-05.
