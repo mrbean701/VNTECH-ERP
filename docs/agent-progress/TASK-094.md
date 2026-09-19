@@ -2211,3 +2211,14 @@ LOI CUA CHINH EM (da sua): ban va cleanup dau tien in "🧹 Da XOA user thu: sec
   => phep kiem thanh cong qua yeu (tin vao phan hoi API). DA SUA: cleanup nay (1) goi delete_user, (2) goi set_user_status active=false,
   (3) DOC LAI danh sach users va chi bao "DA DON" khi user that su bien mat hoac bi khoa; neu van hoat dong thi bao
   "❌ DON DEP THAT BAI ⇒ can xu ly tay". Bai hoc: voi thao tac xoa/khoa, PHAI kiem chung bang DU LIEU, khong tin phan hoi.
+
+### 66. KET THUC SAGA ROLLBACK P-01: CONG ANH DAT 68/68 (20/09)
+Sau khi don 2 user rac (sec_probe_*) va sua loi cleanup cua probe, CHAY LAI CONG ANH day du:
+  KET LUAN: DAT ✅ - khong co vung lech nao (68 anh da doi chieu) - EXIT 0.
+  => TAT CA 17 man x 4 kich thuoc = 0 px, bao gom ca 03-work · 07-admin · 01-dashboard (3 man truoc do DO).
+KET LUAN XAC NHAN: nguyen nhan cong anh do TRUOC DO la DU LIEU RAC (user thu con sot do probe tao ma khong don),
+  KHONG phai loi ma, KHONG phai hoi quy. => KHONG can re-baseline dong nao.
+BAI HOC (dang ghi nho): khi cong bao do, KHONG re-baseline de che; phai (1) xac minh lai phep do, (2) tim nguyen nhan goc
+  (doi chieu moc thoi gian anh chuan vs moc du lieu doi), (3) sua nguyen nhan (don du lieu rac + sua probe),
+  roi (4) chay lai cong de CHUNG MINH da het.
+TRANG THAI: ma nguon sach + bundle khop (VNTECH-FP-21B083DFBC3F8CB9) + cong anh 68/68 DAT. Dang chay 2 nhanh song song PHASE 3 & PHASE 4.
