@@ -50,9 +50,9 @@ const sample = {
     { id: "S4", projectId: "DA-02", userId: "U3", positionName: "CHT", permission: "manager" },
   ] as Row[],
   workItems: [
-    { id: "W1", status: "open", projectId: "DA-01" },
-    { id: "W2", status: "open", projectId: "DA-01" },
-    { id: "W3", status: "done", projectId: "DA-02" },
+    { id: "W1", status: "open", projectId: "DA-01", departmentCode: "KH", progress: 0, dueAt: "2020-01-01" },
+    { id: "W2", status: "open", projectId: "DA-01", departmentCode: "KH", progress: 50, dueAt: "2999-01-01" },
+    { id: "W3", status: "done", projectId: "DA-02", departmentCode: "DA", progress: 100, dueAt: "2020-01-01" },
   ] as Row[],
 };
 
@@ -111,5 +111,15 @@ const rc = buildReport(r4c.def, sourceRows("userProjectScopes", sample));
 const da01c = rc.rows.find((x) => String(x.group[0]) === "DA-01");
 ok("R-04c: DA-01 có 2 THÀNH VIÊN khác nhau (dù 3 lượt gán)", da01c?.metrics.soThanhVien === 2, `(${da01c?.metrics.soThanhVien})`);
 ok("R-04c: DA-01 có 3 lượt gán", da01c?.metrics.soLuot === 3, `(${da01c?.metrics.soLuot})`);
+// KIEM CHUNG R-05c: qua han + tien do theo PHONG (va QUAN TRONG: viec DA XONG khong tinh qua han)
+const r5c = REPORT_CATALOG.find((e) => e.def.key === "R-05c")!;
+const r5 = buildReport(r5c.def, sourceRows("workItems", sample));
+const kh = r5.rows.find((x) => String(x.group[0]) === "KH");
+const da = r5.rows.find((x) => String(x.group[0]) === "DA");
+ok("R-05c: phòng KH có 2 việc", kh?.metrics.soViec === 2, `(${kh?.metrics.soViec})`);
+ok("R-05c: phòng KH có 1 việc QUÁ HẠN", kh?.metrics.quaHan === 1, `(${kh?.metrics.quaHan})`);
+ok("R-05c: phòng KH tiến độ TB = 25% ((0+50)/2)", kh?.metrics.tbTienDo === 25, `(${kh?.metrics.tbTienDo})`);
+ok("R-05c: phòng DA 1 việc, ĐÃ XONG 1", da?.metrics.daXong === 1, `(${da?.metrics.daXong})`);
+ok("R-05c: việc ĐÃ XONG (quá hạn cũ) KHÔNG tính quá hạn", da?.metrics.quaHan === 0, `(${da?.metrics.quaHan})`);
 console.log(`\nKẾT LUẬN catalog-check: pass ${pass} · fail ${fail}`);
 process.exit(fail ? 1 : 0);

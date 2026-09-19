@@ -2123,3 +2123,20 @@ KIEM CHUNG: tsc 0 ; catalog-check pass 90 - fail 0 (13 dinh nghia) voi 5 phep ki
 DAC TA CON THIEU (ghi ro, khong bia): phan "TIEN DO" (%) chua co nguon xac dinh => hien chi co the dua so luong/thoi luong ke hoach
   (start_date..planned_end_date) va so hop dong (project_contracts). Can xac nhan nguon % truoc khi bo sung.
 CON LAI DE DONG R-04: build lai + commit + danh dau DONE (PHASE 9 = 4/5).
+
+### 59. [PHASE 9 · R-05] CONG VIEC: XAC MINH COT THAT + R-05c THEO PHONG (20/09)
+XAC MINH (information_schema) — bang work_items RAT DAY DU:
+  id, task_no, department_code, work_group, title, description, project_id, source_module/type/id/no, work_step, task_origin,
+  assigned_to, assigned_by, assigned_at, due_at, priority, status, progress, required_output, waiting_reason, waiting_started_at,
+  submitted_at, completed_at, completed_by, cancelled_at, cancelled_by, active, created_at, updated_at
+  (tasks / dept_tasks / task_assignments / department_tasks: KHONG CO BANG => nguon cong viec la work_items)
+DA THEM vao lib/report-catalog.ts:
+  * Nhanh sourceRows("workItems") LAM GIAU theo cot da xac minh:
+      quaHan  = 1 khi (due_at < hien tai) VA status KHONG thuoc nhom xong (done/completed/closed)
+      hoanThanh = 1 khi status thuoc nhom xong
+      tienDo  = progress (so)
+  * R-05c — Cong viec theo PHONG (department_code): so viec · QUA HAN · DA XONG · tien do TB (%) · tien do cao nhat.
+KIEM CHUNG: tsc 0 ; catalog-check pass 101 - fail 0 (14 dinh nghia) voi 5 phep kiem R-05c, dac biet:
+  "viec DA XONG (co due_at cu) KHONG tinh qua han (0)" => LOGIC NGHIEP VU DUNG;
+  "phong KH co 2 viec, 1 qua han, tien do TB = 25%" (avg 0 va 50).
+CON LAI DE DONG R-05 (va PHASE 9): build lai + commit + danh dau DONE => PHASE 9 = 5/5.
