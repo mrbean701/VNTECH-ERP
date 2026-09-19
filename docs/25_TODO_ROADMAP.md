@@ -125,9 +125,9 @@
 | `T-05` | Công việc | Việc cá nhân: của tôi · được giao · do tôi tạo | P2 | T-01 | - | - | NEW | CHECK | **DONE** |
 | `T-06` | Công việc | Việc phòng ban: giới hạn theo phạm vi được phép | P2 | T-01 | - | - | NEW | CHECK | **DONE** |
 | `T-07` | Công việc | Board Kanban — **phân biệt rõ Ưu tiên / Trạng thái / Phân công** | P2 | T-03,T-04 | - | - | NEW | - | **DONE** |
-| `T-08` | Công việc | Dashboard cá nhân + phòng ban + dự án (§11) | P3 | T-05,T-06 | - | - | NEW | CHECK | TODO |
-| `T-09` | Công việc | Kiến trúc Task → Team → Thành viên → Hỗ trợ liên phòng (§10) | P3 | T-04 | TBL | - | - | - | TODO |
-| `T-10` | Phê duyệt | **Tách Approval Center thành module độc lập** (§12) | P2 | U-06 | - | - | NEW | CHECK | TODO |
+| `T-08` | Công việc | Dashboard cá nhân + phòng ban + dự án (§11) | P3 | T-05,T-06 | - | - | NEW | CHECK | **DONE** |
+| `T-09` | Công việc | Kiến trúc Task → Team → Thành viên → Hỗ trợ liên phòng (§10) | P3 | T-04 | TBL | - | - | - | **DONE** |
+| `T-10` | Phê duyệt | **Tách Approval Center thành module độc lập** (§12) | P2 | U-06 | - | - | NEW | CHECK | **DONE** |
 
 ---
 
