@@ -80,5 +80,13 @@ tests/work-item-comment-participant.test.ts
 ```
 
 - Tệp đó là **tệp chưa commit của nhánh PHASE 3** (`git status` = `?? tests/work-item-comment-participant.test.ts`) — có trong ghi chú §69 của `TASK-094.md`.
-- **KHÔNG sửa** tệp này: không thuộc phân vùng PHASE 4, và sửa vào tệp nhánh khác đang viết sẽ gây tranh chấp hợp nhất.
-- **Bằng chứng tách bạch (đã chạy):** `npx eslint app/page.tsx tests/pr01-project-tabs.test.mjs tools/probe-project-screen.mjs tools/probe-roadmap-progress.mjs` → **0 error** (102 cảnh báo có sẵn trong `page.tsx`), **exit 0**; và `npm run typecheck` **exit 0** · `npm run test:regression` **61/61** · `npm run test:workflow` **ĐẠT** ⇒ cổng của `PR-01` sạch.
+- **KHÔNG sửa** các tệp này: không thuộc phân vùng PHASE 4, và sửa vào tệp nhánh khác đang viết sẽ gây tranh chấp hợp nhất.
+- **Đo lại lần 2 (cùng ngày, cây làm việc đã đổi vì phiên song song đang chạy):** `npm test` **vẫn ĐỎ ở bước `lint`** — **6 lỗi**, nay đến từ **2 tệp CHƯA COMMIT** của phiên song song: `tools/_tmp-debug-createuser.ts` (**4 lỗi** `@typescript-eslint/no-explicit-any`) và `tests/work-item-comment-participant.test.ts` (**2 lỗi** `prefer-const`). ⇒ **cả 6 lỗi đều KHÔNG thuộc tệp của task này.**
+- **Bằng chứng tách bạch (đã chạy, đo trên cây hiện tại):**
+  - `npx eslint . --ignore-pattern dist --ignore-pattern .next --ignore-pattern "tools/_tmp-*" --ignore-pattern "tests/work-item-comment-participant.test.ts"` → **0 error** (180 cảnh báo có sẵn), **exit 0** ⇒ *toàn bộ cây, trừ 2 tệp TẠM chưa commit của phiên song song, lint SẠCH*;
+  - `npx eslint app/page.tsx tests/pr01-project-tabs.test.mjs tools/probe-project-screen.mjs tools/probe-roadmap-progress.mjs` → **0 error**, exit 0;
+  - `npx tsc --noEmit` / `npm run typecheck` → **exit 0**;
+  - `npm run test:regression` → **61/61 PASS**, exit 0;
+  - `npm run test:workflow` → **ĐẠT**, exit 0;
+  - `node --test tests/pr01-project-tabs.test.mjs` → **7/7 PASS**, exit 0.
+- **Việc cần captain (ngoài phân vùng PHASE 4):** xử lý 2 tệp tạm/phiên song song ở trên (xoá `tools/_tmp-debug-createuser.ts`; sửa 2 dòng `prefer-const` ở `tests/work-item-comment-participant.test.ts`) rồi đăng ký `tests/pr01-project-tabs.test.mjs` vào `scripts.test:regression` ⇒ khi đó `npm test` mới xanh **và** mới bao gồm test của `PR-01` (61 → 68).
