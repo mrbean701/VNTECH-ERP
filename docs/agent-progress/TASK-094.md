@@ -2267,3 +2267,23 @@ HỆ QUẢ: tệp test MỚI thêm vào `tests/` **KHÔNG tự động được 
 QUYẾT ĐỊNH (captain): **KHÔNG** yêu cầu 2 nhánh cùng sửa `package.json` (sẽ tranh chấp 1 tệp) ⇒ **captain tự đấu dây khi hợp nhất**:
   thêm đúng 2 tệp test của 2 nhánh vào `scripts.test:regression`, rồi chạy lại `npm test` để **chứng minh chúng thật sự chạy** (số test tăng).
 BÀI HỌC: trước khi coi "test xanh" là bằng chứng, phải KIỂM XEM TEST ĐÓ CÓ ĐƯỢC CHẠY HAY KHÔNG (runner liệt kê tường minh ≠ quét mẫu).
+
+### 70. [PHASE 4 · `PR-01`] "DANH SÁCH DỰ ÁN" THÀNH TAB RIÊNG + TOOLBAR CÂN ĐỐI — CODE XONG, **CHỜ BUILD** (20/09)
+
+**Mục roadmap:** `PR-01` (PHASE 4 — DỰ ÁN, mục **đầu tiên không bị chặn**: `U-03` đã `DONE / AP-DUNG 10`). Hồ sơ chi tiết: **`TASK-095.md`** + **`PR01-TAB-SPEC.md`** (trace đủ 7 lớp: Code → DB → API → UI → Permission → Workflow → Data).
+
+**Trace — 2 điều chỉnh lại hiểu biết cũ (bằng chứng thật):**
+- `docs/24 §15` mục 8 (*"Danh sách dự án + Ban chỉ huy dự án chưa tách tab"*) **đã CŨ một nửa**: tab **"Ban chỉ huy" ĐÃ TỒN TẠI** (`app/page.tsx` `tab === 4` → `SiteCommandScreen`) và `tools/probe-project-screen.mjs` **đang đòi đúng 5 tab** ⇒ **`PR-05` phải rà lại phạm vi thật trước khi làm**.
+- Cái **thật sự thiếu**: danh sách là **CHẾ ĐỘ XEM** (`view: "list" | "detail"`), **không phải tab**; nhóm **HÀNH ĐỘNG** của toolbar danh sách **TRỐNG** (đúng mô tả *"toolbar mất cân đối"* của `docs/24 §15` mục 1).
+
+**Đã làm (chỉ `ProjectManagement` trong `app/page.tsx` + 1 dòng call-site, commit `4a8608b`):** một nguồn nhãn tab (`LIST_TAB`/`DETAIL_TABS`/`TAB_LABELS`); bỏ state `view` ⇒ **suy ra** từ tab; dải tab dùng chung render ở **CẢ** danh sách và chi tiết; chỉ số tab chi tiết dịch **1..5**; toolbar theo khuôn §5 có `count/total/unit` + `actions` (**`⇩ XUẤT`** CSV) + **QUYỀN=CHECK** (`permission={activePermission}`, `disabled={!canExport}`, tab chi tiết `disabled` khi chưa chọn dự án). Không đổi DB/migration/action/workflow/CSS.
+
+**Kỷ luật đỏ→xanh:** `tests/pr01-project-tabs.test.mjs` (mới, **7 ca**) — **ĐỎ 7/7 trước khi sửa → XANH 7/7**. `npx tsc --noEmit` **0**; `npm test` **61/61** + `test:workflow` **ĐẠT**.
+
+**⚠️ ĐĂNG KÝ TEST (nối tiếp §69):** nhánh PHASE 4 **cố ý KHÔNG** sửa `package.json` (đúng quyết định của captain ở §69) ⇒ `tests/pr01-project-tabs.test.mjs` **vẫn chưa chạy trong `npm test`** (đã chạy riêng bằng `node --test …`, có bằng chứng đỏ→xanh). **Captain đấu dây khi hợp nhất: thêm tệp này vào `scripts.test:regression` rồi chạy lại `npm test` để chứng minh SỐ TEST TĂNG (61 → 68).** Sau khi thêm, sửa câu "61/61" trong `TASK-095.md`/`PR01-TAB-SPEC.md` thành số mới.
+
+**⚠️ CHƯA ĐÓNG `PR-01` (lý do đo được, §45):** `:8787`/`:9000` đang phục vụ **BẢN BUILD CŨ HƠN NGUỒN** — đo DOM lúc chạy trả `tabs = ["Tổng quan","Nhân sự","Tổ đội","Kho","Ban chỉ huy"]` (**5 mục**), `list-toolbar-count = 0`, **không có nút XUẤT** ⇒ `tools/probe-project-screen.mjs` (đã cập nhật hợp đồng **6 tab** + 3 kiểm mới) **KHÔNG ĐẠT 5 mục**. Cần: (1) **build lại**, (2) chạy lại cổng đó (kỳ vọng ĐẠT), (3) `probe-visual-regression` — **ảnh `02-project` SẼ LỆCH CÓ CHỦ Ý** (màn danh sách thêm dải tab), (4) rồi mới đổi `TT` của `PR-01` từ `DOING` → `DONE`.
+
+**🔴 Lỗi cổng phát hiện khi cập nhật SSOT:** `docs/25` dòng 15 khai báo từ vựng cột `TT` là `TODO · DOING · DONE · BLOCKED`, nhưng `tools/probe-roadmap-progress.mjs` **chỉ nhận `DANG-LAM`** ⇒ mọi ô ghi **đúng từ vựng tài liệu** (`DOING`) rơi vào **OTHER trong im lặng**. Đã bổ sung nhánh `DOING` (trước khi thêm: **0** ô nào bắt đầu bằng `DOING` ⇒ không che mục nào) + ghi lý do trong chính cổng.
+
+**UNKNOWN — KHÔNG tự chọn (ghi cho `PR-03`/`R-04`):** `projects` **KHÔNG có cột tiến độ** (`information_schema`) ⇒ màn `ProjectProgress` đọc `progressPlan`/`actualProgress`/`progress` **luôn ra 0 %**. Nguồn % tiến độ dự án (BOQ/sản lượng/nhật ký thi công hay nhập tay) **là quyết định của người dùng**.
