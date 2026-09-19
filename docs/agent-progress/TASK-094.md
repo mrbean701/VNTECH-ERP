@@ -2222,3 +2222,17 @@ BAI HOC (dang ghi nho): khi cong bao do, KHONG re-baseline de che; phai (1) xac 
   (doi chieu moc thoi gian anh chuan vs moc du lieu doi), (3) sua nguyen nhan (don du lieu rac + sua probe),
   roi (4) chay lai cong de CHUNG MINH da het.
 TRANG THAI: ma nguon sach + bundle khop (VNTECH-FP-21B083DFBC3F8CB9) + cong anh 68/68 DAT. Dang chay 2 nhanh song song PHASE 3 & PHASE 4.
+
+### 67. GIAI QUYET DIEM UNKNOWN CUA AUDIT T-02: BANG `attachments` CO DUNG DUOC CHO CONG VIEC? (20/09)
+CAU HOI (tu AUDIT-T02-WORK-ITEM-MODEL.md muc 3): bang dung chung `attachments` (entity_type/entity_id) co lien ket duoc
+voi `work_item_id` khong? => phai tra loi TRUOC khi tao bang moi (tranh tao trung).
+BANG CHUNG DO DUOC (MySQL that):
+  SELECT entity_type, COUNT(*), MIN(created_at), MAX(created_at) FROM attachments GROUP BY entity_type;
+  => entity_type = 'goods_receipt' : 11 dong (tu 2026-02-01 den 2026-09-14). KHONG co entity_type nao khac.
+KET LUAN (CONFIRMED):
+  * Bang `attachments` CHUA duoc dung cho cong viec (moi chi co goods_receipt) => chua co du lieu thuc te cho work_item.
+  * NHUNG schema la DUNG CHUNG theo (entity_type, entity_id) => DU SUC dung cho `entity_type='work_item'`
+    => => KHONG can tao bang dinh kem moi; dung lai `attachments` la DUNG thiet ke.
+  * => Tra loi dung cau hoi audit: "TaskAttachment" KHONG phai bang thieu, ma la DUNG LAI bang co san (khac voi
+    TaskComment/TaskParticipant la THIEU that su, da duoc tao o migration 0155).
+GHI CHU PHUONG PHAP: mot lenh grep ma nguon bi loi regex (ky tu escape) - khong anh huong vi bang chung DB da du tra loi.
