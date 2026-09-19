@@ -1,31 +1,29 @@
--- VNTECH ERP V5.3.0 — PHASE 3 (CONG VIEC) · `T-04`: BINH LUAN + NGUOI THAM GIA/THEO DOI CONG VIEC
--- [CHUOI SQLite] — tep nay chay tren SQLite (dev/local + `tests/workflow-direct.test.ts` giai nen TOAN BO
--- `drizzle/*.sql` vao mot CSDL trong bo nho). Script kiem cua du an (`probe-java-sql-schema.mjs`) cung doc
--- `drizzle/` de phan biet "loi ma" voi "lech luoc do".
+-- VNTECH ERP V5.3.0 — PHASE 3 (CÔNG VIỆC) · `T-04`: BÌNH LUẬN + NGƯỜI THAM GIA/THEO DÕI CÔNG VIỆC
+-- [CHUỖI SQLite] — tệp này chạy trên SQLite (dev/local + `tests/workflow-direct.test.ts` giải nén TOÀN BỘ
+-- `drizzle/*.sql` vào một CSDL trong bộ nhớ). Script kiểm của dự án (`probe-java-sql-schema.mjs`) cũng đọc
+-- `drizzle/` để phân biệt "lỗi mã" với "lệch lược đồ".
 --
--- ⚠️ VI SAO KHONG dat DDL MySQL (`COLLATE`/`ENGINE=InnoDB`/`datetime(3)`/`varchar`) vao tep NAY:
---    SQLite se `Parse error` ngay khi `tests/workflow-direct.test.ts` (va `tests/work-item-comment-participant.test.ts`)
---    nap chuoi migration ⇒ `npm test` DO o tang HA TANG, khong phai o nghiep vu. Vi vay du an di HAI CHUOI
---    SONG SONG (xem `docs/agent-progress/TASK-040.md`: "JS chay tren SQLite theo `drizzle/`, Java chay tren
---    MySQL theo Flyway") va MOI bang co DUNG mot tep mang DDL that cua tung CSDL:
---      · MySQL/InnoDB  → `java-backend/infrastructure/src/main/resources/db/migration/V20__task_comment_participant.sql`
---      · SQLite        → tep nay.
---    ⇒ DDL MySQL THAT (de doi chieu voi `SHOW CREATE TABLE` tren may chu) nam o CUOI tep nay trong khoi
---      chu thich "DDL MySQL TUONG UNG".
+-- ⚠️ VÌ SAO KHÔNG đặt DDL MySQL (`COLLATE`/`ENGINE=InnoDB`/`datetime(3)`/`varchar`) vào tệp NÀY:
+--    SQLite sẽ `Parse error` ngay khi bộ kiểm nạp chuỗi migration ⇒ `npm test` ĐỎ ở tầng HẠ TẦNG, không
+--    phải ở nghiệp vụ. Vì vậy dự án đi HAI CHUỖI SONG SONG (xem `docs/agent-progress/TASK-040.md`: "JS chạy
+--    trên SQLite theo `drizzle/`, Java chạy trên MySQL theo Flyway") và MỖI bảng có ĐÚNG một tệp mang DDL thật:
+--      · MySQL/InnoDB → `java-backend/infrastructure/src/main/resources/db/migration/V20__task_comment_participant.sql`
+--      · SQLite       → tệp này.
+--    DDL MySQL THẬT được chép nguyên văn vào khối chú thích cuối tệp để đối chiếu với `SHOW CREATE TABLE`.
 --
--- NGUON QUYET DINH: `docs/agent-progress/AUDIT-T02-WORK-ITEM-MODEL.md` (T-02, do tren MySQL THAT):
---   · `work_items` (32 cot · 8 dong) + `work_item_events` + `task_notifications` + `task_sla_policies` — DA CO;
---   · `TaskComment`     — THIEU (CONFIRMED): bang binh luan duy nhat la `request_comments`, khoa theo
---                         `request_id` ⇒ KHONG dung duoc cho `work_item_id`;
---   · `TaskParticipant` — THIEU (CONFIRMED): thu gan nhat la `task_notifications.user_id`, nhung do la
---                         "nguoi NHAN THONG BAO", khong phai "nguoi tham gia/theo doi cong viec";
---   · `TaskAttachment`  — dung LAI bang dung chung `attachments` (`entity_type`/`entity_id`) ⇒ KHONG tao bang moi.
+-- NGUỒN QUYẾT ĐỊNH: `docs/agent-progress/AUDIT-T02-WORK-ITEM-MODEL.md` (T-02, đo trên MySQL THẬT):
+--   · `work_items` (32 cột · 8 dòng) + `work_item_events` + `task_notifications` + `task_sla_policies` — ĐÃ CÓ;
+--   · `TaskComment`     — THIẾU (CONFIRMED): bảng bình luận duy nhất là `request_comments`, khoá theo
+--                         `request_id` ⇒ KHÔNG dùng được cho `work_item_id`;
+--   · `TaskParticipant` — THIẾU (CONFIRMED): thứ gần nhất là `task_notifications.user_id`, nhưng đó là
+--                         "người NHẬN THÔNG BÁO", không phải "người tham gia/theo dõi công việc";
+--   · `TaskAttachment`  — dùng LẠI bảng dùng chung `attachments` (`entity_type`/`entity_id`) ⇒ KHÔNG tạo bảng mới.
 --
--- BANG 1 · `work_item_comments` — binh luan nhieu dong theo CONG VIEC (dong luon phan "ghi chu" cua `T-03`).
--- BANG 2 · `work_item_participants` — nguoi THAM GIA / THEO DOI cong viec
---   (`role_in_task`: owner | assignee | follower | supporter — bo tro lien phong cua `T-09`).
+-- BẢNG 1 · `work_item_comments` — bình luận nhiều dòng theo CÔNG VIỆC (đóng luôn phần "ghi chú" của `T-03`).
+-- BẢNG 2 · `work_item_participants` — người THAM GIA / THEO DÕI công việc
+--   (`role_in_task`: owner | assignee | follower | supporter — bổ trợ liên phòng của `T-09`).
 --
--- TINH IDEMPOTENT: `CREATE TABLE IF NOT EXISTS` / `CREATE ... INDEX IF NOT EXISTS` ⇒ chay lai vo hai.
+-- TÍNH IDEMPOTENT: `CREATE TABLE IF NOT EXISTS` / `CREATE ... INDEX IF NOT EXISTS` ⇒ chạy lại vô hại.
 
 CREATE TABLE IF NOT EXISTS `work_item_comments` (
 	`id` text PRIMARY KEY NOT NULL,
@@ -53,10 +51,10 @@ CREATE TABLE IF NOT EXISTS `work_item_participants` (
 CREATE UNIQUE INDEX IF NOT EXISTS `work_item_participants_task_user_idx` ON `work_item_participants` (`work_item_id`,`user_id`);
 
 /* ============================================================================================
-   DDL MySQL TUONG UNG (nguon THAT: V20__task_comment_participant.sql — KHONG thuc thi o tep nay)
-   COLLATE tung cot la BAT BUOC: MySQL 8 mac dinh `utf8mb4_0900_ai_ci`, con toan bo luoc do VNTECH dung
-   `utf8mb4_unicode_ci`; chi can mot cot khac collation la JOIN voi `work_items`/`users` no
-   "Illegal mix of collations" ⇒ TOAN BO UI 500.
+   DDL MySQL TƯƠNG ỨNG (nguồn THẬT: V20__task_comment_participant.sql — KHÔNG thực thi ở tệp này)
+   COLLATE từng cột là BẮT BUỘC: MySQL 8 mặc định `utf8mb4_0900_ai_ci`, còn toàn bộ lược đồ VNTECH dùng
+   `utf8mb4_unicode_ci`; chỉ cần một cột khác collation là JOIN với `work_items`/`users` nổ
+   "Illegal mix of collations" ⇒ TOÀN BỘ UI 500.
 
    CREATE TABLE IF NOT EXISTS `work_item_comments` (
      `id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL,
