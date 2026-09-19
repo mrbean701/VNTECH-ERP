@@ -16,7 +16,7 @@
 
 | Phân loại (nguyên văn cột TT) | Số mục | % |
 |---|---|---|
-| **DONE** (`**DONE**` + `DONE` + `DONE / AP-DUNG n`) | **62** | **56,4 %** |
+| **DONE** (`**DONE**` + `DONE` + `DONE / AP-DUNG n`) | **63** | **57,3 %** |
 | ĐANG LÀM | 1 | 0,9 % |
 | KHUNG XONG nhưng **ÁP DỤNG 0** | 0 | 0 % |
 | **BỊ CHẶN** (`**BLOCKED**` = F-01) | 1 | 0,9 % |
@@ -28,7 +28,7 @@
 | PHASE 0B — BẢO MẬT | **10 / 10** | ĐÓNG (theo yêu cầu người dùng) |
 | PHASE 1 — UI/UX | **17 / 17** | **ĐÓNG HOÀN TOÀN** — `U-12` bỏ **823 token `!important` chết** (9 lô, mỗi lô qua `tsc` + `npm test` + **cổng ảnh 64/64**) |
 | PHASE 2 — MUA HÀNG | 3 / 9 | `P-04` · `P-05` · `P-06` (**`P-01` đã ROLLBACK 20/09 theo yêu cầu user — chưa chốt PHASE 2**) |
-| PHASE 3 — CÔNG VIỆC | **3 / 10** | `T-02` DONE 20/09 (audit mô hình dữ liệu: 32 cột + `work_item_events`) · **`T-03` + `T-04` DONE 20/09**: 2 bảng mới `work_item_comments`/`work_item_participants` (2 chuỗi drizzle + Flyway V20, COLLATE từng cột) · tệp đính kèm **dùng LẠI** `attachments` (`entity_type='work_item'`) · 2 action JS + 2 khoá bootstrap · **vá lỗi thật**: màn Công việc lọc `assigneeUserId` (tên KHÔNG tồn tại) ⇒ tab "Việc của tôi" luôn 0 việc |
+| PHASE 3 — CÔNG VIỆC | **4 / 10** | `T-02` DONE 20/09 (audit mô hình dữ liệu: 32 cột + `work_item_events`) · **`T-03` + `T-04` DONE 20/09**: 2 bảng mới `work_item_comments`/`work_item_participants` (2 chuỗi drizzle + Flyway V20, COLLATE từng cột) · tệp đính kèm **dùng LẠI** `attachments` (`entity_type='work_item'`) · 2 action JS + 2 khoá bootstrap · **vá lỗi thật**: màn Công việc lọc `assigneeUserId` (tên KHÔNG tồn tại) ⇒ tab "Việc của tôi" luôn 0 việc |
 | PHASE 4 — DỰ ÁN | 2 / 6 | `PR-01` **DONE** 20/09 (dải 6 tab + toolbar cân đối — probe hợp đồng ĐẠT exit 0 trên bundle mới `E2E11762304AD2B5`) · `PR-05` DONE (tạm đóng theo chỉ đạo, chờ user test lại). Còn `PR-02`/`PR-03`/`PR-04`/`PR-06` · nguồn % tiến độ = **NHẬT KÝ THI CÔNG** (user chốt 20/09, chưa có nghiệp vụ ⇒ pending) |
 | PHASE 5 — KHO | 0 / 4 | |
 | PHASE 6 — ĐỘI NHÓM | 0 / 6 | |
