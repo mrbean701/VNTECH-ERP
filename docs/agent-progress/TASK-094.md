@@ -2289,3 +2289,23 @@ BÀI HỌC: trước khi coi "test xanh" là bằng chứng, phải KIỂM XEM T
 **UNKNOWN — KHÔNG tự chọn (ghi cho `PR-03`/`R-04`):** `projects` **KHÔNG có cột tiến độ** (`information_schema`) ⇒ màn `ProjectProgress` đọc `progressPlan`/`actualProgress`/`progress` **luôn ra 0 %**. Nguồn % tiến độ dự án (BOQ/sản lượng/nhật ký thi công hay nhập tay) **là quyết định của người dùng**.
 
 **⚠️ PHÁT HIỆN LÚC CHỐT (20/09) — `npm test` ĐỎ vì TỆP CỦA NHÁNH PHASE 3, KHÔNG phải của `PR-01`:** bước `lint` báo **2 lỗi** `prefer-const` trong `tests/work-item-comment-participant.test.ts` (dòng 73 `projectCodeHasUser`, dòng 176 `data`) — đúng tệp mà §69 đã ghi là **CHƯA commit** của nhánh A. **Nhánh PHASE 4 cố ý KHÔNG sửa** tệp đó (không thuộc phân vùng + sẽ tranh chấp hợp nhất) ⇒ **captain phải sửa 2 dòng này (hoặc bảo nhánh A sửa) trước khi `npm test` xanh trở lại.** **Đối chứng tách bạch đã chạy:** `npx eslint app/page.tsx tests/pr01-project-tabs.test.mjs tools/probe-project-screen.mjs tools/probe-roadmap-progress.mjs` → **0 error** (exit 0) · `npm run typecheck` → **exit 0** · `npm run test:regression` → **61/61 PASS** · `npm run test:workflow` → **ĐẠT**.
+
+### 71. TAO BACKUP NEN MySQL THEO CHI DAO USER (20/09) — A-13 PHAN BACKUP DA DUOC XU LY
+CHI DAO: "tao backup nen" (Nhóm 2, mục ④).
+KET QUA:
+  * root KHONG vao duoc (co mat khau) => dung user ung dung `vntech`.
+  * Lenh: mysqldump -uvntech -pvntech --single-transaction --skip-lock-tables --no-tablespaces --routines --triggers
+          --default-character-set=utf8mb4 --databases vntech_erp --result-file=<file>
+  * FILE: `D:\13. Duong Trong Thang\Tai lieu\1. Du an chuan hoa quy trinh\_vntech-backups\vntech_erp_BASE_20260919-1908.sql` (1,66 MB)
+  * KIEM CHUNG: so `CREATE TABLE` = **121** (khop dung 121 bang cua DB) · co du work_items/projects/users/materials/sessions.
+  * Dung `--result-file` (KHONG dung `>` cua PowerShell) de tranh loi ma hoa UTF-16.
+  * Luu NGOAI repo (khong commit dump vao git).
+VAN DE GAP PHAI (ghi ro, khong che):
+  1. `--source-data=2` (ghi vi tri binlog de PITR) BI TU CHOI: `Access denied ... need RELOAD or FLUSH_TABLES`.
+     => user `vntech` thieu `RELOAD`/`FLUSH_TABLES` => dump nay **KHONG co toa do binlog** => **chua noi duoc chuoi PITR**.
+  2. Cung ho voi thieu quyen o A-13: `REPLICATION CLIENT` (khong liet ke duoc binlog).
+  => KHUYEN NGHI (van cho user): (a) cap `RELOAD`, `FLUSH_TABLES`, `REPLICATION CLIENT` cho tai khoan dump
+     (hoac tao tai khoan backup rieng) roi chay lai voi `--source-data=2` => moi PITR duoc;
+     (b) dat lich backup + canh bao khi loi; (c) dien tap restore (backup chua test = chua co backup);
+     (d) de ban sao khac o dia.
+TRANG THAI A-13: phan "backup nen" **DA CO** (1 ban, da kiem chung) => muc P0 giam manh; phan "PITR day du" **VAN THIEU QUYEN**.
