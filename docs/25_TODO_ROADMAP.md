@@ -148,10 +148,10 @@
 
 | ID | Module | Việc | Ưu tiên | Phụ thuộc | DB | API | UI | QUYỀN | TT |
 |---|---|---|---|---|---|---|---|---|---|
-| `W-01` | Kho | Tách 5 mục: Kho · Nhập · Xuất · Điều chuyển · Dashboard tồn kho | P2 | U-03 | - | - | NEW | CHECK | TODO |
+| `W-01` | Kho | Tách 5 mục: Kho · Nhập · Xuất · Điều chuyển · Dashboard tồn kho | P2 | U-03 | - | - | NEW | CHECK | **DONE** |
 | `W-02` | Kho | Audit quan hệ **Project : Warehouse** — xác nhận 1:N | **P2** | — | - | - | - | - | **DONE** |
-| `W-03` | Dự án | Khi tạo dự án: hỏi *"Tạo kho dự án?"* → Có thì tạo kho | P2 | W-02 | - | - | NEW | - | TODO |
-| `W-04` | Kho | Dashboard tồn kho: tổng · khả dụng · giữ chỗ · nhập · xuất · chờ chuyển · sắp hết · giá trị kho (§19) | P3 | W-01 | - | - | NEW | - | TODO |
+| `W-03` | Dự án | Khi tạo dự án: hỏi *"Tạo kho dự án?"* → Có thì tạo kho | P2 | W-02 | - | - | NEW | - | **BLOCKED** |
+| `W-04` | Kho | Dashboard tồn kho: tổng · khả dụng · giữ chỗ · nhập · xuất · chờ chuyển · sắp hết · giá trị kho (§19) | P3 | W-01 | - | - | NEW | - | **DONE** |
 
 ---
 
