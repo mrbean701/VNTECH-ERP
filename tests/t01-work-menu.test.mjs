@@ -113,6 +113,16 @@ test("T-01 — WorkCenter TÁI DÙNG `ReportView` + `lib/report-catalog.ts` cho 
   assert.match(workCenter, /<ReportView catalog=\{WORK_REPORT_CATALOG\.map\(\(entry\) => entry\.def\)\} rowsFor=\{\(key\) => sourceRows\(findEntry\(key\)\?\.source \?\? "workItems", data\)\} \/>/);
 });
 
+test("T-01 — huy hiệu (badge) nhóm «CÔNG VIỆC» KHÔNG mất số việc chưa xong: cộng theo CẢ CẶP khoá quyền", () => {
+  // Trước `T-01`, huy hiệu nhóm = badge(`dept_plan_tasks`) + badge(`dept_project_tasks`) (KH + DA).
+  // 5 mục mới mang MỘT khoá đích ⇒ phải cộng đủ CẢ CẶP, nếu không huy hiệu sẽ hụt (mất phần DA).
+  assert.match(workChildrenBlock(), /badgeKeys: item\.permissionKeys/, "Mục menu chưa giữ cặp khoá quyền để tính huy hiệu");
+  assert.match(page, /const workMenuBadge = \(keys: ModuleKey\[\]\) => keys\.reduce\(\(sum, key\) => sum \+ badgeFor\(key\), 0\);/,
+    "Thiếu phép cộng huy hiệu theo cặp khoá quyền");
+  assert.equal((page.match(/workMenuBadge\(item\.badgeKeys\)/g) || []).length, 4,
+    "Huy hiệu phải tính bằng `workMenuBadge` ở CẢ badge nhóm lẫn mục con (desktop + mobile)");
+});
+
 test("T-01 — giữ nguyên hành vi 3 tab cũ (Việc của tôi → Cá nhân · Phòng ban/tổ đội → Phòng ban · KPI & báo cáo → Báo cáo)", () => {
   const i0 = workCenter.indexOf("{tab === 0 &&");
   const i1 = workCenter.indexOf("{tab === 1 &&");
