@@ -2236,3 +2236,21 @@ KET LUAN (CONFIRMED):
   * => Tra loi dung cau hoi audit: "TaskAttachment" KHONG phai bang thieu, ma la DUNG LAI bang co san (khac voi
     TaskComment/TaskParticipant la THIEU that su, da duoc tao o migration 0155).
 GHI CHU PHUONG PHAP: mot lenh grep ma nguon bi loi regex (ky tu escape) - khong anh huong vi bang chung DB da du tra loi.
+
+### 68. BÀI HỌC QUAN TRỌNG: PHÂN TÍCH DDL TĨNH KHÔNG ĐÁNG TIN — PHẢI KIỂM TRỰC TIẾP TRÊN DB (20/09)
+BỐI CẢNH: sau khi audit PHASE 3 (`T-04`) phát hiện migration `0155` thiếu `COLLATE` (lỗi thật, đã gửi yêu cầu sửa),
+  captain viết `tools/check-migration-ddl.mjs` để tự động hoá phép kiểm.
+KẾT QUẢ: công cụ đó **SAI HAI LẦN** (dương tính giả):
+  * Lần 1 (regex lazy `\(([\s\S]*?)\)`): báo oan `V8__workflow_multi.sql` dù file đó CÓ `) ENGINE=InnoDB ... COLLATE=utf8mb4_unicode_ci;`.
+  * Lần 2 (tách theo câu lệnh + coi "cột text phải có COLLATE riêng" là lỗi): báo oan **108 bảng của `V1__baseline.sql`**.
+SỰ THẬT ĐO TỪ DB (nguồn đáng tin):
+  SELECT TABLE_COLLATION, COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='vntech_erp' GROUP BY TABLE_COLLATION;
+  => `utf8mb4_unicode_ci` : **121 bảng** — TẤT CẢ đều đúng chuẩn, KHÔNG bảng nào lệch.
+  => Cột `text` KHÔNG cần COLLATE riêng: **mệnh đề cấp BẢNG** `DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci` đã áp cho mọi cột.
+NHẬN XÉT ĐÚNG VỀ `0155`: file này hỏng vì **THIẾU MỆNH ĐỀ CẤP BẢNG** (`) ENGINE=InnoDB ... COLLATE=...`) — đó mới là điều cần sửa.
+HÀNH ĐỘNG: đã **rút lại** công cụ không đáng tin (revert) — KHÔNG để lại một cổng kiểm có thể gây hiểu sai về sau.
+BÀI HỌC CHỐT:
+  1. Muốn biết collation có đúng hay không ⇒ **hỏi DB** (`information_schema.TABLES/COLUMNS`), KHÔNG parse file SQL.
+  2. Nguồn DDL THẬT của dự án là **FLYWAY** (`java-backend/.../db/migration`, 20 tệp);
+     `drizzle/**` (156 tệp) là baseline song song, KHÔNG phản ánh DDL thực tế (121 "vi phạm" ở drizzle là vô nghĩa với runtime).
+  3. Khi tự viết công cụ kiểm: phải **kiểm chứng công cụ trên ca ĐÃ BIẾT ĐÚNG và ca ĐÃ BIẾT SAI** trước khi dùng/công bố.
