@@ -1726,3 +1726,24 @@ pm test 0**.
 2. **Sau đó — tách BoqControl:** kèm **5 helper** (BoqExportButtons, oqCellValue, mapBoqRows, useResizableColumnWidths, withBoqGroupContext) ⇒ cùng bộ cổng.
 3. **Cập nhật lộ trình U-11** sau khi cả 2 tách xong (đủ bước 4 ⇒ DONE).
 **BÀI HỌC:** trước khi tách, **phải đếm phụ thuộc THẬT** (không tin số thô — 736 "phụ thuộc" nhưng thật chỉ **1** cho WorkCenter).
+
+### 36. ✅ U-11 bước 4 — TÁCH WorkCenter + SỬA 5 TEST CŨ (19/09)
+**TÁCH (bằng công cụ chuẩn 	ools/tach-lat-cat-page.mjs, KHÔNG viết mới):**
+* Chạy khô lần 1 (chỉ WorkCenter,TaskTable) ⇒ **công cụ TỰ CHỐI GHI** với lý do chính xác: *"WorkCenter phụ thuộc khối KHÔNG được chuyển → isTaskLate, workRate; TaskTable → isTaskLate"* ⇒ **bộ kiểm an toàn hoạt động đúng**, tìm ra **2 phụ thuộc THẬT** mà phép quét thô của tôi không chắc.
+* Kiểm chứng: isTaskLate/workRate chỉ dùng ở dòng 566/567/628/633/640/641 — **đều trong WorkCenter** ⇒ an toàn.
+* Chạy khô lần 2 (4 khối) ⇒ **QUA**: WorkCenter(138d) · TaskTable(11d) · isTaskLate(10d) · workRate(4d) · page.tsx 2878 → 2715.
+* **ÁP DỤNG:** tạo **pp/screens/WorkCenter.tsx** (16KB · 189 dòng · **6 câu import tự sinh**) · page.tsx **2878 → 2720** (−158 dòng) · diff 1 insertion, 159 deletions · dòng 67: import { TaskTable, WorkCenter, isTaskLate, workRate } from "@/app/screens/WorkCenter"; · **	sc EXIT 0** ✔
+**🚨 
+pm test ĐỎ 5 TEST — ĐÃ CHỨNG MINH **KHÔNG PHẢI DO VIỆC TÁCH**:
+`
+'Sản lượng' trong page.tsx:  TRƯỚC (f34835a~1) = 16 dòng · SAU (HEAD) = 16 dòng   ⇒ KHÔNG ĐỔI
+Chuỗi CHÍNH XÁC test đòi:     TRƯỚC = 0 · SAU = 0                                  ⇒ KHÔNG có ở CẢ 2 bản
+`
+⇒ 5 test này là **test kiểm CHUỖI TRONG NGUỒN** (source-shape), và chúng **đã đỏ sẵn** vì **bước tách HELPER trước đó** đưa nav sang lib/menu-helpers.ts mà **danh sách tệp của test chưa cập nhật**:
+`js
+// chính test ghi: "U-11 … đọc HỢP NHẤT nguồn giao diện vì page.tsx đang được tách thành module"
+const readUiSource = () => ['app/page.tsx', 'lib/ui-shared.tsx']   ← THIẾU lib/menu-helpers.ts
+`
+**ĐÃ SỬA (đúng cách — nới PHẠM VI ĐỌC, KHÔNG nới lỏng phép kiểm):** thêm lib/menu-helpers.ts, lib/request-actions.ts, lib/workflow-helpers.ts vào **3 test** dùng eadUiSource; thêm pp/screens/RequestDrawer.tsx + pp/screens/WorkCenter.tsx cho test untime-admin-boq-regression.
+**KẾT QUẢ:** **5 đỏ → 4 hết ngay** (56 → 60 pass) ⇒ thêm tệp màn ⇒ **61/61 PASS · EXIT 0** ✔
+**BÀI HỌC:** (1) git stash **KHÔNG** dùng được làm A/B khi thay đổi **đã commit** — phải dùng git show <commit>:<path> để so sánh. (2) Test kiểm **chuỗi trong nguồn** sẽ đỏ khi tách tệp ⇒ phải **cập nhật phạm vi ĐỌC của test** (giữ nguyên độ chặt phép kiểm).

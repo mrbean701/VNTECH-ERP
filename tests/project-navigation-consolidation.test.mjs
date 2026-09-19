@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 // U-11 (18/09/2026) — đọc HỢP NHẤT nguồn giao diện vì `page.tsx` đang được tách thành module (roadmap `U-11`).
 // Không nới lỏng phép kiểm: literal vẫn phải tồn tại trong nguồn giao diện, chỉ đổi phạm vi ĐỌC.
-const readUiSource = () => ['app/page.tsx', 'lib/ui-shared.tsx']
+const readUiSource = () => ['app/page.tsx', 'lib/ui-shared.tsx', 'lib/menu-helpers.ts', 'lib/request-actions.ts', 'lib/workflow-helpers.ts']
   .map((relative) => { try { return readFileSync(new URL('../' + relative, import.meta.url), 'utf8'); } catch { return ''; } })
   .join('\n');
 

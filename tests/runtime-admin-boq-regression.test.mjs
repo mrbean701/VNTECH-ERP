@@ -11,7 +11,7 @@ import { rankMaterialCandidates, materialCandidateGate } from '../lib/material-m
 // Tệp nào chưa tồn tại thì bỏ qua (tương thích ngược với bản chỉ có `app/page.tsx`).
 const readUiSource = async () => {
   const parts = [];
-  for (const relative of ['app/page.tsx', 'lib/ui-shared.tsx']) {
+  for (const relative of ['app/page.tsx', 'lib/ui-shared.tsx', 'lib/menu-helpers.ts', 'lib/request-actions.ts', 'lib/workflow-helpers.ts', 'app/screens/RequestDrawer.tsx', 'app/screens/WorkCenter.tsx']) {
     try { parts.push(await readFile(relative, 'utf8')); } catch { /* tệp chưa tồn tại sau khi tách */ }
   }
   return parts.join('\n');
