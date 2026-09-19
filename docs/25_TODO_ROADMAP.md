@@ -35,7 +35,7 @@
 | `A-13` | Hạ tầng | **Xác nhận backup / PITR của MySQL** | **P0** | — | - | - | CONFIRMED-PITR / KHONG-CO-BACKUP-NEN | - | **DONE** |
 | `A-14` | Hạ tầng | Xác nhận chính sách thời hạn phiên + thu hồi phiên | P1 | — | - | - | CONFIRMED: TTL 24h + 4 duong thu hoi + audit | - | **DONE** |
 | `A-15` | Admin | Xác định **nhóm quyền nghiệp vụ** có tham gia kiểm quyền không | **P0** | — | - | - | CONFIRMED: KHONG tham gia kiem quyen (chi module_permissions) | MODEL | **DONE** |
-| `A-16` | Toàn hệ | Kiểm thử **cross-department / cross-project** | P1 | A-06 | - | - | - | CHECK | **TODO** |
+| `A-16` | Toàn hệ | Kiểm thử **cross-department / cross-project** | P1 | A-06 | - | - | CONFIRMED: loc theo du an + chan non-admin (0/5, 0/20 lot qua); phat hien 1 khoa nham save_payment_plan | CHECK | **DONE** |
 
 ---
 
