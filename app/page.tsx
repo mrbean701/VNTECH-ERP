@@ -48,6 +48,16 @@ import { Purchasing } from "@/app/screens/Purchasing";
 import { Payments } from "@/app/screens/Payments";
 import { isAdminUser, modulePermission, roleBase } from "@/lib/permissions";
 import { ProjectTeams } from "@/app/screens/ProjectTeams";
+// PHASE 4 (`PR-02`/`PR-03`/`PR-04`/`PR-06`) — các module của màn QUẢN LÝ DỰ ÁN:
+//   • `project-filters`            → bộ lọc 4 chiều (Trạng thái · Quản lý dự án · Phòng ban · Ngày) + hàm suy ngữ cảnh;
+//   • `ProjectDetailTabs`          → 5 tab con chi tiết dự án (chung · nhân sự · tổ đội · kho · lịch sử);
+//   • `ProjectEntityModal`         → MỘT cổng mở `EntityDetailModal` cho Project/User/Warehouse/Team;
+//   • `project-bch-permissions`    → cổng quyền của Ban chỉ huy (đọc đúng 6 capability hiện có).
+import { PROJECT_DETAIL_SUB_TABS, ProjectDetailTabs } from "@/app/screens/ProjectDetailTabs";
+import { ProjectEntityModal } from "@/app/screens/ProjectEntityModal";
+import type { ProjectEntityKind } from "@/app/screens/ProjectEntityModal";
+import { PROJECT_FILTER_DEFAULTS, projectFilterChoices, projectFilterContext, projectManagerName, projectMatchesFilters } from "@/app/screens/project-filters";
+import { bchGates } from "@/app/screens/project-bch-permissions";
 import { MaterialListTable } from "@/app/screens/MaterialListTable";
 import { SupplierManager } from "@/app/screens/SupplierManager";
 import { BaseModal, FileUpload } from "@/lib/ui-blocks";
@@ -535,7 +545,10 @@ function projectOverdueDays(row: Row): number {
 //     theo ngày tham gia); tab Tổ đội; tab Kho (tồn kho, thủ kho, đơn chờ nhập/duyệt/xuất)
 // Dữ liệu lấy HOÀN TOÀN từ bootstrap — không cần API Java mới.
 // =============================================================================
-function ProjectManagement({ data, project, onProject, open, action, permission }: { data: AppData; project: string; onProject: (value: string) => void; open: (name: string, row?: Row) => void; action: (name: string, payload: Row) => Promise<boolean>; permission: Row }) {
+function ProjectManagement({ data, project, onProject, action, permission }: { data: AppData; project: string; onProject: (value: string) => void; open: (name: string, row?: Row) => void; action: (name: string, payload: Row) => Promise<boolean>; permission: Row }) {
+  // ⚠️ `open` (mở modal cũ của App) VẪN nằm trong KIỂU props vì call-site đã bị `tests/pr01-project-tabs.test.mjs`
+  // khoá nguyên văn (`open={open}` — PR-01 đã DONE), nhưng màn dự án KHÔNG gọi nó nữa: từ PR-04 mọi link
+  // Project/User/Warehouse/Team đi qua `EntityDetailModal` (`openEntity`). Không destructure ⇒ không có biến chết.
   // PHASE 4 (`PR-01`) — "DANH SÁCH DỰ ÁN" LÀ MỘT TAB RIÊNG, KHÔNG còn là chế độ xem tách rời.
   // Nguồn yêu cầu: docs/24 §15 mục 8 (*"Danh sách dự án + Ban chỉ huy dự án chưa tách tab"*) + docs/25 mục `PR-01`.
   // TRƯỚC: `view: "list" | "detail"` là HAI chế độ xem rời nhau ⇒ ở màn danh sách KHÔNG có dải tab nào,
@@ -552,16 +565,30 @@ function ProjectManagement({ data, project, onProject, open, action, permission 
   const view: "list" | "detail" = tab === 0 ? "list" : "detail";
   const canExport = Boolean(permission?.canExport);
   const [q, setQ] = useState("");
-  const [status, setStatus] = useState("ALL");
+  // PR-02 — BỘ LỌC 4 CHIỀU (Trạng thái · Quản lý dự án · Phòng ban · Ngày): 3 chiều là `select` của
+  // `ListToolbar`; chiều NGÀY dùng 2 ô `<input type="date">` ở `extra` (ListToolbar chỉ hỗ trợ select),
+  // và lọc THẬT theo 2 cột `projects.start_date` · `projects.planned_end_date`.
+  const [filterState, setFilterState] = useState(PROJECT_FILTER_DEFAULTS);
+  const setFilterValue = (key: keyof typeof PROJECT_FILTER_DEFAULTS) => (value: string) => setFilterState((current) => ({ ...current, [key]: value }));
   const [sortBy, setSortBy] = useState("active_newest");
-  const [openWarehouse, setOpenWarehouse] = useState("");
+  // PR-03 + PR-04 — tab con của khối CHI TIẾT dự án + MỘT cổng mở `EntityDetailModal` cho
+  // Project/User/Warehouse/Team. Modal render ở CẢ 2 nhánh (danh sách · chi tiết) nên đặt state ở đây.
+  const [detailSection, setDetailSection] = useState(PROJECT_DETAIL_SUB_TABS[0]);
+  const [entity, setEntity] = useState<{ kind: ProjectEntityKind; row: Row } | null>(null);
+  function openEntity(kind: ProjectEntityKind, row: Row) { setEntity({ kind: kind, row: row }); }
+  const entityModal = entity ? <ProjectEntityModal data={data} entity={entity} onClose={() => setEntity(null)} permission={permission} /> : null;
 
   const allProjects: Row[] = data.projects || [];
   const users: Row[] = data.users || [];
+  // PR-02 — hai nguồn THẬT để suy 2 chiều lọc không có trong payload dự án:
+  // `user_project_scopes` (ai QUẢN LÝ/tham gia dự án) + danh bạ nhân sự (đơn vị · phòng ban).
+  const userScopes: Row[] = data.userScopes || [];
+  const staffDirectory: Row[] = data.staffDirectory || [];
+  const filterChoices = projectFilterChoices(data);
 
   // --- sắp xếp + lọc danh sách ------------------------------------------------
   const filtered = allProjects
-    .filter((row) => status === "ALL" || String(row.status || "active") === status)
+    .filter((row) => projectMatchesFilters(row, filterState, projectFilterContext(String(row.id), userScopes, staffDirectory)))
     .filter((row) => {
       if (!q.trim()) return true;
       const hay = `${row.code || ""} ${row.name || ""} ${row.contractNo || ""} ${row.contractName || ""}`.toLocaleLowerCase("vi");
@@ -615,17 +642,32 @@ function ProjectManagement({ data, project, onProject, open, action, permission 
       <section className="card">
         <ListToolbar
           title="DANH SÁCH DỰ ÁN"
-          note="Project Master · ưu tiên dự án ĐANG HOẠT ĐỘNG, trong nhóm mới nhất trước"
+          note="Project Master · ưu tiên dự án ĐANG HOẠT ĐỘNG, trong nhóm mới nhất trước · 4 chiều lọc: Trạng thái · Quản lý dự án · Phòng ban · Ngày (Quản lý dự án = phạm vi admin của user_project_scopes; Phòng ban = đơn vị của nhân sự tham gia — bootstrap CHƯA trả projects.manager_user_id)"
           count={filtered.length}
           total={allProjects.length}
           unit="dự án"
           search={{ value: q, onChange: setQ, placeholder: "Tìm mã, tên, hợp đồng…" }}
-          filters={[{ key: "status", label: "Trạng thái", value: status, onChange: setStatus, options: [
-            { value: "ALL", label: "Tất cả trạng thái" },
-            { value: "active", label: "Đang hoạt động" },
-            { value: "paused", label: "Tạm dừng" },
-            { value: "closed", label: "Đã đóng" },
-          ] }]}
+          filters={[
+            { key: "status", label: "Trạng thái", value: filterState.status, onChange: setFilterValue("status"), options: [
+              { value: "ALL", label: "Tất cả trạng thái" },
+              { value: "active", label: "Đang hoạt động" },
+              { value: "paused", label: "Tạm dừng" },
+              { value: "closed", label: "Đã đóng" },
+            ] },
+            { key: "managerUserId", label: "Quản lý dự án", value: filterState.managerUserId, onChange: setFilterValue("managerUserId"), options: [
+              { value: "ALL", label: "Tất cả người quản lý" },
+              ...filterChoices.managers.map((choice) => ({ value: choice.value, label: choice.label })),
+            ] },
+            { key: "organizationUnitId", label: "Phòng ban", value: filterState.organizationUnitId, onChange: setFilterValue("organizationUnitId"), options: [
+              { value: "ALL", label: "Tất cả phòng ban" },
+              ...filterChoices.units.map((choice) => ({ value: choice.value, label: choice.label })),
+            ] },
+          ]}
+          extra={<div className="list-toolbar-field">
+            <span>Ngày</span>
+            <label className="list-toolbar-field"><span>Từ ngày bắt đầu</span><input type="date" value={filterState.startFrom} onChange={(event) => setFilterValue("startFrom")(event.target.value)} title="Chỉ hiện dự án có start_date từ mốc này" /></label>
+            <label className="list-toolbar-field"><span>Đến kết thúc dự kiến</span><input type="date" value={filterState.endTo} onChange={(event) => setFilterValue("endTo")(event.target.value)} title="Chỉ hiện dự án có planned_end_date không muộn hơn mốc này" /></label>
+          </div>}
           sort={{ value: sortBy, onChange: setSortBy, options: [
             { value: "active_newest", label: "Hoạt động trước · mới nhất" },
             { value: "name", label: "Theo mã dự án" },
@@ -654,25 +696,26 @@ function ProjectManagement({ data, project, onProject, open, action, permission 
           rowKey={(row) => String(row.id)}
           emptyText="Không có dự án phù hợp bộ lọc."
           columns={[
-            { key: "code", header: "Mã dự án", render: (row) => <strong className="code">{row.code}</strong> },
+            { key: "code", header: "Mã dự án", render: (row) => <button type="button" className="export-mini" title="Mở chi tiết dự án (EntityDetailModal)" onClick={() => openEntity("project", row)}><strong className="code">{row.code}</strong></button> },
             { key: "name", header: "Tên dự án", render: (row) => <>{row.name}<small>{row.contractNo || "Chưa có hợp đồng"}</small></> },
+            { key: "manager", header: "Quản lý dự án", render: (row) => <>{projectManagerName(String(row.id), userScopes, staffDirectory)}</> },
             { key: "status", header: "Trạng thái", render: (row) => <StatusBadge value={PROJECT_STATUS_LABELS[String(row.status || "active")] || String(row.status || "—")}/> },
             { key: "startDate", header: "Bắt đầu", render: (row) => <>{date(row.startDate)}</> },
             { key: "plannedEndDate", header: "Kết thúc dự kiến", render: (row) => <>{date(row.plannedEndDate)}</> },
             { key: "progress", header: "Tiến độ", render: (row) => { const late = projectOverdueDays(row); return late > 0 ? <strong className="red-text">Chậm {late} ngày</strong> : <StatusBadge value="Đúng tiến độ"/>; } },
             { key: "staff", header: "Nhân sự", render: (row) => <>{scopesOf(String(row.id)).length} người</> },
             { key: "teams", header: "Tổ đội", render: (row) => <>{teamsOf(String(row.id)).length} tổ đội</> },
-            { key: "actions", header: "", render: (row) => <button type="button" className="export-mini" onClick={() => { setDetailId(String(row.id)); setTab(1); setOpenWarehouse(""); }}>Chi tiết ›</button> },
+            { key: "actions", header: "", render: (row) => <button type="button" className="export-mini" onClick={() => { setDetailId(String(row.id)); setDetailSection(PROJECT_DETAIL_SUB_TABS[0]); setTab(1); }}>Chi tiết ›</button> },
           ]}
         />
       </section>
+      {entityModal}
     </div>;
   }
 
   // =========================== CHI TIẾT ======================================
   if (!detail) { setTab(0); return null; }
   const pid = String(detail.id);
-  const late = projectOverdueDays(detail);
   const staff = staffOf(pid).sort((a, b) => {
     const aa = a.active === false ? 1 : 0, bb = b.active === false ? 1 : 0;
     if (aa !== bb) return aa - bb;                      // đang hoạt động lên trước
