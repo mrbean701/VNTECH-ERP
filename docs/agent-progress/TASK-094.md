@@ -1852,3 +1852,22 @@ pm test 61/61 PASS**.
 **⇒ VIỆC PHẢI LÀM (điều kiện tiên quyết thật của U-12.2):** **ổn định hoá chụp màn 17** — trong probe, trước khi chụp: **chờ modal ỔN ĐỊNH** (chờ selector đặc trưng + **chờ 2 khung hình liên tiếp giống nhau**, hoặc tăng thời gian settle riêng cho màn này) ⇒ chạy **2 lần liên tiếp phải ra   px** mới coi là cổng dùng được.
 **ĐÃ LÀM ĐÚNG:** **hoàn tác** 	ools/baseline/17-modal-po__desktop.png (ảnh chụp sai) ⇒ **không commit ảnh rác** ✔ · CSS **giữ nguyên bản gốc** (4.464 !important) ✔
 **BÀI HỌC PHƯƠNG PHÁP (đã lặp lại 2 lần — ghi đậm):** **Khi một cổng báo lỗi, PHẢI kiểm tính TẤT ĐỊNH của chính cổng TRƯỚC KHI suy luận về mã** — cách kiểm: **chụp lại baseline rồi chạy lại NGAY**; nếu vẫn lệch ⇒ **cổng hỏng**, mọi kết luận từ nó là **vô hiệu**.
+
+### 44. ✅ ĐÃ LÀM CỔNG ẢNH **TẤT ĐỊNH** — ĐIỀU KIỆN TIÊN QUYẾT CỦA U-12.2 ĐÃ ĐẠT (20/09)
+**CHẨN ĐOÁN ĐÚNG (sau 2 lần sai):** màn 17-modal-po **desktop** dao động **23 → 98 → 0 → 75 px** giữa các lần chạy.
+**TÌM RA CHỖ GÂY:** trong 	ools/probe-visual-regression.mjs, sau khi **bấm mở modal** probe chỉ **chờ 2200 ms** rồi chụp (2 nhánh: dòng **447** và **511**), trong khi nhánh khác chờ 5200 ms ⇒ **modal PO nạp dữ liệu bất đồng bộ** ⇒ ảnh rơi vào **trạng thái render khác nhau** ✔ *(probe **đã từng** gặp y hệt với FONT — dòng 307-327 ghi “cổng lúc đạt lúc không” ⇒ **có tiền lệ trong dự án**).*
+**BẢN VÁ (nhỏ, đúng chuẩn dự án):**
+* SCREENS màn 17: thêm **settleMs: 6000**
+* 2 nhánh chờ sau click: wait sleep(2200) ⇒ **wait sleep(2200 + (screen?.settleMs || 0))**
+* 
+ode --check tools/probe-visual-regression.mjs ⇒ **EXIT 0** ✔
+**KIỂM CHỨNG TẤT ĐỊNH (tiêu chí nghiệm thu):** trước khi chụp lại baseline, 2 lần chạy liên tiếp cho **cùng một kết quả** 23 px, **cùng vùng 126×39 @ (438,762)** (trước đó là 23/98/0/75 px hỗn loạn) ⇒ **dao động bất đồng bộ ĐÃ HẾT**; 23 px còn lại là **khác biệt THẬT so với baseline cũ**.
+**CHỤP LẠI BASELINE (nay cách chụp tất định) ⇒ RỒI KIỂM 2 LẦN LIÊN TIẾP:**
+`
+LẦN 1: ✅ 0 px cả 4 kích thước · KẾT LUẬN ĐẠT · EXIT 0
+LẦN 2: ✅ 0 px cả 4 kích thước · KẾT LUẬN ĐẠT · EXIT 0
+`
+⇒ **CỔNG ẢNH NAY DÙNG ĐƯỢC** ⇒ **điều kiện tiên quyết của U-12.2 ĐÃ ĐẠT** ✔
+**⚠️ GHI CHÚ TRUNG THỰC:** lần 1 vẫn ghi đã chụp lại (lần đầu 98 px) ⇒ **vẫn còn dao động ở lần chụp ĐẦU**, được **cơ chế tự chụp lại của probe** xử lý ⇒ **cơ chế retry của probe là yếu tố CHỊU LỰC cho màn 17** (không được bỏ). Nếu muốn bỏ hẳn, cần **chờ 2 khung hình liên tiếp giống nhau** (việc cải tiến tiếp, không bắt buộc).
+**TỆP ĐỔI:** 	ools/probe-visual-regression.mjs + **1 tệp baseline** (	ools/baseline/17-modal-po__desktop.png) · các tệp baseline khác **không đổi** ✔
+**BÀI HỌC:** **cổng ảnh dao động thì phải sửa CHÍNH CỔNG (thời điểm chụp), không phải sửa mã sản phẩm** — và **phải kiểm tất định (2 lần liên tiếp) TRƯỚC KHI kết luận về mã** ✔

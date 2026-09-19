@@ -203,7 +203,7 @@ const SCREENS = [
   //   • Tổ đội: nút do `CardHead` render (`<div className="card-head">…<button>＋ Thêm tổ đội →</button>`) nên KHÔNG có
   //     lớp riêng ⇒ phải bấm theo NHÃN (`clickText`), và nút nằm ở **bước 2** của wizard Quản trị
   //     (`.permission-steps button:nth-child(2)`).
-  { id: "17-modal-po", label: "Mua hàng & PO — modal phát hành PO", steps: [{ group: "purchasing", child: 1 }, { click: ".purchase-action-bar button.primary" }] },
+  { id: "17-modal-po", label: "Mua hàng & PO — modal phát hành PO", settleMs: 6000, steps: [{ group: "purchasing", child: 1 }, { click: ".purchase-action-bar button.primary" }] },
   { id: "18-modal-team-create", label: "Quản trị — modal tạo tổ đội dự án (bước 2)", steps: [{ group: "system_admin", child: 0 }, { click: ".permission-steps button:nth-child(2)" }, { clickText: "Thêm tổ đội" }] },
 ];
 
@@ -444,7 +444,7 @@ if (CROP) {
   for (let i = 0; i < 2; i++) {
     await send("Page.navigate", { url: BASE });
     await sleep(5200);
-    if (screen) { const nav = await clickSteps(screen.steps); if (i === 0) console.log(`  nav ${screen.id}: ${nav}`); await sleep(2200); }
+    if (screen) { const nav = await clickSteps(screen.steps); if (i === 0) console.log(`  nav ${screen.id}: ${nav}`); await sleep(2200 + (screen?.settleMs || 0)); }
     await freeze();
     const s = await send("Page.captureScreenshot", {
       format: "png", clip: { x: cx, y: cy, width: cw, height: ch, scale: 3 }, captureBeyondViewport: false,
@@ -508,7 +508,7 @@ if (LOCATE) {
   await send("Page.navigate", { url: BASE });
   await sleep(5200);
   const screen = SCREENS_TO_RUN[0];
-  if (screen) { const nav = await clickSteps(screen.steps); console.log(`  nav ${screen.id}: ${nav}`); await sleep(2200); }
+  if (screen) { const nav = await clickSteps(screen.steps); console.log(`  nav ${screen.id}: ${nav}`); await sleep(2200 + (screen?.settleMs || 0)); }
   const stack = await evaluate(`(()=>{const els=document.elementsFromPoint(${lx},${ly});
     return JSON.stringify(els.slice(0,8).map(e=>{const r=e.getBoundingClientRect();
       return {tag:e.tagName,cls:String(e.className).slice(0,70),txt:(e.textContent||'').replace(/\\s+/g,' ').trim().slice(0,60),
