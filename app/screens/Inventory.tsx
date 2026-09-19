@@ -9,14 +9,39 @@
 // `page.tsx` — công cụ SINH LẠI import đó ở đây, hoặc (d) kiểu của React ⇒ `import type … from "react"`.
 // Không còn tên nào khác ⇒ KHÔNG thể tạo import vòng.
 
+// PHASE 5 (`W-01` + `W-04`) — MÀN TỒN KHO NAY CÓ 2 TAB: «Tồn kho» (giữ NGUYÊN toàn bộ hành vi cũ) và
+// «Dashboard tồn kho» (mục #5 của nhóm menu KHO, 8 chỉ số theo §19 — `app/screens/WarehouseDashboard.tsx`).
+// `view` do MỤC MENU quyết định (`lib/menu-helpers.ts` → `warehouseMenuViewFor` → `app/page.tsx`): mục
+// «Dashboard tồn kho» truyền `view="dashboard"`, bốn mục còn lại KHÔNG truyền ⇒ rơi về tab «Tồn kho».
+// KHÔNG thêm khoá module, KHÔNG route mới, KHÔNG màn mới.
+
 import { DataTable, ListToolbar, StatusBadge } from "@/app/components/ui";
+import { WarehouseDashboard } from "@/app/screens/WarehouseDashboard";
+import type { WarehouseMenuView } from "@/lib/menu-helpers";
 import { CardHead, Empty, Kpi, NavIcon, exportInventoryXlsx, format, printInventoryBarcodes, printInventoryLedger } from "@/lib/ui-shared";
 import type { AppData, Row } from "@/lib/ui-shared";
 import { useState } from "react";
-function Inventory({ data, project, open }: { data: AppData; project: string; open: (name: string, row?: Row) => void }) {
+// Dải 2 tab của màn Tồn kho — thứ tự CỐ ĐỊNH, tab «Tồn kho» là mặc định (hành vi cũ không đổi).
+const WAREHOUSE_TABS = ["Tồn kho", "Dashboard tồn kho"];
+function Inventory({ data, project, open, view = null }: { data: AppData; project: string; open: (name: string, row?: Row) => void; view?: WarehouseMenuView | null }) {
+  const [tab, setTab] = useState(view === "dashboard" ? 1 : 0);
+  const showDashboard = tab === 1;
   const [query,setQuery]=useState(""); const [lowOnly,setLowOnly]=useState(false); const scopedInventory=data.inventory.filter((row)=>project==="ALL"||row.projectId===project); const searched=scopedInventory.filter(row=>!query||`${row.materialCode||""} ${row.materialName||""} ${row.warehouseCode||""} ${row.warehouseName||""} ${row.locationCode||""}`.toLocaleLowerCase("vi").includes(query.toLocaleLowerCase("vi"))); const lowRows=searched.filter(row=>Number(row.available??row.balance)>=0&&Number(row.available??row.balance)<Number(row.minStock||0)); const filtered=lowOnly?[...lowRows].sort((a,b)=>(Number(a.minStock||0)-Number(a.available??a.balance))-(Number(b.minStock||0)-Number(b.available??b.balance))):searched; const positive=filtered.filter((row)=>Number(row.available??row.balance)>0); const totalQty=positive.reduce((sum,row)=>sum+Number((row.available??row.balance)||0),0); const below=lowRows.length; const inbound=filtered.filter(row=>Number(row.pendingInbound||0)>0).length; const outbound=data.issues.filter((row)=>project==="ALL"||row.projectId===project).length;
   const selectedProject=project==="ALL"?null:data.projects.find(row=>row.id===project); const allowedWarehouses=data.warehouses.filter(row=>project==="ALL"||row.projectId===project||row.warehouseType==="central");
+  // PHASE 5 (`W-01`/`W-04`) — dải tab dùng CHUNG cho cả 2 tab, đặt trong màn Tồn kho (không tạo màn/route mới).
+  const tabBar = <section className="card inventory-tabs-card"><ListToolbar title="KHO VẬT TƯ"
+    note="Hai tab của cùng một màn: «Tồn kho» (nghiệp vụ) và «Dashboard tồn kho» (8 chỉ số §19). Mục menu «Dashboard tồn kho» mở thẳng tab thứ hai."
+    extra={<label className="list-toolbar-field"><span>Phạm vi dự án</span><strong className="filter-control">{selectedProject?`${selectedProject.code} – ${selectedProject.name}`:"Tất cả dự án được phân quyền"}</strong></label>}/>
+    <div className="project-scope-tabs" role="tablist" aria-label="Kho vật tư">
+      {WAREHOUSE_TABS.map((label,index)=><button type="button" key={label} role="tab" aria-selected={tab===index} className={tab===index?"active":""} data-warehouse-tab={index===0?"inventory":"dashboard"} onClick={()=>setTab(index)}>{label}</button>)}
+    </div>
+  </section>;
+  if (showDashboard) return <div className="stack baseline-screen approved-inventory-screen">
+    {tabBar}
+    <WarehouseDashboard data={data} project={project}/>
+  </div>;
   return <div className="stack baseline-screen approved-inventory-screen">
+    {tabBar}
     <ListToolbar
       title="TỒN KHO & ĐIỀU CHUYỂN"
       note="Theo dõi tồn theo đúng dự án/kho được phân quyền; điều chuyển phải có xác nhận kho đích."
