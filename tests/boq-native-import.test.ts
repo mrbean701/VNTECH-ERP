@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mapBoqRows } from "../app/page";
+import { mapBoqRows } from "../app/screens/BoqControl";
 
 const rows=[
   ["BẢNG ĐƠN GIÁ DỰ THẦU HẠNG MỤC CÔNG TRÌNH","","","","",""],

@@ -1769,3 +1769,21 @@ const readUiSource = () => ['app/page.tsx', 'lib/ui-shared.tsx']   ← THIẾU l
 2. **Test chứa "Built UI contract dùng marker ổn định cho rule loại heading khỏi matching"** + **"BOQ source rows giữ kiểu Row…"** ⇒ kiểm **chuỗi/kiểu của helper BOQ** trong nguồn giao diện ⇒ cần **thêm pp/screens/BoqControl.tsx (và có thể lib/boq-normalize.ts) vào phạm vi ĐỌC**.
 **⇒ VIỆC KẾ TIẾP (rõ ràng, 2-3 bước):** đọc import của oq-native-import.test.ts ⇒ trỏ về module mới ⇒ thêm tệp vào phạm vi đọc của test kiểm-chuỗi ⇒ **	est:regression phải 61/61** ⇒ rồi chạy **cổng ảnh** cho BoqControl.
 **TRẠNG THÁI CỔNG HIỆN TẠI:** 	sc **0** ✔ · **hồi quy 59/61** ⚠️ (2 đỏ do test cũ) · cổng ảnh BoqControl **đang chạy nền**.
+
+### 39. 🔎 TEST CUỐI CỦA BoqControl — NGHỊCH LÝ CẦN CHẨN ĐOÁN TIẾP (20/09)
+**Trạng thái:** 	est:regression = **60/61** (còn **1 đỏ**).
+**Test đỏ:** Built UI contract dùng marker ổn định cho rule loại heading khỏi matching (trong 	ests/runtime-admin-boq-regression.test.mjs).
+**Assertion đòi:** /data-contract="VNTECH_BOQ_HEADING_MATCHING_EXCLUSION_V1"/
+**ĐÃ KIỂM (bằng chứng):**
+* Marker **CÓ THẬT** tại **pp/screens/BoqControl.tsx:78** ✔
+* **pp/screens/BoqControl.tsx ĐÃ CÓ** trong danh sách đọc của test (dòng **14**: or (const relative of ['app/page.tsx', 'lib/ui-shared.tsx', 'lib/menu-helpers.ts', 'lib/request-actions.ts', 'lib/workflow-helpers.ts', 'app/screens/BoqControl.tsx', 'app/screens/RequestDrawer.tsx', …])) ✔
+* **Vậy mà test vẫn đỏ** ⇒ **NGHỊCH LÝ**.
+**GIẢ THUYẾT (cần kiểm bằng 1 lệnh):**
+1. **eadUiSource không nạp được tệp** (đường dẫn resolve sai / lỗi đọc bị catch im lặng) ⇒ cần in **ui.length** và **ui.includes(marker)** ngay trong test (hoặc in **danh sách tệp đọc thành công**) để biết tệp nào **KHÔNG** được nạp.
+2. **Danh sách đọc bị cắt** ở đâu đó ⇒ kiểm **số tệp thực sự đọc được** so với danh sách.
+3. Assertion đó đọc **nguồn KHÁC** (page.tsx riêng?) chứ không phải ui.
+**KẾ HOẠCH CHẨN ĐOÁN (1-2 lệnh):** thêm tạm 1 dòng debug vào test: console.log('UI len', ui.length, 'has marker', ui.includes('VNTECH_BOQ_HEADING_MATCHING_EXCLUSION_V1')) ⇒ chạy ⇒ xem ui có chứa marker không ⇒ từ đó suy ra tệp nào không được nạp ⇒ sửa **cách đọc** (không nới lỏng phép kiểm).
+**CÁC SỬA ĐỔI ĐÃ XONG CHO BoqControl (giữ nguyên, có giá trị):**
+* 	ests/boq-native-import.test.ts:2 — đổi import { mapBoqRows } from "../app/page" ⇒ **"../app/screens/BoqControl"** ⇒ **test này nay XANH** ✔ (59 → 60 pass)
+* 3 test eadUiSource đã được thêm **pp/screens/BoqControl.tsx**, pp/screens/WorkCenter.tsx, lib/menu-helpers.ts, lib/request-actions.ts, lib/workflow-helpers.ts.
+**TRẠNG THÁI CỔNG:** 	sc **0** ✔ · **hồi quy 60/61** ⚠️ · **cổng ảnh BoqControl: cần đọc job nền**.
