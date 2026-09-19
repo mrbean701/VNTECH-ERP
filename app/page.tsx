@@ -44,6 +44,7 @@ import { Inventory } from "@/app/screens/Inventory";
 import { DEFAULT_PO_ETA, boqControlQty, boqSystemName, downloadBlankPoPlanningTemplate, downloadPaymentsPdf, downloadPoPlanningTemplate, exportPaymentsCsv, exportPaymentsXlsx, mapBoqPriceRows, mapPaymentRows, moneyBillion, normalizeBoqSystemCode, paymentExportRows, poRemainingItems } from "@/lib/ui-shared";
 import { Purchasing } from "@/app/screens/Purchasing";
 import { Payments } from "@/app/screens/Payments";
+import { isAdminUser, modulePermission, roleBase } from "@/lib/permissions";
 
 const VNTECH_UI_CONTRACT_ID = VNTECH_BRAND.release.uiContractId;
 const VNTECH_UI_BUILD_MARKER = VNTECH_BRAND.release.uiBuildMarker;
@@ -253,8 +254,6 @@ function moduleUserDescription(key:ModuleKey){return USER_MODULE_DESCRIPTIONS[ke
 function moduleAdminGuidance(key:ModuleKey){const raw=titles[key][1].replace(/^ĐANG PHÁT TRIỂN\s*·\s*/i,"").trim();return raw===moduleUserDescription(key).replace(/[.]$/,"").trim()?"":raw;}
 function AdminModuleGuide({moduleKey}:{moduleKey:ModuleKey}){const text=moduleAdminGuidance(moduleKey);if(!text)return null;return <details className="admin-module-guide"><summary>ⓘ Hướng dẫn quản trị</summary><p>{text}</p></details>;}
 
-function roleBase(user: Row) { return String(user.roleBase || user.role || ""); }
-function isAdminUser(user: Row) { return user.role === "admin" || roleBase(user) === "admin"; }
 function roleLabel(data: AppData, code: string) { return data.roleCatalog?.find((row) => row.code === code)?.name || roleNames[code] || code; }
 function engineRoleLabel(data: AppData, engineKey: string) { const profile=data.engineRoleProfiles?.find((row) => row.engineKey === engineKey);return profile?`${profile.companyCode} · ${profile.displayName}`:roleNames[engineKey]||engineKey; }
 function configuredMenuGroups(data: AppData, includeHidden = false): Row[] {
@@ -436,11 +435,6 @@ function useResizableColumnWidths(storageKey:string) {
   return {widthFor,resizeStart,autoFit,reset,widths};
 }
 
-function modulePermission(data: AppData, key: ModuleKey) {
-  if (isAdminUser(data.user)) return { canView: true, canUse: true, canCreate: true, canEdit: true, canApprove: true, canExport: true };
-  const row = data.modulePermissions.find((item) => item.moduleKey === key);
-  return { canView: Boolean(row?.canView), canUse: Boolean(row?.canUse), canCreate: Boolean(row?.canCreate), canEdit: Boolean(row?.canEdit), canApprove: Boolean(row?.canApprove), canExport: Boolean(row?.canExport), permissionSource: row?.permissionSource || "none", permissionExpiresAt: row?.permissionExpiresAt || null };
-}
 function WarehouseApp({ data, refresh, action, logout, globalError, toast }: { data: AppData; refresh: () => void; action: (name: string, payload: Row) => Promise<boolean>; logout: () => void; globalError: string; toast: string }) {
   const linkedRequestId = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("request") : null; const linkedRequest = linkedRequestId ? data.requests.find((row) => row.id === linkedRequestId) || null : null;
   const menuGroups = configuredMenuGroups(data);

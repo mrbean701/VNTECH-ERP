@@ -1599,3 +1599,26 @@ ode tools/tach-lat-cat-page.mjs --dry ⇒ **"Khối sẽ chuyển (0)"** · **0 
 **QUY TẮC AN TOÀN GIỮ NGUYÊN:** mỗi vòng dùng 	ools/tach-lat-cat-page.mjs --move=… --out=app/screens/X.tsx (**chạy khô trước**) ⇒ 	sc **0** ⇒ **cổng ảnh 64/64** ⇒ 
 pm test **0** ⇒ commit. **	sc đỏ ⇒ hoàn tác ngay.**
 **BÀI HỌC:** **tài liệu + công cụ của dự án phải được tra TRƯỚC khi lập kế hoạch refactor** — em đã bỏ sót và lập kế hoạch sai thứ tự (suýt làm ngược tài liệu).
+
+### 37. [PHASE 1 · U-11 bước 3] TÁCH HELPER QUYỀN → lib/permissions.ts — XONG (19/09)
+**Việc đã làm (bằng công cụ dự án 	ools/tach-lat-cat-page.mjs):**
+`
+node tools/tach-lat-cat-page.mjs --move=isAdminUser,modulePermission,roleBase --out=lib/permissions.ts --dry
+  ⇒ Khối sẽ chuyển (3): isAdminUser(1d), modulePermission(5d), roleBase(1d) · 7 dòng · ĐƯỢC CHẤP NHẬN (exit 0)
+(áp dụng) ⇒ ĐÃ GHI: lib/permissions.ts · page.tsx 3410 → 3404
+`
+* **lib/permissions.ts (26 dòng)** — do công cụ sinh: header, import type { AppData, ModuleKey, Row } from "@/lib/ui-shared", 3 hàm, export { … }.
+* **page.tsx:47**: import { isAdminUser, modulePermission, roleBase } from "@/lib/permissions"; ⇒ **công cụ TỰ SINH import ngược** ⇒ **KHÔNG vòng import** ✔
+* git diff --stat ⇒ **pp/page.tsx | 8 +------- (1 insertion, 7 deletions)** + tệp mới.
+**BẰNG CHỨNG ĐÃ KIỂM:**
+| Cổng | Kết quả |
+|---|---|
+| 
+px tsc --noEmit | **EXIT 0** ✔ |
+| 
+pm test | **EXIT 0** ✔ |
+| **Cổng ảnh** | **63/64   px** — duy nhất 17-modal-po lệch **rất nhỏ** |
+**VỀ 17-modal-po (đã điều tra, KHÔNG phải regression):** lệch **181 px (desktop) · 170 (laptop) · 185 (tablet) · 109 (phone)**, vùng nhỏ tại (704,192)/(64,192)/(0,192) ⇒ **đúng phần tử ".purchase-cumulative-head" = "Số liệu tính đến ngày …"** mà mục **23.5** đã xác định là **NHẠY THEO NGÀY** (baseline chụp **18/09**, nay **19/09**) ⇒ **nhiễu hệ thống đã biết** ⇒ **KHÔNG sửa mã, KHÔNG cập nhật baseline để che** (đúng kỷ luật: chụp lại chỉ khi nguyên nhân **không phải mã** — ở đây là **ngày**).
+*(Ngoài ra  1-dashboard tablet có 20 px thoáng qua rồi về 0 ⇒ nhiễu chụp, không phải lệch thật.)*
+**BÀI HỌC ĐƯỢC XÁC NHẬN LẦN 2:** màn **17-modal-po nhạy theo NGÀY** ⇒ **sang ngày khác cổng ảnh sẽ báo lệch lại đúng vùng đó** ⇒ khi đó **kiểm --locate để xác nhận là phần tử ngày** rồi mới kết luận.
+**TIẾP THEO:** chạy khô tách **ProjectTeams** (nay isAdminUser đã ở module ⇒ hết chặn).
