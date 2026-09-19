@@ -172,22 +172,22 @@
 
 | ID | Module | Việc | Ưu tiên | Phụ thuộc | DB | API | UI | QUYỀN | TT |
 |---|---|---|---|---|---|---|---|---|---|
-| `AD-01` | Tài khoản | Đổi tên **Nhân sự → Tài khoản** | P3 | — | - | - | FIX | - | TODO |
-| `AD-02` | Tài khoản | Bổ sung cột: mã · tên đăng nhập · họ tên · email · phòng · chức danh · cấp · hạn mức · trạng thái · **số quyền** · vai trò · đăng nhập cuối · ngày tạo | P3 | AD-01 | - | - | FIX | - | TODO |
-| `AD-03` | Tài khoản | Bấm vào tài khoản → **User Detail Modal** | P3 | U-01 | - | - | NEW | CHECK | TODO |
-| `AD-04` | Tài khoản | Sắp xếp mặc định: Trạng thái → Mã tài khoản | P3 | AD-02 | - | - | FIX | - | TODO |
-| `AD-05` | Tổ chức | Tách sub-tab: **Cơ cấu tổ chức** ‖ **Tổ đội theo dự án** | P3 | U-03 | - | - | NEW | - | TODO |
-| `AD-06` | Chức danh | Tách tab Chức danh / Vai trò; **phân biệt rõ Position với System Role** | P3 | — | - | - | NEW | MODEL | TODO |
-| `AD-07` | Nhóm quyền | Audit + giải thích cấu trúc nhóm quyền nghiệp vụ | **P0** | A-15 | - | - | - | MODEL | TODO |
-| `AD-08` | Phòng ban | Bộ lọc phòng ban + chọn nhiều + **Xoá mục đã chọn** (có xác nhận + quyền) | P3 | S-07 | - | NEW | NEW | CHECK | TODO |
-| `AD-09` | Người dùng | Cân đối lại toolbar phân quyền người dùng | P3 | U-03 | - | - | FIX | - | TODO |
-| `AD-10` | Cấp bậc | Audit + sửa UI nếu cần + **kiểm thử kỹ** (không thiết kế lại) | P3 | — | - | - | FIX | - | TODO |
-| `AD-11` | Phạm vi | Audit 2 sub-tab Project & Warehouse scope | P3 | — | - | - | FIX | CHECK | TODO |
-| `AD-12` | Ngoại lệ | Ghi rõ **Ngoại lệ cá nhân = ghi đè QUYỀN** vào tài liệu; giữ nguyên chức năng | P3 | A-08 | - | - | - | - | TODO |
-| `AD-13` | Audit log | Tách riêng cột **User** và **Actor/Performed By** | P3 | U-02 | - | - | FIX | - | TODO |
-| `AD-14` | Audit log | Thêm: hành động · module · thực thể · mã thực thể · thời gian · IP · kết quả · metadata | P3 | AD-13 | - | - | FIX | - | TODO |
-| `AD-15` | Cấu hình | Audit phụ thuộc; nếu không ảnh hưởng roadmap → **ghi backlog** | P4 | — | - | - | - | - | TODO |
-| `AD-16` | Tài khoản cá nhân | Cho user sửa thông tin được phép (tên hiển thị · ảnh · liên hệ · mật khẩu) | P3 | S-07 | - | - | FIX | CHECK | TODO |
+| `AD-01` | Tài khoản | Đổi tên **Nhân sự → Tài khoản** | P3 | — | - | - | FIX | - | **DONE** |
+| `AD-02` | Tài khoản | Bổ sung cột: mã · tên đăng nhập · họ tên · email · phòng · chức danh · cấp · hạn mức · trạng thái · **số quyền** · vai trò · đăng nhập cuối · ngày tạo | P3 | AD-01 | - | - | FIX | - | **DONE** |
+| `AD-03` | Tài khoản | Bấm vào tài khoản → **User Detail Modal** — dùng LẠI cổng chung `ProjectEntityModal` → `EntityDetailModal` (U-01/PR-04), không dựng modal thứ hai | P3 | U-01 | - | - | NEW | CHECK | **DONE** |
+| `AD-04` | Tài khoản | Sắp xếp mặc định: Trạng thái → Mã tài khoản | P3 | AD-02 | - | - | FIX | - | **DONE** |
+| `AD-05` | Tổ chức | Tách sub-tab: **Cơ cấu tổ chức** ‖ **Tổ đội theo dự án** | P3 | U-03 | - | - | NEW | - | **DONE** |
+| `AD-06` | Chức danh | Tách tab Chức danh / Vai trò; **phân biệt rõ Position với System Role** — kết luận CONFIRMED: Position = `role_catalog` (code/name/business_group/default_organization_unit), System Role = `role_catalog.base_role` mà `ActionRbacRegistry`/`RbacService` dùng để kiểm quyền; hồ sơ `docs/agent-progress/AD-06-POSITION-VA-SYSTEM-ROLE.md` | P3 | — | - | - | NEW | MODEL | **DONE** |
+| `AD-07` | Nhóm quyền | Audit + giải thích cấu trúc nhóm quyền nghiệp vụ — **CONFIRMED và KHỚP kết luận A-15**: `department_module_permissions` là MẪU (seed `department_default`) + GIỚI HẠN khi ghi (`assertDepartmentAllowsPermissions`) + tiêu thụ ở nút «Sao chép từ phòng ban» (`app/page.tsx:1772`), **KHÔNG phải đường kiểm quyền** (cổng chạy chỉ đọc `user_module_permissions`: `RbacService.java:13`, `ModulePermissionStoreAdapter.java:12,51`); KHÔNG đổi kiến trúc; hồ sơ `docs/agent-progress/AD-07-NHOM-QUYEN-NGHIEP-VU-AUDIT.md` | **P0** | A-15 | - | - | - | MODEL | **DONE** |
+| `AD-08` | Phòng ban | Bộ lọc phòng ban + chọn nhiều + **Xoá mục đã chọn** (có xác nhận + quyền) — mục bị xoá là DÒNG QUYỀN PHÒNG BAN (`department_module_permissions`) qua action ĐÃ CÓ `delete_department_permission` (`SystemController.java:395`); cổng quyền chỉ admin + phải chọn mục đã cấp; có `window.confirm` | P3 | S-07 | - | NEW | NEW | CHECK | **DONE** |
+| `AD-09` | Người dùng | Cân đối lại toolbar phân quyền người dùng | P3 | U-03 | - | - | FIX | - | **DONE** |
+| `AD-10` | Cấp bậc | Audit + sửa UI nếu cần + **kiểm thử kỹ** (không thiết kế lại) — CONFIRMED: 🔴 lỗi THẬT đã vá: nút «Xóa» cấp bậc gọi API không xác nhận và không chặn cấp bậc ĐANG DÙNG ⇒ nay có `canDeleteLevel` + `disabled` + `window.confirm`; giữ nguyên bảng/KPI gốc; hồ sơ `docs/agent-progress/AD-10-CAP-BAC-AUDIT.md` | P3 | — | - | - | FIX | - | **DONE** |
+| `AD-11` | Phạm vi | Audit 2 sub-tab Project & Warehouse scope — CONFIRMED + ĐÍNH CHÍNH TIỀN ĐỀ: bước 8 KHÔNG có sub-tab (1 bảng gộp); cặp phạm vi kiểm độc lập thật nằm ở `UserAccessModal` («1. Phạm vi dự án» ‖ «2. Phạm vi kho bắt buộc», lưu qua `save_user_access` vào `user_project_scopes`/`user_warehouse_scopes`); KHÔNG dựng bản sao, KHÔNG ảnh hưởng roadmap; hồ sơ `docs/agent-progress/AD-11-PHAM-VI-DU-AN-KHO-AUDIT.md` | P3 | — | - | - | FIX | CHECK | **DONE** |
+| `AD-12` | Ngoại lệ | Ghi rõ **Ngoại lệ cá nhân = ghi đè QUYỀN** vào tài liệu; giữ nguyên chức năng — đã ghi `docs/agent-progress/AD-12-NGOAI-LE-CA-NHAN-GHI-DE-QUYEN.md` (cơ chế `permission_source='manual_override'` ghi đè `department_default` trong CÙNG bảng `user_module_permissions`); KHÔNG đổi hành vi | P3 | A-08 | - | - | - | - | **DONE** |
+| `AD-13` | Audit log | Tách riêng cột **User** và **Actor/Performed By** — User = tài khoản bản ghi thuộc về (`audit_logs.user_id` → `users`), Actor = tên người thực hiện đóng băng lúc ghi (`audit_logs.user_name`, `AuditLogAdapter.java:63`); UI ghi nguồn từng cột | P3 | U-02 | - | - | FIX | - | **DONE** |
+| `AD-14` | Audit log | Thêm: hành động · module · thực thể · mã thực thể · thời gian · IP · kết quả · metadata — **BLOCKED**: 6/8 trường có cột THẬT và đã hiển thị (action · module_key · entity_type · entity_id · occurred_at · ip_address); 2 trường `result` + `metadata` **KHÔNG có cột** trong `audit_logs` (17 cột, đọc bằng information_schema; cả 2 đường ghi `scripts/system-route.mjs:179/2599` + `AuditLogAdapter.java:46/63` đều không ghi) ⇒ muốn đủ phải MIGRATION (BỊ CẤM); 2 trường này hiện «chưa có nguồn» + lý do trên UI; hồ sơ `docs/agent-progress/AD-14-AUDIT-LOG-KET-QUA-METADATA-BLOCKED.md` | P3 | AD-13 | - | - | FIX | - | **BLOCKED** |
+| `AD-15` | Cấu hình | Audit phụ thuộc; nếu không ảnh hưởng roadmap → **ghi backlog** — CONFIRMED: bước 12 gồm 5 khối (`FormFieldConfigManager` · `UiDisplaySettingsManager` · `FactoryResetAdmin` · `TrustLockAdmin` · nhật ký cấu hình), mọi action GHI đều ĐÃ CÓ; phụ thuộc license/trust thuộc nhánh bảo mật đã tạm hoãn ⇒ **KHÔNG ảnh hưởng roadmap**, đã ghi BACKLOG 3 mục `BL-AD15-1…3`; hồ sơ `docs/agent-progress/AD-15-CAU-HINH-PHU-THUOC-AUDIT.md` | P4 | — | - | - | - | - | **DONE** |
+| `AD-16` | Tài khoản cá nhân | Cho user sửa thông tin được phép (tên hiển thị · ảnh · liên hệ · mật khẩu) — **BLOCKED**: 2/4 trường chạy THẬT (`update_profile_avatar` `scripts/system-route.mjs:3243` + `SystemController.java:253`; `change_password` `:3227` + `:236`), nhưng `users.full_name` (tên hiển thị) và `users.email` (liên hệ) **KHÔNG có action tự phục vụ** ở cả 2 đường ghi, muốn có phải thêm action = sửa `scripts/**` + Java (BỊ CẤM); UI chỉ rõ trường nào sửa được + lý do, KHÔNG dựng nút chết; hồ sơ `docs/agent-progress/AD-16-TU-SUA-THONG-TIN-BLOCKED.md` | P3 | S-07 | - | - | FIX | CHECK | **BLOCKED** |
 
 ---
 
