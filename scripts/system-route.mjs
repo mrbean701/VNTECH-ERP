@@ -16,6 +16,9 @@ const ACTION_MODULE = {
     create_central_return: "central_warehouse", approve_central_return: "central_warehouse", receive_central_return: "central_warehouse",
     create_transfer_order: "inventory", approve_transfer_order: "inventory", ship_transfer_order: "inventory", receive_transfer_order: "inventory",
     create_work_item: ["dept_plan_assign","dept_project_assign"], update_work_item_status: ["dept_plan_tasks","dept_project_tasks","dept_plan_assign","dept_project_assign"], update_work_item_progress: ["dept_plan_tasks","dept_project_tasks"], reassign_work_item: ["dept_plan_assign","dept_project_assign"], mark_task_notification_read: ["dept_plan_tasks","dept_project_tasks"],
+    // T-04 (PHASE 3): bình luận theo công việc + người tham gia/theo dõi. Cổng MODULE chỉ là lớp thô —
+    // luật thật (người được giao · trưởng phòng · người tham gia) nằm ở `requireWorkItemAccess`.
+    add_work_item_comment: ["dept_plan_tasks","dept_project_tasks","dept_plan_assign","dept_project_assign"], set_work_item_participant: ["dept_plan_assign","dept_project_assign"],
     compare_boq_materials: ["material_catalog","boq"], confirm_boq_material_mappings: ["material_catalog","boq"], request_material_master_from_boq: ["material_catalog","boq"],
     save_mar_approval: ["boq","purchasing"], save_material_external_code: "material_catalog", save_material_uom_conversion: "material_catalog", save_warehouse_location: ["inventory","central_warehouse"], reverse_stock_movement: ["inventory","stocktake"], set_project_status: "admin", factory_reset_preview: "admin", factory_reset_execute: "admin", set_organization_unit_member: "site_command", save_material_norm: "material_norms", set_material_norm_status: "material_norms", delete_material_norm: "material_norms", estimate_material_norms: "material_norms", save_payment_plan: "dept_finance_payment_plan", set_payment_plan_status: "dept_finance_payment_plan", delete_payment_plan: "dept_finance_payment_plan", save_advance_request: "dept_finance_advance", settle_advance_request: "dept_finance_advance", delete_advance_request: "dept_finance_advance", save_site_expense_claim: "dept_finance_site_cost", approve_site_expense_claim: "dept_finance_site_cost", delete_site_expense_claim: "dept_finance_site_cost", save_bank_account: "dept_finance_cashbank", save_cashbook_entry: "dept_finance_cashbank", delete_cashbook_entry: "dept_finance_cashbank", save_accounting_voucher: "dept_finance_documents", delete_accounting_voucher: "dept_finance_documents", save_hr_record: "dept_legal_hr", save_labor_contract: "dept_legal_labor", set_labor_contract_status: "dept_legal_labor", delete_labor_contract: "dept_legal_labor", save_correspondence: "dept_legal_correspondence", set_correspondence_status: "dept_legal_correspondence", delete_correspondence: "dept_legal_correspondence", save_legal_document: "dept_legal_documents", set_legal_document_status: "dept_legal_documents", delete_legal_document: "dept_legal_documents", save_seal: "dept_legal_seal", set_seal_status: "dept_legal_seal", delete_seal: "dept_legal_seal", save_benefit_record: "dept_legal_benefits", set_benefit_record_status: "dept_legal_benefits", delete_benefit_record: "dept_legal_benefits",
 };
@@ -27,6 +30,7 @@ const ACTION_CAPABILITY = {
     create_central_return: "canCreate", approve_central_return: "canApprove", receive_central_return: "canApprove",
     create_transfer_order: "canCreate", approve_transfer_order: "canApprove", ship_transfer_order: "canEdit", receive_transfer_order: "canApprove",
     create_work_item: "canCreate", update_work_item_status: "canEdit", update_work_item_progress: "canEdit", reassign_work_item: "canEdit", mark_task_notification_read: "canView",
+    add_work_item_comment: "canUse", set_work_item_participant: "canEdit",
     compare_boq_materials: "canUse", confirm_boq_material_mappings: "canApprove", request_material_master_from_boq: "canCreate",
     save_mar_approval: "canApprove", save_material_external_code: "canEdit", save_material_uom_conversion: "canEdit", save_warehouse_location: "canEdit", reverse_stock_movement: "canApprove", set_project_status: "canEdit", factory_reset_preview: "canView", factory_reset_execute: "canEdit", set_organization_unit_member: "canEdit", save_material_norm: "canCreate", set_material_norm_status: "canEdit", delete_material_norm: "canEdit", estimate_material_norms: "canUse", save_payment_plan: "canCreate", set_payment_plan_status: "canEdit", delete_payment_plan: "canEdit", save_advance_request: "canCreate", settle_advance_request: "canApprove", delete_advance_request: "canEdit", save_site_expense_claim: "canCreate", approve_site_expense_claim: "canApprove", delete_site_expense_claim: "canEdit", save_bank_account: "canCreate", save_cashbook_entry: "canCreate", delete_cashbook_entry: "canEdit", save_accounting_voucher: "canCreate", delete_accounting_voucher: "canEdit", save_hr_record: "canCreate", save_labor_contract: "canCreate", set_labor_contract_status: "canEdit", delete_labor_contract: "canEdit", save_correspondence: "canCreate", set_correspondence_status: "canEdit", delete_correspondence: "canEdit", save_legal_document: "canCreate", set_legal_document_status: "canEdit", delete_legal_document: "canEdit", save_seal: "canCreate", set_seal_status: "canEdit", delete_seal: "canEdit", save_benefit_record: "canCreate", set_benefit_record_status: "canEdit", delete_benefit_record: "canEdit",
 };
@@ -457,6 +461,35 @@ async function requireActionModule(user, action) {
             return;
     throw new Error("Tài khoản chưa được quản trị viên cấp đúng quyền cho thao tác này.");
 }
+
+/** Vai trò của một NGƯỜI THAM GIA công việc (`work_item_participants.role_in_task`) — T-04. */
+const WORK_ITEM_PARTICIPANT_ROLES = new Set(["owner", "assignee", "follower", "supporter"]);
+
+/**
+ * T-04 — LUẬT TRUY CẬP MỘT CÔNG VIỆC, dùng CHUNG cho bình luận và người tham gia (một nguồn sự thật,
+ * tránh hai đường lệch nhau):
+ *   · Quản trị viên: luôn được;
+ *   · NGƯỜI ĐƯỢC GIAO việc: được bình luận và tự thêm người hỗ trợ (việc của chính họ);
+ *   · TRƯỞNG PHÒNG của phòng công việc: được cả hai (điều phối việc trong phòng);
+ *   · NGƯỜI ĐANG Ở TRONG `work_item_participants`: được bình luận;
+ *   · người khác: phải có quyền DÙNG (`canUse`) trên một trong 4 module công việc.
+ * `mode` = "comment" (đọc/ghi chú) hay "participant" (điều phối người tham gia — đòi mức cao hơn).
+ */
+async function requireWorkItemAccess(user, task, mode) {
+    if (isAdmin(user)) return;
+    const taskId = clean(task?.id);
+    const mine = clean(task?.assignedTo) && clean(task.assignedTo) === clean(user.id);
+    const manager = isDepartmentManager(user, clean(task?.departmentCode));
+    if (mode === "participant" && (mine || manager)) return;
+    const participant = await first(`SELECT 1 AS ok FROM work_item_participants WHERE work_item_id=? AND user_id=? LIMIT 1`, taskId, user.id);
+    if (participant && mode !== "participant") return;
+    for (const key of ["dept_plan_tasks", "dept_project_tasks", "dept_plan_assign", "dept_project_assign"]) {
+        if (await canUseModule(user, key, mode === "participant" ? "canEdit" : "canUse")) return;
+    }
+    throw new Error(mode === "participant"
+        ? "Chỉ người được giao việc, Trưởng phòng hoặc người có quyền điều phối công việc mới thêm được người tham gia."
+        : "Tài khoản không thuộc phạm vi công việc này nên không bình luận được.");
+}
 async function approvalStages(activeOnly = true) {
     const where = activeOnly ? "WHERE active=1" : "";
     return all(`SELECT stage_no AS stageNo,name,description,allowed_role_codes AS allowedRoleCodes,approval_mode AS approvalMode,sla_hours AS slaHours,auto_approve_on_submit AS autoApproveOnSubmit,active,sort_order AS sortOrder FROM approval_stage_catalog ${where} ORDER BY stage_no`);
@@ -742,6 +775,13 @@ async function bootstrap(user) {
     const workItems = await all(`SELECT wi.id,wi.task_no AS taskNo,wi.department_code AS departmentCode,wi.work_group AS workGroup,wi.title,wi.description,wi.project_id AS projectId,p.code AS projectCode,p.name AS projectName,wi.source_module AS sourceModule,wi.source_type AS sourceType,wi.source_id AS sourceId,wi.source_no AS sourceNo,wi.work_step AS workStep,wi.task_origin AS taskOrigin,wi.assigned_to AS assignedTo,ua.full_name AS assignedToName,wi.assigned_by AS assignedBy,ub.full_name AS assignedByName,wi.assigned_at AS assignedAt,wi.due_at AS dueAt,wi.priority,wi.status,wi.progress,wi.required_output AS requiredOutput,wi.waiting_reason AS waitingReason,wi.waiting_started_at AS waitingStartedAt,wi.submitted_at AS submittedAt,wi.completed_at AS completedAt,wi.active FROM work_items wi LEFT JOIN projects p ON p.id=wi.project_id JOIN users ua ON ua.id=wi.assigned_to JOIN users ub ON ub.id=wi.assigned_by WHERE ${workItemWhere} ORDER BY CASE WHEN wi.status IN ('COMPLETED','CANCELLED') THEN 1 ELSE 0 END,CASE wi.priority WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'normal' THEN 2 ELSE 3 END,COALESCE(wi.due_at,'9999'),wi.assigned_at DESC LIMIT 1000`,...workItemBinds);
     const workItemIds=workItems.map((row)=>String(row.id)); let workItemEvents=[]; if(workItemIds.length){const ph=workItemIds.map(()=>'?').join(',');workItemEvents=await all(`SELECT e.id,e.work_item_id AS workItemId,e.event_type AS eventType,e.from_status AS fromStatus,e.to_status AS toStatus,e.actor_user_id AS actorUserId,u.full_name AS actorName,e.previous_assignee AS previousAssignee,e.new_assignee AS newAssignee,e.reason,e.detail_json AS detailJson,e.occurred_at AS occurredAt FROM work_item_events e LEFT JOIN users u ON u.id=e.actor_user_id WHERE e.work_item_id IN (${ph}) ORDER BY e.occurred_at DESC`,...workItemIds);}
     const taskNotifications=await all(`SELECT n.id,n.work_item_id AS workItemId,n.user_id AS userId,n.channel,n.title,n.body,n.status,n.read_at AS readAt,n.sent_at AS sentAt,n.last_error AS lastError,n.created_at AS createdAt FROM task_notifications n WHERE n.user_id=? ORDER BY CASE WHEN n.read_at IS NULL THEN 0 ELSE 1 END,n.created_at DESC LIMIT 100`,user.id);
+    // T-04 — bình luận + người tham gia/theo dõi của ĐÚNG tập công việc mà người dùng được thấy
+    // (`workItems` đã bị lọc theo phòng/phạm vi ở trên ⇒ hai khoá này KHÔNG mở rộng phạm vi nhìn thấy).
+    let workItemComments=[],workItemParticipants=[];
+    if(workItemIds.length){const ph=workItemIds.map(()=>'?').join(',');
+      workItemComments=await all(`SELECT c.id,c.work_item_id AS workItemId,c.user_id AS userId,u.full_name AS userName,c.comment,c.visibility,c.created_at AS createdAt,c.updated_at AS updatedAt FROM work_item_comments c LEFT JOIN users u ON u.id=c.user_id WHERE c.work_item_id IN (${ph}) ORDER BY c.created_at`,...workItemIds);
+      workItemParticipants=await all(`SELECT p.id,p.work_item_id AS workItemId,p.user_id AS userId,u.full_name AS userName,u.employee_code AS employeeCode,u.role AS roleCode,COALESCE(rc.name,u.role) AS roleName,p.role_in_task AS roleInTask,p.notify,p.added_by AS addedBy,ub.full_name AS addedByName,p.created_at AS createdAt,p.updated_at AS updatedAt FROM work_item_participants p LEFT JOIN users u ON u.id=p.user_id LEFT JOIN role_catalog rc ON rc.code=u.role LEFT JOIN users ub ON ub.id=p.added_by WHERE p.work_item_id IN (${ph}) ORDER BY p.created_at`,...workItemIds);
+    }
     const serverInfo = isAdmin(user) ? { version: VNTECH_IDENTITY.version, releaseBuild: clean(process.env.VNTECH_RELEASE_BUILD || VNTECH_IDENTITY.release.build), deploymentMode: env.DEPLOYMENT_MODE || "unknown", databaseEngine: env.DATABASE_ENGINE || "unknown", storageMode: env.STORAGE_MODE || "unknown", publicUrl: env.PUBLIC_URL || null, redisEnabled: Boolean(env.REDIS), testDataResetEnabled: clean(process.env.VNTECH_ALLOW_TEST_DATA_RESET)==="1", factoryResetEnabled: clean(process.env.VNTECH_ALLOW_FACTORY_RESET)==="1" } : null;
     const emailSettings = isAdmin(user) ? await first(`SELECT enabled,smtp_host AS smtpHost,smtp_port AS smtpPort,security,username,sender_email AS senderEmail,sender_name AS senderName,base_url AS baseUrl,CASE WHEN password IS NOT NULL AND length(password)>0 THEN 1 ELSE 0 END AS passwordConfigured FROM email_settings WHERE id='EMAIL'`) : null;
     const emailRecipients = isAdmin(user) ? await all(`SELECT id,project_id AS projectId,stage,emails,active FROM approval_email_recipients ORDER BY project_id,stage`) : [];
@@ -749,7 +789,7 @@ async function bootstrap(user) {
     const emailOutbox = isAdmin(user) ? await all(`SELECT eo.id,eo.request_id AS requestId,eo.stage,eo.event,eo.recipients,eo.subject,eo.status,eo.attempt_count AS attemptCount,eo.queued_at AS queuedAt,eo.sent_at AS sentAt,eo.last_error AS lastError,mr.request_no AS requestNo FROM email_outbox eo LEFT JOIN material_requests mr ON mr.id=eo.request_id ORDER BY eo.queued_at DESC LIMIT 100`) : [];
     const formFieldConfigs = await formFieldRows(undefined, isAdmin(user));
     const uiDisplayRow=await first(`SELECT settings_json AS settingsJson FROM ui_display_settings WHERE scope_key='company_default'`);let uiDisplaySettings=null;try{uiDisplaySettings=uiDisplayRow?JSON.parse(clean(uiDisplayRow.settingsJson)||"{}"):null;}catch{uiDisplaySettings=null;}
-    const result={ user, settings, uiDisplaySettings, staffDirectory, productIdentity: productIdentity || VNTECH_IDENTITY, trustStatus, formFieldConfigs, engineRoleProfiles, businessScopes, businessRoleGroupScopes, businessRoleGroups, roleCatalog, organizationUnits, approvalStages: approvalStageCatalog, menuGroups, moduleCatalog, emailSettings, emailRecipients, workflowAssignments, emailOutbox, projects: visibleProjects, projectAccessAll, adminProjects, teams, warehouses, transferWarehouses, materialCategories, adminMaterialCategories, materialSubcategories, adminMaterialSubcategories, materials, adminMaterials, materialAliases, materialNorms, paymentPlans, advanceRequests, siteExpenseClaims, bankAccounts, cashbookEntries, accountingVouchers, hrRecords, laborContracts, officialCorrespondence, legalDocuments, sealManagement, benefitRecords, suppliers, adminSuppliers, contractPayments, productionReports, constructionDailyLogs, constructionDailyLogItems, capitalRecoveryRecords, teamSubcontracts, teamProductionRecords, teamPayments, teamSettlements, requests: enrichedRequests, supplySteps: supplyStepRows, inventory, centralInventory, centralReturns, companyAvailability, transferOrders, workItems, workItemEvents, taskNotifications, boqItems, boqSourceItems, projectContracts, boqVersions, boqImportBatches, boqChangeHistory, contractStockLedger, contractStockBalances, stockReconciliations, purchaseOrders, receipts, issues, returns, stockCounts, users, userScopes, userWarehouseScopes, modulePermissions, allModulePermissions, audits, activeSessions, serverInfo };
+    const result={ user, settings, uiDisplaySettings, staffDirectory, productIdentity: productIdentity || VNTECH_IDENTITY, trustStatus, formFieldConfigs, engineRoleProfiles, businessScopes, businessRoleGroupScopes, businessRoleGroups, roleCatalog, organizationUnits, approvalStages: approvalStageCatalog, menuGroups, moduleCatalog, emailSettings, emailRecipients, workflowAssignments, emailOutbox, projects: visibleProjects, projectAccessAll, adminProjects, teams, warehouses, transferWarehouses, materialCategories, adminMaterialCategories, materialSubcategories, adminMaterialSubcategories, materials, adminMaterials, materialAliases, materialNorms, paymentPlans, advanceRequests, siteExpenseClaims, bankAccounts, cashbookEntries, accountingVouchers, hrRecords, laborContracts, officialCorrespondence, legalDocuments, sealManagement, benefitRecords, suppliers, adminSuppliers, contractPayments, productionReports, constructionDailyLogs, constructionDailyLogItems, capitalRecoveryRecords, teamSubcontracts, teamProductionRecords, teamPayments, teamSettlements, requests: enrichedRequests, supplySteps: supplyStepRows, inventory, centralInventory, centralReturns, companyAvailability, transferOrders, workItems, workItemEvents, workItemComments, workItemParticipants, taskNotifications, boqItems, boqSourceItems, projectContracts, boqVersions, boqImportBatches, boqChangeHistory, contractStockLedger, contractStockBalances, stockReconciliations, purchaseOrders, receipts, issues, returns, stockCounts, users, userScopes, userWarehouseScopes, modulePermissions, allModulePermissions, audits, activeSessions, serverInfo };
     if(!isAdmin(user)){
       const view=new Set(modulePermissions.filter((row)=>Number(row.canView)===1).map((row)=>String(row.moduleKey))); const any=(keys)=>keys.some((key)=>view.has(key));
       if(!any(["dashboard","site_command","dept_legal_hr","dept_legal_labor","dept_legal_correspondence","dept_legal_documents","dept_legal_seal","dept_legal_benefits"])) { result.staffDirectory=[]; }
@@ -758,7 +798,7 @@ async function bootstrap(user) {
       if(!any(["boq","dept_project_boq","dept_project_material","project_progress","production","construction","capital_recovery","payments","dept_finance_recovery","dept_finance_payment_plan","dept_finance_advance","dept_finance_site_cost","dept_finance_cashbank","dept_finance_documents","dept_legal_correspondence","dept_legal_documents","dept_legal_seal","dept_legal_benefits","dept_legal_hr","dept_legal_labor"])) { result.boqItems=[]; result.boqSourceItems=[]; result.projectContracts=[]; result.boqVersions=[]; result.boqImportBatches=[]; result.boqChangeHistory=[]; result.contractPayments=[]; result.productionReports=[]; result.capitalRecoveryRecords=[]; result.constructionDailyLogs=[]; result.constructionDailyLogItems=[]; result.paymentPlans=[]; result.advanceRequests=[]; result.siteExpenseClaims=[]; result.bankAccounts=[]; result.cashbookEntries=[]; result.accountingVouchers=[]; result.officialCorrespondence=[]; result.legalDocuments=[]; result.sealManagement=[]; result.benefitRecords=[]; }
       if(!any(["teams","site_command","construction"])) { result.teams=[]; result.teamSubcontracts=[]; result.teamProductionRecords=[]; result.teamPayments=[]; result.teamSettlements=[]; }
       if(!any(["material_catalog","central_warehouse","boq","requests","purchasing","dept_project_material","material_norms"])) { result.materials=[]; result.materialCategories=[]; result.materialSubcategories=[]; result.materialAliases=[]; result.materialNorms=[]; }
-      if(!any(["dept_plan_tasks","dept_plan_assign","dept_project_tasks","dept_project_assign","site_command"])) { result.workItems=[]; result.workItemEvents=[]; result.taskNotifications=[]; }
+      if(!any(["dept_plan_tasks","dept_plan_assign","dept_project_tasks","dept_project_assign","site_command"])) { result.workItems=[]; result.workItemEvents=[]; result.workItemComments=[]; result.workItemParticipants=[]; result.taskNotifications=[]; }
       result.adminProjects=[]; result.adminMaterials=[]; result.adminMaterialCategories=[]; result.adminMaterialSubcategories=[]; result.adminSuppliers=[]; result.users=[]; result.userScopes=[]; result.userWarehouseScopes=[]; result.allModulePermissions=[]; result.audits=[]; result.activeSessions=[]; result.serverInfo=null; result.trustStatus=null; result.emailSettings=null; result.emailRecipients=[]; result.emailOutbox=[];
     }
     return result;
@@ -1190,6 +1230,40 @@ async function handleAction(action, payload, user, request) {
         const taskId=clean(payload.workItemId),nextUser=clean(payload.assignedTo),reason=clean(payload.reason); const task=await first(`SELECT * FROM work_items WHERE id=?`,taskId); if(!task)throw new Error("Không tìm thấy nhiệm vụ."); if(!isDepartmentManager(user,clean(task.department_code)))throw new Error("Chỉ Trưởng phòng/Quản trị viên được đổi người phụ trách."); if(!reason)throw new Error("Đổi người phụ trách phải có lý do."); const assignee=await userCanReceiveDepartmentTask(nextUser,clean(task.department_code),clean(task.project_id)); if(!assignee)throw new Error("Nhân sự mới không thuộc đúng phòng hoặc phạm vi dự án."); const stamp=now(); await env.DB.batch([env.DB.prepare(`UPDATE work_items SET assigned_to=?,assigned_by=?,assigned_at=?,status='NEW',progress=0,waiting_reason=NULL,waiting_started_at=NULL,updated_at=? WHERE id=?`).bind(nextUser,user.id,stamp,stamp,taskId),env.DB.prepare(`INSERT INTO work_item_events(id,work_item_id,event_type,from_status,to_status,actor_user_id,previous_assignee,new_assignee,reason,detail_json,occurred_at,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`).bind(id("EVT"),taskId,"REASSIGNED",task.status,"NEW",user.id,task.assigned_to,nextUser,reason,JSON.stringify({previousAssignedAt:task.assigned_at,newAssignedAt:stamp}),stamp,stamp)]); await queueTaskNotice({id:taskId,taskNo:task.task_no,title:task.title,projectId:task.project_id,dueAt:task.due_at,priority:task.priority,sourceNo:task.source_no},assignee,user,request); return {message:`Đã chuyển nhiệm vụ cho ${assignee.fullName}; SLA trách nhiệm mới bắt đầu ngay tại thời điểm giao lại và toàn bộ lịch sử được giữ.`};
     }
     if (action === "mark_task_notification_read") { const notificationId=clean(payload.notificationId); await env.DB.prepare(`UPDATE task_notifications SET read_at=COALESCE(read_at,?),updated_at=? WHERE id=? AND user_id=?`).bind(stamp,stamp,notificationId,user.id).run(); return {message:"Đã đánh dấu thông báo đã đọc."}; }
+    // ---- T-04 (PHASE 3 · CÔNG VIỆC): bình luận + người tham gia/theo dõi ----
+    // Nguồn quyết định: `docs/agent-progress/AUDIT-T02-WORK-ITEM-MODEL.md` — HAI bảng này là phần THIẾU
+    // thật sự (đã đo trên MySQL): `request_comments` khoá theo `request_id` nên KHÔNG dùng được cho
+    // `work_item_id`, còn `task_notifications.user_id` chỉ là người NHẬN THÔNG BÁO.
+    // Luật quyền dùng CHUNG một chỗ (`workItemAccess`) để bình luận và người tham gia không lệch nhau.
+    if (action === "add_work_item_comment") {
+        const taskId=clean(payload.workItemId), text=clean(payload.comment);
+        const task=await first(`SELECT id,task_no AS taskNo,department_code AS departmentCode,project_id AS projectId,assigned_to AS assignedTo,status,title FROM work_items WHERE id=?`,taskId);
+        if(!task)throw new Error("Không tìm thấy nhiệm vụ.");
+        if(!text)throw new Error("Cần nhập nội dung bình luận.");
+        if(text.length>4000)throw new Error("Nội dung bình luận tối đa 4000 ký tự.");
+        await requireWorkItemAccess(user,task,"comment");
+        const visibility=clean(payload.visibility)==="public"?"public":"internal"; const stamp=now();
+        await env.DB.prepare(`INSERT INTO work_item_comments(id,work_item_id,user_id,comment,visibility,created_at,updated_at) VALUES (?,?,?,?,?,?,?)`).bind(id("WCM"),taskId,user.id,text,visibility,stamp,stamp).run();
+        return {message:`Đã thêm bình luận vào ${clean(task.taskNo)||taskId}.`};
+    }
+    if (action === "set_work_item_participant") {
+        const taskId=clean(payload.workItemId), targetUserId=clean(payload.userId);
+        const task=await first(`SELECT id,task_no AS taskNo,department_code AS departmentCode,project_id AS projectId,assigned_to AS assignedTo,status,title FROM work_items WHERE id=?`,taskId);
+        if(!task)throw new Error("Không tìm thấy nhiệm vụ.");
+        if(!targetUserId)throw new Error("Thiếu người tham gia công việc.");
+        const roleInTask=clean(payload.roleInTask)||"follower";
+        if(!WORK_ITEM_PARTICIPANT_ROLES.has(roleInTask))throw new Error(`Vai trò tham gia công việc không hợp lệ. Chỉ nhận: ${[...WORK_ITEM_PARTICIPANT_ROLES].join(" · ")}.`);
+        const target=await first(`SELECT id,full_name AS fullName,active FROM users WHERE id=?`,targetUserId);
+        if(!target)throw new Error("Không tìm thấy người được thêm vào công việc.");
+        await requireWorkItemAccess(user,task,"participant");
+        const notify=payload.notify===false||clean(payload.notify)==="0"?0:1; const stamp=now();
+        // MỘT dòng cho mỗi (công việc, người): thêm lần sau là GHI ĐÈ vai trò/cờ thông báo, không sinh dòng trùng.
+        const existing=await first(`SELECT id FROM work_item_participants WHERE work_item_id=? AND user_id=?`,taskId,targetUserId);
+        if(existing) await env.DB.prepare(`UPDATE work_item_participants SET role_in_task=?,notify=?,added_by=?,updated_at=? WHERE id=?`).bind(roleInTask,notify,user.id,stamp,existing.id).run();
+        else await env.DB.prepare(`INSERT INTO work_item_participants(id,work_item_id,user_id,role_in_task,notify,added_by,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)`).bind(id("WPT"),taskId,targetUserId,roleInTask,notify,user.id,stamp,stamp).run();
+        const label={owner:"người chịu trách nhiệm",assignee:"người thực hiện",follower:"người theo dõi",supporter:"người hỗ trợ"}[roleInTask]||roleInTask;
+        return {message:`Đã thêm ${clean(target.fullName)} làm ${label} của ${clean(task.taskNo)||taskId}.`};
+    }
     if (action === "save_supplier") {
         const supplierId = clean(payload.supplierId), code = clean(payload.code).toUpperCase(), name = clean(payload.name);
         if (!code || !name) throw new Error("Nhà cung cấp phải có Mã NCC và Tên nhà cung cấp.");
@@ -2449,12 +2523,17 @@ async function handleAction(action, payload, user, request) {
         if(clean(payload.confirmCode)!==clean(project.code))throw new Error(`Xác nhận xóa không đúng. Hãy nhập chính xác mã dự án ${project.code}.`);
         const archive=await first(`SELECT id,file_name AS fileName,sha256,generated_at AS generatedAt,status FROM project_archives WHERE project_id=? AND status='verified' ORDER BY generated_at DESC LIMIT 1`,projectId);
         if(!archive)throw new Error("Trước khi Xóa/Purge phải có gói TOÀN BỘ DỮ LIỆU VERIFIED đã tạo trước khi đóng dự án. Không tìm thấy archive VERIFIED hợp lệ.");
-        const attachmentRows=await all(`SELECT a.id,a.storage_key AS storageKey FROM attachments a WHERE (a.entity_type='material_request' AND a.entity_id IN (SELECT id FROM material_requests WHERE project_id=?)) OR (a.entity_type='goods_receipt' AND a.entity_id IN (SELECT g.id FROM goods_receipts g JOIN purchase_orders p ON p.id=g.purchase_order_id WHERE p.project_id=?)) OR (a.entity_type='central_return' AND a.entity_id IN (SELECT id FROM central_returns WHERE source_project_id=?))`,projectId,projectId,projectId);
+        const attachmentRows=await all(`SELECT a.id,a.storage_key AS storageKey FROM attachments a WHERE (a.entity_type='material_request' AND a.entity_id IN (SELECT id FROM material_requests WHERE project_id=?)) OR (a.entity_type='goods_receipt' AND a.entity_id IN (SELECT g.id FROM goods_receipts g JOIN purchase_orders p ON p.id=g.purchase_order_id WHERE p.project_id=?)) OR (a.entity_type='central_return' AND a.entity_id IN (SELECT id FROM central_returns WHERE source_project_id=?)) OR (a.entity_type='work_item' AND a.entity_id IN (SELECT id FROM work_items WHERE project_id=?))`,projectId,projectId,projectId,projectId);
         const statements=[
           env.DB.prepare(`UPDATE boq_source_items SET project_boq_item_id=NULL WHERE project_id=?`).bind(projectId),
           env.DB.prepare(`UPDATE project_boq_items SET source_item_id=NULL WHERE project_id=?`).bind(projectId),
           env.DB.prepare(`DELETE FROM task_notifications WHERE work_item_id IN (SELECT id FROM work_items WHERE project_id=?)`).bind(projectId),
           env.DB.prepare(`DELETE FROM work_item_events WHERE work_item_id IN (SELECT id FROM work_items WHERE project_id=?)`).bind(projectId),
+          // T-04 — dọn HAI bảng mới + tệp đính kèm theo công việc TRƯỚC khi xoá `work_items`
+          // (attachments dùng chung nên phải lọc theo `entity_type='work_item'`, không xoá cả bảng).
+          env.DB.prepare(`DELETE FROM work_item_comments WHERE work_item_id IN (SELECT id FROM work_items WHERE project_id=?)`).bind(projectId),
+          env.DB.prepare(`DELETE FROM work_item_participants WHERE work_item_id IN (SELECT id FROM work_items WHERE project_id=?)`).bind(projectId),
+          env.DB.prepare(`DELETE FROM attachments WHERE entity_type='work_item' AND entity_id IN (SELECT id FROM work_items WHERE project_id=?)`).bind(projectId),
           env.DB.prepare(`DELETE FROM work_items WHERE project_id=?`).bind(projectId),
           env.DB.prepare(`DELETE FROM team_payments WHERE project_id=?`).bind(projectId),
           env.DB.prepare(`DELETE FROM team_settlements WHERE project_id=?`).bind(projectId),

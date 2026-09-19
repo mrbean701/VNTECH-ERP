@@ -31,12 +31,17 @@ async function entityProject(entityType: string, entityId: string) {
   if (entityType === "material_request") return env.DB.prepare(`SELECT project_id AS projectId FROM material_requests WHERE id=?`).bind(entityId).first<{ projectId: string }>();
   if (entityType === "goods_receipt") return env.DB.prepare(`SELECT po.project_id AS projectId FROM goods_receipts gr JOIN purchase_orders po ON po.id=gr.purchase_order_id WHERE gr.id=?`).bind(entityId).first<{ projectId: string }>();
   if (entityType === "central_return") return env.DB.prepare(`SELECT source_project_id AS projectId FROM central_returns WHERE id=?`).bind(entityId).first<{ projectId: string }>();
+  // T-03 (PHASE 3 · CÔNG VIỆC) — TỆP ĐÍNH KÈM THEO CÔNG VIỆC **dùng lại** bảng dùng chung `attachments`
+  // (`entity_type`/`entity_id`) thay vì tạo bảng mới (quyết định của audit `AUDIT-T02-WORK-ITEM-MODEL.md`).
+  // Dự án suy ra từ chính `work_items.project_id`; việc KHÔNG gắn dự án trả `projectId=null`
+  // ⇒ `assertEntityAccess` từ chối (đúng luật: hồ sơ không gắn dự án thì phải là admin).
+  if (entityType === "work_item") return env.DB.prepare(`SELECT project_id AS projectId FROM work_items WHERE id=?`).bind(entityId).first<{ projectId: string }>();
   return null;
 }
 async function moduleAllowed(user: CurrentUser, entityType: string, write: boolean) {
   if (user.role === "admin") return true;
   if (write && entityType === "material_request" && !["commander","project"].includes(String(user.roleBase || user.role))) return false;
-  const moduleKeys = entityType === "goods_receipt" ? ["receiving", "delivered"] : entityType === "central_return" ? ["central_warehouse"] : ["requests", "approvals"];
+  const moduleKeys = entityType === "goods_receipt" ? ["receiving", "delivered"] : entityType === "central_return" ? ["central_warehouse"] : entityType === "work_item" ? ["dept_plan_tasks", "dept_project_tasks", "dept_plan_assign", "dept_project_assign"] : ["requests", "approvals"];
   const placeholders = moduleKeys.map(() => "?").join(",");
   const permissionSql = write && entityType === "central_return" ? "(can_edit=1 OR can_approve=1)" : `${write ? "can_edit" : "can_view"}=1`;
   const row = await env.DB.prepare(`SELECT 1 AS ok FROM user_module_permissions WHERE user_id=? AND module_key IN (${placeholders}) AND ${permissionSql} LIMIT 1`).bind(user.id, ...moduleKeys).first<{ ok: number }>();
@@ -118,7 +123,7 @@ async function projectArchiveDataset(projectId:string){
   await add("user_warehouse_scopes",`SELECT s.* FROM user_warehouse_scopes s JOIN warehouses w ON w.id=s.warehouse_id WHERE w.project_id=?`,projectId);
   await add("organization_units",`SELECT * FROM organization_units WHERE project_id=?`,projectId);
   await add("material_mar_approvals",`SELECT * FROM material_mar_approvals WHERE project_id=?`,projectId);
-  const attachmentRows=await rows<AttachmentArchiveRow>(`SELECT a.* FROM attachments a WHERE (a.entity_type='material_request' AND a.entity_id IN (SELECT id FROM material_requests WHERE project_id=?)) OR (a.entity_type='goods_receipt' AND a.entity_id IN (SELECT g.id FROM goods_receipts g JOIN purchase_orders p ON p.id=g.purchase_order_id WHERE p.project_id=?)) OR (a.entity_type='central_return' AND a.entity_id IN (SELECT id FROM central_returns WHERE source_project_id=?))`,projectId,projectId,projectId);
+  const attachmentRows=await rows<AttachmentArchiveRow>(`SELECT a.* FROM attachments a WHERE (a.entity_type='material_request' AND a.entity_id IN (SELECT id FROM material_requests WHERE project_id=?)) OR (a.entity_type='goods_receipt' AND a.entity_id IN (SELECT g.id FROM goods_receipts g JOIN purchase_orders p ON p.id=g.purchase_order_id WHERE p.project_id=?)) OR (a.entity_type='central_return' AND a.entity_id IN (SELECT id FROM central_returns WHERE source_project_id=?)) OR (a.entity_type='work_item' AND a.entity_id IN (SELECT id FROM work_items WHERE project_id=?))`,projectId,projectId,projectId,projectId);
   tables.attachments=attachmentRows;
   const entityIds:string[]=[];for(const list of Object.values(tables))for(const row of list||[])if(row?.id)entityIds.push(String(row.id));
   if(entityIds.length){const chunks:ArchiveSqlRow[]=[];for(let i=0;i<entityIds.length;i+=250){const part=entityIds.slice(i,i+250),marks=part.map(()=>'?').join(',');chunks.push(...await rows(`SELECT * FROM audit_logs WHERE entity_id IN (${marks})`,...part));}tables.audit_logs=chunks;}else tables.audit_logs=[];
