@@ -17,9 +17,11 @@
 //
 // PHASE 3 (`T-05`) — tab «Cá nhân»: BA NHÓM RIÊNG (của tôi · được giao · do tôi tạo), mỗi nhóm một bộ lọc + bộ đếm.
 // PHASE 3 (`T-06`) — tab «Phòng ban»: CHỈ việc trong PHẠM VI ĐƯỢC PHÉP (thu hẹp trong payload, không mở rộng quyền).
+// PHASE 3 (`T-07`) — Board Kanban 3 chiều (Ưu tiên · Trạng thái · Phân công) tách ra `WorkKanban.tsx`, gắn ở đây.
 
 import { DataTable, ListToolbar, PermissionGuard, StatusBadge } from "@/app/components/ui";
 import { ReportView } from "@/app/screens/ReportView";
+import { WorkKanban, kanbanManagerDepartments } from "@/app/screens/WorkKanban";
 import { daysFromToday } from "@/lib/date-helpers";
 import type { WorkMenuView } from "@/lib/menu-helpers";
 import { isAdminUser, modulePermission, roleBase } from "@/lib/permissions";
@@ -128,12 +130,13 @@ function WorkCenter({ data, action, refresh, view = "personal" }: { data: AppDat
   // ⚠️ HỢP ĐỒNG TÊN TRƯỜNG (đã đo bằng bootstrap THẬT, không suy đoán): dòng `workItems` của payload do
   // `work_items` sinh ra mang tên **`assignedTo`/`assignedToName`** (`scripts/system-route.mjs` — `wi.assigned_to AS assignedTo`,
   // `ua.full_name AS assignedToName`). Trước đây màn này đọc tên KHÔNG TỒN TẠI ⇒ `mine`/`teamWork` LUÔN rỗng và tab
-  // "Việc của tôi" LUÔN 0 việc (lỗi im lặng: `tsc` xanh vì `Row` là chỉ mục mở). Nay `T-05` gom luật vào một
-  // khối thuần ở đầu tệp và ĐÃ CÓ TEST CHẠY THẬT nó.
+  // "Việc của tôi" LUÔN 0 việc (lỗi im lặng: `tsc` xanh vì `Row` là chỉ mục mở). Nay `T-05`/`T-06` gom luật vào hai
+  // khối thuần ở đầu tệp và ĐÃ CÓ TEST CHẠY THẬT chúng.
   const personalGroups = personalWorkGroups(items, myId);
   const personalRows: Row[] = personalGroups.find((group) => group.key === personalGroup)?.rows || [];
   const mine = personalGroups[0].rows;
   const scope = workScopeOf(data);
+  const managerDepartments = scope.managerDepartments;
   // T-06 — tập việc THUỘC PHẠM VI ĐƯỢC PHÉP; phần bị loại được đếm để người dùng THẤY mình đang bị giới hạn.
   const scopedWork = departmentWorkScope(data, items);
   const outOfScope = items.length - scopedWork.length;
@@ -151,6 +154,14 @@ function WorkCenter({ data, action, refresh, view = "personal" }: { data: AppDat
     const ok = await action(name, payload);
     setBusy(false);
     if (ok) { form?.reset(); refresh(); }
+  }
+  // T-07 — board Kanban gọi ACTION THẬT `update_work_item_status` (KHÔNG đổi trạng thái bằng state cục bộ).
+  async function moveStatus(workItemId: unknown, status: string, reason: string) {
+    setBusy(true);
+    const ok = await action("update_work_item_status", { workItemId, status, reason });
+    setBusy(false);
+    if (ok) refresh();
+    return ok;
   }
   const projCode = (id: unknown) => (data.projects || []).find((p) => String(p.id) === String(id))?.code || "—";
 
@@ -228,6 +239,8 @@ function WorkCenter({ data, action, refresh, view = "personal" }: { data: AppDat
         <CardHead title="Việc của tổ đội tôi tham gia" note="Thành viên tổ đội đang hoạt động (đã lọc theo cùng phạm vi được phép)"/>
         <TaskTable rows={find(teamWork)} allowEdit={false} projCode={projCode} busy={busy} send={send}/>
       </section>
+      <WorkKanban rows={scopedWork} busy={busy} myId={myId} isAdmin={scope.isAdmin} managerDepartments={kanbanManagerDepartments(me)}
+        scopeNote={`Phạm vi: ${scopeNote}`} onMove={moveStatus}/>
     </div>}
 
     {tab === 2 && <div className="stack">
