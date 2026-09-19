@@ -30,12 +30,16 @@ function WorkCenter({ data, action, refresh }: { data: AppData; action: (name: s
 
   const myDepts = [...new Set([String(me.organizationCode || ""), "CN"].filter(Boolean))];
   const activeMemberIds = [...new Set((data.teamMembers || []).filter((m) => Number(m.active ?? 1) === 1).map((m) => String(m.userId)))];
-  const mine = items.filter((r) => String(r.assigneeUserId) === myId);
-  const deptWork = items.filter((r) => String(r.assigneeUserId) !== myId && myDepts.includes(String(r.departmentCode || "")));
-  const teamWork = items.filter((r) => String(r.assigneeUserId) !== myId && activeMemberIds.includes(String(r.assigneeUserId)));
+  // ⚠️ HỢP ĐỒNG TÊN TRƯỜNG (đã đo bằng bootstrap THẬT, không suy đoán): dòng `workItems` của payload do
+  // `work_items` sinh ra mang tên **`assignedTo`/`assignedToName`** (`scripts/system-route.mjs` — `wi.assigned_to AS assignedTo`,
+  // `ua.full_name AS assignedToName`). Trước đây màn này đọc `assigneeUserId`/`assigneeName` — HAI TÊN KHÔNG TỒN TẠI
+  // ⇒ `mine`/`teamWork` LUÔN rỗng và tab "Việc của tôi" LUÔN 0 việc (lỗi im lặng: `tsc` xanh vì `Row` là chỉ mục mở).
+  const mine = items.filter((r) => String(r.assignedTo) === myId);
+  const deptWork = items.filter((r) => String(r.assignedTo) !== myId && myDepts.includes(String(r.departmentCode || "")));
+  const teamWork = items.filter((r) => String(r.assignedTo) !== myId && activeMemberIds.includes(String(r.assignedTo)));
 
   const find = (rows: Row[]) => !q.trim() ? rows
-    : rows.filter((r) => `${r.taskNo || ""} ${r.title || ""} ${r.assigneeName || ""}`.toLocaleLowerCase("vi").includes(q.trim().toLocaleLowerCase("vi")));
+    : rows.filter((r) => `${r.taskNo || ""} ${r.title || ""} ${r.assignedToName || ""}`.toLocaleLowerCase("vi").includes(q.trim().toLocaleLowerCase("vi")));
 
   async function send(name: string, payload: Row, form?: HTMLFormElement) {
     setBusy(true);
@@ -122,7 +126,7 @@ function WorkCenter({ data, action, refresh }: { data: AppData; action: (name: s
       const scope = isOverseer ? users : users.filter((u) => myDepts.includes(String(u.organizationCode || "")));
       const month = UI_TODAY.slice(0, 7);
       const rows = scope.map((u) => {
-        const own = items.filter((r) => String(r.assigneeUserId) === String(u.id));
+        const own = items.filter((r) => String(r.assignedTo) === String(u.id));
         const inMonth = own.filter((r) => String(r.completedAt || r.createdAt || "").slice(0, 7) === month);
         return { u, total: own.length, done: own.filter((r) => String(r.status) === "COMPLETED").length,
           late: own.filter(isTaskLate).length, rate: workRate(own),
@@ -159,7 +163,7 @@ function WorkCenter({ data, action, refresh }: { data: AppData; action: (name: s
 // báo react-hooks/static-components. Nay nhận đủ dữ liệu qua props thay vì đóng kín vào WorkCenter:
 //   rows · allowEdit · projCode · busy · send
 function TaskTable({ rows, allowEdit, projCode, busy, send }: { rows: Row[]; allowEdit: boolean; projCode: (id: unknown) => string; busy: boolean; send: (name: string, payload: Row) => Promise<void> }) {
-  return <DataTable rows={rows} rowKey={(r) => String(String(r.id))} columns={[{ key: "c1", header: "Mã việc", render: (r) => <><strong className="code">{r.taskNo}</strong></> }, { key: "c2", header: "Nội dung", render: (r) => <>{r.title}<small>{r.requiredOutput || r.workGroup || ""}</small></> }, { key: "c3", header: "Người làm", render: (r) => <>{r.assigneeName || "—"}</> }, { key: "c4", header: "Dự án", render: (r) => <>{projCode(r.projectId)}</> }, { key: "c5", header: "Hạn", render: (r) => <>{r.dueAt ? date(r.dueAt) : "—"}{isTaskLate(r) && <small className="red-text">Quá hạn</small>}</> }, { key: "c6", header: "Ưu tiên", render: (r) => <>{r.priority === "urgent" ? "Khẩn" : r.priority === "high" ? "Cao" : "Thường"}</> }, { key: "c7", header: "Tiến độ", render: (r) => <><div className="task-bar"><span><i style={{ width: `${Number(r.progress || 0)}%` }} /></span><b>{Number(r.progress || 0)}%</b></div></> }, { key: "c8", header: "Trạng thái", render: (r) => <><StatusBadge value={WORK_STATUS_LABELS[String(r.status)] || String(r.status || "—")}/></> }, { key: "c9", header: "Thao tác", render: (r) => <><div className="row-actions">
+  return <DataTable rows={rows} rowKey={(r) => String(String(r.id))} columns={[{ key: "c1", header: "Mã việc", render: (r) => <><strong className="code">{r.taskNo}</strong></> }, { key: "c2", header: "Nội dung", render: (r) => <>{r.title}<small>{r.requiredOutput || r.workGroup || ""}</small></> }, { key: "c3", header: "Người làm", render: (r) => <>{r.assignedToName || "—"}</> }, { key: "c4", header: "Dự án", render: (r) => <>{projCode(r.projectId)}</> }, { key: "c5", header: "Hạn", render: (r) => <>{r.dueAt ? date(r.dueAt) : "—"}{isTaskLate(r) && <small className="red-text">Quá hạn</small>}</> }, { key: "c6", header: "Ưu tiên", render: (r) => <>{r.priority === "urgent" ? "Khẩn" : r.priority === "high" ? "Cao" : "Thường"}</> }, { key: "c7", header: "Tiến độ", render: (r) => <><div className="task-bar"><span><i style={{ width: `${Number(r.progress || 0)}%` }} /></span><b>{Number(r.progress || 0)}%</b></div></> }, { key: "c8", header: "Trạng thái", render: (r) => <><StatusBadge value={WORK_STATUS_LABELS[String(r.status)] || String(r.status || "—")}/></> }, { key: "c9", header: "Thao tác", render: (r) => <><div className="row-actions">
           {[25, 50, 75, 100].map((p) => <button key={p} type="button" className="export-mini" disabled={busy || Number(r.progress || 0) >= p} onClick={() => void send("update_work_item_progress", { workItemId: r.id, progress: p })}>{p}%</button>)}
           {String(r.status) !== "COMPLETED" && <button type="button" className="export-mini" disabled={busy} onClick={() => void send("update_work_item_status", { workItemId: r.id, status: "COMPLETED" })}>Xong</button>}
         </div></> }]} emptyText="Chưa có nhiệm vụ nào." />;
