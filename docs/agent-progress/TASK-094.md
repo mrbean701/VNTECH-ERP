@@ -2356,3 +2356,82 @@ KET LUAN: **KHOP HOAN TOAN** voi luat nghiep vu user mo ta => **A-15 KHONG can s
 DIEM CON MO (nho, hoi user khi tien): man "Phan quyen nguoi dung" co KPI **"Tai khoan vuot quyen phong ban"** + ghi chu
   "Quyen cua nguoi dung khong duoc vuot qua quyen cua phong ban" => hien **BAO CAO** danh sach vuot quyen (`violationsOf`).
   => CHUA RO co **CHAN CUNG** (block) khi user bi cap quyen vuot phong ban hay khong => can user chot: (a) chi bao cao, hay (b) chan cung.
+
+## 74. [PHASE 3 · `T-03` + `T-04`] CÔNG VIỆC: BÌNH LUẬN · NGƯỜI THAM GIA · TỆP ĐÍNH KÈM — ĐÓNG 2 MỤC (20/09)
+
+**Mục roadmap:** `T-03` *(Bổ sung trường còn thiếu: tiến độ · huỷ lúc · ghi chú · tệp)* và `T-04`
+*(`TaskAssignment` · `TaskComment` · `TaskAttachment` · `TaskHistory` · `TaskParticipant`)*.
+**Tiền đề bắt buộc:** `docs/agent-progress/AUDIT-T02-WORK-ITEM-MODEL.md` (T-02, đo trên MySQL THẬT).
+
+### 74.1. Điều KHÔNG làm (nhờ audit T-02) — đây là giá trị lớn nhất của lượt này
+| Yêu cầu ghi trong roadmap | Kết luận của audit | Hành động |
+|---|---|---|
+| **tiến độ** | `work_items.progress` **ĐÃ CÓ** (8/8 dòng có giá trị) | **KHÔNG tạo lại** cột/bảng |
+| **huỷ lúc** | `cancelled_at` + `cancelled_by` **ĐÃ CÓ** (4 dòng đã huỷ) | **KHÔNG tạo lại** |
+| `TaskAssignment` | `assigned_to/assigned_by/assigned_at` + `work_item_events.previous_assignee/new_assignee` | **KHÔNG tạo lại** |
+| `TaskHistory` | **`work_item_events`** đã đầy đủ | **KHÔNG tạo lại** |
+| `TaskAttachment` | **UNKNOWN** → nay đã đo: bảng dùng chung `attachments` (`entity_type`/`entity_id`) | **DÙNG LẠI**, không tạo bảng mới |
+
+### 74.2. Việc THẬT đã làm
+1. **`work_item_comments`** (bình luận nhiều dòng theo CÔNG VIỆC) — đóng luôn phần "ghi chú" của `T-03`
+   (từ trước chỉ có `description` một trường; `request_comments` khoá theo `request_id` nên không dùng được).
+   Cột: `id · work_item_id · user_id · comment · visibility · created_at · updated_at`.
+2. **`work_item_participants`** (người tham gia/theo dõi) —
+   `id · work_item_id · user_id · role_in_task (owner|assignee|follower|supporter) · notify · added_by · created_at · updated_at`,
+   **UNIQUE `(work_item_id,user_id)`** ⇒ thêm lần sau là GHI ĐÈ, không sinh dòng trùng.
+3. **Hai chuỗi lược đồ** (đúng kiến trúc 2 nguồn của dự án — xem §68):
+   * MySQL/Flyway: `java-backend/.../db/migration/V20__task_comment_participant.sql` — **nguồn DDL THẬT**;
+   * SQLite/dev: `drizzle/0155_phase_gd_phase_3_t_04_work_item_comment_participant.sql`.
+   ⚠️ **Vì sao KHÔNG đặt DDL MySQL vào tệp drizzle:** `tests/workflow-direct.test.ts` và
+   `tests/work-item-comment-participant.test.ts` giải nén **TOÀN BỘ `drizzle/*.sql`** vào một CSDL SQLite trong
+   bộ nhớ ⇒ `COLLATE`/`ENGINE=InnoDB`/`datetime(3)`/`varchar` sẽ làm SQLite `Parse error` và `npm test` **đỏ ở
+   tầng hạ tầng**. Tệp `0155` giữ đúng khuôn `text` như mọi tệp drizzle khác, và **chép nguyên văn DDL MySQL
+   vào khối chú thích cuối tệp** để đối chiếu.
+4. **Tệp đính kèm theo công việc = dùng lại `/api/files`** (không thêm endpoint, không thêm bảng):
+   `app/api/files/route.ts` nhận thêm `entityType='work_item'` — dự án suy từ `work_items.project_id`,
+   quyền đọc/ghi theo 4 module công việc; `delete_project` dọn kèm tệp của công việc.
+5. **Hai action JS** (`scripts/system-route.mjs`) + **2 khoá bootstrap** `workItemComments`,
+   `workItemParticipants` (lọc theo ĐÚNG tập `work_items` mà người dùng được thấy ⇒ không mở rộng phạm vi).
+   Luật truy cập dùng CHUNG một hàm `requireWorkItemAccess` (người được giao · Trưởng phòng · người tham gia · cấp module).
+6. **🔴 VÁ MỘT LỖI THẬT PHÁT HIỆN ĐƯỢC (im lặng, `tsc` xanh):** màn `app/screens/WorkCenter.tsx` lọc
+   "Việc của tôi" bằng **`assigneeUserId`/`assigneeName`** — hai tên **KHÔNG TỒN TẠI** trong payload
+   (`scripts/system-route.mjs`: `wi.assigned_to AS assignedTo`, `ua.full_name AS assignedToName`)
+   ⇒ tab "Việc của tôi" và ô tìm kiếm **luôn rỗng/0 việc** dù có 7 việc thật trong CSDL. Đã sửa về đúng
+   hợp đồng và khoá lại bằng cổng mới `tools/probe-work-item-field-contract.mjs` (**18/18 ĐẠT**, có đối chứng âm).
+
+### 74.3. Bằng chứng kiểm chứng
+* **Kỷ luật đỏ→xanh:** `tests/work-item-comment-participant.test.ts` — **ĐỎ 1/14 → XANH 14/14**
+  (14 bước, có 5 phép "tự kiểm soát" âm: bình luận rỗng · công việc không tồn tại · vai trò sai ·
+  người ngoài không thêm được người tham gia · loại hồ sơ lạ không nhận tệp).
+  ⚠️ **Bài học khung kiểm (đã trả giá):** KHÔNG dùng `node:test` + `await` cấp tệp — trình chạy chỉ BẮT ĐẦU
+  chạy các `test()` SAU KHI tệp nạp xong, nên `setRuntimeEnvForTests(null); sqlite.close();` ở cuối tệp chạy
+  TRƯỚC ⇒ mọi bài đỏ "database is not open" (lỗi ở KHUNG KIỂM, không ở sản phẩm). Tệp này dùng khung tuần tự.
+* `npm run lint` → **0 error** (180 warning = nền) · `npx tsc --noEmit` → **0** ·
+  `npm run test:regression` → **69/69** (61 nền + 7 `pr01-project-tabs` + tệp này gộp 1 suite) ·
+  `npm run test:workflow` → **ĐẠT** · `node --check scripts/system-route.mjs` → **0**.
+* `npm run test:work-item` = `node --import tsx tests/work-item-comment-participant.test.ts` → **14/14 ĐẠT**.
+* `tools/probe-work-item-field-contract.mjs` → **18/18 ĐẠT · 2 GHI NHẬN** (2 khoá mới chưa thấy trong payload
+  của `:8787`/`:9000` vì dịch vụ đang phục vụ **bundle dựng TRƯỚC thay đổi** — cần dựng lại rồi đo lại).
+* **DDL MySQL đã chạy THỬ trên chính MySQL thật** (tạo 2 bảng tên `_v20check_*` rồi DROP, giữ nguyên 121 bảng):
+  `information_schema.TABLES` trả `ENGINE=InnoDB`, `TABLE_COLLATION=utf8mb4_unicode_ci` cho CẢ HAI;
+  `information_schema.COLUMNS` trả `utf8mb4_unicode_ci` cho `id/work_item_id/user_id/role_in_task/added_by/visibility/comment`
+  và `DATETIME_PRECISION=3` cho `created_at/updated_at` ⇒ **không có đường "Illegal mix of collations"**.
+* `tools/probe-roadmap-progress.mjs` → đọc đủ **110 mục** · **DONE 61/110 = 55,5 %** · **PHASE 3 = 3/10**
+  (T-02 + T-03 + T-04).
+
+### 74.4. Commit
+* `eb054e1` — `[PHASE 3 - T-03/T-04] work item comment + participant tables, JS actions, bootstrap keys, file attachments via shared attachments table`
+  (drizzle `0155` · Flyway `V20` · `scripts/system-route.mjs` · `app/api/files/route.ts` · test mới · `package.json`)
+* `823a1c5` — `[PHASE 3 - T-05 prep] fix WorkCenter assignedTo field contract … + gate probe-work-item-field-contract`
+  (`app/screens/WorkCenter.tsx` · `lib/ui-shared.tsx` · cổng mới)
+
+### 74.5. CÒN LẠI / UNKNOWN (không tự quyết)
+1. **BUNDLE CHƯA DỰNG LẠI** ⇒ payload thật của `:8787`/`:9000` **chưa có** `workItemComments`/`workItemParticipants`
+   ⇒ màn Công việc **chưa hiển thị** bình luận/người tham gia (mã + lược đồ đã xong; cần captain dựng lại rồi đo lại).
+2. **Flyway chưa ghi V20:** DDL đã được **chạy thử** đúng chuẩn, nhưng tệp `V20` chỉ được áp chính thức khi Java
+   khởi động lại (`CREATE TABLE IF NOT EXISTS` nên chạy lại vô hại). **Không tự khởi động lại dịch vụ.**
+3. **UI cho bình luận/người tham gia** (nút thêm bình luận, danh sách người theo dõi) thuộc **`T-07` Board Kanban /
+   `T-05`/`T-06`** — lượt này chỉ mở **đường DỮ LIỆU + hành động backend**, cố ý không nhét UI vào `WorkCenter`.
+4. **Ghi chú "nhiều dòng"** hiện là **bình luận** (`work_item_comments.comment` giữ nguyên ký tự xuống dòng) —
+   nếu người dùng muốn một trường `notes` dài NGAY TRÊN công việc (khác luồng bình luận) thì đó là **quyết định
+   nghiệp vụ** cần chốt trước khi thêm cột.

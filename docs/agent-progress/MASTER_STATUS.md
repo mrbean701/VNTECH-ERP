@@ -16,11 +16,11 @@
 
 | Phân loại (nguyên văn cột TT) | Số mục | % |
 |---|---|---|
-| **DONE** (`**DONE**` + `DONE` + `DONE / AP-DUNG n`) | **59** | **53,6 %** |
+| **DONE** (`**DONE**` + `DONE` + `DONE / AP-DUNG n`) | **61** | **55,5 %** |
 | ĐANG LÀM | 1 | 0,9 % |
 | KHUNG XONG nhưng **ÁP DỤNG 0** | 0 | 0 % |
 | **BỊ CHẶN** (`**BLOCKED**` = F-01) | 1 | 0,9 % |
-| TODO | 49 | 44,5 % |
+| TODO | 47 | 42,7 % |
 
 | Phase | DONE / tổng | Ghi chú |
 |---|---|---|
@@ -28,7 +28,7 @@
 | PHASE 0B — BẢO MẬT | **10 / 10** | ĐÓNG (theo yêu cầu người dùng) |
 | PHASE 1 — UI/UX | **17 / 17** | **ĐÓNG HOÀN TOÀN** — `U-12` bỏ **823 token `!important` chết** (9 lô, mỗi lô qua `tsc` + `npm test` + **cổng ảnh 64/64**) |
 | PHASE 2 — MUA HÀNG | 3 / 9 | `P-04` · `P-05` · `P-06` (**`P-01` đã ROLLBACK 20/09 theo yêu cầu user — chưa chốt PHASE 2**) |
-| PHASE 3 — CÔNG VIỆC | 1 / 10 | `T-02` DONE 20/09 (audit mô hình: 32 cột + work_item_events; THIẾU comment/participant) |
+| PHASE 3 — CÔNG VIỆC | **3 / 10** | `T-02` DONE 20/09 (audit mô hình dữ liệu: 32 cột + `work_item_events`) · **`T-03` + `T-04` DONE 20/09**: 2 bảng mới `work_item_comments`/`work_item_participants` (2 chuỗi drizzle + Flyway V20, COLLATE từng cột) · tệp đính kèm **dùng LẠI** `attachments` (`entity_type='work_item'`) · 2 action JS + 2 khoá bootstrap · **vá lỗi thật**: màn Công việc lọc `assigneeUserId` (tên KHÔNG tồn tại) ⇒ tab "Việc của tôi" luôn 0 việc |
 | PHASE 4 — DỰ ÁN | 0 / 6 | `PR-01` **DOING** — code xong (`tsc` 0 · `npm test` 61/61 + workflow ĐẠT · hợp đồng nguồn 7/7), **CHỜ BUILD** để đo runtime + ảnh (`TASK-095.md` · `PR01-TAB-SPEC.md`) |
 | PHASE 5 — KHO | 0 / 4 | |
 | PHASE 6 — ĐỘI NHÓM | 0 / 6 | |
