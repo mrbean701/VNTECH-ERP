@@ -2254,3 +2254,16 @@ BÀI HỌC CHỐT:
   2. Nguồn DDL THẬT của dự án là **FLYWAY** (`java-backend/.../db/migration`, 20 tệp);
      `drizzle/**` (156 tệp) là baseline song song, KHÔNG phản ánh DDL thực tế (121 "vi phạm" ở drizzle là vô nghĩa với runtime).
   3. Khi tự viết công cụ kiểm: phải **kiểm chứng công cụ trên ca ĐÃ BIẾT ĐÚNG và ca ĐÃ BIẾT SAI** trước khi dùng/công bố.
+
+### 69. LỖI TÍCH HỢP QUAN TRỌNG: TEST MỚI PHẢI ĐƯỢC ĐĂNG KÝ TRONG `package.json` (20/09)
+PHÁT HIỆN: `package.json` → `scripts.test:regression` là **DANH SÁCH TỆP LIỆT KÊ CỤ THỂ** (không quét theo mẫu):
+  node --import tsx --test tests/mobile-menu-interaction.test.mjs tests/project-navigation-consolidation.test.mjs
+    tests/runtime-admin-boq-regression.test.mjs tests/w2-admin-import-role-org.test.mjs tests/trust-lock-foundation.test.mjs
+    tests/security-regression.test.mjs tests/boq-native-import.test.ts tests/boq-dynamic-template.test.ts
+HỆ QUẢ: tệp test MỚI thêm vào `tests/` **KHÔNG tự động được chạy** ⇒ `npm test` vẫn xanh dù test mới đỏ/chưa chạy.
+  * Nhánh B thêm `tests/pr01-project-tabs.test.mjs`       ⇒ CHƯA có trong danh sách ✗
+  * Nhánh A thêm `tests/work-item-comment-participant.test.ts` ⇒ CHƯA có trong danh sách ✗
+  ⇒ ⇒ Nếu hợp nhất nguyên trạng: **2 test này KHÔNG BAO GIỜ CHẠY** ⇒ bằng chứng "61/61" là **không bao gồm** chúng ⇒ TỰ TIN GIẢ.
+QUYẾT ĐỊNH (captain): **KHÔNG** yêu cầu 2 nhánh cùng sửa `package.json` (sẽ tranh chấp 1 tệp) ⇒ **captain tự đấu dây khi hợp nhất**:
+  thêm đúng 2 tệp test của 2 nhánh vào `scripts.test:regression`, rồi chạy lại `npm test` để **chứng minh chúng thật sự chạy** (số test tăng).
+BÀI HỌC: trước khi coi "test xanh" là bằng chứng, phải KIỂM XEM TEST ĐÓ CÓ ĐƯỢC CHẠY HAY KHÔNG (runner liệt kê tường minh ≠ quét mẫu).
