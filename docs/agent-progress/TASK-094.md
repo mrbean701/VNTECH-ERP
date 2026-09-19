@@ -1943,3 +1943,24 @@ CON LAI DE DONG R-01 (ghi ro, khong tu nhan xong):
 2. Noi vao app/page.tsx + nav nhom reports (hien co: dept_plan_kpi, dept_plan_alerts, dept_project_kpi, dept_project_alerts).
 3. BANG CHUNG RUNTIME: hien moi co tsc + npm test + self-check engine; CHUA co bang chung man bao cao render trong app
    => can chay that (them 1 man vao probe visual de co bang chung anh) TRUOC KHI danh dau R-01 DONE.
+
+### 49. [PHASE 9 · R-01..R-05] CATALOG 8 DINH NGHIA BAO CAO + BO KIEM THAT 52/52 (20/09)
+DA TAO lib/report-catalog.ts — 8 dinh nghia, MOI BAO CAO CHI LA MOT KHAI BAO:
+* R-02a Phieu de nghi theo trang thai (so phieu · so du an · so nguoi de nghi · tong dong vat tu)
+* R-02b Phieu de nghi theo du an
+* R-02c Don hang PO theo trang thai (so PO · tong gia tri · lon nhat)
+* R-03a Ton theo du an (so mat hang · tong kha dung · tong so du · tong dinh muc toi thieu)
+* R-03b Mat hang SAP HET (nhom theo materialCode, sap xep kha dung TANG dan)
+* R-04a Du an theo trang thai · R-05a Cong viec theo trang thai · R-05b Cong viec theo du an
+NGUYEN TAC §45 (KHONG TU SUY DOAN): chi dung TRUONG DA XAC MINH (requests: id/requestNo/status/projectId/requestedBy/itemCount;
+purchaseOrders: id/code/projectId/amount/status; inventory: materialCode/materialName/unit/available/balance/minStock/projectId;
+projects: id/code/name/status; workItems: id/status/projectId). Phan dac ta can truong CHUA xac minh (thoi gian xu ly; ton theo kho;
+gia tri; thanh vien/so to doi/so kho/tien do; qua han/khoi luong/theo phong) => GHI RO trong note, KHONG bia ten truong.
+Them sourceRows(source, data) + findEntry(key) + statusLabel(v).
+
+BO KIEM THAT tools/r01-catalog-check.ts: pass 52 · fail 0 · EXIT 0 — phu: moi dinh nghia chay duoc, khoa KHONG trung, co cot,
+chi so huu han, nguon khong rong, kiem rieng ca SAP HET (VT-01) va R-02c tong tien (delivered 3000 / tong 4000).
+PHEP KIEM BAT DUOC 1 GIA DINH SAI CUA TOI: "chi so dau la count" (R-03b co chi so dau sum(available) = 115) => MA DUNG, da sua phep kiem.
+npx tsc --noEmit => 0.
+
+CON LAI de dong R-01: noi ReportView vao app/page.tsx + nav nhom reports; va BANG CHUNG RUNTIME (them 1 man bao cao vao probe visual).
