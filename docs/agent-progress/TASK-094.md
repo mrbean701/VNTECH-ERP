@@ -2009,3 +2009,22 @@ VIEC KE TIEP (ro rang): doc `modulePermission` trong lib/permissions.ts de xac n
   => roi chon 1 trong 2: (a) them khoa vao DANH MUC quyen/module (client + du lieu/Java) hoac (b) bo sung fallback quyen cho module moi.
   Sau khi nav HIEN: them lai man 19-report-center vao probe (dung group/child DUNG index da do) => chay cong anh => CO ANH CHUNG MINH => moi danh dau R-01 DONE.
 DA DON: tep probe da khoi phuc (khong de lai trang thai do dang) ✔; khong commit baseline sai ✔.
+
+### 52. [PHASE 9 - R-01 buoc 5/5] SUA CHAN DOAN: KHONG phai loc quyen - APP DANG CHAY LA BAN BUILD (20/09)
+SUA LAI KET LUAN O MUC 51 (em da doc ma that de kiem, khong doan):
+  lib/permissions.ts - modulePermission(data, key):
+      if (isAdminUser(data.user)) return { canView: true, canUse: true, canCreate: true, canEdit: true, canApprove: true, canExport: true };
+      ...
+  => VOI ADMIN, canView/canUse = TRUE => bo loc o page.tsx:353
+     (!permissionConfigured || modulePermission(data, item.key).canView)
+     KHONG loai muc nav moi. => GIA THUYET "thieu dong quyen" o muc 51 la SAI.
+NGUYEN NHAN THAT (khop moi du kien): ung dung dang chay tren :8787/:9000 la BAN BUILD
+  (asset co hash: /assets/index-*.css, /assets/index-*.js) => SUA MA NGUON KHONG CO TAC DUNG cho toi khi BUILD LAI.
+  => Muc nav reports_center + man ReportView CHUA HE CO trong app dang chay => do la ly do quet child=0..4 khong thay.
+VIEC KE TIEP (dung quy trinh build cua du an, da ghi o bo nho):
+  1. DUNG Node UI (:8787) + proxy (:9000) truoc khi build (build-cross-platform.mjs chay preflight-source.mjs quet file khoa bi mat).
+  2. KHONG tam chuyen .local-data vao %TEMP% (moi phien pwsh co %TEMP% rieng va bi xoa khi ket thuc).
+  3. Build lai (gd-cycle.mjs hoac build-cross-platform.mjs) => KHOI DONG LAI UI + proxy.
+  4. Sau khi build: kiem nav co muc "Bao cao tong hop" => roi moi them man 19-report-center vao probe (index DUNG da do) => cong anh => anh chung minh.
+  5. CHI KHI CO ANH CHUNG MINH moi danh dau R-01 DONE.
+BAI HOC: voi ung dung dang phuc vu ban BUILD, MOI bang chung runtime phai lam SAU khi build lai - neu khong se ket luan sai ve nguyen nhan.
