@@ -16,8 +16,9 @@
 --    `work_items`/`users`/`work_item_events` sẽ nổ **"Illegal mix of collations"** ⇒ **TOÀN BỘ UI trả 500**.
 --    Vì vậy tệp này ghi COLLATE ở CẢ cấp bảng LẪN cấp cột (khuôn đối chiếu: `request_comments` — bảng đã chạy tốt).
 --
--- TÍNH IDEMPOTENT: bảng dùng `CREATE TABLE IF NOT EXISTS`; chỉ mục được tạo qua một thủ tục có bẫy lỗi
---    "Duplicate key name" ⇒ chạy lại vô hại (MySQL 8 KHÔNG hỗ trợ `CREATE INDEX IF NOT EXISTS`).
+-- TÍNH IDEMPOTENT: cả hai bảng dùng `CREATE TABLE IF NOT EXISTS`, và MỌI chỉ mục (kể cả `UNIQUE`) được
+--    khai NGAY TRONG `CREATE TABLE` ⇒ không cần câu `CREATE INDEX` rời (MySQL 8 KHÔNG hỗ trợ
+--    `CREATE INDEX IF NOT EXISTS`) và chạy lại migration là vô hại.
 
 CREATE TABLE IF NOT EXISTS `work_item_comments` (
   `id` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL,
