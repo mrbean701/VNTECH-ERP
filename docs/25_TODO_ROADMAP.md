@@ -135,7 +135,7 @@
 
 | ID | Module | Việc | Ưu tiên | Phụ thuộc | DB | API | UI | QUYỀN | TT |
 |---|---|---|---|---|---|---|---|---|---|
-| `PR-01` | Dự án | Danh sách dự án thành tab riêng + toolbar cân đối | P2 | U-03 | - | - | NEW | CHECK | DOING / CODE-XONG-CHO-BUILD |
+| `PR-01` | Dự án | Danh sách dự án thành tab riêng + toolbar cân đối | P2 | U-03 | - | - | DONE 20/09: dai 6 tab (Danh sach du an + 5 tab chi tiet) + toolbar can doi (count/tim/XUAT); probe hop dong DAT (exit 0) tren bundle moi E2E11762304AD2B5; anh 02-project lech CHU Y (da ghi chu, khong re-baseline) | CHECK | **DONE** |
 | `PR-02` | Dự án | Lọc: Trạng thái · Quản lý dự án · Phòng ban · Ngày | P2 | PR-01 | - | - | FIX | - | TODO |
 | `PR-03` | Dự án | Chi tiết dự án thành tab/modal: chung · nhân sự · tổ đội · kho · lịch sử | P2 | U-01 | - | - | NEW | - | TODO |
 | `PR-04` | Dự án | Bấm vào Project/User/Warehouse/Team → mở **EntityDetailModal** | P2 | U-01 | - | - | NEW | CHECK | TODO |

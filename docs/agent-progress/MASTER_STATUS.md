@@ -1,7 +1,7 @@
 # MASTER STATUS — VNTECH ERP V5.3.0
 
 > Tệp này là NGUỒN SỰ THẬT về trạng thái toàn cục. Mọi phiên làm việc mới PHẢI đọc tệp này trước.
-| PHASE 4 — DỰ ÁN | 1 / 6 | `PR-05` DONE 20/09 (**tạm đóng theo chỉ đạo user** — tab BCH đã tồn tại; chờ user test lại & yêu cầu sửa). `PR-01` DOING (code xong, chờ build) |
+| PHASE 4 — DỰ ÁN | 2 / 6 | `PR-05` DONE 20/09 (**tạm đóng theo chỉ đạo user** — tab BCH đã tồn tại; chờ user test lại & yêu cầu sửa). `PR-01` DOING (code xong, chờ build) |
 
 ## MASTER TASK STATUS
 
@@ -16,11 +16,11 @@
 
 | Phân loại (nguyên văn cột TT) | Số mục | % |
 |---|---|---|
-| **DONE** (`**DONE**` + `DONE` + `DONE / AP-DUNG n`) | **61** | **55,5 %** |
+| **DONE** (`**DONE**` + `DONE` + `DONE / AP-DUNG n`) | **62** | **56,4 %** |
 | ĐANG LÀM | 1 | 0,9 % |
 | KHUNG XONG nhưng **ÁP DỤNG 0** | 0 | 0 % |
 | **BỊ CHẶN** (`**BLOCKED**` = F-01) | 1 | 0,9 % |
-| TODO | 47 | 42,7 % |
+| TODO | 46 | 41,8 % |
 
 | Phase | DONE / tổng | Ghi chú |
 |---|---|---|
@@ -29,7 +29,7 @@
 | PHASE 1 — UI/UX | **17 / 17** | **ĐÓNG HOÀN TOÀN** — `U-12` bỏ **823 token `!important` chết** (9 lô, mỗi lô qua `tsc` + `npm test` + **cổng ảnh 64/64**) |
 | PHASE 2 — MUA HÀNG | 3 / 9 | `P-04` · `P-05` · `P-06` (**`P-01` đã ROLLBACK 20/09 theo yêu cầu user — chưa chốt PHASE 2**) |
 | PHASE 3 — CÔNG VIỆC | **3 / 10** | `T-02` DONE 20/09 (audit mô hình dữ liệu: 32 cột + `work_item_events`) · **`T-03` + `T-04` DONE 20/09**: 2 bảng mới `work_item_comments`/`work_item_participants` (2 chuỗi drizzle + Flyway V20, COLLATE từng cột) · tệp đính kèm **dùng LẠI** `attachments` (`entity_type='work_item'`) · 2 action JS + 2 khoá bootstrap · **vá lỗi thật**: màn Công việc lọc `assigneeUserId` (tên KHÔNG tồn tại) ⇒ tab "Việc của tôi" luôn 0 việc |
-| PHASE 4 — DỰ ÁN | 0 / 6 | `PR-01` **DOING** — code xong (`tsc` 0 · `npm test` 61/61 + workflow ĐẠT · hợp đồng nguồn 7/7), **CHỜ BUILD** để đo runtime + ảnh (`TASK-095.md` · `PR01-TAB-SPEC.md`) |
+| PHASE 4 — DỰ ÁN | 2 / 6 | `PR-01` **DONE** 20/09 (dải 6 tab + toolbar cân đối — probe hợp đồng ĐẠT exit 0 trên bundle mới `E2E11762304AD2B5`) · `PR-05` DONE (tạm đóng theo chỉ đạo, chờ user test lại). Còn `PR-02`/`PR-03`/`PR-04`/`PR-06` · nguồn % tiến độ = **NHẬT KÝ THI CÔNG** (user chốt 20/09, chưa có nghiệp vụ ⇒ pending) |
 | PHASE 5 — KHO | 0 / 4 | |
 | PHASE 6 — ĐỘI NHÓM | 0 / 6 | |
 | PHASE 7 — QUẢN TRỊ | 0 / 16 | |
