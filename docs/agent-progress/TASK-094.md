@@ -2185,3 +2185,18 @@ DICH DANH MOI: VNTECH-FP-21B083DFBC3F8CB9 (thay VNTECH-FP-7CBCBA75FC20E691 cua b
 DUNG LAI DICH VU: UI :8787 = 200 · proxy :9000 = 200 · Java :18081 = 200.
 BANG CHUNG BUNDLE DOI: asset phuc vu la /assets/index-D74SrlKN.css + /assets/layout-segment-context-CEziAB0O.js.
 CONG ANH: chay nen (job) de do 17 man x 4 = 68 anh (lan chay truoc bi harness cat o 600s).
+
+### 64. DIEU TRA CONG ANH DO sau rebuild: KET LUAN = DO DU LIEU, KHONG PHAI DO MA (20/09)
+BANG CHUNG DO DUOC:
+  * Anh chuan ghi lan cuoi: 03-work = 2026-09-18 12:43:01 · 07-admin = 2026-09-18 12:45:23 · 01-dashboard = 2026-09-18 12:41:59
+  * Du lieu DOI SAU cac moc do:
+      users      : 13 dong, moi nhat 2026-09-19 16:52:56  => CO USER MOI "sec_probe_576966" (active=1)  => giai thich 07-admin lech 48318 px
+      work_items :  8 dong, moi nhat 2026-09-19 16:52:58  => CO TASK MOI "CVCN-260919-7476" (NEW)     => giai thich 03-work lech 1548 px
+      attachments: khong doi (2026-09-14) · request_comments: rong => KHONG phai nguyen nhan
+      (01-dashboard 26 px: rat nho, nghi do dong ngay "So lieu tinh den ngay ...")
+KET LUAN: lech la DO DU LIEU TANG THEM (1 user + 1 cong viec), KHONG phai loi ma.
+  => Ma nguon + bundle van khop; khong co hoi quy chuc nang trong 2 man nay.
+PHAT HIEN THEM (loi that): probe de SOT user thu "sec_probe_576966" (probe in "da don user probe" nhung user van con, active=1).
+  => De xuat: sua buoc don dep cua probe (va xem lai probe nao tao user nay: probe-security-rbac / probe-nonadmin-access).
+KHONG TU Y: khong xoa du lieu (user/task) va KHONG tu ghi lai anh chuan (re-baseline) - cho y kien user.
+DE XUAT: (a) don user thu con sot roi chay lai cong anh (co the het lech 07-admin), (b) re-baseline 2 man KEM BANG CHUNG nay, (c) giu nguyen.
