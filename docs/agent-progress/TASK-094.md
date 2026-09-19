@@ -1650,3 +1650,20 @@ pm test **0** · **cổng ảnh 60/64   px**.
 **CÁCH LÀM ĐANG ÁP DỤNG (vòng lặp hội tụ):** chuyển **helper** → **gỡ chặn màn** → tách màn → lặp lại. **Mỗi bước:** --dry ⇒ áp dụng ⇒ **	sc 0** ⇒ **cổng ảnh** ⇒ 
 pm test 0 ⇒ commit.
 **LƯU Ý VẬN HÀNH (mới):** theo yêu cầu người dùng, **chạy cổng ảnh ở NỀN** và **làm việc khác song song** — nhưng **vẫn KHÔNG ghi tệp nguồn trong lúc cổng ảnh chạy** (tránh nhiễm ảnh); việc song song phải là **ĐỌC** (chạy khô, khảo sát) hoặc **ghi tài liệu** (không được app phục vụ).
+
+### 39. ✅ [U-11] LÔ HELPER #2 — ui-blocks + labels + eport-rows (19/09)
+**Đã chuyển (mỗi lần đều --dry trước, công cụ chấp nhận):**
+| Tệp mới | Khối chuyển | Import công cụ tự sinh |
+|---|---|---|
+| lib/ui-blocks.tsx | FileUpload, BaseModal | AttachmentPanel (@/lib/ui-shared) + ReactNode (react) |
+| lib/labels.ts | statusLabel | 	ype Row (@/lib/ui-shared) |
+| lib/report-rows.ts | eportRows, eportExport | downloadCsv, downloadSimpleXlsx + 	ype TableCell (@/lib/tabular-export) + 	ype Row |
+* git diff --stat app/page.tsx ⇒ **3 insertions(+), 12 deletions(-)** ⇒ page.tsx **3299 → 3296 dòng**
+**BẰNG CHỨNG:** 
+px tsc --noEmit **0** · **cổng ảnh: mọi màn   px**, chỉ 17-modal-po giữ **đúng con số nhiễu-ngày** (181/170/185/109 px tại (704,192) — y hệt 2 lượt trước) ⇒ **lô helper KHÔNG đổi giao diện** ✔
+**KẾT QUẢ SONG SONG ĐÁNG GIÁ — 2 MÀN ĐƯỢC GỠ CHẶN NGAY:**
+* **Requests** ⇒ **"Requests(52d)"** ✅ (trước bị chặn bởi statusLabel ⇒ nay đã ở lib/labels.ts)
+* **Stocktake** ⇒ **"Stocktake(1d)"** ✅ (trước bị chặn bởi eportRows,reportExport ⇒ nay đã ở lib/report-rows.ts)
+* Tiến triển cả ở 2 màn khác: ReceiptDrawer **hết chặn FileUpload** (còn SupplyExportButtons,eceiptSupplyDocument,poSupplyDocument) · WorkflowModal **hết chặn BaseModal** (còn workflowApproverCandidates,configuredModules).
+**⇒ VÒNG LẶP HỘI TỤ ĐÚNG NHƯ TÀI LIỆU DỰ ÁN:** *chuyển helper → gỡ chặn màn → tách màn → lặp lại.*
+**CÁCH LÀM SONG SONG (theo yêu cầu người dùng):** cổng ảnh chạy **NỀN**; trong lúc đó em làm việc **ĐỌC** (chạy khô ứng viên, đo bản đồ chặn) và **ghi tài liệu** (không được app phục vụ) — **KHÔNG ghi tệp nguồn** trong lúc cổng ảnh chạy (tránh nhiễm ảnh).
