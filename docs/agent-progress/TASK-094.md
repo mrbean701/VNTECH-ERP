@@ -1535,3 +1535,30 @@ pm test 0 + cổng ảnh 64/64**.
 3. **Ghi rõ các chỗ cố ý KHÔNG đổi** + lý do (đã gác bằng điều kiện/disabled/prop tương đương) ⇒ **không còn chỗ nào "không được gác"** mà chỉ khác **cách viết**.
 **LỘ TRÌNH:** U-04 → **DONE / GUARD-DUNG-5-CHO** · U-16 → **DONE / GUARD-DUNG-5-CHO** ⇒ **PHASE 1 = 15/17** (còn **U-11** ĐANG-LÀM 3/4 · **U-12**).
 **KIỂM CHỨNG KHI SỬA LỘ TRÌNH (đúng bài học):** mỗi mỏ neo khớp **ĐÚNG 1 dòng** · dòng có **12 ô** · **đo lại**: PHASE 1 = **15/17** · **tổng ID = 110** (không mất) · **dòng rác = 0** · diff = **đúng 2 dòng**.
+
+## 34. 🔧 CHẨN ĐOÁN "DSH NGỪNG GIỮA CHỪNG" — LẦN 2: GOAL **BỊ DISARM LẠI** (19/09)
+**Bằng chứng (get_goal):**
+`json
+{ "phase": "active", "roundsStarted": 216, "maxGoalRounds": 1200,
+  "activation": "disarmed" }
+`
+⇒ **ctivation LẠI LÀ disarmed** dù đã rearm thành công ở revision 46 (trần **1200** không phải vấn đề).
+**NGUYÊN NHÂN:** theo thiết kế, **session resume/fork ⇒ mục tiêu đang active bị DISARM**. Vì DSH bị **khởi động lại nhiều lần**, mục tiêu **bị disarmed lại mỗi lần** ⇒ **hết lượt là DỪNG**.
+**VÒNG LẶP CHẾT ĐÃ XÁC ĐỊNH:** em đã thử update_goal action=resume trong lượt này và hệ thống trả:
+Error: this goal operation requires a direct human turn on a top-level agent
+⇒ Lượt hiện tại đang bị gói trong **goal_round (tự động)** ⇒ **KHÔNG THỂ tự rearm từ trong vòng lặp tự động**. Trước đây rearm được (revision 44→45) vì lượt đó là **lượt người dùng TRỰC TIẾP** (không bị gói goal_round).
+**⇒ QUY TRÌNH SỬA (bắt buộc, mỗi lần):**
+1. Người dùng gửi **1 tin nhắn** sao cho nó tới như **lượt TRỰC TIẾP** (không phải tiếp nối tự động).
+2. **Ngay đầu lượt đó**, gọi update_goal action=resume (revision hiện tại) ⇒ ctivation: "armed".
+3. (Trần đã là **1200** ⇒ không cần nâng nữa.)
+**⇒ VIỆC EM TỰ LÀM ĐỂ GIẢM THIỆT HẠI (không phụ thuộc rearm):**
+* **Kết thúc mỗi lượt bằng commit + ghi hồ sơ** ⇒ dù bị dừng giữa chừng, **không mất việc** (đã làm suốt phiên).
+* **Tránh lệnh quá dài** (một lệnh gồm 
+pm test + nhiều git + ... dễ bị **ngắt giữa chừng** — đã gặp 1 lần: *"tool call was interrupted... no result durably recorded"*) ⇒ **chia nhỏ lệnh**, mỗi lệnh 1 việc rõ ràng.
+* **Ghi checkpoint** (CURRENT/CURRENT STEP/REMAINING/NEXT ACTION/BLOCKER) ở cuối mỗi lượt.
+**TRẠNG THÁI CÔNG VIỆC HIỆN TẠI (để lượt sau tiếp ngay):**
+* **PHASE 0B 10/10 ✅** · **PHASE 8 6/6 ✅ ĐÓNG** · **PHASE 1 = 15/17** ⇒ **tổng ≈46/110 = 42 %**
+* **CÒN LẠI CỦA PHASE 1:** **U-11 bước 4** (tách WorkCenter/Requests/BoqControl — đang ĐANG-LÀM 3/4) · **U-12** (U-12.2 bỏ !important thừa + U-12.3 xoá khối override dài)
+* **Cổng đang xanh:** 	sc 0 · 
+pm test 0 · **cổng ảnh 64/64 ĐẠT** · **3 dịch vụ 200** · vân tay ĐẠT · Flyway 19/19
+* **BÀI HỌC VẬN HÀNH:** sau mỗi lần DSH khởi động lại, **việc ĐẦU TIÊN của lượt trực tiếp là REARM mục tiêu** — nếu không, vòng lặp sẽ dừng sau mỗi lượt.
