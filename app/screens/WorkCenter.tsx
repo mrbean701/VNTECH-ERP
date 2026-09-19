@@ -16,6 +16,7 @@
 // Mục menu «Giao việc» KHÔNG mở màn này: nó mở `DepartmentTaskWorkspace` (xem nhánh render trong `app/page.tsx`).
 //
 // PHASE 3 (`T-05`) — tab «Cá nhân»: BA NHÓM RIÊNG (của tôi · được giao · do tôi tạo), mỗi nhóm một bộ lọc + bộ đếm.
+// PHASE 3 (`T-06`) — tab «Phòng ban»: CHỈ việc trong PHẠM VI ĐƯỢC PHÉP (thu hẹp trong payload, không mở rộng quyền).
 
 import { DataTable, ListToolbar, PermissionGuard, StatusBadge } from "@/app/components/ui";
 import { ReportView } from "@/app/screens/ReportView";
@@ -61,6 +62,55 @@ function personalWorkGroups(rows: Row[], myId: string) {
 }
 // T05-PURE-END
 
+// -------------------------------------------------------------------------------------------------
+// T06-PURE-BEGIN
+// ── T-06 · PHẠM VI VIỆC PHÒNG BAN ĐƯỢC PHÉP (khối thuần — test t06 TRÍCH RA và CHẠY) ─────────────
+//
+// Khoá THẬT của payload (đo tại TASK-097, không đoán):
+//   • `workItems[]`    : assignedTo · assignedToName · departmentCode · projectId · status · priority
+//   • `userScopes[]`   : userId · projectId · permission  (nguồn `user_project_scopes`; RỖNG với người không phải admin)
+//   • `modulePermissions[]`            : moduleKey · canView  ⇒ cấp quyền theo NGƯỜI
+//   • `departmentModulePermissions[]`  : organizationCode · moduleKey · canView ⇒ cấp quyền theo PHÒNG
+// Luật dưới đây MÔ PHỎNG nhánh SQL của bootstrap (`scripts/system-route.mjs` — `workItemWhere`) nên chỉ có thể
+// THU HẸP trong chính payload mà máy chủ đã lọc: KHÔNG tự sinh dòng, KHÔNG nới phạm vi.
+const WORK_DEPT_MODULE_KEYS = ["dept_plan_tasks", "dept_project_tasks", "dept_plan_assign", "dept_project_assign"];
+
+function workScopeOf(data: AppData) {
+  const me: Row = data.user || {};
+  const role = String(me.role || "");
+  const base = String(me.roleBase || me.role || "");
+  const myId = String(me.id || "");
+  const isAdmin = role === "admin" || base === "admin";
+  const deptCodes = [...new Set([String(me.organizationCode || ""), String(me.department || "")].filter(Boolean))];
+  const projectIds = [...new Set((data.userScopes || [])
+    .filter((scope) => String(scope.userId) === myId)
+    .map((scope) => String(scope.projectId || "")).filter(Boolean))];
+  const byUser = (data.modulePermissions || []).some((row) => WORK_DEPT_MODULE_KEYS.includes(String(row.moduleKey || "")) && Boolean(row.canView));
+  const byDept = (data.departmentModulePermissions || []).some((row) => WORK_DEPT_MODULE_KEYS.includes(String(row.moduleKey || ""))
+    && Boolean(row.canView) && deptCodes.includes(String(row.organizationCode || "")));
+  return {
+    myId, role, base, deptCodes, projectIds, isAdmin,
+    // ⚠️ TRÙNG LUẬT có chủ ý với `kanbanManagerDepartments` (WorkKanban.tsx) — test t07 kiểm HAI nơi này KHỚP NHAU.
+    managerDepartments: isAdmin ? ["KH", "DA", "BCH"] : [role === "kh_truong" ? "KH" : "", role === "da_truong" ? "DA" : ""].filter(Boolean),
+    canViewDeptWork: byUser || byDept,
+  };
+}
+
+function departmentWorkScope(data: AppData, rows: Row[]) {
+  const scope = workScopeOf(data);
+  if (scope.isAdmin) return rows;   // payload của quản trị ĐÃ là toàn bộ (bootstrap: `workItemWhere = 1=1`)
+  return rows.filter((row) => {
+    const mine = String(row.assignedTo || "") === scope.myId;
+    if (!scope.canViewDeptWork) return mine;
+    const code = String(row.departmentCode || "");
+    if (scope.base === "procurement" || scope.deptCodes.includes("KH")) return code === "KH" && (mine || scope.managerDepartments.includes("KH"));
+    if (scope.base === "project" || scope.deptCodes.includes("DA")) return code === "DA" && (mine || scope.managerDepartments.includes("DA"));
+    if (scope.deptCodes.includes("BCH")) return code === "BCH" && (mine || !row.projectId || scope.projectIds.includes(String(row.projectId || "")));
+    return mine;
+  });
+}
+// T06-PURE-END
+
 function WorkCenter({ data, action, refresh, view = "personal" }: { data: AppData; action: (name: string, payload: Row) => Promise<boolean>; refresh: () => void; view?: WorkMenuView }) {
   const [tab, setTab] = useState(WORK_TAB_OF_VIEW[view]);
   const [personalGroup, setPersonalGroup] = useState("mine");
@@ -83,10 +133,15 @@ function WorkCenter({ data, action, refresh, view = "personal" }: { data: AppDat
   const personalGroups = personalWorkGroups(items, myId);
   const personalRows: Row[] = personalGroups.find((group) => group.key === personalGroup)?.rows || [];
   const mine = personalGroups[0].rows;
-  const myDepts = [...new Set([String(me.organizationCode || ""), "CN"].filter(Boolean))];
+  const scope = workScopeOf(data);
+  // T-06 — tập việc THUỘC PHẠM VI ĐƯỢC PHÉP; phần bị loại được đếm để người dùng THẤY mình đang bị giới hạn.
+  const scopedWork = departmentWorkScope(data, items);
+  const outOfScope = items.length - scopedWork.length;
+  const myDepts = scope.deptCodes;
   const activeMemberIds = [...new Set((data.teamMembers || []).filter((m) => Number(m.active ?? 1) === 1).map((m) => String(m.userId)))];
-  const deptWork = items.filter((r) => String(r.assignedTo) !== myId && myDepts.includes(String(r.departmentCode || "")));
-  const teamWork = items.filter((r) => String(r.assignedTo) !== myId && activeMemberIds.includes(String(r.assignedTo)));
+  const deptWork = scopedWork.filter((r) => String(r.assignedTo) !== myId && (scope.isAdmin || myDepts.includes(String(r.departmentCode || ""))));
+  const teamWork = scopedWork.filter((r) => String(r.assignedTo) !== myId && activeMemberIds.includes(String(r.assignedTo)));
+  const scopeNote = `${scope.isAdmin ? "Quản trị: toàn bộ" : `Phòng ${myDepts.join(" / ") || "—"} · dự án ${scope.projectIds.length}${scope.managerDepartments.length ? ` · trưởng phòng ${scope.managerDepartments.join(" / ")}` : ""}`}${outOfScope > 0 ? ` · ${outOfScope} việc NGOÀI phạm vi đã bị ẩn` : ""}`;
 
   const find = (rows: Row[]) => !q.trim() ? rows
     : rows.filter((r) => `${r.taskNo || ""} ${r.title || ""} ${r.assignedToName || ""}`.toLocaleLowerCase("vi").includes(q.trim().toLocaleLowerCase("vi")));
@@ -166,11 +221,11 @@ function WorkCenter({ data, action, refresh, view = "personal" }: { data: AppDat
 
     {tab === 1 && <div className="stack">
       <section className="card">
-        <CardHead title="Việc phòng ban của tôi" note="Nhiệm vụ thuộc phòng mà tài khoản trực thuộc"/>
+        <CardHead title="Việc phòng ban của tôi" note={`Nhiệm vụ thuộc phòng mà tài khoản trực thuộc — PHẠM VI ĐƯỢC PHÉP: ${scopeNote}`}/>
         <TaskTable rows={find(deptWork)} allowEdit={false} projCode={projCode} busy={busy} send={send}/>
       </section>
       <section className="card">
-        <CardHead title="Việc của tổ đội tôi tham gia" note="Thành viên tổ đội đang hoạt động"/>
+        <CardHead title="Việc của tổ đội tôi tham gia" note="Thành viên tổ đội đang hoạt động (đã lọc theo cùng phạm vi được phép)"/>
         <TaskTable rows={find(teamWork)} allowEdit={false} projCode={projCode} busy={busy} send={send}/>
       </section>
     </div>}
