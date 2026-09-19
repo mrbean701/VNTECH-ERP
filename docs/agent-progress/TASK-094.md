@@ -1787,3 +1787,18 @@ const readUiSource = () => ['app/page.tsx', 'lib/ui-shared.tsx']   ← THIẾU l
 * 	ests/boq-native-import.test.ts:2 — đổi import { mapBoqRows } from "../app/page" ⇒ **"../app/screens/BoqControl"** ⇒ **test này nay XANH** ✔ (59 → 60 pass)
 * 3 test eadUiSource đã được thêm **pp/screens/BoqControl.tsx**, pp/screens/WorkCenter.tsx, lib/menu-helpers.ts, lib/request-actions.ts, lib/workflow-helpers.ts.
 **TRẠNG THÁI CỔNG:** 	sc **0** ✔ · **hồi quy 60/61** ⚠️ · **cổng ảnh BoqControl: cần đọc job nền**.
+
+### 40. ✅ BoqControl TÁCH XONG — HỒI QUY **61/61** + CỔNG ẢNH **63/64** (1 ảnh drift NGÀY) (20/09)
+**SỬA TEST CUỐI (nguyên nhân chắc chắn):** test Built UI contract dùng marker ổn định cho rule loại heading khỏi matching đọc **THẲNG** pp/page.tsx:
+`js
+const page = await readFile("app/page.tsx", "utf8");            // ← CŨ
+assert.match(page, /data-contract="VNTECH_BOQ_HEADING_MATCHING_EXCLUSION_V1"/);
+`
+⇒ **marker đã chuyển sang pp/screens/BoqControl.tsx** khi tách (literal **1 lần** trong BoqControl.tsx, **0 lần** trong page.tsx — đã đo) ⇒ assertion đỏ.
+⇒ **SỬA (theo DÒNG, bền CRLF):** đổi thành **const page = await readUiSource();** ⇒ **GIỮ NGUYÊN độ chặt** (vẫn bắt buộc literal tồn tại trong nguồn UI) ⇒ **	est:regression = 61/61 PASS · EXIT 0** ✔
+⇒ **Đã kiểm thêm:** scripts/verify-built-ui-contract.mjs đọc **từ DANH SÁCH TỆP** (iles.map((f)=>readFileSync(f,'utf8')).join('\n')) ⇒ **không cần sửa** ✔ (sẽ xác nhận lại ở lần build tới).
+**CỔNG ẢNH (sau BoqControl):** **63/64** — 15/16 màn × 4 = **60 ảnh   px tuyệt đối**, **1 ảnh lệch**: 17-modal-po **desktop 23 px (0,0011 %)** tại 126×39 @ (438,762).
+* Đây là **màn NHẠY NGÀY** đã xác minh bằng --locate (**"Ngày giao mặc định"** + **input ngày trong .po-line-planning**) ⇒ **drift theo thời gian**, KHÔNG phải regression; baseline đã **chụp lại** (chỉ 4 tệp màn 17).
+**⚠️ LỖ HỔNG ĐỘ PHỦ ĐÃ PHÁT HIỆN:** **16 màn của probe KHÔNG có màn BOQ** ⇒ việc tách **BoqControl (36KB)** chỉ được bảo chứng bởi **	sc 0 + hồi quy 61/61 + không có thay đổi phụ ở 16 màn khác** ⇒ **KHÔNG có bằng chứng ảnh trực tiếp cho màn BOQ**.
+⇒ **ĐỀ XUẤT (việc kế tiếp, cần cân nhắc):** ① **thêm 1 màn BOQ** vào probe (tăng độ phủ) ② **ghim đồng hồ (fixed clock)** cho màn 17 để baseline **không trôi theo ngày** ⇒ cổng ảnh ổn định **64/64**.
+**TỔNG KẾT U-11 bước 4:** WorkCenter (4 khối) + **BoqControl (9 khối)** đã tách ⇒ **page.tsx 2878 → 2557 dòng (−321 = −11 %)** · **	sc 0** · **hồi quy 61/61** · **cổng ảnh 63/64** (1 drift ngày) ⇒ **ĐỦ ĐIỀU KIỆN ĐÁNH DẤU U-11 = DONE** (còn 2 việc cải thiện độ phủ ghi ở trên).
