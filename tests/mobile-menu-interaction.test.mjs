@@ -34,7 +34,9 @@ test('Active group auto-opens and active leaf is scrolled into view', () => {
 });
 
 test('Single-child mobile groups navigate directly instead of acting like dead display rows', () => {
-  assert.match(mobile, /const directChild=singleChild&&groupKey!=="site_command"\?singleChild:null/);
+  // PHASE 5 (`W-01`): nhóm «KHO VẬT TƯ» nay vẽ 5 mục từ `warehouseMenuChildren` (khai báo trong code) nên phải
+  // BỊ LOẠI khỏi nhánh "single child ⇒ điều hướng thẳng" giống `site_command` (nhóm có danh sách con phẳng).
+  assert.match(mobile, /const directChild=singleChild&&groupKey!=="site_command"&&groupKey!=="warehouse" \? singleChild : null/);
   assert.match(mobile, /if\(directChild\)return <button/);
   assert.match(mobile, /activateModule\(directChild\.key\)/);
 });

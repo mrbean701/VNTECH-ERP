@@ -114,6 +114,48 @@ const workMenuItems: { key: string; label: string; groupKey: "my_work"; view: Wo
 // `approvals` («Trung tâm phê duyệt») CỐ Ý KHÔNG nằm ở đây — nó là mục thứ 6 của nhóm, do `T-10` tách riêng.
 const legacyWorkMenuKeys: ModuleKey[] = ["dept_plan_tasks", "dept_project_tasks", "dept_plan_assign", "dept_project_assign"];
 
+// ─────────────────────────────────────────────────────────────────────────────
+// PHASE 5 (`W-01`) — NHÓM MENU «KHO VẬT TƯ» TÁCH THÀNH 5 MỤC: «Kho · Nhập · Xuất · Điều chuyển · Dashboard tồn kho»
+// (PHƯƠNG ÁN A — ĐÚNG KHUÔN `T-01`: KHÔNG migration, KHÔNG khoá module mới).
+//
+// NGUYÊN VĂN YÊU CẦU: `docs/25_TODO_ROADMAP.md` dòng `W-01` — «Tách 5 mục: Kho · Nhập · Xuất · Điều chuyển · Dashboard tồn kho».
+//
+// VÌ SAO 5 MỤC NÀY KHAI BÁO TRONG CODE (không thêm dòng `module_catalog`): giống hệt lý do đã ghi ở `T-01`
+// (xem khối `workMenuItems` phía trên) — muốn 5 NHÃN MỚI thì phải là 5 khoá mới KHÔNG có `config` trong
+// `module_catalog` ⇒ lấy nhãn trong code. SÁU khoá `warehouse_receipt` · `warehouse_issue` · `inventory` ·
+// `stocktake` · `material_norms` · `central_warehouse` bị ẨN KHỎI MENU nhưng VẪN là khoá nghiệp vụ THẬT
+// (quyền · tiêu đề màn · tìm kiếm · thông báo · nhánh render trong `app/page.tsx`) ⇒ mỗi mục menu chỉ ĐỔI ĐÍCH ĐẾN.
+//
+// ⚠️ CỔNG QUYỀN: mỗi mục mang `permissionKeys` trỏ tới khoá ĐÃ CÓ và được lọc bằng
+// `modulePermission(data, key).canView` (giống `T-01`) — KHÔNG hardcode admin, KHÔNG khoá mới.
+//   • Nhập → `warehouse_receipt` · Xuất → `warehouse_issue` · Điều chuyển → `inventory` · Kho → `central_warehouse`.
+//   • Dashboard tồn kho → `stocktake`: đây là khoá kho THỨ 6 và là khoá DUY NHẤT còn chưa được mục nào dùng làm
+//     cổng quyền; "Kiểm kê & hoàn trả" và "Dashboard tồn kho" cùng phạm vi «tồn kho thực tế» nên dùng chung
+//     khoá này là hợp lý nhất trong 6 khoá ĐÃ CÓ. (Phương án thay thế — dùng lại `inventory` — sẽ khiến 2 mục
+//     menu TRÙNG cổng quyền, phá yêu cầu "mỗi mục có cổng quyền riêng".)
+//   • `material_norms` (Định mức vật tư) là khoá THỨ 6 KHÔNG còn mục menu nào trỏ tới. Khoá vẫn SỐNG
+//     (nhánh render `active === "material_norms" && <MaterialNormsScreen …>` + quyền riêng của nó giữ nguyên);
+//     việc GIỮ hay BỎ lối vào menu của màn này là QUYẾT ĐỊNH CỦA NGƯỜI DÙNG — đã ghi ở `TASK-100.md` mục 8.
+// ─────────────────────────────────────────────────────────────────────────────
+type WarehouseMenuView = "dashboard";
+const warehouseMenuItems: { key: string; label: string; groupKey: "warehouse"; moduleKey: ModuleKey; permissionKeys: ModuleKey[]; view?: WarehouseMenuView }[] = [
+  { key: "warehouse_hub", label: "Kho", groupKey: "warehouse", moduleKey: "central_warehouse", permissionKeys: ["central_warehouse"] },
+  { key: "warehouse_inbound", label: "Nhập", groupKey: "warehouse", moduleKey: "warehouse_receipt", permissionKeys: ["warehouse_receipt"] },
+  { key: "warehouse_outbound", label: "Xuất", groupKey: "warehouse", moduleKey: "warehouse_issue", permissionKeys: ["warehouse_issue"] },
+  { key: "warehouse_transfer", label: "Điều chuyển", groupKey: "warehouse", moduleKey: "inventory", permissionKeys: ["inventory"] },
+  { key: "warehouse_dashboard", label: "Dashboard tồn kho", groupKey: "warehouse", moduleKey: "inventory", permissionKeys: ["stocktake"], view: "dashboard" },
+];
+// SÁU MỤC CŨ BỊ ẨN KHỎI MENU (`W-01`). Khoá vẫn sống: quyền, tiêu đề màn, tìm kiếm, nhánh render.
+const legacyWarehouseMenuKeys: ModuleKey[] = ["warehouse_receipt", "warehouse_issue", "inventory", "stocktake", "material_norms", "central_warehouse"];
+
+// PHASE 5 (`W-01`) — ĐÍCH ĐẾN THẬT của 5 mục nhóm KHO: mục «Dashboard tồn kho» mở **TAB** dashboard của màn
+// Tồn kho (`app/screens/Inventory.tsx`) — KHÔNG màn mới, KHÔNG route mới, KHÔNG khoá module mới. Bốn mục kia
+// giữ nguyên hành vi cũ nên hàm này trả `null` cho chúng (đúng cách `workCenterViewFor` đang làm với `T-01`).
+function warehouseMenuViewFor(view: WarehouseMenuView | null, active: ModuleKey): WarehouseMenuView | null {
+  if (view === "dashboard" && active === "inventory") return "dashboard";
+  return null;
+}
+
 // KP #96 (18/09/2026) — ĐÃ DỌN "cây workspace theo dự án" (8 mục/dự án + khoá ngữ cảnh dự án).
 // Lý do: hai nhánh render treo trên một SENTINEL không bao giờ khớp — `configuredMenuGroups()` chỉ ghép từ
 // `menu_group_catalog` (12 nhóm thật, đo trên CẢ MySQL + SQLite) + bản fallback (12 nhóm), và nhóm
@@ -144,8 +186,11 @@ export {
   approvalCenterMenuKey,
   configuredMenuGroups,
   independentMenuKeys,
+  legacyWarehouseMenuKeys,
   legacyWorkMenuKeys,
   modules,
+  warehouseMenuItems,
+  warehouseMenuViewFor,
   workMenuItems,
 };
-export type { WorkMenuView };
+export type { WarehouseMenuView, WorkMenuView };
