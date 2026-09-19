@@ -14,6 +14,8 @@
 // Giữ NGUYÊN hành vi 3 tab cũ: `Việc của tôi` → Cá nhân · `Phòng ban / tổ đội` → Phòng ban · `KPI & báo cáo` → Báo cáo.
 // Tab «Báo cáo» TÁI DÙNG `ReportView` + `lib/report-catalog.ts` (nguồn `workItems`) — KHÔNG viết màn mới.
 // Mục menu «Giao việc» KHÔNG mở màn này: nó mở `DepartmentTaskWorkspace` (xem nhánh render trong `app/page.tsx`).
+//
+// PHASE 3 (`T-05`) — tab «Cá nhân»: BA NHÓM RIÊNG (của tôi · được giao · do tôi tạo), mỗi nhóm một bộ lọc + bộ đếm.
 
 import { DataTable, ListToolbar, PermissionGuard, StatusBadge } from "@/app/components/ui";
 import { ReportView } from "@/app/screens/ReportView";
@@ -28,11 +30,40 @@ import { useState } from "react";
 // PHASE 3 (`T-01`) — 5 TAB NHÓM «CÔNG VIỆC», ĐÚNG thứ tự đã chốt (5 mục menu ⇄ 5 tab).
 const WORK_TABS = ["Cá nhân", "Phòng ban", "Giao việc", "Dashboard", "Báo cáo"];
 const WORK_TAB_OF_VIEW: Record<WorkMenuView, number> = { personal: 0, department: 1, assign: 2, kpi: 3, reports: 4 };
-// Báo cáo CÔNG VIỆC dùng LẠI catalog chung (`R-05a/b/c`, nguồn `workItems`) — không khai báo định nghĩa mới.
+// Báo cáo CÔNG VIỆC dùng LẠI catalog chung (`R-05a/b/c`, nguồn `workItems`) — không khai định nghĩa mới.
 const WORK_REPORT_CATALOG = REPORT_CATALOG.filter((entry) => entry.source === "workItems");
+
+// -------------------------------------------------------------------------------------------------
+// T05-PURE-BEGIN
+// ── T-05 · BA NHÓM VIỆC CÁ NHÂN (khối thuần — test t05 TRÍCH RA và CHẠY, không chỉ đọc chữ) ──────
+//
+// HỢP ĐỒNG TÊN TRƯỜNG (ĐÃ ĐO bằng payload thật + SQL bootstrap, KHÔNG suy đoán) — `scripts/system-route.mjs`:
+//   `wi.assigned_to AS assignedTo`   · `ua.full_name AS assignedToName`   ⇒ NGƯỜI THỰC HIỆN
+//   `wi.assigned_by AS assignedBy`   · `ub.full_name AS assignedByName`   ⇒ NGƯỜI GIAO VIỆC
+// Bảng `work_items` (drizzle 0031 + Flyway V1) KHÔNG có cột "người tạo" riêng ⇒ «DO TÔI TẠO» = tôi là người GIAO
+// (`assignedBy`). Hai tên `assigneeUserId`/`assigneeName` KHÔNG tồn tại trong payload (xem
+// `tools/probe-work-item-field-contract.mjs` — cổng đã biến lỗi im lặng này thành bất biến).
+const PERSONAL_GROUPS = [
+  { key: "mine", label: "Của tôi", note: "Mọi việc đang mang tên tôi — gồm cả việc tôi tự tạo" },
+  { key: "assigned", label: "Được giao", note: "Người khác giao cho tôi (người giao khác tôi)" },
+  { key: "created", label: "Do tôi tạo", note: "Việc tôi giao/tạo (cho người khác hoặc cho chính tôi)" },
+];
+
+function personalWorkGroups(rows: Row[], myId: string) {
+  const mine = rows.filter((row) => String(row.assignedTo) === myId);
+  const assigned = mine.filter((row) => String(row.assignedBy) !== myId);
+  const created = rows.filter((row) => String(row.assignedBy) === myId);
+  return [
+    { ...PERSONAL_GROUPS[0], rows: mine, count: mine.length },
+    { ...PERSONAL_GROUPS[1], rows: assigned, count: assigned.length },
+    { ...PERSONAL_GROUPS[2], rows: created, count: created.length },
+  ];
+}
+// T05-PURE-END
 
 function WorkCenter({ data, action, refresh, view = "personal" }: { data: AppData; action: (name: string, payload: Row) => Promise<boolean>; refresh: () => void; view?: WorkMenuView }) {
   const [tab, setTab] = useState(WORK_TAB_OF_VIEW[view]);
+  const [personalGroup, setPersonalGroup] = useState("mine");
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState(false);
   const me = data.user || {};
@@ -44,13 +75,16 @@ function WorkCenter({ data, action, refresh, view = "personal" }: { data: AppDat
   const canAssign = modulePermission(data, "dept_plan_assign").canCreate || modulePermission(data, "dept_project_assign").canCreate;
   const isOverseer = isAdminUser(me) || ["director", "commander"].includes(roleBase(me));
 
-  const myDepts = [...new Set([String(me.organizationCode || ""), "CN"].filter(Boolean))];
-  const activeMemberIds = [...new Set((data.teamMembers || []).filter((m) => Number(m.active ?? 1) === 1).map((m) => String(m.userId)))];
   // ⚠️ HỢP ĐỒNG TÊN TRƯỜNG (đã đo bằng bootstrap THẬT, không suy đoán): dòng `workItems` của payload do
   // `work_items` sinh ra mang tên **`assignedTo`/`assignedToName`** (`scripts/system-route.mjs` — `wi.assigned_to AS assignedTo`,
-  // `ua.full_name AS assignedToName`). Trước đây màn này đọc `assigneeUserId`/`assigneeName` — HAI TÊN KHÔNG TỒN TẠI
-  // ⇒ `mine`/`teamWork` LUÔN rỗng và tab "Việc của tôi" LUÔN 0 việc (lỗi im lặng: `tsc` xanh vì `Row` là chỉ mục mở).
-  const mine = items.filter((r) => String(r.assignedTo) === myId);
+  // `ua.full_name AS assignedToName`). Trước đây màn này đọc tên KHÔNG TỒN TẠI ⇒ `mine`/`teamWork` LUÔN rỗng và tab
+  // "Việc của tôi" LUÔN 0 việc (lỗi im lặng: `tsc` xanh vì `Row` là chỉ mục mở). Nay `T-05` gom luật vào một
+  // khối thuần ở đầu tệp và ĐÃ CÓ TEST CHẠY THẬT nó.
+  const personalGroups = personalWorkGroups(items, myId);
+  const personalRows: Row[] = personalGroups.find((group) => group.key === personalGroup)?.rows || [];
+  const mine = personalGroups[0].rows;
+  const myDepts = [...new Set([String(me.organizationCode || ""), "CN"].filter(Boolean))];
+  const activeMemberIds = [...new Set((data.teamMembers || []).filter((m) => Number(m.active ?? 1) === 1).map((m) => String(m.userId)))];
   const deptWork = items.filter((r) => String(r.assignedTo) !== myId && myDepts.includes(String(r.departmentCode || "")));
   const teamWork = items.filter((r) => String(r.assignedTo) !== myId && activeMemberIds.includes(String(r.assignedTo)));
 
@@ -99,6 +133,15 @@ function WorkCenter({ data, action, refresh, view = "personal" }: { data: AppDat
         <Kpi icon="QH" label="Quá hạn" value={String(mine.filter(isTaskLate).length)} note="Cần xử lý trước" tone="red"/>
         <Kpi icon="TL" label="Tỉ lệ hoàn thành" value={`${workRate(mine)}%`} note="Trên việc được giao" tone="green"/>
       </div>
+      <section className="card">
+        <CardHead title="Ba nhóm việc cá nhân" note="T-05 — mỗi nhóm có BỘ LỌC và BỘ ĐẾM riêng: «Của tôi» (assignedTo = tôi) · «Được giao» (assignedTo = tôi VÀ assignedBy ≠ tôi) · «Do tôi tạo» (assignedBy = tôi)"/>
+        <div className="project-scope-tabs" role="tablist" aria-label="Nhóm việc cá nhân">
+          {personalGroups.map((group) => <button key={group.key} type="button" role="tab" aria-selected={personalGroup === group.key}
+            className={personalGroup === group.key ? "active" : ""} data-personal-group={group.key}
+            onClick={() => setPersonalGroup(group.key)}>{group.label} · {group.rows.length}</button>)}
+        </div>
+        <p className="muted">{personalGroups.find((group) => group.key === personalGroup)?.note}</p>
+      </section>
       {canSelf && <section className="card">
         <CardHead title="Tự tạo việc cho bản thân" note="Việc cá nhân (mã CN) không gắn nghiệp vụ nguồn và không lẫn vào việc phòng ban"/>
         <form onSubmit={(e) => { e.preventDefault(); const f = e.currentTarget; const fd = new FormData(f);
@@ -116,8 +159,8 @@ function WorkCenter({ data, action, refresh, view = "personal" }: { data: AppDat
         </form>
       </section>}
       <section className="card">
-        <CardHead title="Danh sách việc của tôi" note="Cập nhật tiến độ và đánh dấu hoàn thành ngay tại đây"/>
-        <TaskTable rows={find(mine)} allowEdit projCode={projCode} busy={busy} send={send}/>
+        <CardHead title="Danh sách việc của tôi" note={`Nhóm đang chọn: «${personalGroups.find((group) => group.key === personalGroup)?.label}» (${personalRows.length} việc) — cập nhật tiến độ và đánh dấu hoàn thành ngay tại đây`}/>
+        <TaskTable rows={find(personalRows)} allowEdit projCode={projCode} busy={busy} send={send}/>
       </section>
     </div>}
 
