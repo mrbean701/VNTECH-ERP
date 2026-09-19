@@ -1,4 +1,13 @@
-// GĐ5 — Kiểm chứng màn TỔ ĐỘI: danh sách + chi tiết 3 tab (Tổng quan / Thành viên / Đơn từ).
+// PHASE 6 (`TM-01`…`TM-05`) — Kiểm chứng màn TỔ ĐỘI: danh sách 6 cột + chi tiết 6 tab.
+//
+// HỢP ĐỒNG (nguyên văn `docs/25_TODO_ROADMAP.md`):
+//   `TM-01` danh sách «mã · tên · trạng thái · thành viên · dự án · hoạt động gần nhất»
+//   `TM-02` thứ tự «ĐANG HOẠT ĐỘNG → hoạt động gần nhất ↓ → ngừng»
+//   `TM-03` chi tiết «thông tin · nhân sự · dự án · kho · cấp phát · lịch sử»
+//
+// ⚠️ BẢN BUILD ĐANG PHỤC VỤ có thể CŨ HƠN nguồn (đợt PHASE 6 KHÔNG được phép `npm run build`): khi đó cổng này
+// báo HỎNG ở các mục cấu trúc mới và ĐÓ LÀ ĐÚNG — hãy dựng lại bundle rồi chạy lại. Cổng ghi rõ
+// `data-bundle` để phân biệt «nguồn sai» với «bundle chưa dựng lại».
 //
 //   node tools/probe-team-screen.mjs [base] [user] [pass]
 import { spawn, spawnSync } from "node:child_process";
@@ -49,8 +58,14 @@ await send("Page.navigate", { url: BASE });
 await sleep(7000);
 
 console.log("═".repeat(74));
-console.log("  GĐ5 — TỔ ĐỘI: DANH SÁCH + CHI TIẾT");
+console.log("  PHASE 6 — TỔ ĐỘI: DANH SÁCH 6 CỘT + CHI TIẾT 6 TAB");
 console.log("═".repeat(74));
+// Ghi rõ BUNDLE đang phục vụ (đợt PHASE 6 KHÔNG được phép `npm run build`) — nếu cấu trúc mới HỎNG thì đọc dòng
+// này để phân biệt «nguồn sai» với «bundle chưa dựng lại».
+const bundle = await ev(`(()=>{const s=[...document.querySelectorAll('script[src]')].map(x=>x.getAttribute('src')).filter(Boolean);
+  return s.filter(x=>/page|index|main/.test(x)).slice(0,4).join(' · ');})()`);
+console.log(`▸ Bundle đang phục vụ: ${bundle || "(không đọc được)"}`);
+console.log("   Nếu các mục TM-01/TM-03 HỎNG mà nguồn đã đúng ⇒ bundle CŨ, cần dựng lại rồi chạy lại cổng này.");
 
 console.log("\n▸ Mở màn Tổ đội");
 // Module `teams` nằm ở nhóm menu TỔ ĐỘI (theo groupKey trong DB module_catalog).
@@ -83,14 +98,22 @@ const listInfo = JSON.parse(await ev(`(()=>{
   if(!root) return JSON.stringify({found:false});
   const t=root.querySelector('.table-wrap table');
   const heads=t?[...t.querySelectorAll('thead th')].map(x=>x.textContent.trim()):[];
+  const sortNote=root.querySelector('[data-team-sort-note="TM-02"]');
+  const srcNote=root.querySelector('[data-team-source-notes="TM-01"]');
   return JSON.stringify({found:true, heads, rows:t?t.querySelectorAll('tbody tr').length:0,
-    hasSearch: !!root.querySelector('input[placeholder*="Tìm"]')});
+    hasSearch: !!root.querySelector('input[placeholder*="Tìm"]'),
+    sortNote: sortNote?sortNote.textContent.trim():'', srcNote: srcNote?srcNote.textContent.trim():''});
 })()`));
-console.log("   " + JSON.stringify(listInfo).slice(0, 300));
+console.log("   " + JSON.stringify(listInfo).slice(0, 420));
 check("Màn Tổ đội render (.team-management)", listInfo.found === true);
-check("Có cột 'Thành viên'", (listInfo.heads || []).some((h) => /thành viên/i.test(h)), (listInfo.heads || []).join(" | "));
-check("Có cột 'Dự án'", (listInfo.heads || []).some((h) => /dự án/i.test(h)));
+// `TM-01` — ĐÚNG 6 CỘT (đếm cả cột HÀNH ĐỘNG nếu có ⇒ kiểm theo NHÃN, không theo số cột thô).
+const REQUIRED_COLUMNS = ["Mã tổ đội", "Tên tổ đội", "Trạng thái", "Thành viên", "Dự án", "Hoạt động gần nhất"];
+for (const header of REQUIRED_COLUMNS) check(`Danh sách có cột «${header}»`, (listInfo.heads || []).some((h) => h === header), (listInfo.heads || []).join(" | "));
 check("Có ô tìm kiếm", listInfo.hasSearch === true);
+// `TM-02` — quy tắc ưu tiên phải HIỆN RA cho người dùng.
+check("Có ghi chú quy tắc sắp xếp (TM-02)", /ĐANG HOẠT ĐỘNG/.test(listInfo.sortNote || "") && /ngừng/.test(listInfo.sortNote || ""), listInfo.sortNote);
+// Không bịa số: khi payload thiếu nguồn thành viên thì phải có chữ «chưa có nguồn».
+check("Có khối GHI NGUỒN của danh sách (TM-01)", (listInfo.srcNote || "").length > 20, (listInfo.srcNote || "").slice(0, 160));
 
 console.log("\n▸ Mở chi tiết tổ đội");
 const clicked = await ev(`(()=>{const b=[...document.querySelectorAll('.team-management tbody button')].find(x=>/chi tiết/i.test(x.textContent));
@@ -112,29 +135,41 @@ check("Chi tiết có 3 tab", (det.tabs || []).length === 3, (det.tabs || []).jo
 for (const t of ["Tổng quan", "Thành viên"]) check(`Có tab "${t}"`, (det.tabs || []).some((x) => x.includes(t)));
 check("Có tab Đơn từ", (det.tabs || []).some((x) => /đơn từ/i.test(x)), (det.tabs || []).join(" · "));
 check("Có nút quay lại", det.hasBack === true);
+// `TM-03` — ĐÚNG 6 TAB, đúng thứ tự nguyên văn. Nhãn có thể kèm ` (n)` khi tab có nguồn ⇒ so bằng `includes`.
+const REQUIRED_TABS = ["Thông tin", "Nhân sự", "Dự án", "Kho", "Cấp phát", "Lịch sử"];
+check("Chi tiết có ĐÚNG 6 tab (TM-03)", (det.tabs || []).length === 6, (det.tabs || []).join(" · "));
+for (const [index, label] of REQUIRED_TABS.entries()) {
+  check(`Tab thứ ${index + 1} là «${label}»`, String((det.tabs || [])[index] || "").includes(label), String((det.tabs || [])[index] || "(không có)"));
+}
 
 console.log("\n▸ Mở từng tab");
 if (!det.found) {
   check("Bỏ qua mở tab vì chi tiết chưa mở được", false, "chi tiết không render");
 } else {
-for (const [i, label] of ["Tổng quan", "Thành viên", "Đơn từ"].entries()) {
+for (const [i, label] of REQUIRED_TABS.entries()) {
   const r = await ev(`(()=>{const bs=[...document.querySelectorAll('.team-management .project-scope-tabs button')];
     if(!bs[${i}]) return 'NO_TAB'; bs[${i}].click(); return 'OK';})()`);
   await sleep(1300);
   const info = JSON.parse(await ev(`(()=>{const root=document.querySelector('.team-management');
     if(!root) return JSON.stringify({tables:0,rows:0,kpis:0});
     return JSON.stringify({tables:root.querySelectorAll('.table-wrap table').length,
-      rows:root.querySelectorAll('.table-wrap tbody tr').length, kpis:root.querySelectorAll('.kpi').length});})()`));
+      rows:root.querySelectorAll('.table-wrap tbody tr').length, kpis:root.querySelectorAll('.kpi').length,
+      noSource:/chưa có nguồn/.test(root.textContent||'')});})()`));
+  // Tab thiếu nguồn KHÔNG được coi là HỎNG: hợp đồng cho phép hiện «chưa có nguồn» + lý do.
   check(`Tab "${label}" mở được`, r === "OK", JSON.stringify(info));
 }
 
-// tab Thành viên có cột ngày tham gia / ngày rời không
+// Tab «Nhân sự» (chỉ số 1) — nếu payload CÓ nguồn `teamMembers` thì bảng phải có cột ngày tham gia / ngày rời;
+// nếu KHÔNG có nguồn (stack JS) thì phải thấy chữ «chưa có nguồn» — cả hai đều là kết quả ĐÚNG của hợp đồng.
 await ev(`(()=>{const bs=[...document.querySelectorAll('.team-management .project-scope-tabs button')]; if(bs[1]) bs[1].click(); return 1;})()`);
 await sleep(1200);
-const memHeads = JSON.parse(await ev(`(()=>{const t=document.querySelector('.team-management .table-wrap table');
-  return JSON.stringify(t?[...t.querySelectorAll('thead th')].map(x=>x.textContent.trim()):[]);})()`));
-check("Tab Thành viên có cột 'Ngày tham gia'", (memHeads || []).some((h) => /ngày tham gia/i.test(h)), (memHeads || []).join(" | "));
-check("Tab Thành viên có cột 'Ngày rời'", (memHeads || []).some((h) => /ngày rời/i.test(h)));
+const staffTab = JSON.parse(await ev(`(()=>{const root=document.querySelector('.team-management');
+  const t=root?root.querySelector('.table-wrap table'):null;
+  return JSON.stringify({heads:t?[...t.querySelectorAll('thead th')].map(x=>x.textContent.trim()):[],
+    noSource:/chưa có nguồn/.test(root?root.textContent||'':'')});})()`));
+const hasSource = (staffTab.heads || []).some((h) => /ngày tham gia/i.test(h));
+check("Tab Nhân sự: CÓ nguồn ⇒ có cột 'Ngày tham gia' / KHÔNG nguồn ⇒ hiện «chưa có nguồn»",
+  hasSource || staffTab.noSource === true, JSON.stringify(staffTab));
 }
 
 console.log("\n" + "═".repeat(74));
