@@ -1622,3 +1622,31 @@ pm test | **EXIT 0** ✔ |
 *(Ngoài ra  1-dashboard tablet có 20 px thoáng qua rồi về 0 ⇒ nhiễu chụp, không phải lệch thật.)*
 **BÀI HỌC ĐƯỢC XÁC NHẬN LẦN 2:** màn **17-modal-po nhạy theo NGÀY** ⇒ **sang ngày khác cổng ảnh sẽ báo lệch lại đúng vùng đó** ⇒ khi đó **kiểm --locate để xác nhận là phần tử ngày** rồi mới kết luận.
 **TIẾP THEO:** chạy khô tách **ProjectTeams** (nay isAdminUser đã ở module ⇒ hết chặn).
+
+### 38. ✅ [U-11 bước 3] TÁCH **3 MÀN** RA pp/screens/ — 	sc 0 · 
+pm test 0 · ảnh 60/64 (4 ảnh = nhiễu NGÀY) (19/09)
+**Đã tách (công cụ dự án, chạy khô TRƯỚC khi ghi — cả 3 đều được chấp nhận):**
+| Màn | Dòng | Tệp mới | Import công cụ tự sinh |
+|---|---|---|---|
+| **ProjectTeams** | 15 | pp/screens/ProjectTeams.tsx | isAdminUser (permissions) + CardHead, Empty, NavIcon, UI_TODAY, date, money + FormEvent |
+| **MaterialListTable** | **86** | pp/screens/MaterialListTable.tsx | isAdminUser + CardHead + useState |
+| **SupplierManager** | 7 | pp/screens/SupplierManager.tsx | isAdminUser, roleBase + CardHead, Empty + FormEvent |
+* git diff --stat app/page.tsx ⇒ **3 insertions(+), 108 deletions(-)** ⇒ page.tsx **3404 → 3299 dòng**.
+**BẰNG CHỨNG:** 
+px tsc --noEmit **0** · 
+pm test **0** · **cổng ảnh 60/64   px**.
+**4 ảnh lệch = 17-modal-po với CON SỐ Y HỆT lượt trước** (181/170/185/109 px tại (704,192)/(64,192)/(0,192)) ⇒ **nhiễu theo NGÀY** (phần tử ".purchase-cumulative-head"), **KHÔNG đổi bởi refactor** ⇒ refactor **không ảnh hưởng giao diện** ✔
+**BẢN ĐỒ CHẶN CHO CÁC MÀN CÒN LẠI (công cụ in chính xác, rất giá trị):**
+| Ứng viên | Phải chuyển TRƯỚC |
+|---|---|
+| ReceiptDrawer | **FileUpload**, SupplyExportButtons, eceiptSupplyDocument, poSupplyDocument |
+| RequestDrawer | stageAllowedForUser, statusLabel, pprovalTiming, workflowTiming, **FileUpload**, savedRequestDocument, decide |
+| WorkflowModal | workflowApproverCandidates, configuredModules, **BaseModal** |
+| WorkCenter | isTaskLate, workRate, TaskTable |
+| BoqControl | withBoqGroupContext, useResizableColumnWidths, mapBoqRows, BoqExportButtons, oqCellValue |
+| Stocktake | eportRows, eportExport |
+| Requests | statusLabel |
+**ĐÃ CHẠY KHÔ (đọc-only) VÀ ĐƯỢC CHẤP NHẬN:** FileUpload,BaseModal → lib/ui-blocks.tsx (2 khối, 4 dòng) · FileUpload riêng · BaseModal riêng ⇒ **có thể chuyển ngay** ⇒ **gỡ chặn RequestDrawer + WorkflowModal**.
+**CÁCH LÀM ĐANG ÁP DỤNG (vòng lặp hội tụ):** chuyển **helper** → **gỡ chặn màn** → tách màn → lặp lại. **Mỗi bước:** --dry ⇒ áp dụng ⇒ **	sc 0** ⇒ **cổng ảnh** ⇒ 
+pm test 0 ⇒ commit.
+**LƯU Ý VẬN HÀNH (mới):** theo yêu cầu người dùng, **chạy cổng ảnh ở NỀN** và **làm việc khác song song** — nhưng **vẫn KHÔNG ghi tệp nguồn trong lúc cổng ảnh chạy** (tránh nhiễm ảnh); việc song song phải là **ĐỌC** (chạy khô, khảo sát) hoặc **ghi tài liệu** (không được app phục vụ).
