@@ -2176,3 +2176,12 @@ CANH BAO TRUNG THUC: bundle dang PHUC VU van la ban build co 3 tab (VNTECH-FP-7C
 KHONG DUNG DEN (khong phai P-01): 4 bao cao audit A-13/A-14/A-15/A-16 va T-02 (PHASE 3) van giu nguyen; cac phase da dong
   (0/0B/1/8/9) khong doi.
 TRANG THAI: TAM DUNG moi task moi cho toi khi co lenh tiep theo.
+
+### 63. BUILD LAI CHO KHOP MA NGUON SAU ROLLBACK P-01 (20/09)
+CHI DAO: "build lai cho khop" => da chay dung quy trinh: dung UI :8787 + proxy :9000 THEO PID => gd-cycle "ROLLBACK-P-01-KHOP-MA-NGUON".
+KET QUA: FULL W2 SOURCE PREFLIGHT DAT · VNTECH FINGERPRINT DAT · VNTECH-FP-21B083DFBC3F8CB9 (source 329 files) ·
+  Build complete · BUILT ARTIFACT VALIDATION DAT · (.local-data da khoi phuc) · GD-CYCLE EXIT = 0.
+DICH DANH MOI: VNTECH-FP-21B083DFBC3F8CB9 (thay VNTECH-FP-7CBCBA75FC20E691 cua ban build CO 3 tab) => bundle hien tai KHONG con 3 tab.
+DUNG LAI DICH VU: UI :8787 = 200 · proxy :9000 = 200 · Java :18081 = 200.
+BANG CHUNG BUNDLE DOI: asset phuc vu la /assets/index-D74SrlKN.css + /assets/layout-segment-context-CEziAB0O.js.
+CONG ANH: chay nen (job) de do 17 man x 4 = 68 anh (lan chay truoc bi harness cat o 600s).
