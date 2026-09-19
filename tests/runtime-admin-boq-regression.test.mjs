@@ -268,7 +268,7 @@ sqlite.close();
 
 
 test("Built UI contract dùng marker ổn định cho rule loại heading khỏi matching", async () => {
-  const page = await readFile("app/page.tsx", "utf8");
+  const page = await readUiSource();
   const verifier = await readFile("scripts/verify-built-ui-contract.mjs", "utf8");
   assert.match(page, /data-contract="VNTECH_BOQ_HEADING_MATCHING_EXCLUSION_V1"/);
   assert.match(verifier, /VNTECH_BOQ_HEADING_MATCHING_EXCLUSION_V1/);
