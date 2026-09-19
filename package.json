@@ -20,7 +20,7 @@
     "local:backup": "bash scripts/local-backup.sh",
     "test:workflow": "node --import tsx tests/workflow-direct.test.ts",
     "test:work-item": "node --import tsx tests/work-item-comment-participant.test.ts",
-    "test:regression": "node --import tsx --test tests/mobile-menu-interaction.test.mjs tests/project-navigation-consolidation.test.mjs tests/runtime-admin-boq-regression.test.mjs tests/w2-admin-import-role-org.test.mjs tests/trust-lock-foundation.test.mjs tests/security-regression.test.mjs tests/pr01-project-tabs.test.mjs tests/boq-native-import.test.ts tests/boq-dynamic-template.test.ts tests/work-item-comment-participant.test.ts",
+    "test:regression": "node --import tsx --test tests/mobile-menu-interaction.test.mjs tests/project-navigation-consolidation.test.mjs tests/runtime-admin-boq-regression.test.mjs tests/w2-admin-import-role-org.test.mjs tests/trust-lock-foundation.test.mjs tests/security-regression.test.mjs tests/pr01-project-tabs.test.mjs tests/work-item-comment-participant.test.ts tests/boq-native-import.test.ts tests/boq-dynamic-template.test.ts tests/work-item-comment-participant.test.ts",
     "test:local-runtime": "node scripts/local-self-test.mjs",
     "test:email": "node tests/email-dispatcher.test.mjs",
     "verify:fingerprint": "node scripts/verify-vntech-fingerprint.mjs",
