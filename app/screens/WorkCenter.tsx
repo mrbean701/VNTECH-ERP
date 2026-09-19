@@ -8,15 +8,31 @@
 // tham chiếu phải thuộc (a) khối cùng nằm trong tệp này, (b) tên có sẵn của JS, (c) tên đến từ `import` của
 // `page.tsx` — công cụ SINH LẠI import đó ở đây, hoặc (d) kiểu của React ⇒ `import type … from "react"`.
 // Không còn tên nào khác ⇒ KHÔNG thể tạo import vòng.
+//
+// PHASE 3 (`T-01`) — MÀN CÔNG VIỆC: 5 TAB ĐÚNG THỨ TỰ CỦA NHÓM MENU «CÔNG VIỆC»
+//   Cá nhân (0) · Phòng ban (1) · Giao việc (2) · Dashboard (3) · Báo cáo (4)
+// Giữ NGUYÊN hành vi 3 tab cũ: `Việc của tôi` → Cá nhân · `Phòng ban / tổ đội` → Phòng ban · `KPI & báo cáo` → Báo cáo.
+// Tab «Báo cáo» TÁI DÙNG `ReportView` + `lib/report-catalog.ts` (nguồn `workItems`) — KHÔNG viết màn mới.
+// Mục menu «Giao việc» KHÔNG mở màn này: nó mở `DepartmentTaskWorkspace` (xem nhánh render trong `app/page.tsx`).
 
 import { DataTable, ListToolbar, PermissionGuard, StatusBadge } from "@/app/components/ui";
+import { ReportView } from "@/app/screens/ReportView";
 import { daysFromToday } from "@/lib/date-helpers";
+import type { WorkMenuView } from "@/lib/menu-helpers";
 import { isAdminUser, modulePermission, roleBase } from "@/lib/permissions";
+import { REPORT_CATALOG, findEntry, sourceRows } from "@/lib/report-catalog";
 import { CardHead, Kpi, UI_TODAY, WORK_CLOSED, WORK_STATUS_LABELS, date } from "@/lib/ui-shared";
 import type { AppData, Row } from "@/lib/ui-shared";
 import { useState } from "react";
-function WorkCenter({ data, action, refresh }: { data: AppData; action: (name: string, payload: Row) => Promise<boolean>; refresh: () => void }) {
-  const [tab, setTab] = useState(0);
+
+// PHASE 3 (`T-01`) — 5 TAB NHÓM «CÔNG VIỆC», ĐÚNG thứ tự đã chốt (5 mục menu ⇄ 5 tab).
+const WORK_TABS = ["Cá nhân", "Phòng ban", "Giao việc", "Dashboard", "Báo cáo"];
+const WORK_TAB_OF_VIEW: Record<WorkMenuView, number> = { personal: 0, department: 1, assign: 2, kpi: 3, reports: 4 };
+// Báo cáo CÔNG VIỆC dùng LẠI catalog chung (`R-05a/b/c`, nguồn `workItems`) — không khai báo định nghĩa mới.
+const WORK_REPORT_CATALOG = REPORT_CATALOG.filter((entry) => entry.source === "workItems");
+
+function WorkCenter({ data, action, refresh, view = "personal" }: { data: AppData; action: (name: string, payload: Row) => Promise<boolean>; refresh: () => void; view?: WorkMenuView }) {
+  const [tab, setTab] = useState(WORK_TAB_OF_VIEW[view]);
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState(false);
   const me = data.user || {};
@@ -49,8 +65,21 @@ function WorkCenter({ data, action, refresh }: { data: AppData; action: (name: s
   }
   const projCode = (id: unknown) => (data.projects || []).find((p) => String(p.id) === String(id))?.code || "—";
 
-
-  const TABS = [`Việc của tôi (${mine.length})`, `Phòng ban / tổ đội (${deptWork.length + teamWork.length})`, "KPI & báo cáo"];
+  // PHASE 3 (`T-01`) — số liệu dùng CHUNG cho tab «Dashboard» (3) và tab «Báo cáo» (4):
+  // CEO/admin/ban lãnh đạo thấy TOÀN BỘ; người khác chỉ thấy phòng mình.
+  const kpiScope = isOverseer ? users : users.filter((u) => myDepts.includes(String(u.organizationCode || "")));
+  const kpiMonth = UI_TODAY.slice(0, 7);
+  const kpiRows = kpiScope.map((u) => {
+    const own = items.filter((r) => String(r.assignedTo) === String(u.id));
+    const inMonth = own.filter((r) => String(r.completedAt || r.createdAt || "").slice(0, 7) === kpiMonth);
+    return { u, total: own.length, done: own.filter((r) => String(r.status) === "COMPLETED").length,
+      late: own.filter(isTaskLate).length, rate: workRate(own),
+      mTotal: inMonth.length, mDone: inMonth.filter((r) => String(r.status) === "COMPLETED").length };
+  }).filter((r) => isOverseer || r.total > 0).sort((a, b) => b.rate - a.rate || b.total - a.total);
+  const kpiByDept = [...new Set(users.map((u) => String(u.organizationCode || u.department || "")).filter(Boolean))]
+    .map((code) => { const own = items.filter((r) => String(r.departmentCode || "") === code);
+      return { code, total: own.length, rate: workRate(own) }; })
+    .filter((r) => r.total > 0).sort((a, b) => b.total - a.total);
 
   return <div className="stack work-center">
     <section className="card">
@@ -60,7 +89,7 @@ function WorkCenter({ data, action, refresh }: { data: AppData; action: (name: s
         search={{ value: q, onChange: setQ, placeholder: "Tìm mã việc, nội dung, người làm…" }}
       />
       <div className="project-scope-tabs" role="tablist">
-        {TABS.map((label, i) => <button key={label} type="button" role="tab" aria-selected={tab === i} className={tab === i ? "active" : ""} onClick={() => setTab(i)}>{label}</button>)}
+        {WORK_TABS.map((label, i) => <button key={label} type="button" role="tab" aria-selected={tab === i} className={tab === i ? "active" : ""} onClick={() => setTab(i)}>{label}</button>)}
       </div>
     </section>
 
@@ -93,8 +122,19 @@ function WorkCenter({ data, action, refresh }: { data: AppData; action: (name: s
     </div>}
 
     {tab === 1 && <div className="stack">
+      <section className="card">
+        <CardHead title="Việc phòng ban của tôi" note="Nhiệm vụ thuộc phòng mà tài khoản trực thuộc"/>
+        <TaskTable rows={find(deptWork)} allowEdit={false} projCode={projCode} busy={busy} send={send}/>
+      </section>
+      <section className="card">
+        <CardHead title="Việc của tổ đội tôi tham gia" note="Thành viên tổ đội đang hoạt động"/>
+        <TaskTable rows={find(teamWork)} allowEdit={false} projCode={projCode} busy={busy} send={send}/>
+      </section>
+    </div>}
+
+    {tab === 2 && <div className="stack">
       {canAssign && <section className="card">
-        <CardHead title="Giao việc cho nhân viên" note="Chỉ Trưởng phòng hoặc Quản trị viên giao được việc thủ công — backend chặn bằng userIsDepartmentManager"/>
+        <CardHead title="Giao việc cho nhân viên" note="Chỉ Trưởng phòng hoặc Quản trị viên giao được việc thủ công — backend chặn bằng userIsDepartmentManager. Bàn giao chi tiết (hồ sơ · dòng thời gian · đổi trạng thái) nằm ở mục «Giao việc» của menu."/>
         <form onSubmit={(e) => { e.preventDefault(); const f = e.currentTarget; const fd = new FormData(f);
           void send("create_work_item", { departmentCode: fd.get("departmentCode"), title: fd.get("title"), description: fd.get("description"),
             projectId: fd.get("projectId"), assignedTo: fd.get("assignedTo"), dueAt: fd.get("dueAt"),
@@ -111,49 +151,36 @@ function WorkCenter({ data, action, refresh }: { data: AppData; action: (name: s
           <PermissionGuard allow={canAssign}><div className="row-actions"><button className="primary" disabled={busy}>＋ Giao việc</button></div></PermissionGuard>
         </form>
       </section>}
+      {!canAssign && <section className="card">
+        <CardHead title="Giao việc cho nhân viên" note="Tài khoản của bạn chưa có quyền tạo việc (canCreate) ở module giao việc — liên hệ Trưởng phòng hoặc Quản trị hệ thống."/>
+      </section>}
+    </div>}
+
+    {tab === 3 && <div className="stack">
       <section className="card">
-        <CardHead title="Việc phòng ban của tôi" note="Nhiệm vụ thuộc phòng mà tài khoản trực thuộc"/>
-        <TaskTable rows={find(deptWork)} allowEdit={false} projCode={projCode} busy={busy} send={send}/>
-      </section>
-      <section className="card">
-        <CardHead title="Việc của tổ đội tôi tham gia" note="Thành viên tổ đội đang hoạt động"/>
-        <TaskTable rows={find(teamWork)} allowEdit={false} projCode={projCode} busy={busy} send={send}/>
+        <CardHead title="Dashboard công việc"
+          note={isOverseer ? "Phạm vi: TOÀN BỘ nhân sự (quyền CEO/Quản trị)" : "Phạm vi: phòng ban của bạn"}/>
+        <div className="kpi-grid small">
+          <Kpi icon="TC" label="Tỉ lệ chung" value={`${workRate(items)}%`} note={`${items.filter((r) => String(r.status) === "COMPLETED").length}/${items.length} nhiệm vụ`} tone="green"/>
+          <Kpi icon="QH" label="Đang quá hạn" value={String(items.filter(isTaskLate).length)} note="Trong phạm vi thấy được" tone="red"/>
+          <Kpi icon="NV" label="Nhân sự có việc" value={String(kpiRows.filter((r) => r.total > 0).length)} note={`${kpiRows.length} nhân sự trong phạm vi`} tone="blue"/>
+          <Kpi icon="TH" label={`Việc tháng ${kpiMonth}`} value={String(kpiRows.reduce((s, r) => s + r.mTotal, 0))} note={`${kpiRows.reduce((s, r) => s + r.mDone, 0)} đã hoàn thành`} tone="violet"/>
+        </div>
       </section>
     </div>}
 
-    {tab === 2 && (() => {
-      // CEO/admin/ban lãnh đạo thấy TOÀN BỘ; người khác chỉ thấy phòng mình.
-      const scope = isOverseer ? users : users.filter((u) => myDepts.includes(String(u.organizationCode || "")));
-      const month = UI_TODAY.slice(0, 7);
-      const rows = scope.map((u) => {
-        const own = items.filter((r) => String(r.assignedTo) === String(u.id));
-        const inMonth = own.filter((r) => String(r.completedAt || r.createdAt || "").slice(0, 7) === month);
-        return { u, total: own.length, done: own.filter((r) => String(r.status) === "COMPLETED").length,
-          late: own.filter(isTaskLate).length, rate: workRate(own),
-          mTotal: inMonth.length, mDone: inMonth.filter((r) => String(r.status) === "COMPLETED").length };
-      }).filter((r) => isOverseer || r.total > 0).sort((a, b) => b.rate - a.rate || b.total - a.total);
-      const byDept = [...new Set(users.map((u) => String(u.organizationCode || u.department || "")).filter(Boolean))]
-        .map((code) => { const own = items.filter((r) => String(r.departmentCode || "") === code);
-          return { code, total: own.length, rate: workRate(own) }; })
-        .filter((r) => r.total > 0).sort((a, b) => b.total - a.total);
-      return <div className="stack">
-        <section className="card">
-          <CardHead title="Tỉ lệ hoàn thành theo nhân viên"
-            note={isOverseer ? "Phạm vi: TOÀN BỘ nhân sự (quyền CEO/Quản trị)" : "Phạm vi: phòng ban của bạn"}/>
-          <div className="kpi-grid small">
-            <Kpi icon="TC" label="Tỉ lệ chung" value={`${workRate(items)}%`} note={`${items.filter((r) => String(r.status) === "COMPLETED").length}/${items.length} nhiệm vụ`} tone="green"/>
-            <Kpi icon="QH" label="Đang quá hạn" value={String(items.filter(isTaskLate).length)} note="Trong phạm vi thấy được" tone="red"/>
-            <Kpi icon="NV" label="Nhân sự có việc" value={String(rows.filter((r) => r.total > 0).length)} note={`${rows.length} nhân sự trong phạm vi`} tone="blue"/>
-            <Kpi icon="TH" label={`Việc tháng ${month}`} value={String(rows.reduce((s, r) => s + r.mTotal, 0))} note={`${rows.reduce((s, r) => s + r.mDone, 0)} đã hoàn thành`} tone="violet"/>
-          </div>
-          <DataTable rows={rows} rowKey={(r) => String(String(r.u.id))} columns={[{ key: "c1", header: "Nhân viên", render: (r) => <><strong>{r.u.fullName}</strong><small>{r.u.employeeCode || r.u.username || ""}</small></> }, { key: "c2", header: "Phòng ban", render: (r) => <>{r.u.organizationName || r.u.department || "—"}</> }, { key: "c3", header: "Chức vụ", render: (r) => <>{r.u.roleName || r.u.role || "—"}</> }, { key: "c4", header: "Tổng việc", render: (r) => <>{r.total}</> }, { key: "c5", header: "Hoàn thành", render: (r) => <><strong>{r.done}</strong></> }, { key: "c6", header: "Quá hạn", cellClassName: (r) => (r.late ? "red-text" : ""), render: (r) => <>{r.late}</> }, { key: "c7", header: "Tỉ lệ", render: (r) => <><div className="task-bar"><span><i style={{ width: `${r.rate}%` }} /></span><b>{r.rate}%</b></div></> }, { key: "c8", header: "Tháng này", render: (r) => <>{r.mDone}/{r.mTotal}</> }]} emptyText="Chưa có dữ liệu KPI." />
-        </section>
-        {isOverseer && <section className="card">
-          <CardHead title="KPI theo phòng ban" note="Chỉ CEO/Ban lãnh đạo/Quản trị hệ thống thấy toàn bộ"/>
-          <DataTable rows={byDept} rowKey={(d) => String(d.code)} columns={[{ key: "c1", header: "Phòng ban", render: (d) => <><strong>{d.code}</strong></> }, { key: "c2", header: "Tổng việc", render: (d) => <>{d.total}</> }, { key: "c3", header: "Tỉ lệ hoàn thành", render: (d) => <><div className="task-bar"><span><i style={{ width: `${d.rate}%` }} /></span><b>{d.rate}%</b></div></> }]} emptyText="Chưa có nhiệm vụ theo phòng ban." />
-        </section>}
-      </div>;
-    })()}
+    {tab === 4 && <div className="stack">
+      <section className="card">
+        <CardHead title="Tỉ lệ hoàn thành theo nhân viên"
+          note={isOverseer ? "Phạm vi: TOÀN BỘ nhân sự (quyền CEO/Quản trị)" : "Phạm vi: phòng ban của bạn"}/>
+        <DataTable rows={kpiRows} rowKey={(r) => String(String(r.u.id))} columns={[{ key: "c1", header: "Nhân viên", render: (r) => <><strong>{r.u.fullName}</strong><small>{r.u.employeeCode || r.u.username || ""}</small></> }, { key: "c2", header: "Phòng ban", render: (r) => <>{r.u.organizationName || r.u.department || "—"}</> }, { key: "c3", header: "Chức vụ", render: (r) => <>{r.u.roleName || r.u.role || "—"}</> }, { key: "c4", header: "Tổng việc", render: (r) => <>{r.total}</> }, { key: "c5", header: "Hoàn thành", render: (r) => <><strong>{r.done}</strong></> }, { key: "c6", header: "Quá hạn", cellClassName: (r) => (r.late ? "red-text" : ""), render: (r) => <>{r.late}</> }, { key: "c7", header: "Tỉ lệ", render: (r) => <><div className="task-bar"><span><i style={{ width: `${r.rate}%` }} /></span><b>{r.rate}%</b></div></> }, { key: "c8", header: "Tháng này", render: (r) => <>{r.mDone}/{r.mTotal}</> }]} emptyText="Chưa có dữ liệu KPI." />
+      </section>
+      {isOverseer && <section className="card">
+        <CardHead title="KPI theo phòng ban" note="Chỉ CEO/Ban lãnh đạo/Quản trị hệ thống thấy toàn bộ"/>
+        <DataTable rows={kpiByDept} rowKey={(d) => String(d.code)} columns={[{ key: "c1", header: "Phòng ban", render: (d) => <><strong>{d.code}</strong></> }, { key: "c2", header: "Tổng việc", render: (d) => <>{d.total}</> }, { key: "c3", header: "Tỉ lệ hoàn thành", render: (d) => <><div className="task-bar"><span><i style={{ width: `${d.rate}%` }} /></span><b>{d.rate}%</b></div></> }]} emptyText="Chưa có nhiệm vụ theo phòng ban." />
+      </section>}
+      <ReportView catalog={WORK_REPORT_CATALOG.map((entry) => entry.def)} rowsFor={(key) => sourceRows(findEntry(key)?.source ?? "workItems", data)} />
+    </div>}
   </div>;
 }
 

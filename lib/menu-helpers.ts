@@ -93,6 +93,27 @@ const modules: { key: ModuleKey; label: string; icon: string; groupKey?: string;
   { key: "admin", label: "Phân quyền & Cấu hình hệ thống", icon: "QT", groupKey: "system_admin" },
 ];
 
+// ─────────────────────────────────────────────────────────────────────────────
+// PHASE 3 (`T-01`) — NHÓM MENU «CÔNG VIỆC» TÁCH THÀNH 5 MỤC (PHƯƠNG ÁN A: không migration).
+//
+// VÌ SAO 5 MỤC NÀY KHAI BÁO TRONG CODE (không thêm dòng `module_catalog`): nhãn menu của khoá ĐÃ CÓ
+// trong `module_catalog` lấy từ DB (`configuredModules()`: `config?.label || item.label` — `lib/workflow-helpers.ts`),
+// nên muốn 5 nhãn «Cá nhân · Phòng ban · Giao việc · Dashboard · Báo cáo» thì PHẢI là 5 khoá MỚI KHÔNG có
+// `config` ⇒ lấy nhãn trong code. Bốn khoá `dept_*` cũ bị ẨN KHỎI MENU nhưng VẪN là khoá nghiệp vụ THẬT
+// (quyền · tiêu đề màn · tìm kiếm · thông báo · nhánh render) ⇒ mỗi mục menu chỉ ĐỔI ĐÍCH ĐẾN, không đổi màn.
+// ─────────────────────────────────────────────────────────────────────────────
+type WorkMenuView = "personal" | "department" | "assign" | "kpi" | "reports";
+const workMenuItems: { key: string; label: string; groupKey: "my_work"; view: WorkMenuView; permissionKeys: ModuleKey[] }[] = [
+  { key: "work_personal", label: "Cá nhân", groupKey: "my_work", view: "personal", permissionKeys: ["dept_plan_tasks", "dept_project_tasks"] },
+  { key: "work_department", label: "Phòng ban", groupKey: "my_work", view: "department", permissionKeys: ["dept_plan_assign", "dept_project_assign"] },
+  { key: "work_assign", label: "Giao việc", groupKey: "my_work", view: "assign", permissionKeys: ["dept_plan_assign", "dept_project_assign"] },
+  { key: "work_dashboard", label: "Dashboard", groupKey: "my_work", view: "kpi", permissionKeys: ["dept_plan_kpi", "dept_project_kpi"] },
+  { key: "work_reports", label: "Báo cáo", groupKey: "my_work", view: "reports", permissionKeys: ["dept_plan_alerts", "dept_project_alerts"] },
+];
+// BỐN MỤC CŨ BỊ ẨN KHỎI MENU (`T-01`). Khoá vẫn sống: quyền, tiêu đề, tìm kiếm, thông báo, nhánh render.
+// `approvals` («Trung tâm phê duyệt») CỐ Ý KHÔNG nằm ở đây — nó là mục thứ 6 của nhóm, do `T-10` tách riêng.
+const legacyWorkMenuKeys: ModuleKey[] = ["dept_plan_tasks", "dept_project_tasks", "dept_plan_assign", "dept_project_assign"];
+
 // KP #96 (18/09/2026) — ĐÃ DỌN "cây workspace theo dự án" (8 mục/dự án + khoá ngữ cảnh dự án).
 // Lý do: hai nhánh render treo trên một SENTINEL không bao giờ khớp — `configuredMenuGroups()` chỉ ghép từ
 // `menu_group_catalog` (12 nhóm thật, đo trên CẢ MySQL + SQLite) + bản fallback (12 nhóm), và nhóm
@@ -102,5 +123,8 @@ const modules: { key: ModuleKey; label: string; icon: string; groupKey?: string;
 
 export {
   configuredMenuGroups,
+  legacyWorkMenuKeys,
   modules,
+  workMenuItems,
 };
+export type { WorkMenuView };
