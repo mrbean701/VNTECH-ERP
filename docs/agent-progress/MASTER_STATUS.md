@@ -20,7 +20,7 @@
 | ĐANG LÀM | 1 | 0,9 % |
 | KHUNG XONG nhưng **ÁP DỤNG 0** | 0 | 0 % |
 | **BỊ CHẶN** (`**BLOCKED**` = F-01) | 1 | 0,9 % |
-| TODO | 46 | 41,8 % |
+| TODO | 43 | 39,1 % |
 
 | Phase | DONE / tổng | Ghi chú |
 |---|---|---|
