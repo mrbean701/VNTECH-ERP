@@ -204,6 +204,8 @@ const SCREENS = [
   //     lớp riêng ⇒ phải bấm theo NHÃN (`clickText`), và nút nằm ở **bước 2** của wizard Quản trị
   //     (`.permission-steps button:nth-child(2)`).
   { id: "17-modal-po", label: "Mua hàng & PO — modal phát hành PO", settleMs: 6000, steps: [{ group: "purchasing", child: 1 }, { click: ".purchase-action-bar button.primary" }] },
+  // R-01 (20/09) — MÀN BÁO CÁO DÙNG CHUNG (nav nhóm reports). Bằng chứng RUNTIME cho R-01.
+  { id: "19-report-center", label: "Báo cáo tổng hợp — màn dùng chung (R-01)", settleMs: 3000, steps: [{ group: "reports", child: 4 }], fullPage: true },
   { id: "18-modal-team-create", label: "Quản trị — modal tạo tổ đội dự án (bước 2)", steps: [{ group: "system_admin", child: 0 }, { click: ".permission-steps button:nth-child(2)" }, { clickText: "Thêm tổ đội" }] },
 ];
 

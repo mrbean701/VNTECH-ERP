@@ -2028,3 +2028,18 @@ VIEC KE TIEP (dung quy trinh build cua du an, da ghi o bo nho):
   4. Sau khi build: kiem nav co muc "Bao cao tong hop" => roi moi them man 19-report-center vao probe (index DUNG da do) => cong anh => anh chung minh.
   5. CHI KHI CO ANH CHUNG MINH moi danh dau R-01 DONE.
 BAI HOC: voi ung dung dang phuc vu ban BUILD, MOI bang chung runtime phai lam SAU khi build lai - neu khong se ket luan sai ve nguyen nhan.
+
+### 53. R-01 DONE => PHASE 9 = 1/5 · MASTER TASK 49/110 = 44,5 % (20/09)
+BANG CHUNG RUNTIME (sau khi build lai thanh cong):
+* Nav nhom reports: muc "Bao cao tong hop" nam o child=4 (do bang quet child 0..6 + DOC TIEU DE trang; dung --locate, KHONG tin nav=OK).
+* Tieu de trang that: "Bao cao tong hop" + ghi chu "Bao cao dung chung: Mua hang · Kho · Du an · ..." => dung man ReportView.
+* Chup anh chuan man 19-report-center: 4/4 kich thuoc (desktop 327KB, laptop 259KB, tablet 133KB, phone 95KB), nav=OK.
+* Kiem lai ngay sau: 4/4 DAT 0 px, EXIT 0.
+DUONG DI QUA 3 CONG BUILD (moi cong sua DUNG CHUAN, khong noi long phep kiem):
+1. Duong dan build dung: scripts/build-cross-platform.mjs (npm run build) - khong phai tools/.
+2. preflight: 3 marker BOQ da chuyen sang app/screens/BoqControl.tsx => chuyen viec kiem sang tep dich.
+3. preflight: chuoi "San luong" da o lib/menu-helpers.ts => MO RONG CLIENT_SOURCE_FILES (dung co che san co cua du an:
+   "chi doi PHAM VI DOC, khong noi long phep kiem").
+4. Fingerprint: refresh bang gd-cycle.mjs => VNTECH-FP-C04DCE32F9A98FB8 + drizzle moi 0148.
+5. EPERM rename .local-data => phai DUNG UI + proxy THEO PID truoc khi build.
+BAI HOC: khi app phuc vu BAN BUILD thi moi bang chung runtime phai lam SAU khi build lai; va khi cong bao loi thi PHAI kiem chinh cong do.

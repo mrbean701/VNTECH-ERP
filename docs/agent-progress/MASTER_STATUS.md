@@ -16,11 +16,11 @@
 
 | Phân loại (nguyên văn cột TT) | Số mục | % |
 |---|---|---|
-| **DONE** (`**DONE**` + `DONE` + `DONE / AP-DUNG n`) | **48** | **43,6 %** |
+| **DONE** (`**DONE**` + `DONE` + `DONE / AP-DUNG n`) | **49** | **44,5 %** |
 | ĐANG LÀM | 0 | 0 % |
 | KHUNG XONG nhưng **ÁP DỤNG 0** | 0 | 0 % |
 | **BỊ CHẶN** (`**BLOCKED**` = F-01) | 1 | 0,9 % |
-| TODO | 61 | 55,5 % |
+| TODO | 60 | 54,5 % |
 
 | Phase | DONE / tổng | Ghi chú |
 |---|---|---|
@@ -34,7 +34,7 @@
 | PHASE 6 — ĐỘI NHÓM | 0 / 6 | |
 | PHASE 7 — QUẢN TRỊ | 0 / 16 | |
 | PHASE 8 — WORKFLOW | **6 / 6** | ĐÓNG TRỌN (WF-01…WF-06 + nhánh B) |
-| PHASE 9 — BÁO CÁO | 0 / 5 | **ĐANG LÀM `R-01`**: engine `lib/report-engine.ts` (self-check 22/22) + màn `app/screens/ReportView.tsx` + **catalog 8 định nghĩa** (52/52) + đã nối nav `reports_center`; còn **bằng chứng runtime** |
+| PHASE 9 — BÁO CÁO | **1 / 5** | **`R-01` DONE** (20/09): engine `lib/report-engine.ts` (self-check 22/22) + màn `app/screens/ReportView.tsx` + **catalog 8 định nghĩa** (52/52) + nối nav `reports_center` + **build ĐẠT** + **ảnh chuẩn 4/4 ĐẠT** |
 | PHASE 10 — TƯƠNG LAI | 0 / 5 | 1 mục bị chặn (F-01) |
 
 **Phần KHÔNG cộng vào 110 mục — nhánh đang chạy thực tế:** TASK-048 → TASK-071 là **vá lỗi

@@ -208,7 +208,7 @@
 
 | ID | Module | Việc | Ưu tiên | Phụ thuộc | DB | API | UI | QUYỀN | TT |
 |---|---|---|---|---|---|---|---|---|---|
-| `R-01` | Báo cáo | Kiến trúc báo cáo dùng chung (không hard-code từng báo cáo) | P4 | U-02 | - | NEW | NEW | - | TODO |
+| `R-01` | Báo cáo | Kiến trúc báo cáo dùng chung (không hard-code từng báo cáo) | P4 | U-02 | - | NEW | NEW | - | **DONE / ENGINE + MAN DUNG CHUNG + 8 DINH NGHIA + ANH CHUAN 4/4** |
 | `R-02` | Báo cáo | Báo cáo Mua hàng: số lượng MR/PR/PO · chờ · xong · từ chối · thời gian xử lý | P4 | R-01 | - | - | NEW | - | TODO |
 | `R-03` | Báo cáo | Báo cáo Kho: tồn theo kho · giá trị · sắp hết · nhập/xuất | P4 | R-01 | - | - | NEW | - | TODO |
 | `R-04` | Báo cáo | Báo cáo Dự án: trạng thái · thành viên · số tổ đội · số kho · tiến độ | P4 | R-01 | - | - | NEW | - | TODO |
