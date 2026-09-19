@@ -46,7 +46,7 @@
 |---|---|
 | `node --test tests/pr01-project-tabs.test.mjs` | **7/7 PASS** (đỏ trước khi sửa) |
 | `npx tsc --noEmit` | **exit 0** |
-| `npm test` | **61/61 PASS** + `test:workflow` **ĐẠT** |
+| `npm test` | **61/61 PASS** + `test:workflow` **ĐẠT**<br>⚠️ Xem §8: lúc chốt hồ sơ, `npm test` bị đỏ bởi **1 tệp chưa được commit của nhánh PHASE 3** (không phải tệp của task này) |
 | `tools/probe-project-screen.mjs` | **5 mục KHÔNG ĐẠT** trên bản build đang phục vụ ⇒ bằng chứng bundle cũ hơn nguồn (§5) |
 
 ## 5. ⚠️ VÌ SAO CHƯA ĐÓNG `PR-01` (giới hạn đo được — §45)
@@ -67,4 +67,18 @@
 
 ## 7. Ghi chú hồ sơ
 
-- Tệp hồ sơ này là **TASK-095** (không phải TASK-094): `TASK-094.md` là **hồ sơ workflow phê duyệt động** đang **mở** (263 KB, `KHUNG-XONG / CHO-CHOT-NGHIEP-VU`, được `MASTER_STATUS` trỏ tới) ⇒ **không được ghi đè**.
+- Tệp hồ sơ này là **TASK-095** (không phải TASK-094): `TASK-094.md` là **hồ sơ workflow phê duyệt động** đang **mở** (263 KB, `KHUNG-XONG / CHO-CHOT-NGHIEP-VU`, được `MASTER_STATUS` trỏ tới) ⇒ **không được ghi đè**. Mục **70** của `TASK-094.md` đã được ghi thêm đúng theo yêu cầu (nhật ký tích hợp của captain).
+
+## 8. ⚠️ Phát hiện lúc chốt: `npm test` bị đỏ bởi TỆP CỦA NHÁNH KHÁC (không phải của task này)
+
+Lúc 20/09 chạy lại toàn bộ `npm test`, bước `lint` **ĐỎ 2 lỗi**:
+
+```
+tests/work-item-comment-participant.test.ts
+   73:5  error  'projectCodeHasUser' is never reassigned. Use 'const' instead  prefer-const
+  176:5  error  'data' is never reassigned. Use 'const' instead                prefer-const
+```
+
+- Tệp đó là **tệp chưa commit của nhánh PHASE 3** (`git status` = `?? tests/work-item-comment-participant.test.ts`) — có trong ghi chú §69 của `TASK-094.md`.
+- **KHÔNG sửa** tệp này: không thuộc phân vùng PHASE 4, và sửa vào tệp nhánh khác đang viết sẽ gây tranh chấp hợp nhất.
+- **Bằng chứng tách bạch (đã chạy):** `npx eslint app/page.tsx tests/pr01-project-tabs.test.mjs tools/probe-project-screen.mjs tools/probe-roadmap-progress.mjs` → **0 error** (102 cảnh báo có sẵn trong `page.tsx`), **exit 0**; và `npm run typecheck` **exit 0** · `npm run test:regression` **61/61** · `npm run test:workflow` **ĐẠT** ⇒ cổng của `PR-01` sạch.
