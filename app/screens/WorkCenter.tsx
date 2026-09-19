@@ -21,6 +21,7 @@
 
 import { DataTable, ListToolbar, PermissionGuard, StatusBadge } from "@/app/components/ui";
 import { ReportView } from "@/app/screens/ReportView";
+import { WorkDashboard } from "@/app/screens/WorkDashboard";
 import { WorkHierarchy } from "@/app/screens/WorkHierarchy";
 import { WorkKanban, kanbanManagerDepartments } from "@/app/screens/WorkKanban";
 import { daysFromToday } from "@/lib/date-helpers";
@@ -283,6 +284,10 @@ function WorkCenter({ data, action, refresh, view = "personal" }: { data: AppDat
           <Kpi icon="TH" label={`Việc tháng ${kpiMonth}`} value={String(kpiRows.reduce((s, r) => s + r.mTotal, 0))} note={`${kpiRows.reduce((s, r) => s + r.mDone, 0)} đã hoàn thành`} tone="violet"/>
         </div>
       </section>
+      {/* PHASE 3 (`T-08`) — §11: 3 KHỐI «cá nhân · phòng ban · dự án». Mọi số tính từ dữ liệu ĐANG CÓ trong payload
+          (KHÔNG gọi API mới); chỉ số nào không có nguồn thì ghi rõ «chưa có nguồn», KHÔNG bịa số.
+          Khối «Cá nhân» nhận ĐÚNG tập việc của tôi; hai khối kia nhận tập việc trong PHẠM VI ĐƯỢC PHÉP (T-06). */}
+      <WorkDashboard data={data} personalRows={mine} scopeRows={scopedWork} isLate={isTaskLate} scopeNote={scopeNote}/>
     </div>}
 
     {tab === 4 && <div className="stack">
