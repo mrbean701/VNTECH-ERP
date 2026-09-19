@@ -2317,3 +2317,25 @@ BANG CHUNG: nhanh PHASE 4 da xac minh — **tab Ban chi huy DA TON TAI** trong m
 HANH DONG: danh dau `PR-05` = **DONE** kem ghi chu ro: **"TAM DONG THEO CHI DAO 20/09"** — cho user test lai va yeu cau sua sau.
   => KHONG coi la "xong vinh vien": neu user gui yeu cau sua thi mo lai (reopen) va ghi vao ho so.
 CAP NHAT: docs/25 (TT PR-05 -> DONE) · MASTER_STATUS (DONE 59/110 = 53,6% · PHASE 4 = 1/6).
+
+### 73. [A-15] LUAT NGHIEP VU THAT (do USER giai thich 20/09) — KHONG CON VUONG MAC
+NGUYEN VAN USER: "phan quyen theo phong ban... viec phan quyen phong ban chi la tao 1 mau nhom phan quyen san danh cho
+  phong ban do phuc vu nut copy quyen tu phong ban trong tab phan quyen nguoi dung. ... khi click vao se hien thi thong bao
+  co cap quyen phong ban cho user nay khong, neu chon co thi cap full quyen ma phong ban do duoc cau hinh cho user, nguoc lai la khong."
+=> DIEN GIAI CHUAN (chot):
+  1. **Phan quyen phong ban = MẪU (template)**, khong phai duong kiem quyen truc tiep.
+  2. Muc dich: phuc vu **nut COPY QUYEN TU PHONG BAN** trong **tab phan quyen nguoi dung**.
+  3. Hanh vi nut: click => **hien thong bao xac nhan** ("co cap quyen phong ban cho user nay khong?")
+     => chon **CO** => cap **FULL** bo quyen ma phong ban do duoc cau hinh cho user
+     => chon **KHONG** => khong cap gi.
+=> KHOP HOAN TOAN voi ket qua audit A-15: nhom nghiep vu **KHONG** tham gia `RbacService` (kiem quyen chi dung `module_permissions`)
+   => dap an **A-15 = (a)**: la danh muc/mau, KHONG phai noi kiem quyen => **KHONG can noi vao RbacService**.
+BANG CHUNG XAC NHAN TU MA NGUON + DB:
+  * app/page.tsx:2103 — `step===4 && <CardHead title="Nhom quyen nghiep vu" ...>` (buoc trong wizard tao nguoi dung) ✔
+  * app/page.tsx:1277 — bang quan ly nhom: cot "Ma nhom · Ten nhom · Pham vi nghiep vu · Q..." ✔
+  * DB: `department_module_permissions` = **480** (mau quyen theo phong ban) · `user_module_permissions` = **1046** (quyen that tung user)
+        · `business_role_group_scopes` = **2** (danh muc nhom) ✔
+VIEC CAN LAM TIEP (thay cho "noi vao RbacService"):
+  => Kiem tra + hoan thien **NUT COPY QUYEN TU PHONG BAN** trong tab phan quyen nguoi dung:
+     click => xac nhan => copy `department_module_permissions` cua phong ban do vao `user_module_permissions` cua user.
+  => Neu nut con thieu/khong dung => do la mot muc moi can lam (ghi vao roadmap khi xac minh xong).

@@ -120,8 +120,8 @@
 |---|---|---|---|---|---|---|---|---|---|
 | `T-01` | Công việc | Tách menu 5 mục: cá nhân · phòng ban · giao việc · dashboard · báo cáo | P2 | U-03 | - | - | NEW | CHECK | TODO |
 | `T-02` | Công việc | Audit mô hình dữ liệu task hiện có (đã có `work_items`) | **P2** | — | - | - | work_items 32 cot (8 dong) + work_item_events/task_notifications/task_sla_policies; THIEU: comment + participant; UNKNOWN: attachments | - | **DONE** |
-| `T-03` | Công việc | Bổ sung trường còn thiếu: tiến độ · huỷ lúc · ghi chú · tệp | P2 | T-02 | COL | - | - | - | `DONE` |
-| `T-04` | Công việc | `TaskAssignment` · `TaskComment` · `TaskAttachment` · `TaskHistory` · `TaskParticipant` | P2 | T-02 | TBL | NEW | NEW | - | `DONE` |
+| `T-03` | Công việc | Bổ sung trường còn thiếu: tiến độ · huỷ lúc · ghi chú · tệp | P2 | T-02 | COL | - | - | - | **DONE** |
+| `T-04` | Công việc | `TaskAssignment` · `TaskComment` · `TaskAttachment` · `TaskHistory` · `TaskParticipant` | P2 | T-02 | TBL | NEW | NEW | - | **DONE** |
 | `T-05` | Công việc | Việc cá nhân: của tôi · được giao · do tôi tạo | P2 | T-01 | - | - | NEW | CHECK | TODO |
 | `T-06` | Công việc | Việc phòng ban: giới hạn theo phạm vi được phép | P2 | T-01 | - | - | NEW | CHECK | TODO |
 | `T-07` | Công việc | Board Kanban — **phân biệt rõ Ưu tiên / Trạng thái / Phân công** | P2 | T-03,T-04 | - | - | NEW | - | TODO |
