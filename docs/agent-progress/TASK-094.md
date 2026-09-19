@@ -1964,3 +1964,23 @@ PHEP KIEM BAT DUOC 1 GIA DINH SAI CUA TOI: "chi so dau la count" (R-03b co chi s
 npx tsc --noEmit => 0.
 
 CON LAI de dong R-01: noi ReportView vao app/page.tsx + nav nhom reports; va BANG CHUNG RUNTIME (them 1 man bao cao vao probe visual).
+
+### 50. [PHASE 9 · R-01] NOI MAN BAO CAO VAO APP — tsc 0, npm test 61/61 (20/09)
+DA NOI (3 diem, tat ca qua kiem mo neo DUNG 1 LAN truoc khi ghi):
+1. app/page.tsx: them import { ReportView } + { REPORT_CATALOG, findEntry, sourceRows }.
+2. app/page.tsx: them nhanh render {active === "reports_center" && <ReportView catalog={REPORT_CATALOG.map((e)=>e.def)}
+   rowsFor={(k)=>sourceRows(findEntry(k)?.source ?? "requests", data)} />} (chen TRUOC nhanh WorkCenter).
+3. lib/menu-helpers.ts: them muc nav { key: "reports_center", label: "Bao cao tong hop", icon: "BC", groupKey: "reports" }.
+ReportView duoc bo sung prop rowsFor(key) de moi bao cao lay DUNG nguon cua no (requests/purchaseOrders/inventory/projects/workItems),
+van tuong thich nguoc voi prop rows.
+
+TSC DAN DUONG DUNG (3 vong, moi vong chi ra chinh xac cho con thieu):
+* Vong 1: 2 loi - "reports_center" khong thuoc union ModuleKey (lib/menu-helpers.ts) va phep so sanh vo nghia o page.tsx.
+* Vong 2: them "reports_center" vao union ModuleKey (lib/ui-shared.tsx dong 21) => con 1 loi: thieu property trong
+  Record<ModuleKey, [string, string]> (map tieu de module) o page.tsx dong 78.
+* Vong 3: them reports_center vao map tieu de => tsc EXIT 0.
+CONG CU TU CHOI GHI 1 LAN (mo neo 'export type ModuleKey =' khong khop vi khai bao KHONG co export) => da sua mo neo va va THEO DONG.
+
+KIEM CHUNG: npx tsc --noEmit => 0 ; npm test => pass 61 / fail 0 / EXIT 0.
+
+CON LAI de dong R-01: BANG CHUNG RUNTIME - them man bao cao vao probe visual (nhom nav reports) => chay cong anh => co anh chung minh.

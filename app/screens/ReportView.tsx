@@ -1,6 +1,10 @@
 // [PHASE 9 · R-01] MÀN BÁO CÁO DÙNG CHUNG — render MỌI `ReportDefinition` bằng cùng một mã.
 // KHÔNG hard-code từng báo cáo: R-02 (Mua hàng) · R-03 (Kho) · R-04 (Dự án) · R-05 (Công việc)
 // chỉ cần khai báo định nghĩa và đưa vào `catalog`.
+//
+// HAI CÁCH CẤP DỮ LIỆU (tương thích ngược):
+//   • `rows`     — một mảng dòng dùng cho mọi định nghĩa (đơn giản, dùng khi mọi báo cáo cùng nguồn);
+//   • `rowsFor`  — hàm tra dòng theo KHOÁ định nghĩa (khi các báo cáo khác nguồn: requests/inventory/projects/workItems…).
 import { useMemo, useState } from "react";
 import { DataTable, ListToolbar, type Column, type Option, type ToolbarFilter } from "@/app/components/ui";
 import { CardHead } from "@/lib/ui-shared";
@@ -9,7 +13,7 @@ import { buildReport, filterRows, formatMetric, type FilterSpec, type ReportDefi
 
 type FilterState = Record<string, string>;
 
-/** Các bộ lọc KHAI BÁO trong định nghĩa được biến thành dropdown, chọn giá trị từ chính dữ liệu. */
+/** Các bộ lọc KHAI BÁO trong định nghĩa (op eq/in) được biến thành dropdown, chọn giá trị từ chính dữ liệu. */
 function buildToolbarFilters(def: ReportDefinition, rows: Row[], state: FilterState, set: (field: string, value: string) => void): ToolbarFilter[] {
   const declared = (def.filter ?? []).filter((f) => f.op === "eq" || f.op === "in");
   return declared.map((f) => {
@@ -19,9 +23,10 @@ function buildToolbarFilters(def: ReportDefinition, rows: Row[], state: FilterSt
   });
 }
 
-export function ReportView({ catalog, rows, initialKey, project }: {
+export function ReportView({ catalog, rows, rowsFor, initialKey, project }: {
   catalog: ReportDefinition[];
-  rows: Row[];
+  rows?: Row[];
+  rowsFor?: (key: string) => Row[];
   initialKey?: string;
   project?: string;
 }) {
@@ -30,6 +35,12 @@ export function ReportView({ catalog, rows, initialKey, project }: {
   const [state, setState] = useState<FilterState>({});
 
   const setFilter = (field: string, value: string) => setState((s) => ({ ...s, [field]: value }));
+
+  // Dòng nguồn của báo cáo ĐANG CHỌN (rowsFor ưu tiên; nếu không có thì dùng `rows`).
+  const activeRows: Row[] = useMemo(
+    () => (rowsFor && def ? rowsFor(def.key) : (rows ?? [])),
+    [rowsFor, rows, def],
+  );
 
   // Áp bộ lọc người dùng chọn LÊN TRÊN bộ lọc đã khai báo (không sửa định nghĩa gốc).
   const effective: ReportDefinition | undefined = useMemo(() => {
@@ -42,7 +53,7 @@ export function ReportView({ catalog, rows, initialKey, project }: {
     return { ...def, filter: [...base, ...extra] };
   }, [def, state]);
 
-  const result = useMemo(() => (effective ? buildReport(effective, rows) : undefined), [effective, rows]);
+  const result = useMemo(() => (effective ? buildReport(effective, activeRows) : undefined), [effective, activeRows]);
 
   if (!def || !result) {
     return (
@@ -57,9 +68,8 @@ export function ReportView({ catalog, rows, initialKey, project }: {
     key: c.key,
     header: c.label,
     render: (row) => {
-      const value = c.key in (row as Record<string, unknown>)
-        ? (row as Record<string, unknown>)[c.key]
-        : (row.metrics as Record<string, number> | undefined)?.[c.key];
+      const bag = row as Record<string, unknown>;
+      const value = c.key in bag ? bag[c.key] : undefined;
       if (typeof value === "number") return formatMetric(value, c.format);
       return String(value ?? "");
     },
@@ -72,7 +82,7 @@ export function ReportView({ catalog, rows, initialKey, project }: {
     return flat;
   });
 
-  const filters = buildToolbarFilters(def, rows, state, setFilter);
+  const filters = buildToolbarFilters(def, activeRows, state, setFilter);
 
   return (
     <div className="stack module-screen">
@@ -80,7 +90,7 @@ export function ReportView({ catalog, rows, initialKey, project }: {
         title={def.title.toUpperCase()}
         note={def.note ?? "Báo cáo dùng chung — định nghĩa bằng dữ liệu, không viết mã riêng."}
         count={result.rows.length}
-        total={rows.length}
+        total={activeRows.length}
         unit="nhóm"
         filters={filters}
         extra={
@@ -119,7 +129,7 @@ export function ReportView({ catalog, rows, initialKey, project }: {
   );
 }
 
-/** Tiện ích cho catalog: đếm nhanh theo một trường (dùng khi khai báo báo cáo mới). */
+/** Tiện ích cho catalog: định nghĩa nhanh một báo cáo ĐẾM theo một trường. */
 export function countByDef(key: string, title: string, field: string, label: string): ReportDefinition {
   return { key, title, groupBy: [field], metrics: [{ key: "soLuong", label, agg: "count" }] };
 }

@@ -43,6 +43,7 @@ const modules: { key: ModuleKey; label: string; icon: string; groupKey?: string;
   { key: "dept_plan_price_data", label: "Giá & dữ liệu thương mại", icon: "DG", groupKey: "purchasing", subGroup: "Phòng Kế hoạch" },
   { key: "dept_plan_kpi", label: "KPI & hiệu suất nhân viên", icon: "KP", groupKey: "reports", subGroup: "Phòng Kế hoạch" },
   { key: "dept_plan_alerts", label: "Báo cáo & cảnh báo", icon: "CB", groupKey: "reports", subGroup: "Phòng Kế hoạch" },
+  { key: "reports_center", label: "Báo cáo tổng hợp", icon: "BC", groupKey: "reports" },
   { key: "dept_project_tasks", label: "Nhiệm vụ nhân viên đang làm", icon: "NV", groupKey: "my_work", subGroup: "Phòng Dự án" },
   { key: "dept_project_pda", label: "PDA / Điều phối dự án", icon: "PD", groupKey: "mep", subGroup: "Phòng Dự án" },
   { key: "dept_project_assign", label: "Giao việc & Kiểm soát hoàn thành", icon: "GV", groupKey: "my_work", subGroup: "Phòng Dự án" },
