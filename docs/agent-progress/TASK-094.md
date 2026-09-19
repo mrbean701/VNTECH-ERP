@@ -1923,3 +1923,23 @@ F- 0/5 · AD- 0/16 · TM- 0/6 · PR- 0/6
 
 CANH BAO KY THUAT (tu phat hien): ghi chu ho so truoc day (§46) bi MEO nhe do dung here-string noi suy @"..."@ voi noi dung
 co backtick (PowerShell hieu backtick la escape). TU NAY: moi ghi chu ghi bang @'...'@ (khong noi suy) va TRANH backtick.
+
+### 48. [PHASE 9 · R-01] MAN BAO CAO DUNG CHUNG app/screens/ReportView.tsx (20/09)
+DA TAO (catalog-driven, KHONG hard-code tung bao cao):
+* Nhan `{ catalog: ReportDefinition[], rows: Row[], initialKey?, project? }`.
+* Bo loc KHAI BAO trong dinh nghia (op eq/in) tu bien thanh dropdown, gia tri lay tu CHINH du lieu.
+* Bo loc nguoi dung chon duoc AP LEN TREN bo loc khai bao (khong sua dinh nghia goc) => ReportDefinition hieu luc tinh bang useMemo.
+* Dung lai UI co san: ListToolbar (title/note/count/total/filters/extra) + DataTable (columns/rows/rowKey/footer).
+* footer in dong TONG lay tu result.totals; cot render qua formatMetric (number/money/percent).
+* Them tien ich countByDef(key,title,field,label) de khai bao bao cao dem nhanh.
+
+TSC BAT 1 LOI KIEU (dung vai tro trong tai): literal { field, op: "eq", value } bi SUY RONG thanh op: string => sua bang
+chu thich kieu (f): FilterSpec => tsc EXIT 0.
+
+KIEM CHUNG: npx tsc --noEmit => 0 ; npm test => pass 61 / fail 0 / EXIT 0.
+
+CON LAI DE DONG R-01 (ghi ro, khong tu nhan xong):
+1. lib/report-catalog.ts - khai bao dinh nghia cho R-02 (Mua hang), R-03 (Kho), R-04 (Du an), R-05 (Cong viec) tu du lieu that.
+2. Noi vao app/page.tsx + nav nhom reports (hien co: dept_plan_kpi, dept_plan_alerts, dept_project_kpi, dept_project_alerts).
+3. BANG CHUNG RUNTIME: hien moi co tsc + npm test + self-check engine; CHUA co bang chung man bao cao render trong app
+   => can chay that (them 1 man vao probe visual de co bang chung anh) TRUOC KHI danh dau R-01 DONE.
