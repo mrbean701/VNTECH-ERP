@@ -1747,3 +1747,13 @@ const readUiSource = () => ['app/page.tsx', 'lib/ui-shared.tsx']   ← THIẾU l
 **ĐÃ SỬA (đúng cách — nới PHẠM VI ĐỌC, KHÔNG nới lỏng phép kiểm):** thêm lib/menu-helpers.ts, lib/request-actions.ts, lib/workflow-helpers.ts vào **3 test** dùng eadUiSource; thêm pp/screens/RequestDrawer.tsx + pp/screens/WorkCenter.tsx cho test untime-admin-boq-regression.
 **KẾT QUẢ:** **5 đỏ → 4 hết ngay** (56 → 60 pass) ⇒ thêm tệp màn ⇒ **61/61 PASS · EXIT 0** ✔
 **BÀI HỌC:** (1) git stash **KHÔNG** dùng được làm A/B khi thay đổi **đã commit** — phải dùng git show <commit>:<path> để so sánh. (2) Test kiểm **chuỗi trong nguồn** sẽ đỏ khi tách tệp ⇒ phải **cập nhật phạm vi ĐỌC của test** (giữ nguyên độ chặt phép kiểm).
+
+### 37. ✅ CỔNG ẢNH sau TÁCH WorkCenter — chỉ 17-modal-po lệch, **đã xác minh do NGÀY** (20/09)
+**Cổng ảnh (sau khi tách WorkCenter):** 15/16 màn × 4 = 60/64 ĐẠT · **4 ảnh lệch đúng là 17-modal-po** (cả 4 kích thước) với lệch **RẤT NHỎ và rải rác**: desktop **181 px (0,0087 %)** · laptop 170 · tablet 185 · phone 109.
+**KIỂM CHỨNG bằng --locate (không đoán):**
+* (704,192) ⇒ **<SPAN> "Ngày giao mặc định *"** (rect 694,188,599,18) — **TRƯỜNG NGÀY** trong .form-grid của .po-form (mặc định theo NGÀY HÔM NAY).
+* (1664,448) ⇒ **<INPUT> trong .po-line-planning** ⇒ ô **ngày/kế hoạch theo dòng** (cũng theo ngày).
+⇒ **KẾT LUẬN: KHÔNG phải regression mã** — màn 17-modal-po **nhạy theo NGÀY ở 2 chỗ**; ngày đã sang ngày mới ⇒ lệch ⇒ **xử lý đúng là CHỤP LẠI BASELINE** (đã làm, **chỉ 4 tệp của màn 17**).
+**LƯU Ý ĐỘ PHỦ (nâng cấp từ §23.5):** màn 17 có **2 trường nhạy ngày**: **Ngày giao mặc định** + **input ngày trong .po-line-planning** ⇒ các lượt sau **có thể lệch lại** với cùng dấu hiệu ⇒ là **nhiễu hệ thống ĐÃ BIẾT**, không phải lỗi.
+**CẢI TIẾN ĐỀ XUẤT (chưa làm — cần cân nhắc rủi ro sửa probe):** **ghim đồng hồ (fixed clock)** cho màn 17 trong probe để baseline **không trôi theo ngày** ⇒ cổng ảnh sẽ **ổn định 64/64** qua các ngày. *(Hiện tại chấp nhận chụp lại baseline khi cần.)*
+**⇒ TÁCH WorkCenter KHÔNG làm đổi giao diện** (15/16 màn   px tuyệt đối; 1 màn lệch do ngày) ✔
