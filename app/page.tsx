@@ -79,6 +79,11 @@ import { RequestDrawer } from "@/app/screens/RequestDrawer";
 import { WorkflowModal } from "@/app/screens/WorkflowModal";
 import { TaskTable, WorkCenter, isTaskLate, workRate } from "@/app/screens/WorkCenter";
 import { BoqControl, BoqExportButtons, boqAssessment, boqCellValue, boqExportRows, boqVariationQty, mapBoqRows, useResizableColumnWidths, withBoqGroupContext } from "@/app/screens/BoqControl";
+// PHASE 7 (AD-*) — LÕI THUẦN CỦA MÀN QUẢN TRỊ HỆ THỐNG: nhãn 12 bước (AD-01), 13 cột tài khoản (AD-02),
+// trạng thái «chưa có nguồn» cho 2 trường thiếu nguồn, sắp xếp mặc định (AD-04), 2 cặp sub-tab (AD-05/AD-06),
+// lọc + chọn nhiều + xoá quyền phòng ban (AD-08), cột User/Actor của nhật ký (AD-13), danh mục trường tự
+// phục vụ (AD-16). Mọi quy tắc ở đây đều có test hợp đồng tương ứng `tests/adNN-*.test.mjs`.
+import { ACCOUNT_COLUMNS, ACCOUNT_DEFAULT_SORT, ACCOUNT_SORT_NOTE, ACCOUNT_UNSOURCED_REASON, ADMIN_STEP_LABELS, AUDIT_ACTOR_COLUMN_SOURCE, AUDIT_USER_COLUMN_SOURCE, ORG_SUB_TABS, POSITION_SUB_TABS, SELF_EDIT_FIELDS, UNSOURCED_TEXT, accountRows, accountSortCompare, auditActorOf, auditUserOf, bulkDeleteDepartmentPermissionsEnabled, filterDepartments, selectedPermissionRows, toggleSelection } from "@/app/screens/admin-governance-pure";
 
 const VNTECH_UI_CONTRACT_ID = VNTECH_BRAND.release.uiContractId;
 const VNTECH_UI_BUILD_MARKER = VNTECH_BRAND.release.uiBuildMarker;
@@ -1513,15 +1518,17 @@ function OrganizationUnitManager({data,action}:{data:AppData;action:(name:string
   return <section className="card"><CardHead title="Cơ cấu tổ chức canonical" note="Phòng ban và BCH dùng một danh mục gốc; hỗ trợ cấp trên, dự án, ngày hiệu lực và lưu trữ không mất lịch sử."/><form key={String(selected?.id||"new")} onSubmit={save}><div className="form-grid"><label><span>Mã đơn vị *</span><input name="code" required defaultValue={selected?.code||""}/></label><label><span>Tên đơn vị *</span><input name="name" required defaultValue={selected?.name||""}/></label><label><span>Loại *</span><select name="unitType" defaultValue={selected?.unitType||"department"}><option value="company">Công ty</option><option value="department">Phòng/Bộ phận</option><option value="site_command">Ban chỉ huy dự án</option></select></label><label><span>Đơn vị cấp trên</span><select name="parentId" defaultValue={selected?.parentId||""}><option value="">— Không có —</option>{parents.map((row)=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label><label><span>Dự án (cho BCH)</span><select name="projectId" defaultValue={selected?.projectId||""}><option value="">— Danh mục cha —</option>{data.adminProjects.map((row)=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label><label><span>Thứ tự</span><input name="sortOrder" type="number" defaultValue={selected?.sortOrder??100}/></label><label><span>Hiệu lực từ</span><input name="effectiveFrom" type="date" defaultValue={selected?.effectiveFrom||""}/></label><label><span>Hiệu lực đến</span><input name="effectiveTo" type="date" defaultValue={selected?.effectiveTo||""}/></label><label className="span-2"><span>Mô tả</span><input name="description" defaultValue={selected?.description||""}/></label></div><div className="row-actions"><button className="primary" type="submit">{selected?"Lưu đơn vị":"＋ Thêm đơn vị"}</button>{selected&&<button className="secondary" type="button" onClick={()=>setSelected(null)}>Hủy sửa</button>}</div></form><div className="table-wrap"><table><thead><tr><th>Mã</th><th>Đơn vị</th><th>Loại</th><th>Cấp trên / Dự án</th><th>Hiệu lực</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>{units.map((row)=><tr key={row.id}><td><strong>{row.code}</strong></td><td>{row.name}<small>{row.description||"—"}</small></td><td>{row.unitType}</td><td>{row.parentName||"—"}<small>{row.projectCode?`${row.projectCode} · ${row.projectName}`:""}</small></td><td>{row.effectiveFrom||"—"}<small>{row.effectiveTo?` đến ${row.effectiveTo}`:""}</small></td><td><StatusBadge value={row.active?"Đang dùng":"Đã lưu trữ"}/></td><td><div className="row-actions"><button className="export-mini" onClick={()=>setSelected(row)}>Sửa</button><button className="export-mini" disabled={Boolean(row.systemLocked&&row.active)} onClick={()=>void toggle(row)}>{row.active?"Lưu trữ":"Kích hoạt"}</button></div></td></tr>)}</tbody></table></div></section>;
 }
 
-function AdminStaffList({ data, open, query }: { data: AppData; open: (name: string, row?: Row) => void; query: string }) {
+function AdminStaffList({ data, open, query, openEntity }: { data: AppData; open: (name: string, row?: Row) => void; query: string; openEntity: (kind: ProjectEntityKind, row: Row) => void }) {
   const [dept, setDept] = useState("ALL");
   const [role, setRole] = useState("ALL");
   const [status, setStatus] = useState("ALL");
-  const [sortBy, setSortBy] = useState("name");
+  // AD-04 — SẮP XẾP MẶC ĐỊNH: «Trạng thái → Mã tài khoản» (một nguồn sự thật: ACCOUNT_DEFAULT_SORT).
+  const [sortBy, setSortBy] = useState(ACCOUNT_DEFAULT_SORT);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
 
-  const users: Row[] = data.users || [];
+  // AD-02 — 13 cột: suy từ payload THẬT bằng `accountRows` (số quyền đếm thật; 2 trường thiếu nguồn ⇒ null).
+  const users: Row[] = accountRows(data.users || [], data.allModulePermissions || [], data.systemLevelCatalog || []);
   const depts = [...new Set(users.map((u) => String(u.organizationName || u.department || "")).filter(Boolean))].sort((a, b) => a.localeCompare(b, "vi"));
   const roles = [...new Set(users.map((u) => String(u.roleName || u.role || "")).filter(Boolean))].sort((a, b) => a.localeCompare(b, "vi"));
 
@@ -1533,10 +1540,11 @@ function AdminStaffList({ data, open, query }: { data: AppData; open: (name: str
       `${u.fullName || ""} ${u.email || ""} ${u.username || ""} ${u.employeeCode || ""}`.toLocaleLowerCase("vi")
         .includes(query.trim().toLocaleLowerCase("vi")))
     .sort((a, b) => {
-      if (sortBy === "code") return String(a.employeeCode || "").localeCompare(String(b.employeeCode || ""));
+      if (sortBy === "code") return String(a.employeeCode || "").localeCompare(String(b.employeeCode || ""), "vi", { numeric: true });
       if (sortBy === "dept") return String(a.organizationName || a.department || "").localeCompare(String(b.organizationName || b.department || ""), "vi");
       if (sortBy === "role") return String(a.roleName || a.role || "").localeCompare(String(b.roleName || b.role || ""), "vi");
-      return String(a.fullName || "").localeCompare(String(b.fullName || ""), "vi");
+      if (sortBy === "name") return String(a.fullName || "").localeCompare(String(b.fullName || ""), "vi");
+      return accountSortCompare(a, b); // AD-04 — mặc định: Trạng thái (hoạt động trước) → Mã tài khoản
     });
 
   const pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
@@ -1552,35 +1560,44 @@ function AdminStaffList({ data, open, query }: { data: AppData; open: (name: str
       <select value={dept} onChange={(e) => setDept(e.target.value)} aria-label="Lọc phòng ban"><option value="ALL">Tất cả phòng ban</option>{depts.map((d) => <option key={d} value={d}>{d}</option>)}</select>
       <select value={role} onChange={(e) => setRole(e.target.value)} aria-label="Lọc chức danh"><option value="ALL">Tất cả chức danh</option>{roles.map((r) => <option key={r} value={r}>{r}</option>)}</select>
       <select value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Lọc trạng thái"><option value="ALL">Tất cả trạng thái</option><option value="ACTIVE">Đang hoạt động</option><option value="LOCKED">Đã khoá</option></select>
-      <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} aria-label="Sắp xếp"><option value="name">Sắp xếp: Họ tên</option><option value="code">Sắp xếp: Mã NV</option><option value="dept">Sắp xếp: Phòng ban</option><option value="role">Sắp xếp: Chức danh</option></select>
+      <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} aria-label="Sắp xếp"><option value="status">Sắp xếp: Trạng thái → Mã tài khoản</option><option value="name">Sắp xếp: Họ tên</option><option value="code">Sắp xếp: Mã NV</option><option value="dept">Sắp xếp: Phòng ban</option><option value="role">Sắp xếp: Chức danh</option></select>
       <select value={String(pageSize)} onChange={(e) => setPageSize(Number(e.target.value))} aria-label="Số dòng mỗi trang"><option value="25">25/trang</option><option value="50">50/trang</option><option value="100">100/trang</option></select>
+      <small className="muted account-sort-note" data-account-sort-note="AD-04">{ACCOUNT_SORT_NOTE}</small>
     </div>
     <div className="table-wrap"><table className="baseline-table staff-full-table">
       <thead><tr>
-        <th>STT</th><th>Mã NV</th><th>Họ tên</th><th>Tài khoản</th><th>Chức danh</th>
-        <th>Phòng ban</th><th>Email</th><th>Trạng thái</th><th>Thao tác</th>
+        <th>STT</th>
+        {ACCOUNT_COLUMNS.map((column) => <th key={column.key} title={column.source ? `Nguồn: ${column.source}` : `Chưa có nguồn — ${ACCOUNT_UNSOURCED_REASON[column.key as keyof typeof ACCOUNT_UNSOURCED_REASON]}`}>{column.label}</th>)}
+        <th>Thao tác</th>
       </tr></thead>
       <tbody>
-        {shown.map((u, i) => <tr key={String(u.id)}>
+        {shown.map((u, i) => <tr key={String(u.id)} className="account-row" onClick={() => openEntity("user", u)} title="Bấm để mở chi tiết tài khoản (EntityDetailModal)">
           <td>{(safePage - 1) * pageSize + i + 1}</td>
           <td><strong className="code">{u.employeeCode || "—"}</strong></td>
-          <td><strong>{u.fullName}</strong></td>
           <td>{u.username || "—"}</td>
-          <td>{u.roleName || u.role || "—"}</td>
-          <td>{u.organizationName || u.department || "—"}</td>
+          <td><strong>{u.fullName}</strong></td>
           <td>{u.email || "—"}</td>
-          <td><StatusBadge value={u.active === false ? "Đã khoá" : "Đang hoạt động"}/></td>
-          <td><div className="row-actions">
-            <button type="button" className="export-mini" onClick={() => open("userProfile", u)}>Hồ sơ</button>
+          <td>{u.organizationName || u.department || "—"}</td>
+          <td>{u.roleName || u.role || "—"}</td>
+          <td>{u.systemLevelName || <span className="muted">Chưa xếp</span>}</td>
+          <td>{money(Number(u.approvalLimit || 0))}</td>
+          <td><StatusBadge value={u.statusLabel}/></td>
+          <td><strong>{u.permissionCount}</strong><small> quyền</small></td>
+          <td>{u.roleBase || "—"}</td>
+          {/* AD-02 — 2 trường KHÔNG có nguồn trong payload: hiện «chưa có nguồn» + LÝ DO, KHÔNG hiện 0 giả. */}
+          <td>{u.lastLoginAt ? date(u.lastLoginAt) : <span className="muted" title={ACCOUNT_UNSOURCED_REASON.lastLoginAt}>{UNSOURCED_TEXT}</span>}</td>
+          <td>{u.createdAt ? date(u.createdAt) : <span className="muted" title={ACCOUNT_UNSOURCED_REASON.createdAt}>{UNSOURCED_TEXT}</span>}</td>
+          <td><div className="row-actions" onClick={(event) => event.stopPropagation()}>
+            <button type="button" className="export-mini" onClick={() => openEntity("user", u)}>Chi tiết</button>
             <button type="button" className="export-mini" onClick={() => open("userEdit", u)}>Sửa</button>
             <button type="button" className="export-mini" onClick={() => open("access", u)}>Quyền</button>
           </div></td>
         </tr>)}
-        {!shown.length && <tr><td colSpan={9}><Empty text="Không có nhân sự phù hợp bộ lọc."/></td></tr>}
+        {!shown.length && <tr><td colSpan={ACCOUNT_COLUMNS.length + 2}><Empty text="Không có tài khoản nào phù hợp bộ lọc."/></td></tr>}
       </tbody>
     </table></div>
     <div className="table-pagination">
-      <span>{rows.length} nhân sự · trang {safePage}/{pageCount}</span>
+      <span>{rows.length} tài khoản · trang {safePage}/{pageCount}</span>
       <div>
         <button type="button" disabled={safePage <= 1} onClick={() => setPage(1)}>«</button>
         <button type="button" disabled={safePage <= 1} onClick={() => setPage(safePage - 1)}>‹</button>
@@ -1601,11 +1618,19 @@ function DepartmentPermissionManager({ data, action }: { data: AppData; action: 
   const [draft, setDraft] = useState<Record<string, Row>>({});
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
+  // AD-08 — bộ lọc phòng ban + CHỌN NHIỀU + «Xoá mục đã chọn» (xác nhận + quyền).
+  const [deptQuery, setDeptQuery] = useState("");
+  const [selected, setSelected] = useState<string[]>([]);
+  const [deleteMsg, setDeleteMsg] = useState("");
   const modules = configuredModules(data).filter((m) => m.key !== "admin");
   const savedRows = (data.departmentModulePermissions || []).filter((r) => String(r.organizationUnitId) === deptId);
+  // Danh sách phòng ĐANG HIỂN THỊ theo ô lọc; tập chọn chỉ tính trên các dòng quyền ĐÃ CÓ trong CSDL.
+  const visibleDepts = filterDepartments(depts, deptQuery);
+  const deletableRows = selectedPermissionRows(savedRows.map((row) => ({ ...row, id: String(row.moduleKey) })), selected);
+  const canBulkDelete = bulkDeleteDepartmentPermissionsEnabled(data.user, deletableRows.map((row) => String(row.id)));
   // Đổi phòng ban thì bỏ bản nháp đang sửa của phòng trước.
   // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { setDraft({}); setMsg(""); }, [deptId]);
+  useEffect(() => { setDraft({}); setMsg(""); setSelected([]); setDeleteMsg(""); }, [deptId]);
   const valueOf = (moduleKey: string): Row => {
     if (draft[moduleKey]) return draft[moduleKey];
     const row = savedRows.find((r) => String(r.moduleKey) === moduleKey);
@@ -1644,6 +1669,20 @@ function DepartmentPermissionManager({ data, action }: { data: AppData; action: 
     setMsg(`Đã lưu ${ok}/${changed.length} chức năng và đồng bộ lại quyền của nhân sự trong phòng.`);
     setDraft({});
   }
+  /** AD-08 — XOÁ MỤC ĐÃ CHỌN: xác nhận trước, gọi action THẬT `delete_department_permission`, chặn bằng quyền. */
+  async function deleteSelected() {
+    if (!canBulkDelete) return setDeleteMsg("Không đủ quyền xoá quyền phòng ban (chỉ Quản trị viên) hoặc chưa chọn mục nào.");
+    const names = deletableRows.map((row) => modules.find((m) => String(m.key) === String(row.moduleKey))?.label || String(row.moduleKey));
+    if (!window.confirm(`Xoá ${deletableRows.length} mục quyền đã chọn của phòng «${deptName ? deptName.name : deptId}»?\n\n${names.join(", ")}\n\nThao tác này xoá dòng quyền phòng ban tương ứng và đồng bộ lại quyền nhân sự trong phòng.`)) return;
+    setBusy(true);
+    let ok = 0;
+    for (const row of deletableRows) {
+      if (await action("delete_department_permission", { organizationUnitId: deptId, moduleKey: String(row.moduleKey) })) ok++;
+    }
+    setBusy(false);
+    setSelected([]);
+    setDeleteMsg(`Đã xoá ${ok}/${deletableRows.length} mục quyền đã chọn của phòng.`);
+  }
   const deptName = depts.find((d) => String(d.id) === deptId);
   return <div className="stack">
     <div className="kpi-grid small">
@@ -1655,15 +1694,17 @@ function DepartmentPermissionManager({ data, action }: { data: AppData; action: 
       <CardHead title="Phân quyền theo phòng ban" note="Chọn phòng ở cột DANH SÁCH PHÒNG BAN bên trái. Quyền hiển thị dạng checkbox; nhân sự trong phòng hưởng quyền này." />
       <div className="dept-perm-layout">
         <aside className="dept-perm-list">
-          <div className="dept-perm-list-head"><strong>DANH SÁCH PHÒNG BAN</strong><span>{depts.length} phòng</span></div>
-          {depts.map((o) => {
+          <div className="dept-perm-list-head"><strong>DANH SÁCH PHÒNG BAN</strong><span>{visibleDepts.length}/{depts.length} phòng</span></div>
+          {/* AD-08 — BỘ LỌC PHÒNG BAN: lọc theo mã hoặc tên, không phân biệt hoa/thường. */}
+          <label className="dept-perm-filter" data-dept-filter="AD-08"><span>⌕ Lọc phòng ban</span><input value={deptQuery} onChange={(event) => setDeptQuery(event.target.value)} placeholder="Mã hoặc tên phòng…"/></label>
+          {visibleDepts.map((o) => {
             const granted = (data.departmentModulePermissions || []).filter((r) => String(r.organizationUnitId) === String(o.id)).length;
             return <button key={String(o.id)} type="button" className={String(o.id) === deptId ? "active" : ""} onClick={() => setDeptId(String(o.id))}>
               <div><b>{o.code || "—"}</b><small>{o.name}</small></div>
               <span>{granted} quyền</span>
             </button>;
           })}
-          {!depts.length && <div className="dept-perm-empty"><Empty text="Chưa có phòng ban nào."/></div>}
+          {!visibleDepts.length && <div className="dept-perm-empty"><Empty text={depts.length ? "Không có phòng ban nào khớp bộ lọc." : "Chưa có phòng ban nào."}/></div>}
         </aside>
         <div className="dept-perm-main">
           <div className="dept-perm-context">
@@ -1679,8 +1720,16 @@ function DepartmentPermissionManager({ data, action }: { data: AppData; action: 
             <button className="secondary" onClick={clearAll}>Bỏ chọn tất cả</button>
             <button className="primary" disabled={busy} onClick={save}>{busy ? "Đang lưu…" : "Lưu thay đổi"}</button>
           </div>
+          {/* AD-08 — «XOÁ MỤC ĐÃ CHỌN»: chỉ bật khi ĐỦ QUYỀN (admin) và ĐÃ CHỌN mục có thật trong CSDL. */}
+          <div className="dept-perm-bulkbar" data-bulk-delete="AD-08">
+            <strong>THAO TÁC NHÓM</strong>
+            <button className="secondary danger-outline" disabled={busy || !canBulkDelete} title={canBulkDelete ? `Xoá ${deletableRows.length} dòng quyền phòng ban đã chọn` : "Không đủ quyền (chỉ Quản trị viên) hoặc chưa chọn mục nào đã được cấp"} onClick={() => void deleteSelected()}>Xóa mục đã chọn ({deletableRows.length})</button>
+            <span>{selected.length} mục đang chọn · {savedRows.length} dòng quyền đã cấp của phòng</span>
+          </div>
+      {deleteMsg && <div className="inline-alert">{deleteMsg}</div>}
       {msg && <div className="inline-alert">{msg}</div>}
       <DataTable rows={modules} rowKey={(m) => String(m.key)} rowStyle={(m) => (draft[m.key] ? { background: "#fff8e6" } : undefined)} columns={[
+        { key: "cs", header: <input type="checkbox" aria-label="Chọn tất cả mục quyền" checked={savedRows.length > 0 && deletableRows.length === savedRows.length} onChange={(event) => { const keys = savedRows.map((r) => String(r.moduleKey)); setSelected(event.target.checked ? keys : []); }} />, render: (m: Row) => <input type="checkbox" aria-label={`Chọn mục ${m.label}`} checked={selected.includes(String(m.key))} onChange={() => setSelected((current) => toggleSelection(current, m.key))} /> },
         { key: "c0", header: "Chức năng", render: (m) => <><strong>{m.label}</strong><small>{m.key}</small></> },
         ...PERM_CAPS.map((c) => ({ key: c.key, header: c.label, render: (m: Row) => <input type="checkbox" checked={Number(valueOf(m.key)[c.key]) === 1} onChange={() => toggle(m.key, c.key)} /> })),
         { key: "cz", header: "", render: (m) => (draft[m.key] ? <StatusBadge value="Chưa lưu" /> : (savedRows.some((r) => String(r.moduleKey) === m.key) ? <StatusBadge value="Đã cấp" /> : "")) },
@@ -1743,9 +1792,10 @@ function UserPermissionMatrix({ data, open, action }: { data: AppData; open: (na
     </div>
     <section className="card">
       <CardHead title="Phân quyền người dùng" note="Tìm theo tên, mã nhân viên, phòng ban, chức danh hoặc cấp bậc. Quyền của người dùng không được vượt quá quyền của phòng ban." />
-      <ListToolbar
+      <div data-permission-toolbar="AD-09"><ListToolbar
         title="BỘ LỌC"
         note={`${rows.length}/${(data.users || []).length} tài khoản khớp`}
+        count={rows.length} total={(data.users || []).length} unit="tài khoản"
         search={{ value: query, onChange: setQuery, placeholder: "Tên, mã NV, chức danh…" }}
         filters={[
           { key: "dept", label: "Phòng ban", value: deptFilter, onChange: setDeptFilter, options: [
@@ -1757,7 +1807,8 @@ function UserPermissionMatrix({ data, open, action }: { data: AppData; open: (na
             ...levels.map((l) => ({ value: String(l.code), label: String(l.name) })),
           ] },
         ]}
-      />
+        actions={<button className="secondary" onClick={() => { setQuery(""); setDeptFilter(""); setLevelFilter(""); }}>Bỏ lọc</button>}
+      /></div>
       {msg && <div className="inline-alert">{msg}</div>}
       <div className="table-wrap"><table>
         <thead><tr><th>Mã NV</th><th>Họ tên</th><th>Phòng ban</th><th>Chức danh</th><th>Cấp bậc</th><th>Quyền</th><th>Cảnh báo</th><th></th></tr></thead>
@@ -1815,6 +1866,8 @@ function SystemLevelManager({ data, open, action }: { data: AppData; open: (name
   const levelLabel = (code: string) => levels.find((l) => String(l.code) === code) || null;
   const chosen = levelLabel(levelCode);
   const noLevel = (data.users || []).filter((u) => !u.systemLevelCode);
+  // AD-10 — PHÁT HIỆN THẬT khi audit: nút «Xóa» gọi thẳng API, không xác nhận và không chặn cấp bậc ĐANG DÙNG.
+  const canDeleteLevel = (level: Row) => usersOfLevel(String(level.code)).length === 0;
   async function assign() {
     if (!userId || !levelCode) return setMsg("Hãy chọn tài khoản và cấp bậc.");
     setBusy(true);
@@ -1844,7 +1897,7 @@ function SystemLevelManager({ data, open, action }: { data: AppData; open: (name
           <td><div className="row-actions">
             <button className="export-mini" onClick={() => open("systemLevelMaster", l)}>Sửa</button>
             <button className="export-mini" onClick={() => action("set_system_level_status", { levelId: l.id, active: Number(l.active) === 1 ? 0 : 1 })}>{Number(l.active) === 1 ? "Ngừng" : "Kích hoạt"}</button>
-            <button className="export-mini danger" onClick={() => action("delete_system_level", { levelId: l.id })}>Xóa</button>
+            <button className="export-mini danger" disabled={!canDeleteLevel(l)} title={canDeleteLevel(l) ? `Xóa cấp bậc ${l.name} (không có tài khoản nào đang giữ)` : `Không xóa được: ${usersOfLevel(String(l.code)).length} tài khoản đang giữ cấp bậc này — hãy xếp lại cấp bậc trước`} onClick={() => { if (!window.confirm(`Xóa cấp bậc «${l.name}»? Thao tác không khôi phục được.`)) return; void action("delete_system_level", { levelId: l.id }); }}>Xóa</button>
           </div></td>
         </tr>)}
         {!levels.length && <tr><td colSpan={8}><Empty text="Chưa có cấp bậc nào." /></td></tr>}
@@ -1898,6 +1951,12 @@ function AuditLogManager({ data }: { data: AppData }) {
   const [toDate, setToDate] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
   const all = data.audits || [];
+  // AD-13 — TÁCH RIÊNG hai khái niệm: «User» = tài khoản bản ghi thuộc về (`audit_logs.user_id` → `users`);
+  // «Actor/Performed By» = tên người THỰC HIỆN đóng băng lúc ghi (`audit_logs.user_name`, có thể NULL với
+  // bản ghi cũ do đường JS chỉ ghi 9 cột — xem `scripts/system-route.mjs:179`). Nguồn cột ghi ngay trên UI.
+  const usersById: Row[] = data.users || [];
+  const actorOf = (row: Row) => auditActorOf(row);
+  const subjectOf = (row: Row) => auditUserOf(row, usersById);
   const levelName = (code: unknown) => (data.systemLevelCatalog || []).find((l) => String(l.code) === String(code))?.name || "";
   const moduleLabel = (key: unknown) => {
     const k = String(key || "");
@@ -1956,22 +2015,26 @@ function AuditLogManager({ data }: { data: AppData }) {
       />
       {!all.length && <Empty text="Chưa có bản ghi nào. Nhật ký sẽ tự đầy khi có thao tác thay đổi dữ liệu." />}
       {all.length > 0 && <div className="table-wrap"><table>
-        <thead><tr><th>Thời gian</th><th>Người thực hiện</th><th>Phòng ban</th><th>Cấp bậc</th><th>Chức năng</th><th>Quyền dùng</th><th>Hành động</th><th>Chi tiết</th></tr></thead>
+        <thead><tr><th>Thời gian / IP</th><th title={AUDIT_USER_COLUMN_SOURCE}>Tài khoản (User)</th><th title={AUDIT_ACTOR_COLUMN_SOURCE}>Người thực hiện (Actor)</th><th>Phòng ban</th><th>Cấp bậc</th><th>Module</th><th>Quyền dùng</th><th>Hành động</th><th>Mã thực thể</th><th>Chi tiết</th></tr></thead>
         <tbody>
           {rows.map((a) => {
             const isOpen = openId === String(a.id);
+            const actor = actorOf(a);
+            const subject = subjectOf(a);
             const mainRow = <tr key={a.id}>
               <td><strong>{date(a.occurredAt)}</strong><small>{String(a.ipAddress || "—")}</small></td>
-              <td>{a.userName || "Hệ thống"}<small>{a.userRole || ""}</small></td>
+              <td>{subject.userName || <span className="muted" title={AUDIT_USER_COLUMN_SOURCE}>không có trong danh mục tài khoản</span>}<small>{subject.userId || "—"}</small></td>
+              <td>{actor.actorName || <span className="muted" title={AUDIT_ACTOR_COLUMN_SOURCE}>không ghi tên (bản ghi cũ)</span>}<small>{a.userRole || ""}</small></td>
               <td>{a.department || "—"}</td>
               <td>{levelName(a.systemLevel) || <span className="muted">—</span>}</td>
               <td>{moduleLabel(a.moduleKey) || "—"}</td>
               <td>{CAP_LABEL[String(a.permissionUsed || "")] || a.permissionUsed || "—"}</td>
               <td><strong>{a.action}</strong></td>
+              <td>{a.entityId || "—"}<small>{a.entityType || ""}</small></td>
               <td><button className="export-mini" onClick={() => setOpenId(isOpen ? null : String(a.id))}>{isOpen ? "Đóng" : "Xem"}</button></td>
             </tr>;
             if (!isOpen) return [mainRow];
-            return [mainRow, <tr key={`${a.id}-x`}><td colSpan={8}>
+            return [mainRow, <tr key={`${a.id}-x`}><td colSpan={10}>
               <div className="table-toolbar"><div><strong>CHI TIẾT THAY ĐỔI</strong><span>{a.changeDetail || ""}</span></div></div>
               <div className="form-grid">
                 <label className="span-2"><span>Dữ liệu gửi lên (sau)</span>
@@ -1984,10 +2047,13 @@ function AuditLogManager({ data }: { data: AppData }) {
               <div className="inline-alert">
                 Đối tượng: <b>{a.entityId || "—"}</b> · Loại: <b>{a.entityType || "—"}</b> · Mã bản ghi: <b>{a.id}</b>
                 {!a.beforeJson && <> · Bản ghi này chỉ lưu dữ liệu SAU thay đổi (nhật ký chung không chụp được giá trị trước).</>}
+                {/* AD-14 — 2/8 trường KHÔNG có cột trong `audit_logs`: hiện «chưa có nguồn» + lý do (KHÔNG bịa, KHÔNG migration). */}
+                {' '}· Kết quả: <b>{UNSOURCED_TEXT}</b> (bảng <code>audit_logs</code> không có cột <code>result</code>) ·
+                {' '}Metadata: <b>{UNSOURCED_TEXT}</b> (không có cột <code>metadata</code>; dữ liệu cấu trúc gần nhất là 2 khối JSON ở trên).
               </div>
             </td></tr>];
           })}
-          {!rows.length && <tr><td colSpan={8}><Empty text="Không có bản ghi nào khớp bộ lọc." /></td></tr>}
+          {!rows.length && <tr><td colSpan={10}><Empty text="Không có bản ghi nào khớp bộ lọc." /></td></tr>}
         </tbody>
       </table></div>}
     </section>
@@ -2128,7 +2194,13 @@ function WorkflowManager({ data, open, action }: { data: AppData; open: (name: s
 }
 
 function Admin({ data, open, action }: { data: AppData; open: (name: string, row?: Row) => void; action: (name: string, payload: Row) => Promise<boolean> }) {
-  const [step,setStep]=useState(1); const [showHelp,setShowHelp]=useState(false); const [adminQuery,setAdminQuery]=useState(""); const [bulkUserMessage,setBulkUserMessage]=useState(""); const [bulkProjectMessage,setBulkProjectMessage]=useState(""); const roles=canonicalRoleOptions(data.roleCatalog||[]); const groups=(data.businessRoleGroups||[]).filter(row=>row.code!=="admin"); const activeUsers=data.users.filter(row=>row.active); const roleCount=(code:string)=>data.users.filter(row=>String(row.role)===String(code)).length;
+  // AD-03 — CỔNG DÙNG CHUNG `ProjectEntityModal` (PR-04) mở `EntityDetailModal` (U-01) cho tài khoản:
+  // KHÔNG tự dựng modal thứ hai. Quyền xem lấy từ chính module đang mở (`admin`).
+  const [entity,setEntity]=useState<{kind:ProjectEntityKind;row:Row}|null>(null);
+  function openEntity(kind: ProjectEntityKind, row: Row) { setEntity({ kind: kind, row: row }); }
+  const [step,setStep]=useState(1); const [showHelp,setShowHelp]=useState(false); const [adminQuery,setAdminQuery]=useState(""); const [bulkUserMessage,setBulkUserMessage]=useState(""); const [bulkProjectMessage,setBulkProjectMessage]=useState(""); const [orgTab,setOrgTab]=useState(0); const [roleTab,setRoleTab]=useState(0); const roles=canonicalRoleOptions(data.roleCatalog||[]); const groups=(data.businessRoleGroups||[]).filter(row=>row.code!=="admin"); const activeUsers=data.users.filter(row=>row.active); const roleCount=(code:string)=>data.users.filter(row=>String(row.role)===String(code)).length;
+  // AD-06 — SYSTEM ROLE là mã kỹ thuật `role_catalog.base_role` (cổng kiểm quyền), tách khỏi CHỨC DANH (Position).
+  const systemRoles=[...new Set(roles.map((row)=>String(row.baseRole||"").trim()).filter(Boolean))].sort().map((code)=>({ code, positions: roles.filter((row)=>String(row.baseRole||"").trim()===code), profiles: (data.engineRoleProfiles||[]).filter((row)=>String(row.engineKey||"")===code) }));
   const filteredAdminUsers=data.users.filter(row=>!adminQuery||`${row.fullName||""} ${row.email||""} ${row.username||""} ${row.phone||""}`.toLocaleLowerCase("vi").includes(adminQuery.toLocaleLowerCase("vi")));
   async function importUsersFile(file?:File){
     if(!file)return;
@@ -2166,8 +2238,8 @@ function Admin({ data, open, action }: { data: AppData; open: (name: string, row
       setBulkProjectMessage(`ARCHIVE VERIFIED · ${row.code} · ${records} bản ghi · ${attachments} tệp · SHA-256: ${sha} · Archive ID: ${archiveId}. Hãy lưu ZIP này ở nơi an toàn.`);
     }catch(error){setBulkProjectMessage(error instanceof Error?error.message:"Không thể tạo gói lưu trữ dự án.");}
   }
-  // Nhân sự và Tổ chức là hai tab RIÊNG (trước đây gộp chung "Nhân sự & tổ chức").
-  const steps=["Nhân sự","Tổ chức","Chức danh / vai trò","Nhóm quyền nghiệp vụ","Phân quyền phòng ban","Phân quyền người dùng","Cấp bậc hệ thống","Phạm vi dự án & kho","Workflow phê duyệt","Ngoại lệ cá nhân","Audit log","Cấu hình hệ thống"];
+  // AD-01 — nhãn 12 bước lấy từ MỘT nguồn sự thật (`ADMIN_STEP_LABELS`); bước 1 nay là «Tài khoản».
+  const steps=ADMIN_STEP_LABELS;
   return <div className="stack admin-approved-screen baseline-screen">
     <ListToolbar
       title="PHÂN QUYỀN NGƯỜI DÙNG"
@@ -2185,13 +2257,13 @@ function Admin({ data, open, action }: { data: AppData; open: (name: string, row
     <div className="permission-steps">{steps.map((label,index)=><button type="button" key={label} className={step===index+1?"active":""} onClick={()=>setStep(index+1)}>{index+1}&nbsp; {label}</button>)}</div>
     {showHelp&&<div className="overlay" onMouseDown={e=>e.target===e.currentTarget&&setShowHelp(false)}><div className="modal permission-help-modal"><header><div><strong>Hướng dẫn phân quyền chuẩn</strong><p>Thiết lập theo đúng thứ tự để tránh quyền chồng chéo.</p></div><button onClick={()=>setShowHelp(false)}>×</button></header><div className="modal-body"><ol className="permission-help-list"><li><b>Nhân sự:</b> tạo tài khoản và chọn chức danh; bấm vào một dòng để xem hồ sơ chi tiết.</li><li><b>Tổ chức:</b> khai báo phòng ban, Ban chỉ huy và tổ đội theo dự án.</li><li><b>Chức danh:</b> mỗi chức danh chỉ tồn tại một bản canonical, không trùng tên.</li><li><b>Nhóm quyền:</b> gom quyền theo nghiệp vụ, không dùng quyền nền kỹ thuật ở UI chính.</li><li><b>Phạm vi:</b> giới hạn dự án và kho; backend chặn truy cập ngoài scope.</li><li><b>Workflow:</b> cấu hình bước duyệt, vai trò, AND/OR và SLA.</li><li><b>Ngoại lệ:</b> chỉ cấp cá nhân khi thật sự cần và phải có thời hạn/audit.</li></ol></div><footer className="modal-footer"><button className="primary" onClick={()=>setShowHelp(false)}>Đã hiểu</button></footer></div></div>}
     {step===1&&<div className="stack"><section className="card admin-overview-card">{bulkUserMessage&&<div className="inline-alert" style={{whiteSpace:"pre-line"}}>{bulkUserMessage}</div>}<ListToolbar
-      title="DANH SÁCH NHÂN SỰ / NGƯỜI DÙNG"
-      note={`${filteredAdminUsers.length}/${activeUsers.length} tài khoản · danh sách toàn màn hình`}
+      title="DANH SÁCH TÀI KHOẢN"
+      note={`${filteredAdminUsers.length}/${activeUsers.length} tài khoản · danh sách toàn màn hình · ${ACCOUNT_SORT_NOTE}`}
       search={{ value: adminQuery, onChange: setAdminQuery, placeholder: "Tìm tên, mã NV, email, tài khoản…" }}
       actions={<button className="icon-mini" onClick={()=>open("user")}>＋</button>}
-    /><AdminStaffList data={data} open={open} query={adminQuery}/></section></div>}
-    {step===2&&<div className="stack"><section className="card"><CardHead title="Tổ đội theo dự án" note="Tổ đội thuộc đúng một dự án và có kho tổ đội riêng; dùng để cấp phát vật tư và hoàn trả." action="＋ Thêm tổ đội" onClick={()=>open("teamCreate")}/><div className="admin-mini-list">{data.teams.slice(0,40).map(row=><div key={row.id}><span className="group-icon">▣</span><span><strong>{row.name}</strong><small>{row.code||"—"} · {row.projectCode||row.projectName||"Chưa gán dự án"} · {row.trade||"—"}</small></span><b>{row.active===0?"Đã ngừng":"Đang dùng"}</b></div>)}{!data.teams.length&&<div className="menu-drop-empty">Chưa có tổ đội nào. Bấm “＋ Thêm tổ đội” để tạo.</div>}</div></section><OrganizationUnitManager data={data} action={action}/></div>}
-    {step===3&&<section className="card"><CardHead title="Chức danh / vai trò" note="Dropdown tài khoản chỉ dùng danh mục active canonical; backend chặn trùng mã và trùng tên." action="＋ Thêm vai trò" onClick={()=>open("roleMaster")}/><div className="table-wrap"><table><thead><tr><th>Mã</th><th>Chức danh</th><th>Nhóm nghiệp vụ</th><th>Số người</th><th>Trạng thái</th><th></th></tr></thead><tbody>{roles.map(row=><tr key={row.id}><td><strong>{row.code}</strong></td><td>{row.name}<small>{row.description||"—"}</small></td><td>{row.businessGroupName||"—"}</td><td>{roleCount(row.code)}</td><td><StatusBadge value={row.active?"Đang dùng":"Đã ẩn"}/></td><td><button className="export-mini" onClick={()=>open("roleMaster",row)}>Sửa</button></td></tr>)}</tbody></table></div></section>}
+    /><AdminStaffList data={data} open={open} query={adminQuery} openEntity={openEntity}/></section></div>}
+    {step===2&&<div className="stack"><div className="admin-subtabs" data-org-subtabs="AD-05">{ORG_SUB_TABS.map((label,index)=><button type="button" key={label} className={orgTab===index?"active":""} onClick={()=>setOrgTab(index)}>{index+1}&nbsp; {label}</button>)}</div>{orgTab===0&&<div className="stack" data-subtab="org-structure"><OrganizationUnitManager data={data} action={action}/></div>}{orgTab===1&&<section className="card" data-subtab="org-teams"><CardHead title="Tổ đội theo dự án" note="Tổ đội thuộc đúng một dự án và có kho tổ đội riêng; dùng để cấp phát vật tư và hoàn trả." action="＋ Thêm tổ đội" onClick={()=>open("teamCreate")}/><div className="admin-mini-list">{data.teams.slice(0,40).map(row=><div key={row.id}><span className="group-icon">▣</span><span><strong>{row.name}</strong><small>{row.code||"—"} · {row.projectCode||row.projectName||"Chưa gán dự án"} · {row.trade||"—"}</small></span><b>{row.active===0?"Đã ngừng":"Đang dùng"}</b></div>)}{!data.teams.length&&<div className="menu-drop-empty">Chưa có tổ đội nào. Bấm “＋ Thêm tổ đội” để tạo.</div>}</div></section>}</div>}
+    {step===3&&<div className="stack"><div className="admin-subtabs" data-position-subtabs="AD-06">{POSITION_SUB_TABS.map((tab,index)=><button type="button" key={tab.key} className={roleTab===index?"active":""} title={`Nguồn: ${tab.source}`} onClick={()=>setRoleTab(index)}>{index+1}&nbsp; {tab.label}</button>)}</div><div className="inline-alert"><b>Phân biệt rõ:</b> <b>Chức danh (Position)</b> là danh mục nghiệp vụ trong <code>role_catalog</code> (mã · tên hiển thị · nhóm quyền · đơn vị mặc định) dùng để gán cho tài khoản; <b>Vai trò hệ thống (System Role)</b> là mã kỹ thuật <code>role_catalog.base_role</code> mà tầng kiểm quyền (<code>ActionRbacRegistry</code> · <code>RbacService</code>) dùng để quyết định quyền. Đổi chức danh không tạo thêm quyền ngoài System Role.</div>{roleTab===0&&<section className="card" data-subtab="position"><CardHead title="Chức danh (Position)" note="Dropdown tài khoản chỉ dùng danh mục active canonical; backend chặn trùng mã và trùng tên." action="＋ Thêm vai trò" onClick={()=>open("roleMaster")}/><div className="table-wrap"><table><thead><tr><th>Mã</th><th>Chức danh</th><th>Nhóm nghiệp vụ</th><th>System Role</th><th>Số người</th><th>Trạng thái</th><th></th></tr></thead><tbody>{roles.map(row=><tr key={row.id}><td><strong>{row.code}</strong></td><td>{row.name}<small>{row.description||"—"}</small></td><td>{row.businessGroupName||"—"}</td><td>{row.baseRole||"—"}</td><td>{roleCount(row.code)}</td><td><StatusBadge value={row.active?"Đang dùng":"Đã ẩn"}/></td><td><button className="export-mini" onClick={()=>open("roleMaster",row)}>Sửa</button></td></tr>)}</tbody></table></div></section>}{roleTab===1&&<section className="card" data-subtab="system-role"><CardHead title="Vai trò hệ thống (System Role)" note="CHỈ ĐỌC: đây là mã kỹ thuật dùng để kiểm quyền ở backend; muốn đổi phải sửa `role_catalog.base_role` (ngoài phạm vi PHASE 7)."/><div className="table-wrap"><table><thead><tr><th>System Role</th><th>Quyền nền kỹ thuật (engineRoleProfiles)</th><th>Số chức danh dùng</th><th>Danh sách chức danh</th></tr></thead><tbody>{systemRoles.map((item)=><tr key={item.code}><td><strong>{item.code}</strong></td><td>{item.profiles.map((profile)=>`${profile.companyCode||profile.engineKey} · ${profile.displayName||""}`).join(" · ")||"—"}</td><td>{item.positions.length}</td><td>{item.positions.map((position)=>position.name).join(", ")||"—"}</td></tr>)}{!systemRoles.length&&<tr><td colSpan={4}><Empty text="Chưa đọc được System Role nào từ role_catalog."/></td></tr>}</tbody></table></div></section>}</div>}
     {step===4&&<section className="card"><CardHead title="Nhóm quyền nghiệp vụ" note="Bộ quyền nghiệp vụ được dùng để cấu thành chức danh; quyền nền kỹ thuật được ẩn khỏi màn quản trị chính." action="＋ Thêm nhóm quyền" onClick={()=>open("businessGroupMaster")}/><div className="admin-mini-list groups">{groups.map(row=><div key={row.id}><span className="group-icon">▣</span><span><strong>{row.name}</strong><small>{row.description||"Nhóm quyền nghiệp vụ"}</small></span><b>{roles.filter(r=>String(r.businessGroupId)===String(row.id)).length} vai trò</b><button className="export-mini" onClick={()=>open("businessGroupMaster",row)}>Sửa</button></div>)}</div></section>}
     {step===5&&<DepartmentPermissionManager data={data} action={action}/>}
     {step===6&&<UserPermissionMatrix data={data} open={open} action={action}/>}
@@ -2200,8 +2272,9 @@ function Admin({ data, open, action }: { data: AppData; open: (name: string, row
     {step===9&&<WorkflowManager data={data} open={open} action={action}/>}
     {step===10&&<PersonalExceptionManager data={data} open={open} action={action}/>} 
     {step===11&&<AuditLogManager data={data}/>}
-    {step===12&&<TrustLockAdmin data={data} action={action}/>} 
-    {step===12&&<div className="stack admin-system-config"><section className="card admin-config-intro"><CardHead title="CẤU HÌNH HỆ THỐNG" note="Tập trung các tác vụ quản trị thêm/bớt/đổi tên/ẩn hiện/sắp xếp/căn chỉnh dùng chung toàn hệ thống."/><div className="admin-config-cards"><button onClick={()=>document.getElementById("config-fields")?.scrollIntoView({behavior:"smooth"})}><NavIcon name="boq"/><strong>BOQ / HĐ & Lũy kế</strong><span>Cột, Import/Export, thứ tự, cho sửa</span></button><button onClick={()=>document.getElementById("config-fields")?.scrollIntoView({behavior:"smooth"})}><NavIcon name="requests"/><strong>Phiếu đề nghị</strong><span>Đầu phiếu & dòng vật tư</span></button><button onClick={()=>document.getElementById("config-display")?.scrollIntoView({behavior:"smooth"})}><NavIcon name="admin"/><strong>Tùy chỉnh giao diện</strong><span>Font, màu, mật độ</span></button><button onClick={()=>open("email")}><NavIcon name="dept_plan_alerts"/><strong>Email & SLA</strong><span>SMTP, người nhận, thời hạn</span></button></div></section><div id="config-fields"><FormFieldConfigManager data={data} action={action}/></div><div id="config-display"><UiDisplaySettingsManager data={data} action={action}/></div><FactoryResetAdmin data={data}/><section className="card"><CardHead title="Nhật ký cấu hình hệ thống" note="Theo dõi các thay đổi gần nhất; không ghi nội dung mật khẩu."/><div className="table-wrap"><table><thead><tr><th>Thời gian</th><th>Người thực hiện</th><th>Hạng mục</th><th>Hành động</th></tr></thead><tbody>{data.audits.slice(0,30).map(row=><tr key={row.id}><td>{date(row.occurredAt)}</td><td>{row.userName||"Hệ thống"}</td><td>{row.entityType}</td><td>{row.action}</td></tr>)}</tbody></table></div></section></div>}
+    {step===12&&<TrustLockAdmin data={data} action={action}/>}     {step===12&&<div className="stack admin-system-config"><section className="card admin-config-intro"><CardHead title="CẤU HÌNH HỆ THỐNG" note="Tập trung các tác vụ quản trị thêm/bớt/đổi tên/ẩn hiện/sắp xếp/căn chỉnh dùng chung toàn hệ thống."/><div className="admin-config-cards"><button onClick={()=>document.getElementById("config-fields")?.scrollIntoView({behavior:"smooth"})}><NavIcon name="boq"/><strong>BOQ / HĐ & Lũy kế</strong><span>Cột, Import/Export, thứ tự, cho sửa</span></button><button onClick={()=>document.getElementById("config-fields")?.scrollIntoView({behavior:"smooth"})}><NavIcon name="requests"/><strong>Phiếu đề nghị</strong><span>Đầu phiếu & dòng vật tư</span></button><button onClick={()=>document.getElementById("config-display")?.scrollIntoView({behavior:"smooth"})}><NavIcon name="admin"/><strong>Tùy chỉnh giao diện</strong><span>Font, màu, mật độ</span></button><button onClick={()=>open("email")}><NavIcon name="dept_plan_alerts"/><strong>Email & SLA</strong><span>SMTP, người nhận, thời hạn</span></button></div></section><div id="config-fields"><FormFieldConfigManager data={data} action={action}/></div><div id="config-display"><UiDisplaySettingsManager data={data} action={action}/></div><FactoryResetAdmin data={data}/><section className="card"><CardHead title="Nhật ký cấu hình hệ thống" note="Theo dõi các thay đổi gần nhất; không ghi nội dung mật khẩu."/><div className="table-wrap"><table><thead><tr><th>Thời gian</th><th>Người thực hiện</th><th>Hạng mục</th><th>Hành động</th></tr></thead><tbody>{data.audits.slice(0,30).map(row=><tr key={row.id}><td>{date(row.occurredAt)}</td><td>{row.userName||"Hệ thống"}</td><td>{row.entityType}</td><td>{row.action}</td></tr>)}</tbody></table></div></section></div>}
+    {/* AD-03 — User Detail Modal dùng LẠI cổng chung `ProjectEntityModal` (PR-04) → `EntityDetailModal` (U-01). */}
+    <ProjectEntityModal data={data} entity={entity} onClose={()=>setEntity(null)} permission={modulePermission(data,"admin")}/>
   </div>;
 }
 
@@ -2704,7 +2777,17 @@ function AccountSettingsModal({ user, close, submit }: { user:Row; close:()=>voi
   async function pickAvatar(event:ChangeEvent<HTMLInputElement>){const file=event.target.files?.[0];event.target.value="";if(!file)return;if(!["image/jpeg","image/png","image/webp"].includes(file.type)){setAvatarError("Chỉ hỗ trợ JPG, PNG hoặc WebP.");return;}if(file.size>2*1024*1024){setAvatarError("Ảnh đại diện tối đa 2 MB.");return;}const reader=new FileReader();reader.onload=()=>{setAvatar(String(reader.result||""));setAvatarError("");};reader.readAsDataURL(file);}
   async function saveAvatar(){if(await submit("update_profile_avatar",{avatarDataUrl:avatar}))close();}
   async function changePassword(event:FormEvent<HTMLFormElement>){event.preventDefault();const payload=Object.fromEntries(new FormData(event.currentTarget));const next=String(payload.newPassword||"");if(next!==String(payload.confirmPassword||"")){window.alert("Xác nhận mật khẩu mới chưa khớp.");return;}const rules=[next.length>=8,/[A-Z]/.test(next),/[a-z]/.test(next),/[0-9]/.test(next),/[^A-Za-z0-9]/.test(next)];if(rules.some(v=>!v)){window.alert("Mật khẩu cần ≥8 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt.");return;}if(await submit("change_password",payload))close();}
-  return <BaseModal title="Cài đặt tài khoản" note="Tự quản lý ảnh đại diện và mật khẩu cá nhân" close={close}><div className="account-settings"><section className="account-avatar-settings"><div className="account-avatar-preview">{avatar?<img src={avatar} alt="Ảnh đại diện"/>:<span>{initials(String(user.fullName||"NV"))}</span>}</div><div><strong>Ảnh đại diện</strong><p>JPG/PNG/WebP · tối đa 2 MB · hiển thị dạng tròn</p>{avatarError&&<small className="red-text">{avatarError}</small>}<div className="row-actions"><label className="secondary file-inline">Chọn ảnh<input type="file" accept="image/jpeg,image/png,image/webp" onChange={pickAvatar}/></label><button type="button" className="secondary" onClick={()=>setAvatar("")}>Xóa ảnh</button><button type="button" className="primary" onClick={saveAvatar}>Lưu ảnh</button></div></div></section><form className="account-password-form" onSubmit={changePassword}><h3>Đổi mật khẩu</h3><p>Mật khẩu tối thiểu 8 ký tự, có ít nhất 1 chữ hoa, 1 chữ thường, 1 số và 1 ký tự đặc biệt.</p><label><span>Mật khẩu hiện tại</span><input name="currentPassword" type="password" required autoComplete="current-password"/></label><label><span>Mật khẩu mới</span><input name="newPassword" type="password" minLength={8} pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}" required autoComplete="new-password"/></label><label><span>Xác nhận mật khẩu mới</span><input name="confirmPassword" type="password" minLength={8} required autoComplete="new-password"/></label><button className="primary">Cập nhật mật khẩu</button></form></div></BaseModal>;
+  return <BaseModal title="Cài đặt tài khoản" note="Tự quản lý ảnh đại diện và mật khẩu cá nhân" close={close}><div className="account-settings">
+    {/* AD-16 — DANH MỤC TRƯỜNG TỰ PHỤC VỤ (một nguồn sự thật `SELF_EDIT_FIELDS`). Trường nào KHÔNG có
+        action tự phục vụ thì ghi rõ lý do — KHÔNG dựng ô nhập giả để tránh nút chết. */}
+    <section className="account-self-edit-fields" data-self-edit="AD-16"><h3>Thông tin được phép tự sửa</h3>
+      <ul>{SELF_EDIT_FIELDS.map((field) => <li key={field.key}><b>{field.label}</b>
+        {field.editable
+          ? <span> · sửa được ngay tại màn này (action <code>{field.action}</code>)</span>
+          : <span className="muted"> · chưa có action tự phục vụ (<code>{field.source}</code> chỉ Admin sửa được) — cần bổ sung action ở CẢ HAI đường ghi (`scripts/system-route.mjs` + Java `SystemController`), hiện BỊ CẤM trong phạm vi PHASE 7 ⇒ mục AD-16 **BLOCKED** (xem `docs/agent-progress/AD-16-TU-SUA-THONG-TIN-BLOCKED.md`)</span>}
+      </li>)}</ul>
+    </section>
+    <section className="account-avatar-settings"><div className="account-avatar-preview">{avatar?<img src={avatar} alt="Ảnh đại diện"/>:<span>{initials(String(user.fullName||"NV"))}</span>}</div><div><strong>Ảnh đại diện</strong><p>JPG/PNG/WebP · tối đa 2 MB · hiển thị dạng tròn</p>{avatarError&&<small className="red-text">{avatarError}</small>}<div className="row-actions"><label className="secondary file-inline">Chọn ảnh<input type="file" accept="image/jpeg,image/png,image/webp" onChange={pickAvatar}/></label><button type="button" className="secondary" onClick={()=>setAvatar("")}>Xóa ảnh</button><button type="button" className="primary" onClick={saveAvatar}>Lưu ảnh</button></div></div></section><form className="account-password-form" onSubmit={changePassword}><h3>Đổi mật khẩu</h3><p>Mật khẩu tối thiểu 8 ký tự, có ít nhất 1 chữ hoa, 1 chữ thường, 1 số và 1 ký tự đặc biệt.</p><label><span>Mật khẩu hiện tại</span><input name="currentPassword" type="password" required autoComplete="current-password"/></label><label><span>Mật khẩu mới</span><input name="newPassword" type="password" minLength={8} pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}" required autoComplete="new-password"/></label><label><span>Xác nhận mật khẩu mới</span><input name="confirmPassword" type="password" minLength={8} required autoComplete="new-password"/></label><button className="primary">Cập nhật mật khẩu</button></form></div></BaseModal>;
 }
 
 function ModalFooter({ close, label, disabled }: { close: () => void; label: string; disabled?: boolean }) { return <footer className="modal-footer"><button className="secondary" type="button" onClick={close}>Hủy</button><button className="primary" disabled={disabled}>{label}</button></footer>; }
