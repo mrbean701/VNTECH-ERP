@@ -1835,3 +1835,20 @@ pm test 61/61 PASS**.
 * **KHÔNG** coi “822 token chết” là đã an toàn: tiêu chí tĩnh **chưa được kiểm chứng bằng cổng ổn định** ⇒ **chưa được phép áp dụng hàng loạt**.
 **BÀI HỌC PHƯƠNG PHÁP (ghi đậm):** **Muốn A/B một thay đổi ảnh hưởng giao diện thì phải CỐ ĐỊNH mọi nguồn nhiễu (thời gian/dữ liệu) TRƯỚC.** Nếu cổng còn nhiễu, **kết luận “thay đổi gây lệch” hay “không gây lệch” đều KHÔNG đáng tin.**
 **TRẠNG THÁI:** pp/globals.css = **bản gốc** (cây SẠCH) ✔ · 	sc **0** · **hồi quy 61/61** · 	ools/u12-2-tim-important-thua.mjs **đã tạo** (chưa track — nằm trong commit này) · màn 17 còn **nhiễu thời gian 23 px** ⇒ **ưu tiên sửa probe**.
+
+### 43. 🚨 U-12.2 — NGUYÊN NHÂN THẬT: **MÀN 17 DESKTOP KHÔNG TẤT ĐỊNH LÚC CHỤP** (không phải ngày, không phải CSS) (20/09)
+**BẰNG CHỨNG QUYẾT ĐỊNH (một thí nghiệm duy nhất kết thúc mọi suy đoán):**
+`
+1) node tools/probe-visual-regression.mjs --update --only=17-modal-po   ⇒ ĐÃ GHI 4 ảnh chuẩn (desktop 245KB)
+2) node tools/probe-visual-regression.mjs --only=17-modal-po            ⇒ ❌ desktop lệch 98 px · vùng 1468×674 @ (438,127)
+`
+⇒ **Baseline MỚI vẫn hỏng NGAY LẬP TỨC** — và lệch **LỚN HƠN** (98 px so với 23 px) với **VÙNG KHÁC** ⇒ **màn 17 desktop KHÔNG TẤT ĐỊNH ở thời điểm chụp** (đổi giữa 2 lần chạy **cách vài giây**) ✔
+**HAI CHẨN ĐOÁN TRƯỚC CỦA TÔI ĐỀU SAI — nói rõ:**
+1. *“Do lô CSS của tôi”* ⇒ **SAI** (hoàn tác CSS rồi **vẫn lệch**).
+2. *“Do NGÀY”* ⇒ **SAI** (baseline **mới** vẫn lệch **98 px**).
+⇒ **NGUYÊN NHÂN THẬT (khớp mọi dữ liệu):** **cách CHỤP màn 17 chưa ổn định** — modal render **bất đồng bộ** (nạp dữ liệu PO rồi mới ổn định bố cục) nên ảnh chụp rơi vào **thời điểm khác nhau** mỗi lần; vùng lệch **lớn** (1468×674) là **cả nội dung modal**, không phải vài glyph.
+**ĐIỀU NÀY GIẢI THÍCH TOÀN BỘ KẾT QUẢ RỐI TRƯỚC ĐÓ:** 23 px (lần 1) · 0 px (lần “A/B”) · 23 px (sau hoàn tác) · 98 px (sau chụp lại) — **cùng một bất định**, chỉ khác thời điểm rơi.
+**⇒ KẾT LUẬN KỸ THUẬT:** ảnh 17-modal-po__desktop.png **KHÔNG dùng được làm cổng** cho tới khi **cách chụp được ổn định** ⇒ **nó không thể xác nhận hay phủ nhận bất cứ thay đổi nào** (kể cả lô CSS).
+**⇒ VIỆC PHẢI LÀM (điều kiện tiên quyết thật của U-12.2):** **ổn định hoá chụp màn 17** — trong probe, trước khi chụp: **chờ modal ỔN ĐỊNH** (chờ selector đặc trưng + **chờ 2 khung hình liên tiếp giống nhau**, hoặc tăng thời gian settle riêng cho màn này) ⇒ chạy **2 lần liên tiếp phải ra   px** mới coi là cổng dùng được.
+**ĐÃ LÀM ĐÚNG:** **hoàn tác** 	ools/baseline/17-modal-po__desktop.png (ảnh chụp sai) ⇒ **không commit ảnh rác** ✔ · CSS **giữ nguyên bản gốc** (4.464 !important) ✔
+**BÀI HỌC PHƯƠNG PHÁP (đã lặp lại 2 lần — ghi đậm):** **Khi một cổng báo lỗi, PHẢI kiểm tính TẤT ĐỊNH của chính cổng TRƯỚC KHI suy luận về mã** — cách kiểm: **chụp lại baseline rồi chạy lại NGAY**; nếu vẫn lệch ⇒ **cổng hỏng**, mọi kết luận từ nó là **vô hiệu**.
