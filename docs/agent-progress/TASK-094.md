@@ -1894,3 +1894,32 @@ px tsx):** **pass 22 · fail 0 · EXIT 0** — phủ: lọc eq/in/gte/contains/t
 px tsc --noEmit ⇒ 0** ✔
 **🐞 1 PHÁT HIỆN TỐT TỪ SELF-CHECK:** ca contains "appro" cho **3** kết quả (không phải 2) vì "pending_approval" **cũng chứa "appro"** ⇒ **MÃ ĐÚNG, KỲ VỌNG CỦA TÔI SAI** ⇒ sửa **kỳ vọng** (ghi rõ lý do trong tệp), **KHÔNG** sửa mã.
 **TIẾP THEO (PHASE 9):** pp/screens/ReportView.tsx (màn DÙNG CHUNG render mọi định nghĩa) + **catalog** định nghĩa cho R-02/R-03/R-04/R-05.
+
+### 47. PHASE 1 DONG HOAN TOAN = 17/17 · TONG LO TRINH 48/110 = 43,6 % (20/09)
+U-12 = DONE (o [10] dong 89): "DONE / 823-TOKEN-IMPORTANT-CHET-DA-BO + 5-KHOI-TRUNG-DA-GOP"
+
+U-12.2 — KET QUA DO DUOC (9 lo, MOI LO QUA DU 3 CONG):
+* important trong app/globals.css: 4.464 -> 3.641 = da bo 823 token CHET chung minh duoc (18,4 %)
+* Chay kho lai cong cu => SO important CHET = 0 (ca globals.css va styles/canonical.css) => het sach lop chet
+* Ngoac CAN BANG 3269/3269 o MOI lo · tsc 0 · npm test 61/61 · cong anh 64/64 DAT o MOI lo
+* Commit cac lo: 7351750, 9c0e2ae, e0c643e, bbf0300, a135c76, 1fa3b86, f3e7910, d9e5f8e
+
+U-12.3 — KHAO SAT & KET LUAN (co bang chung): 3 khoi override dai (959-969 · 1000-1016 · 2069-2079) KHONG phai code chet
+ma la TANG THEME BASELINE + TANG CHUAN HOA + DARK THEME + LAYOUT MOBILE (@media max-width:900px) => dang ganh viec
+=> CO Y KHONG XOA (ghi ro ly do, khong doan).
+
+U-12.1 (da xong truoc do): gop 5 khoi khai bao giong het tung byte; phat hien 506 nhom "trung" nhung CHI 5 nhom giong het
+=> 501 nhom la override co chu dich => KHONG gop bua.
+
+DIEU KIEN TIEN QUYET DA GO (nut that that cua U-12.2): cong anh DAO DONG o man 17-modal-po desktop (23 -> 98 -> 0 -> 75 px)
+=> tim ra probe chi cho 2200 ms sau click mo modal trong khi modal PO nap du lieu BAT DONG BO => va settleMs: 6000 cho man 17
++ dung o 2 nhanh cho => cong TAT DINH (2 lan lien tiep DAT 0 px) => nho do moi kiem chung duoc tung lo.
+
+KIEM CHUNG LO TRINH (dung quy trinh an toan): mo neo khop DUNG 1 dong · 12 o · tong ID = 110 (khong mat) · dong rac = 0
+=> PHASE 1 = 17/17 DONE · TONG 48/110 = 43,6 %
+
+BUC TRANH CAC PHASE CON LAI: R- 0/5 (PHASE 9 — dang lam: R-01 loi da xong) · P- 3/9 · T- 0/10 · W- 0/4 · A- 12/16 ·
+F- 0/5 · AD- 0/16 · TM- 0/6 · PR- 0/6
+
+CANH BAO KY THUAT (tu phat hien): ghi chu ho so truoc day (§46) bi MEO nhe do dung here-string noi suy @"..."@ voi noi dung
+co backtick (PowerShell hieu backtick la escape). TU NAY: moi ghi chu ghi bang @'...'@ (khong noi suy) va TRANH backtick.
