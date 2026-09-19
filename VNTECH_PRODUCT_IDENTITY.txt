@@ -5,10 +5,10 @@ Version: 5.3.0
 Release: VNTECH ERP V5.3.0 MASTER BASELINE R1.1.1
 Package: VNTECH_ERP_V5_3_0_MASTER_BASELINE_R1_1_1
 Build: 5.3.0-MASTER-BASELINE-R1.1.1-FINAL-20260908
-Source fingerprint: 224a533c4c4efad7f0833f6f4a78d9c58f60c2bb55c9d264e746db3c926b9a5e
-Fingerprint short: VNTECH-FP-224A533C4C4EFAD7
-Brand fingerprint: 4294b7e834dbabbe2ad7d88485dbee66439585031f451d621382453845207269
-Release fingerprint: 92eb0efcc7f903fc94d345775ea4cb0fc9f2c9220bec554abd43b935dfab3519
+Source fingerprint: c9074530f4139210f23c5d271cd5a806b970e6a153134c3e41a63b799fac9c6f
+Fingerprint short: VNTECH-FP-C9074530F4139210
+Brand fingerprint: f90e49919347ed52af26d95ba96b3e0eb9431e0e907c3e9a3eece0133a642904
+Release fingerprint: e09d9c2cf4e4015f691a6ff2c784240da9c089ec48f2228a325d2c523e940c8d
 Trust mode: development
 License enforcement: disabled by design
 Private key: not present

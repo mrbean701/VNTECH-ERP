@@ -2140,3 +2140,12 @@ KIEM CHUNG: tsc 0 ; catalog-check pass 101 - fail 0 (14 dinh nghia) voi 5 phep k
   "viec DA XONG (co due_at cu) KHONG tinh qua han (0)" => LOGIC NGHIEP VU DUNG;
   "phong KH co 2 viec, 1 qua han, tien do TB = 25%" (avg 0 va 50).
 CON LAI DE DONG R-05 (va PHASE 9): build lai + commit + danh dau DONE => PHASE 9 = 5/5.
+
+### 60. R-05 DONE => PHASE 9 = 5/5 DONG TRON · MASTER TASK 53/110 = 48,2 % (20/09)
+KET THUC PHASE 9 (BAO CAO): 14 dinh nghia bao cao dung chung, MOI chi so dua tren COT DB DA XAC MINH:
+  R-01 (kien truc) · R-02a/b/c (Mua hang) · R-03a/b (ton/sap het) + R-03c/d/e (nhap-xuat, TON theo kho, gia tri) ·
+  R-04a/b/c (trang thai, to doi & kho, thanh vien) · R-05a/b (cong viec) + R-05c (theo PHONG).
+BANG CHUNG: engine self-check 101/101 · tsc 0 · hoi quy 61/61 · build DAT VNTECH-FP-C9074530F4139210 (327 files) ·
+  anh chuan man bao cao 4/4 DAT 0px · o chon "Bao cao" trong app chua tieu de tu catalog.
+GIOI HAN DA GHI RO: (1) probe gioi han ~60 ky tu khi in text phan tu => chua co anh rieng cho tung bao cao (de xuat: chon bao cao theo khoa);
+  (2) dac ta "tien do (%)" cua bao cao DU AN chua co nguon xac dinh => khong bia; (3) bao cao Kho "gia tri" phu thuoc unit_cost duoc nhap.

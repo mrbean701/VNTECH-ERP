@@ -16,11 +16,11 @@
 
 | Phân loại (nguyên văn cột TT) | Số mục | % |
 |---|---|---|
-| **DONE** (`**DONE**` + `DONE` + `DONE / AP-DUNG n`) | **52** | **47,3 %** |
+| **DONE** (`**DONE**` + `DONE` + `DONE / AP-DUNG n`) | **53** | **48,2 %** |
 | ĐANG LÀM | 0 | 0 % |
 | KHUNG XONG nhưng **ÁP DỤNG 0** | 0 | 0 % |
 | **BỊ CHẶN** (`**BLOCKED**` = F-01) | 1 | 0,9 % |
-| TODO | 57 | 51,8 % |
+| TODO | 56 | 50,9 % |
 
 | Phase | DONE / tổng | Ghi chú |
 |---|---|---|
@@ -34,7 +34,7 @@
 | PHASE 6 — ĐỘI NHÓM | 0 / 6 | |
 | PHASE 7 — QUẢN TRỊ | 0 / 16 | |
 | PHASE 8 — WORKFLOW | **6 / 6** | ĐÓNG TRỌN (WF-01…WF-06 + nhánh B) |
-| PHASE 9 — BÁO CÁO | **4 / 5** | `R-01` · `R-02` · `R-03` · `R-04` DONE (tổ đội/kho/thành viên từ cột DB thật; engine 90/90) |
+| PHASE 9 — BÁO CÁO | **5 / 5 — ĐÓNG** ✅ | **14 định nghĩa báo cáo dùng chung** (`R-01`…`R-05c`), mọi chỉ số dựa **cột DB đã xác minh**; engine self-check 101/101; build ĐẠT
 | PHASE 10 — TƯƠNG LAI | 0 / 5 | 1 mục bị chặn (F-01) |
 
 **Phần KHÔNG cộng vào 110 mục — nhánh đang chạy thực tế:** TASK-048 → TASK-071 là **vá lỗi
