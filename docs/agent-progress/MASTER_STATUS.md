@@ -1,7 +1,7 @@
 # MASTER STATUS — VNTECH ERP V5.3.0
 
 > Tệp này là NGUỒN SỰ THẬT về trạng thái toàn cục. Mọi phiên làm việc mới PHẢI đọc tệp này trước.
-> Cấu trúc theo GOAL §12. Cập nhật lần cuối: **2026-09-20** (nhánh **PHASE 4 — DỰ ÁN** mở mục `PR-01`: **code xong, CHỜ BUILD** để đo runtime; số tiến độ lấy từ cổng `tools/probe-roadmap-progress.mjs` — **DONE 58/110 = 52,7 % · DOING 1**)
+| PHASE 4 — DỰ ÁN | 1 / 6 | `PR-05` DONE 20/09 (**tạm đóng theo chỉ đạo user** — tab BCH đã tồn tại; chờ user test lại & yêu cầu sửa). `PR-01` DOING (code xong, chờ build) |
 
 ## MASTER TASK STATUS
 
@@ -16,11 +16,11 @@
 
 | Phân loại (nguyên văn cột TT) | Số mục | % |
 |---|---|---|
-| **DONE** (`**DONE**` + `DONE` + `DONE / AP-DUNG n`) | **58** | **52,7 %** |
+| **DONE** (`**DONE**` + `DONE` + `DONE / AP-DUNG n`) | **59** | **53,6 %** |
 | ĐANG LÀM | 1 | 0,9 % |
 | KHUNG XONG nhưng **ÁP DỤNG 0** | 0 | 0 % |
 | **BỊ CHẶN** (`**BLOCKED**` = F-01) | 1 | 0,9 % |
-| TODO | 50 | 45,5 % |
+| TODO | 49 | 44,5 % |
 
 | Phase | DONE / tổng | Ghi chú |
 |---|---|---|

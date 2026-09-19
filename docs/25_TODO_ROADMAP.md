@@ -120,8 +120,8 @@
 |---|---|---|---|---|---|---|---|---|---|
 | `T-01` | Công việc | Tách menu 5 mục: cá nhân · phòng ban · giao việc · dashboard · báo cáo | P2 | U-03 | - | - | NEW | CHECK | TODO |
 | `T-02` | Công việc | Audit mô hình dữ liệu task hiện có (đã có `work_items`) | **P2** | — | - | - | work_items 32 cot (8 dong) + work_item_events/task_notifications/task_sla_policies; THIEU: comment + participant; UNKNOWN: attachments | - | **DONE** |
-| `T-03` | Công việc | Bổ sung trường còn thiếu: tiến độ · huỷ lúc · ghi chú · tệp | P2 | T-02 | COL | - | - | - | TODO |
-| `T-04` | Công việc | `TaskAssignment` · `TaskComment` · `TaskAttachment` · `TaskHistory` · `TaskParticipant` | P2 | T-02 | TBL | NEW | NEW | - | TODO |
+| `T-03` | Công việc | Bổ sung trường còn thiếu: tiến độ · huỷ lúc · ghi chú · tệp | P2 | T-02 | COL | - | - | - | `DONE` |
+| `T-04` | Công việc | `TaskAssignment` · `TaskComment` · `TaskAttachment` · `TaskHistory` · `TaskParticipant` | P2 | T-02 | TBL | NEW | NEW | - | `DONE` |
 | `T-05` | Công việc | Việc cá nhân: của tôi · được giao · do tôi tạo | P2 | T-01 | - | - | NEW | CHECK | TODO |
 | `T-06` | Công việc | Việc phòng ban: giới hạn theo phạm vi được phép | P2 | T-01 | - | - | NEW | CHECK | TODO |
 | `T-07` | Công việc | Board Kanban — **phân biệt rõ Ưu tiên / Trạng thái / Phân công** | P2 | T-03,T-04 | - | - | NEW | - | TODO |
@@ -139,7 +139,7 @@
 | `PR-02` | Dự án | Lọc: Trạng thái · Quản lý dự án · Phòng ban · Ngày | P2 | PR-01 | - | - | FIX | - | TODO |
 | `PR-03` | Dự án | Chi tiết dự án thành tab/modal: chung · nhân sự · tổ đội · kho · lịch sử | P2 | U-01 | - | - | NEW | - | TODO |
 | `PR-04` | Dự án | Bấm vào Project/User/Warehouse/Team → mở **EntityDetailModal** | P2 | U-01 | - | - | NEW | CHECK | TODO |
-| `PR-05` | Dự án | **Ban chỉ huy dự án** thành tab riêng (§14) | P2 | PR-01 | - | - | NEW | CHECK | TODO |
+| `PR-05` | Dự án | **Ban chỉ huy dự án** thành tab riêng (§14) | P2 | PR-01 | - | - | TAM-DONG-THEO-CHI-DAO-20/09: tab BCH DA TON TAI (tab===4 -> SiteCommandScreen); cho user test lai va yeu cau sua sau | CHECK | **DONE** |
 | `PR-06` | Dự án | BCH: thêm/sửa/xoá theo quyền + link entity mở modal | P2 | PR-05 | - | - | NEW | CHECK | TODO |
 
 ---

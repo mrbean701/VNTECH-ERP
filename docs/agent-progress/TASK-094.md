@@ -2309,3 +2309,11 @@ VAN DE GAP PHAI (ghi ro, khong che):
      (b) dat lich backup + canh bao khi loi; (c) dien tap restore (backup chua test = chua co backup);
      (d) de ban sao khac o dia.
 TRANG THAI A-13: phan "backup nen" **DA CO** (1 ban, da kiem chung) => muc P0 giam manh; phan "PITR day du" **VAN THIEU QUYEN**.
+
+### 72. DONG PR-05 THEO CHI DAO USER (20/09)
+CHI DAO: "tab ban chi huy tam thoi dong de toi test lai va yeu cau sua sau" (Nhom 1, muc ③).
+BANG CHUNG: nhanh PHASE 4 da xac minh — **tab Ban chi huy DA TON TAI** trong man Du an (`tab === 4` -> `SiteCommandScreen`)
+  => yeu cau "BCH thanh tab rieng" (PR-05) ve co ban DA CO; cau chu audit cu.
+HANH DONG: danh dau `PR-05` = **DONE** kem ghi chu ro: **"TAM DONG THEO CHI DAO 20/09"** — cho user test lai va yeu cau sua sau.
+  => KHONG coi la "xong vinh vien": neu user gui yeu cau sua thi mo lai (reopen) va ghi vao ho so.
+CAP NHAT: docs/25 (TT PR-05 -> DONE) · MASTER_STATUS (DONE 59/110 = 53,6% · PHASE 4 = 1/6).
