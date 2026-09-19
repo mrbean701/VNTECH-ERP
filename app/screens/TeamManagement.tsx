@@ -1,5 +1,13 @@
 // PHASE 1 (U-11) — MODULE DÙNG CHUNG TÁCH KHỎI `app/page.tsx`.
 //
+// ⚠️ ĐÃ NGỪNG DÙNG TỪ PHASE 6 (`TM-01`…`TM-05`) — 2026-09-20.
+//   Màn này chỉ có **3 tab** (Tổng quan / Thành viên / Đơn từ) và **nhận `open` thay vì `action`/`permission`**
+//   ⇒ mọi thao tác ghi là BẤT KHẢ. Hợp đồng `TM-03` yêu cầu **6 tab** (thông tin · nhân sự · dự án · kho ·
+//   cấp phát · lịch sử) và `TM-04` yêu cầu CRUD **theo quyền** ⇒ màn hiện hành là
+//   **`app/screens/TeamDirectory.tsx`**, và `app/page.tsx` đã đổi call-site sang `TeamDirectory`.
+//   Tệp này được GIỮ LẠI (không xoá) vì nằm trong cây `U-11` đã chốt của PHASE 1 — nhưng **KHÔNG được import
+//   lại vào màn Tổ đội** (hợp đồng `tests/tm04-team-crud.test.mjs` chặn call-site cũ quay lại).
+//
 // Vì sao tách: `app/page.tsx` là MỘT tệp khổng lồ (hơn 4.000 dòng, hơn 250 khai báo top-level).
 // Thứ tự cắt ĐÚNG (đã ghi ở `docs/agent-progress/U14-U11-KHAO-SAT.md` mục 2): tách HELPER DÙNG CHUNG trước
 // (gỡ chặn IMPORT VÒNG), rồi mới tách từng màn.
