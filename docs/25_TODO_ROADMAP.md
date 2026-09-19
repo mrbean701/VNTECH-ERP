@@ -159,12 +159,12 @@
 
 | ID | Module | Việc | Ưu tiên | Phụ thuộc | DB | API | UI | QUYỀN | TT |
 |---|---|---|---|---|---|---|---|---|---|
-| `TM-01` | Tổ đội | Danh sách: mã · tên · trạng thái · thành viên · dự án · hoạt động gần nhất | P2 | U-02 | - | - | FIX | - | TODO |
-| `TM-02` | Tổ đội | Ưu tiên sắp xếp: ĐANG HOẠT ĐỘNG → hoạt động gần nhất ↓ → ngừng | P2 | TM-01 | - | - | FIX | - | TODO |
-| `TM-03` | Tổ đội | Chi tiết: thông tin · nhân sự · dự án · kho · **cấp phát** · lịch sử | P2 | U-01 | - | - | NEW | - | TODO |
-| `TM-04` | Tổ đội | CRUD đầy đủ: tạo · xem · sửa · ngừng (theo quyền) | P2 | S-07 | - | NEW | NEW | CHECK | TODO |
-| `TM-05` | Tổ đội | Tab **Cấp phát** — dùng lại logic cấp phát kho nếu tương thích | P2 | TM-03 | - | - | REUSE | CHECK | TODO |
-| `TM-06` | Tổ đội | Audit `team_members` (hiện **0 dòng**) — xác định cách nạp dữ liệu | P2 | — | - | - | - | - | TODO |
+| `TM-01` | Tổ đội | Danh sách: mã · tên · trạng thái · thành viên · dự án · hoạt động gần nhất | P2 | U-02 | - | - | FIX | - | **DONE** |
+| `TM-02` | Tổ đội | Ưu tiên sắp xếp: ĐANG HOẠT ĐỘNG → hoạt động gần nhất ↓ → ngừng | P2 | TM-01 | - | - | FIX | - | **DONE** |
+| `TM-03` | Tổ đội | Chi tiết: thông tin · nhân sự · dự án · kho · **cấp phát** · lịch sử | P2 | U-01 | - | - | NEW | - | **DONE** |
+| `TM-04` | Tổ đội | CRUD đầy đủ: tạo · xem · sửa · ngừng (theo quyền) — ⚠️ **CHẶN ở nhánh «sửa»**: `grep` `update_project_team`/`save_project_team`/`edit_project_team` = **0** ở CẢ 2 route; `ActionRbacRegistry.java:39/:190/:73` chỉ có `create_project_team` + `set_project_team_status` + `delete_project_team`; muốn thêm action phải sửa `scripts/**` ⇒ **BỊ CẤM**. Đã làm được + có test: **tạo · xem · ngừng theo quyền**. Chi tiết `docs/agent-progress/TASK-101.md` §TM-04 | P2 | S-07 | - | NEW | NEW | CHECK | **BLOCKED** |
+| `TM-05` | Tổ đội | Tab **Cấp phát** — dùng lại logic cấp phát kho nếu tương thích | P2 | TM-03 | - | - | REUSE | CHECK | **DONE** |
+| `TM-06` | Tổ đội | Audit `team_members` (hiện **0 dòng**) — xác định cách nạp dữ liệu. ⚠️ **TIỀN ĐỀ SAI**: CSDL thật **6 dòng (5 `active=1`)**, KHÔNG phải 0; cách nạp = **CONFIRMED «SQL ngoài sản phẩm»** (0 action ghi ở cả JS lẫn Java). Chi tiết `TASK-101.md` §TM-06 + `docs/agent-progress/TM-06-AUDIT-TEAM-MEMBERS.md` | P2 | — | - | - | - | - | **DONE** |
 
 ---
 

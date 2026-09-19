@@ -16,11 +16,11 @@
 
 | Phân loại (nguyên văn cột TT) | Số mục | % |
 |---|---|---|
-| **DONE** (`**DONE**` + `DONE` + `DONE / AP-DUNG n`) | **76** | **69,1 %** |
+| **DONE** (`**DONE**` + `DONE` + `DONE / AP-DUNG n`) | **81** | **73,6 %** |
 | ĐANG LÀM | 0 | 0 % |
 | KHUNG XONG nhưng **ÁP DỤNG 0** | 0 | 0 % |
-| **BỊ CHẶN** (`**BLOCKED**` = F-01 + W-03) | 2 | 1,8 % |
-| TODO | 32 | 29,1 % |
+| **BỊ CHẶN** (`**BLOCKED**` = F-01 + W-03 + TM-04) | 3 | 2,7 % |
+| TODO | 26 | 23,6 % |
 
 | Phase | DONE / tổng | Ghi chú |
 |---|---|---|
@@ -31,7 +31,7 @@
 | PHASE 3 — CÔNG VIỆC | **10 / 10** | `T-02` DONE 20/09 (audit mô hình dữ liệu: 32 cột + `work_item_events`) · **`T-03` + `T-04` DONE 20/09**: 2 bảng mới `work_item_comments`/`work_item_participants` (2 chuỗi drizzle + Flyway V20, COLLATE từng cột) · tệp đính kèm **dùng LẠI** `attachments` (`entity_type='work_item'`) · 2 action JS + 2 khoá bootstrap · **vá lỗi thật**: màn Công việc lọc `assigneeUserId` (tên KHÔNG tồn tại) ⇒ tab "Việc của tôi" luôn 0 việc |
 | PHASE 4 — DỰ ÁN | 6 / 6 | **ĐÓNG 20/09 (TASK-098)** — `PR-01` **DONE** (dải 6 tab + toolbar cân đối — probe hợp đồng ĐẠT exit 0 trên bundle mới `E2E11762304AD2B5`) · `PR-05` DONE (tạm đóng theo chỉ đạo) · **`PR-02` DONE** (lọc 4 chiều: Trạng thái · Quản lý dự án · Phòng ban · Ngày — 7/7 ca hợp đồng) · **`PR-03` DONE** (5 tab con chi tiết: chung · nhân sự · tổ đội · kho · lịch sử — 4/4 ca) · **`PR-04` DONE** (`EntityDetailModal` cho Project/User/Warehouse/Team — 6/6 ca) · **`PR-06` DONE** (CRUD BCH theo quyền + link entity — 6/6 ca) · nguồn % tiến độ = **NHẬT KÝ THI CÔNG** (user chốt 20/09, CHƯA có nghiệp vụ ⇒ khối tiến độ để trống kèm ghi chú, KHÔNG bịa công thức) |
 | PHASE 5 — KHO | 3 / 4 | **`W-02` DONE** (audit `Project : Warehouse` = **CONFIRMED 1:N** trên CSDL thật + code; FK khai ở drizzle, MySQL chỉ có INDEX) · **`W-01` DONE** (tách nhóm menu KHO thành **đúng 5 mục** khai trong code — Kho · Nhập · Xuất · Điều chuyển · Dashboard tồn kho; cổng quyền trỏ **6 khoá ĐÃ CÓ**; **0 khoá module mới, 0 migration**) · **`W-04` DONE** (tab «Dashboard tồn kho» đủ **8 chỉ số §19**, mọi số từ payload; «giá trị kho» = **«chưa có nguồn»** vì `unit_cost` không vào payload) · **`W-03` BLOCKED** (nhánh «Không» của *«Tạo kho dự án?»* không thi hành được: `create_project` luôn INSERT kho, không có action xoá/ngưng kho, mà `scripts/**` bị CẤM ⇒ chi tiết `TASK-100.md` §8) |
-| PHASE 6 — ĐỘI NHÓM | 0 / 6 | |
+| PHASE 6 — ĐỘI NHÓM | 5 / 6 | **`TM-01` DONE** (danh sách đúng **6 cột** mã · tên · trạng thái · thành viên · dự án · hoạt động gần nhất; «hoạt động gần nhất» tính từ `stock_issues.issued_at`/`material_returns.returned_at` theo `teamId`) · **`TM-02` DONE** (thứ tự ĐANG HOẠT ĐỘNG → ngày ↓ → ngừng, có **đối chứng âm bắt được 2 lỗi thật** khi viết) · **`TM-03` DONE** (chi tiết **6 tab**: thông tin · nhân sự · dự án · kho · cấp phát · lịch sử) · **`TM-04` BLOCKED** (xem dưới) · **`TM-05` DONE** (tab Cấp phát **TÁI DÙNG** `stock_issues`/`material_returns` + 2 action `issue_stock`/`return_stock`, 0 bảng mới) · **`TM-06` DONE** (**ĐÍNH CHÍNH:** CSDL thật **6 dòng / 5 active**, KHÔNG phải «0 dòng»; cách nạp = **CONFIRMED SQL ngoài sản phẩm**). Hồ sơ: `TASK-101.md` · `TM-06-AUDIT-TEAM-MEMBERS.md` · 6 test hợp đồng `tests/tm0*.test.mjs` (30/30 ĐẠT). **`TM-04` BLOCKED**: nhánh «sửa» không có action ở **cả 2 route** (`update/save/edit_project_team` = 0; `ActionRbacRegistry.java:39/:190/:73` chỉ có create/status/delete) và `scripts/**` **bị cấm sửa** ⇒ không thể đóng «CRUD đầy đủ»; phần đã làm được (tạo · xem · ngừng, theo quyền) vẫn hoạt động |
 | PHASE 7 — QUẢN TRỊ | 0 / 16 | |
 | PHASE 8 — WORKFLOW | **6 / 6** | ĐÓNG TRỌN (WF-01…WF-06 + nhánh B) |
 | PHASE 9 — BÁO CÁO | **5 / 5 — ĐÓNG** ✅ | **14 định nghĩa báo cáo dùng chung** (`R-01`…`R-05c`), mọi chỉ số dựa **cột DB đã xác minh**; engine self-check 101/101; build ĐẠT
