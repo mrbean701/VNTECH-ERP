@@ -136,11 +136,11 @@
 | ID | Module | Việc | Ưu tiên | Phụ thuộc | DB | API | UI | QUYỀN | TT |
 |---|---|---|---|---|---|---|---|---|---|
 | `PR-01` | Dự án | Danh sách dự án thành tab riêng + toolbar cân đối | P2 | U-03 | - | - | DONE 20/09: dai 6 tab (Danh sach du an + 5 tab chi tiet) + toolbar can doi (count/tim/XUAT); probe hop dong DAT (exit 0) tren bundle moi E2E11762304AD2B5; anh 02-project lech CHU Y (da ghi chu, khong re-baseline) | CHECK | **DONE** |
-| `PR-02` | Dự án | Lọc: Trạng thái · Quản lý dự án · Phòng ban · Ngày | P2 | PR-01 | - | - | FIX | - | TODO |
-| `PR-03` | Dự án | Chi tiết dự án thành tab/modal: chung · nhân sự · tổ đội · kho · lịch sử | P2 | U-01 | - | - | NEW | - | TODO |
-| `PR-04` | Dự án | Bấm vào Project/User/Warehouse/Team → mở **EntityDetailModal** | P2 | U-01 | - | - | NEW | CHECK | TODO |
+| `PR-02` | Dự án | Lọc: Trạng thái · Quản lý dự án · Phòng ban · Ngày | P2 | PR-01 | - | - | FIX | - | **DONE** |
+| `PR-03` | Dự án | Chi tiết dự án thành tab/modal: chung · nhân sự · tổ đội · kho · lịch sử | P2 | U-01 | - | - | NEW | - | **DONE** |
+| `PR-04` | Dự án | Bấm vào Project/User/Warehouse/Team → mở **EntityDetailModal** | P2 | U-01 | - | - | NEW | CHECK | **DONE** |
 | `PR-05` | Dự án | **Ban chỉ huy dự án** thành tab riêng (§14) | P2 | PR-01 | - | - | TAM-DONG-THEO-CHI-DAO-20/09: tab BCH DA TON TAI (tab===4 -> SiteCommandScreen); cho user test lai va yeu cau sua sau | CHECK | **DONE** |
-| `PR-06` | Dự án | BCH: thêm/sửa/xoá theo quyền + link entity mở modal | P2 | PR-05 | - | - | NEW | CHECK | TODO |
+| `PR-06` | Dự án | BCH: thêm/sửa/xoá theo quyền + link entity mở modal | P2 | PR-05 | - | - | NEW | CHECK | **DONE** |
 
 ---
 

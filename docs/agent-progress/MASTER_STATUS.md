@@ -1,7 +1,7 @@
 # MASTER STATUS — VNTECH ERP V5.3.0
 
 > Tệp này là NGUỒN SỰ THẬT về trạng thái toàn cục. Mọi phiên làm việc mới PHẢI đọc tệp này trước.
-| PHASE 4 — DỰ ÁN | 2 / 6 | `PR-05` DONE 20/09 (**tạm đóng theo chỉ đạo user** — tab BCH đã tồn tại; chờ user test lại & yêu cầu sửa). `PR-01` DOING (code xong, chờ build) |
+| PHASE 4 — DỰ ÁN | 6 / 6 | **ĐÓNG** — `PR-01` DONE (dải 6 tab + toolbar cân đối) · `PR-05` DONE (tạm đóng theo chỉ đạo) · **`PR-02`/`PR-03`/`PR-04`/`PR-06` DONE 20/09 (TASK-098)**: lọc 4 chiều · 5 tab con chi tiết · `EntityDetailModal` cho Project/User/Warehouse/Team · CRUD BCH theo quyền. Nguồn % tiến độ = **NHẬT KÝ THI CÔNG** (user chốt, nghiệp vụ chưa tồn tại ⇒ khối tiến độ để trống có ghi chú) |
 
 ## MASTER TASK STATUS
 
@@ -16,11 +16,11 @@
 
 | Phân loại (nguyên văn cột TT) | Số mục | % |
 |---|---|---|
-| **DONE** (`**DONE**` + `DONE` + `DONE / AP-DUNG n`) | **66** | **60,0 %** |
-| ĐANG LÀM | 1 | 0,9 % |
+| **DONE** (`**DONE**` + `DONE` + `DONE / AP-DUNG n`) | **70** | **63,6 %** |
+| ĐANG LÀM | 0 | 0 % |
 | KHUNG XONG nhưng **ÁP DỤNG 0** | 0 | 0 % |
 | **BỊ CHẶN** (`**BLOCKED**` = F-01) | 1 | 0,9 % |
-| TODO | 43 | 39,1 % |
+| TODO | 39 | 35,5 % |
 
 | Phase | DONE / tổng | Ghi chú |
 |---|---|---|
@@ -29,7 +29,7 @@
 | PHASE 1 — UI/UX | **17 / 17** | **ĐÓNG HOÀN TOÀN** — `U-12` bỏ **823 token `!important` chết** (9 lô, mỗi lô qua `tsc` + `npm test` + **cổng ảnh 64/64**) |
 | PHASE 2 — MUA HÀNG | 3 / 9 | `P-04` · `P-05` · `P-06` (**`P-01` đã ROLLBACK 20/09 theo yêu cầu user — chưa chốt PHASE 2**) |
 | PHASE 3 — CÔNG VIỆC | **7 / 10** | `T-02` DONE 20/09 (audit mô hình dữ liệu: 32 cột + `work_item_events`) · **`T-03` + `T-04` DONE 20/09**: 2 bảng mới `work_item_comments`/`work_item_participants` (2 chuỗi drizzle + Flyway V20, COLLATE từng cột) · tệp đính kèm **dùng LẠI** `attachments` (`entity_type='work_item'`) · 2 action JS + 2 khoá bootstrap · **vá lỗi thật**: màn Công việc lọc `assigneeUserId` (tên KHÔNG tồn tại) ⇒ tab "Việc của tôi" luôn 0 việc |
-| PHASE 4 — DỰ ÁN | 2 / 6 | `PR-01` **DONE** 20/09 (dải 6 tab + toolbar cân đối — probe hợp đồng ĐẠT exit 0 trên bundle mới `E2E11762304AD2B5`) · `PR-05` DONE (tạm đóng theo chỉ đạo, chờ user test lại). Còn `PR-02`/`PR-03`/`PR-04`/`PR-06` · nguồn % tiến độ = **NHẬT KÝ THI CÔNG** (user chốt 20/09, chưa có nghiệp vụ ⇒ pending) |
+| PHASE 4 — DỰ ÁN | 6 / 6 | **ĐÓNG 20/09 (TASK-098)** — `PR-01` **DONE** (dải 6 tab + toolbar cân đối — probe hợp đồng ĐẠT exit 0 trên bundle mới `E2E11762304AD2B5`) · `PR-05` DONE (tạm đóng theo chỉ đạo) · **`PR-02` DONE** (lọc 4 chiều: Trạng thái · Quản lý dự án · Phòng ban · Ngày — 7/7 ca hợp đồng) · **`PR-03` DONE** (5 tab con chi tiết: chung · nhân sự · tổ đội · kho · lịch sử — 4/4 ca) · **`PR-04` DONE** (`EntityDetailModal` cho Project/User/Warehouse/Team — 6/6 ca) · **`PR-06` DONE** (CRUD BCH theo quyền + link entity — 6/6 ca) · nguồn % tiến độ = **NHẬT KÝ THI CÔNG** (user chốt 20/09, CHƯA có nghiệp vụ ⇒ khối tiến độ để trống kèm ghi chú, KHÔNG bịa công thức) |
 | PHASE 5 — KHO | 0 / 4 | |
 | PHASE 6 — ĐỘI NHÓM | 0 / 6 | |
 | PHASE 7 — QUẢN TRỊ | 0 / 16 | |
