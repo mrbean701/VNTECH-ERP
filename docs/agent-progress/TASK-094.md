@@ -2043,3 +2043,20 @@ DUONG DI QUA 3 CONG BUILD (moi cong sua DUNG CHUAN, khong noi long phep kiem):
 4. Fingerprint: refresh bang gd-cycle.mjs => VNTECH-FP-C04DCE32F9A98FB8 + drizzle moi 0148.
 5. EPERM rename .local-data => phai DUNG UI + proxy THEO PID truoc khi build.
 BAI HOC: khi app phuc vu BAN BUILD thi moi bang chung runtime phai lam SAU khi build lai; va khi cong bao loi thi PHAI kiem chinh cong do.
+
+### 54. [PHASE 9 · R-02] XAC MINH COT THAT + BO SUNG "THOI GIAN XU LY" (20/09)
+XAC MINH TRONG DB THAT (khong bia truong nao):
+  material_requests : id, request_no, project_id, team_id, source_warehouse_id, requested_by, requested_at, needed_at, priority,
+                      area, purpose, status, approval_stage, total_estimated_value, created_at, updated_at, supply_status, contract_id, boq_version_id
+  purchase_orders   : id, po_no, project_id, supplier_id, receiving_warehouse_id, buyer_user_id, ordered_at, eta, status, total_value,
+                      created_at, updated_at, request_id, delivery_queued_at, delivery_completed_at, contract_id, boq_version_id, decision_reason, decided_by, decided_at
+=> Ket luan: "thoi gian xu ly" TINH DUOC (updated_at - requested_at); PO co total_value (khong phai amount) va co moc decided_at / delivery_* .
+DA SUA lib/report-catalog.ts:
+* sourceRows() CHUAN HOA theo cot da xac minh:
+  - purchaseOrders: amount = Number(r.amount ?? r.totalValue ?? r.total_value ?? 0)  (chong lech ten khoa)
+  - requests: xuLyNgay = (updated_at - requested_at) / 86400000  (chi khi CA HAI moc co that; Math.max(0,...))
+* R-02a bo sung 2 chi so: tbNgayXuLy (avg) + chamNhat (max) => phu phan "thoi gian xu ly" cua dac ta.
+KIEM CHUNG: npx tsc --noEmit => 0 ; npx tsx tools/r01-catalog-check.ts => pass 52 - fail 0 - EXIT 0.
+GUARD TU CHOI GHI 1 LAN: mo neo 'tongDong' xuat hien 2 lan (R-02a va R-02b) => da dung mo neo dac trung (soNguoiDeNghi + tongDong) roi moi ghi.
+CON LAI DE DONG R-02: PHAI BUILD LAI (app dang phuc vu ban build nen sua ma nguon chua co hieu luc) => roi chup lai anh chuan man
+  19-report-center (man nay mac dinh hien R-02a vi la dinh nghia DAU TIEN trong catalog) + doc so lieu THAT bang --locate => anh chung minh => danh dau R-02 DONE.

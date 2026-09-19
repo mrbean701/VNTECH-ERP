@@ -45,6 +45,8 @@ const R02: ReportCatalogEntry[] = [
         { key: "soDuAn", label: "Số dự án", agg: "distinct", field: "projectId" },
         { key: "soNguoiDeNghi", label: "Số người đề nghị", agg: "distinct", field: "requestedBy" },
         { key: "tongDong", label: "Tổng dòng vật tư", agg: "sum", field: "itemCount", format: "number" },
+        { key: "tbNgayXuLy", label: "TB ngày xử lý", agg: "avg", field: "xuLyNgay", format: "number" },
+        { key: "chamNhat", label: "Lâu nhất (ngày)", agg: "max", field: "xuLyNgay", format: "number" },
       ],
       sortBy: "soPhieu",
       sortDir: "desc",
@@ -175,11 +177,34 @@ const R05: ReportCatalogEntry[] = [
 
 export const REPORT_CATALOG: ReportCatalogEntry[] = [...R02, ...R03, ...R04, ...R05];
 
-/** Lấy mảng dữ liệu nguồn từ `data` bootstrap (an toàn: luôn trả mảng). */
+/**
+ * Lấy mảng dữ liệu nguồn từ `data` bootstrap (an toàn: luôn trả mảng).
+ *
+ * CHUẨN HOÁ theo CỘT DB ĐÃ XÁC MINH (TASK-094 §54) — KHÔNG bịa trường:
+ *   material_requests : requested_at · needed_at · updated_at · created_at · status · total_estimated_value · project_id · requested_by
+ *   purchase_orders   : ordered_at · eta · status · total_value · decided_at · delivery_queued_at · delivery_completed_at · request_id
+ * Bổ sung:
+ *   • amount    — khoá tiền cho PO dù bootstrap đặt tên amount / totalValue / total_value.
+ *   • xuLyNgay  — SỐ NGÀY XỬ LÝ = updated_at − requested_at (chỉ khi CẢ HAI mốc có thật) ⇒ "thời gian xử lý" của R-02.
+ */
 export function sourceRows(source: ReportSource, data: unknown): Row[] {
   const bag = (data ?? {}) as Record<string, unknown>;
   const v = bag[source];
-  return Array.isArray(v) ? (v as Row[]) : [];
+  const list = Array.isArray(v) ? (v as Row[]) : [];
+  if (source === "purchaseOrders") {
+    return list.map((r) => ({ ...r, amount: Number(r.amount ?? r.totalValue ?? r.total_value ?? 0) }));
+  }
+  if (source === "requests") {
+    return list.map((r) => {
+      const a = r.requestedAt ?? r.requested_at;
+      const b = r.updatedAt ?? r.updated_at;
+      const ta = a ? new Date(String(a)).getTime() : NaN;
+      const tb = b ? new Date(String(b)).getTime() : NaN;
+      const soNgay = Number.isFinite(ta) && Number.isFinite(tb) ? Math.max(0, (tb - ta) / 86400000) : undefined;
+      return { ...r, xuLyNgay: soNgay };
+    });
+  }
+  return list;
 }
 
 /** Tra một mục catalog theo khoá định nghĩa. */
