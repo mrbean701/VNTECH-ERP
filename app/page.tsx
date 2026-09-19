@@ -53,6 +53,12 @@ import { statusLabel } from "@/lib/labels";
 import { reportExport, reportRows } from "@/lib/report-rows";
 import { Requests } from "@/app/screens/Requests";
 import { Stocktake } from "@/app/screens/Stocktake";
+import { approvalTiming, stageAllowedForUser, workflowTiming } from "@/lib/approval-helpers";
+import { SupplyExportButtons, poSupplyDocument, receiptSupplyDocument } from "@/lib/supply-docs";
+import { configuredMenuGroups, modules } from "@/lib/menu-helpers";
+import { requestLineContext } from "@/lib/request-context";
+import { isBoqTemplateInstructionRow, normalizeBoqRowRole, normalizeBoqType } from "@/lib/boq-normalize";
+import { daysFromToday } from "@/lib/date-helpers";
 
 const VNTECH_UI_CONTRACT_ID = VNTECH_BRAND.release.uiContractId;
 const VNTECH_UI_BUILD_MARKER = VNTECH_BRAND.release.uiBuildMarker;
@@ -60,76 +66,6 @@ const VNTECH_FUNCTIONAL_UI_MARKER = VNTECH_BRAND.release.functionalUiMarker;
 const VNTECH_UI_DISPLAY_VERSION = VNTECH_BRAND.release.uiGeneration;
 const VNTECH_RUNTIME_REGRESSION_LOCK = VNTECH_BRAND.release.regressionContract;
 const VNTECH_COMPANY_DISPLAY_NAME = VNTECH_BRAND.company.displayName;
-const modules: { key: ModuleKey; label: string; icon: string; groupKey?: string; subGroup?: string }[] = [
-  { key: "dashboard", label: "Tổng quan điều hành", icon: "OV", groupKey: "overview" },
-  { key: "dept_plan_tasks", label: "Nhiệm vụ nhân viên đang làm", icon: "NV", groupKey: "my_work", subGroup: "Phòng Kế hoạch" },
-  { key: "dept_plan_assign", label: "Giao việc & Kiểm soát hoàn thành", icon: "GV", groupKey: "my_work", subGroup: "Phòng Kế hoạch" },
-  { key: "dept_plan_supply_plan", label: "Kế hoạch mua hàng & cung ứng", icon: "KH", groupKey: "purchasing", subGroup: "Phòng Kế hoạch" },
-  { key: "dept_plan_tender", label: "Đấu thầu", icon: "DT", groupKey: "purchasing", subGroup: "Phòng Kế hoạch" },
-  { key: "dept_plan_rfq", label: "Xin giá vật tư", icon: "RF", groupKey: "purchasing", subGroup: "Phòng Kế hoạch" },
-  { key: "dept_plan_purchasing", label: "Mua hàng vật tư thiết bị", icon: "MH", groupKey: "purchasing", subGroup: "Phòng Kế hoạch" },
-  { key: "dept_plan_supply", label: "Cung ứng vật tư cho dự án", icon: "CU", groupKey: "purchasing", subGroup: "Phòng Kế hoạch" },
-  { key: "dept_plan_contracts", label: "Hợp đồng các loại", icon: "HD", groupKey: "purchasing", subGroup: "Phòng Kế hoạch" },
-  { key: "dept_plan_suppliers", label: "Nhà cung cấp / Đối tác", icon: "NC", groupKey: "purchasing", subGroup: "Phòng Kế hoạch" },
-  { key: "dept_plan_price_data", label: "Giá & dữ liệu thương mại", icon: "DG", groupKey: "purchasing", subGroup: "Phòng Kế hoạch" },
-  { key: "dept_plan_kpi", label: "KPI & hiệu suất nhân viên", icon: "KP", groupKey: "reports", subGroup: "Phòng Kế hoạch" },
-  { key: "dept_plan_alerts", label: "Báo cáo & cảnh báo", icon: "CB", groupKey: "reports", subGroup: "Phòng Kế hoạch" },
-  { key: "dept_project_tasks", label: "Nhiệm vụ nhân viên đang làm", icon: "NV", groupKey: "my_work", subGroup: "Phòng Dự án" },
-  { key: "dept_project_pda", label: "PDA / Điều phối dự án", icon: "PD", groupKey: "mep", subGroup: "Phòng Dự án" },
-  { key: "dept_project_assign", label: "Giao việc & Kiểm soát hoàn thành", icon: "GV", groupKey: "my_work", subGroup: "Phòng Dự án" },
-  { key: "dept_project_plan", label: "Kế hoạch triển khai dự án", icon: "KH", groupKey: "mep", subGroup: "Phòng Dự án" },
-  { key: "dept_project_shop", label: "Shopdrawing & trình duyệt", icon: "SD", groupKey: "mep", subGroup: "Phòng Dự án" },
-  { key: "dept_project_boq", label: "BOQ & bóc tách khối lượng", icon: "BQ", groupKey: "mep", subGroup: "Phòng Dự án" },
-  { key: "dept_project_material", label: "Kiểm soát vật tư & đặt hàng", icon: "VT", groupKey: "mep", subGroup: "Phòng Dự án" },
-  { key: "dept_project_issues", label: "Phát sinh / RFI / RFQ / NCR", icon: "PS", groupKey: "mep", subGroup: "Phòng Dự án" },
-  { key: "dept_project_asbuilt", label: "Hoàn công", icon: "HC", groupKey: "mep", subGroup: "Phòng Dự án" },
-  { key: "dept_project_payment", label: "Thanh toán / Quyết toán", icon: "TT", groupKey: "finance", subGroup: "Phòng Dự án" },
-  { key: "dept_project_tender", label: "Đấu thầu kỹ thuật", icon: "DT", groupKey: "mep", subGroup: "Phòng Dự án" },
-  { key: "dept_project_kpi", label: "KPI & hiệu suất nhân viên", icon: "KP", groupKey: "reports", subGroup: "Phòng Dự án" },
-  { key: "dept_project_alerts", label: "Báo cáo & cảnh báo", icon: "CB", groupKey: "reports", subGroup: "Phòng Dự án" },
-  { key: "dept_finance_payment_plan", label: "Kế hoạch thanh toán", icon: "KT", groupKey: "finance", subGroup: "Tài chính Kế toán" },
-  { key: "dept_finance_recovery", label: "Thu hồi vốn / Công nợ", icon: "TH", groupKey: "finance", subGroup: "Tài chính Kế toán" },
-  { key: "dept_finance_advance", label: "Tạm ứng / Hoàn ứng", icon: "TU", groupKey: "finance", subGroup: "Tài chính Kế toán" },
-  { key: "dept_finance_site_cost", label: "Chi phí Ban chỉ huy", icon: "CP", groupKey: "finance", subGroup: "Tài chính Kế toán" },
-  { key: "dept_finance_cashbank", label: "Sổ quỹ & Ngân hàng", icon: "SQ", groupKey: "finance", subGroup: "Tài chính Kế toán" },
-  { key: "dept_finance_documents", label: "Chứng từ kế toán", icon: "CT", groupKey: "finance", subGroup: "Tài chính Kế toán" },
-  { key: "dept_legal_hr", label: "Hồ sơ nhân sự", icon: "NS", groupKey: "hr_legal", subGroup: "Hành chính Pháp chế" },
-  { key: "dept_legal_labor", label: "Hợp đồng lao động", icon: "LD", groupKey: "hr_legal", subGroup: "Hành chính Pháp chế" },
-  { key: "dept_legal_correspondence", label: "Công văn đến / đi", icon: "CV", groupKey: "hr_legal", subGroup: "Hành chính Pháp chế" },
-  { key: "dept_legal_documents", label: "Văn bản pháp lý", icon: "PL", groupKey: "hr_legal", subGroup: "Hành chính Pháp chế" },
-  { key: "dept_legal_seal", label: "Con dấu / Ủy quyền", icon: "CD", groupKey: "hr_legal", subGroup: "Hành chính Pháp chế" },
-  { key: "dept_legal_benefits", label: "Bảo hiểm & Chế độ", icon: "BH", groupKey: "hr_legal", subGroup: "Hành chính Pháp chế" },
-  { key: "site_command", label: "Quản lý dự án", icon: "BC", groupKey: "site_command" },
-  { key: "project_progress", label: "Tiến độ & sản lượng dự án", icon: "TD", groupKey: "project_management" },
-  { key: "construction", label: "Thi công", icon: "TC", groupKey: "project_management" },
-  { key: "production", label: "Sản lượng", icon: "SL", groupKey: "project_management" },
-  { key: "capital_recovery", label: "Thu hồi vốn", icon: "TH", groupKey: "project_management" },
-  { key: "boq", label: "BOQ / Hợp đồng dự án", icon: "BQ", groupKey: "project_management" },
-  { key: "payments", label: "Thanh toán HĐ", icon: "TT", groupKey: "project_management" },
-  { key: "teams", label: "Tổ đội theo dự án", icon: "TĐ", groupKey: "project_management" },
-  { key: "requests", label: "Phiếu đề nghị mua hàng", icon: "ĐN", groupKey: "purchasing" },
-  { key: "approvals", label: "Workflow", icon: "PD", groupKey: "purchasing" },
-  { key: "purchasing", label: "Mua hàng & PO", icon: "PO", groupKey: "purchasing" },
-  { key: "supplier_catalog", label: "Danh mục Nhà cung cấp", icon: "NC", groupKey: "purchasing" },
-  { key: "receiving", label: "Kế hoạch giao hàng", icon: "GH", groupKey: "purchasing" },
-  { key: "delivered", label: "Đơn hàng đã giao", icon: "DG", groupKey: "purchasing" },
-  { key: "warehouse_receipt", label: "Nhập kho", icon: "NK", groupKey: "warehouse" },
-  { key: "warehouse_issue", label: "Xuất kho", icon: "XK", groupKey: "warehouse" },
-  { key: "inventory", label: "Tồn kho & điều chuyển", icon: "TK", groupKey: "warehouse" },
-  { key: "stocktake", label: "Kiểm kê & hoàn trả", icon: "KK", groupKey: "warehouse" },
-  { key: "material_norms", label: "Định mức vật tư theo dự án", icon: "ĐM", groupKey: "warehouse" },
-  { key: "central_warehouse", label: "Kho Tổng", icon: "KT", groupKey: "warehouse" },
-  { key: "material_catalog", label: "Danh mục vật tư gốc", icon: "MV", groupKey: "material_master" },
-  { key: "admin", label: "Phân quyền & Cấu hình hệ thống", icon: "QT", groupKey: "system_admin" },
-];
-
-// KP #96 (18/09/2026) — ĐÃ DỌN "cây workspace theo dự án" (8 mục/dự án + khoá ngữ cảnh dự án).
-// Lý do: hai nhánh render treo trên một SENTINEL không bao giờ khớp — `configuredMenuGroups()` chỉ ghép từ
-// `menu_group_catalog` (12 nhóm thật, đo trên CẢ MySQL + SQLite) + bản fallback (12 nhóm), và nhóm
-// `project_management` còn bị chính hàm đó LỌC BỎ ⇒ tính năng KHÔNG BAO GIỜ render, chỉ còn mã chết.
-// Giao diện THẬT của nhóm «QUẢN LÝ DỰ ÁN» là danh sách con phẳng (`group.children.map`), giữ nguyên.
-// Bằng chứng: tools/probe-kp96-dead-project-tree.mjs · docs/agent-progress/TASK-090.md · MASTER_STATUS KP #96.
-
 const titles: Record<ModuleKey, [string, string]> = {
   dashboard: ["Tổng quan điều hành", "Theo dõi tổng thể dự án, hợp đồng, thu hồi vốn, mua hàng và tồn kho"],
   dept_plan_tasks: ["Nhiệm vụ nhân viên đang làm – Phòng Kế hoạch", "Task tự động từ nghiệp vụ + giao việc bổ sung; SLA tính ngay từ thời điểm giao"],
@@ -264,23 +200,6 @@ function AdminModuleGuide({moduleKey}:{moduleKey:ModuleKey}){const text=moduleAd
 
 function roleLabel(data: AppData, code: string) { return data.roleCatalog?.find((row) => row.code === code)?.name || roleNames[code] || code; }
 function engineRoleLabel(data: AppData, engineKey: string) { const profile=data.engineRoleProfiles?.find((row) => row.engineKey === engineKey);return profile?`${profile.companyCode} · ${profile.displayName}`:roleNames[engineKey]||engineKey; }
-function configuredMenuGroups(data: AppData, includeHidden = false): Row[] {
-  const dbCatalog: Row[] = Array.isArray(data.menuGroups) ? data.menuGroups : [];
-  const catalog: Row[] = [...dbCatalog, ...defaultMenuGroups.filter((row)=>!dbCatalog.some((db)=>String(db.groupKey)===String(row.groupKey)))];
-  const unique = new Map<string, Row>();
-  catalog.forEach((row) => {
-    const groupKey = String(row.groupKey || "").trim();
-    if (!groupKey || unique.has(groupKey)) return;
-    unique.set(groupKey, { ...row, groupKey });
-  });
-  return [...unique.values()]
-    .filter((row) => String(row.groupKey) !== "project_management")
-    .map((row): Row => {
-      const normalized = String(row.groupKey) === "site_command" ? { ...row, name: "QUẢN LÝ DỰ ÁN", icon: "DA", sortOrder: 25 } : row;
-      return { ...normalized, active: normalized.active === undefined ? true : Boolean(normalized.active), collapsible: normalized.collapsible === undefined ? true : Boolean(normalized.collapsible), sortOrder: Number(normalized.sortOrder || 0) };
-    })
-    .filter((row) => includeHidden || row.active).sort((a, b) => a.sortOrder - b.sortOrder || String(a.name).localeCompare(String(b.name), "vi"));
-}
 function configuredModules(data: AppData, includeHidden = false) {
   const catalog = data.moduleCatalog || [];
   const groups = configuredMenuGroups(data, true);
@@ -313,9 +232,6 @@ function permissionMenuStructure(data: AppData) {
   for(const item of moduleRows.filter((item)=>!seen.has(item.key)))result.push({kind:"module",key:`module:${item.key}`,label:item.label,module:item});
   return result;
 }
-
-function stageAllowedForUser(stage: Row | undefined, user: Row) { if (isAdminUser(user)) return true; if (!stage) return false; const allowed = String(stage.allowedRoleCodes || "").split(",").map((item) => item.trim()).filter(Boolean); return allowed.includes(String(user.role)) || allowed.includes(roleBase(user)); }
-
 
 async function requestApi(action: string, payload: Row = {}) {
   const response = await fetch("/api/system", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, ...payload }) });
@@ -748,15 +664,6 @@ function WorkCenter({ data, action, refresh }: { data: AppData; action: (name: s
   </div>;
 }
 
-function daysFromToday(iso: unknown): number | null {
-  const s = String(iso ?? "").slice(0, 10);
-  if (!s) return null;
-  const t = new Date(s + "T00:00:00").getTime();
-  if (Number.isNaN(t)) return null;
-  return Math.floor((UI_NOW_MS - t) / 86400000);
-}
-
-/** Số ngày chậm tiến độ: chỉ tính khi dự án còn hoạt động và đã qua ngày kết thúc dự kiến. */
 function projectOverdueDays(row: Row): number {
   if (String(row.status || "active") !== "active") return 0;
   const late = daysFromToday(row.plannedEndDate);
@@ -1017,13 +924,6 @@ function DevelopmentNotice(){return <div className="development-screen-notice"><
 function DevelopmentModule({ title, note }: { title: string; note: string }) { return <section className="card development-module"><h2>{title}</h2><p>{note.replace("ĐANG PHÁT TRIỂN · ","")}</p><div className="inline-alert">Màn hình này chưa được ưu tiên hiệu chỉnh sâu. Dữ liệu, phân quyền, workflow và liên kết domain chung vẫn tiếp tục đồng bộ theo hệ thống mới.</div></section>; }
 
 function pendingForRole(requests: Row[], user: Row, stages: Row[] = []) { return requests.filter((row) => { if(row.status!=="pending_approval")return false; const approval=row.approvals?.find((item:Row)=>Number(item.stage)===Number(row.approvalStage)); const rule=approval?.allowedRoleCodes?approval:stages.find((stage)=>Number(stage.stageNo)===Number(row.approvalStage)); return stageAllowedForUser(rule,user); }).length; }
-function approvalTiming(approval?: Row) { if (!approval?.queuedAt) return { text: "Chờ cấp trước hoàn tất", minutes: 0, late: false, active: false }; const end = approval.decidedAt ? new Date(approval.decidedAt).getTime() : Date.now(); const start = new Date(approval.queuedAt).getTime(); const due = approval.dueAt ? new Date(approval.dueAt).getTime() : 0; const minutes = Math.max(0, (end - start) / 60000); const late = Boolean(due && end > due); return { text: `${approval.decidedAt ? "Đã xử lý" : "Đang chờ"} ${durationText(minutes)} · ${late ? "Quá hạn" : "Trong hạn"}`, minutes, late, active: true }; }
-function workflowTiming(step?: Row) { if (!step?.queuedAt) return { text: "Chưa bắt đầu", minutes: 0, late: false }; const end = step.completedAt ? new Date(step.completedAt).getTime() : Date.now(); const start = new Date(step.queuedAt).getTime(); const due = step.dueAt ? new Date(step.dueAt).getTime() : 0; const minutes = Math.max(0, (end - start) / 60000); const late = Boolean(due && end > due); return { text: `${step.completedAt ? "Đã xử lý" : "Đang chờ"} ${durationText(minutes)} · ${late ? "Quá hạn" : "Trong hạn"}`, minutes, late }; }
-function SupplyExportButtons({ doc, compact = true, stopPropagation = false }: { doc: SupplyExportDocument; compact?: boolean; stopPropagation?: boolean }) {
-  const cls = compact ? "export-mini" : "secondary";
-  return <span className="supply-export-buttons"><button type="button" className={cls} onClick={(event) => { if (stopPropagation) event.stopPropagation(); downloadSupplyXlsx(doc); }}>⇩ Excel</button><button type="button" className={cls} onClick={(event) => { if (stopPropagation) event.stopPropagation(); downloadSupplyPdf(doc); }}>⇩ PDF</button></span>;
-}
-
 function ContractValueOverview({data,project}:{data:AppData;project:string}) {
   const rows=data.boqItems.filter((row)=>(project==="ALL"||row.projectId===project)&&["material","component"].includes(String(row.rowRole||"material")));
   const contractRows=rows.filter((row)=>row.itemType!=="outside_contract");
@@ -1300,9 +1200,6 @@ function mapMaterialCatalogRows(rows: string[][]) {
 function downloadMaterialCatalogTemplateXlsx(){ downloadPublicTemplate("/templates/Mau_Danh_Muc_Vat_Tu_MEP_VNTECH.xlsx","Mau_Danh_Muc_Vat_Tu_MEP_VNTECH.xlsx"); }
 function downloadMaterialCatalogTemplateCsv(){ downloadPublicTemplate("/templates/Mau_Danh_Muc_Vat_Tu_MEP_VNTECH.csv","Mau_Danh_Muc_Vat_Tu_MEP_VNTECH.csv"); }
 
-function isBoqTemplateInstructionRow(row:string[]){const markers=["cot he thong tu link tinh khong nhap tay","bat buoc theo cau hinh admin","khong bat buoc"];const cells=row.map(normalizeBoqHeader).filter(Boolean);return cells.filter((cell)=>markers.some((marker)=>cell===marker||cell.startsWith(marker))).length>=2;}
-function normalizeBoqType(value: unknown) { const v = normalizeBoqHeader(value); return v.includes("ngoai") || v.includes("phat sinh") ? "outside_contract" : "contract"; }
-function normalizeBoqRowRole(value: unknown) { const v=normalizeBoqHeader(value); if(v.includes("tong"))return "subtotal"; if(v.includes("tieu de phan")||v==="phan")return "section"; if(v.includes("tieu de he")||v==="he")return "system"; if(v.includes("nhom"))return "group"; if(v.includes("ghi chu"))return "note"; if(v.includes("cau kien")||v.includes("chi tiet"))return "component"; return "material"; }
 function normalizeVariationStatus(value: unknown) { const v = normalizeBoqHeader(value); if (v.includes("da duyet") || v === "approved") return "approved"; if (v.includes("khong duyet") || v.includes("tu choi") || v === "rejected") return "rejected"; if (v.includes("cho") || v.includes("chua") || v === "pending") return "pending"; return "none"; }
 export function mapBoqRows(rows: string[][], _materials: Row[], configs?: FormFieldConfig[]) {
   // BOQ source-ingestion contract:
@@ -2683,15 +2580,6 @@ function Admin({ data, open, action }: { data: AppData; open: (name: string, row
   </div>;
 }
 
-function requestLineContext(data: AppData, projectId: string, item: Row, index: number) {
-  const material = data.materials.find((mat) => mat.id === item.materialId) || {};
-  const boqRows = data.boqItems.filter((row) => row.projectId === projectId);
-  const boq = (item.boqItemId ? boqRows.find((row) => String(row.id) === String(item.boqItemId)) : null) || (item.contractLineNo ? boqRows.find((row) => Number(row.lineNo) === Number(item.contractLineNo) && row.materialId === item.materialId) : null) || boqRows.find((row) => row.materialId === item.materialId && (!item.boqCode || !row.boqCode || row.boqCode === item.boqCode)) || {};
-  const stockQty = data.inventory.filter((row) => row.projectId === projectId && row.materialId === item.materialId && (row.warehouseType === "site" || row.type === "site" || !row.warehouseType)).reduce((sum,row)=>sum+Number(row.balance||0),0);
-  const orderedCumulativeQty = Number(boq.orderedQty || item.orderedCumulativeQty || item.orderedQty || 0);
-  const requestedQty = Number(item.quantity ?? item.requestedQty ?? 0);
-  return { ...item, lineNo: item.lineNo || index + 1, contractLineNo: item.contractLineNo || boq.lineNo || "", materialCode: item.materialCode || material.code || boq.materialCode || "", materialName: item.materialName || material.name || boq.materialName || "", unit: item.unit || material.unit || boq.unit || "", manufacturer: item.manufacturer || material.brand || "", origin: item.origin || "", approvedSupplier: item.approvedSupplier || "", contractQty: Number(boq.contractQty || 0), stockQty, orderedCumulativeQty, requestedQty, cumulativeAfterRequest: orderedCumulativeQty + requestedQty, installationArea: item.installationArea || "", note: item.note || "", boqCode: item.boqCode || boq.boqCode || "", customFields: item.customFields || {} };
-}
 function savedRequestDocument(data: AppData, request: Row): RequestExportDocument {
   return {
     requestNo: request.requestNo || "De_nghi_cap_vat_tu", projectCode: request.projectCode, projectName: request.projectName, requestedBy: request.requestedBy, requestedAt: request.requestedAt, neededAt: request.neededAt, priority: request.priority, area: request.area, purpose: request.purpose, status: statusLabel(request), fieldConfigs: data.formFieldConfigs,
@@ -2703,37 +2591,6 @@ function draftRequestDocument(data: AppData, projectId: string, lines: Row[], fo
   return {
     requestNo: `DNMH-${project?.code || "DAxx"}-${new Date().getFullYear()}-DRAFT`, projectCode: project?.code, projectName: project?.name, requestedBy: data.user.fullName, requestedAt: new Date().toISOString(), neededAt: String(values.neededAt || ""), priority: String(values.priority || "normal"), area: String(values.area || ""), purpose: String(values.purpose || ""), status: "Dự thảo - chưa gửi duyệt", fieldConfigs: data.formFieldConfigs,
     lines: lines.map((item, index) => requestLineContext(data, projectId, item, index)),
-  };
-}
-
-function poSupplyDocument(data: AppData, po: Row): SupplyExportDocument {
-  const request = data.requests.find((row) => row.id === po.requestId) || {};
-  const project = data.projects.find((row) => row.id === po.projectId) || {};
-  const warehouse = data.warehouses.find((row) => row.id === po.receivingWarehouseId) || {};
-  const requestItems = new Map<string,Row>((request.items || []).map((item: Row) => [String(item.id), item]));
-  return {
-    kind: "po", requestNo: po.requestNo || request.requestNo || "DNMH-KHONG-RO", poNo: po.poNo || "PO-KHONG-RO", projectCode: po.projectCode || project.code, projectName: project.name,
-    supplierName: po.supplierName, warehouseName: warehouse.name, orderedAt: po.orderedAt, eta: po.eta, status: statusLabel(po),
-    lines: (po.items || []).map((item: Row, index: number) => { const source = requestItems.get(String(item.requestItemId)) || {} as Row; return { lineNo: item.lineNo || index + 1, materialCode: item.materialCode, materialName: item.materialName, unit: item.unit, requestedQty: Number(source.requestedQty || 0), approvedQty: Number(source.approvedPurchaseQty || 0), orderedQty: Number(item.orderedQty || 0), unitPrice: Number(item.unitPrice || 0), actualTripQty: null, acceptedTripQty: null, actualCumulativeQty: Number(item.actualDeliveredQty || 0), acceptedCumulativeQty: Number(item.receivedQty || 0) }; }),
-  };
-}
-
-function receiptSupplyDocument(data: AppData, receipt: Row): SupplyExportDocument {
-  const po = data.purchaseOrders.find((row) => row.id === receipt.purchaseOrderId) || {};
-  const request = data.requests.find((row) => row.id === (po.requestId || receipt.requestId)) || {};
-  const project = data.projects.find((row) => row.id === (po.projectId || receipt.projectId)) || {};
-  const requestItems = new Map<string,Row>((request.items || []).map((item: Row) => [String(item.id), item]));
-  const currentItems = new Map<string,Row>((receipt.items || []).map((item: Row) => [String(item.purchaseOrderItemId), item]));
-  const cutoff = receipt.receivedAt ? new Date(receipt.receivedAt).getTime() : Number.POSITIVE_INFINITY;
-  const cumulative = new Map<string, { actual: number; accepted: number }>();
-  data.receipts.filter((row) => row.purchaseOrderId === receipt.purchaseOrderId && (!row.receivedAt || new Date(row.receivedAt).getTime() <= cutoff)).forEach((row) => {
-    (row.items || []).forEach((item: Row) => { const key = String(item.purchaseOrderItemId); const current = cumulative.get(key) || { actual: 0, accepted: 0 }; current.actual += Number(item.actualQty || 0); current.accepted += Number(item.acceptedQty || 0); cumulative.set(key, current); });
-  });
-  return {
-    kind: "delivery", requestNo: po.requestNo || request.requestNo || "DNMH-KHONG-RO", poNo: receipt.poNo || po.poNo || "PO-KHONG-RO", receiptNo: receipt.receiptNo, projectCode: receipt.projectCode || po.projectCode || project.code, projectName: project.name,
-    supplierName: receipt.supplierName || po.supplierName, warehouseName: receipt.warehouseName, orderedAt: po.orderedAt, eta: po.eta, receivedAt: receipt.receivedAt, deliveryNoteNo: receipt.deliveryNoteNo,
-    bchConfirmedAt: receipt.bchConfirmedAt, bchConfirmedByName: receipt.bchConfirmedByName, certificateStatus: receipt.certificateStatus, deliveryDocumentStatus: receipt.deliveryDocumentStatus, status: receipt.bchConfirmationStatus === "confirmed" ? "BCH đã xác nhận" : "Chờ BCH xác nhận",
-    lines: (po.items || []).map((item: Row, index: number) => { const source = requestItems.get(String(item.requestItemId)) || {} as Row; const trip = currentItems.get(String(item.id)) || {} as Row; const total = cumulative.get(String(item.id)) || { actual: 0, accepted: 0 }; return { lineNo: item.lineNo || index + 1, materialCode: item.materialCode, materialName: item.materialName, unit: item.unit, requestedQty: Number(source.requestedQty || 0), approvedQty: Number(source.approvedPurchaseQty || 0), orderedQty: Number(item.orderedQty || 0), unitPrice: Number(item.unitPrice || 0), actualTripQty: Number(trip.actualQty || 0), acceptedTripQty: Number(trip.acceptedQty || 0), actualCumulativeQty: total.actual, acceptedCumulativeQty: total.accepted, lotNo: trip.lotNo || "" }; }),
   };
 }
 

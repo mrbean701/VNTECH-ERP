@@ -1686,3 +1686,23 @@ px tsc --noEmit **0** · **cổng ảnh: mọi màn   px**, chỉ 17-modal-po gi
 * SupplyExportButtons, receiptSupplyDocument, poSupplyDocument → lib/supply-docs.ts ⇒ **gỡ chặn ReceiptDrawer**
 * stageAllowedForUser, approvalTiming, workflowTiming → lib/approval-helpers.ts
 **CÒN CHẶN (đã ghi rõ helper nào cần trước):** WorkflowModal ← configuredMenuGroups, modules · WorkCenter ← daysFromToday, WorkCenter · BoqControl ← isBoqTemplateInstructionRow, normalizeBoqRowRole, normalizeBoqType · RequestDrawer ← equestLineContext · ReceiptDrawer ← 3 helper supply-docs (lô #3).
+
+### 41. ✅ [U-11] LÔ HELPER #3+#4 — page.tsx 3243 → **3095 dòng** (19/09)
+**6 module mới (mỗi lần đều --dry trước):**
+| Tệp | Khối | Ghi chú |
+|---|---|---|
+| lib/approval-helpers.ts | stageAllowedForUser, pprovalTiming, workflowTiming | hàm thuần ⇒ .ts |
+| **lib/supply-docs.tsx** | SupplyExportButtons, eceiptSupplyDocument, poSupplyDocument | **CÓ JSX ⇒ PHẢI .tsx** |
+| lib/menu-helpers.ts | configuredMenuGroups(17d), **modules(70d)** | import từ @/lib/ui-shared |
+| lib/request-context.ts | equestLineContext(9d) | |
+| lib/boq-normalize.ts | isBoqTemplateInstructionRow, 
+ormalizeBoqRowRole, 
+ormalizeBoqType | |
+| lib/date-helpers.ts | daysFromToday(9d) | |
+* git diff --stat app/page.tsx ⇒ **6 insertions(+), 149 deletions(-)** ⇒ page.tsx **3243 → 3095 dòng** (cả phiên: **3410 → 3095 = −315 dòng**; hàm top-level **182 → 158**).
+**🚨 LỖI ĐÃ TỰ PHÁT HIỆN & SỬA (bài học mới):** lô #3 lần đầu công cụ ghi SupplyExportButtons (**component CÓ JSX**) vào **lib/supply-docs.ts** ⇒ **7 lỗi TS1005** ⇒ **	sc bắt được ⇒ em TỰ HOÀN TÁC SẠCH** (git checkout -- app/page.tsx + xoá tệp) ⇒ làm lại **đúng**: **JSX ⇒ .tsx** ⇒ 	sc **0** ✔
+> 📌 **Quy tắc:** khối **CÓ JSX ⇒ .tsx**; khối **hàm thuần ⇒ .ts**.
+**BẰNG CHỨNG:** 
+px tsc --noEmit **0** · **cổng ảnh 4/64 lệch — TOÀN BỘ là 17-modal-po với CON SỐ Y HỆT mọi lượt trước** (181/170/185/109 px tại (704,192)) ⇒ **nhiễu NGÀY, không do refactor** ✔
+**TIẾN TRIỂN GỠ CHẶN:** ReceiptDrawer **hết chặn (chuyển được ngay)** · RequestDrawer từ **7 → 2 chặn** · WorkflowModal từ **3 → 2 chặn** · WorkCenter còn isTaskLate/workRate/TaskTable · BoqControl còn 5 helper (vướng oqAssessment/oqExportRows).
+**LÔ #5 ĐÃ CHẠY KHÔ VÀ ĐƯỢC CHẤP NHẬN (chờ áp dụng):** savedRequestDocument, decide → lib/request-actions.ts · workflowApproverCandidates, configuredModules → lib/workflow-helpers.ts.
