@@ -2072,3 +2072,25 @@ DA LAM: xac minh cot THAT trong MySQL (material_requests/purchase_orders); sourc
 BUILD: gd-cycle "PHASE-9-R-02-BAO-CAO-MUA-HANG" => dinh danh moi VNTECH-FP-DB84DDA40A395178 · drizzle 0149 ·
   PREFLIGHT DAT · FINGERPRINT DAT (source 324 files) · BUILT ARTIFACT VALIDATION DAT.
 ANH CHUAN: 4/4 kich thuoc (desktop 328KB, laptop 260KB, tablet 134KB, phone 96KB) · nav=OK.
+
+### 56. [PHASE 9 · R-03] KHO: XAC MINH COT THAT + 3 DINH NGHIA MOI (R-03c/d/e) (20/09)
+XAC MINH BANG information_schema (khong bia):
+  Bang lien quan: stock_movements · stock_issues(+items) · stock_counts(+items) · stock_reservations · goods_receipts(+items) · warehouses · warehouse_locations · materials
+  stock_movements : id, project_id, material_id, from_warehouse_id, to_warehouse_id, movement_type, quantity, unit_cost, occurred_at,
+                    reference_type, reference_id, posted_by, reversal_of_id, contract_id, destination_contract_id
+  warehouses      : id, code, name, type, project_id, parent_warehouse_id, keeper_user_id, active
+  materials       : id, code, name, unit, standard_price, min_stock, category_id, subcategory_id, ...
+  LUU Y: 'inventory' KHONG phai bang DB (0 bang khop) => du lieu 'inventory' la TINH SAN o bootstrap (da xac minh client-side: available/balance/minStock).
+DA THEM vao lib/report-catalog.ts:
+  * ReportSource += "stockMovements" (bo "materials" vi chua dung den - giu gon).
+  * sourceRows("stockMovements"): FAN-OUT CO DAU - moi giao dich sinh 2 dong:
+      nhap (to_warehouse_id)   => soLuong = +quantity, chieu = "N"
+      xuat (from_warehouse_id) => soLuong = -quantity, chieu = "X"
+    kem khoTen (tra tu data.warehouses) + giaTri = quantity * unit_cost + occurredAt.
+    => GOP theo khoId/khoTen + sum(soLuong) CHINH LA TON THEO KHO (khong can bang ton rieng).
+  * 3 dinh nghia moi: R-03c (Nhap/Xuat theo loai giao dich) · R-03d (TON theo KHO) · R-03e (Gia tri theo kho).
+KIEM CHUNG: npx tsc --noEmit => 0 ; catalog-check => pass 73 - fail 0 (11 dinh nghia), trong do co 2 phep kiem FAN-OUT:
+  "R-03d: net Kho A = 100 - 30 = 70" va "R-03d: net Kho B = 50" => phep cong/tru theo dau DUNG.
+GUARD: 2 lan tu choi ghi (lan 1: mo neo CRLF khong khop tep LF; lan 2: bo dem cua toi dem nham 4/3) => tep khong bi ghi sai lan nao.
+CON LAI DE DONG R-03: BUILD LAI (ma nguon chua co hieu luc trong app) => roi CHUNG MINH RUNTIME: doc danh sach option cua o chon bao cao
+  (dropdown lay tu catalog) => phai thay ten R-03c/d/e => anh chung minh => danh dau R-03 DONE.

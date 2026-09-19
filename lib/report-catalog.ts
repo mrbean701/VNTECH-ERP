@@ -9,7 +9,7 @@
 // Phần nào của đặc tả R-02..R-05 dùng trường CHƯA xác minh thì để `note` ghi rõ là còn thiếu, KHÔNG bịa tên trường.
 import type { ReportDefinition, Row } from "./report-engine";
 
-export type ReportSource = "requests" | "purchaseOrders" | "inventory" | "projects" | "workItems";
+export type ReportSource = "requests" | "purchaseOrders" | "inventory" | "projects" | "workItems" | "stockMovements";
 
 export interface ReportCatalogEntry {
   def: ReportDefinition;
@@ -123,6 +123,37 @@ const R03: ReportCatalogEntry[] = [
 ];
 
 // ── R-04 — DỰ ÁN ────────────────────────────────────────────────────────────
+// R-03c/d/e — KHO (nguon stock_movements DA XAC MINH: from/to_warehouse_id, quantity, movement_type, unit_cost)
+const R03B: ReportCatalogEntry[] = [
+  { source: "stockMovements", def: {
+      key: "R-03c", title: "Kho — Nhập / Xuất theo loại giao dịch",
+      note: "Số giao dịch · tổng số lượng · giá trị (quantity × unit_cost) · số mặt hàng. Nguồn: stock_movements (cột đã xác minh).",
+      groupBy: ["movementType", "chieu"],
+      metrics: [
+        { key: "soGiaoDich", label: "Số giao dịch", agg: "count" },
+        { key: "tongSoLuong", label: "Tổng số lượng", agg: "sum", field: "soLuong", format: "number" },
+        { key: "tongGiaTri", label: "Tổng giá trị", agg: "sum", field: "giaTri", format: "money" },
+        { key: "soMatHang", label: "Số mặt hàng", agg: "distinct", field: "materialId" },
+      ], sortBy: "tongSoLuong", sortDir: "desc" } },
+  { source: "stockMovements", def: {
+      key: "R-03d", title: "Kho — Tồn theo KHO (cộng nhập − trừ xuất)",
+      note: "TỒN = Σ(+quantity khi nhập) − Σ(quantity khi xuất), gộp theo kho. Nguồn: stock_movements.to_warehouse_id / from_warehouse_id.",
+      groupBy: ["khoTen"],
+      metrics: [
+        { key: "tonSoLuong", label: "Tồn (số lượng)", agg: "sum", field: "soLuong", format: "number" },
+        { key: "soGiaoDich", label: "Số giao dịch", agg: "count" },
+        { key: "soMatHang", label: "Số mặt hàng", agg: "distinct", field: "materialId" },
+      ], sortBy: "tonSoLuong", sortDir: "desc" } },
+  { source: "stockMovements", def: {
+      key: "R-03e", title: "Kho — Giá trị theo kho",
+      note: "Giá trị = quantity × unit_cost (unit_cost đã xác minh; nếu nghiệp vụ chưa nhập đơn giá thì bằng 0 — phản ánh đúng dữ liệu).",
+      groupBy: ["khoTen"],
+      metrics: [
+        { key: "giaTri", label: "Giá trị", agg: "sum", field: "giaTri", format: "money" },
+        { key: "soGiaoDich", label: "Số giao dịch", agg: "count" },
+      ], sortBy: "giaTri", sortDir: "desc" } },
+];
+
 const R04: ReportCatalogEntry[] = [
   {
     source: "projects",
@@ -175,7 +206,7 @@ const R05: ReportCatalogEntry[] = [
   },
 ];
 
-export const REPORT_CATALOG: ReportCatalogEntry[] = [...R02, ...R03, ...R04, ...R05];
+export const REPORT_CATALOG: ReportCatalogEntry[] = [...R02, ...R03, ...R03B, ...R04, ...R05];
 
 /**
  * Lấy mảng dữ liệu nguồn từ `data` bootstrap (an toàn: luôn trả mảng).
@@ -203,6 +234,24 @@ export function sourceRows(source: ReportSource, data: unknown): Row[] {
       const soNgay = Number.isFinite(ta) && Number.isFinite(tb) ? Math.max(0, (tb - ta) / 86400000) : undefined;
       return { ...r, xuLyNgay: soNgay };
     });
+  }
+  if (source === "stockMovements") {
+    // FAN-OUT CO DAU theo cot DA XAC MINH (stock_movements: from/to_warehouse_id, quantity, unit_cost):
+    //   nhap (to_warehouse_id) => +quantity ; xuat (from_warehouse_id) => -quantity
+    //   => gop theo khoId + sum(soLuong) chinh la TON THEO KHO.
+    const wh = Array.isArray((bag as Record<string, unknown>).warehouses) ? ((bag as Record<string, unknown>).warehouses as Row[]) : [];
+    const ten = (id: unknown) => { const w = wh.find((x) => String(x.id) === String(id)); return w ? String(w.name ?? w.code ?? id) : String(id ?? "(khong xac dinh)"); };
+    const out: Row[] = [];
+    for (const r of list) {
+      const qty = Number(r.quantity ?? 0);
+      const cost = Number(r.unitCost ?? r.unit_cost ?? 0);
+      const when = r.occurredAt ?? r.occurred_at;
+      const to = r.toWarehouseId ?? r.to_warehouse_id;
+      const from = r.fromWarehouseId ?? r.from_warehouse_id;
+      if (to) out.push({ ...r, khoId: to, khoTen: ten(to), soLuong: qty, giaTri: qty * cost, chieu: "N", occurredAt: when });
+      if (from) out.push({ ...r, khoId: from, khoTen: ten(from), soLuong: -qty, giaTri: -qty * cost, chieu: "X", occurredAt: when });
+    }
+    return out;
   }
   return list;
 }

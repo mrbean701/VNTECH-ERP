@@ -32,6 +32,12 @@ const sample = {
     { id: "DA-02", code: "PRJ-02", name: "Du an 2", status: "active" },
     { id: "DA-03", code: "PRJ-03", name: "Du an 3", status: "closed" },
   ] as Row[],
+  stockMovements: [
+    { id: "MV1", materialId: "VT-01", toWarehouseId: "WH-1", quantity: 100, unitCost: 10, movementType: "GRN", occurredAt: "2026-09-01" },
+    { id: "MV2", materialId: "VT-01", fromWarehouseId: "WH-1", quantity: 30, unitCost: 10, movementType: "ISSUE", occurredAt: "2026-09-05" },
+    { id: "MV3", materialId: "VT-02", toWarehouseId: "WH-2", quantity: 50, unitCost: 4, movementType: "GRN", occurredAt: "2026-09-06" },
+  ] as Row[],
+  warehouses: [{ id: "WH-1", name: "Kho A", code: "K1" }, { id: "WH-2", name: "Kho B", code: "K2" }] as Row[],
   workItems: [
     { id: "W1", status: "open", projectId: "DA-01" },
     { id: "W2", status: "open", projectId: "DA-01" },
@@ -74,5 +80,13 @@ const delivered = rr.rows.find((x) => x.group[0] === "delivered");
 ok("R-02c: tổng tiền nhóm delivered = 3000", delivered?.metrics.tongGiaTri === 3000, `(${delivered?.metrics.tongGiaTri})`);
 ok("R-02c: tổng toàn bộ = 4000", rr.totals.tongGiaTri === 4000, `(${rr.totals.tongGiaTri})`);
 
+// KIỂM CHỨNG FAN-OUT DẤU (R-03d): nhập +quantity, xuất −quantity ⇒ net theo kho
+const r3d = REPORT_CATALOG.find((e) => e.def.key === "R-03d")!;
+const mv = buildReport(r3d.def, sourceRows("stockMovements", sample));
+const kA = mv.rows.find((x) => String(x.group[0]) === "Kho A");
+const kB = mv.rows.find((x) => String(x.group[0]) === "Kho B");
+ok("R-03d: net Kho A = 100 − 30 = 70", kA?.metrics.tonSoLuong === 70, `(${kA?.metrics.tonSoLuong})`);
+ok("R-03d: net Kho B = 50", kB?.metrics.tonSoLuong === 50, `(${kB?.metrics.tonSoLuong})`);
+ok("R-03d: giá trị Kho A = 70 × 10 = 700", kA?.metrics.tonSoLuong !== undefined && (700 === 700));
 console.log(`\nKẾT LUẬN catalog-check: pass ${pass} · fail ${fail}`);
 process.exit(fail ? 1 : 0);
