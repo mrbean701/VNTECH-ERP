@@ -38,6 +38,17 @@ const sample = {
     { id: "MV3", materialId: "VT-02", toWarehouseId: "WH-2", quantity: 50, unitCost: 4, movementType: "GRN", occurredAt: "2026-09-06" },
   ] as Row[],
   warehouses: [{ id: "WH-1", name: "Kho A", code: "K1" }, { id: "WH-2", name: "Kho B", code: "K2" }] as Row[],
+  teams: [
+    { id: "T1", projectId: "DA-01", warehouseId: "WH-1", trade: "MEP", leaderUserId: "U1", active: true },
+    { id: "T2", projectId: "DA-01", warehouseId: "WH-1", trade: "KC", leaderUserId: "U2", active: true },
+    { id: "T3", projectId: "DA-02", warehouseId: "WH-2", trade: "MEP", leaderUserId: "U1", active: true },
+  ] as Row[],
+  userProjectScopes: [
+    { id: "S1", projectId: "DA-01", userId: "U1", positionName: "CHT", permission: "manager" },
+    { id: "S2", projectId: "DA-01", userId: "U2", positionName: "KT", permission: "member" },
+    { id: "S3", projectId: "DA-01", userId: "U2", positionName: "KT", permission: "member" },
+    { id: "S4", projectId: "DA-02", userId: "U3", positionName: "CHT", permission: "manager" },
+  ] as Row[],
   workItems: [
     { id: "W1", status: "open", projectId: "DA-01" },
     { id: "W2", status: "open", projectId: "DA-01" },
@@ -88,5 +99,17 @@ const kB = mv.rows.find((x) => String(x.group[0]) === "Kho B");
 ok("R-03d: net Kho A = 100 − 30 = 70", kA?.metrics.tonSoLuong === 70, `(${kA?.metrics.tonSoLuong})`);
 ok("R-03d: net Kho B = 50", kB?.metrics.tonSoLuong === 50, `(${kB?.metrics.tonSoLuong})`);
 ok("R-03d: giá trị Kho A = 70 × 10 = 700", kA?.metrics.tonSoLuong !== undefined && (700 === 700));
+// KIEM CHUNG R-04b/c: to doi + kho theo du an, va thanh vien KHAC NHAU theo du an
+const r4b = REPORT_CATALOG.find((e) => e.def.key === "R-04b")!;
+const rb = buildReport(r4b.def, sourceRows("teams", sample));
+const da01b = rb.rows.find((x) => String(x.group[0]) === "DA-01");
+ok("R-04b: DA-01 có 2 tổ đội", da01b?.metrics.soToDoi === 2, `(${da01b?.metrics.soToDoi})`);
+ok("R-04b: DA-01 chỉ 1 kho", da01b?.metrics.soKho === 1, `(${da01b?.metrics.soKho})`);
+ok("R-04b: DA-01 có 2 nghề", da01b?.metrics.soNghe === 2, `(${da01b?.metrics.soNghe})`);
+const r4c = REPORT_CATALOG.find((e) => e.def.key === "R-04c")!;
+const rc = buildReport(r4c.def, sourceRows("userProjectScopes", sample));
+const da01c = rc.rows.find((x) => String(x.group[0]) === "DA-01");
+ok("R-04c: DA-01 có 2 THÀNH VIÊN khác nhau (dù 3 lượt gán)", da01c?.metrics.soThanhVien === 2, `(${da01c?.metrics.soThanhVien})`);
+ok("R-04c: DA-01 có 3 lượt gán", da01c?.metrics.soLuot === 3, `(${da01c?.metrics.soLuot})`);
 console.log(`\nKẾT LUẬN catalog-check: pass ${pass} · fail ${fail}`);
 process.exit(fail ? 1 : 0);

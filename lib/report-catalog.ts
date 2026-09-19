@@ -9,7 +9,7 @@
 // Phần nào của đặc tả R-02..R-05 dùng trường CHƯA xác minh thì để `note` ghi rõ là còn thiếu, KHÔNG bịa tên trường.
 import type { ReportDefinition, Row } from "./report-engine";
 
-export type ReportSource = "requests" | "purchaseOrders" | "inventory" | "projects" | "workItems" | "stockMovements";
+export type ReportSource = "requests" | "purchaseOrders" | "inventory" | "projects" | "workItems" | "stockMovements" | "teams" | "userProjectScopes";
 
 export interface ReportCatalogEntry {
   def: ReportDefinition;
@@ -154,6 +154,30 @@ const R03B: ReportCatalogEntry[] = [
       ], sortBy: "giaTri", sortDir: "desc" } },
 ];
 
+// R-04b/c — DU AN: nguon DA XAC MINH (teams: project_id/warehouse_id/trade; user_project_scopes: project_id/user_id/permission/position_name)
+const R04B: ReportCatalogEntry[] = [
+  { source: "teams", def: {
+      key: "R-04b", title: "Dự án — Tổ đội & kho theo dự án",
+      note: "Số tổ đội · số kho khác nhau · số nghề (trade) · số tổ đội còn hoạt động. Nguồn: teams (project_id · warehouse_id · trade · active).",
+      groupBy: ["projectId"],
+      metrics: [
+        { key: "soToDoi", label: "Số tổ đội", agg: "count" },
+        { key: "soKho", label: "Số kho", agg: "distinct", field: "warehouseId" },
+        { key: "soNghe", label: "Số nghề", agg: "distinct", field: "trade" },
+        { key: "soLeader", label: "Số tổ trưởng", agg: "distinct", field: "leaderUserId" },
+      ], sortBy: "soToDoi", sortDir: "desc" } },
+  { source: "userProjectScopes", def: {
+      key: "R-04c", title: "Dự án — Thành viên theo dự án",
+      note: "Số thành viên (user khác nhau) · số chức danh · số mức quyền. Nguồn: user_project_scopes (project_id · user_id · position_name · permission). (Bảng project_members KHÔNG tồn tại ⇒ đây là nguồn thành viên dự án.)",
+      groupBy: ["projectId"],
+      metrics: [
+        { key: "soThanhVien", label: "Số thành viên", agg: "distinct", field: "userId" },
+        { key: "soChucDanh", label: "Số chức danh", agg: "distinct", field: "positionName" },
+        { key: "soMucQuyen", label: "Số mức quyền", agg: "distinct", field: "permission" },
+        { key: "soLuot", label: "Số lượt gán", agg: "count" },
+      ], sortBy: "soThanhVien", sortDir: "desc" } },
+];
+
 const R04: ReportCatalogEntry[] = [
   {
     source: "projects",
@@ -206,7 +230,7 @@ const R05: ReportCatalogEntry[] = [
   },
 ];
 
-export const REPORT_CATALOG: ReportCatalogEntry[] = [...R02, ...R03, ...R03B, ...R04, ...R05];
+export const REPORT_CATALOG: ReportCatalogEntry[] = [...R02, ...R03, ...R03B, ...R04, ...R04B, ...R05];
 
 /**
  * Lấy mảng dữ liệu nguồn từ `data` bootstrap (an toàn: luôn trả mảng).

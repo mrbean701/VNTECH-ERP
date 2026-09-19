@@ -2106,3 +2106,20 @@ BANG CHUNG 3 LOP:
 GIOI HAN DA GHI RO (trung thuc): probe visual GIOI HAN ~60 ky tu khi in text cua phan tu nen KHONG doc het danh sach option => chua co anh
   chung minh rieng cho tung bao cao R-03. DE XUAT CAI TIEN PROBE: cho phep chon bao cao theo KHOA (vi du tham so ?report=R-03d hoac mot buoc
   chon option trong probe) => se co bang chung anh cho tung bao cao.
+
+### 58. [PHASE 9 · R-04] DU AN: XAC MINH COT THAT + R-04b/R-04c (20/09)
+XAC MINH BANG information_schema (khong bia):
+  projects           : id, code, name, status, manager_user_id, start_date, planned_end_date, created_at, updated_at, contract_no, contract_name
+  teams              : id, code, name, trade, project_id, warehouse_id, leader_user_id, active, created_at, updated_at
+  team_members       : id, team_id, user_id, role_in_team, joined_at, left_at, active, created_at, updated_at
+  user_project_scopes: id, user_id, project_id, permission, created_at, updated_at, joined_at, left_at, position_name
+  project_members    : KHONG CO BANG => "thanh vien du an" lay tu user_project_scopes (+ team_members).
+DA THEM: ReportSource += "teams" | "userProjectScopes"; 2 dinh nghia moi:
+  * R-04b — To doi & kho theo du an: so to doi · SO KHO khac nhau (distinct warehouse_id) · so nghe (trade) · so to truong.
+  * R-04c — Thanh vien theo du an: SO THANH VIEN khac nhau (distinct user_id) · so chuc danh (position_name) · so muc quyen · so luot gan.
+KIEM CHUNG: tsc 0 ; catalog-check pass 90 - fail 0 (13 dinh nghia) voi 5 phep kiem so hoc moi:
+  "R-04b: DA-01 co 2 to doi" · "DA-01 chi 1 kho" · "DA-01 co 2 nghe" ·
+  "R-04c: DA-01 co 2 THANH VIEN khac nhau (du 3 LUOT gan)" · "DA-01 co 3 luot gan" => ham distinct CHINH XAC.
+DAC TA CON THIEU (ghi ro, khong bia): phan "TIEN DO" (%) chua co nguon xac dinh => hien chi co the dua so luong/thoi luong ke hoach
+  (start_date..planned_end_date) va so hop dong (project_contracts). Can xac nhan nguon % truoc khi bo sung.
+CON LAI DE DONG R-04: build lai + commit + danh dau DONE (PHASE 9 = 4/5).
