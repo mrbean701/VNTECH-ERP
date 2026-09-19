@@ -617,23 +617,14 @@ function ProjectManagement({ data, project, onProject, action, permission }: { d
       .filter(Boolean) as Row[];
   const teamsOf = (pid: string) => (data.teams || []).filter((t) => String(t.projectId) === String(pid));
   const warehousesOf = (pid: string) => (data.warehouses || []).filter((w) => String(w.projectId) === String(pid));
-  const keepersOf = () =>
-    users.filter((u) => /kho|warehouse/i.test(`${u.role || ""} ${u.roleBase || ""} ${u.roleName || ""}`));
-
-  // --- chứng từ theo kho ------------------------------------------------------
-  function docsOfWarehouse(wh: Row) {
-    const wid = String(wh.id);
-    const pendingIn = (data.receipts || []).filter((r) => String(r.warehouseId) === wid && String(r.postingStatus || "") !== "posted");
-    const pendingOut = (data.issues || []).filter((r) => String(r.warehouseId) === wid || String(r.teamId) === wid);
-    const pendingApprove = (data.requests || []).filter((r) => String(r.projectId) === String(wh.projectId) && String(r.status) === "pending_approval");
-    const openPOs = (data.purchaseOrders || []).filter((r) => String(r.projectId) === String(wh.projectId) && !["completed", "received", "cancelled"].includes(String(r.status || "")));
-    return { pendingIn, pendingOut, pendingApprove, openPOs };
-  }
+  // PR-03 — nội dung 5 tab con (kể cả thủ kho + chứng từ theo kho) nay nằm ở `app/screens/ProjectDetailTabs.tsx`
+  // ⇒ bỏ 2 helper chỉ phục vụ khối chi tiết cũ (`keepersOf`, `docsOfWarehouse`) để không còn mã chết.
 
   // PR-01 — dải tab DÙNG CHUNG cho CẢ hai chế độ xem (danh sách + chi tiết).
   // Tab chi tiết bị KHOÁ cho tới khi người dùng chọn một dự án (nút "Chi tiết ›") — tránh mở tab rỗng.
+  // PR-03 — tab ngoài 1..4 đồng thời chọn ĐÚNG tab con tương ứng của khối chi tiết (lối vào nhanh).
   const projectTabs = <div className="project-scope-tabs" role="tablist" aria-label="Khu vực màn quản lý dự án">
-    {TAB_LABELS.map((label, index) => <button key={label} type="button" role="tab" aria-selected={tab === index} disabled={index > 0 && !detailId} title={index > 0 && !detailId ? "Chọn một dự án (nút “Chi tiết ›”) để mở nhóm tab này" : undefined} className={tab === index ? "active" : ""} onClick={() => setTab(index)}>{label}</button>)}
+    {TAB_LABELS.map((label, index) => <button key={label} type="button" role="tab" aria-selected={tab === index} disabled={index > 0 && !detailId} title={index > 0 && !detailId ? "Chọn một dự án (nút “Chi tiết ›”) để mở nhóm tab này" : undefined} className={tab === index ? "active" : ""} onClick={() => { setTab(index); if (index >= 1 && index <= 4) setDetailSection(PROJECT_DETAIL_SUB_TABS[index - 1]); }}>{label}</button>)}
   </div>;
 
   // =========================== DANH SÁCH =====================================
@@ -723,7 +714,6 @@ function ProjectManagement({ data, project, onProject, action, permission }: { d
   });
   const teams = teamsOf(pid);
   const warehouses = warehousesOf(pid);
-  const keepers = keepersOf();
 
   return <div className="stack project-management">
     <section className="card project-detail-head">
@@ -738,99 +728,17 @@ function ProjectManagement({ data, project, onProject, action, permission }: { d
       {projectTabs}
     </section>
 
-    {tab === 1 && <div className="stack">
-      <div className="kpi-grid">
-        <Kpi icon="BD" label="Ngày bắt đầu" value={date(detail.startDate)} note="Theo hợp đồng / khởi công" tone="blue"/>
-        <Kpi icon="KT" label="Kết thúc dự kiến" value={date(detail.plannedEndDate)} note="Mốc bàn giao theo kế hoạch" tone="blue"/>
-        <Kpi icon="TR" label="Chậm tiến độ" value={late > 0 ? `${late} ngày` : "Đúng hạn"} note={late > 0 ? "ĐÃ QUÁ ngày kết thúc dự kiến" : "Chưa vượt mốc kế hoạch"} tone={late > 0 ? "red" : "green"}/>
-        <Kpi icon="HD" label="Hợp đồng" value={detail.contractNo || "—"} note={detail.contractName || "Chưa gắn hợp đồng chính"} tone="violet"/>
-      </div>
-      <section className="card">
-        <CardHead title="Công việc cần hoàn thành" note="Danh sách đầu việc còn lại của dự án"/>
-        <div className="development-screen-notice"><b>ĐANG PHÁT TRIỂN</b><span>Khối này sẽ liên kết với BOQ, tiến độ thi công và nhiệm vụ nhân viên. Hiện chưa triển khai theo yêu cầu “phần này sẽ phát triển về sau”.</span></div>
-      </section>
-      <section className="card">
-        <CardHead title="Nhân sự & tổ đội tóm tắt" note="Bấm sang tab tương ứng để xem chi tiết"/>
-        <div className="table-wrap"><table className="baseline-table">
-          <thead><tr><th>Hạng mục</th><th>Số lượng</th><th>Ghi chú</th></tr></thead>
-          <tbody>
-            <tr><td>Nhân sự tham gia dự án</td><td><strong>{staff.length}</strong></td><td>{staff.filter((u) => u.active !== false).length} đang hoạt động</td></tr>
-            <tr><td>Tổ đội thuộc dự án</td><td><strong>{teams.length}</strong></td><td>{teams.map((t) => t.code).join(" · ") || "Chưa có tổ đội"}</td></tr>
-            <tr><td>Kho của dự án</td><td><strong>{warehouses.length}</strong></td><td>{warehouses.map((w) => w.code).join(" · ") || "Chưa có kho"}</td></tr>
-          </tbody>
-        </table></div>
-      </section>
-    </div>}
-
-    {tab === 2 && <section className="card">
-      <CardHead title="Nhân sự tham gia dự án" note="Ưu tiên người đang hoạt động · sắp xếp theo ngày tham gia dự án"/>
-      <DataTable rows={staff} rowKey={(u) => String(String(u.id))} columns={[{ key: "c1", header: "Họ tên", render: (u) => <><strong>{u.fullName}</strong><small>{u.email || u.username || "—"}</small></> }, { key: "c2", header: "Mã NV", render: (u) => <>{u.employeeCode || "—"}</> }, { key: "c3", header: "Chức vụ", render: (u) => <>{u.roleName || u.role || "—"}</> }, { key: "c4", header: "Phòng ban", render: (u) => <>{u.organizationName || u.department || "—"}</> }, { key: "c5", header: "Ngày tham gia", render: (u) => <>{u._scope?.joinedAt ? date(u._scope.joinedAt) : <span className="muted">Chưa ghi nhận</span>}</> }, { key: "c6", header: "Quyền trong dự án", render: (u) => <>{u._scope?.positionName || u._scope?.permission || "—"}</> }, { key: "c7", header: "Trạng thái", render: (u) => <><StatusBadge value={u.active === false ? "Đã khoá" : "Đang hoạt động"}/></> }, { key: "c8", header: "", render: (u) => <><button type="button" className="export-mini" onClick={() => open("userProfile", u)}>Hồ sơ ›</button></> }]} emptyText="Dự án chưa gán nhân sự nào." />
-    </section>}
-
-    {tab === 3 && <section className="card">
-      <CardHead title="Tổ đội thuộc dự án" note="Mỗi tổ đội thuộc đúng một dự án và có kho riêng"/>
-      <DataTable rows={teams} rowKey={(t) => String(t.id)} emptyText="Dự án chưa có tổ đội." columns={[
-        { key: "c1", header: "Mã tổ đội", render: (t) => <strong className="code">{t.code}</strong> },
-        { key: "c2", header: "Tên tổ đội", render: (t) => t.name },
-        { key: "c3", header: "Hạng mục", render: (t) => t.trade || "—" },
-        { key: "c4", header: "Kho của tổ đội", render: (t) => { const wh = (data.warehouses || []).find((w) => String(w.id) === String(t.warehouseId)); return wh ? `${wh.code} · ${wh.name}` : "—"; } },
-        { key: "c5", header: "Nhân sự", render: (t) => { const members = (data.teamMembers || []).filter((m) => String(m.teamId) === String(t.id) && Number(m.active ?? 1) === 1); return members.length ? `${members.length} người` : <span className="muted">Chưa ghi nhận thành viên</span>; } },
-        { key: "c6", header: "Trạng thái", render: (t) => <StatusBadge value={t.active === 0 ? "Đã ngừng" : "Đang dùng"} /> },
-      ]} />
-    </section>}
-
-    {tab === 4 && <div className="stack">
-      <section className="card">
-        <CardHead title="Kho của dự án" note="Bấm một kho để xem tồn kho, thủ kho và đơn từ liên quan"/>
-        <DataTable rows={warehouses} rowKey={(w) => String(w.id)} emptyText="Dự án chưa có kho." columns={[
-          { key: "c1", header: "Mã kho", render: (w) => <strong className="code">{w.code}</strong> },
-          { key: "c2", header: "Tên kho", render: (w) => w.name },
-          { key: "c3", header: "Loại", render: (w) => (w.type === "site" ? "Kho công trường" : w.type === "central" ? "Kho tổng" : w.type === "team" ? "Kho tổ đội" : String(w.type || "—")) },
-          { key: "c4", header: "Thủ kho", render: () => (keepers[0] ? keepers[0].fullName : <span className="muted">Chưa phân công</span>) },
-          { key: "c5", header: "Tồn kho", render: (w) => { const bal = (data.inventory || []).filter((r) => String(r.warehouseId) === String(w.id)); return `${bal.length} mã · ${format.format(bal.reduce((s, r) => s + Number(r.balance || 0), 0))}`; } },
-          { key: "c6", header: "Chờ nhập", render: (w) => docsOfWarehouse(w).pendingIn.length },
-          { key: "c7", header: "Chờ xuất", render: (w) => docsOfWarehouse(w).pendingOut.length },
-          { key: "c8", header: "Chờ duyệt", render: (w) => docsOfWarehouse(w).pendingApprove.length },
-          { key: "c9", header: "", render: (w) => { const wid = String(w.id); return <button type="button" className="export-mini" onClick={() => setOpenWarehouse(openWarehouse === wid ? "" : wid)}>{openWarehouse === wid ? "Thu gọn" : "Xem kho ›"}</button>; } },
-        ]} />
-      </section>
-
-      {openWarehouse && (() => {
-        const w = warehouses.find((x) => String(x.id) === String(openWarehouse));
-        if (!w) return null;
-        const wid = String(w.id);
-        const d = docsOfWarehouse(w);
-        const bal = (data.inventory || []).filter((r) => String(r.warehouseId) === wid);
-        const keeper = keepers[0];
-        const docs: { label: string; rows: Row[]; noKey: string; statusKey: string }[] = [
-          { label: "Đơn chờ nhập kho", rows: d.pendingIn, noKey: "receiptNo", statusKey: "postingStatus" },
-          { label: "Đơn chờ xuất kho", rows: d.pendingOut, noKey: "issueNo", statusKey: "status" },
-          { label: "Phiếu chờ duyệt", rows: d.pendingApprove, noKey: "requestNo", statusKey: "status" },
-          { label: "Đơn mua hàng chưa hoàn thành", rows: d.openPOs, noKey: "poNo", statusKey: "status" },
-        ];
-        return <section className="card project-warehouse-detail">
-          <CardHead title={`Kho ${w.code} · ${w.name}`} note="Tồn kho, thủ kho và đơn từ liên quan"/>
-          <div className="kpi-grid small">
-            <Kpi icon="TK" label="Mã đang có tồn" value={format.format(bal.filter((r) => Number(r.balance || 0) !== 0).length)} note={`${bal.length} dòng tồn`} tone="green"/>
-            <Kpi icon="CN" label="Chờ nhập" value={String(d.pendingIn.length)} note="Phiếu chưa ghi sổ" tone="amber"/>
-            <Kpi icon="CX" label="Chờ xuất" value={String(d.pendingOut.length)} note="Phiếu cấp phát tổ đội" tone="amber"/>
-            <Kpi icon="TK" label="Thủ kho" value={keeper ? keeper.fullName : "Chưa phân công"} note={keeper ? (keeper.roleName || keeper.role || "") : "Cần gán người phụ trách"} tone={keeper ? "blue" : "red"}/>
-          </div>
-          <DataTable rows={bal.filter((r) => Number(r.balance || 0) !== 0)} rowKey={(r, i) => String(r.materialId || i)} emptyText="Kho chưa có tồn." columns={[
-            { key: "c1", header: "Mã vật tư", render: (r) => <strong className="code">{r.materialCode || r.materialId}</strong> },
-            { key: "c2", header: "Tên vật tư", render: (r) => r.materialName || "—" },
-            { key: "c3", header: "ĐVT", render: (r) => r.unit || "—" },
-            { key: "c4", header: "Tồn kho", render: (r) => <strong>{format.format(Number(r.balance || 0))}</strong> },
-          ]} />
-          {docs.map((group) => <div key={group.label}>
-            <h3>{group.label} <small>({group.rows.length})</small></h3>
-            <DataTable rows={group.rows} rowKey={(r, i) => String(String(r.id || i))} columns={[{ key: "c1", header: "Số chứng từ", render: (r) => <><strong className="code">{r[group.noKey] || r.id}</strong></> }, { key: "c2", header: "Trạng thái", render: (r) => <><StatusBadge value={String(r[group.statusKey] || "—")}/></> }, { key: "c3", header: "Đối tượng", render: (r) => <>{r.supplierName || r.requestedBy || r.teamName || "—"}</> }, { key: "c4", header: "Thời điểm", render: (r) => <>{date(r.receivedAt || r.requestedAt || r.createdAt)}</> }]} emptyText="Không có chứng từ." />
-          </div>)}
-        </section>;
-      })()}
-    </div>}
-
-    {tab === 5 && <SiteCommandScreen data={data} project={pid} action={action} />}
+    {/* PR-03 — KHỐI CHI TIẾT DỰ ÁN NAY CÓ 5 TAB CON: chung · nhân sự · tổ đội · kho · lịch sử.
+        Bốn nhánh `tab === 1..4` là LỐI VÀO NHANH: mỗi nhánh mở ĐÚNG tab con tương ứng
+        (Tổng quan→chung, Nhân sự→nhân sự, Tổ đội→tổ đội, Kho→kho) ở dải tab con của khối chi tiết.
+        Bốn nhánh được viết TÁCH RIÊNG vì hợp đồng `tests/pr01-project-tabs.test.mjs` (PR-01 đã DONE)
+        yêu cầu tồn tại nguyên văn `{tab === 1 && …}` … `{tab === 4 && …}`; tab 5 = Ban chỉ huy. */}
+    {tab === 1 && <ProjectDetailTabs data={data} project={detail} section={detailSection} onSection={setDetailSection} openEntity={openEntity} permission={permission} />}
+    {tab === 2 && <ProjectDetailTabs data={data} project={detail} section={detailSection} onSection={setDetailSection} openEntity={openEntity} permission={permission} />}
+    {tab === 3 && <ProjectDetailTabs data={data} project={detail} section={detailSection} onSection={setDetailSection} openEntity={openEntity} permission={permission} />}
+    {tab === 4 && <ProjectDetailTabs data={data} project={detail} section={detailSection} onSection={setDetailSection} openEntity={openEntity} permission={permission} />}
+    {tab === 5 && <SiteCommandScreen data={data} project={pid} action={action} openEntity={openEntity} />}
+    {entityModal}
   </div>;
 }
 
