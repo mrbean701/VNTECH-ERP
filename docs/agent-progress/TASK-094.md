@@ -1871,3 +1871,13 @@ LẦN 2: ✅ 0 px cả 4 kích thước · KẾT LUẬN ĐẠT · EXIT 0
 **⚠️ GHI CHÚ TRUNG THỰC:** lần 1 vẫn ghi đã chụp lại (lần đầu 98 px) ⇒ **vẫn còn dao động ở lần chụp ĐẦU**, được **cơ chế tự chụp lại của probe** xử lý ⇒ **cơ chế retry của probe là yếu tố CHỊU LỰC cho màn 17** (không được bỏ). Nếu muốn bỏ hẳn, cần **chờ 2 khung hình liên tiếp giống nhau** (việc cải tiến tiếp, không bắt buộc).
 **TỆP ĐỔI:** 	ools/probe-visual-regression.mjs + **1 tệp baseline** (	ools/baseline/17-modal-po__desktop.png) · các tệp baseline khác **không đổi** ✔
 **BÀI HỌC:** **cổng ảnh dao động thì phải sửa CHÍNH CỔNG (thời điểm chụp), không phải sửa mã sản phẩm** — và **phải kiểm tất định (2 lần liên tiếp) TRƯỚC KHI kết luận về mã** ✔
+
+### 45. ✅ U-12.2 LÔ 1 **QUA CẢ 3 CỔNG** — TIÊU CHÍ “TOKEN CHẾT” ĐÃ ĐƯỢC CỔNG ỔN ĐỊNH XÁC NHẬN (20/09)
+**KẾT QUẢ CỔNG ẢNH LÔ 1:** KẾT LUẬN: ĐẠT ✅ — không có vùng lệch nào (64 ảnh đã đối chiếu) · EXIT 0 — **16 màn × 4 kích thước đều   px, KỂ CẢ 17-modal-po** ✔
+**BỘ CỔNG ĐẦY ĐỦ CỦA LÔ 1 (25 token):** 	sc **EXIT 0** · 
+pm test **tests 61 · pass 61 · fail 0 · EXIT 0** · **cổng ảnh 64/64 ĐẠT** · !important **4.464 → 4.439** (công cụ tự kiểm giảm 25, phải = 25) · ngoặc 3269/3269 CÂN BẰNG ✔
+**⇒ XÁC NHẬN TIÊU CHÍ:** “cùng CHUỖI selector + cùng @media ⇒ rule sau thắng tự nhiên ⇒ !important ở rule TRƯỚC là chết” — **ĐÚNG** ✔ *(báo động dương tính trước đó của tôi là do **cổng dao động**, nay đã sửa tận gốc bằng settleMs: 6000 + baseline mới.)*
+**VÒNG LẶP NAY ĐÁNG TIN:** --apply --limit=25 ⇒ 	sc + 
+pm test + **cổng ảnh** ⇒ **ĐẠT ⇒ commit** / **KHÔNG ⇒ revert** ✔
+**CÒN LẠI:** **822 − 25 = 797** token (≈ 32 lô) ⇒ tiếp tục theo lô cho tới hết ⇒ **đóng U-12**.
+**TRẠNG THÁI:** globals.css = **4.439** !important · cây SẠCH sau commit · cổng ảnh **tất định** (2 lần liên tiếp ĐẠT).
