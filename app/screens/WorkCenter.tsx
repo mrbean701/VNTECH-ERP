@@ -21,6 +21,7 @@
 
 import { DataTable, ListToolbar, PermissionGuard, StatusBadge } from "@/app/components/ui";
 import { ReportView } from "@/app/screens/ReportView";
+import { WorkHierarchy } from "@/app/screens/WorkHierarchy";
 import { WorkKanban, kanbanManagerDepartments } from "@/app/screens/WorkKanban";
 import { daysFromToday } from "@/lib/date-helpers";
 import type { WorkMenuView } from "@/lib/menu-helpers";
@@ -241,6 +242,10 @@ function WorkCenter({ data, action, refresh, view = "personal" }: { data: AppDat
       </section>
       <WorkKanban rows={scopedWork} busy={busy} myId={myId} isAdmin={scope.isAdmin} managerDepartments={kanbanManagerDepartments(me)}
         scopeNote={`Phạm vi: ${scopeNote}`} onMove={moveStatus}/>
+      {/* PHASE 3 (`T-09`) — KIẾN TRÚC 4 CẤP Task → Team → Thành viên → Hỗ trợ liên phòng (§10).
+          Đặt trong tab «Phòng ban» (nơi đã có board Kanban của `T-07`), KHÔNG mở màn/menu mới và KHÔNG đổi 5 tab `T-01`.
+          Bấm Team/Nhân sự mở `EntityDetailModal` qua cổng dùng chung `ProjectEntityModal` (PR-04). */}
+      <WorkHierarchy data={data} rows={find(scopedWork)} scopeNote={`Phạm vi: ${scopeNote}`} permission={modulePermission(data, "dept_plan_assign")}/>
     </div>}
 
     {tab === 2 && <div className="stack">
