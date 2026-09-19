@@ -16,11 +16,11 @@
 
 | Phân loại (nguyên văn cột TT) | Số mục | % |
 |---|---|---|
-| **DONE** (`**DONE**` + `DONE` + `DONE / AP-DUNG n`) | **57** | **51,8 %** |
+| **DONE** (`**DONE**` + `DONE` + `DONE / AP-DUNG n`) | **58** | **52,7 %** |
 | ĐANG LÀM | 0 | 0 % |
 | KHUNG XONG nhưng **ÁP DỤNG 0** | 0 | 0 % |
 | **BỊ CHẶN** (`**BLOCKED**` = F-01) | 1 | 0,9 % |
-| TODO | 52 | 47,3 % |
+| TODO | 51 | 46,4 % |
 
 | Phase | DONE / tổng | Ghi chú |
 |---|---|---|

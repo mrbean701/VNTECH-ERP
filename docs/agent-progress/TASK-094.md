@@ -2149,3 +2149,15 @@ BANG CHUNG: engine self-check 101/101 · tsc 0 · hoi quy 61/61 · build DAT VNT
   anh chuan man bao cao 4/4 DAT 0px · o chon "Bao cao" trong app chua tieu de tu catalog.
 GIOI HAN DA GHI RO: (1) probe gioi han ~60 ky tu khi in text phan tu => chua co anh rieng cho tung bao cao (de xuat: chon bao cao theo khoa);
   (2) dac ta "tien do (%)" cua bao cao DU AN chua co nguon xac dinh => khong bia; (3) bao cao Kho "gia tri" phu thuoc unit_cost duoc nhap.
+
+### 61. P-01 DONE (tach MR/PR/PO thanh 3 tab) + CHI DAO MOI CUA USER (20/09)
+P-01 DA LAM: xac minh ngu nghia bang du lieu that (MR = material_requests.status pending_approval; PR = status approved;
+  PO = purchase_orders; KHONG ton tai bang purchase_requests) => them 3 tab kem SO DEM + 3 bang rieng trong app/screens/Purchasing.tsx
+  (47 -> 87 dong), KHONG di chuyen khoi BOQ/nhap gia.
+BANG CHUNG: npx tsc --noEmit = 0; npm test = tests 61/pass 61/fail 0 + workflow DAT; gd-cycle => VNTECH-FP-7CBCBA75FC20E691
+  (328 files) PREFLIGHT/FINGERPRINT/BUILT ARTIFACT deu DAT; them man 20-purchasing-tabs vao cong anh => ghi anh chuan 4/4 (nav=OK).
+GIOI HAN GHI RO (trung thuc): viec do `--locate` de DOC TRUC TIEP nhan tab + so dem (MR 7 / PR 10 / PO 7) CHUA hoan tat
+  (lan do dau trung the KPI "PO cho giao 5"; lan do sau bi dung giua chung). => Bang chung hien co la: code + tsc + test + build DAT + anh chuan.
+  CON LAI: mot luot --locate nhe de chot bang chuoi (khong anh huong chuc nang).
+CHI DAO MOI CUA USER (nguyen van): "Sau khi lam xong task nay thi chuyen sang phase 3 va 4 truoc"
+  => Sau P-01, UU TIEN PHASE 3 va PHASE 4 truoc cac phase/muc khac (P-02/P-03 se lam sau).
