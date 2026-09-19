@@ -1757,3 +1757,15 @@ const readUiSource = () => ['app/page.tsx', 'lib/ui-shared.tsx']   ← THIẾU l
 **LƯU Ý ĐỘ PHỦ (nâng cấp từ §23.5):** màn 17 có **2 trường nhạy ngày**: **Ngày giao mặc định** + **input ngày trong .po-line-planning** ⇒ các lượt sau **có thể lệch lại** với cùng dấu hiệu ⇒ là **nhiễu hệ thống ĐÃ BIẾT**, không phải lỗi.
 **CẢI TIẾN ĐỀ XUẤT (chưa làm — cần cân nhắc rủi ro sửa probe):** **ghim đồng hồ (fixed clock)** cho màn 17 trong probe để baseline **không trôi theo ngày** ⇒ cổng ảnh sẽ **ổn định 64/64** qua các ngày. *(Hiện tại chấp nhận chụp lại baseline khi cần.)*
 **⇒ TÁCH WorkCenter KHÔNG làm đổi giao diện** (15/16 màn   px tuyệt đối; 1 màn lệch do ngày) ✔
+
+### 38. ⚠️ TÁCH BoqControl — XONG VỀ MÃ (	sc 0), CÒN **2 TEST CŨ** PHẢI SỬA (20/09)
+**ĐÃ LÀM (giữ việc, commit trung thực):**
+* Tách **9 khối / 164 dòng** khỏi page.tsx ⇒ **pp/screens/BoqControl.tsx** (36KB · 9 câu import tự sinh) · page.tsx **2720 → 2557**.
+* **Công cụ TỰ CHỐI 2 lần** với lý do chính xác (thiếu oqExportRows, oqAssessment, oqVariationQty) ⇒ **bao đóng phụ thuộc đủ** trước khi ghi.
+* **🐞 LỖI CÔNG CỤ (tự phát hiện bằng 	sc, đã sửa):** sinh import type { MouseEvent, ReactMouseEvent } from "react" ⇒ **che MouseEvent DOM** ⇒ 	sc EXIT 2; sửa thành import type { MouseEvent as ReactMouseEvent } from "react" ⇒ **	sc EXIT 0** ✔
+* **Thêm pp/screens/BoqControl.tsx vào phạm vi ĐỌC** của 3 test eadUiSource ⇒ **3 đỏ → 2 đỏ** (58 → 59 pass).
+**CÒN 2 TEST ĐỎ (cùng loại "test cũ đọc/import theo tệp cũ"):**
+1. **	ests/boq-native-import.test.ts** (fail cả tệp) ⇒ nhiều khả năng **import helper BOQ từ page.tsx** mà helper đó nay ở **pp/screens/BoqControl.tsx** ⇒ **phải đổi đường dẫn import** (hoặc import từ module mới).
+2. **Test chứa "Built UI contract dùng marker ổn định cho rule loại heading khỏi matching"** + **"BOQ source rows giữ kiểu Row…"** ⇒ kiểm **chuỗi/kiểu của helper BOQ** trong nguồn giao diện ⇒ cần **thêm pp/screens/BoqControl.tsx (và có thể lib/boq-normalize.ts) vào phạm vi ĐỌC**.
+**⇒ VIỆC KẾ TIẾP (rõ ràng, 2-3 bước):** đọc import của oq-native-import.test.ts ⇒ trỏ về module mới ⇒ thêm tệp vào phạm vi đọc của test kiểm-chuỗi ⇒ **	est:regression phải 61/61** ⇒ rồi chạy **cổng ảnh** cho BoqControl.
+**TRẠNG THÁI CỔNG HIỆN TẠI:** 	sc **0** ✔ · **hồi quy 59/61** ⚠️ (2 đỏ do test cũ) · cổng ảnh BoqControl **đang chạy nền**.
