@@ -1984,3 +1984,28 @@ CONG CU TU CHOI GHI 1 LAN (mo neo 'export type ModuleKey =' khong khop vi khai b
 KIEM CHUNG: npx tsc --noEmit => 0 ; npm test => pass 61 / fail 0 / EXIT 0.
 
 CON LAI de dong R-01: BANG CHUNG RUNTIME - them man bao cao vao probe visual (nhom nav reports) => chay cong anh => co anh chung minh.
+
+### 51. [PHASE 9 · R-01 buoc 5/5] MAN BAO CAO CHUA HIEN TRONG NAV — DA TIM RA CHUOI LOC (20/09)
+TRANG THAI: app-side da noi (nav reports_center khai bao + render + tieu de module; tsc 0; npm test 61/61) NHUNG man CHUA HIEN trong menu.
+BANG CHUNG DO DUOC (khong doan): quet nav nhom reports child=0..4 va doc TIEU DE trang that:
+  child=0 -> "Bao cao & canh bao" · child=1 -> "Bao cao & canh bao" · child=2 -> "KPI & hieu suat nhan vien"
+  child=3 -> "KPI & hieu suat nhan vien" · child=4 -> "Tong quan dieu hanh" (khong ton tai => roi ve dashboard)
+  => MAN "Bao cao tong hop" KHONG xuat hien o bat ky index nao.
+LUU Y PHUONG PHAP: `nav=OK` cua probe CHI nghia la "bam duoc menu", KHONG nghia la "dung man" — phai kiem bang --locate.
+  (Lan dau em chup voi child=2 => anh la man KPI Phong Ke hoach => da phat hien dung luc va khong dung lam bang chung.)
+
+CHUOI TAO + LOC MENU (da doc ma, khong suy dien):
+1. lib/menu-helpers.ts:32 `const modules = [...]` (ket thuc dong 94) — da them { key: "reports_center", ... } tai dong 46 ✔
+2. lib/workflow-helpers.ts:39 `configuredModules(data)` — map qua `modules`, ghep `data.moduleCatalog`; dong 52 dat
+   `active: config ? Boolean(config.active) : true` => muc KHONG co trong catalog DB van active ✔ (khong phai nguyen nhan)
+3. app/page.tsx:347-353 — `visibleGroupKeys` tu `configuredMenuGroups(data)`; va
+   `allowedModules = configuredModules(data).filter((item) => (!item.groupKey || visibleGroupKeys.has(item.groupKey))
+                    && (!permissionConfigured || modulePermission(data, item.key).can...))`
+   voi admin: `permissionConfigured = isAdminUser(data.user)` = TRUE => dieu kien 2 AP DUNG
+   => muc MOI khong co dong quyen trong catalog => `modulePermission(...).canUse` = FALSE => BI LOC ✗
+4. app/page.tsx:410/425 — sidebar render `group.children` tu `allowedModules`.
+
+VIEC KE TIEP (ro rang): doc `modulePermission` trong lib/permissions.ts de xac nhan duong dan cho ADMIN
+  => roi chon 1 trong 2: (a) them khoa vao DANH MUC quyen/module (client + du lieu/Java) hoac (b) bo sung fallback quyen cho module moi.
+  Sau khi nav HIEN: them lai man 19-report-center vao probe (dung group/child DUNG index da do) => chay cong anh => CO ANH CHUNG MINH => moi danh dau R-01 DONE.
+DA DON: tep probe da khoi phuc (khong de lai trang thai do dang) ✔; khong commit baseline sai ✔.
