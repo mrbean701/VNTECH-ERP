@@ -1667,3 +1667,22 @@ px tsc --noEmit **0** · **cổng ảnh: mọi màn   px**, chỉ 17-modal-po gi
 * Tiến triển cả ở 2 màn khác: ReceiptDrawer **hết chặn FileUpload** (còn SupplyExportButtons,eceiptSupplyDocument,poSupplyDocument) · WorkflowModal **hết chặn BaseModal** (còn workflowApproverCandidates,configuredModules).
 **⇒ VÒNG LẶP HỘI TỤ ĐÚNG NHƯ TÀI LIỆU DỰ ÁN:** *chuyển helper → gỡ chặn màn → tách màn → lặp lại.*
 **CÁCH LÀM SONG SONG (theo yêu cầu người dùng):** cổng ảnh chạy **NỀN**; trong lúc đó em làm việc **ĐỌC** (chạy khô ứng viên, đo bản đồ chặn) và **ghi tài liệu** (không được app phục vụ) — **KHÔNG ghi tệp nguồn** trong lúc cổng ảnh chạy (tránh nhiễm ảnh).
+
+### 40. ✅ [U-11 bước 3] TÁCH THÊM 2 MÀN — Requests + Stocktake (19/09)
+**Bối cảnh:** 2 màn này **vừa được GỠ CHẶN** nhờ lô helper #2 (statusLabel → lib/labels.ts; eportRows/reportExport → lib/report-rows.ts).
+**Đã tách (công cụ dự án):**
+| Màn | Tệp mới | Import công cụ tự sinh |
+|---|---|---|
+| Requests | pp/screens/Requests.tsx | Empty, Kpi, UI_NOW_MS, date, format (@/lib/ui-shared) + 	ype Row + useState |
+| Stocktake | pp/screens/Stocktake.tsx | **eportExport, reportRows (@/lib/report-rows)** + CardHead, Empty, Kpi, NavIcon, date, format + 	ype AppData, Row |
+* git diff --stat app/page.tsx ⇒ **2 insertions(+), 53 deletions(-)** ⇒ page.tsx **3296 → 3243 dòng**
+**BẰNG CHỨNG:** 
+px tsc --noEmit **0** · **cổng ảnh: mọi màn   px**, chỉ 17-modal-po giữ **đúng con số nhiễu-ngày** (181/170/185/109 px tại (704,192) — y hệt 3 lượt trước) ⇒ **không đổi giao diện** ✔
+**TỔNG KẾT U-11 tới nay (đều qua công cụ + cổng):**
+* **Helper đã tách:** lib/permissions.ts (isAdminUser, modulePermission, roleBase) · lib/ui-blocks.tsx (FileUpload, BaseModal) · lib/labels.ts (statusLabel) · lib/report-rows.ts (reportRows, reportExport)
+* **Màn đã tách (vòng này):** ProjectTeams · MaterialListTable(86d) · SupplierManager · **Requests** · **Stocktake** (+ 16 màn có từ trước)
+* **page.tsx: 3410 → 3243 dòng** (giảm **167 dòng** trong vòng này)
+**LÔ HELPER #3 ĐÃ CHẠY KHÔ VÀ ĐƯỢC CHẤP NHẬN (chờ áp dụng):**
+* SupplyExportButtons, receiptSupplyDocument, poSupplyDocument → lib/supply-docs.ts ⇒ **gỡ chặn ReceiptDrawer**
+* stageAllowedForUser, approvalTiming, workflowTiming → lib/approval-helpers.ts
+**CÒN CHẶN (đã ghi rõ helper nào cần trước):** WorkflowModal ← configuredMenuGroups, modules · WorkCenter ← daysFromToday, WorkCenter · BoqControl ← isBoqTemplateInstructionRow, normalizeBoqRowRole, normalizeBoqType · RequestDrawer ← equestLineContext · ReceiptDrawer ← 3 helper supply-docs (lô #3).
