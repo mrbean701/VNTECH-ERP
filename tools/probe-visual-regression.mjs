@@ -189,7 +189,7 @@ const SCREENS = [
   // Hai màn được chụp vì dữ liệu thật KHÁC NHAU: 7 việc thật đều thuộc phòng DA ⇒ màn KH là **trạng thái rỗng**,
   // màn DA có **7 dòng** ⇒ phủ cả hai đường render (rỗng + có dữ liệu).
   { id: "09-dept-assign-kh", label: "Phòng Kế hoạch — Giao việc (trạng thái rỗng)", steps: [{ group: "my_work", child: 2 }], fullPage: true },
-  { id: "10-dept-assign-da", label: "Phòng Dự án — Giao việc (7 việc thật)", steps: [{ group: "my_work", child: 3 }], fullPage: true },
+  { id: "10-dept-assign-da", label: "Giao việc (màn giao việc, 7 việc thật) — sau T-01 menu my_work đổi: child 2 = Giao việc, child 3 = Dashboard", steps: [{ group: "my_work", child: 2 }], fullPage: true },
   // 11/12: KIỂM BẤT BIẾN "KHUNG KHÔNG VƯỢT VIEWPORT" (U-10). Bước `{ click: "<selector>" }` mở khung rồi mới chụp;
   // cổng tự đo `getBoundingClientRect()` của `.modal`/`.drawer` và TỪ CHỐI ĐẠT nếu khung tràn khung nhìn,
   // hoặc nếu nội dung cao hơn thân khung mà thân khung KHÔNG cuộn được (⇒ mất nội dung).
