@@ -1816,3 +1816,22 @@ pm run test:regression ⇒ 61/61 PASS · EXIT 0** ✔ *(sửa **5 test cũ**: 4 
 **ĐO LẠI (đúng quy trình an toàn):** mỏ neo khớp **đúng 1 dòng** · **12 ô** · **tổng ID = 110** (không mất) · **dòng rác = 0** · **tổng lộ trình 47/110 = 42,7 %**.
 **⚠️ 2 LỖ HỔNG ĐỘ PHỦ CÒN LẠI (đã ghi, đề xuất cải thiện):** ① probe **không có màn BOQ** ⇒ tách BoqControl chỉ được bảo chứng bằng 	sc + hồi quy + không đổi 16 màn khác ② màn 17-modal-po **nhạy ngày** ⇒ nên **ghim đồng hồ** để cổng ảnh ổn định.
 **⇒ TIẾP THEO: U-12 (mục CUỐI của PHASE 1)** — U-12.2 bỏ !important **thừa** (từng lô 20–30 chỗ + kiểm ảnh) → U-12.3 xoá **khối override dài** (dòng 962 · 1003-1011 · 2072-2074) ⇒ **PHASE 1 = 17/17** ⇒ sang **PHASE 9 (Báo cáo & Dashboard)**.
+
+### 42. 🔬 U-12.2 — ĐO ĐƯỢC 822 “token chết”, NHƯNG **CỔNG ẢNH BỊ NHIỄU THỜI GIAN** ⇒ **HOÀN TÁC, ĐÚNG THỨ TỰ: LÀM CỔNG ỔN ĐỊNH TRƯỚC** (20/09)
+**ĐÃ LÀM ĐƯỢC (có giá trị, giữ lại):**
+* Công cụ **	ools/u12-2-tim-important-thua.mjs** — tìm !important **chết chứng minh được** theo tiêu chí: **cùng CHUỖI selector + cùng @media** ⇒ cùng specificity ⇒ rule **sau thắng tự nhiên** ⇒ !important ở rule **trước** không bao giờ quyết định. Có **tự vệ**: chạy khô mặc định · bắt buộc --limit=N · kiểm đúng offset · **tự chối ghi** nếu số giảm ≠ số sửa hoặc ngoặc đổi.
+* **Đo:** 4.464 !important / 3.171 rule ⇒ **822 chết (18,4 %)** — ont-size=140 · color=131 · background=93 · padding=54 · font-weight=52 · min-height=41 …
+* **Lô 1 (25 token)** áp dụng ⇒ !important **4.464 → 4.438** (đúng 25) · ngoặc CÂN BẰNG · **	sc 0** · **
+pm test 61/61 PASS**.
+**🚨 DIỄN BIẾN — VÀ MỘT LỖI PHƯƠNG PHÁP CỦA TÔI:**
+1. Cổng ảnh sau lô 1: 17-modal-po **desktop 23 px** (đúng toạ độ 126×39 @ (438,762), đúng các điểm nặng nhất như lần trước) ⇒ tôi **nghi lô CSS gây ra**.
+2. **A/B bằng git stash** (thay đổi **chưa commit** nên stash hợp lệ): bản **gốc** ⇒ --only=17-modal-po = **ĐẠT 0 px** ⇒ tôi **kết luận lô CSS gây lệch** và **hoàn tác**.
+3. **NHƯNG SAU KHI HOÀN TÁC (CSS = bản gốc, cây SẠCH): màn 17 VẪN LỆCH 23 px ĐÚNG CHỖ ĐÓ.**
+⇒ **KẾT LUẬN ĐÚNG:** lệch là do **THỜI GIAN** (màn 17 chứa giá trị theo ngày/giờ), **KHÔNG phải lô CSS**.
+⇒ **A/B CỦA TÔI KHÔNG HỢP LỆ (lỗi phương pháp):** tôi đổi **CSS** *đồng thời* để **thời gian trôi** ⇒ **không cô lập được biến** ⇒ lần A/B ra   px chỉ là **may mắn khớp**, không phải bằng chứng.
+**⇒ QUYẾT ĐỊNH (an toàn, đúng thứ tự):**
+* **GIỮ NGUYÊN bản gốc CSS** (lô 1 đã hoàn tác; !important = **4.464**) — vì **chưa chứng minh được lô là trung tính** khi cổng còn nhiễu.
+* **VIỆC PHẢI LÀM TRƯỚC U-12.2:** **làm màn 17 ỔN ĐỊNH** — ① **ghim đồng hồ** (fixed clock) cho màn 17 trong probe, hoặc ② **loại màn 17** khỏi phép so sánh nghiêm (kèm ghi chú độ phủ). **Chỉ khi cổng ảnh ổn định 64/64 mới được thử lại các lô CSS** — khi đó   px mới là bằng chứng thật.
+* **KHÔNG** coi “822 token chết” là đã an toàn: tiêu chí tĩnh **chưa được kiểm chứng bằng cổng ổn định** ⇒ **chưa được phép áp dụng hàng loạt**.
+**BÀI HỌC PHƯƠNG PHÁP (ghi đậm):** **Muốn A/B một thay đổi ảnh hưởng giao diện thì phải CỐ ĐỊNH mọi nguồn nhiễu (thời gian/dữ liệu) TRƯỚC.** Nếu cổng còn nhiễu, **kết luận “thay đổi gây lệch” hay “không gây lệch” đều KHÔNG đáng tin.**
+**TRẠNG THÁI:** pp/globals.css = **bản gốc** (cây SẠCH) ✔ · 	sc **0** · **hồi quy 61/61** · 	ools/u12-2-tim-important-thua.mjs **đã tạo** (chưa track — nằm trong commit này) · màn 17 còn **nhiễu thời gian 23 px** ⇒ **ưu tiên sửa probe**.
