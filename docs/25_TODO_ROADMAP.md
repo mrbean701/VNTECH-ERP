@@ -33,7 +33,7 @@
 | `A-11` | Toàn hệ | Xuất AUDIT REPORT (`docs/24`) | P0 | A-01…A-10 | - | - | - | - | **DONE** |
 | `A-12` | Toàn hệ | Xuất TODO/ROADMAP (`docs/25`) | P0 | A-11 | - | - | - | - | **DONE** |
 | `A-13` | Hạ tầng | **Xác nhận backup / PITR của MySQL** | **P0** | — | - | - | CONFIRMED-PITR / KHONG-CO-BACKUP-NEN | - | **DONE** |
-| `A-14` | Hạ tầng | Xác nhận chính sách thời hạn phiên + thu hồi phiên | P1 | — | - | - | - | - | **TODO** |
+| `A-14` | Hạ tầng | Xác nhận chính sách thời hạn phiên + thu hồi phiên | P1 | — | - | - | CONFIRMED: TTL 24h + 4 duong thu hoi + audit | - | **DONE** |
 | `A-15` | Admin | Xác định **nhóm quyền nghiệp vụ** có tham gia kiểm quyền không | **P0** | — | - | - | - | MODEL | **TODO** |
 | `A-16` | Toàn hệ | Kiểm thử **cross-department / cross-project** | P1 | A-06 | - | - | - | CHECK | **TODO** |
 
