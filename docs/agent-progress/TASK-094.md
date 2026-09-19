@@ -2339,3 +2339,20 @@ VIEC CAN LAM TIEP (thay cho "noi vao RbacService"):
   => Kiem tra + hoan thien **NUT COPY QUYEN TU PHONG BAN** trong tab phan quyen nguoi dung:
      click => xac nhan => copy `department_module_permissions` cua phong ban do vao `user_module_permissions` cua user.
   => Neu nut con thieu/khong dung => do la mot muc moi can lam (ghi vao roadmap khi xac minh xong).
+
+### 74. [A-15 FOLLOW-UP] DA XAC MINH: NUT "SAO CHEP TU PHONG BAN" **DA CO VA DUNG HANH VI** (20/09)
+CAU HOI: luat nghiep vu user mo ta (mau quyen phong ban + nut copy + xac nhan + cap full) da duoc CAI DAT chua?
+BANG CHUNG (doc truc tiep ma nguon):
+  * Nut: `app/page.tsx:1688` — `<button className="export-mini" onClick={() => void copyFromDepartment(u)}>Sao chep tu phong ban</button>`
+  * Ham: `app/page.tsx:1631` `async function copyFromDepartment(u: Row)`:
+      1. `const dp = deptPermsOf(u.organizationUnitId)`            => lay MAU quyen cua PHONG BAN ✔
+      2. neu phong ban chua cau hinh => setMsg(...) va return     => bao ro, khong cap ✔
+      3. `if (!window.confirm("Ghi de quyen chuc nang ... ?")) return;` => HIEN XAC NHAN; HUY => KHONG CAP ✔
+      4. giu nguyen `projectScopes` + `warehouseScopes`            => khong pha pham vi du an/kho ✔
+      5. `modulePermissions = dp.filter(active===1).map(7 capability)` => CAP FULL bo quyen phong ban ✔
+      6. `await action("save_user_access", {...})`                 => ghi vao quyen USER ✔
+      7. `setMsg("Da sao chep N quyen tu phong ban cho ...")`      => bao ket qua ✔
+KET LUAN: **KHOP HOAN TOAN** voi luat nghiep vu user mo ta => **A-15 KHONG can sua gi**; khong phai "thieu tinh nang".
+DIEM CON MO (nho, hoi user khi tien): man "Phan quyen nguoi dung" co KPI **"Tai khoan vuot quyen phong ban"** + ghi chu
+  "Quyen cua nguoi dung khong duoc vuot qua quyen cua phong ban" => hien **BAO CAO** danh sach vuot quyen (`violationsOf`).
+  => CHUA RO co **CHAN CUNG** (block) khi user bi cap quyen vuot phong ban hay khong => can user chot: (a) chi bao cao, hay (b) chan cung.
