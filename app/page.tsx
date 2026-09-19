@@ -67,7 +67,7 @@ import { Requests } from "@/app/screens/Requests";
 import { Stocktake } from "@/app/screens/Stocktake";
 import { approvalTiming, stageAllowedForUser, workflowTiming } from "@/lib/approval-helpers";
 import { SupplyExportButtons, poSupplyDocument, receiptSupplyDocument } from "@/lib/supply-docs";
-import { configuredMenuGroups, legacyWorkMenuKeys, modules, workMenuItems } from "@/lib/menu-helpers";
+import { approvalCenterGroup, approvalCenterMenuKey, configuredMenuGroups, independentMenuKeys, legacyWorkMenuKeys, modules, workMenuItems } from "@/lib/menu-helpers";
 import type { WorkMenuView } from "@/lib/menu-helpers";
 import { requestLineContext } from "@/lib/request-context";
 import { isBoqTemplateInstructionRow, normalizeBoqRowRole, normalizeBoqType } from "@/lib/boq-normalize";
@@ -447,9 +447,20 @@ function WarehouseApp({ data, refresh, action, logout, globalError, toast }: { d
   const groupTree: Array<Row & { children: typeof allowedModules }> = menuGroups
     .filter((group)=>String(group.groupKey)!=="overview")
     // PHASE 3 (`T-01`) — 4 mục `dept_*` CŨ bị ẨN khỏi menu (5 mục mới thay chúng); `approvals` GIỮ NGUYÊN.
-    .map((group): Row & { children: typeof allowedModules } => ({ ...group, children: allowedModules.filter((item) => item.key!=="dashboard" && String(item.groupKey) === String(group.groupKey) && !legacyWorkMenuKeys.includes(item.key)) }))
-    .filter((group) => group.children.length > 0);
+    // PHASE 3 (`T-10`) — `approvals` KHÔNG còn nằm trong `children` của nhóm nào (`independentMenuKeys`): nó có
+    // NHÓM RIÊNG bên dưới. Khoá dùng vẫn là khoá ĐÃ CÓ `approvals` — KHÔNG thêm khoá module, KHÔNG migration.
+    .map((group): Row & { children: typeof allowedModules } => ({ ...group, children: allowedModules.filter((item) => !independentMenuKeys.includes(item.key) && String(item.groupKey) === String(group.groupKey) && !legacyWorkMenuKeys.includes(item.key)) }))
+    // Nhóm «CÔNG VIỆC» phải SỐNG kể cả khi `children` rỗng: 5 mục của nó do `workMenuChildren` vẽ (T-01/T-10).
+    .filter((group) => group.children.length > 0 || (String(group.groupKey) === "my_work" && workMenuChildren.length > 0));
   if (unassignedModules.length) groupTree.push({ groupKey: "__other__", name: "Khác", icon: "•", sortOrder: 9999, active: true, collapsible: true, children: unassignedModules });
+  // PHASE 3 (`T-10`) — «TRUNG TÂM PHÊ DUYỆT» = MODULE ĐỘC LẬP KHỎI NHÓM «CÔNG VIỆC» (§12), CHỈ BẰNG UI:
+  // một NHÓM MENU riêng (`approval_center` — khoá NHÓM, không phải khoá module) chứa ĐÚNG mục `approvals`
+  // (khoá ĐÃ CÓ; nhãn mục vẫn lấy từ DB qua `configuredModules`). Cổng quyền giữ nguyên: `allowedModules` đã
+  // lọc bằng `modulePermission(data, key).canView` ⇒ không hardcode admin. Sắp lại theo `sortOrder` để nhóm
+  // này đứng ngay sau «CÔNG VIỆC» (15) và trước «QUẢN LÝ DỰ ÁN» (25).
+  const approvalCenterItem = allowedModules.find((item) => item.key === approvalCenterMenuKey) || null;
+  if (approvalCenterItem) groupTree.push({ groupKey: approvalCenterGroup.groupKey, name: approvalCenterGroup.name, icon: approvalCenterGroup.icon, sortOrder: approvalCenterGroup.sortOrder, active: true, collapsible: false, children: [approvalCenterItem] });
+  groupTree.sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0));
   return <div className={`app-shell vntech-full-ui ${sidebarCollapsed?"sidebar-collapsed":""}`} data-full-release={VNTECH_BRAND.release.build} data-mobile-nav-contract="VNTECH_MOBILE_NAV_20260907" data-ui-contract={VNTECH_UI_CONTRACT_ID} data-ui-build={VNTECH_UI_BUILD_MARKER} data-functional-ui={VNTECH_FUNCTIONAL_UI_MARKER} data-regression-lock={VNTECH_RUNTIME_REGRESSION_LOCK}><aside className="sidebar vntech-app-sidebar"><div className="brand brand-logo-only" data-vntech-product={VNTECH_BRAND.productId} data-vntech-fingerprint={VNTECH_BRAND.sourceFingerprintShort}><img className="brand-logo sidebar-logo" src={VNTECH_BRAND.logoPath} alt="VNTECH TECHNOLOGY FOR LIFE" /></div><nav className="tree-nav"><button type="button" className={`nav-dashboard-direct ${active==="dashboard"?"active":""}`} onClick={()=>activateModule("dashboard")}><NavIcon name="dashboard"/><span>TỔNG QUAN ĐIỀU HÀNH</span></button>
     {groupTree.map((group) => {
       const groupKey = String(group.groupKey);

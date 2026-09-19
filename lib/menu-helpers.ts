@@ -121,8 +121,29 @@ const legacyWorkMenuKeys: ModuleKey[] = ["dept_plan_tasks", "dept_project_tasks"
 // Giao diện THẬT của nhóm «QUẢN LÝ DỰ ÁN» là danh sách con phẳng (`group.children.map`), giữ nguyên.
 // Bằng chứng: tools/probe-kp96-dead-project-tree.mjs · docs/agent-progress/TASK-090.md · MASTER_STATUS KP #96.
 
+// ─────────────────────────────────────────────────────────────────────────────
+// PHASE 3 (`T-10`) — «Tách Approval Center thành module độc lập» (§12) BẰNG UI, KHÔNG MIGRATION.
+//
+// KHOÁ DÙNG: **`approvals`** — khoá ĐÃ CÓ, không thêm gì mới:
+//   • `module_catalog` có sẵn dòng `approvals` (`drizzle/0076_phase_menu_11_groups_identity.sql`:35-36 gán nhóm
+//     `my_work`, :76 đặt `sort_order` 50);
+//   • `ModuleKey` (`lib/ui-shared.tsx`) đã có `"approvals"`;
+//   • màn đã độc lập sẵn: `app/page.tsx` — `active === "approvals" && <Approvals …>`.
+// Việc còn lại thuần HIỂN THỊ MENU: đưa `approvals` ra khỏi `children` của mọi nhóm và dựng NHÓM RIÊNG
+// `approval_center` (KHOÁ NHÓM MENU — KHÔNG phải khoá module, KHÔNG có dòng `module_catalog`, KHÔNG migration).
+// ⚠️ Khoá module MỚI cần `module_catalog` + `MODULE_KEYS` + migration ⇒ NGOÀI PHẠM VI (kết luận đã ghi ở `T-01`).
+// ─────────────────────────────────────────────────────────────────────────────
+const approvalCenterMenuKey: ModuleKey = "approvals";
+const approvalCenterGroup = { groupKey: "approval_center", name: "PHÊ DUYỆT", icon: "PD", sortOrder: 20 } as const;
+// Hai mục menu KHÔNG bao giờ nằm trong `children` của nhóm: chúng là mục ĐỘC LẬP ở cấp cao nhất
+// (`dashboard` = «TỔNG QUAN ĐIỀU HÀNH» — hành vi CŨ giữ nguyên; `approvals` = Trung tâm phê duyệt — `T-10`).
+const independentMenuKeys: ModuleKey[] = ["dashboard", "approvals"];
+
 export {
+  approvalCenterGroup,
+  approvalCenterMenuKey,
   configuredMenuGroups,
+  independentMenuKeys,
   legacyWorkMenuKeys,
   modules,
   workMenuItems,
