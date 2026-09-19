@@ -1562,3 +1562,26 @@ pm test + nhiều git + ... dễ bị **ngắt giữa chừng** — đã gặp 1
 * **Cổng đang xanh:** 	sc 0 · 
 pm test 0 · **cổng ảnh 64/64 ĐẠT** · **3 dịch vụ 200** · vân tay ĐẠT · Flyway 19/19
 * **BÀI HỌC VẬN HÀNH:** sau mỗi lần DSH khởi động lại, **việc ĐẦU TIÊN của lượt trực tiếp là REARM mục tiêu** — nếu không, vòng lặp sẽ dừng sau mỗi lượt.
+
+## 35. [PHASE 1 · U-11 bước 4] ĐO PHẠM VI & PHỤ THUỘC — KẾ HOẠCH TÁCH AN TOÀN (19/09)
+**Mục U-11 (đang DANG-LAM 3/4):** tách WorkCenter / Requests / BoqControl khỏi pp/page.tsx.
+**SỐ ĐO ĐƯỢC:**
+| Component | Dòng | Số dòng | **Hàm file-local phụ thuộc** |
+|---|---|---|---|
+| **WorkCenter** | 611–748 | **138** | **isAdminUser · modulePermission · oleBase · workRate** |
+| **Requests** | 1163–1220 | **58** | **statusLabel** |
+| **BoqControl** | 1579–1639 | **61** | **oqCellValue · mapBoqRows · useResizableColumnWidths · withBoqGroupContext** |
+**BỐI CẢNH RỦI RO (đã đo):** pp/page.tsx = **3.400 dòng** với **182 hàm + 458 const cấp file**; nhiều dòng **dài tới 9.422 ký tự**; các helper **KHÔNG được export** ⇒ tách component mà **import helper từ chính page.tsx sẽ tạo vòng import** (đúng bẫy đã gặp ở U-14).
+**⇒ KẾ HOẠCH TÁCH (thứ tự TỪ DỄ → KHÓ, mỗi bước có cổng 	sc 0 + **cổng ảnh 64/64** + 
+pm test 0):**
+* **Bước 1 — Requests (dễ nhất: chỉ phụ thuộc statusLabel)**: tạo pp/screens/Requests.tsx; **export statusLabel** từ module dùng chung (hoặc chuyển hẳn vào file mới nếu chỉ nơi đó dùng); import vào page.tsx.
+* **Bước 2 — BoqControl (phụ thuộc 4 hàm BOQ)**: tạo pp/screens/BoqControl.tsx; **chuyển 4 helper** (oqCellValue, mapBoqRows, useResizableColumnWidths, withBoqGroupContext) sang module BOQ dùng chung rồi cả hai nơi import ⇒ **không vòng**.
+* **Bước 3 — WorkCenter (phụ thuộc 4 hàm quyền/workRate)**: tạo pp/screens/WorkCenter.tsx; chuyển isAdminUser/modulePermission/oleBase sang **pp/lib/permissions.ts** (dùng chung cho cả page.tsx) + workRate sang module tương ứng.
+**QUY TẮC AN TOÀN (đã trả giá nhiều lần trong phiên):**
+1. Tách bằng công cụ **đếm ngoặc/đếm thẻ**, **mặc định chạy khô**, **tự chối ghi nếu không cân bằng**.
+2. **Không tách mù**: mỗi bước phải **cập nhật import/export** rồi để **	sc làm trọng tài**.
+3. **Sau MỖI bước**: 	sc 0 ⇒ **cổng ảnh 64/64 (admin, phải KHÔNG đổi)** ⇒ 
+pm test 0 ⇒ **commit** ⇒ mới sang bước sau.
+4. **Nếu 	sc đỏ ⇒ hoàn tác ngay** (git checkout -- <tệp>) rồi điều tra — không sửa dồn.
+5. **Không chạy uild** và **không ghi tệp song song với cổng ảnh** (bài học đã ghi).
+**TRẠNG THÁI:** kế hoạch đã đo và ghi; **chưa tách** (để thực hiện tuần tự ở các vòng sau khi có context sạch).
