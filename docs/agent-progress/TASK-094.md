@@ -1585,3 +1585,17 @@ pm test 0 ⇒ **commit** ⇒ mới sang bước sau.
 4. **Nếu 	sc đỏ ⇒ hoàn tác ngay** (git checkout -- <tệp>) rồi điều tra — không sửa dồn.
 5. **Không chạy uild** và **không ghi tệp song song với cổng ảnh** (bài học đã ghi).
 **TRẠNG THÁI:** kế hoạch đã đo và ghi; **chưa tách** (để thực hiện tuần tự ở các vòng sau khi có context sạch).
+
+## 36. [PHASE 1 · U-11] TRẠNG THÁI ĐO ĐƯỢC + **SỬA KẾ HOẠCH THEO TÀI LIỆU DỰ ÁN** (19/09)
+**BẰNG CHỨNG ĐO ĐƯỢC:**
+* 
+ode tools/tach-lat-cat-page.mjs --dry ⇒ **"Khối sẽ chuyển (0)"** · **0 dòng** · page.tsx 3410 → 3410 ⇒ **KHÔNG còn "lá sạch"** để tự động tách ⇒ **BƯỚC 1 (tách helper dùng chung) ĐÃ XONG** ✔
+* **ĐÃ TÁCH 16 MÀN** ra pp/screens/: SealScreen · CorrespondenceScreen · BenefitsScreen · LaborScreen · SiteCostScreen · CashbankScreen · HrScreen · DocumentsScreen · ConstructionScreen · LegalDocsScreen · TeamManagement · Receiving · Delivered · Inventory · Purchasing · Payments
+* pp/page.tsx nay **3.409 dòng / 182 hàm top-level** (177 khai báo top-level · 131 tên đến từ import).
+**CÔNG CỤ + TÀI LIỆU DỰ ÁN ĐÃ CÓ (điều em phát hiện muộn — và nó sửa kế hoạch của em):**
+* 	ools/tach-lat-cat-page.mjs — 2 chế độ: **(A) --dry** tự chọn lá sạch (bước 1, đã dùng) · **(B) --move=A,B,C [--dry] [--out=app/screens/X.tsx] [--back=…]** chuyển khối **có JSX + có import**, **tự sinh dòng import** ở tệp mới, **TỪ CHỐI** nếu còn tên không giải được (a) khối cùng chuyển · (b) tên JS · (c) tên từ import của page.tsx · (d) kiểu React ⇒ **không thể tạo import vòng**.
+* docs/agent-progress/U14-U11-KHAO-SAT.md §2 — **thứ tự cắt ĐÚNG**: ① helper dùng chung trước (**gỡ chặn import vòng**) ② 1 màn **nhỏ tự chứa** ③ mỗi vòng **1–2 màn**, ưu tiên màn **đã có ảnh chuẩn (01–13, 16)** ④ **KHÔNG tách WorkCenter/Requests/BoqControl trong các vòng đầu**.
+**🚨 SỬA KẾ HOẠCH CỦA EM (mục 35 đã SAI thứ tự):** em từng định tách **Requests trước** ⇒ **NGƯỢC tài liệu dự án** (tài liệu nói *KHÔNG* tách 3 component đó sớm). **⇒ Nay theo ĐÚNG tài liệu: Bước 1 XONG; Bước 2 XONG (16 màn); Bước 3 = tiếp tục tách 1–2 màn/vòng, ưu tiên màn CÓ ẢNH CHUẨN và KHÔNG thuộc 3 cái bị hoãn.**
+**QUY TẮC AN TOÀN GIỮ NGUYÊN:** mỗi vòng dùng 	ools/tach-lat-cat-page.mjs --move=… --out=app/screens/X.tsx (**chạy khô trước**) ⇒ 	sc **0** ⇒ **cổng ảnh 64/64** ⇒ 
+pm test **0** ⇒ commit. **	sc đỏ ⇒ hoàn tác ngay.**
+**BÀI HỌC:** **tài liệu + công cụ của dự án phải được tra TRƯỚC khi lập kế hoạch refactor** — em đã bỏ sót và lập kế hoạch sai thứ tự (suýt làm ngược tài liệu).
