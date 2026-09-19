@@ -2200,3 +2200,14 @@ PHAT HIEN THEM (loi that): probe de SOT user thu "sec_probe_576966" (probe in "d
   => De xuat: sua buoc don dep cua probe (va xem lai probe nao tao user nay: probe-security-rbac / probe-nonadmin-access).
 KHONG TU Y: khong xoa du lieu (user/task) va KHONG tu ghi lai anh chuan (re-baseline) - cho y kien user.
 DE XUAT: (a) don user thu con sot roi chay lai cong anh (co the het lech 07-admin), (b) re-baseline 2 man KEM BANG CHUNG nay, (c) giu nguyen.
+
+### 65. DON USER THU CON SOT + SUA LOI KIEM THANH CONG CUA PROBE (20/09)
+CHI DAO CUA USER: "don user thu con sot".
+DA DON (1 giao dich, co kiem chung bang DB):
+  * Truoc: sec_probe_576966 (1 session) + sec_probe_725151 (1 session) => tong users 13.
+  * Lam: DELETE sessions cua 2 user nay => UPDATE users SET active=0 => DELETE FROM users => COMMIT.
+  * Sau: so user 'sec_probe%' con lai = 0 ; tong users = 12.
+LOI CUA CHINH EM (da sua): ban va cleanup dau tien in "🧹 Da XOA user thu: sec_probe_725151" NHUNG user VAN CON (active=1)
+  => phep kiem thanh cong qua yeu (tin vao phan hoi API). DA SUA: cleanup nay (1) goi delete_user, (2) goi set_user_status active=false,
+  (3) DOC LAI danh sach users va chi bao "DA DON" khi user that su bien mat hoac bi khoa; neu van hoat dong thi bao
+  "❌ DON DEP THAT BAI ⇒ can xu ly tay". Bai hoc: voi thao tac xoa/khoa, PHAI kiem chung bang DU LIEU, khong tin phan hoi.

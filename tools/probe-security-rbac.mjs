@@ -167,3 +167,31 @@ if (!leak.length && !wronglyBlocked.length) {
   console.log("  ⇒ CHƯA ĐẠT — xem danh sách trên.");
 }
 console.log("═".repeat(104));
+// ---------- 7. DỌN DẸP (BẮT BUỘC) ----------
+// SỬA LỖI 20/09/2026: bản trước KHÔNG dọn user thử ⇒ để sót tài khoản 'sec_probe_*' trong DB
+// ⇒ làm cổng ảnh (07-admin) lệch và gây nhiễu điều tra (xem TASK-094 §64).
+// Luôn chạy kể cả khi phần kiểm phía trên lỗi: (1) thử XOÁ; (2) nếu không xoá được (tài khoản đã phát sinh
+// dữ liệu) thì KHOÁ lại (active=false) — đúng ngữ nghĩa của màn Quản trị (deleteAccount/toggleStatus).
+try {
+  const probeUser = me;
+  if (!probeUser?.id) {
+    console.log("  ⚠️  Không tìm thấy user thử để dọn (có thể create_user đã thất bại).");
+  } else {
+    const payload = { id: probeUser.id, userId: probeUser.id, username: probeUser.username };
+    // ⚠️ BÀI HỌC 20/09/2026: KHÔNG tin phản hồi API — phải ĐỌC LẠI dữ liệu để xác nhận.
+    // (Bản trước in "Đã XOÁ" trong khi user vẫn còn ⇒ báo cáo sai.)
+    await post("delete_user", payload);
+    await post("set_user_status", { ...payload, active: false });
+    const after = await post("bootstrap", {});
+    const still = (after?.data?.users || []).find((u) => u.username === probeUser.username);
+    if (!still) {
+      console.log(`  🧹 ĐÃ DỌN (đã xoá hẳn): ${probeUser.username}`);
+    } else if (still.active === false || still.active === 0 || still.active === "0") {
+      console.log(`  🧹 ĐÃ DỌN (đã khoá, không xoá hẳn vì đã phát sinh dữ liệu): ${probeUser.username}`);
+    } else {
+      console.log(`  ❌ DỌN DẸP THẤT BẠI — user thử VẪN HOẠT ĐỘNG: ${probeUser.username} ⇒ cần xử lý tay`);
+    }
+  }
+} catch (error) {
+  console.log(`  ⚠️  DỌN DẸP LỖI — cần kiểm tay: ${error instanceof Error ? error.message : String(error)}`);
+}
