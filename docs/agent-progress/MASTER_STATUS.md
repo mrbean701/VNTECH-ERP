@@ -1,7 +1,7 @@
 # MASTER STATUS — VNTECH ERP V5.3.0
 
 > Tệp này là NGUỒN SỰ THẬT về trạng thái toàn cục. Mọi phiên làm việc mới PHẢI đọc tệp này trước.
-> Cấu trúc theo GOAL §12. Cập nhật lần cuối: **2026-09-20** (sau khi **ĐÓNG PHASE 1 = 17/17** với `U-12`; số tiến độ lấy từ cổng `tools/probe-roadmap-progress.mjs` — **DONE 48/110 = 43,6 %**)
+> Cấu trúc theo GOAL §12. Cập nhật lần cuối: **2026-09-20** (nhánh **PHASE 4 — DỰ ÁN** mở mục `PR-01`: **code xong, CHỜ BUILD** để đo runtime; số tiến độ lấy từ cổng `tools/probe-roadmap-progress.mjs` — **DONE 58/110 = 52,7 % · DOING 1**)
 
 ## MASTER TASK STATUS
 
@@ -17,10 +17,10 @@
 | Phân loại (nguyên văn cột TT) | Số mục | % |
 |---|---|---|
 | **DONE** (`**DONE**` + `DONE` + `DONE / AP-DUNG n`) | **58** | **52,7 %** |
-| ĐANG LÀM | 0 | 0 % |
+| ĐANG LÀM | 1 | 0,9 % |
 | KHUNG XONG nhưng **ÁP DỤNG 0** | 0 | 0 % |
 | **BỊ CHẶN** (`**BLOCKED**` = F-01) | 1 | 0,9 % |
-| TODO | 51 | 46,4 % |
+| TODO | 50 | 45,5 % |
 
 | Phase | DONE / tổng | Ghi chú |
 |---|---|---|
@@ -29,7 +29,7 @@
 | PHASE 1 — UI/UX | **17 / 17** | **ĐÓNG HOÀN TOÀN** — `U-12` bỏ **823 token `!important` chết** (9 lô, mỗi lô qua `tsc` + `npm test` + **cổng ảnh 64/64**) |
 | PHASE 2 — MUA HÀNG | 3 / 9 | `P-04` · `P-05` · `P-06` (**`P-01` đã ROLLBACK 20/09 theo yêu cầu user — chưa chốt PHASE 2**) |
 | PHASE 3 — CÔNG VIỆC | 1 / 10 | `T-02` DONE 20/09 (audit mô hình: 32 cột + work_item_events; THIẾU comment/participant) |
-| PHASE 4 — DỰ ÁN | 0 / 6 | |
+| PHASE 4 — DỰ ÁN | 0 / 6 | `PR-01` **DOING** — code xong (`tsc` 0 · `npm test` 61/61 + workflow ĐẠT · hợp đồng nguồn 7/7), **CHỜ BUILD** để đo runtime + ảnh (`TASK-095.md` · `PR01-TAB-SPEC.md`) |
 | PHASE 5 — KHO | 0 / 4 | |
 | PHASE 6 — ĐỘI NHÓM | 0 / 6 | |
 | PHASE 7 — QUẢN TRỊ | 0 / 16 | |
@@ -301,4 +301,7 @@ Mặc định của interface là `return role()` = **mã chuẩn** ⇒ thiếu 
 100. **MỚI (18/09 · TASK-092) — BA LẦN "ĐO/ BÁO SAI" TRONG CÙNG MỘT LÔ QUYẾT ĐỊNH (ghi lại, cả ba đều bị chính kỷ luật tự chối bắt).** **(1) KHẲNG ĐỊNH THÀNH CÔNG MÀ KHÔNG ĐỌC LẠI:** script cấp phạm vi dự án (Q1) `INSERT` **thiếu cột `id`** (NOT NULL, không default) ⇒ MySQL báo lỗi, nhưng script vẫn in *"đã cấp 1 dòng phạm vi"* vì **không đọc lại kiểm chứng**, và stderr còn bị che bởi `2>$null` ở tầng gọi ⇒ **báo sai**; phát hiện khi truy vấn độc lập thấy **0 dòng**. **Quy tắc: mọi script GHI dữ liệu phải ĐỌC LẠI sau khi ghi; không che stderr ở thao tác ghi.** **(2) CÔNG CỤ ĐO SAI ĐỊNH DẠNG NGUỒN ⇒ CON SỐ SAI:** probe Q10 đọc bảng luật `canonicalMeCode` bằng regex không khớp định dạng tệp ⇒ thu được **0 cặp mã** ⇒ hàm suy luận luôn trả `KHAC` ⇒ in ra *"7 mã lệch"* — **hiện vật của chính công cụ**, không phải dữ liệu; sau khi port đúng luật + thêm **ĐỐI CHỨNG DƯƠNG 7/7 đầu vào**, số đúng là **4**. **(3) GHI CHÚ CŨ TRONG SỔ SAI, ĐÃ ĐƯỢC ĐÍNH CHÍNH:** ô *"TASK-040 nhóm 3b: UI gửi `categoryCode`, Java đọc `categoryId`"* — đo lại thì Java **đọc đúng** `categoryCode` và tự tạo nhóm; lỗi thật nằm ở **cột `review_status` NOT NULL** bị truyền `null`. **Bài học chung (lần thứ 5 của họ bài học #21/#25):** *một phép đo tự viết có thể in ra con số nghe rất hợp lý nhưng SAI — nên MỌI kết luận phải kèm đối chứng, và mọi thao tác ghi phải kèm đọc lại.*
 
 
+101. **MỚI (20/09 · TASK-095 · PHASE 4 `PR-01`) — "DANH SÁCH DỰ ÁN" NAY LÀ MỘT TAB, VÀ CỔNG TIẾN ĐỘ TỰ KHAI SAI TỪ VỰNG.** `docs/24 §15` mục 8 nói *"Danh sách dự án + Ban chỉ huy dự án chưa tách tab"*, nhưng **nửa sau đã CŨ**: tab "Ban chỉ huy" **đã tồn tại** trong chi tiết dự án (`app/page.tsx` `tab === 4` → `SiteCommandScreen`) và cổng `tools/probe-project-screen.mjs` **đang đòi đúng 5 tab** ⇒ trước khi làm `PR-05` phải **rà lại phạm vi thật**. Phần **còn thiếu thật** của `PR-01`: danh sách là một **CHẾ ĐỘ XEM** (`view: "list" | "detail"`) chứ **không phải tab**, và nhóm **HÀNH ĐỘNG** của toolbar danh sách **TRỐNG**. **Đã sửa:** một nguồn nhãn tab (`LIST_TAB`/`DETAIL_TABS`/`TAB_LABELS`), `view` **suy ra** từ tab, dải tab dùng chung render ở **cả hai** chế độ xem, chỉ số tab chi tiết dịch **1..5**, toolbar theo khuôn §5 có `count/total/unit` + `actions` (`⇩ XUẤT` CSV) và **QUYỀN=CHECK** (`permission={activePermission}`; nút xuất `disabled={!canExport}`; tab chi tiết `disabled` khi chưa chọn dự án). **Kỷ luật đỏ→xanh:** `tests/pr01-project-tabs.test.mjs` (mới, **7 ca**) **ĐỎ 7/7 trước khi sửa → XANH 7/7**; cố ý **không** thêm vào `package.json` để `test:regression` giữ nguyên **61** ca. **⚠️ CHƯA đóng `PR-01`:** bản build đang phục vụ **cũ hơn nguồn** — đo DOM lúc chạy trả `tabs = ["Tổng quan","Nhân sự","Tổ đội","Kho","Ban chỉ huy"]` (**5 mục**), `list-toolbar-count = 0`, **không có nút XUẤT** ⇒ `tools/probe-project-screen.mjs` (đã cập nhật hợp đồng 6 tab) **KHÔNG ĐẠT 5 mục**; phải **build lại** rồi mới đo được runtime. **Cảnh báo ảnh:** ảnh `02-project` của `probe-visual-regression.mjs` **SẼ LỆCH CÓ CHỦ Ý** (màn danh sách thêm dải tab) — cập nhật ảnh chuẩn kèm lý do nếu lệch đúng ở màn đó. **🔴 Lỗi cổng riêng phát hiện khi cập nhật SSOT:** `docs/25` dòng 15 khai báo từ vựng cột `TT` là `TODO · DOING · DONE · BLOCKED`, nhưng `tools/probe-roadmap-progress.mjs` **chỉ nhận `DANG-LAM`** ⇒ mọi ô ghi **đúng từ vựng tài liệu** (`DOING`) rơi vào **OTHER** (im lặng, không cảnh báo) — đã bổ sung nhánh `DOING` (trước khi thêm: **0** ô nào bắt đầu bằng `DOING` ⇒ không che mục nào) và ghi rõ lý do trong chính cổng. **UNKNOWN không tự chọn:** `projects` **KHÔNG có cột tiến độ** ⇒ màn `ProjectProgress` luôn ra **0 %**; nguồn % tiến độ dự án (BOQ/sản lượng/nhật ký hay nhập tay) **thuộc quyết định của người dùng** (ghi cho `PR-03`/`R-04`, không thuộc `PR-01`).
+
 - **[PHASE 8] WF-05 + WF-02/S-08**: snapshot người/vai trò/mode được ghi lúc tạo phiếu và **thắng** khi ra quyết định (Java `RequestStoreAdapter.java:255,293-294`; JS `system-route.mjs:489,1105`) · đo phủ **100/100** dòng có snapshot · cổng `probe-wf05-doi-quy-trinh` **5/5 ĐẠT** ⇒ đổi quy trình KHÔNG đổi luồng phiếu đang chờ.
+

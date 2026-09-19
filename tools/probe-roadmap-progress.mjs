@@ -38,6 +38,11 @@ const classify = (s) => {
   if (t === "BLOCKED") return "BLOCKED";
   if (t.startsWith("DONE /")) return "DONE"; // "DONE / AP-DUNG n"
   if (t.startsWith("DANG-LAM")) return "DOING";
+  // `docs/25` dòng 15 khai báo từ vựng cột TT là `TODO · DOING · DONE · BLOCKED`, nhưng cổng này
+  // trước đây chỉ nhận `DANG-LAM` ⇒ mọi ô ghi đúng từ vựng tài liệu (`DOING`) rơi vào OTHER.
+  // Bổ sung nhánh dưới đây để SSOT tự khai báo và cổng đo KHỚP nhau (không che mục nào:
+  // trước khi thêm, 0 ô nào bắt đầu bằng `DOING`).
+  if (t.startsWith("DOING")) return "DOING";
   if (t.startsWith("KHUNG-XONG")) return "FRAME_ONLY";
   if (t === "TODO") return "TODO";
   return "OTHER";

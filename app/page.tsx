@@ -438,7 +438,7 @@ function WarehouseApp({ data, refresh, action, logout, globalError, toast }: { d
           return <section key={groupKey} className={`mobile-nav-group ${childActive?"has-active":""}`} data-nav-action="expand"><button type="button" className="mobile-nav-parent mobile-nav-expand-only" onClick={()=>toggleGroup(groupKey)} aria-expanded={opened} aria-label={`${opened?"Thu gọn":"Mở rộng"} ${group.name}`}><NavIcon name={groupKey} kind="group"/><span>{group.name}</span>{groupBadge>0&&<b>{groupBadge}</b>}<em>{opened?"⌃":"⌄"}</em></button>{opened&&<div className="mobile-nav-children">{group.children.map((item)=>{const badge=badgeFor(item.key);return <button type="button" key={item.key} className={active===item.key?"active":""} aria-current={active===item.key?"page":undefined} data-nav-action="navigate" onClick={()=>{activateModule(item.key);setMobileNavOpen(false);}}><span>{item.label}</span>{badge>0&&<b>{badge}</b>}<em aria-hidden="true">›</em></button>;})}</div>}</section>;
         })}</div><button type="button" className="mobile-nav-collapse" onClick={()=>setMobileNavOpen(false)}><span aria-hidden="true">«</span><b>THU GỌN MENU</b></button><div className="mobile-display-settings"><button onClick={()=>setAppearance(value=>value==="dark"?"light":"dark")}><span>GIAO DIỆN</span><b>{appearance==="light"?"☀ SÁNG":"☾ TỐI"}</b></button><button onClick={()=>setUiDensity(v=>v==="normal"?"comfortable":v==="comfortable"?"compact":"normal")}><span>MẬT ĐỘ</span><b>{uiDensity==="comfortable"?"THOÁNG":uiDensity==="compact"?"CHẶT":"VỪA"}</b></button></div><div className="mobile-server-status"><i/><div><strong>Máy chủ công ty</strong><small>Hệ thống nội bộ</small></div></div></div></>}<main><header className={`topbar vntech-app-header ${showDashboardTopbar?"topbar-dashboard":"topbar-contextual"}`}><img className="topbar-city-art topbar-city-light" src="/vntech-header-city-light.webp" alt="" aria-hidden="true"/><img className="topbar-city-art topbar-city-dark" src="/vntech-header-city-dark.webp" alt="" aria-hidden="true"/><button className={`mobile-nav-toggle ${mobileNavOpen?"is-open":""}`} onClick={()=>setMobileNavOpen(value=>!value)} aria-label={mobileNavOpen?"Đóng menu":"Mở menu"}>{mobileNavOpen?"×":"☰"}</button><div className="mobile-brand-lockup"><img src={VNTECH_BRAND.logoPath} alt="VNTECH"/></div>{showTopbarSearch&&<form className="global-search" onSubmit={submitGlobalSearch}><button type="submit" className="global-search-icon" aria-label="Tìm kiếm" title="Tìm kiếm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg></button><input value={search} onFocus={()=>setSearchOpen(true)} onChange={(event) => {setSearch(event.target.value);setSearchOpen(true);}} placeholder="TÌM NHANH DỰ ÁN, PHIẾU, PO, VẬT TƯ…" />{searchOpen&&search.trim().length>=2&&<div className="global-search-results">{globalSearchResults.map((r,index)=><button type="button" key={`${r.type}-${r.id}-${index}`} onClick={()=>openSearchResult(r)}><b>{r.type}</b><span>{r.title}</span><small>{r.subtitle}</small></button>)}{!globalSearchResults.length&&<p>Không tìm thấy dữ liệu trong phạm vi quyền hiện tại.</p>}</div>}</form>}{!topbarHasUtility&&<div className="topbar-context-fill" aria-hidden="true"><i/><i/></div>}<div className="topbar-actions"><button className="theme-switch" onClick={()=>setAppearance(value=>value==="dark"?"light":"dark")} title={`Giao diện: ${appearance==="light"?"Sáng":"Tối"}`}><span>☀</span><i className={appearance==="dark"?"dark":"light"}></i><span>☾</span></button><div className="task-notify-wrap"><button className="notify-button" title="Thông báo" onClick={()=>setNotifyOpen(v=>!v)}><NavIcon name="dept_plan_alerts"/>{notificationCount>0&&<b>{notificationCount>99?"99+":notificationCount}</b>}</button>{notifyOpen&&<div className="task-notify-popover" role="dialog" aria-label="Thông báo công việc"><header><strong>Thông báo công việc</strong><span>{notificationCount} cần xử lý</span><button type="button" className="notify-close" aria-label="Đóng thông báo" onClick={()=>setNotifyOpen(false)}>×</button></header>{actionableApprovalNotifications.slice(0,5).map((r:Row)=><button key={`approval-${r.id}`} className="approval-notice" onClick={()=>{setNotifyOpen(false);setActive("approvals");open("detail",r);}}><b>Phiếu chờ duyệt · {r.requestNo}</b><span>{r.projectCode} · Bước {r.approvalStage} · {statusLabel(r)}</span><small>{date(r.requestedAt)}</small></button>)}{data.taskNotifications.slice(0,8).map(n=><button key={n.id} className={n.readAt?"read":""} onClick={async()=>{await action("mark_task_notification_read",{notificationId:n.id});setNotifyOpen(false);const task=data.workItems.find(t=>t.id===n.workItemId);if(task)setActive(task.departmentCode==="KH"?"dept_plan_tasks":"dept_project_tasks");}}><b>{n.title}</b><span>{n.body}</span><small>{date(n.createdAt)}</small></button>)}{notificationCount===0&&<p>Chưa có thông báo hoặc phiếu cần xử lý.</p>}</div>}</div></div><div className="user-menu"><button onClick={() => setMenuOpen((value) => !value)}><span className="header-user-avatar">{data.user.avatarUrl?<img src={String(data.user.avatarUrl)} alt="Ảnh đại diện"/>:initials(data.user.fullName)}</span><div><strong>{data.user.fullName}</strong><small>{roleLabel(data, data.user.role)}</small></div><i>⌄</i></button>{menuOpen && <div className="user-popover"><div className="popover-setting"><span>CỠ CHỮ</span><div><button className={fontScale===0.94?"active":""} onClick={()=>setFontScale(0.94)}>A−</button><button className={fontScale===1?"active":""} onClick={()=>setFontScale(1)}>A</button><button className={fontScale===1.12?"active":""} onClick={()=>setFontScale(1.12)}>A+</button></div></div><div className="popover-setting"><span>MẬT ĐỘ DỮ LIỆU</span><div><button className={uiDensity==="comfortable"?"active":""} onClick={()=>setUiDensity("comfortable")}>THOÁNG</button><button className={uiDensity==="normal"?"active":""} onClick={()=>setUiDensity("normal")}>VỪA</button><button className={uiDensity==="compact"?"active":""} onClick={()=>setUiDensity("compact")}>CHẶT</button></div></div><button onClick={() => { open("accountSettings"); setMenuOpen(false); }}>Cài đặt tài khoản</button><button onClick={logout}>Đăng xuất</button></div>}</div></header><div className={`main-content ${showDashboardTopbar?"main-content-dashboard":""}`}> <section className="page-heading"><div>{showDashboardTopbar&&<p>VNTECH ERP <span>/</span> {title[0]}</p>}<h1>{title[0]}</h1><small>{title[1]}</small></div></section>{isAdminUser(data.user)&&<AdminModuleGuide moduleKey={active}/>} {accessDenied?<AccessDeniedPanel/>:<>{!["material_catalog","central_warehouse","admin"].includes(active)&&(<ProjectScopeSelect projects={data.projects} project={project} onChange={setProject} allowAll={data.projects.length>1}/>)}  {DEVELOPMENT_MODULES.has(active)&&active!=="boq"&&<DevelopmentNotice/>}{globalError && <div className="inline-alert danger">{globalError}</div>}
     
-    {active === "dashboard" && <Dashboard data={data} project={project} navigate={setActive} open={open} />}{active === "site_command" && <ProjectManagement data={data} project={project} onProject={setProject} open={open} action={action} />}{active === "project_progress" && <ProjectProgress data={data} project={project} onProject={setProject} />}{/* GĐ4 — hai module "Nhiệm vụ nhân viên đang làm" nay dùng màn CÔNG VIỆC thống nhất */}
+    {active === "dashboard" && <Dashboard data={data} project={project} navigate={setActive} open={open} />}{active === "site_command" && <ProjectManagement data={data} project={project} onProject={setProject} open={open} action={action} permission={activePermission} />}{active === "project_progress" && <ProjectProgress data={data} project={project} onProject={setProject} />}{/* GĐ4 — hai module "Nhiệm vụ nhân viên đang làm" nay dùng màn CÔNG VIỆC thống nhất */}
     {active === "reports_center" && <ReportView catalog={REPORT_CATALOG.map((e)=>e.def)} rowsFor={(k)=>sourceRows(findEntry(k)?.source ?? "requests", data)} />}{(active === "dept_plan_tasks" || active === "dept_project_tasks") && <WorkCenter data={data} action={action} refresh={refresh} />}{active.startsWith("dept_plan_") && active !== "dept_plan_tasks" && <DepartmentTaskWorkspace data={data} department="KH" moduleKey={active} project={project} onProject={setProject} action={action} navigate={setActive} />}{active.startsWith("dept_project_") && active !== "dept_project_tasks" && <DepartmentTaskWorkspace data={data} department="DA" moduleKey={active} project={project} onProject={setProject} action={action} navigate={setActive} />}{active === "construction" && <ConstructionScreen data={data} project={project} action={action} permission={activePermission} />}{active === "dept_finance_recovery" && <FinanceRecoveryScreen data={data} project={project} action={action} />}{active === "dept_legal_hr" && <HrScreen data={data} project={project} action={action} permission={activePermission} open={open} />}{active === "dept_legal_labor" && <LaborScreen data={data} project={project} action={action} permission={activePermission} />}{active === "dept_legal_correspondence" && <CorrespondenceScreen data={data} project={project} action={action} permission={activePermission} />}{active === "dept_legal_documents" && <LegalDocsScreen data={data} project={project} action={action} permission={activePermission} />}{active === "dept_legal_seal" && <SealScreen data={data} project={project} action={action} permission={activePermission} />}{active === "dept_legal_benefits" && <BenefitsScreen data={data} project={project} action={action} permission={activePermission} />}{active === "dept_finance_documents" && <DocumentsScreen data={data} project={project} action={action} permission={activePermission} />}{active === "dept_finance_cashbank" && <CashbankScreen data={data} project={project} action={action} permission={activePermission} />}{active === "dept_finance_site_cost" && <SiteCostScreen data={data} project={project} action={action} permission={activePermission} />}{active === "dept_finance_advance" && <AdvanceScreen data={data} project={project} action={action} permission={activePermission} />}{active === "dept_finance_payment_plan" && <PaymentPlanScreen data={data} project={project} action={action} permission={activePermission} />}{active === "material_norms" && <MaterialNormsScreen data={data} project={project} action={action} permission={activePermission} />}{active.startsWith("dept_finance_")||active.startsWith("dept_legal_") ? <DevelopmentModule title={title[0]} note={title[1]} /> : null}{active === "site_command" && <SiteCommandScreen data={data} project={project} action={action} />}{active === "production" && <ProductionReports data={data} project={project} action={action} permission={activePermission} />}{active === "capital_recovery" && <CapitalRecovery data={data} project={project} action={action} permission={activePermission} />}{active === "requests" && <Requests rows={filteredRequests} projects={data.projects} project={project} onProject={setProject} open={open} inventory={data.inventory} exportRows={() => exportRequestsXlsx(filteredRequests)} />}{active === "approvals" && <Approvals data={data} rows={data.requests.filter((row)=>(project==="ALL"||row.projectId===project))} projects={data.projects} project={project} onProject={setProject} user={data.user} action={action} open={open} canUse={canUseActive} refresh={refresh} />}{active === "purchasing" && <Purchasing data={data} project={project} open={open} action={action} canUse={canUseActive} />}{active === "supplier_catalog" && <SupplierManager data={data} action={action} />}{active === "receiving" && <Receiving data={data} project={project} open={open} canUse={canUseActive} />}{active === "delivered" && <Delivered data={data} project={project} open={open} />}{active === "warehouse_receipt" && <WarehouseReceipt data={data} project={project} open={open} canUse={canUseActive} />}{active === "warehouse_issue" && <WarehouseIssueTeams data={data} project={project} open={open} canUse={canUseActive} />}{active === "inventory" && <Inventory data={data} project={project} open={open} />}{active === "central_warehouse" && <CentralWarehouse data={data} open={open} action={action} permission={activePermission} />}{active === "material_catalog" && <MaterialCatalogPage data={data} open={open} action={action} permission={activePermission} />}{active === "boq" && <BoqControl data={data} project={project} open={open} action={action} canUse={canUseActive} />}{active === "payments" && <Payments data={data} project={project} action={action} canCreate={Boolean(activePermission.canCreate)} canEdit={Boolean(activePermission.canEdit)} refresh={refresh} />}{active === "teams" && <TeamManagement data={data} open={open} />}{active === "stocktake" && <Stocktake data={data} open={open} action={action} canUse={canUseActive} />}{active === "reports" && <Reports data={data} project={project} />}{active === "admin" && isAdminUser(data.user) && <Admin data={data} open={open} action={action} />}</>}</div><footer className="vntech-product-footer" data-product-id={VNTECH_BRAND.productId}><span>{VNTECH_BRAND.copyright}</span><b>VNTECH ERP</b></footer></main>
     {selected && modal === "detail" && <RequestDrawer variant="page" data={data} request={selected} approvalStages={data.approvalStages} close={() => { setModal(null); if (new URLSearchParams(window.location.search).has("request")) window.history.replaceState({}, "", window.location.pathname); }} action={action} user={data.user} />}
     {selected && modal === "receiptDetail" && <ReceiptDrawer data={data} receipt={selected} user={data.user} close={() => setModal(null)} action={action} />}
@@ -504,10 +504,22 @@ function projectOverdueDays(row: Row): number {
 //     theo ngày tham gia); tab Tổ đội; tab Kho (tồn kho, thủ kho, đơn chờ nhập/duyệt/xuất)
 // Dữ liệu lấy HOÀN TOÀN từ bootstrap — không cần API Java mới.
 // =============================================================================
-function ProjectManagement({ data, project, onProject, open, action }: { data: AppData; project: string; onProject: (value: string) => void; open: (name: string, row?: Row) => void; action: (name: string, payload: Row) => Promise<boolean> }) {
-  const [view, setView] = useState<"list" | "detail">("list");
+function ProjectManagement({ data, project, onProject, open, action, permission }: { data: AppData; project: string; onProject: (value: string) => void; open: (name: string, row?: Row) => void; action: (name: string, payload: Row) => Promise<boolean>; permission: Row }) {
+  // PHASE 4 (`PR-01`) — "DANH SÁCH DỰ ÁN" LÀ MỘT TAB RIÊNG, KHÔNG còn là chế độ xem tách rời.
+  // Nguồn yêu cầu: docs/24 §15 mục 8 (*"Danh sách dự án + Ban chỉ huy dự án chưa tách tab"*) + docs/25 mục `PR-01`.
+  // TRƯỚC: `view: "list" | "detail"` là HAI chế độ xem rời nhau ⇒ ở màn danh sách KHÔNG có dải tab nào,
+  //        muốn quay lại phải bấm nút "← Quay lại danh sách" (nút chỉ tồn tại ở màn chi tiết).
+  // NAY:   MỘT dải tab duy nhất cho cả màn dự án — tab 0 = "Danh sách dự án", tab 1..5 = 5 tab chi tiết
+  //        (Tổng quan · Nhân sự · Tổ đội · Kho · Ban chỉ huy). Dải tab hiện ở CẢ hai chế độ xem.
+  // QUYỀN (`QUYỀN=CHECK` của `PR-01`): tab chi tiết CHỈ bật khi đã chọn một dự án; nút xuất dữ liệu
+  //        trên toolbar phụ thuộc `canExport` của module `site_command` (backend ĐÃ lọc phạm vi dự án).
+  const LIST_TAB = "Danh sách dự án";
+  const DETAIL_TABS = ["Tổng quan", "Nhân sự", "Tổ đội", "Kho", "Ban chỉ huy"];
+  const TAB_LABELS = [LIST_TAB, ...DETAIL_TABS];
   const [detailId, setDetailId] = useState("");
   const [tab, setTab] = useState(0);
+  const view: "list" | "detail" = tab === 0 ? "list" : "detail";
+  const canExport = Boolean(permission?.canExport);
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("ALL");
   const [sortBy, setSortBy] = useState("active_newest");
@@ -560,13 +572,22 @@ function ProjectManagement({ data, project, onProject, open, action }: { data: A
     return { pendingIn, pendingOut, pendingApprove, openPOs };
   }
 
+  // PR-01 — dải tab DÙNG CHUNG cho CẢ hai chế độ xem (danh sách + chi tiết).
+  // Tab chi tiết bị KHOÁ cho tới khi người dùng chọn một dự án (nút "Chi tiết ›") — tránh mở tab rỗng.
+  const projectTabs = <div className="project-scope-tabs" role="tablist" aria-label="Khu vực màn quản lý dự án">
+    {TAB_LABELS.map((label, index) => <button key={label} type="button" role="tab" aria-selected={tab === index} disabled={index > 0 && !detailId} title={index > 0 && !detailId ? "Chọn một dự án (nút “Chi tiết ›”) để mở nhóm tab này" : undefined} className={tab === index ? "active" : ""} onClick={() => setTab(index)}>{label}</button>)}
+  </div>;
+
   // =========================== DANH SÁCH =====================================
   if (view === "list") {
     return <div className="stack project-management">
       <section className="card">
         <ListToolbar
           title="DANH SÁCH DỰ ÁN"
-          note={`${filtered.length}/${allProjects.length} dự án · ưu tiên đang hoạt động, mới nhất trước`}
+          note="Project Master · ưu tiên dự án ĐANG HOẠT ĐỘNG, trong nhóm mới nhất trước"
+          count={filtered.length}
+          total={allProjects.length}
+          unit="dự án"
           search={{ value: q, onChange: setQ, placeholder: "Tìm mã, tên, hợp đồng…" }}
           filters={[{ key: "status", label: "Trạng thái", value: status, onChange: setStatus, options: [
             { value: "ALL", label: "Tất cả trạng thái" },
@@ -579,7 +600,24 @@ function ProjectManagement({ data, project, onProject, open, action }: { data: A
             { value: "name", label: "Theo mã dự án" },
             { value: "overdue", label: "Chậm tiến độ nhiều nhất" },
           ] }}
+          actions={<button
+            type="button"
+            className="secondary"
+            disabled={!canExport}
+            title={canExport ? "Xuất đúng danh sách đang hiển thị ra CSV" : "Tài khoản chưa được cấp quyền XUẤT của chức năng Quản lý dự án"}
+            onClick={() => downloadCsv(
+              ["Mã dự án", "Tên dự án", "Số hợp đồng", "Tên hợp đồng", "Trạng thái", "Bắt đầu", "Kết thúc dự kiến", "Chậm tiến độ (ngày)", "Nhân sự", "Tổ đội", "Số kho"],
+              filtered.map((row) => [
+                row.code || "", row.name || "", row.contractNo || "", row.contractName || "",
+                PROJECT_STATUS_LABELS[String(row.status || "active")] || String(row.status || ""),
+                row.startDate || "", row.plannedEndDate || "", projectOverdueDays(row),
+                scopesOf(String(row.id)).length, teamsOf(String(row.id)).length, warehousesOf(String(row.id)).length,
+              ]),
+              `Danh_sach_du_an_${UI_TODAY}`
+            )}
+          >⇩ XUẤT</button>}
         />
+        {projectTabs}
         <DataTable
           rows={filtered}
           rowKey={(row) => String(row.id)}
@@ -593,7 +631,7 @@ function ProjectManagement({ data, project, onProject, open, action }: { data: A
             { key: "progress", header: "Tiến độ", render: (row) => { const late = projectOverdueDays(row); return late > 0 ? <strong className="red-text">Chậm {late} ngày</strong> : <StatusBadge value="Đúng tiến độ"/>; } },
             { key: "staff", header: "Nhân sự", render: (row) => <>{scopesOf(String(row.id)).length} người</> },
             { key: "teams", header: "Tổ đội", render: (row) => <>{teamsOf(String(row.id)).length} tổ đội</> },
-            { key: "actions", header: "", render: (row) => <button type="button" className="export-mini" onClick={() => { setDetailId(String(row.id)); setView("detail"); setTab(0); setOpenWarehouse(""); }}>Chi tiết ›</button> },
+            { key: "actions", header: "", render: (row) => <button type="button" className="export-mini" onClick={() => { setDetailId(String(row.id)); setTab(1); setOpenWarehouse(""); }}>Chi tiết ›</button> },
           ]}
         />
       </section>
@@ -601,7 +639,7 @@ function ProjectManagement({ data, project, onProject, open, action }: { data: A
   }
 
   // =========================== CHI TIẾT ======================================
-  if (!detail) { setView("list"); return null; }
+  if (!detail) { setTab(0); return null; }
   const pid = String(detail.id);
   const late = projectOverdueDays(detail);
   const staff = staffOf(pid).sort((a, b) => {
@@ -612,7 +650,6 @@ function ProjectManagement({ data, project, onProject, open, action }: { data: A
   const teams = teamsOf(pid);
   const warehouses = warehousesOf(pid);
   const keepers = keepersOf();
-  const TABS = ["Tổng quan", "Nhân sự", "Tổ đội", "Kho", "Ban chỉ huy"];
 
   return <div className="stack project-management">
     <section className="card project-detail-head">
@@ -621,15 +658,13 @@ function ProjectManagement({ data, project, onProject, open, action }: { data: A
         note={`${PROJECT_STATUS_LABELS[String(detail.status || "active")] || detail.status} · ${staff.length} nhân sự · ${teams.length} tổ đội · ${warehouses.length} kho`}
         actions={<>
           <button type="button" className="secondary" onClick={() => { onProject(pid); }} title="Đặt dự án này làm phạm vi làm việc">Đặt làm dự án hiện tại</button>
-          <button type="button" className="page-back" onClick={() => setView("list")}>← Quay lại danh sách</button>
+          <button type="button" className="page-back" onClick={() => setTab(0)}>← Quay lại danh sách</button>
         </>}
       />
-      <div className="project-scope-tabs" role="tablist">
-        {TABS.map((label, index) => <button key={label} type="button" role="tab" aria-selected={tab === index} className={tab === index ? "active" : ""} onClick={() => setTab(index)}>{label}</button>)}
-      </div>
+      {projectTabs}
     </section>
 
-    {tab === 0 && <div className="stack">
+    {tab === 1 && <div className="stack">
       <div className="kpi-grid">
         <Kpi icon="BD" label="Ngày bắt đầu" value={date(detail.startDate)} note="Theo hợp đồng / khởi công" tone="blue"/>
         <Kpi icon="KT" label="Kết thúc dự kiến" value={date(detail.plannedEndDate)} note="Mốc bàn giao theo kế hoạch" tone="blue"/>
@@ -653,12 +688,12 @@ function ProjectManagement({ data, project, onProject, open, action }: { data: A
       </section>
     </div>}
 
-    {tab === 1 && <section className="card">
+    {tab === 2 && <section className="card">
       <CardHead title="Nhân sự tham gia dự án" note="Ưu tiên người đang hoạt động · sắp xếp theo ngày tham gia dự án"/>
       <DataTable rows={staff} rowKey={(u) => String(String(u.id))} columns={[{ key: "c1", header: "Họ tên", render: (u) => <><strong>{u.fullName}</strong><small>{u.email || u.username || "—"}</small></> }, { key: "c2", header: "Mã NV", render: (u) => <>{u.employeeCode || "—"}</> }, { key: "c3", header: "Chức vụ", render: (u) => <>{u.roleName || u.role || "—"}</> }, { key: "c4", header: "Phòng ban", render: (u) => <>{u.organizationName || u.department || "—"}</> }, { key: "c5", header: "Ngày tham gia", render: (u) => <>{u._scope?.joinedAt ? date(u._scope.joinedAt) : <span className="muted">Chưa ghi nhận</span>}</> }, { key: "c6", header: "Quyền trong dự án", render: (u) => <>{u._scope?.positionName || u._scope?.permission || "—"}</> }, { key: "c7", header: "Trạng thái", render: (u) => <><StatusBadge value={u.active === false ? "Đã khoá" : "Đang hoạt động"}/></> }, { key: "c8", header: "", render: (u) => <><button type="button" className="export-mini" onClick={() => open("userProfile", u)}>Hồ sơ ›</button></> }]} emptyText="Dự án chưa gán nhân sự nào." />
     </section>}
 
-    {tab === 2 && <section className="card">
+    {tab === 3 && <section className="card">
       <CardHead title="Tổ đội thuộc dự án" note="Mỗi tổ đội thuộc đúng một dự án và có kho riêng"/>
       <DataTable rows={teams} rowKey={(t) => String(t.id)} emptyText="Dự án chưa có tổ đội." columns={[
         { key: "c1", header: "Mã tổ đội", render: (t) => <strong className="code">{t.code}</strong> },
@@ -670,7 +705,7 @@ function ProjectManagement({ data, project, onProject, open, action }: { data: A
       ]} />
     </section>}
 
-    {tab === 3 && <div className="stack">
+    {tab === 4 && <div className="stack">
       <section className="card">
         <CardHead title="Kho của dự án" note="Bấm một kho để xem tồn kho, thủ kho và đơn từ liên quan"/>
         <DataTable rows={warehouses} rowKey={(w) => String(w.id)} emptyText="Dự án chưa có kho." columns={[
@@ -721,7 +756,7 @@ function ProjectManagement({ data, project, onProject, open, action }: { data: A
       })()}
     </div>}
 
-    {tab === 4 && <SiteCommandScreen data={data} project={pid} action={action} />}
+    {tab === 5 && <SiteCommandScreen data={data} project={pid} action={action} />}
   </div>;
 }
 

@@ -1,4 +1,8 @@
-// GĐ3 — Kiểm chứng màn QUẢN LÝ DỰ ÁN: danh sách + chi tiết 4 tab.
+// GĐ3 + PHASE 4 (`PR-01`) — Kiểm chứng màn QUẢN LÝ DỰ ÁN.
+//
+// HỢP ĐỒNG SAU `PR-01` (docs/25 §PHASE 4): "Danh sách dự án" là MỘT TAB RIÊNG — dải tab dùng chung
+// cho CẢ hai chế độ xem: tab 0 = `Danh sách dự án`, tab 1..5 = Tổng quan · Nhân sự · Tổ đội · Kho · Ban chỉ huy.
+// Tab chi tiết bị KHOÁ (`disabled`) khi chưa chọn dự án; toolbar danh sách có SỐ LƯỢNG + TÌM + HÀNH ĐỘNG.
 //
 //   node tools/probe-project-screen.mjs [base] [user] [pass]
 import { spawn, spawnSync } from "node:child_process";
@@ -140,19 +144,20 @@ const detailInfo = JSON.parse(await ev(`(()=>{
 })()`));
 console.log("   " + JSON.stringify(detailInfo));
 
-check("Chi tiết có 5 tab (gồm Ban chỉ huy)", (detailInfo.tabs || []).length === 5, (detailInfo.tabs || []).join(" · "));
+check("Dải tab có 6 mục (Danh sách dự án + 5 tab chi tiết)", (detailInfo.tabs || []).length === 6, (detailInfo.tabs || []).join(" · "));
+check("Tab ĐẦU TIÊN là 'Danh sách dự án'", (detailInfo.tabs || [])[0] === "Danh sách dự án", (detailInfo.tabs || [])[0]);
 for (const t of ["Tổng quan", "Nhân sự", "Tổ đội", "Kho", "Ban chỉ huy"]) {
   check(`Có tab "${t}"`, (detailInfo.tabs || []).includes(t));
 }
 check("Có nút quay lại danh sách", detailInfo.hasBack === true);
 
-// lần lượt mở từng tab, đếm nội dung
-console.log("\n▸ Mở từng tab");
+// lần lượt mở từng tab CHI TIẾT (chỉ số 1..5 — chỉ số 0 là tab DANH SÁCH)
+console.log("\n▸ Mở từng tab chi tiết");
 for (const [i, label] of ["Tổng quan", "Nhân sự", "Tổ đội", "Kho", "Ban chỉ huy"].entries()) {
   const r = await ev(`(()=>{
     const bs=[...document.querySelectorAll('.project-management .project-scope-tabs button')];
-    if(!bs[${i}]) return 'NO_TAB';
-    bs[${i}].click(); return 'OK';
+    if(!bs[${i + 1}]) return 'NO_TAB';
+    bs[${i + 1}].click(); return 'OK';
   })()`);
   await sleep(1200);
   const info = JSON.parse(await ev(`(()=>{
@@ -163,6 +168,32 @@ for (const [i, label] of ["Tổng quan", "Nhân sự", "Tổ đội", "Kho", "Ba
   })()`));
   check(`Tab "${label}" mở được`, r === "OK", JSON.stringify(info));
 }
+
+// PR-01 — bất biến cốt lõi: quay về DANH SÁCH bằng CHÍNH tab đầu tiên (không cần nút "←")
+console.log("\n▸ PR-01 — quay lại DANH SÁCH bằng tab đầu tiên");
+const backViaTab = await ev(`(()=>{
+  const bs=[...document.querySelectorAll('.project-management .project-scope-tabs button')];
+  if(!bs[0]) return 'NO_TAB';
+  bs[0].click(); return 'OK';
+})()`);
+await sleep(1500);
+const listBack = JSON.parse(await ev(`(()=>{
+  const root=document.querySelector('.project-management');
+  if(!root) return JSON.stringify({found:false});
+  return JSON.stringify({
+    found:true,
+    hasStrip: !!root.querySelector('.project-scope-tabs'),
+    tabLabels:[...root.querySelectorAll('.project-scope-tabs button')].map(x=>x.textContent.trim()),
+    hasListTable: !!root.querySelector('.table-wrap table'),
+    hasSearch: !!root.querySelector('input[placeholder*="Tìm"]'),
+    hasExport: [...root.querySelectorAll('.list-toolbar-actions button')].some(b=>/XUẤT/i.test(b.textContent||'')),
+    countBadges: root.querySelectorAll('.list-toolbar-count').length,
+  });
+})()`));
+console.log("   " + JSON.stringify(listBack));
+check("Tab 'Danh sách dự án' đưa về ĐÚNG màn danh sách", backViaTab === "OK" && listBack.hasListTable === true, JSON.stringify(listBack));
+check("Dải tab còn nguyên 6 mục ở màn danh sách", (listBack.tabLabels || []).length === 6, (listBack.tabLabels || []).join(" · "));
+check("Toolbar danh sách CÂN ĐỐI: số lượng + tìm + hành động", listBack.countBadges >= 1 && listBack.hasSearch === true && listBack.hasExport === true, `count=${listBack.countBadges} search=${listBack.hasSearch} export=${listBack.hasExport}`);
 
 console.log("\n" + "═".repeat(74));
 const failed = results.filter((r) => !r.ok);
