@@ -16,11 +16,11 @@
 
 | Phân loại (nguyên văn cột TT) | Số mục | % |
 |---|---|---|
-| **DONE** (`**DONE**` + `DONE` + `DONE / AP-DUNG n`) | **58** | **52,7 %** |
+| **DONE** (`**DONE**` + `DONE` + `DONE / AP-DUNG n`) | **59** | **53,6 %** |
 | ĐANG LÀM | 0 | 0 % |
 | KHUNG XONG nhưng **ÁP DỤNG 0** | 0 | 0 % |
 | **BỊ CHẶN** (`**BLOCKED**` = F-01) | 1 | 0,9 % |
-| TODO | 51 | 46,4 % |
+| TODO | 50 | 45,5 % |
 
 | Phase | DONE / tổng | Ghi chú |
 |---|---|---|
@@ -28,7 +28,7 @@
 | PHASE 0B — BẢO MẬT | **10 / 10** | ĐÓNG (theo yêu cầu người dùng) |
 | PHASE 1 — UI/UX | **17 / 17** | **ĐÓNG HOÀN TOÀN** — `U-12` bỏ **823 token `!important` chết** (9 lô, mỗi lô qua `tsc` + `npm test` + **cổng ảnh 64/64**) |
 | PHASE 2 — MUA HÀNG | 3 / 9 | `P-04` (TASK-072) · `P-05` (TASK-074) · `P-06` (TASK-075) |
-| PHASE 3 — CÔNG VIỆC | 0 / 10 | |
+| PHASE 3 — CÔNG VIỆC | 1 / 10 | `T-02` DONE 20/09 (audit mô hình: 32 cột + work_item_events; THIẾU comment/participant) |
 | PHASE 4 — DỰ ÁN | 0 / 6 | |
 | PHASE 5 — KHO | 0 / 4 | |
 | PHASE 6 — ĐỘI NHÓM | 0 / 6 | |
