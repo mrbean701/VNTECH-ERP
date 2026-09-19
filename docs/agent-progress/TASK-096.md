@@ -2,9 +2,9 @@
 
 - **Mã:** TASK-096 · **Ngày:** 20/09/2026 · **Roadmap:** `T-01` (`docs/25_TODO_ROADMAP.md` §PHASE 3 — CÔNG VIỆC)
 - **Nguồn yêu cầu:** roadmap `T-01` (P2, phụ thuộc `U-03` — đã DONE) + `docs/24_SYSTEM_AUDIT_REPORT.md` ~dòng 408: *"Màn công việc chưa tách menu con theo quyền"*.
-- **Trạng thái:** **`DONE`** — 5 cổng XANH · hợp đồng `tests/t01-work-menu.test.mjs` **8/8 ĐẠT** (ĐỎ 7/8 → XANH 8/8).
+- **Trạng thái:** **`DONE`** — 5 cổng XANH · hợp đồng `tests/t01-work-menu.test.mjs` **9/9 ĐẠT** (ĐỎ 8 → XANH 9).
 - **Quyết định đã chốt (PHƯƠNG ÁN A):** KHÔNG migration · KHÔNG sửa `scripts/**` · KHÔNG sửa `MODULE_KEYS` · KHÔNG thêm dòng `module_catalog`.
-- **Commit:** `9b325c5` (test hợp đồng + probe) · `6502deb` (3 tệp mã nguồn).
+- **Commit:** `9b325c5` (test hợp đồng + probe) · `6502deb` (3 tệp mã nguồn) · `33e8d58` (giữ đủ huy hiệu nhóm + test) · commit tài liệu cuối cùng.
 
 ## 1. 5 mục menu — nhãn · khoá menu · đích đến THẬT · cổng quyền THẬT
 
@@ -41,7 +41,7 @@ Cơ chế: `lib/workflow-helpers.ts`:52 — `label: … (config?.label || item.l
 - `approvals` **KHÔNG** nằm trong danh sách ẩn; nó vốn đã ở nhóm `my_work` và `sort_order=50` (`drizzle/0076_phase_menu_11_groups_identity.sql`:35-36,76) ⇒ tự nhiên thành **mục thứ 6**, đúng chủ ý `T-10`.
 - **KHÔNG hồi quy «Giao việc»:** `app/page.tsx`:351 `workCenterViewFor()` trả `null` cho `view="assign"` ⇒ rơi về nhánh CŨ (`app/page.tsx`:469) và mở `DepartmentTaskWorkspace` y như 2 mục assign cũ (màn giao việc chi tiết **không mất lối vào**). Không đụng logic `T-03`/`T-04` (bình luận + người tham gia).
 - Khoá cũ **vẫn là khoá thật**: quyền, `titles[active]`, tìm kiếm toàn cục (`app/page.tsx`:397), và thông báo công việc (`setActive(dept_plan_tasks|dept_project_tasks)`) đều chạy nguyên.
-- Huy hiệu (badge) việc chưa xong **không mất**: `groupBadge` cộng thêm badge của 5 mục mới (`app/page.tsx`:444·458).
+- Huy hiệu (badge) việc chưa xong **không mất**: huy hiệu của mục «Cá nhân» cộng đủ **cả cặp** khoá (`app/page.tsx`:433 `workMenuBadge`), badge nhóm cộng thêm 5 mục mới (`app/page.tsx`:446·460) — trước `T-01` nhóm cộng `dept_plan_tasks` + `dept_project_tasks` (KH + DA), nếu chỉ lấy khoá đích đầu tiên thì hụt phần DA. Ca test thứ 9 là **ĐỎ trước / XANH sau** cho đúng chỗ này.
 
 ## 4. Cổng quyền THẬT (không hardcode «chỉ admin»)
 
@@ -87,11 +87,20 @@ Chạy: `node --test tests/t01-work-menu.test.mjs`
 ✔ «Cá nhân» và «Phòng ban» KHÔNG dùng chung cổng quyền   ← ca chỉ đọc BẢNG CHỐT nên ĐỎ/ĐỎ đều xanh
 ```
 
+**ĐỎ vòng 2 (ca huy hiệu, sau khi đã XANH 8 ca):**
+
+```
+ℹ tests 9
+ℹ pass 8
+ℹ fail 1        (EXIT=1)
+✖ huy hiệu (badge) nhóm «CÔNG VIỆC» KHÔNG mất số việc chưa xong: cộng theo CẢ CẶP khoá quyền
+```
+
 **XANH (mã SAU `T-01`):**
 
 ```
-ℹ tests 8
-ℹ pass 8
+ℹ tests 9
+ℹ pass 9
 ℹ fail 0        (GREEN_EXIT=0)
 ```
 
@@ -103,7 +112,7 @@ Chạy: `node --test tests/t01-work-menu.test.mjs`
 | 2 | `npm run lint` | `✖ 180 problems (0 errors, 180 warnings)` · `LINT_EXIT=0` — **0 error** (đúng nền 180 warning) |
 | 3 | `npm run test:regression` | `ℹ tests 69 · pass 69 · fail 0` · `REG_EXIT=0` — **69/69, KHÔNG giảm** |
 | 4 | `npm run test:workflow` | `Workflow VNTECH ERP V5.3.0 FULL W2 passed: …` · `WF_EXIT=0` — **ĐẠT** |
-| 5 | `node --test tests/t01-work-menu.test.mjs` | `pass 8 · fail 0` — **tất cả ĐẠT** |
+| 5 | `node --test tests/t01-work-menu.test.mjs` | `pass 9 · fail 0` — **tất cả ĐẠT** |
 
 ## 8. Probe tiến độ lộ trình (sau khi sửa)
 
@@ -126,7 +135,7 @@ Tổng số mục đọc được: 110
 | `lib/menu-helpers.ts` | `+` `WorkMenuView` · `workMenuItems` (5 mục) · `legacyWorkMenuKeys` (4 khoá ẩn) |
 | `app/page.tsx` | menu 5 mục (sidebar + mobile) · lọc 4 khoá cũ · cổng quyền từng mục · `workCenterViewFor` · nhánh render `WorkCenter`/`DepartmentTaskWorkspace` |
 | `app/screens/WorkCenter.tsx` | 5 tab đúng thứ tự · tách form giao việc · tái dùng `ReportView` |
-| `tests/t01-work-menu.test.mjs` | **mới** — hợp đồng `T-01` (8 ca) |
+| `tests/t01-work-menu.test.mjs` | **mới** — hợp đồng `T-01` (9 ca) |
 | `tests/t01-work-menu-probe.mjs` | **mới** — probe nhãn (7 ĐẠT), chạy tay bằng `--import tsx` |
 | `docs/25_TODO_ROADMAP.md` | ô TT dòng `T-01` → `**DONE**` |
 | `docs/agent-progress/MASTER_STATUS.md` | chỉ ô số: DONE `62 → 63`, `56,4 % → 57,3 %`, PHASE 3 `3/10 → 4/10` |
