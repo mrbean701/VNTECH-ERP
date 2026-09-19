@@ -2161,3 +2161,18 @@ GIOI HAN GHI RO (trung thuc): viec do `--locate` de DOC TRUC TIEP nhan tab + so 
   CON LAI: mot luot --locate nhe de chot bang chuoi (khong anh huong chuc nang).
 CHI DAO MOI CUA USER (nguyen van): "Sau khi lam xong task nay thi chuyen sang phase 3 va 4 truoc"
   => Sau P-01, UU TIEN PHASE 3 va PHASE 4 truoc cac phase/muc khac (P-02/P-03 se lam sau).
+
+### 62. ROLLBACK P-01 THEO YEU CAU USER + TAM DUNG CONG VIEC (20/09)
+NGUYEN VAN CHI DAO: "tam dung viec dang lam lai, hay rollback p1 ve nhu ban dau, toi chua chot duoc phase 2"
+=> Hieu dung: "p1" = muc `P-01` (tach tab MR/PR/PO) trong PHASE 2 MUA HANG - phase user CHUA CHOT.
+DA ROLLBACK:
+  1. app/screens/Purchasing.tsx: khoi phuc ban goc (47 dong) tu commit 021a2bf (truoc commit code 4dddf33).
+  2. tools/probe-visual-regression.mjs: bo man 20-purchasing-tabs; xoa 4 anh chuan moi => cong anh ve dung 16 man / 64 anh.
+  3. docs/25_TODO_ROADMAP.md: P-01 -> TODO (tra o trang thai ve '-') + xoa ghi chu da lam.
+  4. docs/agent-progress/MASTER_STATUS.md: DONE 59 -> 58 (53,6% -> 52,7%); PHASE 2 -> 3/9 va ghi ro P-01 da rollback.
+CANH BAO TRUNG THUC: bundle dang PHUC VU van la ban build co 3 tab (VNTECH-FP-7CBCBA75FC20E691, 328 files) vi
+  lan build do da chay TRUOC khi rollback. Muon khop 100% voi ma nguon thi PHAI build lai (gd-cycle) - nhung user dang
+  yeu cau TAM DUNG nen KHONG tu build; cho user quyet dinh.
+KHONG DUNG DEN (khong phai P-01): 4 bao cao audit A-13/A-14/A-15/A-16 va T-02 (PHASE 3) van giu nguyen; cac phase da dong
+  (0/0B/1/8/9) khong doi.
+TRANG THAI: TAM DUNG moi task moi cho toi khi co lenh tiep theo.
