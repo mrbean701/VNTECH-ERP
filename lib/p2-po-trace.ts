@@ -20,6 +20,11 @@
 /** Bản ghi bất kỳ đến từ payload bootstrap (đúng kiểu `Row` của `lib/ui-shared.tsx`). */
 export type Row = Record<string, any>;
 
+// Kiểu CHỈ-dùng-để-biên-dịch (`import type` bị xoá khi build ⇒ tệp này vẫn KHÔNG có phụ thuộc runtime,
+// chạy được cả trong Node lẫn bundle client). Mục đích: `purchaseOrderTimeline` trả ĐÚNG kiểu `ActivityItem`
+// để màn chi tiết PO (§21) truyền thẳng vào `ActivityTimeline` mà không phải ép kiểu.
+import type { ActivityItem } from "@/app/components/ui/Timeline";
+
 /** Số an toàn: `null`/`undefined`/chuỗi rỗng đều thành 0; KHÔNG bao giờ trả `NaN`. */
 export function numeric(value: unknown): number {
   const parsed = Number(value ?? 0);
@@ -131,8 +136,9 @@ export function receiptItemCount(receipt: Row | null | undefined): number {
   return Array.isArray(receipt.items) ? receipt.items.length : 0;
 }
 
-/** `true` khi GRN rỗng dòng ⇒ UI BẮT BUỘC hiện cảnh báo (không được im lặng). */
+/** `true` khi GRN rỗng dòng ⇒ UI BẮT BUỘC hiện cảnh báo (không được im lặng). GRN không tồn tại ⇒ `false` (không dựng cảnh báo giả). */
 export function isEmptyReceipt(receipt: Row | null | undefined): boolean {
+  if (!receipt) return false;
   return receiptItemCount(receipt) === 0;
 }
 
@@ -149,10 +155,10 @@ export function poLineLabel(item: Row | null | undefined, index = 0): string {
  * `orderedAt` (phát hành PO) · `eta` (hạn giao dự kiến) · `deliveryQueuedAt`/`deliveryCompletedAt` ·
  * từng GRN theo `receivedAt`. Không có mốc nào ⇒ mảng rỗng (UI hiện «chưa có nguồn»).
  */
-export function purchaseOrderTimeline(po: Row | null | undefined, receipts: Row[] = []): { at: string | null; action: string; actor?: string; detail?: string; tone?: "green" | "amber" | "red" | "grey" | "violet" }[] {
-  const events: { at: string | null; action: string; actor?: string; detail?: string; tone?: "green" | "amber" | "red" | "grey" | "violet" }[] = [];
+export function purchaseOrderTimeline(po: Row | null | undefined, receipts: Row[] = []): ActivityItem[] {
+  const events: ActivityItem[] = [];
   if (!po) return events;
-  if (po.orderedAt) events.push({ at: String(po.orderedAt), action: "Phát hành PO", actor: rowKey(po.buyerName) || undefined, detail: `Nhà cung cấp: ${rowKey(po.supplierName) || "chưa xác định"} · Trạng thái hiện tại: ${rowKey(po.status) || "—"}`, tone: "violet" });
+  if (po.orderedAt) events.push({ at: String(po.orderedAt), action: "Phát hành PO", actor: rowKey(po.buyerName) || undefined, detail: `Nhà cung cấp: ${rowKey(po.supplierName) || "chưa xác định"} · Trạng thái hiện tại: ${rowKey(po.status) || "—"}`, tone: "blue" });
   if (po.eta) events.push({ at: String(po.eta), action: "Hạn giao dự kiến", detail: `Kho nhận: ${rowKey(po.receivingWarehouseId) || "chưa xác định"}`, tone: "amber" });
   if (po.deliveryQueuedAt) events.push({ at: String(po.deliveryQueuedAt), action: "Đưa vào hàng chờ giao", tone: "amber" });
   for (const receipt of receipts) {
