@@ -14,6 +14,17 @@ import java.util.UUID;
 @Component
 public class AuditLogAdapter implements AuditLogPort {
 
+    /**
+     * AD-14 (PHASE 7 — chỉ đạo người dùng 21/09/2026 «thêm result»): cột `result` = KẾT QUẢ NGHIỆP VỤ, không rỗng.
+     * Từ vựng ĐÓNG: {@link #RESULT_OK} · {@link #RESULT_DENIED} · {@link #RESULT_FAILED}.
+     * Mặc định `ok` vì mọi lời gọi hiện nay nằm ở CUỐI nhánh THÀNH CÔNG (lỗi/từ chối thì ném ra trước đó);
+     * nơi gọi dùng {@code logDetailed} có thể truyền khoá {@code result} để ghi `denied`/`failed` tường minh.
+     * `metadata` KHÔNG có cột riêng: metadata = CHÍNH `before_json` + `after_json` (người dùng chốt).
+     */
+    public static final String RESULT_OK = "ok";
+    public static final String RESULT_DENIED = "denied";
+    public static final String RESULT_FAILED = "failed";
+
     private final JdbcTemplate jdbcTemplate;
 
     public AuditLogAdapter(JdbcTemplate jdbcTemplate) {
@@ -44,10 +55,10 @@ public class AuditLogAdapter implements AuditLogPort {
         String id = "AUD_" + UUID.randomUUID();
         jdbcTemplate.update("""
                 INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id,
-                                        before_json, after_json, ip_address, occurred_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                        before_json, after_json, ip_address, result, occurred_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, id, userId, action, entityType, entityId,
-                beforeJson, afterJson, ipAddress, Instant.now());
+                beforeJson, afterJson, ipAddress, RESULT_OK, Instant.now());
         return id;
     }
 
@@ -62,8 +73,8 @@ public class AuditLogAdapter implements AuditLogPort {
         jdbcTemplate.update("""
                 INSERT INTO audit_logs (id, user_id, user_name, user_role, department, system_level,
                                         module_key, permission_used, action, entity_type, entity_id,
-                                        before_json, after_json, change_detail, ip_address, occurred_at)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                                        before_json, after_json, change_detail, ip_address, result, occurred_at)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 "AUD_" + UUID.randomUUID(),
                 str(entry.get("userId")), str(entry.get("userName")), str(entry.get("userRole")),
                 str(entry.get("department")), str(entry.get("systemLevel")),
@@ -72,7 +83,11 @@ public class AuditLogAdapter implements AuditLogPort {
                 entry.get("entityType") == null ? "system" : String.valueOf(entry.get("entityType")),
                 entry.get("entityId") == null ? "" : String.valueOf(entry.get("entityId")),
                 str(entry.get("beforeJson")), str(entry.get("afterJson")), str(entry.get("changeDetail")),
-                str(entry.get("ipAddress")), Instant.now());
+                str(entry.get("ipAddress")),
+                // AD-14: `result` do nơi gọi quyết định (`ok`/`denied`/`failed`); thiếu thì mặc định `ok`.
+                entry.get("result") == null || String.valueOf(entry.get("result")).isBlank()
+                        ? RESULT_OK : String.valueOf(entry.get("result")),
+                Instant.now());
     }
 
     /** Cột text NULL — chuỗi rỗng nên lưu thành NULL cho sạch dữ liệu. */

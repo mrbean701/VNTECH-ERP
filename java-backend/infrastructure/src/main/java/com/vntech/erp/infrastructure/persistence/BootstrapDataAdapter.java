@@ -1225,7 +1225,7 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                            al.user_id AS userId,al.user_role AS userRole,al.department,al.system_level AS systemLevel,
                            al.module_key AS moduleKey,al.permission_used AS permissionUsed,
                            al.change_detail AS changeDetail,al.before_json AS beforeJson,
-                           al.after_json AS afterJson,al.ip_address AS ipAddress
+                           al.after_json AS afterJson,al.ip_address AS ipAddress,al.result AS result
                     FROM audit_logs al LEFT JOIN users u ON u.id=al.user_id
                     ORDER BY al.occurred_at DESC LIMIT 100"""));
             // TASK-066 — BA KHOÁ `businessRoleEngineProfiles`/`businessRoleGroups`/`businessScopes` ĐÃ CHUYỂN RA
