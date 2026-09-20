@@ -140,3 +140,21 @@ KẾT LUẬN: ĐẠT ✅ — 5/5 dấu có thật trên DOM của bundle ĐANG P
 | `docs/agent-progress/TASK-114.md` | **mới** | Nhật ký này. |
 
 **Không** sửa bất kỳ tệp nào khác. 2 tệp `tests/p2-25-pr-po-grn-cases.test.mjs` và `tests/p2-25-roadmap-status-cell.test.mjs` vẫn **untracked** như trước.
+
+---
+
+## 9. CỔNG XANH — CHẠY LẠI TOÀN BỘ BỘ KIỂM THỬ **SAU** KHI ĐÃ COMMIT (`1544ef3`)
+
+Lượt này chỉ **thêm** 1 probe + 1 tài liệu (không sửa mã `app/**`, `lib/**`, `scripts/**`), nhưng vẫn chạy lại **đủ cổng** của repo để không tuyên bố "xong" bằng suy đoán:
+
+| Cổng | Lệnh | Kết quả | Exit |
+|---|---|---|---|
+| Bộ kiểm thử hồi quy | `npm run test:regression` | **tests 69 · pass 69 · fail 0** · cancelled 0 · skipped 0 · todo 0 (6 185 ms) | `0` |
+| Kiểm thử luồng nghiệp vụ | `npm run test:workflow` | `Workflow VNTECH ERP V5.3.0 FULL W2 passed: four-stage spec approvals/email/SLA → multi-PO/multi-delivery → strict material master → contract stock → inherited/override permissions → configurable groups/roles/UI → user safety.` | `0` |
+| Kiểm tra kiểu | `npm run typecheck` (`tsc --noEmit --incremental false`) | 0 lỗi | `0` |
+| Lint toàn repo | `npm run lint` (`eslint .`) | **0 error · 186 warning** (toàn bộ là warning `no-unused-vars` có sẵn ở các `tools/*.mjs` cũ) | `0` |
+| Lint RIÊNG tệp mới | `npx eslint tools/probe-p2-ui-dom.mjs` | **0 vấn đề** | `0` |
+| Probe của TASK-114 (chạy lại trên đúng bản đã commit) | `node tools/probe-p2-ui-dom.mjs` | `Số dấu thấy trên DOM: 5/5 · Asset JS đang phục vụ chứa đủ 5 chuỗi dấu: CÓ ✔` → **ĐẠT ✅** | `0` |
+
+**Working tree sau khi chạy đủ cổng:** không phát sinh thay đổi mới (đúng tập tệp `M`/`??` có sẵn từ trước lượt này). 2 tệp `tests/p2-25-*.test.mjs` **vẫn untracked** ✔.
+
