@@ -187,7 +187,7 @@ class AdminGovernanceIntegrationTest {
         seed();
         Instant now = Instant.now();
         jdbc.update("INSERT INTO workflow_definitions (id,code,name,is_default,active,sort_order,created_at,updated_at)"
-                + " VALUES ('WF-MUAHANG','WF-MUAHANG-01','Quy trình mặc định',1,1,1,10,?,?)", now, now);
+                + " VALUES ('WF-MUAHANG','WF-MUAHANG-01','Quy trình mặc định',1,1,10,?,?)", now, now);
         expectRejected(a("delete_workflow", "\"workflowId\":\"WF-MUAHANG\""), "mặc định");
     }
 
