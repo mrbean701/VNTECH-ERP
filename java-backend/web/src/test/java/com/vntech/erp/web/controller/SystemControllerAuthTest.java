@@ -134,9 +134,23 @@ class SystemControllerAuthTest {
 
     @Test
     void unknownAction_returns400_notImplementedContract() throws Exception {
+        // [TASK-115] Cổng RBAC ở `SystemController.post` (`:205-208`) chạy TRƯỚC `switch` ⇒ khách CHƯA đăng nhập
+        // nhận **401** (ĐÚNG về bảo mật: không để lộ danh sách action cho người ẩn danh — quyết định giữ nguyên).
+        // Hợp đồng **400 «chưa được triển khai»** (`:1196-1199`) chỉ áp dụng cho tài khoản ĐÃ đăng nhập
+        // ⇒ ca này phải setup (lấy phiên) TRƯỚC khi gọi action lạ.
+        MvcResult setup = mockMvc.perform(post("/api/system")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"action":"setup","companyName":"Công ty VNTECH",
+                                 "fullName":"Quản trị viên","username":"admin","password":"VnTech@123"}"""))
+                .andExpect(status().isCreated())
+                .andReturn();
+        jakarta.servlet.http.Cookie sessionCookie = setup.getResponse().getCookie("mep_session");
+
         mockMvc.perform(post("/api/system")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"action\":\"some_unknown_action\"}"))
+                        .content("{\"action\":\"some_unknown_action\"}")
+                        .cookie(sessionCookie))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.ok").value(false))
                 .andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.containsString("chưa được triển khai")));

@@ -36,6 +36,7 @@ class RequestApprovalIntegrationTest {
     private JdbcTemplate jdbc;
 
     private jakarta.servlet.http.Cookie adminCookie;
+    private jakarta.servlet.http.Cookie requesterCookie;
 
     private void setupAdmin() throws Exception {
         MvcResult setup = mockMvc.perform(post("/api/system")
@@ -46,6 +47,17 @@ class RequestApprovalIntegrationTest {
                 .andExpect(status().isCreated())
                 .andReturn();
         adminCookie = setup.getResponse().getCookie("mep_session");
+    }
+
+    /**
+     * [TASK-115] NGƯỜI LẬP PHIẾU phải KHÁC NGƯỜI DUYỆT: luật «người tạo đơn KHÔNG tự duyệt» (commit 42f91be)
+     * bỏ qua bước mà vai trò của người lập phiếu nằm trong `allowed_role_codes`. Vai trò `kh_nv` KHÔNG có trong
+     * danh sách duyệt của bất kỳ bước nào ⇒ luồng vẫn khởi động đúng ở bước 1 và admin (owner của bước) duyệt.
+     */
+    private void seedRequester() throws Exception {
+        TestActors.seedRequester(jdbc, "u_req", "kh.nv01", "Nhân viên Kế hoạch", "kh_nv",
+                "Phòng Kế hoạch", "p_1", Instant.now());
+        requesterCookie = TestActors.login(mockMvc, "kh.nv01");
     }
 
     /** Seed dự án + hợp đồng + vật tư + approval stage + workflow assignment (admin làm owner). */
@@ -86,8 +98,9 @@ class RequestApprovalIntegrationTest {
     void requestFlow_createAndApprove() throws Exception {
         setupAdmin();
         seedBusinessData();
+        seedRequester();
 
-        // 1. create_request — dòng vật tư outside contract + lý do (tránh phụ thuộc BOQ item)
+        // 1. create_request — NGƯỜI LẬP PHIẾU là kh.nv01 (KHÔNG phải admin) — dòng vật tư outside contract + lý do
         MvcResult created = mockMvc.perform(post("/api/system")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -95,7 +108,7 @@ class RequestApprovalIntegrationTest {
                                  "area":"Tầng 1",
                                  "lines":[{"materialId":"m_1","quantity":10,"unitPrice":50000,
                                            "itemType":"outside_contract","note":"Phát sinh khối lượng ngoài hợp đồng"}]}""")
-                        .cookie(adminCookie))
+                        .cookie(requesterCookie))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.ok").value(true))
                 .andExpect(jsonPath("$.message", containsString("DNMH")))
@@ -136,19 +149,57 @@ class RequestApprovalIntegrationTest {
                 "SELECT supply_status FROM material_requests WHERE id=?", String.class, requestId);
         org.junit.jupiter.api.Assertions.assertEquals("approved", status);
         org.junit.jupiter.api.Assertions.assertEquals("awaiting_po", supply);
+
+        // ══════════════════════════════════════════════════════════════════════════════════════════
+        // 5. [TASK-115] KHẲNG ĐỊNH LUẬT «NGƯỜI TẠO ĐƠN KHÔNG TỰ DUYỆT» (commit 42f91be) VẪN NGUYÊN:
+        //    phiếu này do CHÍNH admin lập, và `allowed_role_codes` của CẢ HAI bước đều chứa 'admin'
+        //    (seed ở `seedBusinessData`) ⇒ mỗi bước bị BỎ QUA kèm vết `creator_role_waived` + comment nêu
+        //    rõ lý do; hồ sơ khởi động ngay ở bước cuối và KHÔNG thể `decide_approval` lại bước 1.
+        //    (Không sửa `allowed_role_codes` của seed — luật phải được chứng minh bằng chính luật.)
+        // ══════════════════════════════════════════════════════════════════════════════════════════
+        mockMvc.perform(post("/api/system")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"action":"create_request","projectId":"p_1","neededAt":"2026-09-16","area":"Tầng 3",
+                                 "lines":[{"materialId":"m_1","quantity":1,"unitPrice":1000,
+                                           "itemType":"outside_contract","note":"Kiểm chứng luật người tạo"}]}""")
+                        .cookie(adminCookie))
+                .andExpect(status().isOk());
+        String waivedId = jdbc.queryForObject(
+                "SELECT id FROM material_requests WHERE id<>? ORDER BY created_at DESC LIMIT 1",
+                String.class, requestId);
+        String waivedSnapshot = jdbc.queryForObject(
+                "SELECT decision_snapshot FROM approvals WHERE request_id=? AND stage=1", String.class, waivedId);
+        org.junit.jupiter.api.Assertions.assertTrue(
+                waivedSnapshot != null && waivedSnapshot.contains("creator_role_waived"),
+                "phải ghi vết creator_role_waived ở bước bị bỏ qua: " + waivedSnapshot);
+        String waivedComment = jdbc.queryForObject(
+                "SELECT comment FROM approvals WHERE request_id=? AND stage=1", String.class, waivedId);
+        org.junit.jupiter.api.Assertions.assertTrue(
+                waivedComment != null && waivedComment.contains("Người lập phiếu trùng vai trò duyệt"),
+                "comment phải nêu rõ lý do bỏ qua bước: " + waivedComment);
+        // Bước đã bị bỏ qua KHÔNG thể duyệt lại ⇒ 400 đúng thông điệp (chứng minh luật có hiệu lực thật).
+        mockMvc.perform(post("/api/system")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"action\":\"decide_approval\",\"requestId\":\"" + waivedId
+                                + "\",\"stage\":1,\"decision\":\"approved\"}")
+                        .cookie(adminCookie))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Hồ sơ chưa đến bước duyệt này hoặc đã được xử lý."));
     }
 
     @Test
     void requestFlow_rejectReturnsToRequester() throws Exception {
         setupAdmin();
         seedBusinessData();
+        seedRequester();
         mockMvc.perform(post("/api/system")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"action":"create_request","projectId":"p_1","neededAt":"2026-09-15","area":"Tầng 2",
                                  "lines":[{"materialId":"m_1","quantity":5,"unitPrice":100000,
                                            "itemType":"outside_contract","note":"Phát sinh"}]}""")
-                        .cookie(adminCookie))
+                        .cookie(requesterCookie))
                 .andExpect(status().isOk());
         String requestId = jdbc.queryForObject(
                 "SELECT id FROM material_requests ORDER BY created_at DESC LIMIT 1", String.class);

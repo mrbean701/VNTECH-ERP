@@ -61,6 +61,23 @@ class StockChainIntegrationTest {
         return s.length() > 260 ? s.substring(0, 260) + "…" : s;
     }
 
+    /**
+     * [TASK-115] POST bằng cookie của NGƯỜI LẬP PHIẾU (khác NGƯỜI DUYỆT) — luật «người tạo đơn KHÔNG tự duyệt»
+     * (commit 42f91be) bỏ qua bước mà vai trò người lập phiếu nằm trong `allowed_role_codes`.
+     */
+    private MvcResult postActionAs(jakarta.servlet.http.Cookie cookie, String json, int expectStatus)
+            throws Exception {
+        var res = mockMvc.perform(post("/api/system").contentType(MediaType.APPLICATION_JSON)
+                .content(json).cookie(cookie));
+        res.andExpect(status().is(expectStatus));
+        var q = res.andReturn();
+        if (expectStatus == 200) {
+            String body = q.getResponse().getContentAsString();
+            assertTrue(body.contains("\"ok\":true"), "action phải ok:true — " + abbrev(body));
+        }
+        return q;
+    }
+
     private void seed() throws Exception {
         MvcResult setup = postAction(action("setup",
                 "\"companyName\":\"Công ty VNTECH\",\"fullName\":\"Quản trị viên\",\"username\":\"admin\",\"password\":\"VnTech@123\""), 201);
@@ -92,7 +109,11 @@ class StockChainIntegrationTest {
         jdbc.update("INSERT INTO suppliers (id,code,name,active,created_at,updated_at) VALUES (?,?,?,1,?,?)",
                 "sup_stk", "NCC-STK", "NCC STK", now, now);
         // MR + duyệt + PO + GRN (có tồn ledger)
-        MvcResult mr = postAction(action("create_request",
+        // [TASK-115] Phiếu do NGƯỜI LẬP PHIẾU khác (vai trò `kh_nv` không có trong danh sách duyệt) tạo;
+        // admin vẫn là owner của bước 1 nên duyệt bình thường — luật «người tạo không tự duyệt» GIỮ NGUYÊN.
+        TestActors.seedRequester(jdbc, "u_req_stk", "kh.nv.stk", "Nhân viên Kế hoạch", "kh_nv",
+                "Phòng Kế hoạch", "p_stk", now);
+        MvcResult mr = postActionAs(TestActors.login(mockMvc, "kh.nv.stk"), action("create_request",
                 "\"projectId\":\"p_stk\",\"contractId\":\"pc_stk\",\"boqVersionId\":\"bv_stk\",\"purpose\":\"Thi công\",\"neededAt\":\"2026-10-01\","
                         + "\"lines\":[{\"materialId\":\"m_stk\",\"quantity\":10,\"unitPrice\":0,\"boqItemId\":\"pboq_stk\",\"contractLineNo\":\"S-1\"}]"), 200);
         String requestId = jdbc.queryForObject(

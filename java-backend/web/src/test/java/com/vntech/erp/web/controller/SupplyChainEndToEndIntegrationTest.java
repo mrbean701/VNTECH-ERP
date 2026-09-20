@@ -42,12 +42,32 @@ class SupplyChainEndToEndIntegrationTest {
     private final ObjectMapper om = new ObjectMapper();
 
     private jakarta.servlet.http.Cookie adminCookie;
+    private jakarta.servlet.http.Cookie requesterCookie;
     private String adminId;
 
     private MvcResult postAction(String json, int expectStatus) throws Exception {
         var req = post("/api/system").contentType(MediaType.APPLICATION_JSON).content(json);
         if (adminCookie != null) req.cookie(adminCookie);
         var res = mockMvc.perform(req);
+        res.andExpect(status().is(expectStatus));
+        var q = res.andReturn();
+        if (expectStatus == 200) {
+            String body = q.getResponse().getContentAsString();
+            org.junit.jupiter.api.Assertions.assertTrue(body.contains("\"ok\":true"),
+                    "action phải trả ok:true — body: " + abbreviate(body));
+        }
+        return q;
+    }
+
+    /**
+     * [TASK-115] POST bằng cookie của NGƯỜI LẬP PHIẾU (khác NGƯỜI DUYỆT) — luật «người tạo đơn KHÔNG tự duyệt»
+     * (commit 42f91be) bỏ qua bước mà vai trò người lập phiếu nằm trong `allowed_role_codes`, nên phiếu của
+     * chuỗi này phải do tài khoản KHÁC tạo (vai trò `kh_nv` không có trong danh sách duyệt của bước nào).
+     */
+    private MvcResult postActionAs(jakarta.servlet.http.Cookie cookie, String json, int expectStatus)
+            throws Exception {
+        var res = mockMvc.perform(post("/api/system").contentType(MediaType.APPLICATION_JSON)
+                .content(json).cookie(cookie));
         res.andExpect(status().is(expectStatus));
         var q = res.andReturn();
         if (expectStatus == 200) {
@@ -100,6 +120,10 @@ class SupplyChainEndToEndIntegrationTest {
                 "team_e2e", "p_e2e", "TD-E2E", "Tổ E2E", "wh_e2e", adminId, now, now);
         jdbc.update("INSERT INTO suppliers (id,code,name,active,created_at,updated_at) VALUES (?,?,?,1,?,?)",
                 "sup_e2e", "NCC-E2E", "Nhà cung cấp E2E", now, now);
+        // [TASK-115] Người LẬP PHIẾU khác NGƯỜI DUYỆT (luật «người tạo không tự duyệt» — commit 42f91be).
+        TestActors.seedRequester(jdbc, "u_req_e2e", "kh.nv.e2e", "Nhân viên Kế hoạch", "kh_nv",
+                "Phòng Kế hoạch", "p_e2e", now);
+        requesterCookie = TestActors.login(mockMvc, "kh.nv.e2e");
     }
 
     @Test
@@ -110,7 +134,7 @@ class SupplyChainEndToEndIntegrationTest {
                 + "\",\"boqVersionId\":\"" + versionId + "\",\"purpose\":\"Phục vụ thi công\",\"neededAt\":\"2026-10-01\","
                 + "\"lines\":[{\"materialId\":\"" + materialId + "\",\"quantity\":10,\"unitPrice\":50000,"
                 + "\"boqItemId\":\"pboq_e2e\",\"contractLineNo\":\"E2E-1\",\"boqCode\":\"BQ-E2E\"}]";
-        postAction(action("create_request", mrFields), 200);
+        postActionAs(requesterCookie, action("create_request", mrFields), 200);
         String requestId = jdbc.queryForObject(
                 "SELECT id FROM material_requests WHERE project_id=? ORDER BY created_at DESC LIMIT 1", String.class, projectId);
         assertTrue(!requestId.isEmpty(), "create_request phải tạo MR trong DB");

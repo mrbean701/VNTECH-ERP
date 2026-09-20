@@ -80,6 +80,17 @@ class AdminCatalogChainIntegrationTest {
                 "pboq_adm", "p_adm", "pc_adm", "bv_adm", "m_adm_seed", "Vật tư thử", now, now);
         jdbc.update("INSERT INTO warehouses (id,code,name,type,project_id,parent_warehouse_id,active,created_at,updated_at) VALUES (?,?,?,'site',?,'WH-CENTRAL',1,?,?)",
                 "wh_adm", "KHO-ADM", "Kho ADM", "p_adm", now, now);
+        // [TASK-115] `role_catalog` là DỮ LIỆU THAM CHIẾU có sẵn trên MySQL thật nhưng H2 test KHÔNG nạp seed
+        // tham chiếu ⇒ `OpsTaskManagementUseCase` kiểm `store.activeRoleCodes()` (role_catalog WHERE active=1)
+        // và `save_approval_stage` dưới đây trả 400 «Vai trò engineer không tồn tại hoặc đang bị ẩn.».
+        // Ca này dùng đúng 2 mã vai trò 'engineer' và 'admin' (xem postAction save_approval_stage).
+        for (String[] role : new String[][]{
+                {"engineer", "Kỹ sư giám sát", "engineer"},
+                {"admin", "Quản trị viên", "admin"}}) {
+            jdbc.update("INSERT INTO role_catalog (id,code,name,base_role,active,sort_order,system_locked,"
+                            + "created_at,updated_at) VALUES (?,?,?,?,1,10,1,?,?)",
+                    "rc_" + role[0], role[0], role[1], role[2], now, now);
+        }
     }
 
     @Test
