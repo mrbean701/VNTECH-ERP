@@ -196,6 +196,29 @@ public class MaterialCatalogStoreAdapter implements MaterialCatalogStore {
                                   int sortOrder, String createdBy, Instant now) {
         // SỬA LỖI (TASK-041 phần 3): JS `system-route.mjs:2516` chèn đủ 12 cột gồm scope_examples /
         // review_status / adjustment_note; bản cũ bỏ 3 cột này nên đường Java không bao giờ ghi được chúng.
+        //
+        // [TASK-115] `review_status` là **NOT NULL DEFAULT 'approved'** (MySQL thật + `V1__baseline.sql`).
+        // Bản JS gốc ghi cột này ở MÀN nhóm con (`scripts/system-route.mjs:2709-2715` — LUÔN có giá trị:
+        // `proposed`/`approved`/payload hợp lệ) nhưng **KHÔNG ghi** ở hai đường còn lại:
+        //   • `:2604` — luồng NHẬP danh mục vật tư (9 cột),
+        //   • `:2673` — nhóm con mặc định `CHUA_PHAN_NHOM` khi lưu vật tư (9 cột).
+        // ⇒ Nơi gọi KHÔNG có ý kiến (truyền `null`) thì câu lệnh phải **BỎ cột ra** để **DEFAULT của CSDL**
+        // quyết định — đúng parity với JS, KHÔNG hard-code 'approved' trong mã (một nguồn sự thật duy nhất).
+        // Trước đây luôn bind `null` ⇒ H2 `NULL not allowed for column "review_status" [23502-232]`,
+        // MySQL `1048 Column 'review_status' cannot be null` (sql_mode có STRICT_TRANS_TABLES)
+        // ⇒ `DataIntegrityViolationException` ⇒ HTTP **409** khi lưu vật tư không chỉ định nhóm con.
+        // LƯU Ý: KHÔNG bỏ cột trong nhánh có giá trị — màn nhóm con phải ghi đúng `proposed`/`approved`
+        // như JS `:2715`, nếu bỏ hết thì mọi nhóm mới sẽ thành 'approved' (sai parity).
+        if (reviewStatus == null) {
+            jdbcTemplate.update("""
+                    INSERT INTO material_subcategories (id,category_id,code,name,description,scope_examples,
+                                                        adjustment_note,sort_order,active,
+                                                        created_at,updated_at)
+                    VALUES (?,?,?,?,?,?,?,?,1,?,?)""",
+                    id, categoryId, code, name, description, scopeExamples, adjustmentNote,
+                    sortOrder, now, now);
+            return;
+        }
         jdbcTemplate.update("""
                 INSERT INTO material_subcategories (id,category_id,code,name,description,scope_examples,
                                                     review_status,adjustment_note,sort_order,active,

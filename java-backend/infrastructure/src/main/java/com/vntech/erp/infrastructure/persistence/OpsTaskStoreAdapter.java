@@ -459,17 +459,22 @@ public class OpsTaskStoreAdapter implements OpsTaskStore {
     public void upsertWorkflow(Map<String, Object> wf, Instant now) {
         Long n = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM workflow_definitions WHERE id=?", Long.class, wf.get("id"));
+        // [TASK-115] Cột `workflow_definitions.version` đã bị XOÁ bởi V19__drop_workflow_definitions_version.sql
+        // (PHASE 8 · WF-03, commit c382b47) nhưng 2 câu lệnh dưới đây vẫn ghi nó ⇒
+        // MySQL thật: `ERROR 1054 (42S22) Unknown column 'version' in 'field list'` (đo 22/09/2026),
+        // H2: `Column "version" not found`. Đã bỏ hẳn khỏi INSERT và khỏi `version=version+1` của UPDATE
+        // (cùng họ với việc commit 49da107 đã sửa cho các câu SELECT).
         if (n != null && n > 0) {
             jdbcTemplate.update("""
                     UPDATE workflow_definitions SET code=?,name=?,description=?,module_key=?,project_id=?,
-                           is_default=?,sort_order=?,version=version+1,updated_at=? WHERE id=?""",
+                           is_default=?,sort_order=?,updated_at=? WHERE id=?""",
                     wf.get("code"), wf.get("name"), wf.get("description"), wf.get("moduleKey"), wf.get("projectId"),
                     wf.get("isDefault"), wf.get("sortOrder"), now, wf.get("id"));
         } else {
             jdbcTemplate.update("""
                     INSERT INTO workflow_definitions (id,code,name,description,module_key,project_id,is_default,
-                                                      active,version,sort_order,created_by,created_at,updated_at)
-                    VALUES (?,?,?,?,?,?,?,1,1,?,?,?,?)""",
+                                                      active,sort_order,created_by,created_at,updated_at)
+                    VALUES (?,?,?,?,?,?,?,1,?,?,?,?)""",
                     wf.get("id"), wf.get("code"), wf.get("name"), wf.get("description"), wf.get("moduleKey"),
                     wf.get("projectId"), wf.get("isDefault"), wf.get("sortOrder"), wf.get("createdBy"), now, now);
         }
