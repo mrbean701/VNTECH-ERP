@@ -79,3 +79,34 @@ Toolchain: `JAVA_HOME=C:\Users\PC\.jdks\openjdk-26.0.2.1` · Maven 3.9.16 (wrapp
   duyệt» / hết 403 `create_request` mới có hiệu lực live. **Không thực hiện ở đây** (ràng buộc cứng).
 - UNKNOWN kế thừa từ TASK-106 §6.3: nhãn trạng thái bước bị miễn trong `RequestStoreAdapter.resubmitRequest`
   (không chặn luồng, chỉ lệch nhãn) — chưa xử lý ở lượt này.
+
+## 6. CỔNG XANH SAU KHI SỬA (green gate — chạy lại toàn bộ cổng liên quan)
+
+| Cổng | Lệnh | Kết quả |
+|---|---|---|
+| Test luồng duyệt động (có 3 ca JAVA parity đọc chính tệp vừa sửa) | `node --test tests/p2-approval-dynamic.test.mjs` | **16 pass / 0 fail** ✔ (124.9 ms) |
+| Unit test Java — Application | `mvn -B -pl application -am test` | **Tests run: 16, Failures: 0, Errors: 0** ✔ · BUILD SUCCESS (4.148 s) |
+| Unit test Java — Domain | `mvn -B -pl domain -am test` | **Tests run: 19, Failures: 0, Errors: 0** ✔ · BUILD SUCCESS (2.864 s) |
+| Regression JS | `npm run test:regression` | **69 pass / 0 fail** ✔ · exit 0 (5.65 s) |
+| Workflow JS | `npm run test:workflow` | **PASS** ✔ («four-stage spec approvals/email/SLA → multi-PO/multi-delivery → …») |
+| Tích hợp Java — Web (H2) | `mvn -B -pl web -am test` | ✗ **Tests run: 29, Failures: 3, Errors: 8** — xem §7 (tiền tồn tại, KHÔNG do bản sửa này) |
+
+## 7. PHÁT HIỆN NGOÀI PHẠM VI — TÍCH HỢP H2 ĐANG ĐỎ VÌ LỆCH LƯỢC ĐỒ (TIỀN TỒN TẠI)
+
+Sau khi sửa lỗi biên dịch, mô-đun `application` **lần đầu biên dịch được kể từ `42f91be`** ⇒ cổng tích hợp
+`mvn -pl web -am test` mới chạy được và phơi ra **11 ca đỏ sẵn có**, toàn bộ do **lược đồ H2 dùng cho test lệch với
+truy vấn của mã nguồn ĐÃ COMMIT** (không liên quan tới lambda `restartStage`):
+
+| Lỗi nguyên văn (surefire) | Gốc | Bằng chứng |
+|---|---|---|
+| `Column "stage_kind" not found` (4 ca: `RequestApprovalIntegrationTest` ×2, `StockChainIntegrationTest`, `SupplyChainEndToEndIntegrationTest`, `SystemControllerAuthTest`) | `42f91be` (TASK-106 P2-A) đổi `RequestStoreAdapter`/`BootstrapDataAdapter` sang `stage_kind` nhưng **không** cập nhật `java-backend/web/src/test/resources/schema-h2.sql` | `stage_kind` xuất hiện **0 lần** trong `schema-h2.sql`; trong `RequestStoreAdapter.java` đã có từ **HEAD** (`git show HEAD:…` dòng 148/158/159/165) |
+| `Column "version" not found` + `Column count does not match` (`workflow_definitions`, 2 ca `AdminGovernanceIntegrationTest`) | `c382b47` (PHASE 8 · WF-03) **cố ý xoá cột DEAD `workflow_definitions.version`** khỏi migration V19 + `schema-h2`, nhưng INSERT đang chạy vẫn ghi cột `version` | `CREATE TABLE workflow_definitions` trong `schema-h2.sql` không có `version` |
+| `Column "result" not found` (`audit_logs`, 1 ca `SystemControllerAuthTest`) | Cột `result` không có trong `CREATE TABLE audit_logs` của `schema-h2.sql` | đối chiếu `schema-h2.sql` |
+| `AdminCatalogChainIntegrationTest` 409 + `SystemControllerAuthTest` 400→401 | **Hệ quả dây chuyền** của các ca trên (DB H2 dùng chung bị nhiễm trạng thái/phiên đăng nhập không thiết lập được) | cùng tệp, cùng lần chạy |
+
+**Kết luận:** bản sửa của lượt này **không gây** các lỗi trên (`git show --stat 89e75f5` chỉ có 2 tệp:
+`RequestManagementUseCase.java` + hồ sơ này). Việc vá đòi hỏi sửa
+`java-backend/web/src/test/resources/schema-h2.sql` (+ có thể `schema-seed.sql`) ⇒ **ngoài phạm vi được phép**
+(`application/**`, `infrastructure/**`) ⇒ **không sửa**, chuyển captain quyết định. Đề xuất: một task riêng thêm
+`stage_kind` vào `approval_stage_catalog` của `schema-h2.sql`, bỏ `version` khỏi INSERT `workflow_definitions`,
+thêm `result` vào `audit_logs` — rồi chạy lại `mvn -pl web -am test` để lấy baseline xanh.
