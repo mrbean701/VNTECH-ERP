@@ -85,7 +85,7 @@ import { BoqControl, BoqExportButtons, boqAssessment, boqCellValue, boqExportRow
 // trạng thái «chưa có nguồn» cho 2 trường thiếu nguồn, sắp xếp mặc định (AD-04), 2 cặp sub-tab (AD-05/AD-06),
 // lọc + chọn nhiều + xoá quyền phòng ban (AD-08), cột User/Actor của nhật ký (AD-13), danh mục trường tự
 // phục vụ (AD-16). Mọi quy tắc ở đây đều có test hợp đồng tương ứng `tests/adNN-*.test.mjs`.
-import { ACCOUNT_COLUMNS, ACCOUNT_DEFAULT_SORT, ACCOUNT_SORT_NOTE, ACCOUNT_UNSOURCED_REASON, ADMIN_STEP_LABELS, AUDIT_ACTOR_COLUMN_SOURCE, AUDIT_USER_COLUMN_SOURCE, ORG_SUB_TABS, POSITION_SUB_TABS, SELF_EDIT_FIELDS, UNSOURCED_TEXT, accountRows, accountSortCompare, auditActorOf, auditUserOf, bulkDeleteDepartmentPermissionsEnabled, filterDepartments, selectedPermissionRows, toggleSelection } from "@/app/screens/admin-governance-pure";
+import { ACCOUNT_COLUMNS, ACCOUNT_DEFAULT_SORT, ACCOUNT_SORT_NOTE, ACCOUNT_UNSOURCED_REASON, ADMIN_STEP_LABELS, AUDIT_ACTOR_COLUMN_SOURCE, AUDIT_RESULT_VALUES, AUDIT_USER_COLUMN_SOURCE, ORG_SUB_TABS, POSITION_SUB_TABS, SELF_EDIT_FIELDS, UNSOURCED_TEXT, accountRows, accountSortCompare, auditActorOf, auditResultLabel, auditUserOf, bulkDeleteDepartmentPermissionsEnabled, filterDepartments, selectedPermissionRows, toggleSelection } from "@/app/screens/admin-governance-pure";
 
 const VNTECH_UI_CONTRACT_ID = VNTECH_BRAND.release.uiContractId;
 const VNTECH_UI_BUILD_MARKER = VNTECH_BRAND.release.uiBuildMarker;
@@ -2019,7 +2019,7 @@ function AuditLogManager({ data }: { data: AppData }) {
       />
       {!all.length && <Empty text="Chưa có bản ghi nào. Nhật ký sẽ tự đầy khi có thao tác thay đổi dữ liệu." />}
       {all.length > 0 && <div className="table-wrap"><table>
-        <thead><tr><th>Thời gian / IP</th><th title={AUDIT_USER_COLUMN_SOURCE}>Tài khoản (User)</th><th title={AUDIT_ACTOR_COLUMN_SOURCE}>Người thực hiện (Actor)</th><th>Phòng ban</th><th>Cấp bậc</th><th>Module</th><th>Quyền dùng</th><th>Hành động</th><th>Mã thực thể</th><th>Chi tiết</th></tr></thead>
+        <thead><tr><th>Thời gian / IP</th><th title={AUDIT_USER_COLUMN_SOURCE}>Tài khoản (User)</th><th title={AUDIT_ACTOR_COLUMN_SOURCE}>Người thực hiện (Actor)</th><th>Phòng ban</th><th>Cấp bậc</th><th>Module</th><th>Quyền dùng</th><th>Hành động</th><th title="audit_logs.result — cột thật (AD-14)">Kết quả</th><th>Mã thực thể</th><th>Chi tiết</th></tr></thead>
         <tbody>
           {rows.map((a) => {
             const isOpen = openId === String(a.id);
@@ -2034,11 +2034,13 @@ function AuditLogManager({ data }: { data: AppData }) {
               <td>{moduleLabel(a.moduleKey) || "—"}</td>
               <td>{CAP_LABEL[String(a.permissionUsed || "")] || a.permissionUsed || "—"}</td>
               <td><strong>{a.action}</strong></td>
+              {/* AD-14 — hiển thị NGAY trên danh sách (cột thật `audit_logs.result`); bản ghi cũ ⇒ «—». */}
+              <td>{a.result ? <StatusBadge value={auditResultLabel(String(a.result))} /> : <span className="muted" title="Bản ghi cũ trước migration AD-14 chưa có cột `result`.">—</span>}</td>
               <td>{a.entityId || "—"}<small>{a.entityType || ""}</small></td>
               <td><button className="export-mini" onClick={() => setOpenId(isOpen ? null : String(a.id))}>{isOpen ? "Đóng" : "Xem"}</button></td>
             </tr>;
             if (!isOpen) return [mainRow];
-            return [mainRow, <tr key={`${a.id}-x`}><td colSpan={10}>
+            return [mainRow, <tr key={`${a.id}-x`}><td colSpan={11}>
               <div className="table-toolbar"><div><strong>CHI TIẾT THAY ĐỔI</strong><span>{a.changeDetail || ""}</span></div></div>
               <div className="form-grid">
                 <label className="span-2"><span>Dữ liệu gửi lên (sau)</span>
@@ -2051,13 +2053,15 @@ function AuditLogManager({ data }: { data: AppData }) {
               <div className="inline-alert">
                 Đối tượng: <b>{a.entityId || "—"}</b> · Loại: <b>{a.entityType || "—"}</b> · Mã bản ghi: <b>{a.id}</b>
                 {!a.beforeJson && <> · Bản ghi này chỉ lưu dữ liệu SAU thay đổi (nhật ký chung không chụp được giá trị trước).</>}
-                {/* AD-14 — 2/8 trường KHÔNG có cột trong `audit_logs`: hiện «chưa có nguồn» + lý do (KHÔNG bịa, KHÔNG migration). */}
-                {' '}· Kết quả: <b>{UNSOURCED_TEXT}</b> (bảng <code>audit_logs</code> không có cột <code>result</code>) ·
-                {' '}Metadata: <b>{UNSOURCED_TEXT}</b> (không có cột <code>metadata</code>; dữ liệu cấu trúc gần nhất là 2 khối JSON ở trên).
+                {/* AD-14 (PHASE 7) — 8/8 trường có nguồn: `result` là CỘT THẬT (migration additive 0162/V22);
+                    `metadata` = ÁNH XẠ từ `before_json` + `after_json` (người dùng chốt, KHÔNG thêm cột trùng nghĩa).
+                    Bản ghi cũ chưa có `result` ⇒ nói rõ «chưa ghi kết quả», KHÔNG bịa giá trị. */}
+                {' '}· Kết quả: <b>{a.result ? auditResultLabel(String(a.result)) : <span className="muted" title="Bản ghi cũ trước migration chưa có cột `result`; nay mọi bản ghi mới đều ghi kết quả.">chưa ghi kết quả</span>}</b> ·
+                {' '}Metadata: <b>ánh xạ từ 2 khối JSON dưới đây</b> (<code>after_json</code>{a.beforeJson ? <> + <code>before_json</code></> : null} — không có cột <code>metadata</code> riêng).
               </div>
             </td></tr>];
           })}
-          {!rows.length && <tr><td colSpan={10}><Empty text="Không có bản ghi nào khớp bộ lọc." /></td></tr>}
+          {!rows.length && <tr><td colSpan={11}><Empty text="Không có bản ghi nào khớp bộ lọc." /></td></tr>}
         </tbody>
       </table></div>}
     </section>

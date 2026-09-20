@@ -198,8 +198,11 @@ export function auditUserOf(row: Row, users: Row[]): { userName: string; userId:
 }
 
 // AD-14: 8 trường nguyên văn yêu cầu «hành động · module · thực thể · mã thực thể · thời gian · IP ·
-// kết quả · metadata» đối chiếu với 17 CỘT THẬT của `audit_logs` (information_schema, DB `vntech_erp`).
-// `source: null` = KHÔNG có cột ⇒ muốn đủ phải MIGRATION (BỊ CẤM) ⇒ mục này **BLOCKED**.
+// kết quả · metadata» đối chiếu với CỘT THẬT của `audit_logs` (information_schema, DB `vntech_erp`).
+// 21/09/2026 — CHỈ ĐẠO NGƯỜI DÙNG: «AD-14 thêm result» ⇒ MIGRATION ADDITIVE thêm cột `result`
+// (`drizzle/0162_ad14_audit_log_result.sql` + Flyway `V22__ad14_audit_log_result.sql`).
+// `metadata` KHÔNG thêm cột: người dùng chốt metadata = **CHÍNH `before_json` + `after_json`** (2 cột đã có)
+// ⇒ trường `metadata` trỏ vào 2 cột đó (ánh xạ, không phải dữ liệu trùng nghĩa).
 export const AUDIT_FIELDS = [
   { key: "action", label: "Hành động", source: "audit_logs.action", available: true },
   { key: "moduleKey", label: "Module", source: "audit_logs.module_key", available: true },
@@ -207,9 +210,22 @@ export const AUDIT_FIELDS = [
   { key: "entityId", label: "Mã thực thể", source: "audit_logs.entity_id", available: true },
   { key: "occurredAt", label: "Thời gian", source: "audit_logs.occurred_at", available: true },
   { key: "ipAddress", label: "IP", source: "audit_logs.ip_address", available: true },
-  { key: "result", label: "Kết quả", source: null, available: false },
-  { key: "metadata", label: "Metadata", source: null, available: false },
+  { key: "result", label: "Kết quả", source: "audit_logs.result", available: true },
+  { key: "metadata", label: "Metadata", source: "audit_logs.before_json + audit_logs.after_json (ánh xạ)", available: true },
 ];
+
+/** AD-14 — quy ước giá trị cột `result` (từ vựng ĐÓNG, dùng chung với 2 đường ghi JS/Java). */
+export const AUDIT_RESULT_VALUES = [
+  { value: "ok", label: "Đã thực hiện xong" },
+  { value: "denied", label: "Bị từ chối" },
+  { value: "failed", label: "Thao tác lỗi" },
+];
+
+/** Nhãn tiếng Việt của một giá trị `result`; giá trị LẠ thì hiện nguyên văn (không bịa nhãn). */
+export function auditResultLabel(value: string): string {
+  const found = AUDIT_RESULT_VALUES.find((row) => row.value === String(value || "").trim().toLowerCase());
+  return found ? found.label : String(value || "").trim();
+}
 
 export function auditAvailableFields(): Row[] {
   return AUDIT_FIELDS.filter((field) => field.available);
@@ -219,7 +235,7 @@ export function auditBlockedFields(): Row[] {
   return AUDIT_FIELDS.filter((field) => !field.available);
 }
 
-/** Bảng `audit_logs` KHÔNG có cột `result`/`metadata` ⇒ chỉ có 6/8 trường có nguồn. */
+/** Cổng 8/8: mọi trường của yêu cầu AD-14 đều CÓ nguồn THẬT (không còn «chưa có nguồn»). */
 export function auditHasResultAndMetadata(): boolean {
   return AUDIT_FIELDS.every((field) => field.available);
 }
