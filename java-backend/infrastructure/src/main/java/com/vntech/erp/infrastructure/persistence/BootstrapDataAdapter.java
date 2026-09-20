@@ -722,10 +722,13 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                        po_sla_hours AS poSlaHours,bch_confirmation_sla_hours AS bchConfirmationSlaHours,
                        slow_moving_days AS slowMovingDays,negative_stock_blocked AS negativeStockBlocked
                 FROM company_settings WHERE id='SETTINGS'"""));
+        // [PHASE 2 · §23] trả thêm `stageKind` để UI phân biệt bước DUYỆT HỒ SƠ (`approval`) với bước
+        // CUNG ỨNG/xử lý (`supply`: 101 Lập & phát hành PO · 102 Giao nhận · 103 BCH xác nhận) bằng DỮ LIỆU.
         data.put("approvalStageCatalog", query("""
                 SELECT id,stage_no AS stageNo,name,description,allowed_role_codes AS allowedRoleCodes,
                        approval_mode AS approvalMode,sla_hours AS slaHours,
-                       auto_approve_on_submit AS autoApproveOnSubmit,active,sort_order AS sortOrder
+                       auto_approve_on_submit AS autoApproveOnSubmit,active,sort_order AS sortOrder,
+                       COALESCE(stage_kind,'approval') AS stageKind
                 FROM approval_stage_catalog ORDER BY stage_no"""));
         // TASK-059 — thiếu `businessGroupId` + `businessGroupName` (JS `:676`) ⇒ cột "Nhóm nghiệp vụ"
         // của màn *Chức danh / vai trò* (`app/page.tsx:3522` đọc `row.businessGroupName`) LUÔN hiện "—".

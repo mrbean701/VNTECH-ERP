@@ -57,10 +57,11 @@ public final class RequestManagementUseCase {
     }
 
     public Map<String, Object> createRequest(Principal principal, Map<String, Object> payload) {
-        // SỬA LỖI VAI TRÒ: canonicalRoleCode LUÔN đổi "engineer"→"ksda" và "commander"→"cht" khi
-        // ghi vào DB, nên hai mã cũ không bao giờ tồn tại ⇒ phép kiểm này khoá chết thành
-        // admin-only, không ai lập được phiếu đề nghị mua. Dùng mã vai trò THẬT trong DB.
-        rbac.requireRole(principalAsCurrent(principal), List.of("engineer", "commander", "admin"));
+        // [PHASE 2 — CHỈ ĐẠO NGƯỜI DÙNG (3) 21/09/2026] «đây là luồng duyệt của đơn đề nghị mua hàng nên TẤT CẢ
+        // các user đều có quyền tạo» ⇒ BỎ chốt cứng `List.of("engineer","commander","admin")` (chốt này chặn
+        // mọi vai trò khác: kh_nv, kh_truong, da_nv, da_truong, thuky, thu_kho, director…).
+        // Quyền TẠO vẫn đi qua CỔNG RBAC do quản trị viên cấu hình (`requireModule`/`user_module_permissions`
+        // — module `requests`, năng lực `canCreate`) + phạm vi dự án ở ngay dưới ⇒ KHÔNG mở toang.
         String projectId = trim(payload.get("projectId"));
         // JS 907.
         accessScope.requireProjectAccess(principal.userId(), principal.role(), projectId, true,
@@ -221,8 +222,12 @@ public final class RequestManagementUseCase {
         if (stages.isEmpty())
             throw Api("Chưa cấu hình bước phê duyệt đang hoạt động. Quản trị viên cần tạo ít nhất 1 bước.");
         Map<Integer, Map<String, Object>> stageOwners = new LinkedHashMap<>();
+        // [PHASE 2 · §6 — chỉ đạo người dùng (2)] «mỗi tác nhân = 1 người duyệt, KHÔNG tính người tạo đơn»:
+        // bước mà NGƯỜI LẬP PHIẾU có thẩm quyền duyệt (khớp `role` HOẶC `roleBase` — TRÙNG vị từ `canApproveStage`
+        // của JS) được BỎ QUA, không đặt Owner ⇒ người tạo KHÔNG tự duyệt đơn của mình.
         for (Map<String, Object> stage : stages) {
-            if (!isOne(gi(stage, "autoApproveOnSubmit"))) {
+            if (isOne(gi(stage, "autoApproveOnSubmit"))) continue;
+            if (!creatorMatchedStageRole(stage, principal).isEmpty()) continue;
                 Map<String, Object> assignment = store.workflowAssignment(projectId, (int) numberValue(gi(stage, "stageNo")))
                         .orElse(null);
                 if (assignment == null || !isOne(gi(assignment, "ownerActive")))
@@ -267,13 +272,20 @@ public final class RequestManagementUseCase {
                     throw Api("Owner " + ownerName + " chưa được phân quyền dự án này.");
 
                 stageOwners.put((int) numberValue(gi(stage, "stageNo")), assignment);
-            }
         }
-        Map<String, Object> firstStage = stages.get(0);
-        boolean autoFirst = isOne(gi(firstStage, "autoApproveOnSubmit"));
-        int currentStage = autoFirst && stages.size() > 1
-                ? (int) numberValue(gi(stages.get(1), "stageNo")) : (int) numberValue(gi(firstStage, "stageNo"));
-        boolean allAutoComplete = autoFirst && stages.size() == 1;
+        // [PHASE 2 · §6/§23] Bước đang xử lý = bước CHỜ ĐẦU TIÊN chưa bị bỏ qua (tự xác nhận khi gửi HOẶC do
+        // người lập phiếu trùng vai trò duyệt). Không còn bước nào ⇒ luồng tự hoàn tất ngay khi gửi.
+        // Thay cho hình dạng cũ `autoFirst ? stage[1] : stage[0]` — hình dạng đó chỉ đúng khi luồng có ĐÚNG 1
+        // bước tự xác nhận ở đầu và không có luật loại người tạo.
+        int currentStage = 0;
+        for (Map<String, Object> stage : stages) {
+            if (isOne(gi(stage, "autoApproveOnSubmit"))) continue;
+            if (!creatorMatchedStageRole(stage, principal).isEmpty()) continue;
+            currentStage = (int) numberValue(gi(stage, "stageNo"));
+            break;
+        }
+        boolean allAutoComplete = currentStage == 0;
+        if (allAutoComplete) currentStage = (int) numberValue(gi(stages.get(stages.size() - 1), "stageNo"));
 
         Instant now = Instant.now();
         String requestId = idGenerator.next("MR");
@@ -336,7 +348,12 @@ public final class RequestManagementUseCase {
         List<Map<String, Object>> approvalRows = new ArrayList<>();
         for (int i = 0; i < stages.size(); i++) {
             Map<String, Object> stage = stages.get(i);
-            boolean isAuto = i == 0 && autoFirst;
+            // [PHASE 2 · §6] Bước bị bỏ qua = tự xác nhận khi gửi HOẶC người lập phiếu trùng vai trò duyệt.
+            // Vết kiểm toán ghi RÕ lý do (`decisionSnapshot.source`) — KHÔNG im lặng bỏ bước.
+            boolean autoBySubmit = isOne(gi(stage, "autoApproveOnSubmit"));
+            String creatorRole = creatorMatchedStageRole(stage, principal);
+            boolean waivedByCreator = !creatorRole.isEmpty();
+            boolean isAuto = autoBySubmit || waivedByCreator;
             boolean isQueued = isAuto || (!allAutoComplete && (int) numberValue(gi(stage, "stageNo")) == currentStage);
             String assignedOwner = null;
             if (isAuto) assignedOwner = principal.userId();
@@ -353,10 +370,14 @@ public final class RequestManagementUseCase {
             approval.put("queuedAt", isQueued ? now : null);
             approval.put("dueAt", isQueued ? now.plusSeconds((long) numberValue(gi(stage, "slaHours")) * 3600) : null);
             approval.put("decidedAt", isAuto ? now : null);
-            approval.put("comment", isAuto ? "Tự xác nhận khi gửi phiếu: " + sv(stage, "name") : null);
+            approval.put("comment", !isAuto ? null
+                    : autoBySubmit ? "Tự xác nhận khi gửi phiếu: " + sv(stage, "name")
+                    : "Người lập phiếu trùng vai trò duyệt của bước " + gi(stage, "stageNo") + " (" + creatorRole
+                      + ") — không tự duyệt đơn của mình: " + sv(stage, "name"));
             approval.put("decisionSnapshot", isAuto
                     ? "{\"stage\":" + gi(stage, "stageNo") + ",\"decision\":\"approved\",\"user\":\""
-                    + principal.fullName() + "\",\"at\":\"" + now + "\",\"source\":\"request_submission\"}" : null);
+                    + principal.fullName() + "\",\"at\":\"" + now + "\",\"source\":\""
+                    + (autoBySubmit ? "request_submission" : "creator_role_waived") + "\"}" : null);
             approval.put("allowedRoleCodes", gi(stage, "allowedRoleCodes"));
             approval.put("approvalMode", "single");
             approvalRows.add(approval);
@@ -388,6 +409,30 @@ public final class RequestManagementUseCase {
         return Map.of("message", allAutoComplete
                 ? "Đã lập phiếu " + requestNo + "; luồng phê duyệt tự hoàn tất và chuyển sang Mua hàng & PO."
                 : "Đã lập phiếu " + requestNo + " gồm " + normalizedItems.size() + " dòng và chuyển tới bước " + currentStage + ".");
+    }
+
+    /**
+     * PHASE 2 (§6 · §23 — chỉ đạo người dùng 21/09/2026) — VỊ TỪ «NGƯỜI LẬP PHIẾU CÓ THẨM QUYỀN CỦA BƯỚC NÀY».
+     *
+     * <p>Trả về mã vai trò khớp (rỗng = không khớp ⇒ bước vẫn phải được duyệt bình thường). Khớp theo
+     * `role` HOẶC `roleBase` — ĐÚNG CÙNG vị từ mà `RbacService`/JS `canApproveStage` dùng để cho phép duyệt
+     * (`allowed.includes(user.role) || allowed.includes(effectiveRole(user))`). Vì vậy luật «người tạo không tự
+     * duyệt» KHÔNG phải một luật thứ hai: ai có thẩm quyền duyệt bước đó thì cũng chính là người bị loại khỏi
+     * bước đó khi họ lập phiếu.
+     *
+     * <p>Đối chiếu bản JS dùng chung: `lib/p2-approval-flow.mjs#matchedStageRole` (cùng quy tắc, cùng thứ tự).
+     */
+    private String creatorMatchedStageRole(Map<String, Object> stage, Principal principal) {
+        String codes = sv(stage, "allowedRoleCodes");
+        if (codes.isEmpty()) return "";
+        String role = trim(principal.role());
+        String base = trim(principal.roleBase());
+        for (String raw : codes.split(",")) {
+            String code = raw.trim();
+            if (code.isEmpty()) continue;
+            if (code.equals(role) || code.equals(base)) return code;
+        }
+        return "";
     }
 
     /** update_returned_request — CHT chỉnh sửa phiếu bị trả lại. */
@@ -451,10 +496,17 @@ public final class RequestManagementUseCase {
         if (stages.isEmpty()) throw Api("Chưa cấu hình bước phê duyệt hoạt động.");
         Map<String, Object> firstStage = stages.get(0);
         boolean autoFirst = isOne(gi(firstStage, "autoApproveOnSubmit"));
-        int currentStage;
-        if (autoFirst && stages.size() > 1) currentStage = ((Number) gi(stages.get(1), "stageNo")).intValue();
-        else if (autoFirst) currentStage = ((Number) gi(firstStage, "stageNo")).intValue();
-        else currentStage = ((Number) gi(firstStage, "stageNo")).intValue();
+        // [PHASE 2 · §6] GỬI LẠI cũng phải suy bước khởi động lại từ chính các bước CHƯA bị bỏ qua (người gửi
+        // lại trùng vai trò duyệt thì bước đó bị bỏ qua). Hình dạng cũ `autoFirst ? stage[1] : stage[0]` chỉ đúng
+        // khi luồng có đúng 1 bước tự xác nhận ở đầu.
+        int currentStage = 0;
+        for (Map<String, Object> stage : stages) {
+            if (isOne(gi(stage, "autoApproveOnSubmit"))) continue;
+            if (!creatorMatchedStageRole(stage, principal).isEmpty()) continue;
+            currentStage = ((Number) gi(stage, "stageNo")).intValue();
+            break;
+        }
+        if (currentStage == 0) currentStage = ((Number) gi(stages.get(stages.size() - 1), "stageNo")).intValue();
         Map<String, Object> currentConfig = stages.stream()
                 .filter(s -> ((Number) gi(s, "stageNo")).intValue() == currentStage).findFirst().orElse(firstStage);
         String comment = "CHT GỬI LẠI: " + blankDefault(trim(payload.get("comment")),

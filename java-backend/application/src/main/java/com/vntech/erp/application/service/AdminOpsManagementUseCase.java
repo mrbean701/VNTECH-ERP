@@ -124,8 +124,11 @@ public final class AdminOpsManagementUseCase {
 
     // ============ preview_request_import ============
     public Map<String, Object> previewRequestImport(Principal principal, Map<String, Object> payload) {
-        // JS 861: requireRole(user,["engineer","commander","admin"]) — TASK-022 bổ sung.
-        rbac.requireRole(principalAsCurrent(principal), List.of("engineer", "commander", "admin"));
+        // [PHASE 2 — CHỈ ĐẠO NGƯỜI DÙNG (3) 21/09/2026] Bước ĐỐI CHIẾU FILE của biểu mẫu lập phiếu phải mở cho
+        // MỌI tài khoản có quyền TẠO phiếu (trước đây chốt cứng engineer/commander/admin ⇒ user khác không đối
+        // chiếu được file, dù đã được cấp quyền `requests`/`canCreate`). Quyền vẫn qua CỔNG RBAC cấu hình được
+        // (module `requests`, năng lực `canCreate`) — KHÔNG mở toang. Đối chiếu bản JS `scripts/system-route.mjs`
+        // (action `preview_request_import`, cùng bỏ chốt vai trò).
         String projectId = trim(payload.get("projectId"));
         List<?> rawLines = payload.get("lines") instanceof List<?> l ? l : List.of();
         if (projectId.isEmpty() || rawLines.isEmpty())

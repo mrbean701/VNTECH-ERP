@@ -145,17 +145,24 @@ public class RequestStoreAdapter implements RequestStore {
 
     @Override
     public List<Map<String, Object>> approvalStages(boolean activeOnly) {
+        // [PHASE 2 · §6/§23 — chỉ đạo người dùng 21/09/2026] CHUỖI DUYỆT HỒ SƠ chỉ gồm bước `stage_kind='approval'`.
+        // 3 bước CUNG ỨNG/xử lý (101 Lập & phát hành PO · 102 Giao nhận · 103 BCH xác nhận) nay NẰM TRONG
+        // `approval_stage_catalog` (trước đây khai bằng literal trong mã JS) nên nếu không lọc theo `stage_kind`
+        // thì mọi phiếu MỚI sẽ bị ép thành 7 bước và Java sẽ đòi Owner cho cả 101/102/103.
+        // Đồng thời trả thêm `stageKind` để tầng bootstrap/UI phân biệt hai loại bước bằng DỮ LIỆU.
         if (activeOnly) {
             return jdbcTemplate.queryForList("""
                     SELECT stage_no AS stageNo,name,allowed_role_codes AS allowedRoleCodes,
                            approval_mode AS approvalMode,sla_hours AS slaHours,
-                           auto_approve_on_submit AS autoApproveOnSubmit,active,sort_order AS sortOrder
-                    FROM approval_stage_catalog WHERE active=1 ORDER BY stage_no""");
+                           auto_approve_on_submit AS autoApproveOnSubmit,active,sort_order AS sortOrder,
+                           COALESCE(stage_kind,'approval') AS stageKind
+                    FROM approval_stage_catalog WHERE active=1 AND stage_kind='approval' ORDER BY stage_no""");
         }
         return jdbcTemplate.queryForList("""
                 SELECT stage_no AS stageNo,name,allowed_role_codes AS allowedRoleCodes,
                        approval_mode AS approvalMode,sla_hours AS slaHours,
-                       auto_approve_on_submit AS autoApproveOnSubmit,active,sort_order AS sortOrder
+                       auto_approve_on_submit AS autoApproveOnSubmit,active,sort_order AS sortOrder,
+                       COALESCE(stage_kind,'approval') AS stageKind
                 FROM approval_stage_catalog ORDER BY stage_no""");
     }
 
