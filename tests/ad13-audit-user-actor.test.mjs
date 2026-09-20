@@ -71,6 +71,10 @@ test("AD-13 — bằng chứng cột THẬT ở cả 2 đường bootstrap (khô
   const adapter = read("java-backend/infrastructure/src/main/java/com/vntech/erp/infrastructure/persistence/AuditLogAdapter.java");
   assert.match(adapter, /INSERT INTO audit_logs \(id, user_id, user_name, user_role/, "Bản ghi mới ghi CẢ `user_name`");
   const js = read("scripts/system-route.mjs");
-  assert.match(js, /SELECT al\.id,al\.action,al\.entity_type AS entityType,al\.entity_id AS entityId,al\.occurred_at AS occurredAt,u\.full_name AS userName/,
+  // AD-14 (21/09/2026) bổ sung `al.result` + 2 khối JSON vào CHÍNH câu select này ⇒ không ghim nguyên văn cả
+  // danh sách cột nữa; giữ ĐÚNG kết luận của AD-13: đường JS lấy tên từ JOIN (`u.full_name AS userName`) và
+  // KHÔNG có cột `user_name` đóng băng lúc ghi ⇒ nguồn HẸP HƠN đường Java (Actor = User khi bản ghi cũ).
+  assert.match(js, /SELECT al\.id,al\.action[\s\S]{0,240}u\.full_name AS userName[\s\S]{0,40}FROM audit_logs al LEFT JOIN users u ON u\.id=al\.user_id/,
     "Đường JS cũ chỉ trả `userName` từ JOIN — phải được ghi nhận là nguồn HẸP HƠN (không suy đoán)");
+  assert.doesNotMatch(js, /al\.user_name AS userName/, "Đường JS KHÔNG được tự nhận là có Actor đóng băng");
 });
