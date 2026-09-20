@@ -214,7 +214,11 @@ public final class ProductionManagementUseCase {
 
     /** save_team_subcontract — HĐ giao khoán độc lập với HĐ chính dự án. */
     public Map<String, Object> saveTeamSubcontract(Principal principal, Map<String, Object> payload) {
-        rbac.requireRole(principalAsCurrent(principal), List.of("admin", "commander", "project"));
+        // [P-09/TASK-117] Giữ mã ENGINE (commander/project) ĐỂ TƯƠNG THÍCH NGƯỢC + thêm mã CHỨC DANH THẬT
+        // của role_catalog (cht→commander, da_nv/da_truong→project). RbacService.requireRole so với
+        // CẢ role() và roleBase(); khi roleBase rỗng thì rơi về role() (mã chức danh) nên thiếu mã chức
+        // danh = từ chối oan. Nguồn mã: `SELECT code, base_role FROM role_catalog` (MySQL thật).
+        rbac.requireRole(principalAsCurrent(principal), List.of("admin", "commander", "cht", "project", "da_nv", "da_truong"));
         String projectId = trim(payload.get("projectId"));
         // JS 1238.
         accessScope.requireProjectAccess(principal.userId(), principal.role(), projectId, true,
@@ -236,7 +240,8 @@ public final class ProductionManagementUseCase {
 
     /** save_team_production — ghi sản lượng tổ đội; chống vượt lũy kế HĐ giao khoán. */
     public Map<String, Object> saveTeamProduction(Principal principal, Map<String, Object> payload) {
-        rbac.requireRole(principalAsCurrent(principal), List.of("admin", "commander", "project"));
+        // [P-09/TASK-117] ENGINE + mã CHỨC DANH THẬT (xem chú thích ở saveTeamSubcontract).
+        rbac.requireRole(principalAsCurrent(principal), List.of("admin", "commander", "cht", "project", "da_nv", "da_truong"));
         String projectId = trim(payload.get("projectId"));
         String subcontractId = trim(payload.get("subcontractId"));
         String periodKey = trim(payload.get("periodKey"));
@@ -261,7 +266,8 @@ public final class ProductionManagementUseCase {
 
     /** approve_team_production — duyệt; kiểm lại lũy kế (trừ record hiện tại). */
     public Map<String, Object> approveTeamProduction(Principal principal, Map<String, Object> payload) {
-        rbac.requireRole(principalAsCurrent(principal), List.of("admin", "commander", "project"));
+        // [P-09/TASK-117] ENGINE + mã CHỨC DANH THẬT (xem chú thích ở saveTeamSubcontract).
+        rbac.requireRole(principalAsCurrent(principal), List.of("admin", "commander", "cht", "project", "da_nv", "da_truong"));
         String productionId = trim(payload.get("productionId"));
         Map<String, Object> rec = store.findTeamProduction(productionId).orElse(null);
         if (rec == null || !"submitted".equals(sv(rec, "status")))
@@ -280,7 +286,8 @@ public final class ProductionManagementUseCase {
 
     /** save_team_payment — thanh toán tổ đội (progress/advance); chặn vượt sản lượng duyệt. */
     public Map<String, Object> saveTeamPayment(Principal principal, Map<String, Object> payload) {
-        rbac.requireRole(principalAsCurrent(principal), List.of("admin", "commander", "accountant", "project"));
+        // [P-09/TASK-117] ENGINE + mã CHỨC DANH THẬT (xem chú thích ở saveTeamSubcontract).
+        rbac.requireRole(principalAsCurrent(principal), List.of("admin", "commander", "cht", "accountant", "project", "da_nv", "da_truong"));
         String projectId = trim(payload.get("projectId"));
         String subcontractId = trim(payload.get("subcontractId"));
         double amount = strictNonNegative(payload.get("amount"), "Số tiền thanh toán");
@@ -306,7 +313,8 @@ public final class ProductionManagementUseCase {
 
     /** settle_team_subcontract — quyết toán: chặn khi tổ đội còn giữ vật tư; close HĐ. */
     public Map<String, Object> settleTeamSubcontract(Principal principal, Map<String, Object> payload) {
-        rbac.requireRole(principalAsCurrent(principal), List.of("admin", "commander", "accountant"));
+        // [P-09/TASK-117] ENGINE + mã CHỨC DANH THẬT (xem chú thích ở saveTeamSubcontract).
+        rbac.requireRole(principalAsCurrent(principal), List.of("admin", "commander", "cht", "accountant"));
         String subcontractId = trim(payload.get("subcontractId"));
         Map<String, Object> sc = store.findSubcontract(subcontractId)
                 .orElseThrow(() -> Api("Không có quyền quyết toán hợp đồng này."));
