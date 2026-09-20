@@ -2273,3 +2273,14 @@ ALTER TABLE `audit_logs` ADD COLUMN IF NOT EXISTS `change_detail` text;
 ALTER TABLE `user_project_scopes` ADD COLUMN IF NOT EXISTS `joined_at` datetime(3);
 ALTER TABLE `user_project_scopes` ADD COLUMN IF NOT EXISTS `left_at` datetime(3);
 ALTER TABLE `user_project_scopes` ADD COLUMN IF NOT EXISTS `position_name` varchar(255);
+
+-- [TASK-115] Hai cột dưới đây bị THIẾU trong H2 vì migration tạo chúng bằng DDL ĐỘNG
+-- (`SET @ddl := IF(...) ... PREPARE/EXECUTE`) nên generator tools/generate-h2-test-schema.mjs
+-- KHÔNG bắt được (regex chỉ khớp `ALTER TABLE ... ADD COLUMN` literal):
+--   V21__p2_pr_approval_dynamic_default.sql -> approval_stage_catalog.stage_kind
+--   V22__ad14_audit_log_result.sql          -> audit_logs.result
+-- Kiểu + DEFAULT lấy ĐÚNG theo MySQL thật (lệnh information_schema ngày 22/09/2026).
+-- Hệ quả nếu thiếu: RequestStoreAdapter/BootstrapDataAdapter dùng `stage_kind` và đường ghi
+-- nhật ký dùng `result` đều ném BadSqlGrammarException -> cổng `mvn -pl web -am test` đỏ.
+ALTER TABLE `approval_stage_catalog` ADD COLUMN IF NOT EXISTS `stage_kind` varchar(16) NOT NULL DEFAULT 'approval';
+ALTER TABLE `audit_logs` ADD COLUMN IF NOT EXISTS `result` varchar(32) NOT NULL DEFAULT 'ok';
