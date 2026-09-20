@@ -17,8 +17,8 @@
 //   · `goods_receipt_items.accepted_qty`      → payload `acceptedQty`
 //   Nguồn: `scripts/system-route.mjs:653-668` (bootstrap) + `docs/agent-progress/PHASE2-GAP-ANALYSIS.md` §2.4.
 
-/** Bản ghi bất kỳ đến từ payload bootstrap (đúng kiểu `Row` của `lib/ui-shared.tsx`). */
-export type Row = Record<string, any>;
+/** Bản ghi bất kỳ đến từ payload bootstrap (cùng kiểu `Row` của `lib/ui-shared.tsx` — KHÔNG dùng `any` để giữ lint 0 error). */
+export type Row = Record<string, unknown>;
 
 // Kiểu CHỈ-dùng-để-biên-dịch (`import type` bị xoá khi build ⇒ tệp này vẫn KHÔNG có phụ thuộc runtime,
 // chạy được cả trong Node lẫn bundle client). Mục đích: `purchaseOrderTimeline` trả ĐÚNG kiểu `ActivityItem`
@@ -27,7 +27,7 @@ import type { ActivityItem } from "@/app/components/ui/Timeline";
 
 /** Số an toàn: `null`/`undefined`/chuỗi rỗng đều thành 0; KHÔNG bao giờ trả `NaN`. */
 export function numeric(value: unknown): number {
-  const parsed = Number(value ?? 0);
+  const parsed = typeof value === "number" ? value : Number(value ?? 0);
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
