@@ -133,7 +133,32 @@ INSERT INTO workflow_definitions (id,code,name,...) VALUES ('WF-PROBE-V2','WF-PO
 | `tests/*.test.mjs` (tổng) | 46 tệp | chỉ 3 tệp liên quan gián tiếp (`t10-approval-center`, `ad06`, `w2`) |
 
 **Cách chạy:** `npm run test:workflow` ⇒ `node --import tsx tests/workflow-direct.test.ts`.
-⚠️ **`workflow-direct.test.ts` chạy trên SQLite in-memory** (bằng chứng: `sqlite.prepare(...)` nhiều chỗ, `value` `Æ°`, …) — **khác MySQL thật**; kết quả test không tự động đúng cho production.
+⚠️ **`workflow-direct.test.ts` chạy trên SQLite in-memory** — **XÁC NHẬN bằng mã**, không suy đoán:
+
+```ts
+// tests/workflow-direct.test.ts:3,31
+import { DatabaseSync } from "node:sqlite";
+const sqlite = new DatabaseSync(":memory:");   // ← CSDL TÁCH BIỆT HOÀN TOÀN
+```
+
+⇒ chạy bộ test **KHÔNG ghi vào MySQL production** `vntech_erp` (đã kiểm chứng để bảo đảm an toàn dữ liệu thật 17 MR / 7 PO / 16 GRN).
+**Hệ quả về độ tin cậy:** test dựng lược đồ từ `drizzle/*.sql` trên SQLite, **khác MySQL thật** ⇒ kết quả xanh **không tự động đúng cho production**; mọi kết luận trong báo cáo gap vẫn phải dựa trên phép đo MySQL thật (§2.3–2.5).
+
+### 2.7 BẰNG CHỨNG CHẠY BỘ TEST (cổng xanh — đo ngày 21/09/2026)
+
+Lệnh: `npm test` ⇒ `lint && typecheck && test:regression && test:workflow`
+
+| Chặng | Kết quả đo |
+|---|---|
+| `eslint .` | ✅ **0 errors** · 181 warnings (đều là `no-unused-vars`/`no-img-element` tồn đọng sẵn) |
+| `tsc --noEmit --incremental false` | ✅ **thoát 0**, không lỗi |
+| `test:regression` | ✅ **69 pass · 0 fail · 0 cancelled · 0 skipped · 0 todo** (6.756 s) |
+| `test:workflow` | ✅ `Workflow VNTECH ERP V5.3.0 FULL W2 passed: five-stage approvals/email/SLA → multi-PO/multi-delivery → strict material master → contract stock → inherited/override permissions → configurable groups/roles/UI → user safety.` |
+| **Tổng** | ✅ **exit code 0 — CỔNG XANH** |
+
+**Phạm vi bằng chứng (khai báo trung thực):** bộ test này **xác nhận baseline của repo**, **KHÔNG** xác nhận "thay đổi của TASK-103" — vì TASK-103 **không sửa dòng mã nào** (chỉ tạo 2 tệp tài liệu). `git status` cho thấy các tệp mã bị ` M` (`lib/vntech-identity-data.mjs`, `VNTECH_*`, `docs/28_*`, `drizzle/0159-0160`) đều có `LastWriteTime` **19–20/09/2026**, **trước** lượt này ⇒ không phải thay đổi của TASK-103.
+**Giá trị của phép đo:** cung cấp **mốc xanh trước khi sửa** cho nhóm C (C3/C4 phải sửa `scripts/system-route.mjs`) — đúng yêu cầu "test trước khi sửa engine" ở §5.
+**Ghi chú đính chính:** ở bản đầu của tài liệu này tôi ghi "không chạy test vì bị cấm build". Đính chính: `npm test` **không phải** lệnh build/thay đổi mã, và bộ test **cô lập** (SQLite `:memory:`) nên **được phép chạy**; ràng buộc cấm (`node tools/gd-cycle.mjs`, `npm run build`, khởi động/dừng dịch vụ) **vẫn được tuân thủ**.
 
 ### 2.6 Đối chiếu §25 — 12 test case bắt buộc
 
