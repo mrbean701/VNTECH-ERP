@@ -1,195 +1,195 @@
-# TASK-115 — Vá lược đồ H2 của TEST để cổng tích hợp Java xanh trở lại
+# TASK-115 — Vá lược đồ H2 của TEST + 5 khiếm khuyết mã nghiệp vụ mà cổng phơi ra
 
 - **Mốc xuất phát:** `c968988` (HEAD) — cổng `mvn -B -pl web -am test` **ĐỎ** `Tests run: 29, Failures: 3, Errors: 8`.
 - **Ngày đo:** 22/09/2026 (log JVM ghi `2026-09-21T…+07:00` — lệch múi giờ log).
-- **Phạm vi được phép sửa:** `java-backend/web/src/test/resources/**`, `java-backend/**/src/test/**`,
-  `docs/agent-progress/TASK-115.md`. **Đã sửa đúng 3 tệp, KHÔNG chạm `src/main/**`** (xem §7).
-- **Kết luận ngắn:** vá được **3 gốc lược đồ test + 1 gốc cấu hình test** ⇒ **11 ca đỏ → 7 ca đỏ**;
-  7 ca còn lại **KHÔNG phải lỗi lược đồ test** mà là **5 khiếm khuyết mã nghiệp vụ** (`src/main/**`)
-  ⇒ **BLOCKED** theo ràng buộc "không sửa mã nghiệp vụ" (chi tiết §5, §6).
+- **Kết quả cuối:** `Tests run: 29, Failures: 0, Errors: 0, Skipped: 0` · **BUILD SUCCESS** ✔ (exit 0);
+  `application` + `domain` vẫn xanh ✔.
+- **2 đợt phạm vi:** đợt 1 (cho phép: `web/src/test/resources/**`, `**/src/test/**`, doc) → **29/6/1**;
+  đợt 2 (captain mở thêm `src/main/**` cho (a)+(b) + `tools/generate-h2-test-schema.mjs`) → **29/0/0**.
 
 ---
 
 ## 1. Bảng TRƯỚC / SAU (nguyên văn dòng tổng)
 
-| Cổng (lệnh) | TRƯỚC (`c968988`) | SAU (working tree TASK-115) |
+| Cổng (lệnh) | TRƯỚC (`c968988`) | SAU (cuối TASK-115) |
 |---|---|---|
-| `mvn -B -pl web -am test` | `[ERROR] Tests run: 29, Failures: 3, Errors: 8, Skipped: 0` ⛔ BUILD FAILURE | `[ERROR] Tests run: 29, Failures: 6, Errors: 1, Skipped: 0` ⛔ BUILD FAILURE |
-| `mvn -B -pl application -am test` | Domain `19/0/0` + Application `16/0/0` ✅ BUILD SUCCESS | `[INFO] Tests run: 19, Failures: 0, Errors: 0, Skipped: 0` (Domain) · `[INFO] Tests run: 16, Failures: 0, Errors: 0, Skipped: 0` (Application) ✅ BUILD SUCCESS |
-| `mvn -B -pl domain -am test` | `19/0/0` ✅ BUILD SUCCESS | `[INFO] Tests run: 19, Failures: 0, Errors: 0, Skipped: 0` ✅ BUILD SUCCESS |
+| `mvn -B -pl web -am test` | `[ERROR] Tests run: 29, Failures: 3, Errors: 8, Skipped: 0` ⛔ BUILD FAILURE | `[INFO] Tests run: 29, Failures: 0, Errors: 0, Skipped: 0` ✅ **BUILD SUCCESS** (exit 0) |
+| `mvn -B -pl application -am test` | Domain `19/0/0` + Application `16/0/0` ✅ BUILD SUCCESS | `[INFO] Tests run: 19, Failures: 0, Errors: 0, Skipped: 0` (Domain) · `[INFO] Tests run: 16, Failures: 0, Errors: 0, Skipped: 0` (Application) ✅ BUILD SUCCESS (exit 0) |
+| `mvn -B -pl domain -am test` | `19/0/0` ✅ BUILD SUCCESS | `[INFO] Tests run: 19, Failures: 0, Errors: 0, Skipped: 0` ✅ BUILD SUCCESS (exit 0) |
 
-Trong cùng lượt `-pl web -am`: Domain `19/0/0` ✅ · Application `16/0/0` ✅ · Infrastructure `10/0/0` ✅ · **Web `29/6/1` ⛔**.
+Mốc trung gian đáng nhớ: **29/6/1** (hết mọi lỗi SQL của lược đồ, còn 7 ca đỏ thuộc `src/main`) → **29/0/0**.
+**Số test KHÔNG đổi (29)** — không thêm phương thức test mới; phần khẳng định luật được **gộp vào ca có sẵn**
+(xem §3.3) nên tổng số ca giữ nguyên.
 
-**Vì sao `Failures` tăng 3 → 6 mà tổng số đỏ lại GIẢM 11 → 7?**
-4 ca trước đây chết ở tầng SQL (`Errors`) sau khi vá lược đồ **không còn lỗi SQL** nhưng lộ ra **lỗi nghiệp vụ 400 nằm sẵn bên dưới**
-(quy tắc "người tạo không tự duyệt" của commit `42f91be`) ⇒ chúng **chuyển từ `Errors` sang `Failures`**, không phải lỗi mới.
-Số đỏ thực: **11 → 7**; trong 7 ca còn lại, **0 ca** có gốc là lược đồ H2.
+---
 
-### 4 ca đã XANH LẠI sau lượt này
+## 2. ĐỢT 1 — gốc thuộc LƯỢC ĐỒ/CẤU HÌNH TEST (4 ca xanh)
 
-| # | Ca (class#method) | Lỗi TRƯỚC (nguyên văn) | Gốc đã vá |
+| # | Tệp : dòng | Thay đổi | Lý do (đã đối chiếu MySQL thật) |
 |---|---|---|---|
-| 1 | `SystemControllerAuthTest#login_wrongPassword_returns401_sameVietnameseMessage` | `BadSqlGrammarException … INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, before_json, after_json, ip_address, result, occurred_at)` | thiếu cột `audit_logs.result` |
-| 2 | `AdminGovernanceIntegrationTest#auditLog_ghiMoiThayDoi_vaKhongGhiDangNhap` | `AssertionFailedError: save_department_permission phải được ghi nhật ký ==> expected: <true> but was: <false>` (đường ghi nhật ký ném lỗi nên không có dòng nào) | thiếu cột `audit_logs.result` |
-| 3 | `AdminGovernanceIntegrationTest#workflow_quyTrinhMacDinh_khongChoXoa` | `BadSqlGrammarException … INSERT INTO workflow_definitions (id,code,name,is_default,active,sort_order,created_at,updated_at) VALUES (… ,1,1,1,10,?,?)` (8 cột / 9 giá trị) | lỗi **giá trị thừa** trong chính tệp test |
-| 4 | `SystemControllerAuthTest#fullAuthFlow_setupLoginBootstrapLogout` | (a) `Column "stage_kind" not found` → (b) sau khi vá (a): `Column "u.password_reset_at" not found` | 2 lớp: thiếu `stage_kind` + `ddl-auto` của profile test |
+| 1 | `schema-h2.sql:2286-2289` | `+ stage_kind varchar(16) NOT NULL DEFAULT 'approval'` trên `approval_stage_catalog` | `V21` thêm cột; `RequestStoreAdapter:158,165` lọc `stage_kind='approval'`, `BootstrapDataAdapter:731` đọc `COALESCE(stage_kind,'approval')`. V21/V22 tạo cột bằng **DDL ĐỘNG** (`SET @ddl := IF(...) … PREPARE/EXECUTE`) nên regex của generator **không bắt được** |
+| 2 | `schema-h2.sql` | `+ result varchar(32) NOT NULL DEFAULT 'ok'` trên `audit_logs` | `V22` thêm cột; `AuditLogAdapter:56-61,73-90` ghi ở **cả 2 đường ghi** nhật ký |
+| 3 | `application-test.yml:18` | `ddl-auto: create-drop` → **`none`** | Hibernate tạo lại `users`/`sessions`/`projects` theo entity ⇒ **mất** `users.password_reset_at`/`password_reset_by` (CÓ trên MySQL thật + CÓ trong `CREATE TABLE users` của `schema-h2.sql`) ⇒ `Column "u.password_reset_at" not found`. `none` làm **lược đồ H2 = chính `schema-h2.sql`**, ĐÚNG như production (`application.yml:14`). ⚠️ BOM đầu tệp bị mất khi ghi lại (chỉ 1 byte, YAML đọc bình thường) |
+| 4 | `AdminGovernanceIntegrationTest.java:190` | bỏ **1 giá trị thừa** trong `VALUES` (`…,1,1,1,10,?,?` → `…,1,1,10,?,?`) | `c382b47` xoá cột `version` khỏi **danh sách cột** nhưng quên giá trị ⇒ 8 cột/9 giá trị |
+
+**Ca đã xanh lại:** `SystemControllerAuth#login_wrongPassword…` · `AdminGovernance#auditLog_ghiMoiThayDoi…` ·
+`AdminGovernance#workflow_quyTrinhMacDinh_khongChoXoa` · `SystemControllerAuth#fullAuthFlow…` (phải vá **2 lớp**:
+`stage_kind` rồi `ddl-auto`).
+
+**Đã thử và GỠ LẠI (không để rác):** thêm `ALTER TABLE users ADD COLUMN password_reset_at` vào `schema-h2.sql`
+⇒ vẫn `Column "u.password_reset_at" not found`, chứng minh DDL của Hibernate chạy **sau** script và xoá cột vừa thêm.
 
 ---
 
-## 2. Đã thêm/bỏ gì (tệp : dòng) và LÝ DO
+## 3. ĐỢT 2 — 4 việc captain mở phạm vi (đều là LỖI PRODUCTION THẬT)
 
-### 2.1 `java-backend/web/src/test/resources/schema-h2.sql`
+### 3.1 (a) `MaterialCatalogStoreAdapter.insertSubcategory` — NULL vào cột NOT NULL
 
-| Dòng | Thay đổi | Lý do |
-|---|---|---|
-| `2277-2284` | Khối chú thích `[TASK-115]` giải thích vì sao 2 cột dưới bị thiếu | truy vết cho người sau |
-| `2285` | `ALTER TABLE approval_stage_catalog ADD COLUMN IF NOT EXISTS stage_kind varchar(16) NOT NULL DEFAULT 'approval';` | `V21__p2_pr_approval_dynamic_default.sql` thêm cột này; `RequestStoreAdapter.java:158,165` (`WHERE active=1 AND stage_kind='approval'`) và `BootstrapDataAdapter.java:731` (`COALESCE(stage_kind,'approval')`) đọc nó |
-| `2286` | `ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS result varchar(32) NOT NULL DEFAULT 'ok';` | `V22__ad14_audit_log_result.sql` thêm cột này; `AuditLogAdapter.java:56-61,73-90` ghi nó ở **cả 2 đường ghi** nhật ký |
+- **Sửa:** khi nơi gọi truyền `null` cho `review_status` thì **BỎ CỘT khỏi câu INSERT** để **DEFAULT của CSDL**
+  quyết định (`'approved'`); nhánh có giá trị vẫn ghi như cũ. **KHÔNG hard-code `'approved'` trong mã** ✔.
+- **Vì sao KHÔNG bỏ cột trong MỌI trường hợp** (khác đề xuất ban đầu, có lý do): bản JS gốc ghi `review_status`
+  ở **MÀN nhóm con** — `scripts/system-route.mjs:2709-2715` tính
+  `reviewStatus = hợp lệ ? payload : (subcategoryId ? "approved" : "proposed")` rồi chèn **12 cột**;
+  chỉ 2 đường còn lại mới bỏ cột (`:2604` luồng NHẬP danh mục, `:2673` nhóm mặc định `CHUA_PHAN_NHOM`).
+  Java đã port đúng phép tính đó (`MaterialCatalogManagementUseCase.java:336-338`, luôn khác `null`).
+  ⇒ Bỏ cột trong mọi trường hợp sẽ khiến **mọi nhóm con tạo từ màn hình thành `approved` thay vì `proposed`** (sai parity).
+- **Bằng chứng gốc:** MySQL thật `material_subcategories.review_status` = `varchar(255) NOT NULL DEFAULT 'approved'`;
+  `sql_mode` có `STRICT_TRANS_TABLES`; probe H2 độc lập: `NULL not allowed for column "review_status" [23502-232]`.
+  JS `:2673` không liệt kê cột ⇒ DEFAULT áp dụng.
 
-**Vì sao phải viết tay vào `schema-h2.sql`:** generator `java-backend/tools/generate-h2-test-schema.mjs:70`
-chỉ bắt `ALTER TABLE … ADD COLUMN` **literal**; V21/V22 tạo cột bằng **DDL động**
-(`SET @ddl := IF(...); PREPARE … EXECUTE`) nên generator **không sinh** 2 dòng này.
-⚠️ Hệ quả cần nhớ: **chạy lại generator sẽ xoá 2 dòng 2285-2286** — nếu muốn bền, phải mở rộng regex của
-`tools/generate-h2-test-schema.mjs` (ngoài phạm vi TASK-115).
+### 3.2 (b) `OpsTaskStoreAdapter.upsertWorkflow` — ghi cột `version` đã bị xoá
 
-### 2.2 `java-backend/web/src/test/resources/application-test.yml`
+- **Sửa:** bỏ `version` khỏi **INSERT** và bỏ `version=version+1` khỏi **UPDATE** (cùng họ với việc `49da107`
+  đã sửa cho các câu SELECT).
+- **Bằng chứng:** `V19__drop_workflow_definitions_version.sql:4` đã `DROP COLUMN version`; MySQL thật
+  `ERROR 1054 (42S22): Unknown column 'version' in 'field list'` ⇒ lỗi production, không chỉ H2.
 
-| Dòng | Thay đổi | Lý do |
-|---|---|---|
-| `18` | `ddl-auto: create-drop` → **`ddl-auto: none`** | Hibernate tạo lại `users`/`sessions`/`projects` theo entity ⇒ **mất** cột `users.password_reset_at` / `password_reset_by` (CÓ trong MySQL thật và CÓ trong `CREATE TABLE users` của `schema-h2.sql`, nhưng entity `UserJpaEntity` không khai báo) ⇒ `UserAdminStoreAdapter` ném `Column "u.password_reset_at" not found`. `none` làm **lược đồ H2 = chính `schema-h2.sql`**, ĐÚNG như production (`application.yml:14` cũng `ddl-auto: none`) |
-| `5-9` | Khối chú thích `[TASK-115]` | ghi lại lý do + lỗi nguyên văn |
-| `3` | Thay dòng cũ "JPA ddl-auto tạo users/sessions trước…" bằng ghi chú "không còn đúng" | dòng cũ đã sai và gây hiểu nhầm chính là nguyên nhân của lỗi này |
+### 3.3 (c)+(d) — người tạo ≠ người duyệt; 401 cho ẩn danh
 
-Ghi chú kỹ thuật: khi ghi lại `application-test.yml`, **BOM ở đầu tệp bị mất** (diff hiện `-﻿#` → `+#`).
-Đã kiểm: YAML + Spring đọc bình thường, cổng chạy được (xem §8). Đây là thay đổi ngoài ý muốn, chỉ ở 1 byte đầu tệp.
-
-**Bằng chứng đã loại phương án "chỉ thêm ALTER cho `users`":** đã thử thêm
-`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_at TIMESTAMP(3)` rồi chạy
-`-Dtest=SystemControllerAuthTest` ⇒ **vẫn** `Column "u.password_reset_at" not found`
-(tức DDL của Hibernate chạy SAU script và xoá cột vừa thêm) ⇒ đã **gỡ 2 ALTER vô hiệu** đó khỏi tệp,
-không để lại rác.
-
-### 2.3 `java-backend/web/src/test/java/com/vntech/erp/web/controller/AdminGovernanceIntegrationTest.java`
-
-| Dòng | Thay đổi | Lý do |
-|---|---|---|
-| `190` | Bỏ **1 giá trị thừa** trong `VALUES`: `…,'Quy trình mặc định',1,1,1,10,?,?)` → `…,'Quy trình mặc định',1,1,10,?,?)` | Commit `c382b47` (PHASE 8 · WF-03) xoá cột `version` khỏi **danh sách cột** nhưng **quên giá trị** `1` (giá trị của `version`) ⇒ 8 cột / 9 giá trị ⇒ `Column count does not match`. Giá trị `10` là `sort_order` (giữ nguyên) |
-
-**Đã cân nhắc và KHÔNG chọn:** thêm cột `version` trở lại `workflow_definitions` của H2. Lý do: MySQL thật
-**không còn** cột này (V19 + đo trực tiếp §3), nên thêm lại chỉ để che một lỗi thật của mã nghiệp vụ (§6 #2).
+- **Luật «người tạo đơn KHÔNG tự duyệt» GIỮ NGUYÊN** (`RequestManagementUseCase:222-232,352-372`, chặn ở `:607-608`);
+  **không nới luật**, **không sửa mã nghiệp vụ** cho việc này.
+- **Sửa FIXTURE:** thêm `TestActors.java` (mới) — tạo **người lập phiếu** là tài khoản KHÁC với vai trò `kh_nv`
+  (không nằm trong `allowed_role_codes` của bước nào) + phạm vi dự án `write` + quyền module `requests`
+  (`canCreate`, kèm dòng `module_catalog` mà `ModulePermissionStoreAdapter.canUseModule` JOIN tới) + đăng nhập
+  (hash PBKDF2-SHA256 600k đúng định dạng `Pbkdf2PasswordHasher`: `pbkdf2$600000$saltHex$hashHex`).
+  Áp dụng cho 3 ca chuỗi: `RequestApprovalIntegrationTest` (2 ca), `StockChainIntegrationTest`,
+  `SupplyChainEndToEndIntegrationTest` — phiếu do `kh.nv*` lập, **admin** (owner của bước) duyệt như cũ.
+- **Giữ 1 khẳng định LUẬT** (gộp vào `requestFlow_createAndApprove`, KHÔNG thêm ca mới ⇒ tổng vẫn 29):
+  lập phiếu bằng **admin** với seed gốc (`allowed_role_codes` của cả 2 bước đều chứa `admin`) rồi khẳng định
+  `approvals.decision_snapshot` chứa **`creator_role_waived`**, comment chứa
+  «Người lập phiếu trùng vai trò duyệt», và `decide_approval(stage=1)` trả **400**
+  «Hồ sơ chưa đến bước duyệt này hoặc đã được xử lý.» ⇒ luật có hiệu lực thật, không chỉ là comment.
+- **(d)** `SystemControllerAuthTest#unknownAction…`: cổng RBAC (`SystemController:205-208`) chạy TRƯỚC `switch`
+  ⇒ giữ **401 cho khách ẩn danh** (đúng bảo mật, KHÔNG cho action lạ đi qua cổng); ca test nay **setup lấy phiên
+  TRƯỚC** rồi mới gọi action lạ ⇒ kỳ vọng **400** «chưa được triển khai» (`:1196-1199`).
+- **Lỗi tiềm ẩn lộ ra thêm ở `AdminCatalogChainIntegrationTest`** (sau khi (a) hết 409): `save_approval_stage`
+  trả 400 «Vai trò engineer không tồn tại hoặc đang bị ẩn.» vì `OpsTaskManagementUseCase:458-461` kiểm
+  `store.activeRoleCodes()` = `SELECT code FROM role_catalog WHERE active=1` mà **H2 test không nạp dữ liệu tham chiếu**.
+  ⇒ vá fixture: seed `role_catalog` cho đúng 2 mã ca này dùng (`engineer`, `admin`).
 
 ---
 
-## 3. Đối chiếu lược đồ MySQL THẬT (chỉ ĐỌC — `information_schema` / `SELECT`)
+## 4. Bền vững: `tools/generate-h2-test-schema.mjs` (đã sửa + đã kiểm chứng)
+
+1. **Giữ khối thủ công:** generator nay **chép lại nguyên văn** mọi thứ giữa
+   `-- [H2-MANUAL-START]` và `-- [H2-MANUAL-END]` của `schema-h2.sql` hiện có ⇒ 2 ALTER `stage_kind`/`result`
+   **không còn bị xoá** khi sinh lại (đã chạy thử: `Giữ khối thủ công [H2-MANUAL-START..END]: 4 dòng`).
+2. **Tôn trọng `DROP COLUMN`:** generator trước đây dựng `workflow_definitions` từ `V8` (có `version`) và
+   **không biết `V19` đã DROP** ⇒ sinh lại sẽ **đưa cột `version` trở lại** (âm thầm đảo ngược WF-03).
+   Nay đã thêm nhánh `drops`: sinh lại cho kết quả **0 dòng `version`** ✔ (`Xoá cột H2: workflow_definitions.version`).
+3. ⚠️ **Vẫn KHÔNG nên chạy generator blindly:** lần sinh lại còn thay đổi khác (thêm 2 bảng từ migration mới:
+   `work_item_comments`, `work_item_participants`) ⇒ **phải review `git diff` + chạy lại cổng** trước khi commit.
+   Tệp `schema-h2.sql` đang commit là bản **bàn tay** (đã qua cổng xanh), KHÔNG phải bản vừa sinh.
+
+---
+
+## 5. Bằng chứng trên MySQL THẬT (CHỈ ĐỌC — `PREPARE` chỉ phân tích/kiểm cột, KHÔNG thi hành, KHÔNG ghi dữ liệu)
 
 ```sql
--- approval_stage_catalog
-stage_kind   varchar(16)  NO   approval
--- audit_logs
-result       varchar(32)  NO   ok
--- workflow_definitions: KHÔNG có cột `version`
--- material_subcategories
-review_status varchar(255) NO  approved
-SELECT @@sql_mode;  -- ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION
-SELECT version FROM workflow_definitions LIMIT 1;
--- ERROR 1054 (42S22) at line 1: Unknown column 'version' in 'field list'
+-- (b) CÂU CŨ (còn version):  ERROR 1054 (42S22): Unknown column 'version' in 'field list'
+PREPARE s_old FROM 'INSERT INTO workflow_definitions (…,active,version,sort_order,…) VALUES (…,1,1,…)';
+-- (b) CÂU MỚI (đã sửa):        INSERT_OK   ✔ (chuẩn bị được ⇒ câu lệnh hợp lệ trên MySQL thật)
+PREPARE s_new FROM 'INSERT INTO workflow_definitions (id,code,name,description,module_key,project_id,is_default,active,sort_order,created_by,created_at,updated_at) VALUES (?,?,?,?,?,?,?,1,?,?,?,?)';
+-- (b) UPDATE MỚI:              UPDATE_OK   ✔
+PREPARE u_new FROM 'UPDATE workflow_definitions SET code=?,name=?,description=?,module_key=?,project_id=?,is_default=?,sort_order=?,updated_at=? WHERE id=?';
+-- (a) INSERT MỚI (bỏ review_status): SUBCAT_INSERT_OK ✔ (CSDL tự điền DEFAULT 'approved')
+PREPARE i_new FROM 'INSERT INTO material_subcategories (id,category_id,code,name,description,scope_examples,adjustment_note,sort_order,active,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,1,?,?)';
+-- Ràng buộc chứng minh (a): review_status | IS_NULLABLE=NO | COLUMN_DEFAULT=approved
+SELECT COLUMN_NAME, IS_NULLABLE, COLUMN_DEFAULT FROM information_schema.COLUMNS
+ WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='material_subcategories' AND COLUMN_NAME='review_status';
+-- Lược đồ tham chiếu: stage_kind varchar(16) NO 'approval' · result varchar(32) NO 'ok' · workflow_definitions KHÔNG có version
+-- sql_mode = ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION
 ```
 
-⇒ Kiểu + DEFAULT của 2 cột đã thêm vào H2 **khớp 100%** MySQL thật; và `version` đúng là **đã bị xoá ở MySQL**.
-
 ---
 
-## 4. 3 ca "dây chuyền" — có TỰ HẾT không?
+## 6. 3 ca "dây chuyền" — kết luận
 
-| Ca dây chuyền (theo giả thuyết của lượt giao việc) | Kết quả đo | Ghi chú |
+| Ca | Kết quả | Ghi chú |
 |---|---|---|
-| `AdminGovernanceIntegrationTest#auditLog_ghiMoiThayDoi_vaKhongGhiDangNhap` | **TỰ HẾT** ✅ | hết ngay sau khi thêm `audit_logs.result` (nó chính là hệ quả của gốc #3) |
-| `SystemControllerAuthTest#fullAuthFlow_setupLoginBootstrapLogout` | **HẾT nhưng phải vá 2 LỚP** ✅ | lớp 1 `stage_kind`; lớp 2 lộ ra lỗi mới: `Column "u.password_reset_at" not found` (§2.2) |
-| `AdminCatalogChainIntegrationTest#adminCatalogChain` (409) | **KHÔNG TỰ HẾT** ⛔ | gốc là mã nghiệp vụ (§6 #1), không phải lược đồ |
-| `SystemControllerAuthTest#unknownAction_returns400_notImplementedContract` (401) | **KHÔNG TỰ HẾT** ⛔ | gốc là cổng RBAC ở tầng controller (§6 #5) |
+| `AdminGovernance#auditLog_ghiMoiThayDoi…` | **TỰ HẾT** ✅ | hệ quả trực tiếp của cột `result` |
+| `SystemControllerAuth#fullAuthFlow…` | **HẾT sau 2 LỚP** ✅ | lớp 1 `stage_kind`; lớp 2 `users.password_reset_at` (⇒ `ddl-auto: none`) |
+| `AdminCatalogChain#adminCatalogChain` | **HẾT sau 3 LỚP** ✅ | lớp 1 `review_status` (mã nghiệp vụ (a)) → lớp 2 `role_catalog` thiếu seed (fixture) → XANH |
+| `SystemControllerAuth#unknownAction…` | **HẾT sau khi sửa TEST** ✅ | giữ 401 cho ẩn danh; ca test đăng nhập trước ⇒ 400 |
 
 ---
 
-## 5. Bảng 7 ca CÒN ĐỎ — gốc KHÔNG thuộc lược đồ test (BLOCKED)
-
-Tất cả 7 ca dưới đây **không thể** sửa bằng lược đồ H2 hay tệp test-setup: gốc nằm ở `src/main/**`
-(**bị CẤM sửa** trong lượt này). **Không sửa mã nghiệp vụ.**
-
-| # | Ca | Lỗi nguyên văn (rút gọn) | Gốc (mã nghiệp vụ) | Đề xuất 1 dòng (chờ duyệt) |
-|---|---|---|---|---|
-| 1 | `AdminCatalogChainIntegrationTest#adminCatalogChain` | `AssertionError: Response status expected:<200> but was:<409>` — body: `{"ok":false,"error":"Dữ liệu vi phạm ràng buộc của hệ thống (trùng hoặc thiếu tham chiếu).…"}` | `MaterialCatalogStoreAdapter.java:199-205` (`insertSubcategory`) truyền **NULL tường minh** cho cột `material_subcategories.review_status` (NOT NULL DEFAULT 'approved' trên MySQL thật, `sql_mode` có `STRICT_TRANS_TABLES`). Đo lại trên H2 độc lập: `NULL not allowed for column "review_status" [23502-232]`. Bản JS gốc `scripts/system-route.mjs:2673` **không liệt kê** cột này ⇒ DEFAULT áp dụng ⇒ lệch parity | Bỏ `review_status`/`adjustment_note` khỏi câu INSERT (hoặc truyền `'approved'`/NULL-có-ý-nghĩa) trong `MaterialCatalogStoreAdapter.insertSubcategory` |
-| 2 | `AdminGovernanceIntegrationTest#workflow_multiLuong_anyOf_allOf_vaCacTruongHopBiChan` | `BadSqlGrammarException … INSERT INTO workflow_definitions (id,code,name,description,module_key,project_id,is_default, active,version,sort_order,created_by,created_at,updated_at) VALUES (?,?,?,?,?,?,?,1,1,?,?,?,?)` | `OpsTaskStoreAdapter.java:463-475` vẫn ghi cột `version` (cả `UPDATE … version=version+1` lẫn INSERT) sau khi `V19__drop_workflow_definitions_version.sql:4` xoá cột. MySQL thật: `ERROR 1054 Unknown column 'version'` ⇒ **lỗi production thật**, không chỉ H2 | Bỏ `version` khỏi INSERT và bỏ `version=version+1` khỏi UPDATE (giống việc `49da107` đã làm cho các câu SELECT) |
-| 3 | `RequestApprovalIntegrationTest#requestFlow_createAndApprove` | `AssertionError: Status expected:<200> but was:<400>` — `{"error":"Hồ sơ chưa đến bước duyệt này hoặc đã được xử lý."}` | `RequestManagementUseCase.java:222-232` + `:352-372` (commit `42f91be`): bước mà **người lập phiếu** khớp vai trò duyệt bị **bỏ qua**. Test seed bước 1 với `allowed_role_codes='engineer,commander,admin'` và admin vừa là người tạo ⇒ bước 1 bị bỏ qua, `approval_stage` = 2 ⇒ `decide_approval stage=1` chạm `:607-608` ⇒ 400 | Cần quyết định sản phẩm: hoặc (a) cập nhật **seed của test** để người duyệt bước 1 KHÁC người tạo, hoặc (b) giới hạn luật "người tạo không tự duyệt" cho luồng mặc định |
-| 4 | `RequestApprovalIntegrationTest#requestFlow_rejectReturnsToRequester` | `JSON path "$.error" expected:<Bắt buộc nhập lý do trả lại / từ chối hồ sơ.> but was:<Hồ sơ chưa đến bước duyệt này hoặc đã được xử lý.>` | **cùng gốc #3** (chặn sớm hơn ở `:607-608` nên không tới được kiểm tra "thiếu lý do" ở `:713-714`) | như #3 |
-| 5 | `StockChainIntegrationTest#stockChain_transferReturnStocktakeReconcile` | `AssertionError: Response status expected:<200> but was:<400>` (body `Hồ sơ chưa đến bước duyệt này hoặc đã được xử lý.`) | **cùng gốc #3** (`StockChainIntegrationTest.java:80-101`) | như #3 |
-| 6 | `SupplyChainEndToEndIntegrationTest#fullSupplyChain` | `AssertionError: Response status expected:<200> but was:<400>` (body `Hồ sơ chưa đến bước duyệt này hoặc đã được xử lý.`) | **cùng gốc #3** (`SupplyChainEndToEndIntegrationTest.java:89-123`) | như #3 |
-| 7 | `SystemControllerAuthTest#unknownAction_returns400_notImplementedContract` | `AssertionError: Status expected:<400> but was:<401>` | `SystemController.java:205-208`: cổng RBAC chạy **TRƯỚC** `switch`, mọi action không công khai đều cần phiên ⇒ khách ẩn danh nhận 401 trước khi tới nhánh `default` trả 400 (`:1196-1199`). Test (`:136-143`) gửi request **không cookie** | Quyết định hợp đồng: hoặc (a) test phải đăng nhập trước khi gọi action lạ (giữ 401 cho ẩn danh — an toàn hơn), hoặc (b) cho action lạ đi qua cổng RBAC để trả 400 |
-
----
-
-## 6. Lệnh đã chạy (nguyên văn, đúng toolchain đã chỉ định)
+## 7. Lệnh đã chạy (đúng toolchain đã chỉ định)
 
 ```powershell
 $jdk = "C:\Users\PC\.jdks\openjdk-26.0.2.1"
 $mvnBin = "C:\Users\PC\.m2\wrapper\dists\apache-maven-3.9.16-bin\5grr65jo27hi51sujmtcldfovl\apache-maven-3.9.16\bin"
 $env:JAVA_HOME = $jdk; $env:Path = "$jdk\bin;$mvnBin;$env:Path"; cd java-backend
 
-# TRƯỚC (HEAD c968988): Tests run: 29, Failures: 3, Errors: 8
-& (Join-Path $mvnBin 'mvn.cmd') -B -pl web -am test
+& (Join-Path $mvnBin 'mvn.cmd') -B -pl web -am test        # TRƯỚC: 29/3/8 FAILURE → giữa: 29/6/1 → CUỐI: 29/0/0 SUCCESS
+& (Join-Path $mvnBin 'mvn.cmd') -B -pl application -am test # Domain 19/0/0 + Application 16/0/0 SUCCESS
+& (Join-Path $mvnBin 'mvn.cmd') -B -pl domain -am test      # 19/0/0 SUCCESS
 
-# SAU khi vá 3 gốc lược đồ + tệp test: Tests run: 29, Failures: 6, Errors: 2  (Errors 8 -> 2)
-& (Join-Path $mvnBin 'mvn.cmd') -B -pl web -am test
-
-# Thí nghiệm cô lập cho ca AdminCatalog (đọc đúng câu SQL gây 409)
+# Cô lập 1 ca + đọc SQL gây lỗi:
 & (Join-Path $mvnBin 'mvn.cmd') -B -pl web -am test "-Dtest=AdminCatalogChainIntegrationTest" "-Dsurefire.failIfNoSpecifiedTests=false" "-Dlogging.level.org.springframework.jdbc=DEBUG"
 
-# Thí nghiệm cô lập cho ca fullAuthFlow (chứng minh ALTER cho `users` bị Hibernate xoá)
-& (Join-Path $mvnBin 'mvn.cmd') -B -pl web -am test "-Dtest=SystemControllerAuthTest" "-Dsurefire.failIfNoSpecifiedTests=false"
-
-# SAU khi đổi ddl-auto=none (ĐO CUỐI): Tests run: 29, Failures: 6, Errors: 1
-& (Join-Path $mvnBin 'mvn.cmd') -B -pl web -am test
-& (Join-Path $mvnBin 'mvn.cmd') -B -pl application -am test   # BUILD SUCCESS
-& (Join-Path $mvnBin 'mvn.cmd') -B -pl domain -am test        # BUILD SUCCESS
+# Sinh lại schema H2 (kiểm chứng nhánh giữ khối thủ công + DROP COLUMN) — sau đó ĐÃ KHÔI PHỤC bản bàn tay:
+node java-backend/tools/generate-h2-test-schema.mjs
 ```
 
-**Probe H2 độc lập (không sửa repo, chạy ngoài `java-backend`)** — dùng để lấy **lỗi nguyên văn** của ca AdminCatalog
-(`schema-h2.sql` **chạy sạch 167/167 câu lệnh**, tức bản thân lược đồ không còn lỗi cú pháp):
-
-```powershell
-# C:\Users\PC\AppData\Local\Temp\h2probe\H2Probe.java
-& "$jdk\bin\java.exe" -cp "$env:USERPROFILE\.m2\repository\com\h2database\h2\2.3.232\h2-2.3.232.jar" `
-  H2Probe.java "...\java-backend\web\src\test\resources\schema-h2.sql"
-# -> schema statements ok=167 failed=0
-# -> INSERT material_subcategories FAILED -> JdbcSQLIntegrityConstraintViolationException:
-#    NULL not allowed for column "review_status" … [23502-232]
-```
-
-**MySQL thật (chỉ ĐỌC):** `information_schema.COLUMNS` cho 3 bảng + `SELECT @@sql_mode;` + `SELECT version FROM workflow_definitions LIMIT 1;`
-(câu cuối trả `ERROR 1054 (42S22)`, xác nhận cột đã bị xoá ở MySQL).
+**Probe H2 độc lập** (không sửa repo; `schema-h2.sql` chạy **sạch 167/167** câu lệnh — bản thân lược đồ không còn lỗi cú pháp):
+`C:\Users\PC\AppData\Local\Temp\h2probe\H2Probe.java` với `h2-2.3.232.jar`
+→ `INSERT material_subcategories FAILED -> … NULL not allowed for column "review_status" [23502-232]`.
 
 ---
 
-## 7. Tệp đã sửa & commit
+## 8. Tệp đã sửa & commit
 
-| Tệp | Loại | Ghi chú |
+| Tệp | Loại | Nội dung |
 |---|---|---|
-| `java-backend/web/src/test/resources/schema-h2.sql` | sửa | +10 dòng (khối chú thích 2277-2284 + 2 ALTER 2285-2286) |
-| `java-backend/web/src/test/resources/application-test.yml` | sửa | `ddl-auto: none` + chú thích; BOM đầu tệp bị mất |
-| `java-backend/web/src/test/java/com/vntech/erp/web/controller/AdminGovernanceIntegrationTest.java` | sửa | 1 dòng: bỏ giá trị thừa trong `VALUES` |
+| `java-backend/web/src/test/resources/schema-h2.sql` | sửa | +2 ALTER (`stage_kind`, `result`) + mốc `[H2-MANUAL-START/END]` |
+| `java-backend/web/src/test/resources/application-test.yml` | sửa | `ddl-auto: none` + chú thích (BOM đầu tệp bị mất) |
+| `java-backend/web/src/test/java/…/AdminGovernanceIntegrationTest.java` | sửa | bỏ 1 giá trị thừa trong INSERT `workflow_definitions` |
+| `java-backend/web/src/test/java/…/TestActors.java` | **mới** | fixture người lập phiếu khác người duyệt + đăng nhập |
+| `java-backend/web/src/test/java/…/RequestApprovalIntegrationTest.java` | sửa | người lập phiếu `kh.nv01` + khẳng định luật `creator_role_waived` |
+| `java-backend/web/src/test/java/…/StockChainIntegrationTest.java` | sửa | người lập phiếu `kh.nv.stk` |
+| `java-backend/web/src/test/java/…/SupplyChainEndToEndIntegrationTest.java` | sửa | người lập phiếu `kh.nv.e2e` |
+| `java-backend/web/src/test/java/…/SystemControllerAuthTest.java` | sửa | `unknownAction` setup trước ⇒ 400 |
+| `java-backend/web/src/test/java/…/AdminCatalogChainIntegrationTest.java` | sửa | seed `role_catalog` (engineer/admin) |
+| `java-backend/infrastructure/…/MaterialCatalogStoreAdapter.java` | sửa (src/main — captain cho phép) | (a) bỏ `review_status` khi `null` |
+| `java-backend/infrastructure/…/OpsTaskStoreAdapter.java` | sửa (src/main — captain cho phép) | (b) bỏ `version` khỏi INSERT/UPDATE |
+| `java-backend/tools/generate-h2-test-schema.mjs` | sửa | giữ khối thủ công + tôn trọng `DROP COLUMN` |
 | `docs/agent-progress/TASK-115.md` | mới | tệp này |
 
-**Commit:** xem `git log --oneline -2` (2 commit ASCII, xem mục cuối tệp này khi cần).
-Không `git add -A`; **không** chạm `src/main/**`, `app/**`, `lib/**`, `scripts/**`, `drizzle/**`;
-2 tệp `tests/p2-25-*.test.mjs` giữ nguyên **untracked**.
+Commit: xem `git log --oneline -6` (commit ASCII, nhỏ, tách theo việc). **Không** `git add -A`; **không** push;
+2 tệp `tests/p2-25-*.test.mjs` giữ nguyên **untracked**; **không** chạm `app/**`, `lib/**`, `scripts/**`, `drizzle/**`.
 
 ---
 
-## 8. Điều KHÔNG khẳng định (giới hạn của lượt đo này)
+## 9. Điều KHÔNG khẳng định (giới hạn của lượt đo này)
 
-- **KHÔNG** khẳng định cổng `mvn -pl web -am test` đã xanh: sau lượt này vẫn `29/6/1` (7 ca đỏ ở §5).
-- **KHÔNG** khẳng định luật "người tạo không tự duyệt" (`42f91be`) là sai — đó là **quyết định sản phẩm**;
-  lượt này chỉ chứng minh nó là **nguyên nhân** của 4 ca đỏ #3-#6.
-- **KHÔNG** khẳng định ca #1 (`review_status`) và ca #2 (`version`) chỉ ảnh hưởng test: cả hai đều **đã đối chiếu
-  MySQL thật** và đều là **lỗi production** (NULL vào cột NOT NULL; ghi cột đã bị xoá).
-- **KHÔNG** chạy `package`, **KHÔNG** start/stop dịch vụ (`8787` · `9000` · `18081`), **KHÔNG** ghi vào MySQL thật.
-- **CHƯA** kiểm chứng nhánh (a)/(b) của mục #3-#6 và #7 — cần quyết định của người dùng/captain.
+- **KHÔNG** khẳng định (a) đã được chứng minh **bằng cách chạy INSERT thật trên MySQL**: ràng buộc «chỉ đọc»
+  nên chỉ dùng `PREPARE` (hợp lệ hoá câu lệnh) + `information_schema` (NOT NULL/DEFAULT) + probe H2. Muốn chứng minh
+  bằng thi hành thì phải chạy INSERT rồi `ROLLBACK` trên MySQL thật — **chưa làm**.
+- **KHÔNG** khẳng định hành vi auto-hoàn-tất luồng khi **mọi** bước đều bị miễn (`allAutoComplete`) là đúng thiết kế —
+  lượt này chỉ ghi nhận nó tồn tại (`RequestManagementUseCase:222-232`) và ca khẳng định luật không phụ thuộc vào nó.
+- **KHÔNG** kết luận về môi trường MySQL/production: chỉ ĐỌC `information_schema` + `PREPARE`; **không** ghi dữ liệu,
+  **không** chạy `mvn package`, **không** start/stop dịch vụ (`8787` · `9000` · `18081`).
+- **CHƯA** xử lý: `MaterialCatalogManagementUseCase.java:582` vẫn **hard-code `"approved"`** cho luồng NHẬP danh mục
+  (từ bản vá Q3 18/09/2026). Giá trị lưu **trùng** DEFAULT nên không sai kết quả, nhưng vẫn là nguồn sự thật thứ hai —
+  nếu muốn dọn tiếp thì truyền `null` để CSDL quyết định (việc nhỏ, cần chạy lại cổng).
