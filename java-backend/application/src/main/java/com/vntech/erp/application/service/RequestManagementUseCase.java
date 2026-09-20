@@ -507,8 +507,11 @@ public final class RequestManagementUseCase {
             break;
         }
         if (currentStage == 0) currentStage = ((Number) gi(stages.get(stages.size() - 1), "stageNo")).intValue();
+        // Bước khởi động lại đã chốt ⇒ chốt thành biến `final` để lambda bên dưới bắt giữ được
+        // (`currentStage` bị gán lại trong vòng lặp nên KHÔNG effectively final).
+        final int restartStage = currentStage;
         Map<String, Object> currentConfig = stages.stream()
-                .filter(s -> ((Number) gi(s, "stageNo")).intValue() == currentStage).findFirst().orElse(firstStage);
+                .filter(s -> ((Number) gi(s, "stageNo")).intValue() == restartStage).findFirst().orElse(firstStage);
         String comment = "CHT GỬI LẠI: " + blankDefault(trim(payload.get("comment")),
                 "Đã sửa phiếu; CHT xác nhận lại và khởi động lại luồng duyệt từ đầu.");
         store.resubmitRequest(requestId, stages, sv(firstStage, "stageNo"), autoFirst, currentStage,
