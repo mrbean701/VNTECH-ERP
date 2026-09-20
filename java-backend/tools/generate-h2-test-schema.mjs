@@ -60,6 +60,7 @@ const migrationDir = join(repoRoot, "java-backend", "infrastructure", "src", "ma
 const incremental = [];
 const alters = [];
 const renames = [];
+const drops = [];
 for (const name of readdirSync(migrationDir).filter((n) => /^V\d+__.+\.sql$/.test(n) && !/^V1__/.test(n)).sort()) {
   const text = readFileSync(join(migrationDir, name), "utf8");
   for (const m of text.matchAll(/CREATE TABLE IF NOT EXISTS `[^`]+` \([\s\S]*?\n\)[^;]*;/g)) {
@@ -75,6 +76,13 @@ for (const name of readdirSync(migrationDir).filter((n) => /^V\d+__.+\.sql$/.tes
   // mà ghi nhận để đổi tên NGAY TRONG câu CREATE TABLE bên dưới.
   for (const m of text.matchAll(/ALTER TABLE `([^`]+)`\s+CHANGE COLUMN `([^`]+)`\s+`([^`]+)`/g)) {
     renames.push({ table: m[1], from: m[2], to: m[3] });
+  }
+  // [TASK-115] Cột bị XOÁ bằng migration (vd V19: workflow_definitions.version — PHASE 8 · WF-03).
+  // VÌ SAO CẦN: generator dựng `workflow_definitions` từ V8 (có `version`) và KHÔNG hề biết V19 đã DROP,
+  // nên sinh lại tệp sẽ **đưa cột `version` trở lại** — trong khi MySQL thật đã bị xoá và mã Java (đã sửa)
+  // không còn ghi cột này. Ghi nhận để xoá đúng DÒNG khai báo cột trong CREATE TABLE bên dưới.
+  for (const m of text.matchAll(/ALTER TABLE `([^`]+)`\s+DROP COLUMN `([^`]+)`/g)) {
+    drops.push({ table: m[1], column: m[2] });
   }
 }
 if (incremental.length || alters.length) {
@@ -99,6 +107,56 @@ for (const r of renames) {
   } else {
     console.warn(`⚠️ Không tìm thấy CREATE TABLE cho ${r.table} để đổi tên ${r.from} → ${r.to}`);
   }
+}
+
+// [TASK-115] Áp dụng XOÁ CỘT vào đúng câu CREATE TABLE của bảng đó (H2 không chạy Flyway).
+// Chỉ bỏ DÒNG khai báo cột — KHÔNG đụng tên cột xuất hiện trong khoá/UNIQUE/index.
+for (const d of drops) {
+  const block = new RegExp("(CREATE TABLE IF NOT EXISTS `" + d.table + "` \\([\\s\\S]*?\\n\\) ;)");
+  const found = out.match(block);
+  if (!found) {
+    console.warn(`⚠️ Không tìm thấy CREATE TABLE cho ${d.table} để xoá cột ${d.column}`);
+    continue;
+  }
+  const before = found[1];
+  const after = before
+    .split("\n")
+    .filter((line) => !new RegExp("^\\s*`" + d.column + "`\\s").test(line))
+    .join("\n");
+  if (after !== before) {
+    out = out.replace(before, after);
+    console.log(`Xoá cột H2: ${d.table}.${d.column} (theo migration DROP COLUMN)`);
+  } else {
+    console.warn(`⚠️ Không tìm thấy dòng cột ${d.table}.${d.column} để xoá (có thể đã bị đổi tên)`);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// [TASK-115] GIỮ LẠI KHỐI THỦ CÔNG của schema-h2.sql.
+// VÌ SAO: vài cột do migration tạo bằng DDL ĐỘNG — `SET @ddl := IF(cond,'ALTER TABLE ... ADD COLUMN ...');
+// PREPARE ...; EXECUTE ...` — nằm TRONG CHUỖI nên regex ALTER literal ở trên KHÔNG bắt được:
+//   • V21__p2_pr_approval_dynamic_default.sql -> approval_stage_catalog.stage_kind
+//   • V22__ad14_audit_log_result.sql          -> audit_logs.result
+// Chạy lại generator mà không giữ khối này sẽ XOÁ 2 cột ⇒ cổng `mvn -pl web -am test` đỏ trở lại
+// (RequestStoreAdapter/BootstrapDataAdapter dùng `stage_kind`, AuditLogAdapter ghi `result`).
+// QUY ƯỚC: mọi thứ giữa `-- [H2-MANUAL-START]` và `-- [H2-MANUAL-END]` trong schema-h2.sql hiện có
+// được CHÉP LẠI nguyên văn vào bản mới.
+// ---------------------------------------------------------------------------
+const MANUAL_START = "-- [H2-MANUAL-START]";
+const MANUAL_END = "-- [H2-MANUAL-END]";
+let manualBlock = "";
+try {
+  const previous = readFileSync(outPath, "utf8");
+  const from = previous.indexOf(MANUAL_START);
+  const to = previous.indexOf(MANUAL_END);
+  if (from >= 0 && to > from) manualBlock = previous.slice(from, to + MANUAL_END.length);
+} catch {
+  // Lần sinh đầu tiên: chưa có tệp để giữ khối thủ công.
+}
+if (manualBlock) {
+  out += "\n\n-- Khối THỦ CÔNG giữ nguyên văn (cột sinh bởi migration DDL ĐỘNG — xem [TASK-115]).\n"
+    + manualBlock + "\n";
+  console.log("Giữ khối thủ công [H2-MANUAL-START..END]:", manualBlock.split("\n").length, "dòng");
 }
 
 mkdirSync(dirname(outPath), { recursive: true });

@@ -2282,5 +2282,8 @@ ALTER TABLE `user_project_scopes` ADD COLUMN IF NOT EXISTS `position_name` varch
 -- Kiểu + DEFAULT lấy ĐÚNG theo MySQL thật (lệnh information_schema ngày 22/09/2026).
 -- Hệ quả nếu thiếu: RequestStoreAdapter/BootstrapDataAdapter dùng `stage_kind` và đường ghi
 -- nhật ký dùng `result` đều ném BadSqlGrammarException -> cổng `mvn -pl web -am test` đỏ.
+-- KHỐI THỦ CÔNG: generator CHÉP LẠI nguyên văn mọi thứ giữa 2 mốc dưới đây.
+-- [H2-MANUAL-START]
 ALTER TABLE `approval_stage_catalog` ADD COLUMN IF NOT EXISTS `stage_kind` varchar(16) NOT NULL DEFAULT 'approval';
 ALTER TABLE `audit_logs` ADD COLUMN IF NOT EXISTS `result` varchar(32) NOT NULL DEFAULT 'ok';
+-- [H2-MANUAL-END]
