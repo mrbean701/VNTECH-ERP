@@ -221,10 +221,35 @@ giữ in số NULL riêng · chứng minh 335 → 113 **trước khi seed**.
 | 2 | **`8b8c8ff`** | `[PHASE 2 - SEED]` `tools/seed-p2-test-data.mjs` — 81 dòng INSERT + ca 1 PR→2 PO |
 | 3 | **`db0524c`** | `[PHASE 2 - DOCS]` hồ sơ TASK-108 (bản đầu, lúc mục 5 còn BLOCKED) |
 | 4 | **`70888d1`** | `[PHASE 2 - FIX]` `tools/fix-p2-test-data.mjs` — 18 dòng UPDATE, gỡ BLOCKED |
-| 5 | **`801e49a`** | `[PHASE 2 - DOCS]` cập nhật TASK-108: cả 3 cổng ĐẠT + nhật ký UPDATE |
+| 5 | **`b436800`** | `[PHASE 2 - DOCS]` cập nhật TASK-108: cả 3 cổng ĐẠT + nhật ký UPDATE |
 
 Nhánh `unity`. Không `git add -A`, không push. (Commit `89e75f5` nằm giữa #3 và #4 là của **phiên khác** —
 TASK-109 + 1 tệp Java, không đụng tệp nào của đợt này.)
+
+> Hash của tệp hồ sơ này **đổi mỗi lần `git commit --amend`**; các hash ở bảng trên là của commit **đã chốt**.
+> Tra nhanh: `git log --oneline -1 -- tools/seed-p2-test-data.mjs` (và tương tự cho từng tệp).
+
+---
+
+## 8. KIỂM CHỨNG CUỐI — CHẠY LẠI TOÀN BỘ SAU KHI MÃ ĐÃ CHỐT
+
+Chạy trên đúng revision hiện tại (HEAD `b436800`, cây làm việc không còn thay đổi nào của đợt này):
+
+| Phép kiểm | Lệnh | Kết quả |
+|---|---|---|
+| Kiểu | `npx tsc --noEmit` | **exit 0 · 0 lỗi** |
+| Lint | `npm run lint` | **exit 0 · 0 error** (186 warning có sẵn từ trước) |
+| Hồi quy | `npm run test:regression` | **exit 0 · 69 tests / 69 pass / 0 fail / 0 cancelled** |
+| Luồng nghiệp vụ | `npm run test:workflow` | **exit 0 · "FULL W2 passed"** |
+| Test cổng đo | `node --import tsx --test tests/p2-gates-tools.test.mjs` | **exit 0 · 13 tests / 13 pass / 0 fail** |
+| Màn dự án | `node tools/probe-project-screen.mjs` | **KẾT LUẬN: ĐẠT ✅** |
+| Menu công việc | `node --import tsx tests/t01-work-menu-probe.mjs` | **7 ĐẠT · 0 HỎNG** |
+| Cổng trace | `node tools/p2-trace-audit.mjs` | **exit 0 · ĐẠT 5/5 chặng** |
+| Cổng split | `node tools/p2-split-po-audit.mjs` | **exit 0 · ĐẠT** |
+| Cổng integrity | `node tools/p2-reference-integrity.mjs` | **exit 0 · ĐẠT 15/15 cặp** |
+
+Ghi chú: các commit sau lần chạy này (nếu có) chỉ sửa **tài liệu** (`docs/**`) — phần mã đã kiểm ở trên
+(`tools/**`, `tests/p2-gates-tools.test.mjs`) không đổi.
 
 ### Cách tái lập / kiểm chứng
 
