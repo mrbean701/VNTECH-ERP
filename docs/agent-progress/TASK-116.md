@@ -109,6 +109,24 @@ nhóm `mep` trong `module_catalog` (**8 dòng**, `active=1`) — **KHÔNG** đ�
 **HỎNG sẵn** với `ERR_MODULE_NOT_FOUND: app/api/system/route` — **không phải hồi quy của lượt này**
 (tệp không đọc roadmap/F-03/F-04/F-05; đã kiểm `git status` = `??`). Không sửa, không commit.
 
+### 4.1. CHẠY LẠI TOÀN BỘ CỔNG SAU THAY ĐỔI CUỐI (HEAD `bff5972`, cây đã commit — không còn thay đổi chưa commit)
+
+| Cổng | Kết quả CHẠY LẠI |
+|---|---|
+| `npx tsc --noEmit` | **TSC_EXIT=0** |
+| `npm run lint` | **186 problems (0 errors, 186 warnings)** · `LINT_EXIT=0` — đúng nền cũ |
+| `node --test tests/f03-… + tests/f04-f05-… + tests/p2-25-roadmap-status-cell` | **24 tests · 24 pass · 0 fail** |
+| `npm run test:regression` | **69 tests · 69 pass · 0 fail** · `REG_EXIT=0` |
+| `npm run test:workflow` | **«Workflow VNTECH ERP V5.3.0 FULL W2 passed»** · `WF_EXIT=0` |
+| `node --import tsx tests/t01-work-menu-probe.mjs` | **7 ĐẠT · 0 HỎNG** · `T01_EXIT=0` |
+| `node tools/probe-project-screen.mjs` | **KẾT LUẬN: ĐẠT** · `PRJ_EXIT=0` |
+| `node tools/p2-trace-audit.mjs` | **EXIT=0** (5/5 chặng, 0 mồ côi) |
+| `node tools/p2-split-po-audit.mjs` | **EXIT=0** (không vượt số lượng, rollup khớp) |
+| `node tools/p2-reference-integrity.mjs` | **EXIT=0** (15/15 cặp, 0 mồ côi) |
+| `node scripts/phase10-architecture-gate.mjs` | **ĐẠT — 0 cổng hỏng · 0 cảnh báo DRIFT số dòng** · `GATE_EXIT=0` |
+
+⇒ **Không có lần chạy nào sau thay đổi mà thiếu kết quả**: lần chạy lại này diễn ra trên **đúng cây đã commit cuối** (`bff5972`), sau khi đã gỡ 1 warning lint do cổng mới sinh ra.
+
 ### `tools/probe-roadmap-progress.mjs` — TRƯỚC / SAU
 
 ```text
