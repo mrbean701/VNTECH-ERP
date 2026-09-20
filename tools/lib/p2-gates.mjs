@@ -61,6 +61,28 @@ export function doQuanHe(d) {
 }
 
 /**
+ * Quyết định số dòng MỒ CÔI của một cặp cột quan hệ — TÁCH RIÊNG khỏi I/O để test được offline.
+ *
+ * `choNull` = cột có ĐƯỢC PHÉP NULL theo quy ước nghiệp vụ hay không:
+ *   · choNull = true  ⇒ NULL là "chưa tới bước đó" (vd `supply_workflow_steps.receipt_id` khi chưa giao
+ *                       hàng) ⇒ NULL KHÔNG tính mồ côi; CHỈ tham chiếu TREO mới tính.
+ *   · choNull = false ⇒ NULL là dữ liệu thiếu ⇒ TÍNH là mồ côi (cùng với tham chiếu treo).
+ *
+ * VÌ SAO CẦN HÀM RIÊNG NÀY: cổng `tools/p2-reference-integrity.mjs` từng gán NGƯỢC so với chính tài liệu
+ * của nó (`rong = choNull ? <đếm NULL> : 0`) nên đếm 222 dòng NULL HỢP LỆ thành mồ côi, khiến cổng không
+ * thể về 0 trên dữ liệu thật. Ghi nhận đầy đủ ở `docs/agent-progress/TASK-108.md`.
+ *
+ * @param {{choNull:boolean, tong:number, soNull:number, treo:number}} d
+ * @returns {{tong:number, rong:number, treo:number, moCoi:number, truyDuoc:number, dat:boolean, rongBang:boolean, rongNull:number}}
+ *          Kết quả đo kèm `rongNull` = SỐ NULL RIÊNG, để cổng vẫn IN RA được mà không tính vào mồ côi.
+ */
+export function mucDoMoCoi({ choNull, tong, soNull, treo }) {
+  const rongNull = Number(soNull || 0);
+  const rong = choNull ? 0 : rongNull;
+  return { ...doQuanHe({ tong, rong, treo }), rongNull };
+}
+
+/**
  * Đếm số `request_id` được tham chiếu bởi ≥ 2 PO (đo năng lực "1 PR → N PO" TRÊN DỮ LIỆU THẬT).
  * @param {Array<{request_id:string, n:number}>} rows — đầu ra GROUP BY request_id.
  */

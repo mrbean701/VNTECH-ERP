@@ -15,11 +15,19 @@
 // NGƯỠNG (in nguyên văn khi chạy — không giấu ngưỡng):
 //   [BẮT BUỘC = 0] Số DÒNG có giá trị trỏ tới bản ghi KHÔNG tồn tại, cho TỪNG cặp cột quan hệ.
 //                  Vì CSDL không có FK, con số này KHÔNG BAO GIỜ tự về 0 — nó phải do mã ứng dụng/cổng giữ.
+//   [NGỮ NGHĨA NULL] Cột CÓ được phép NULL theo quy ước nghiệp vụ (vd `supply_workflow_steps.receipt_id`
+//                  khi chưa giao hàng) thì NULL là "chưa tới bước đó" ⇒ KHÔNG tính mồ côi; cột KHÔNG được
+//                  phép NULL thì NULL là dữ liệu thiếu ⇒ TÍNH mồ côi. Số NULL luôn được IN RIÊNG ở cột
+//                  "NULL (hợp lệ)" để không giấu thông tin. Quyết định nằm ở hàm thuần `mucDoMoCoi`
+//                  (tools/lib/p2-gates.mjs) và có test offline ở tests/p2-gates-tools.test.mjs.
+//                  ⚠ SỬA TẠI TASK-108: trước đây tệp này gán NGƯỢC (`rong = choNull ? <đếm NULL> : 0`)
+//                  nên coi 222 dòng NULL hợp lệ là mồ côi ⇒ cổng không thể về 0. Sửa xong, đo lại TRƯỚC khi
+//                  seed dữ liệu cho kết quả 113 dòng mồ côi (toàn bộ là tham chiếu TREO) thay vì 335.
 //   [ĐO]           Số quan hệ chỉ dựa vào QUY ƯỚC (= số cột `*_id` khi tổng FK = 0).
 //   exit 0 = không cặp nào có dòng mồ côi · exit 1 = có ít nhất 1 cặp mồ côi · exit 2 = KHÔNG kết nối được MySQL
 
 import { execFileSync } from "node:child_process";
-import { theThamChieu, ketLuan, dem, rongCot, bang } from "./lib/p2-gates.mjs";
+import { theThamChieu, mucDoMoCoi, ketLuan, dem, rongCot, bang } from "./lib/p2-gates.mjs";
 
 const MYSQL = process.env.MYSQL_BIN || "C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysql.exe";
 const DB = process.env.MYSQL_DB || "vntech_erp";
@@ -114,13 +122,19 @@ function main() {
       continue;
     }
     const tong = Number(one(`SELECT COUNT(*) FROM ${q.bang}`));
-    const rong = q.choNull ? Number(one(`SELECT COUNT(*) FROM ${q.bang} WHERE ${q.cot} IS NULL OR ${q.cot}=''`)) : 0;
+    // Số NULL LUÔN được đếm để IN RA (không giấu thông tin), nhưng chỉ tính là MỒ CÔI khi cột KHÔNG được
+    // phép NULL. Quyết định đó nằm ở hàm thuần `mucDoMoCoi` (test offline ở tests/p2-gates-tools.test.mjs)
+    // thay vì một phép gán tại chỗ — trước đây phép gán đó NGƯỢC với tài liệu nên đếm NULL hợp lệ thành
+    // mồ côi. Sửa tại TASK-108: SỐ NULL giữ riêng ở `rongNull`, `rong` chỉ còn là phần NULL ĐÁNG tính mồ côi.
+    const soNull = Number(one(`SELECT COUNT(*) FROM ${q.bang} WHERE ${q.cot} IS NULL OR ${q.cot}=''`));
     const treo = Number(
       one(
         `SELECT COUNT(*) FROM ${q.bang} t LEFT JOIN ${q.dichBang} d ON d.${q.dichCot}=t.${q.cot} ` +
           `WHERE t.${q.cot} IS NOT NULL AND t.${q.cot}<>'' AND d.${q.dichCot} IS NULL`
       )
     );
+    const kqCap = mucDoMoCoi({ choNull: q.choNull, tong, soNull, treo });
+    const rong = kqCap.rong;
     // Ví dụ phải phân biệt 2 loại mồ côi: NULL/rỗng (không khai quan hệ) vs trỏ vào bản ghi không tồn tại.
     let viDu = [];
     if (rong > 0) viDu.push("<NULL/rỗng>");
@@ -132,7 +146,12 @@ function main() {
         ).map((r) => r[0])
       );
     }
-    ketQua.push({ ...theThamChieu({ ...q, tong, rong, treo, viDu }), nhan: q.nhan, choNull: q.choNull });
+    ketQua.push({
+      ...theThamChieu({ ...q, tong, rong, treo, viDu }),
+      rongNull: kqCap.rongNull,
+      nhan: q.nhan,
+      choNull: q.choNull,
+    });
   }
 
   const cotBang = [
@@ -152,7 +171,7 @@ function main() {
         r.quanHe,
         r.nhan,
         r.tong,
-        r.choNull ? r.rong : "—",
+        r.choNull ? r.rongNull : "—",
         r.moCoi,
         r.tong === 0 ? "n/a" : `${((r.moCoi / r.tong) * 100).toFixed(1)}%`,
         r.viDu.length ? r.viDu.join(", ").slice(0, 44) : (r.moCoi === 0 ? "—" : "(không lấy được)"),
@@ -183,10 +202,13 @@ function main() {
     if (!coBang(q.bang) || !coBang(q.dichBang) || !coCot(q.bang, q.cot) || !coCot(q.dichBang, q.dichCot)) continue;
     const kqJoin = ketQua.find((r) => r.quanHe === `${q.bang}.${q.cot} → ${q.dichBang}.${q.dichCot}`);
     if (!kqJoin) continue;
+    // ⚠ Phải dùng CÙNG ngữ nghĩa về NULL như vế LEFT JOIN: cột cho phép NULL thì NULL KHÔNG tính mồ côi.
+    // (Trước TASK-108, vế này đếm NULL vô điều kiện nên LỆCH với vế LEFT JOIN ngay khi cổng được sửa.)
+    const demNull = q.choNull ? "0=1" : `(t.${q.cot} IS NULL OR t.${q.cot}='')`;
     const theoNotExists = Number(
       one(
-        `SELECT COUNT(*) FROM ${q.bang} t WHERE (t.${q.cot} IS NULL OR t.${q.cot}='') OR NOT EXISTS ` +
-          `(SELECT 1 FROM ${q.dichBang} d WHERE d.${q.dichCot}=t.${q.cot})`
+        `SELECT COUNT(*) FROM ${q.bang} t WHERE ${demNull} OR (t.${q.cot} IS NOT NULL AND t.${q.cot}<>'' AND NOT EXISTS ` +
+          `(SELECT 1 FROM ${q.dichBang} d WHERE d.${q.dichCot}=t.${q.cot}))`
       )
     );
     const khop = theoNotExists === kqJoin.moCoi;

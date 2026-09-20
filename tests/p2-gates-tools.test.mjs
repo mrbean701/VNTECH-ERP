@@ -113,6 +113,21 @@ test("P2-GATES: lechTong — so SUM(poi.ordered_qty) với material_request_item
 // ─────────────────────────────────────────────────────────────────────────────
 // NHÓM 3 — logic toàn vẹn tham chiếu
 // ─────────────────────────────────────────────────────────────────────────────
+test("P2-GATES: mucDoMoCoi — NULL CHỈ là mồ côi khi cột KHÔNG được phép NULL", async () => {
+  const { mucDoMoCoi } = await loadLib();
+  assert.equal(typeof mucDoMoCoi, "function", "thiếu hàm thuần quyết định mồ côi của một cặp cột");
+  // Cột CHO PHÉP NULL theo quy ước nghiệp vụ (vd supply_workflow_steps.receipt_id khi chưa giao hàng):
+  // NULL là "chưa tới bước đó" ⇒ KHÔNG tính mồ côi; chỉ tham chiếu TREO mới là mồ côi.
+  const choPhep = mucDoMoCoi({ choNull: true, tong: 92, soNull: 72, treo: 8 });
+  assert.equal(choPhep.moCoi, 8, "NULL hợp lệ KHÔNG được đếm thành mồ côi (lỗi cũ đếm thành 80)");
+  assert.equal(choPhep.rongNull, 72, "vẫn phải giữ RIÊNG số NULL để in ra, không được giấu");
+  assert.equal(choPhep.dat, false);
+  // Cột KHÔNG cho phép NULL ⇒ NULL là dữ liệu thiếu ⇒ TÍNH là mồ côi.
+  assert.equal(mucDoMoCoi({ choNull: false, tong: 35, soNull: 2, treo: 1 }).moCoi, 3);
+  // Không còn tham chiếu treo ⇒ cặp ĐẠT, dù còn bao nhiêu NULL hợp lệ.
+  assert.equal(mucDoMoCoi({ choNull: true, tong: 92, soNull: 72, treo: 0 }).dat, true);
+});
+
 test("P2-GATES: theThamChieu — gộp số liệu 1 quan hệ thành dòng bảng", async () => {
   const { theThamChieu } = await loadLib();
   const the = theThamChieu({
