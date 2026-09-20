@@ -298,3 +298,32 @@ Commit (ASCII, nhỏ, **không** `git add -A`; 2 tệp `tests/p2-25-*.test.mjs` 
 
 HEAD **trước** lượt B: `7b2e8fb`. **Không** push.
 
+## 15. KIỂM CHỨNG LẠI TRÊN CÂY ĐÃ COMMIT (chống «xanh trên cây đã đổi»)
+
+Sau khi commit xong, **không** sửa thêm dòng mã nào; mọi cổng ở §12 được **chạy lại lần hai** trên cây hiện tại để
+bảo đảm «lần chạy xanh» thuộc **đúng** bản đã commit, không phải một cây trung gian nào khác.
+
+| Phép kiểm | Lệnh | Kết quả |
+|---|---|---|
+| Tệp test có khớp HEAD không? | `git diff --quiet HEAD -- tests/p2-s25-b-6cases.test.mjs` | exit **0** (khớp HEAD, **0** thay đổi chưa commit) |
+| Hash nội dung tệp test | `git rev-parse HEAD:tests/p2-s25-b-6cases.test.mjs` **so với** `git hash-object tests/p2-s25-b-6cases.test.mjs` | **`014b9de3e0488851d41243be1f49dbd4198b0f9d`** — **GIỐNG NHAU** |
+| Tệp nguồn `lib/`·`scripts/`·`app/` bị sửa chưa commit? | `git status --porcelain lib/ scripts/ app/` | chỉ ` M lib/vntech-identity-data.mjs` — **thay đổi CÓ TRƯỚC** của lượt khác, **không** thuộc TASK-112 và **không** được tệp test này import |
+| `tools/lib/p2-gates.mjs` có đổi không? | `git status --porcelain tools/` | **không xuất hiện** ⇒ cổng giữ nguyên ngữ nghĩa |
+
+**Chạy lại lần hai (nguyên văn, trên cây đã commit):**
+
+| Cổng | Kết quả | exit |
+|---|---|---|
+| 6 ca mới (b) | `✔ Case 7 · ✔ Case 8 · ✔ Case 9 · ✔ Case 10 · ✔ Case 11 · ✔ Case 12` ⇒ `ℹ tests 6 · pass 6 · fail 0 · skipped 0 · duration_ms 1464.5015` | **0** |
+| 6 ca cũ (a) | `ℹ tests 6 · pass 6 · fail 0 · skipped 0` | **0** |
+| Regression | `ℹ tests 69 · pass 69 · fail 0 · skipped 0` | **0** |
+| Workflow | `Workflow VNTECH ERP V5.3.0 FULL W2 passed: …` | **0** |
+| Typecheck | `npx tsc --noEmit` → 0 lỗi | **0** |
+| Lint | `✖ 186 problems (0 errors, 186 warnings)` | **0** |
+| `p2-trace-audit` | `KẾT LUẬN: ĐẠT — 5/5 chặng truy vết đầy đủ (0 mồ côi).` | **0** |
+| `p2-split-po-audit` | `KẾT LUẬN: ĐẠT — không có dòng nào đặt vượt số lượng và không lệch tổng rollup.` | **0** |
+| `p2-reference-integrity` | `KẾT LUẬN: ĐẠT — 15/15 cặp quan hệ không có dòng mồ côi.` | **0** |
+| Menu probe | `═══ KẾT QUẢ: 7 ĐẠT · 0 HỎNG ═══` | **0** |
+| Màn dự án probe | `KẾT LUẬN: ĐẠT ✅` | **0** |
+
+
