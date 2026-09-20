@@ -59,6 +59,30 @@ export function receiptsForPurchaseOrder(data: { receipts?: Row[] } | null | und
 }
 
 /**
+ * PO NGUỒN của một chuyến giao (§21 — CHIỀU NGƯỢC của `receiptsForPurchaseOrder`).
+ *
+ * VÌ SAO CẦN: §21 yêu cầu đi được «PO → GRN → PO». Chiều xuôi có ở `PurchaseOrderDrawer`
+ * (`data-vntech="po-grn-open"`), nhưng đứng ở chi tiết phiếu nhập thì KHÔNG quay lại được đơn mua
+ * nguồn ⇒ truy vết đứt tại chính màn người dùng đang xem.
+ *
+ * Khoá nối là cột THẬT `goods_receipts.purchase_order_id` (payload `purchaseOrderId`), tra trong
+ * `data.purchaseOrders` theo `purchase_orders.id` (payload `id`).
+ *
+ * KHÔNG BỊA: GRN không khai PO, khai PO rỗng, hoặc PO khai ra KHÔNG có trong payload (PO mồ côi /
+ * ngoài phạm vi dự án) ⇒ trả `null`. Nơi gọi phải hiện nhánh «chưa có nguồn», KHÔNG ghép bừa sang
+ * một PO khác.
+ */
+export function purchaseOrderForReceipt(
+  data: { purchaseOrders?: Row[] } | null | undefined,
+  receipt: Row | null | undefined
+): Row | null {
+  if (!data || !Array.isArray(data.purchaseOrders) || !receipt) return null;
+  const purchaseOrderId = rowKey(receipt.purchaseOrderId);
+  if (!purchaseOrderId) return null;
+  return data.purchaseOrders.find((po) => rowKey(po?.id) === purchaseOrderId) ?? null;
+}
+
+/**
  * PO mồ côi — `request_id = NULL` ⇒ KHÔNG truy được PR (§21 phần 1).
  * Trả `true` khi trường `requestId` THIẾU hoặc rỗng.
  */
