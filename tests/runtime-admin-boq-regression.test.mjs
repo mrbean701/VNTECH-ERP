@@ -55,11 +55,15 @@ const setup=await post('', 'setup',{companyName:'VNTECH FULL W2 TEST',fullName:'
 assert.equal(setup.status,201,setup.body.error);const adminCookie=setup.headers.get('set-cookie').split(';')[0];
 
 async function ensureWorkflowOwners(projectId){
+  // PHASE 2 (§6 · §23 — chỉ đạo người dùng 21/09/2026): luồng duyệt PR mặc định nay là 4 tác nhân theo đặc tả,
+  // mỗi tác nhân MỘT người duyệt: Thư ký TGĐ (bước 2) → Phòng Dự án (bước 3) → Phòng Kế hoạch (bước 4) →
+  // Giám đốc (bước 5). Vì vậy Owner của bước 4 phải là vai trò `procurement/kh_nv` và bước 5 là `director` —
+  // trước đây (bước 4 = KH tiếp nhận, bước 5 = DA+KH xác nhận cuối) là `da_truong`/`kh_truong`.
   const stageUsers=[
     {stage:2,username:'p02.thuky',employeeCode:'P02-THUKY',fullName:'Thư ký FULL W2',email:'thuky@full-w2.test',role:'thuky'},
     {stage:3,username:'p02.danv',employeeCode:'P02-DANV',fullName:'Nhân viên DA FULL W2',email:'danv@full-w2.test',role:'project'},
-    {stage:4,username:'p02.datruong',employeeCode:'P02-DATR',fullName:'Trưởng phòng DA FULL W2',email:'datruong@full-w2.test',role:'da_truong'},
-    {stage:5,username:'p02.khtruong',employeeCode:'P02-KHTR',fullName:'Trưởng phòng KH FULL W2',email:'khtruong@full-w2.test',role:'kh_truong'},
+    {stage:4,username:'p02.khnv',employeeCode:'P02-KHNV',fullName:'Nhân viên Kế hoạch FULL W2',email:'khnv@full-w2.test',role:'kh_nv'},
+    {stage:5,username:'p02.giamdoc',employeeCode:'P02-GD',fullName:'Giám đốc FULL W2',email:'giamdoc@full-w2.test',role:'director'},
   ];
   const stamp=new Date().toISOString();
   for(const item of stageUsers){

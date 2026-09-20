@@ -58,11 +58,15 @@ const ownerCredentials = new Map<number,{username:string,password:string}>();
 let adminCookie = "";
 async function loginAs(username:string,password:string){ const saved=cookie; cookie=""; const r=await api('login',{username,password}); assert.equal(r.response.status,200,r.result.error); const c=r.response.headers.get('set-cookie')?.split(';')[0]||''; assert(c); cookie=saved; return c; }
 async function configureWorkflowOwners(projectId:string){
+  // PHASE 2 (§6 · §23 — chỉ đạo người dùng 21/09/2026): luồng duyệt PR mặc định là 4 tác nhân theo đặc tả, mỗi
+  // tác nhân MỘT người duyệt: Thư ký Tổng giám đốc (bước 2) → Phòng Dự án (bước 3) → Phòng Kế hoạch (bước 4) →
+  // Giám đốc (bước 5). Bước 1 (CHT tự xác nhận) đã NGỪNG áp dụng: «không tính người tạo đơn» do engine suy từ
+  // DỮ LIỆU vai trò (`lib/p2-approval-flow.mjs`). Vì vậy Owner bước 4 phải là `procurement/kh_nv`, bước 5 `director`.
   const rows=[
     {stage:2,username:'wf.thuky',employeeCode:'WF-THUKY',fullName:'Thư ký Workflow',email:'wf.thuky@test.local',role:'thuky'},
     {stage:3,username:'wf.danv',employeeCode:'WF-DANV',fullName:'Nhân viên DA Workflow',email:'wf.danv@test.local',role:'project'},
-    {stage:4,username:'wf.datruong',employeeCode:'WF-DATR',fullName:'Trưởng DA Workflow',email:'wf.datruong@test.local',role:'da_truong'},
-    {stage:5,username:'wf.khtruong',employeeCode:'WF-KHTR',fullName:'Trưởng KH Workflow',email:'wf.khtruong@test.local',role:'kh_truong'},
+    {stage:4,username:'wf.khnv',employeeCode:'WF-KHNV',fullName:'Nhân viên Kế hoạch Workflow',email:'wf.khnv@test.local',role:'kh_nv'},
+    {stage:5,username:'wf.giamdoc',employeeCode:'WF-GD',fullName:'Giám đốc Workflow',email:'wf.giamdoc@test.local',role:'director'},
   ]; const stamp='2026-08-24T00:00:00.000Z';
   for(const row of rows){ const password='OwnerTest@2026!'; const created=await api('create_user',{employeeCode:row.employeeCode,fullName:row.fullName,username:row.username,email:row.email,role:row.role,password}); assert.equal(created.response.status,200,created.result.error); const u=sqlite.prepare('SELECT id FROM users WHERE username=?').get(row.username) as {id:string}; sqlite.prepare(`INSERT OR IGNORE INTO user_project_scopes(id,user_id,project_id,permission,created_at,updated_at) VALUES (?,?,?,?,?,?)`).run(`UPS-${projectId}-${row.stage}`,u.id,projectId,'approve',stamp,stamp); sqlite.prepare(`INSERT OR REPLACE INTO user_module_permissions(id,user_id,module_key,can_view,can_use,can_create,can_edit,can_approve,can_export,permission_expires_at,permission_source,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(`UMP-APPROVALS-${projectId}-${row.stage}`,u.id,'approvals',1,1,0,0,1,0,null,'manual_override',stamp,stamp); sqlite.prepare(`INSERT OR REPLACE INTO approval_project_assignments(id,project_id,stage,owner_user_id,cc_emails,active,updated_by,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?)`).run(`APOWN-${projectId}-${row.stage}`,projectId,row.stage,u.id,null,1,(sqlite.prepare("SELECT id FROM users WHERE username='admin'").get() as {id:string}).id,stamp,stamp); ownerCredentials.set(row.stage,{username:row.username,password}); }
 }
@@ -137,11 +141,11 @@ const created = await api("create_request", { projectId: project.id, teamId: tea
 assert.equal(created.response.status, 200, created.result.error);
 data = await load(); let request = data.requests[0];
 assert.equal(request.requestNo, "DNMH-DA01-2026-0001");
-assert(request.approvals.find((row: any) => Number(row.stage) === 1).queuedAt);
-assert.equal(request.approvals.find((row: any) => Number(row.stage) === 1).status, "approved");
-assert(request.approvals.find((row: any) => Number(row.stage) === 1).decidedAt);
-assert(request.approvals.find((row: any) => Number(row.stage) === 1).approverName);
-assert.equal(Number(request.approvals.find((row: any) => Number(row.stage) === 1).jointApprovedCount), 1);
+// PHASE 2 (§6 · §23): luồng mặc định 4 tác nhân, KHÔNG còn bước 1 «CHT tự xác nhận» (người tạo không tự duyệt
+// do engine suy từ DỮ LIỆU vai trò). Người lập phiếu ở đây là `admin` (không thuộc vai trò duyệt nào)
+// ⇒ cả 4 bước đều đang chờ, bước chờ đầu tiên là bước 2 (Thư ký Tổng giám đốc).
+assert.equal(request.approvals.length, 4, "Luồng mặc định có ĐÚNG 4 bước duyệt theo đặc tả §6");
+assert.equal(request.approvals.some((row: any) => Number(row.stage) === 1), false, "Bước 1 (CHT tự xác nhận) không còn áp dụng cho phiếu mới");
 assert(request.approvals.find((row: any) => Number(row.stage) === 2).queuedAt);
 assert(request.approvals.find((row: any) => Number(row.stage) === 2).dueAt);
 assert.equal(request.approvals.find((row: any) => Number(row.stage) === 2).status, "pending");
@@ -156,10 +160,10 @@ assert.equal(Number(request.approvalStage), 2);
 await approveConfiguredWorkflow(request.id, "Duyệt kiểm thử");
 data = await load(); request = data.requests.find((row: any) => row.id === request.id); assert.equal(request.status, "approved"); assert.equal(request.supplyStatus, "awaiting_po"); assert.equal(Number(request.items[0].approvedPurchaseQty), 12);
 const automaticPoTask = sqlite.prepare(`SELECT id,status,assigned_to AS assignedTo,assigned_at AS assignedAt,due_at AS dueAt FROM work_items WHERE source_type='MR' AND source_id=? AND work_step='MR_TO_PO'`).get(request.id) as {id:string,status:string,assignedTo:string,assignedAt:string,dueAt:string}|undefined;
-assert(automaticPoTask, "Duyệt đủ 5 bước phải tự tạo nhiệm vụ MR_TO_PO cho Phòng Kế hoạch"); assert.equal(automaticPoTask.status, "NEW"); assert(automaticPoTask.assignedTo); assert(automaticPoTask.assignedAt); assert(automaticPoTask.dueAt);
+assert(automaticPoTask, "Duyệt đủ 4 bước của đặc tả phải tự tạo nhiệm vụ MR_TO_PO cho Phòng Kế hoạch"); assert.equal(automaticPoTask.status, "NEW"); assert(automaticPoTask.assignedTo); assert(automaticPoTask.assignedAt); assert(automaticPoTask.dueAt);
 assert.equal(Number((sqlite.prepare(`SELECT COUNT(*) AS count FROM task_notifications WHERE work_item_id=? AND channel='in_app'`).get(automaticPoTask.id) as {count:number}).count),1,"Nhiệm vụ tự động phải có đúng 1 thông báo in-app cho Owner");
 assert.equal(Number((sqlite.prepare(`SELECT COUNT(*) AS count FROM email_outbox WHERE event='task_assigned' AND subject LIKE '%NV-KH-%'`).get() as {count:number}).count),1,"Nhiệm vụ tự động phải xếp đúng 1 email thông báo cho Owner");
-assert.equal(request.approvals.length, 5);
+assert.equal(request.approvals.length, 4, "Luồng mặc định 4 bước: Thư ký TGĐ → Phòng Dự án → Phòng Kế hoạch → Giám đốc");
 assert(request.approvals.every((row: any) => row.status === "approved"));
 assert.equal(Number(request.approvals.find((row: any) => Number(row.stage) === 5).jointApprovedCount), 1);
 const poQueueStep = request.supplySteps.find((row: any) => row.step === "po_creation");
@@ -388,4 +392,4 @@ cookie="";const lockedLogin=await api("login",{username:"nhanvien.xoa.test",pass
 const neverUsedCreated=await api("create_user",{employeeCode:"NV-XOA-TRONG",fullName:"Nhân viên chưa đăng nhập",username:"nhanvien.chua.dung",email:"nhanvien.chua.dung@example.com",password:"NeverUsed@2026",role:"engineer",department:"Kiểm thử",projectIds:[]});assert.equal(neverUsedCreated.response.status,200,neverUsedCreated.result.error);data=await load();const neverUsed=data.users.find((row:any)=>row.username==="nhanvien.chua.dung");assert(neverUsed);const neverUsedLocked=await api("set_user_status",{userId:neverUsed.id,active:0});assert.equal(neverUsedLocked.response.status,200,neverUsedLocked.result.error);const neverUsedDeleted=await api("delete_user",{userId:neverUsed.id});assert.equal(neverUsedDeleted.response.status,200,neverUsedDeleted.result.error);data=await load();assert(!data.users.some((row:any)=>row.id===neverUsed.id));
 
 setRuntimeEnvForTests(null); sqlite.close();
-console.log("Workflow VNTECH ERP V5.3.0 FULL W2 passed: five-stage approvals/email/SLA → multi-PO/multi-delivery → strict material master → contract stock → inherited/override permissions → configurable groups/roles/UI → user safety.");
+console.log("Workflow VNTECH ERP V5.3.0 FULL W2 passed: four-stage spec approvals/email/SLA → multi-PO/multi-delivery → strict material master → contract stock → inherited/override permissions → configurable groups/roles/UI → user safety.");
