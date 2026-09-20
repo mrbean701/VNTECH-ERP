@@ -193,3 +193,28 @@ Commit: xem `git log --oneline -6` (commit ASCII, nhỏ, tách theo việc). **K
 - **CHƯA** xử lý: `MaterialCatalogManagementUseCase.java:582` vẫn **hard-code `"approved"`** cho luồng NHẬP danh mục
   (từ bản vá Q3 18/09/2026). Giá trị lưu **trùng** DEFAULT nên không sai kết quả, nhưng vẫn là nguồn sự thật thứ hai —
   nếu muốn dọn tiếp thì truyền `null` để CSDL quyết định (việc nhỏ, cần chạy lại cổng).
+
+---
+
+## 10. Xác nhận XANH trên cây ĐÃ ĐÓNG BĂNG (chạy lại sau khi commit)
+
+Yêu cầu "green gate": cổng phải được chạy **SAU** thay đổi cuối cùng. Đã chạy lại trên `HEAD c1cfd4a`,
+working tree **sạch** (không có thay đổi nào trong phạm vi TASK-115):
+
+| Cổng | Kết quả (nguyên văn) | Exit |
+|---|---|---|
+| `mvn -B -pl web -am test` | Domain `19/0/0` · Application `16/0/0` · Infrastructure `10/0/0` · **Web `Tests run: 29, Failures: 0, Errors: 0, Skipped: 0`** · `BUILD SUCCESS` | **0** |
+| `mvn -B -pl application -am test` | `Tests run: 19, Failures: 0, Errors: 0` + `Tests run: 16, Failures: 0, Errors: 0` · `BUILD SUCCESS` | **0** |
+| `mvn -B -pl domain -am test` | `Tests run: 19, Failures: 0, Errors: 0, Skipped: 0` · `BUILD SUCCESS` | **0** |
+
+**Bằng chứng "chạy đúng trên nội dung đã đo"** — hash nội dung `git hash-object` **TRƯỚC** và **SAU** khi chạy là
+**giống nhau từng byte** (không tệp nào bị test ghi đè):
+
+```
+schema-h2.sql                     99b2eb029a48c5d1007e54e68c814dab6bab6924
+application-test.yml              4fa6d682a8791197fa20d6f19655d4df12344392
+MaterialCatalogStoreAdapter.java  b12f30de59a4c3f9799c1b7467c94052465f9de3
+OpsTaskStoreAdapter.java          0d20a00de5613da299c914bbf1578645bb020677
+```
+
+`git status --short -- java-backend docs/agent-progress/TASK-115.md` → **rỗng** (sạch) trước và sau lượt chạy.
