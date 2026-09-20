@@ -2,6 +2,11 @@
 import { VNTECH_IDENTITY } from "./vntech-identity.mjs";
 import { normalizeMaterialText, tokenSimilarity, embedText, scoreMaterialCandidate, materialCandidateGate, MATERIAL_MATCH_THRESHOLDS, MATERIAL_MATCH_WEIGHTS } from "../lib/material-matching-v2.mjs";
 import { verifyLicenseEnvelope } from "../lib/trust/license-verifier.mjs";
+// PHASE 2 (§23) — LUỒNG DUYỆT ĐỘNG: bước duyệt KHÔNG được khai bằng literal trong tệp này. Mọi thứ (số bước,
+// thứ tự, tên, vai trò, SLA, cách xác nhận) đọc từ `approval_stage_catalog`; hàm thuần dùng chung suy luồng và
+// loại NGƯỜI LẬP PHIẾU khỏi chuỗi duyệt (chỉ đạo người dùng 21/09/2026: «mỗi tác nhân = 1 người duyệt, không
+// tính người tạo đơn»). Xem `lib/p2-approval-flow.mjs` + `tests/p2-approval-dynamic.test.mjs`.
+import { resolveApprovalFlow, requiredStageRoles, STAGE_KIND_SUPPLY } from "../lib/p2-approval-flow.mjs";
 let env;
 async function loadEnv() { env = globalThis.__MEP_LOCAL_ENV__; if (!env) throw new Error("Chưa khởi tạo môi trường dữ liệu cục bộ."); }
 const COOKIE = "mep_session";
@@ -424,6 +429,10 @@ function normalizeBulkStatus(value){const status=clean(value||"ACTIVE").toUpperC
 function defaultDepartmentPermission(user,moduleKey){
     if(moduleKey==="dashboard") return {canView:1,canUse:1,canCreate:0,canEdit:0,canApprove:0,canExport:1};
     if(isCompanyLeadershipActionGate(user) && moduleKey!=="admin") return {canView:1,canUse:1,canCreate:1,canEdit:1,canApprove:1,canExport:1};
+    // [PHASE 2 · chỉ đạo người dùng (3)] «đơn đề nghị mua hàng nên TẤT CẢ các user đều có quyền tạo» ⇒ module
+    // `requests` là quyền NỀN cho mọi tài khoản (kể cả tài khoản chưa gắn phòng ban): TẠO được, KHÔNG tự có
+    // quyền SỬA/DUYỆT. Đây là mức sàn; quyền chi tiết vẫn do quản trị viên cấu hình ở `user_module_permissions`.
+    if(moduleKey==="requests") return {canView:1,canUse:1,canCreate:1,canEdit:0,canApprove:0,canExport:1};
     const dep=departmentCodeForUser(user); let matches=false;
     if(dep==="KH") matches=moduleKey.startsWith("dept_plan_")||moduleKey==="supplier_catalog";
     else if(dep==="DA") matches=moduleKey.startsWith("dept_project_");
@@ -435,11 +444,18 @@ function defaultDepartmentPermission(user,moduleKey){
     return {canView:1,canUse:1,canCreate:1,canEdit:1,canApprove:isDepartmentApprover(user,dep)?1:0,canExport:1};
 }
 async function replaceDepartmentDefaults(userId){
-    const target=await first(`SELECT u.id,u.role,u.department,COALESCE(rc.base_role,u.role) AS roleBase FROM users u LEFT JOIN role_catalog rc ON rc.code=u.role WHERE u.id=?`,userId); if(!target)return;
+    const target=await first(`SELECT u.id,u.role,u.department,u.organization_unit_id AS organizationUnitId,COALESCE(rc.base_role,u.role) AS roleBase FROM users u LEFT JOIN role_catalog rc ON rc.code=u.role WHERE u.id=?`,userId); if(!target)return;
     await env.DB.prepare(`DELETE FROM user_module_permissions WHERE user_id=? AND permission_source='department_default'`).bind(userId).run();
     if(isAdmin(target)) return;
     const stamp=now(); const rows=await all(`SELECT module_key AS moduleKey FROM module_catalog WHERE active=1 AND module_key<>'admin' ORDER BY sort_order,module_key`); const statements=[];
-    for(const row of rows){const moduleKey=clean(row.moduleKey);const caps=defaultDepartmentPermission(target,moduleKey);if(!Object.values(caps).some(Number))continue;statements.push(env.DB.prepare(`INSERT OR IGNORE INTO user_module_permissions(id,user_id,module_key,can_view,can_use,can_create,can_edit,can_approve,can_export,permission_expires_at,permission_source,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(id("UMP"),userId,moduleKey,caps.canView,caps.canUse,caps.canCreate,caps.canEdit,caps.canApprove,caps.canExport,null,"department_default",stamp,stamp));}
+    // [PHASE 2 · chỉ đạo người dùng (3)] — MẪU quyền phòng ban (`department_module_permissions`) là NGUỒN DỮ LIỆU
+    // cho quyền nền, ĐÚNG như Java `UserManagementUseCase.replaceDepartmentDefaults:355` («là nguồn chính»).
+    // Nhờ vậy: cấp 1 dòng cho module `requests` (Phiếu đề nghị mua hàng) với `can_create=1` là MỌI user MỚI của
+    // phòng đó tự có quyền TẠO phiếu — không cần sửa lược đồ, không cần cấp tay từng người.
+    const orgUnitId=clean(target.organizationUnitId);
+    const templateRows=orgUnitId?await all(`SELECT module_key AS moduleKey,active,can_view AS canView,can_use AS canUse,can_create AS canCreate,can_edit AS canEdit,can_approve AS canApprove,can_export AS canExport FROM department_module_permissions WHERE organization_unit_id=?`,orgUnitId):[];
+    const template=new Map(templateRows.map((row)=>[clean(row.moduleKey),row]));
+    for(const row of rows){const moduleKey=clean(row.moduleKey);const dept=template.get(moduleKey);const caps=dept?(Number(dept.active)===1?{canView:Number(dept.canView||0),canUse:Number(dept.canUse||0),canCreate:Number(dept.canCreate||0),canEdit:Number(dept.canEdit||0),canApprove:Number(dept.canApprove||0),canExport:Number(dept.canExport||0)}:{canView:0,canUse:0,canCreate:0,canEdit:0,canApprove:0,canExport:0}):defaultDepartmentPermission(target,moduleKey);if(!Object.values(caps).some(Number))continue;statements.push(env.DB.prepare(`INSERT OR IGNORE INTO user_module_permissions(id,user_id,module_key,can_view,can_use,can_create,can_edit,can_approve,can_export,permission_expires_at,permission_source,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(id("UMP"),userId,moduleKey,caps.canView,caps.canUse,caps.canCreate,caps.canEdit,caps.canApprove,caps.canExport,null,"department_default",stamp,stamp));}
     if(statements.length) await env.DB.batch(statements);
 }
 async function canUseModule(user, moduleKey, capability = "canUse") {
@@ -490,8 +506,14 @@ async function requireWorkItemAccess(user, task, mode) {
         ? "Chỉ người được giao việc, Trưởng phòng hoặc người có quyền điều phối công việc mới thêm được người tham gia."
         : "Tài khoản không thuộc phạm vi công việc này nên không bình luận được.");
 }
+/**
+ * Các bước của CHUỖI DUYỆT HỒ SƠ (phiếu đề nghị mua hàng). Dữ liệu quyết định toàn bộ: số bước, thứ tự, tên,
+ * vai trò, SLA. Cột `stage_kind` phân biệt bước DUYỆT HỒ SƠ (`approval`) với bước CUNG ỨNG/xử lý
+ * (`supply` — 101 Lập & phát hành PO · 102 Giao nhận · 103 BCH xác nhận): 3 bước cung ứng nay NẰM TRONG
+ * `approval_stage_catalog` (trước đây khai bằng literal trong mã nguồn) nên phải lọc ra khỏi chuỗi duyệt phiếu.
+ */
 async function approvalStages(activeOnly = true) {
-    const where = activeOnly ? "WHERE active=1" : "";
+    const where = activeOnly ? "WHERE active=1 AND stage_kind='approval'" : "WHERE stage_kind='approval'";
     return all(`SELECT stage_no AS stageNo,name,description,allowed_role_codes AS allowedRoleCodes,approval_mode AS approvalMode,sla_hours AS slaHours,auto_approve_on_submit AS autoApproveOnSubmit,active,sort_order AS sortOrder FROM approval_stage_catalog ${where} ORDER BY stage_no`);
 }
 async function workflowAssignment(projectId, stageNo) {
@@ -552,8 +574,8 @@ async function approvalEmailStatement(context, stage, event, dueAt, request) {
     const emailConfig = await first(`SELECT base_url AS baseUrl FROM email_settings WHERE id='EMAIL'`);
     const baseUrl = clean(emailConfig?.baseUrl).replace(/\/$/, "") || new URL(request.url).origin;
     const link = `${baseUrl}/?request=${encodeURIComponent(context.requestId)}`;
-    const stageConfig = stage > 0 && stage < 100 ? await first(`SELECT name FROM approval_stage_catalog WHERE stage_no=?`, stage) : null;
-    const department = stageConfig?.name || (stage === 101 ? "Mua hàng" : "Bộ phận xử lý");
+    const stageConfig = Number(stage) > 0 ? await first(`SELECT name FROM approval_stage_catalog WHERE stage_no=?`, stage) : null;
+    const department = clean(stageConfig?.name) || `Bước ${stage}`;
     const eventTitle = event === "approval_requested" ? `Chờ duyệt bước ${stage} – ${department}` : event === "approved" ? "Đã hoàn tất luồng phê duyệt" : `Bị từ chối tại bước ${stage}`;
     const subject = event === "approval_requested" ? `[DNMH] ${context.requestNo} chờ ${department} duyệt` : event === "approved" ? `[DNMH] ${context.requestNo} đã hoàn tất phê duyệt` : `[DNMH] ${context.requestNo} bị từ chối`;
     const deadline = dueAt ? new Date(dueAt).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" }) : "—";
@@ -733,7 +755,7 @@ async function bootstrap(user) {
     const businessRoleGroups = rawBusinessRoleGroups.map((row)=>({...row,scopeIds:businessRoleGroupScopes.filter((item)=>String(item.businessGroupId)===String(row.id)).map((item)=>String(item.businessScopeId)),scopes:businessRoleGroupScopes.filter((item)=>String(item.businessGroupId)===String(row.id))}));
     const roleCatalog = await all(`SELECT rc.id,rc.code,rc.name,rc.description,rc.base_role AS baseRole,rc.business_group_id AS businessGroupId,COALESCE(bg.name,rc.base_role) AS businessGroupName,rc.default_organization_unit_id AS defaultOrganizationUnitId,ou.code AS defaultOrganizationCode,ou.name AS defaultOrganizationName,rc.active,rc.sort_order AS sortOrder,rc.system_locked AS systemLocked FROM role_catalog rc LEFT JOIN business_role_group_catalog bg ON bg.id=rc.business_group_id LEFT JOIN organization_units ou ON ou.id=rc.default_organization_unit_id ${isAdmin(user) ? "" : "WHERE rc.active=1"} ORDER BY rc.sort_order,rc.name`);
     const organizationUnits = await all(`SELECT ou.id,ou.code,ou.name,ou.unit_type AS unitType,ou.parent_id AS parentId,parent.name AS parentName,ou.project_id AS projectId,p.code AS projectCode,p.name AS projectName,ou.description,ou.effective_from AS effectiveFrom,ou.effective_to AS effectiveTo,ou.active,ou.archived_at AS archivedAt,ou.sort_order AS sortOrder,ou.system_locked AS systemLocked FROM organization_units ou LEFT JOIN organization_units parent ON parent.id=ou.parent_id LEFT JOIN projects p ON p.id=ou.project_id ${isAdmin(user) ? "" : "WHERE ou.active=1 AND ou.archived_at IS NULL"} ORDER BY ou.sort_order,ou.name`);
-    const approvalStageCatalog = await all(`SELECT id,stage_no AS stageNo,name,description,allowed_role_codes AS allowedRoleCodes,approval_mode AS approvalMode,sla_hours AS slaHours,auto_approve_on_submit AS autoApproveOnSubmit,active,sort_order AS sortOrder FROM approval_stage_catalog ORDER BY stage_no`);
+    const approvalStageCatalog = await all(`SELECT id,stage_no AS stageNo,name,description,allowed_role_codes AS allowedRoleCodes,approval_mode AS approvalMode,sla_hours AS slaHours,auto_approve_on_submit AS autoApproveOnSubmit,active,sort_order AS sortOrder,COALESCE(stage_kind,'approval') AS stageKind FROM approval_stage_catalog ORDER BY stage_no`);
     const menuGroups = await all(`SELECT id,group_key AS groupKey,name,icon,active,sort_order AS sortOrder,collapsible,system_locked AS systemLocked FROM menu_group_catalog ${isAdmin(user) ? "" : "WHERE active=1"} ORDER BY sort_order,name`);
     const moduleCatalog = isAdmin(user)
       ? await all(`SELECT mc.module_key AS moduleKey,mc.label,mc.icon,mc.group_name AS groupName,mc.group_key AS groupKey,mc.active,mc.sort_order AS sortOrder,mc.system_locked AS systemLocked FROM module_catalog mc ORDER BY mc.sort_order,mc.module_key`)
@@ -923,7 +945,10 @@ async function handleAction(action, payload, user, request) {
       requireRole(user,["warehouse","commander","admin"]);const projectId=clean(payload.projectId),warehouseId=clean(payload.warehouseId);if(!projectId||!warehouseId)throw new Error("Đối soát cần chọn đúng một dự án và kho.");if(!(await canAccessProject(user,projectId,false))||!(await canAccessWarehouse(user,warehouseId,false)))throw new Error("Không có quyền đối soát kho này.");const rows=await all(`WITH physical AS (SELECT material_id,COALESCE(SUM(CASE WHEN to_warehouse_id=? THEN quantity ELSE 0 END)-SUM(CASE WHEN from_warehouse_id=? THEN quantity ELSE 0 END),0) AS qty FROM stock_movements GROUP BY material_id),owned AS (SELECT material_id,COALESCE(SUM(quantity_delta),0) AS qty FROM contract_stock_ledger WHERE project_id=? AND warehouse_id=? GROUP BY material_id),ids AS (SELECT material_id FROM physical UNION SELECT material_id FROM owned) SELECT ids.material_id AS materialId,m.code AS materialCode,m.name AS materialName,COALESCE(physical.qty,0) AS physicalQty,COALESCE(owned.qty,0) AS contractQty,COALESCE(physical.qty,0)-COALESCE(owned.qty,0) AS differenceQty FROM ids JOIN materials m ON m.id=ids.material_id LEFT JOIN physical ON physical.material_id=ids.material_id LEFT JOIN owned ON owned.material_id=ids.material_id ORDER BY m.code`,warehouseId,warehouseId,projectId,warehouseId);const statements=[];let mismatch=0;for(const row of rows){const diff=numberValue(row.differenceQty),status=Math.abs(diff)<1e-7?"balanced":"mismatch";if(status==="mismatch")mismatch++;statements.push(env.DB.prepare(`INSERT INTO contract_stock_reconciliations(id,project_id,warehouse_id,material_id,physical_qty,contract_qty,difference_qty,status,checked_by,checked_at,note,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`).bind(id("REC"),projectId,warehouseId,row.materialId,numberValue(row.physicalQty),numberValue(row.contractQty),diff,status,user.id,stamp,clean(payload.note)||null,stamp));}if(statements.length)await env.DB.batch(statements);await audit(user.id,"RECONCILE","contract_stock",`${projectId}:${warehouseId}`,null,{rows:rows.length,mismatch},request);return{message:mismatch?`Đối soát xong: ${mismatch}/${rows.length} vật tư lệch giữa tồn vật lý và tổng ownership Contract.`:`Đối soát xong: ${rows.length} vật tư cân bằng.`,rows,mismatch};
     }
     if (action === "preview_request_import") {
-      requireRole(user,["engineer","commander","admin"]);
+      // CHỈ ĐẠO NGƯỜI DÙNG (3) — bước ĐỐI CHIẾU FILE của biểu mẫu lập phiếu phải mở cho MỌI tài khoản có quyền
+      // TẠO phiếu (trước đây chốt cứng engineer/commander/admin ⇒ user khác không đối chiếu được file).
+      // Quyền vẫn qua cổng RBAC `preview_request_import` ⇒ module `requests`, năng lực `canCreate`.
+      if(Number(user?.active ?? 1)!==1)throw new Error("Tài khoản đã bị khoá nên không lập được phiếu đề nghị.");
       const projectId=clean(payload.projectId),inputLines=Array.isArray(payload.lines)?payload.lines:[];
       if(!projectId||!inputLines.length)throw new Error("Chọn dự án và file có ít nhất một dòng vật tư trước khi đối chiếu.");
       if(inputLines.length>100)throw new Error("Mỗi phiếu đề nghị được nhập tối đa 100 dòng vật tư.");
@@ -959,7 +984,12 @@ async function handleAction(action, payload, user, request) {
       return{message:`Đã đối chiếu ${results.length} dòng với ${ctx.contract.contractNo} · ${ctx.version.versionCode}.`,projectId,contractId,boqVersionId,lines:results,summary:{exact:results.filter(r=>r.matchStatus==="exact").length,review:results.filter(r=>r.matchStatus==="review").length,notFound:results.filter(r=>r.matchStatus==="not_found").length}};
     }
     if (action === "create_request") {
-      requireRole(user, ["engineer", "commander", "admin"]);
+      // CHỈ ĐẠO NGƯỜI DÙNG (3): «đơn đề nghị mua hàng nên tất cả các user đều có quyền tạo» ⇒ BỎ chốt cứng
+      // `["engineer","commander","admin"]` (chốt này chặn mọi vai trò khác: kh_nv, kh_truong, da_nv, thuky,
+      // thu_kho, accountant…). Quyền TẠO vẫn đi qua CỔNG RBAC thật do quản trị viên cấu hình:
+      // `requireActionModule(user,"create_request")` ⇒ module `requests`, năng lực `canCreate`
+      // (ACTION_MODULE/ACTION_CAPABILITY) + phạm vi dự án `canAccessProject` — KHÔNG mở toang.
+      if (Number(user?.active ?? 1) !== 1) throw new Error("Tài khoản đã bị khoá nên không lập được phiếu đề nghị.");
       const projectId = clean(payload.projectId); const neededAt = clean(payload.neededAt); const area = clean(payload.area);
       // Source contract retained: projectId, null, sourceWarehouseId; team is assigned only at issue step.
       const lines = Array.isArray(payload.lines) ? payload.lines : [];
@@ -1028,8 +1058,11 @@ async function handleAction(action, payload, user, request) {
       }
       const total = normalizedLines.reduce((sum, line) => sum + numberValue(line.quantity) * numberValue(line.unitPrice), 0);
       const stages = await approvalStages(true); if (!stages.length) throw new Error("Chưa cấu hình bước phê duyệt đang hoạt động. Quản trị viên cần tạo ít nhất 1 bước.");
-      const stageOwners = new Map(); for (const stage of stages) { if (Number(stage.autoApproveOnSubmit||0)!==1) stageOwners.set(Number(stage.stageNo), await requireWorkflowAssignment(projectId, stage)); }
-      const firstStage = stages[0]; const autoFirst = Number(firstStage.autoApproveOnSubmit || 0) === 1; const currentStage = autoFirst ? (stages[1]?.stageNo ?? firstStage.stageNo) : firstStage.stageNo; const allAutoComplete = autoFirst && stages.length === 1;
+      // §23 + chỉ đạo người dùng (2): luồng suy TỪ catalog dữ liệu và LOẠI người lập phiếu khỏi chuỗi duyệt
+      // (bước mà người lập giữ vai trò duyệt được đánh dấu đã duyệt, KHÔNG đặt Owner ⇒ không tự duyệt đơn mình).
+      const flow = resolveApprovalFlow(stages, user);
+      const stageOwners = new Map(); for (const step of flow.steps) { if (!step.autoApproved) stageOwners.set(step.stageNo, await requireWorkflowAssignment(projectId, step)); }
+      const currentStage = flow.currentStageNo; const allAutoComplete = flow.complete;
       const statements = [];
       statements.push(env.DB.prepare(`INSERT INTO material_requests (id,request_no,project_id,contract_id,boq_version_id,team_id,source_warehouse_id,requested_by,requested_at,needed_at,priority,area,purpose,status,approval_stage,total_estimated_value,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(requestId, requestNo, projectId, contractId, boqVersionId, null, clean(payload.sourceWarehouseId) || null, user.id, stamp, neededAt || stamp.slice(0,10), clean(payload.priority) || "normal", area, clean(payload.purpose) || null, allAutoComplete ? "approved" : "pending_approval", currentStage, total, stamp, stamp));
       normalizedLines.forEach((line, index) => {
@@ -1038,12 +1071,12 @@ async function handleAction(action, payload, user, request) {
         statements.push(env.DB.prepare(`INSERT INTO procurement_allocations(id,project_id,contract_id,boq_version_id,boq_item_id,material_id,request_item_id,stage,quantity,reference_no,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`).bind(id("PAL"),projectId,clean(line.contractId)||contractId,clean(line.boqVersionId)||boqVersionId,clean(line.boqItemId)||null,clean(line.materialId),requestItemId,"MR",numberValue(line.quantity),requestNo,stamp,stamp));
         const customs = customFieldsObject(line.customFields); for (const [fieldKey,value] of Object.entries(customs)) if (clean(fieldKey) && value !== undefined && value !== null && clean(value) !== "") statements.push(env.DB.prepare(`INSERT INTO custom_field_values (id,form_key,entity_id,field_key,value_text,created_at,updated_at) VALUES (?,?,?,?,?,?,?) ON CONFLICT(form_key,entity_id,field_key) DO UPDATE SET value_text=excluded.value_text,updated_at=excluded.updated_at`).bind(id("CFV"), "request_line", requestItemId, clean(fieldKey), clean(value), stamp, stamp));
       });
-      for (let index = 0; index < stages.length; index += 1) { const stage = stages[index]; const isAutoApproved = index === 0 && autoFirst; const isQueued = isAutoApproved || (!allAutoComplete && stage.stageNo === currentStage); const dueAt = isQueued ? addHours(stamp, Number(stage.slaHours || 8)) : null; const snapshot = isAutoApproved ? JSON.stringify({ stage: stage.stageNo, decision: "approved", user: user.fullName, at: stamp, source: "request_submission" }) : null; const assignedOwner = isAutoApproved ? user.id : clean(stageOwners.get(Number(stage.stageNo))?.ownerUserId); statements.push(env.DB.prepare(`INSERT INTO approvals (id,request_id,stage,department,approver_user_id,status,queued_at,due_at,notified_at,reminder_sent_at,decided_at,comment,decision_snapshot,allowed_role_codes_snapshot,approval_mode_snapshot,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(id("APR"), requestId, stage.stageNo, stage.name, assignedOwner || null, isAutoApproved ? "approved" : "pending", isQueued ? stamp : null, dueAt, null, null, isAutoApproved ? stamp : null, isAutoApproved ? `Tự xác nhận khi gửi phiếu: ${stage.name}` : null, snapshot, clean(stage.allowedRoleCodes), assignedOwner ? "single" : (clean(stage.approvalMode) || "single"), stamp, stamp)); }
+      for (const step of flow.steps) { const isAutoApproved = step.autoApproved; const isQueued = isAutoApproved || (!allAutoComplete && step.stageNo === currentStage); const dueAt = isQueued ? addHours(stamp, step.slaHours) : null; const autoSource = Number(step.autoApproveOnSubmit || 0) === 1 ? "request_submission" : "creator_role_waived"; const snapshot = isAutoApproved ? JSON.stringify({ stage: step.stageNo, decision: "approved", user: user.fullName, at: stamp, source: autoSource }) : null; const assignedOwner = isAutoApproved ? user.id : clean(stageOwners.get(step.stageNo)?.ownerUserId); statements.push(env.DB.prepare(`INSERT INTO approvals (id,request_id,stage,department,approver_user_id,status,queued_at,due_at,notified_at,reminder_sent_at,decided_at,comment,decision_snapshot,allowed_role_codes_snapshot,approval_mode_snapshot,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(id("APR"), requestId, step.stageNo, step.name, assignedOwner || null, isAutoApproved ? "approved" : "pending", isQueued ? stamp : null, dueAt, null, null, isAutoApproved ? stamp : null, isAutoApproved ? `${step.autoApproveReason}: ${step.name}` : null, snapshot, clean(step.allowedRoleCodes), assignedOwner ? "single" : (clean(step.approvalMode) || "single"), stamp, stamp)); for (const roleCode of step.waivedRoleCodes) statements.push(env.DB.prepare(`INSERT INTO approval_stage_decisions (id,request_id,stage,role_code,user_id,decision,comment,decided_at,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)`).bind(id("APD"), requestId, step.stageNo, roleCode, user.id, "waived_requester", `Người lập phiếu giữ vai trò ${roleCode} nên vai trò này được miễn tại bước ${step.stageNo} (không tự duyệt đơn của mình)`, stamp, stamp, stamp)); }
       const emailContext = { requestId, requestNo, projectId, projectCode: project.code, projectName: project.name, requesterName: user.fullName, requesterEmail: user.email, neededAt: neededAt || stamp.slice(0,10), area, itemCount: normalizedLines.length, total };
       if (allAutoComplete) { const supplySla = await supplySlaHours(); statements.push(env.DB.prepare(`UPDATE material_requests SET supply_status='awaiting_po',updated_at=? WHERE id=?`).bind(stamp, requestId)); statements.push(env.DB.prepare(`INSERT INTO supply_workflow_steps (id,request_id,purchase_order_id,receipt_id,step,status,queued_at,due_at,completed_at,completed_by,comment,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(id("SWF"), requestId, null, null, "po_creation", "pending", stamp, addHours(stamp, supplySla.po), null, null, "Tự chuyển từ phê duyệt sang chờ lập PO", stamp, stamp)); const completedMail = await approvalEmailStatement(emailContext, 101, "approved", null, request); if (completedMail) statements.push(completedMail); }
-      else { const current = stages.find((item) => item.stageNo === currentStage); const dueAt = addHours(stamp, Number(current.slaHours || 8)); const emailStatement = await approvalEmailStatement(emailContext, currentStage, "approval_requested", dueAt, request); if (emailStatement) statements.push(emailStatement); }
-      await env.DB.batch(statements); await audit(user.id, "CREATE", "material_request", requestId, null, { requestNo, projectId, contractId, boqVersionId, lineCount: normalizedLines.length, newMaterialCount: 0, mappingMode: "strict_internal_material", total, dynamicFields: true }, request);
-      return { message: allAutoComplete ? `Đã lập phiếu ${requestNo}; luồng phê duyệt tự hoàn tất và chuyển sang Mua hàng & PO.` : `Đã lập phiếu ${requestNo} gồm ${normalizedLines.length} dòng và chuyển tới ${stages.find((item) => item.stageNo === currentStage)?.name || `bước ${currentStage}`}.` };
+      else { const current = flow.steps.find((item) => item.stageNo === currentStage); const dueAt = addHours(stamp, Number(current?.slaHours || 8)); const emailStatement = await approvalEmailStatement(emailContext, currentStage, "approval_requested", dueAt, request); if (emailStatement) statements.push(emailStatement); }
+      await env.DB.batch(statements); await audit(user.id, "CREATE", "material_request", requestId, null, { requestNo, projectId, contractId, boqVersionId, lineCount: normalizedLines.length, newMaterialCount: 0, mappingMode: "strict_internal_material", total, dynamicFields: true, approvalFlow: flow.steps.map((step) => ({ stageNo: step.stageNo, name: step.name, autoApproved: step.autoApproved, waivedRoleCodes: step.waivedRoleCodes })) }, request);
+      return { message: allAutoComplete ? `Đã lập phiếu ${requestNo}; luồng phê duyệt tự hoàn tất và chuyển sang Mua hàng & PO.` : `Đã lập phiếu ${requestNo} gồm ${normalizedLines.length} dòng và chuyển tới ${flow.steps.find((item) => item.stageNo === currentStage)?.name || `bước ${currentStage}`}.` };
     }
     if (action === "update_returned_request") {
         const requestId=clean(payload.requestId);
@@ -1067,22 +1100,24 @@ async function handleAction(action, payload, user, request) {
         if(String(mr.status)!=="returned_to_requester")throw new Error("Chỉ phiếu đã bị trả về CHT mới được gửi lại.");
         const stages=await approvalStages(true);
         if(!stages.length)throw new Error("Chưa cấu hình bước phê duyệt hoạt động.");
-        const firstStage=stages[0];
-        const autoFirst=Number(firstStage.autoApproveOnSubmit||0)===1;
-        const currentStage=autoFirst?(stages[1]?.stageNo??firstStage.stageNo):firstStage.stageNo;
-        const currentConfig=stages.find((item)=>Number(item.stageNo)===Number(currentStage))||firstStage;
-        const due=addHours(stamp,Number(currentConfig.slaHours||8));
-        const autoSnapshot=autoFirst?JSON.stringify({stage:firstStage.stageNo,decision:"approved",user:user.fullName,at:stamp,source:"request_resubmission"}):null;
-        await env.DB.batch([
-          env.DB.prepare(`UPDATE material_requests SET status='pending_approval',supply_status='approval_pending',approval_stage=?,updated_at=? WHERE id=?`).bind(currentStage,stamp,requestId),
-          env.DB.prepare(`UPDATE approvals SET status=CASE WHEN stage=? AND ?=1 THEN 'approved' WHEN stage=? THEN 'pending' ELSE 'waiting' END,approver_user_id=CASE WHEN stage=? AND ?=1 THEN ? ELSE NULL END,queued_at=CASE WHEN stage=? AND ?=1 THEN ? WHEN stage=? THEN ? ELSE NULL END,due_at=CASE WHEN stage=? THEN ? ELSE NULL END,decided_at=CASE WHEN stage=? AND ?=1 THEN ? ELSE NULL END,comment=CASE WHEN stage=? AND ?=1 THEN ? ELSE NULL END,decision_snapshot=CASE WHEN stage=? AND ?=1 THEN ? ELSE NULL END,updated_at=? WHERE request_id=?`).bind(firstStage.stageNo,autoFirst?1:0,currentStage,firstStage.stageNo,autoFirst?1:0,user.id,firstStage.stageNo,autoFirst?1:0,stamp,currentStage,stamp,currentStage,due,firstStage.stageNo,autoFirst?1:0,stamp,firstStage.stageNo,autoFirst?1:0,`Tự xác nhận khi gửi lại phiếu: ${firstStage.name}`,firstStage.stageNo,autoFirst?1:0,autoSnapshot,stamp,requestId),
-          env.DB.prepare(`DELETE FROM approval_stage_decisions WHERE request_id=?`).bind(requestId),
-          env.DB.prepare(`INSERT INTO request_comments (id,request_id,user_id,comment,visibility,created_at) VALUES (?,?,?,?,?,?)`).bind(id("RCM"),requestId,user.id,`CHT GỬI LẠI: ${clean(payload.comment)||"Đã sửa phiếu; CHT xác nhận lại và khởi động lại luồng duyệt từ đầu."}`,"internal",stamp)
-        ]);
+        // §23 — GỬI LẠI cũng suy luồng từ catalog (không tự viết lại hình dạng 2 bước như trước) và loại
+        // người gửi lại khỏi chuỗi duyệt nếu họ giữ vai trò của một bước.
+        const flow=resolveApprovalFlow(stages,user);
+        if(!flow.steps.length)throw new Error("Chưa cấu hình bước phê duyệt hoạt động.");
+        const currentStage=flow.currentStageNo;
+        const currentConfig=flow.steps.find((item)=>item.stageNo===currentStage)||flow.steps[0];
+        const due=currentStage?addHours(stamp,Number(currentConfig.slaHours||8)):stamp;
+        const resetStatements=[env.DB.prepare(`UPDATE material_requests SET status=?,supply_status=?,approval_stage=?,updated_at=? WHERE id=?`).bind(flow.complete?"approved":"pending_approval",flow.complete?"awaiting_po":"approval_pending",currentStage,stamp,requestId)];
+        for(const step of flow.steps){const isAuto=step.autoApproved;const isQueued=isAuto||step.stageNo===currentStage;const stepDue=isQueued?addHours(stamp,Number(step.slaHours||8)):null;const autoSource=Number(step.autoApproveOnSubmit||0)===1?"request_resubmission":"creator_role_waived";resetStatements.push(env.DB.prepare(`UPDATE approvals SET status=?,approver_user_id=?,queued_at=?,due_at=?,decided_at=?,comment=?,decision_snapshot=?,allowed_role_codes_snapshot=?,updated_at=? WHERE request_id=? AND stage=?`).bind(isAuto?"approved":(isQueued?"pending":"waiting"),isAuto?user.id:null,isQueued?stamp:null,stepDue,isAuto?stamp:null,isAuto?`${step.autoApproveReason}: ${step.name}`:null,isAuto?JSON.stringify({stage:step.stageNo,decision:"approved",user:user.fullName,at:stamp,source:autoSource}):null,clean(step.allowedRoleCodes),stamp,requestId,step.stageNo));}
+        if(flow.complete){resetStatements.push(env.DB.prepare(`UPDATE material_request_items SET approved_purchase_qty=CASE WHEN requested_qty-stock_allocation_qty>0 THEN requested_qty-stock_allocation_qty ELSE 0 END,line_status='approved',updated_at=? WHERE request_id=?`).bind(stamp,requestId));const supplySla=await supplySlaHours();resetStatements.push(env.DB.prepare(`INSERT INTO supply_workflow_steps (id,request_id,purchase_order_id,receipt_id,step,status,queued_at,due_at,completed_at,completed_by,comment,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(id("SWF"),requestId,null,null,"po_creation","pending",stamp,addHours(stamp,supplySla.po),null,null,"Tự chuyển từ phê duyệt sang chờ lập PO",stamp,stamp));}
+        resetStatements.push(env.DB.prepare(`DELETE FROM approval_stage_decisions WHERE request_id=?`).bind(requestId));
+        for(const step of flow.steps)for(const roleCode of step.waivedRoleCodes)resetStatements.push(env.DB.prepare(`INSERT INTO approval_stage_decisions (id,request_id,stage,role_code,user_id,decision,comment,decided_at,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)`).bind(id("APD"),requestId,step.stageNo,roleCode,user.id,"waived_requester",`Người lập phiếu giữ vai trò ${roleCode} nên vai trò này được miễn tại bước ${step.stageNo} (không tự duyệt đơn của mình)`,stamp,stamp,stamp));
+        resetStatements.push(env.DB.prepare(`INSERT INTO request_comments (id,request_id,user_id,comment,visibility,created_at) VALUES (?,?,?,?,?,?)`).bind(id("RCM"),requestId,user.id,`CHT GỬI LẠI: ${clean(payload.comment)||"Đã sửa phiếu; CHT xác nhận lại và khởi động lại luồng duyệt từ đầu."}`,"internal",stamp));
+        await env.DB.batch(resetStatements);
         const project=await first(`SELECT p.code,p.name,u.full_name AS requesterName,u.email AS requesterEmail,mr.needed_at AS neededAt,mr.area,(SELECT COUNT(*) FROM material_request_items i WHERE i.request_id=mr.id) AS itemCount,mr.total_estimated_value AS total FROM material_requests mr JOIN projects p ON p.id=mr.project_id JOIN users u ON u.id=mr.requested_by WHERE mr.id=?`,requestId);
-        if(project){const emailContext={requestId,requestNo:String(mr.requestNo),projectId:String(mr.projectId),projectCode:String(project.code),projectName:String(project.name),requesterName:String(project.requesterName),requesterEmail:project.requesterEmail?String(project.requesterEmail):null,neededAt:String(project.neededAt||""),area:String(project.area||""),itemCount:numberValue(project.itemCount),total:numberValue(project.total)};const emailStatement=await approvalEmailStatement(emailContext,currentStage,"approval_requested",due,request);if(emailStatement)await emailStatement.run();}
-        await audit(user.id,"RESUBMIT","material_request",requestId,mr,{confirmedStage:firstStage.stageNo,restartStage:currentStage,comment:clean(payload.comment)},request);
-        return {message:`Đã gửi lại ${mr.requestNo}; CHT đã xác nhận và hồ sơ chuyển sang ${currentConfig.name}.`};
+        if(project&&currentStage){const emailContext={requestId,requestNo:String(mr.requestNo),projectId:String(mr.projectId),projectCode:String(project.code),projectName:String(project.name),requesterName:String(project.requesterName),requesterEmail:project.requesterEmail?String(project.requesterEmail):null,neededAt:String(project.neededAt||""),area:String(project.area||""),itemCount:numberValue(project.itemCount),total:numberValue(project.total)};const emailStatement=await approvalEmailStatement(emailContext,currentStage,"approval_requested",due,request);if(emailStatement)await emailStatement.run();}
+        await audit(user.id,"RESUBMIT","material_request",requestId,mr,{restartStage:currentStage,flow:flow.steps.map((step)=>({stageNo:step.stageNo,autoApproved:step.autoApproved,waivedRoleCodes:step.waivedRoleCodes})),comment:clean(payload.comment)},request);
+        return {message:flow.complete?`Đã gửi lại ${mr.requestNo}; luồng phê duyệt tự hoàn tất (người lập phiếu giữ các vai trò duyệt) và chuyển sang Mua hàng & PO.`:`Đã gửi lại ${mr.requestNo}; hồ sơ chuyển sang ${currentConfig.name}.`};
     }
     if (action === "delete_request") {
         const requestId=clean(payload.requestId);
@@ -1150,7 +1185,10 @@ async function handleAction(action, payload, user, request) {
         const stageConfig = stages[stageIndex];
         const snapshot = JSON.stringify({ stage, decision, user: user.fullName, at: stamp, stageName: stageConfig.name });
         if (clean(stageConfig.approvalMode) === "all_roles" && decision === "approved") {
-            const required = stageRoleCodes(stageConfig);
+            // Vai trò của NGƯỜI LẬP PHIẾU đã được MIỄN khi tạo phiếu (`waived_requester`) ⇒ không tính vào
+            // danh sách phải xác nhận, nếu không bước song song sẽ treo vĩnh viễn.
+            const waivedRows = await all(`SELECT DISTINCT role_code AS roleCode FROM approval_stage_decisions WHERE request_id=? AND stage=? AND decision='waived_requester'`, requestId, stage);
+            const required = requiredStageRoles(stageConfig, waivedRows.map((row)=>String(row.roleCode)));
             const approvedRows = await all(`SELECT DISTINCT role_code AS roleCode FROM approval_stage_decisions WHERE request_id=? AND stage=? AND decision='approved'`, requestId, stage);
             const approved = new Set(approvedRows.map((row)=>String(row.roleCode)));
             const roleCode = matchedApprovalRole(user, stageConfig) || (isAdmin(user) ? required.find((code)=>!approved.has(code)) || "" : "");
@@ -1741,7 +1779,10 @@ async function handleAction(action, payload, user, request) {
         for (const row of assignments) {
             const projectId = clean(row.projectId); const stage = Math.trunc(numberValue(row.stage)); const ownerUserId = clean(row.ownerUserId); const ccEmails = emailsFrom(row.ccEmails).join(",");
             if (!projectId || !stage || !ownerUserId) continue;
-            const stageCfg = stage < 100 ? await first(`SELECT stage_no AS stageNo,name,allowed_role_codes AS allowedRoleCodes FROM approval_stage_catalog WHERE stage_no=? AND active=1`,stage) : {stageNo:stage,name:stage===101?'Lập & phát hành PO':stage===102?'Giao nhận':'BCH xác nhận giao hàng',allowedRoleCodes:stage===101?'procurement,kh_nv,kh_truong':stage===102?'warehouse,thu_kho':stage===103?'commander,cht':''};
+            // §23 — KHÔNG literal: tên + vai trò của MỌI bước (kể cả bước cung ứng 101/102/103, nay nằm trong
+            // `approval_stage_catalog`) đọc từ DỮ LIỆU cấu hình. Quản trị viên đổi dữ liệu ⇒ đổi luồng, không sửa mã.
+            const stageCfg = await first(`SELECT stage_no AS stageNo,name,allowed_role_codes AS allowedRoleCodes FROM approval_stage_catalog WHERE stage_no=? AND active=1`,stage);
+            if (!stageCfg) throw new Error(`Bước ${stage} chưa có trong danh mục bước phê duyệt đang hoạt động. Quản trị viên cần cấu hình bước này trước khi phân công Owner.`);
             const owner = await first(`SELECT u.id,u.full_name AS fullName,u.role,COALESCE(rc.base_role,u.role) AS baseRole,u.active FROM users u LEFT JOIN role_catalog rc ON rc.code=u.role WHERE u.id=?`,ownerUserId);
             if (!owner || Number(owner.active||0)!==1) throw new Error(`Owner được chọn cho ${stageCfg.name} không còn hoạt động.`);
             const allowed=stageRoleCodes(stageCfg); if (allowed.length && !allowed.includes(clean(owner.role)) && !allowed.includes(clean(owner.baseRole))) throw new Error(`${owner.fullName} không thuộc vai trò được phép của ${stageCfg.name}.`);
@@ -2292,7 +2333,7 @@ async function handleAction(action, payload, user, request) {
         const approvalMode = clean(payload.approvalMode) === "all_roles" ? "all_roles" : "single";
         const autoApprove = payload.autoApproveOnSubmit === true || ["1", "true", "on"].includes(clean(payload.autoApproveOnSubmit).toLowerCase());
         if (autoApprove) {
-            const earlier = await first(`SELECT COUNT(*) AS count FROM approval_stage_catalog WHERE active=1 AND id<>? AND stage_no<?`, stageId || "__NEW__", stageNo);
+            const earlier = await first(`SELECT COUNT(*) AS count FROM approval_stage_catalog WHERE active=1 AND stage_kind='approval' AND id<>? AND stage_no<?`, stageId || "__NEW__", stageNo);
             if (Number(earlier?.count || 0) > 0)
                 throw new Error("Tự xác nhận khi gửi phiếu chỉ được đặt cho bước đầu tiên của luồng. Hãy đưa bước này lên đầu hoặc bỏ tùy chọn tự xác nhận.");
         }
@@ -2315,8 +2356,11 @@ async function handleAction(action, payload, user, request) {
         if (autoApprove)
             await env.DB.prepare(`UPDATE approval_stage_catalog SET auto_approve_on_submit=0,updated_at=?`).bind(stamp).run();
         const newId = id("ASTAGE");
-        await env.DB.prepare(`INSERT INTO approval_stage_catalog (id,stage_no,name,description,allowed_role_codes,approval_mode,sla_hours,auto_approve_on_submit,active,sort_order,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`).bind(newId, stageNo, name, description || null, allowedRoles.join(","), approvalMode, slaHours, autoApprove ? 1 : 0, 1, sortOrder, stamp, stamp).run();
-        await audit(user.id, "CREATE", "approval_stage_catalog", newId, null, { stageNo, name, allowedRoles, slaHours, autoApprove, sortOrder }, request);
+        // Loại bước do quản trị viên chọn: `approval` = bước duyệt hồ sơ (vào chuỗi duyệt phiếu),
+        // `supply` = bước cung ứng/xử lý (Lập & phát hành PO · Giao nhận · BCH xác nhận).
+        const stageKind = clean(payload.stageKind) === STAGE_KIND_SUPPLY ? STAGE_KIND_SUPPLY : "approval";
+        await env.DB.prepare(`INSERT INTO approval_stage_catalog (id,stage_no,name,description,allowed_role_codes,approval_mode,sla_hours,auto_approve_on_submit,active,sort_order,stage_kind,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(newId, stageNo, name, description || null, allowedRoles.join(","), approvalMode, slaHours, autoApprove ? 1 : 0, 1, sortOrder, stageKind, stamp, stamp).run();
+        await audit(user.id, "CREATE", "approval_stage_catalog", newId, null, { stageNo, name, allowedRoles, slaHours, autoApprove, sortOrder, stageKind }, request);
         return { message: `Đã thêm bước phê duyệt ${name}. Phiếu mới sẽ áp dụng luồng mới; phiếu cũ giữ nguyên luồng đã tạo.` };
     }
     if (action === "set_approval_stage_status") {
@@ -2332,7 +2376,7 @@ async function handleAction(action, payload, user, request) {
                 throw new Error("Bước này đang có hồ sơ chờ xử lý. Hãy xử lý hết hồ sơ hoặc giữ bước hoạt động; phiếu đang chạy không được cắt ngang.");
         }
         await env.DB.prepare(`UPDATE approval_stage_catalog SET active=?,updated_at=? WHERE id=?`).bind(active ? 1 : 0, stamp, stageId).run();
-        const activeCount = await first(`SELECT COUNT(*) AS count FROM approval_stage_catalog WHERE active=1`);
+        const activeCount = await first(`SELECT COUNT(*) AS count FROM approval_stage_catalog WHERE active=1 AND stage_kind='approval'`);
         if (Number(activeCount?.count || 0) === 0) {
             await env.DB.prepare(`UPDATE approval_stage_catalog SET active=1,updated_at=? WHERE id=?`).bind(stamp, stageId).run();
             throw new Error("Hệ thống phải có ít nhất một bước phê duyệt đang hoạt động.");
@@ -2349,7 +2393,7 @@ async function handleAction(action, payload, user, request) {
         const history = await first(`SELECT COUNT(*) AS count FROM approvals WHERE stage=?`, stage.stageNo);
         if (Number(history?.count || 0) > 0)
             throw new Error("Bước đã có lịch sử hồ sơ nên không được xóa. Hãy dùng Ẩn để ngừng áp dụng cho phiếu mới.");
-        const activeCount = await first(`SELECT COUNT(*) AS count FROM approval_stage_catalog WHERE active=1`);
+        const activeCount = await first(`SELECT COUNT(*) AS count FROM approval_stage_catalog WHERE active=1 AND stage_kind='approval'`);
         if (Number(activeCount?.count || 0) <= 1)
             throw new Error("Không thể xóa bước hoạt động cuối cùng.");
         await env.DB.prepare(`DELETE FROM approval_stage_catalog WHERE id=?`).bind(stageId).run();
