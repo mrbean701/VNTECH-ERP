@@ -16,11 +16,11 @@
 
 | Phân loại (nguyên văn cột TT) | Số mục | % |
 |---|---|---|
-| **DONE** (`**DONE**` + `DONE` + `DONE / AP-DUNG n`) | **98** | **89,1 %** |
+| **DONE** (`**DONE**` + `DONE` + `DONE / AP-DUNG n`) | **101** | **91,8 %** |
 | ĐANG LÀM | 0 | 0 % |
 | KHUNG XONG nhưng **ÁP DỤNG 0** | 0 | 0 % |
 | **BỊ CHẶN** (`**BLOCKED**` = F-01 + W-03) | 2 | 1,8 % |
-| TODO | 10 | 9,1 % |
+| TODO | 7 | 6,4 % |
 
 | Phase | DONE / tổng | Ghi chú |
 |---|---|---|
@@ -35,7 +35,7 @@
 | PHASE 7 — QUẢN TRỊ | **16 / 16** | **TASK-102 (21/09) — 14 mục DONE · 2 mục BLOCKED** (`AD-14` cần cột `result`/`metadata` trong `audit_logs` — 17 cột thật không có ⇒ phải migration, BỊ CẤM; `AD-16` cần action tự sửa `full_name`/`email` ở cả 2 đường ghi ⇒ phải sửa `scripts/**`+Java, BỊ CẤM). Đã làm thật: `AD-01` đổi tên Nhân sự→Tài khoản · `AD-02` 13 cột (2 trường thiếu nguồn hiện «chưa có nguồn» + lý do, KHÔNG số giả) · `AD-03` bấm tài khoản mở `EntityDetailModal` qua cổng chung (U-01/PR-04) · `AD-04` sắp mặc định Trạng thái→Mã · `AD-05` 2 sub-tab tổ chức · `AD-06` 2 sub-tab Position/System Role (audit CONFIRMED: Position=`role_catalog`, System Role=`role_catalog.base_role`) · `AD-07` (**P0**, CONFIRMED & **KHỚP** `A-15`: phân quyền phòng ban là MẪU/GIỚI HẠN, **KHÔNG phải đường kiểm quyền**) · `AD-08` lọc phòng ban + chọn nhiều + xoá dòng quyền qua action ĐÃ CÓ `delete_department_permission` (xác nhận + cổng quyền admin) · `AD-09` toolbar phân quyền theo khuôn §5 · `AD-10` 🔴 **vá lỗi thật**: nút xoá cấp bậc không xác nhận, không chặn cấp bậc đang dùng · `AD-11` audit 2 phạm vi (CONFIRMED + đính chính tiền đề «2 sub-tab») · `AD-12` tài liệu «Ngoại lệ cá nhân = ghi đè QUYỀN», KHÔNG đổi hành vi · `AD-13` tách cột User/Actor · `AD-15` audit 5 phụ thuộc cấu hình ⇒ BACKLOG, KHÔNG ảnh hưởng roadmap. Hồ sơ: `TASK-102.md` + 6 tài liệu audit + 2 tài liệu BLOCKED + **16 test hợp đồng `tests/ad01…ad16-*.test.mjs` (59 ca: ĐỎ 25/59 trước khi sửa → XANH 59/59)** |
 | PHASE 8 — WORKFLOW | **6 / 6** | ĐÓNG TRỌN (WF-01…WF-06 + nhánh B) |
 | PHASE 9 — BÁO CÁO | **5 / 5 — ĐÓNG** ✅ | **14 định nghĩa báo cáo dùng chung** (`R-01`…`R-05c`), mọi chỉ số dựa **cột DB đã xác minh**; engine self-check 101/101; build ĐẠT
-| PHASE 10 — TƯƠNG LAI | 0 / 5 | 1 mục bị chặn (F-01) |
+| PHASE 10 — TƯƠNG LAI | 3 / 5 | 1 mục bị chặn (F-01) |
 
 **Phần KHÔNG cộng vào 110 mục — nhánh đang chạy thực tế:** TASK-048 → TASK-071 là **vá lỗi
 phát hiện được khi audit** (đường ĐỌC bootstrap JS ↔ Java, phân quyền, audit trail). Nhánh này **không có

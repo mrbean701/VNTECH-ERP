@@ -222,9 +222,9 @@
 |---|---|---|---|---|---|---|---|---|---|
 | `F-01` | MEP | **Làm rõ nghiệp vụ MEP với người dùng** (8 module chưa rõ phạm vi) | P5 | cần spec | - | - | - | - | **BLOCKED** |
 | `F-02` | MEP | Roadmap MEP: thiết bị · bản vẽ · BOQ · lắp đặt · nghiệm thu · bàn giao | P5 | F-01 | TBL | - | - | - | TODO |
-| `F-03` | Tài chính | Audit phụ thuộc, chuẩn bị kiến trúc — **không triển khai nghiệp vụ** | P5 | F-01 | - | - | - | - | TODO |
-| `F-04` | Hành chính | Kiến trúc: chấm công · lịch làm việc · nghỉ phép | P5 | WF-06 | TBL | - | - | - | TODO |
-| `F-05` | Hành chính | Lịch: ngày làm việc · nghỉ phép · ngày lễ · tăng ca · chấm công | P5 | F-04 | TBL | - | NEW | - | TODO |
+| `F-03` | Tài chính | Audit phụ thuộc, chuẩn bị kiến trúc — **không triển khai nghiệp vụ** · DONE: hồ sơ `docs/agent-progress/F-03-TAI-CHINH-AUDIT-PHU-THUOC.md` — đo được 14 bảng tài chính · 23 action đủ 2 đường ghi (JS+Java) · 8 khoá module · 0 DDL áp dụng · 6 câu nghiệp vụ chờ chốt | P5 | F-01 | - | - | - | - | **DONE** |
+| `F-04` | Hành chính | Kiến trúc: chấm công · lịch làm việc · nghỉ phép · DONE: kiến trúc 8 bảng `hr_*` + 7 action NEW + tái dùng engine WF-06 qua `workflow_definitions.module_key` — DDL **CHƯA ÁP DỤNG**, 8 câu nghiệp vụ chờ chốt; hồ sơ `docs/agent-progress/F-04-HANH-CHINH-KIEN-TRUC.md` | P5 | WF-06 | TBL | - | - | - | **DONE** |
+| `F-05` | Hành chính | Lịch: ngày làm việc · nghỉ phép · ngày lễ · tăng ca · chấm công · DONE: kiến trúc 2 bảng `hr_attendance_records`/`hr_attendance_periods` + 5 action NEW + luật lịch dùng dữ liệu F-04 — DDL/API **CHƯA ÁP DỤNG**; hồ sơ `docs/agent-progress/F-05-LICH-KIEN-TRUC.md` | P5 | F-04 | TBL | - | NEW | - | **DONE** |
 
 ---
 
