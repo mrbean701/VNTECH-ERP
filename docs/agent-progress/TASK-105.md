@@ -127,11 +127,13 @@ node --import tsx --test tests/p2-d1-pr-child-po.test.mjs tests/p2-d2-po-detail.
 
 ## 6. CỔNG ĐO (chạy thật, dán nguyên văn)
 
+### 6.1 Lượt đo ĐẦU (ngay sau 3 commit đầu)
+
 | # | Cổng | Lệnh | Kết quả | Kết luận |
 |---|---|---|---|---|
 | 1 | Typecheck | `npx tsc --noEmit` | `tsc-exit=0` (0 lỗi) | ✅ ĐẠT |
 | 2 | Lint | `npm run lint` | `✖ 186 problems (0 errors, 186 warnings)` → `lint-exit=0` | ✅ ĐẠT (0 error; nền warning) |
-| 3 | Regression | `npm run test:regression` | `ℹ tests 69 · ℹ pass 60 · ℹ fail 9` | ❌ **CHƯA XANH — 9 ca hỏng, KHÔNG do lượt này** (xem §7) |
+| 3 | Regression | `npm run test:regression` | `ℹ tests 69 · ℹ pass 60 · ℹ fail 9` | ❌ **CHƯA XANH — 9 ca hỏng, KHÔNG do lượt này** (xem §7.1) |
 | 4 | Workflow | `npm run test:workflow` | `Workflow VNTECH ERP V5.3.0 FULL W2 passed: …` | ✅ ĐẠT |
 | 5 | 2 test mới | `node --import tsx --test tests/p2-d1-*.test.mjs tests/p2-d2-*.test.mjs` | `tests 12 · pass 12 · fail 0` | ✅ ĐẠT |
 | 6 | Probe T-01 | `node --import tsx tests/t01-work-menu-probe.mjs` | `═══ KẾT QUẢ: 7 ĐẠT · 0 HỎNG ═══` | ✅ ĐẠT |
@@ -139,9 +141,27 @@ node --import tsx --test tests/p2-d1-pr-child-po.test.mjs tests/p2-d2-po-detail.
 
 **Lint 186 warning toàn nền** (không phát sinh từ lượt này): `lib/**` cũ + `tools/**` cũ + `app/page.tsx` (import không dùng có từ trước). Riêng 4 tệp của lượt này lint sạch: `npx eslint lib/p2-po-trace.ts app/screens/PurchaseOrderDrawer.tsx app/screens/RequestDrawer.tsx app/screens/Purchasing.tsx → eslint-exit=0`.
 
+### 6.2 Lượt đo LẠI (theo yêu cầu "test xanh sau thay đổi") — luồng song song đã tiến thêm
+
+Cây làm việc đã đổi **do luồng khác** (`M lib/approval-helpers.ts`, `M scripts/system-route.mjs`, `M lib/vntech-identity-data.mjs`, **mới** `?? drizzle/0161_p2_pr_approval_dynamic_default.sql`, `?? lib/p2-approval-flow.mjs`) — **không phải tệp của TASK-105**. Lượt đo lại:
+
+| # | Cổng | Lệnh | Kết quả | Kết luận |
+|---|---|---|---|---|
+| 1 | Typecheck | `npx tsc --noEmit` | `TSC_EXIT=0` | ✅ ĐẠT |
+| 2 | Lint | `npm run lint` | `✖ 184 problems (0 errors, 184 warnings)` → `LINT_EXIT=0` | ✅ ĐẠT |
+| 3 | Regression | `npm run test:regression` | `ℹ tests 69 · ℹ pass **68** · ℹ fail **1**` | ❌ **CHƯA XANH — 1 ca, KHÔNG do lượt này** (xem §7.2) |
+| 4 | Workflow | `npm run test:workflow` | `AssertionError: Dự án chưa được phân công 01 Owner hợp lệ cho Bước 0 – Thư ký Tổng giám đốc … 400 !== 200` (`workflow-direct.test.ts:137`) | ❌ **CHƯA XANH — do Ownership assignment mới** (xem §7.2) |
+| 5 | 2 test mới | `node --import tsx --test tests/p2-d1-*.test.mjs tests/p2-d2-*.test.mjs` | `ℹ tests 12 · ℹ pass 12 · ℹ fail 0` → `NEWTESTS_EXIT=0` | ✅ ĐẠT |
+| 6 | Probe T-01 | `node --import tsx tests/t01-work-menu-probe.mjs` | `═══ KẾT QUẢ: 7 ĐẠT · 0 HỎNG ═══` → `PROBE1_EXIT=0` | ✅ ĐẠT |
+| 7 | Probe project screen | `node tools/probe-project-screen.mjs` | `KẾT LUẬN: ĐẠT ✅` → `PROBE2_EXIT=0` | ✅ ĐẠT |
+
+**Tệp của TASK-105 phủ định nguyên nhân:** `lib/p2-po-trace.ts` **không import gì** (hàm thuần); 4 tệp còn lại chỉ là JSX client + `page.tsx`; **không tệp nào được `scripts/**`/`app/api/**` import** ⇒ không thể tạo 400/500 trong `bootstrap`/`create_request`.
+
 ---
 
-## 7. CỔNG 3 CHƯA XANH — NGUYÊN NHÂN ĐÃ ĐO (KHÔNG thuộc phạm vi lượt này)
+## 7. HAI CỔNG 3 & 4 CHƯA XANH — NGUYÊN NHÂN ĐÃ ĐO (KHÔNG thuộc phạm vi lượt này)
+
+### 7.1 Lượt đo đầu — 9 ca hỏng (bootstrap 500)
 
 **9 ca hỏng của `test:regression` là HỎNG NỀN, đã đo bằng cách so sánh CÙNG một môi trường:**
 
@@ -159,8 +179,19 @@ LỖI: no such column: stage_kind
 ```
 `stage_kind` **KHÔNG tồn tại** trong lược đồ/drizzle hiện tại; nó được **thêm vào `scripts/system-route.mjs` bởi một luồng công việc KHÁC đang chạy song song trên cùng workspace** (cây làm việc hiện có `M scripts/system-route.mjs` + **mới** `?? lib/p2-approval-flow.mjs`, `?? drizzle/0159_*.sql`, `?? drizzle/0160_*.sql`, `?? tests/p2-approval-dynamic.test.mjs`, `?? tests/p2-25-pr-po-grn-cases.test.mjs` — **không phải thay đổi của TASK-105**). Bộ test regression dựng SQLite từ `drizzle/*.sql` nên cột này vắng ⇒ bootstrap 500 ⇒ 8 ca phụ thuộc bootstrap + `tests/work-item-comment-participant.test.ts` hỏng theo.
 
-**Không tự sửa:** sửa `stage_kind` đòi hỏi sửa `scripts/**` hoặc `drizzle/**` — **ngoài phạm vi TASK-105** và đúng lệnh "nếu buộc sửa tệp khác ⇒ DỪNG, báo BLOCKED". **Cổng 3 để lại cho luồng công việc đang giữ `stage_kind`.**
-`tests/workflow-direct.test.ts` (cổng 4) **vẫn ĐẠT** vì nó dùng `app/api/system/route` + `setRuntimeEnvForTests`, không đi qua đường `stage_kind`.
+### 7.2 Lượt đo lại — 1 ca regression + cổng 4 (Ownership assignment)
+
+Luồng song song đã bổ sung `drizzle/0161_p2_pr_approval_dynamic_default.sql` ⇒ **lỗi `stage_kind` ĐÃ HẾT** (9 → 1 ca). Ca còn lại và cổng 4 nay cùng một nguyên nhân:
+
+```
+✖ ĐNMH preview/enrich + tạo phiếu PostgreSQL-safe theo Contract/BOQ Version
+  AssertionError: Dự án chưa được phân công 01 Owner hợp lệ cho Bước 0 – Thư ký Tổng giám đốc.
+                  Quản trị viên cần cấu hình “Phân công xử lý theo dự án”.   400 !== 200
+`npm run test:workflow` → cùng AssertionError tại `tests/workflow-direct.test.ts:137`
+```
+Nguồn: kiểm tra Ownership **mới** tại `scripts/system-route.mjs:524`. Đây là hệ quả của luồng động hoá luồng duyệt (`lib/approval-helpers.ts` + `lib/p2-approval-flow.mjs`) đang sửa **cùng workspace**, không phải của 2 màn UI.
+
+**Không tự sửa:** sửa đòi hỏi đụng `scripts/**`, `lib/approval-helpers.ts` hoặc seed `drizzle/**` — **ngoài phạm vi TASK-105**; đúng lệnh *"nếu buộc sửa tệp khác ⇒ DỪNG, báo BLOCKED"*. **Cổng 3 và 4 để lại cho luồng đang giữ luồng-duyệt-động.**
 
 ---
 
@@ -180,11 +211,19 @@ Các tệp **không thuộc** TASK-105 (vd `scripts/system-route.mjs`, `lib/vnte
 
 | # | Nội dung | Loại |
 |---|---|---|
-| 1 | Cổng 3 (`test:regression` ≥ 69/69) **CHƯA XANH** do `no such column: stage_kind` từ luồng song song đang sửa `scripts/system-route.mjs` + cần migration `drizzle/**` | **BLOCKED (ngoài phạm vi)** — cần luồng đang giữ `stage_kind` bổ sung cột/migration hoặc hoàn tất, rồi đo lại cổng 3 |
+| 1 | **Cổng 3 + 4 CHƯA XANH sau lượt đo lại**: regression `68/69` (`ĐNMH preview/enrich …`) và `test:workflow` (`workflow-direct.test.ts:137`) **cùng một nguyên nhân** — kiểm tra Ownership mới tại `scripts/system-route.mjs:524`: *«Dự án chưa được phân công 01 Owner hợp lệ cho Bước 0 – Thư ký Tổng giám đốc»* `400 !== 200`. Luồng động hoá luồng duyệt đang chạy song song (`lib/approval-helpers.ts`, `lib/p2-approval-flow.mjs`, `drizzle/0161_*.sql`) là nguồn của kiểm tra này | **BLOCKED (ngoài phạm vi)** — cần luồng đang giữ luồng-duyệt-động seed `project_workflow_assignments` (hoặc nới kiểm tra Ownership cho luồng mặc định), rồi đo lại cổng 3 + 4 |
+| 1b | Tiến triển đã đo giữa 2 lượt: lỗi nền `no such column: stage_kind` **đã hết** sau `drizzle/0161_p2_pr_approval_dynamic_default.sql` (9 → 1 ca hỏng) | CONFIRMED — chỉ luồng song song sửa được phần còn lại |
 | 2 | Nhánh **1 PR → N PO** chỉ có bằng chứng **lược đồ + mã**; dữ liệu thật `0 MR có ≥2 PO` ⇒ **chưa chứng minh được bằng dữ liệu** | UNKNOWN (đã khai báo từ TASK-103 §2.8) |
 | 3 | `10/16 GRN rỗng dòng`: UI nay **cảnh báo** đúng, nhưng **không tự vá dữ liệu** (không được tạo/sửa dữ liệu ở lượt này) | UNKNOWN — chờ quyết định Q5 của `PHASE2-GAP-ANALYSIS.md` §9 |
 | 4 | §21 yêu cầu «click PO → GRN → PO → PR»: đã có §20↔§21, §21↔GRN, §21→PR, Mua hàng→§21. **GRN → PO** (từ `ReceiptDrawer`) **chưa thêm** (ngoài phạm vi 2 màn được giao; `ReceiptDrawer.tsx` không nằm trong danh sách tệp được phép sửa) | UNKNOWN — cần xác nhận có mở rộng phạm vi sang `ReceiptDrawer.tsx` hay không |
 
 ---
 
-*Hết TASK-105. Bằng chứng thô: 3 commit §8 · 2 tệp test §5 · script chẩn đoán cổng 3 chạy ngoài repo (không thêm tệp vào repo để giữ đúng phạm vi).*
+## 10. KẾT LUẬN TRUNG THỰC (không đóng việc khi cổng chưa xanh)
+
+**Phần thuộc TASK-105 thì XANH và có bằng chứng tái lập:** cổng 1 (tsc 0) · cổng 2 (lint 0 error) · cổng 5 (12/12 test hợp đồng mới) · cổng 6 (7 ĐẠT/0 HỎNG) · cổng 7 (ĐẠT).
+**Hai cổng KHÔNG được đóng:** cổng 3 (regression `68/69`, thiếu 1 so với mốc ≥69) và cổng 4 (`test:workflow` FAIL) — **cả hai do kiểm tra Ownership ngoài phạm vi**, đã đo và có đường dẫn dòng mã cụ thể. TASK-105 **KHÔNG tự nhận đã hoàn tất toàn bộ 7 cổng**.
+
+---
+
+*Hết TASK-105. Bằng chứng thô: 4 commit §8 · 2 tệp test §5 · script chẩn đoán cổng 3 chạy ngoài repo (không thêm tệp vào repo để giữ đúng phạm vi).*
