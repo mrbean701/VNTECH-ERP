@@ -127,6 +127,9 @@ INSERT INTO `partners` (`id`,`code`,`name`,`tax_code`,`address`,`contact_name`,`
 | `node --import tsx tests/t01-work-menu-probe.mjs` | **7 ĐẠT · 0 HỎNG** |
 | `node tools/probe-project-screen.mjs` | **KẾT LUẬN: ĐẠT ✅** |
 
+**ĐO LẠI LẦN 2 tại `HEAD = 13b2cde`** (sau khi cả 3 commit đã vào cây — bắt buộc, vì 2 commit `3be6013`/`ef6352b` do **phiên SONG SONG** thực hiện nên bản đã kiểm lần 1 chưa chắc là bản cuối):
+`tsc` **0 lỗi** (exit 0) · `lint` **0 error**/189 warning (exit 0) · test mới **5/5** (exit 0) · `test:regression` **69/69 · 0 HỎNG** (exit 0) · `test:workflow` **ĐẠT** (exit 0) · `t01-work-menu-probe` **7 ĐẠT · 0 HỎNG** (exit 0) · `probe-project-screen` **ĐẠT ✅** (exit 0) ⇒ **7/7 cổng XANH trên đúng bản đã commit**.
+
 ## 9. BLOCKED (một phần) — đường LIVE là JAVA
 
 **Đo được, không suy đoán:** proxy `:9000` chạy `tools/cutover-proxy.mjs --api-port 18081` ⇒ **mọi request API của UI đi vào Java `:18081`** (không đi vào `scripts/system-route.mjs`).
