@@ -103,6 +103,29 @@ if (!APPLY) {
   process.exitCode = 0;
 } else {
 
+// ---------- 0. CHUẨN BỊ: admin đặt mật khẩu demo đã biết ----------
+// ĐO ĐƯỢC (lượt chạy đầu): `kttdemo` trả **401** với `Vntech@2026` ⇒ không đăng nhập được nên
+// mọi bước dùng tài khoản này rơi vào 401 «Phiên đăng nhập đã hạn» và bị đếm nhầm là ĐỐI CHỨNG ÂM
+// ĐẠT. Đặt lại mật khẩu qua `update_user` (chính là kiểm thử chức năng admin), đúng khuôn
+// `tools/probe-purchasing-flow.mjs` dòng 124-137. ⚠ BẮT BUỘC `active: 1`.
+console.log("\n── CHUẨN BỊ: admin đặt mật khẩu demo đã biết ──");
+const al = await login("admin", "Admin123456@");
+step("P.admin", "admin", "đăng nhập admin", al);
+if (!al.ok) throw new Error("Không đăng nhập được admin ⇒ dừng.");
+const boot0 = await (await fetch(`${BASE}/api/system`, { headers: { cookie: sessions.get("admin") } })).json();
+const staffRows = boot0?.data?.users || boot0?.data?.staffDirectory || [];
+const byName = (u) => staffRows.find((s) => s.username === u);
+for (const u of ACTORS) {
+  const row = byName(u);
+  if (!row) { console.log(`  ⚠️  không có tài khoản ${u}`); continue; }
+  const r = await call("admin", "update_user", {
+    userId: row.id, employeeCode: row.employeeCode, fullName: row.fullName, username: row.username,
+    email: row.email || "", role: row.role, organizationUnitId: row.organizationUnitId,
+    approvalLimit: row.approvalLimit ?? 0, newPassword: PASS, active: 1,
+  });
+  step(`P.${u}`, "admin", `đặt mật khẩu demo cho ${u}`, r);
+}
+
 // ---------- 1. ĐĂNG NHẬP TỪNG VAI TRÒ ----------
 console.log("\n── ĐĂNG NHẬP THEO TỪNG VAI TRÒ ──");
 for (const u of ACTORS) {
@@ -138,8 +161,6 @@ if (!createRes.ok) {
   step("1b", "cha.ht", "issue_stock — vai trò cht (BCH)", createRes);
 }
 if (!createRes.ok) {
-  const adminLogin = await login("admin", "Admin123456@");
-  sessions.set("admin", sessions.get("admin") || adminLogin.cookie);
   createRes = await call("admin", "issue_stock", mkIssuePayload());
   step("1c", "admin", "issue_stock — BIỆN PHÁP TẠM nếu các vai trò nghiệp vụ đều bị chặn", createRes);
 }
@@ -162,14 +183,17 @@ if (!issueId) {
   step("N-B.ktt/b1", "kttdemo", "duyệt SAI BƯỚC 1 — ĐỐI CHỨNG ÂM, KỲ VỌNG 400/403", wrong, { expectFail: true });
 
   // Thử trên chính PHIẾU XUẤT (nếu API có nhận issueId) để đo xem có chuỗi duyệt cho stock_issue.
+  // ĐO CHUỖI DUYỆT TRÊN PHIẾU XUẤT: `decide_approval` tra `material_requests`
+  // (`RequestManagementUseCase.java:600` → `findRequestForApproval`) nên truyền `issueId` vào
+  // LUÔN trả 400 «Không tìm thấy đơn yêu cầu.» ⇒ **ĐỐI CHỨNG ÂM**: 400 mới là ĐẠT.
   const s1 = await call("cha.ht", "decide_approval", {
     requestId: issueId, stage: 1, decision: "approved", comment: "Kiểm thử TASK-130 bước 1 (CHT/BCH xác nhận)",
   });
-  step("2.1", "cha.ht", "duyệt bước 1 phiếu XUẤT (CHT/BCH xác nhận) — đo xem có chuỗi duyệt không", s1);
+  step("2.1", "cha.ht", "duyệt bước 1 phiếu XUẤT — ĐỐI CHỨNG ÂM: stock_issue KHÔNG có API duyệt, KỲ VỌNG 400", s1, { expectFail: true });
   const s2 = await call("kttdemo", "decide_approval", {
     requestId: issueId, stage: 2, decision: "approved", comment: "Kiểm thử TASK-130 bước 2 (Kế toán xác nhận)",
   });
-  step("2.2", "kttdemo", "duyệt bước 2 phiếu XUẤT (Kế toán xác nhận) — đo xem có chuỗi duyệt không", s2);
+  step("2.2", "kttdemo", "duyệt bước 2 phiếu XUẤT — ĐỐI CHỨNG ÂM: stock_issue KHÔNG có API duyệt, KỲ VỌNG 400", s2, { expectFail: true });
 }
 
 // ---------- 5. TRẠNG THÁI CUỐI QUA API ----------
