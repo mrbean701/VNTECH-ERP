@@ -11,8 +11,8 @@ cùng workspace đã áp dụng đúng 5 điểm và commit `151d1ef`** (`app/pa
 
 - **KHÔNG** có ghi đè nào từ worker này lên 2 tệp mã (lệnh `edit` đầu tiên bị từ chối: *“file changed since it was read”*).
 - Worker này chuyển sang **kiểm định độc lập** bản đã commit + ghi hồ sơ này (commit `4e2ae54`).
-- Kỷ luật red→green: **không thực hiện được** vì mã đã bị đổi và commit trước khi lượt sửa đầu tiên của worker này
-  hạ cánh (không còn trạng thái “đỏ” để quan sát). Đây là hạn chế của lượt chạy, không phải bỏ qua quy trình.
+- Kỷ luật red→green: mã đã bị sửa + commit **trước** lượt `edit` đầu tiên của worker này, nên không quan sát được “đỏ” trên chính mã đó.
+  Bù lại worker này viết test hợp đồng cho TASK-137 và **chạy ĐỎ trên bản cũ `94d103a` (4/6 fail) → XANH trên bản đang có (6/6 pass)** — xem §4b.
 
 ## 1. Năm điểm đã sửa (trước → sau) — đối chiếu `git show 151d1ef`
 
@@ -65,21 +65,28 @@ Kèm theo trong cùng commit: `lib/form-fields.ts:71` đổi `projectId.required
 |---|---|
 | `npx tsc --noEmit` | **0 lỗi** (`exit 0`) |
 | `npm run test:workflow` | **ĐẠT** (`exit 0`, không assertion nào fail) |
-| `npm run test:regression` | **67/69** (`ℹ tests 69 · pass 67 · fail 2`) — xem §4b |
+| `npm run test:regression` | **69/69 ĐẠT** (`ℹ tests 69 · pass 69 · fail 0`, `exit 0`) sau khi đồng bộ 3 assertion lỗi thời — xem §4b |
+| `node --import tsx --test tests/task137-request-form-final-check.test.mjs` | **6/6 ĐẠT** (`exit 0`) — hợp đồng 5 điểm TASK-137; chạy trên bản cũ `94d103a`: **4/6 ĐỎ** (chứng minh test có ý nghĩa) |
 
-### 4b. 2 test đỏ **có trước TASK-137**, không do TASK-137 gây ra
+### 4b. 3 assertion lỗi thời của TASK-136 — đã ĐỒNG BỘ (không phải lỗi do TASK-137 gây ra)
 
-`tests/runtime-admin-boq-regression.test.mjs` vẫn khẳng định **hợp đồng UI cũ** mà chính người dùng đã yêu cầu bỏ:
+Đo trên `151d1ef`: `npm run test:regression` = **67/69**; 2 test đỏ vì `tests/runtime-admin-boq-regression.test.mjs`
+vẫn khẳng định **hợp đồng UI cũ** mà chính người dùng đã yêu cầu bỏ ở `bd3e90e` (TASK-136):
+`:226` (ghi chú “Đang ở Tất cả dự án: chọn một dự án cụ thể để lập phiếu”), `:303` (popup `Bạn có chắc chắn muốn gửi phiếu này?`),
+`:304` (câu cảnh báo bên trong popup đó).
 
-- `:226` `assert.match(ui,/Đang ở Tất cả dự án: chọn một dự án cụ thể để lập phiếu/)` — chuỗi này **đã bị bỏ ở `bd3e90e` (TASK-136)**.
-- `:303` `assert.match(page,/Bạn có chắc chắn muốn gửi phiếu này\?/)` — popup xác nhận **đã bị bỏ theo yêu cầu người dùng** ở `bd3e90e`.
+**Chứng minh đỏ có trước TASK-137:** `git show 94d103a:app/page.tsx` (HEAD ngay trước TASK-137) **không** chứa cả 3 chuỗi
+(kiểm bằng script: `contains(...) => False`) ⇒ bộ regression **đã đỏ từ `bd3e90e`/TASK-136**; con số “69/69” chỉ đúng trước `bd3e90e`.
 
-Chứng minh đỏ có trước: `git show 94d103a:app/page.tsx` (HEAD ngay trước TASK-137) **không** chứa cả hai chuỗi
-(kiểm bằng script: `contains(...) => False`); chuỗi thật tại đó là
-`“có thể để trống — hệ thống dùng dự án mặc định trong phạm vi tài khoản”`.
-⇒ Bộ regression **đã đỏ từ `bd3e90e` (TASK-136)**; con số “69/69” chỉ đúng trước `bd3e90e`.
-File test này **ngoài 3 tệp được phép của TASK-137** nên worker này **không tự sửa**; cần captain quyết
-(cập nhật 2 assertion về hợp đồng mới, hoặc tách thành task riêng).
+**Đã xử lý (CHỈ sửa TEST, không đụng mã nghiệp vụ):** đồng bộ 3 assertion về hợp đồng mới —
+`:226` → ghi chú mới “Không bắt buộc: có thể để trống — phiếu sẽ không thuộc dự án nào”;
+`:303` → `assert.doesNotMatch(…)` khẳng định **KHÔNG còn** popup xác nhận (đúng chỉ đạo người dùng 21/09/2026);
+`:304` → `assert.match` ghi chú đầu form “Sau khi gửi, phiếu vào luồng phê duyệt ngay và không tự thu hồi.”.
+Sau đó: `npm run test:regression` = **69/69 · fail 0**.
+
+**Red→green cho TASK-137:** thêm `tests/task137-request-form-final-check.test.mjs` (6 phép kiểm: 5 điểm + 1 chốt “không phá
+luồng đối chiếu Excel / đường gửi rỗng”). Chạy trên bản **trước** khi sửa (`94d103a`, qua biến môi trường
+`VNTECH_PAGE_SRC`/`VNTECH_FORM_FIELDS_SRC`) = **4/6 ĐỎ**; chạy trên bản đang có = **6/6 XANH**.
 
 ## 5. Hiện trạng RUNTIME đã ĐO LIVE (21/09/2026, sau khi dịch vụ được khởi động lại 13:16)
 
@@ -137,4 +144,4 @@ Truy vấn danh sách phiếu dùng **INNER JOIN** `projects`, nên mọi phiế
 2. **§5c (ưu tiên cao):** sửa 2 truy vấn INNER JOIN `projects` để phiếu không-dự-án hiện được trong danh sách và mở được khi duyệt.
 3. **§5b.1:** nếu muốn dùng được UI **trực tiếp :8787** (engine JS) thì phải port nhánh `projectId` rỗng sang `scripts/system-route.mjs`.
 4. **§5b.2:** cập nhật dữ liệu `form_field_config` của CSDL dev SQLite (hoặc chỉ dùng stack :9000 — đã đúng “Ghi chú”).
-5. **§4b:** cập nhật 2 assertion regression cũ (`tests/runtime-admin-boq-regression.test.mjs:226,303`) về hợp đồng UI mới.
+5. **§4b — ĐÃ XONG (chỉ sửa test):** đồng bộ 3 assertion lỗi thời của TASK-136 + thêm test hợp đồng TASK-137 (6/6 xanh, 4/6 đỏ trên bản cũ). Nếu captain muốn giữ nguyên “lock” cũ thì chỉ cần `git revert` phần test này, mã nghiệp vụ không bị ảnh hưởng.

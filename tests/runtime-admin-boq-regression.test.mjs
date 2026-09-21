@@ -223,7 +223,8 @@ await test('Project context đồng bộ ĐNMH + tìm vật tư BOQ + collapse/b
   const ui=await readUiSource();const css=await readFile('app/globals.css','utf8');
   assert.match(ui,/contextProject=\{project\}/);
   assert.match(ui,/Đồng bộ theo dự án đang chọn ở màn hình ngoài/);
-  assert.match(ui,/Đang ở Tất cả dự án: chọn một dự án cụ thể để lập phiếu/);
+  // TASK-136/TASK-137 (21/09/2026) — chỉ đạo người dùng: ô Dự án bỏ chốt bắt buộc ⇒ ghi chú mới.
+  assert.match(ui,/Không bắt buộc: có thể để trống — phiếu sẽ không thuộc dự án nào/);
   assert.match(ui,/const contractId=contracts\.some/);
   assert.match(ui,/const boqVersionId=versions\.some/);
   assert.match(ui,/setContractSelection\(""\);setBoqVersionSelection\(""\)/);
@@ -300,8 +301,10 @@ test('FULL W2 UX/workflow contract: header, drawer rộng, ngày Việt Nam, lu�
   assert.match(migration,/name='Trưởng phòng Dự án'[\s\S]{0,360}stage_no=4/,'Bước 4 phải là Trưởng phòng Dự án');
   assert.match(migration,/name='Trưởng phòng Kế hoạch'[\s\S]{0,360}stage_no=5/,'Bước 5 phải là Trưởng phòng Kế hoạch');
   assert.match(migration,/stage_no>5/,'Chỉ các stage cũ sau cấp 5 mới bị tắt');
-  assert.match(page,/Bạn có chắc chắn muốn gửi phiếu này\?/,'CHT phải xác nhận trước khi gửi phiếu');
-  assert.match(page,/Phiếu không thể tự thu hồi; muốn sửa phải được trả lại theo quy trình/,'Popup phải cảnh báo không thể tự thu hồi sau khi gửi');
+  // TASK-136/TASK-137 (21/09/2026) — CHỈ ĐẠO NGƯỜI DÙNG: gửi phiếu KHÔNG còn popup xác nhận;
+  // cảnh báo "không tự thu hồi" chuyển thành ghi chú đầu form (BaseModal `note`).
+  assert.doesNotMatch(page,/Bạn có chắc chắn muốn gửi phiếu này\?/,'Gửi phiếu KHÔNG còn popup xác nhận (chỉ đạo người dùng 21/09/2026)');
+  assert.match(page,/Sau khi gửi, phiếu vào luồng phê duyệt ngay và không tự thu hồi\./,'Đầu form phải cảnh báo không thể tự thu hồi sau khi gửi');
   assert.match(page,/XEM \/ TẢI PHIẾU/,'Màn duyệt phải mở được phiếu trước khi quyết định');
 });
 
