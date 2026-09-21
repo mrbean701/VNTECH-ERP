@@ -3,7 +3,7 @@
 - **Ngày**: 20/09/2026 · **Nhánh**: `unity-p2-full-20260920`
 - **Trạng thái**: **DONE** — 2 mục menu «Nhà cung cấp» + «Đối tác» đã được khai báo, **nối vào cây menu thật** (desktop + mobile), bấm vào mở **`SupplierManager`** kèm `view`; nhãn `module_catalog` đã cập nhật trong MySQL.
 - **Tệp đã sửa**: `lib/menu-helpers.ts` · `app/page.tsx` · `app/screens/SupplierManager.tsx` · `tests/p07-supplier-partner-split.test.mjs` (mới) · `tests/p07-supplier-partner-split-probe.mjs` (mới) · `docs/25_TODO_ROADMAP.md` (ô `P-07`) · tệp hồ sơ này.
-- **Commit**: `8b55cf4` (menu code + test) · `7ac5dc2` (nối `app/page.tsx` + prop `view`) · `886452b` (hồ sơ lượt trước).
+- **Commit**: `8b55cf4` (menu code + test) · `7ac5dc2` (nối `app/page.tsx` + prop `view`) · `886452b` (hồ sơ lượt trước) · **`80d6b6d`** (chốt bản cuối: `lib/menu-helpers.ts` + `app/page.tsx` + 2 tệp test/probe — captain commit gộp).
 
 ## 1. Kết quả cuối (cái người dùng thấy)
 
