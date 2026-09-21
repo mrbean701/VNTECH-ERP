@@ -173,21 +173,27 @@ function warehouseMenuViewFor(view: WarehouseMenuView | null, active: ModuleKey)
 // ⚠️ CHƯA NỐI VÀO `app/page.tsx` (lượt `P-07` này CHỈ được sửa `lib/menu-helpers.ts`): màn `SupplierManager`
 // hiện chỉ nhận `{data, action}` (`app/screens/SupplierManager.tsx` dòng 16) ⇒ muốn 2 mục HIỆN ra kèm lọc
 // theo `view` thì phải nối tiếp theo đúng khuôn `W-01` — xem `docs/agent-progress/TASK-121.md` mục 4.
+//
+// ⚠️ MÀN ĐÍCH LÀ `supplier_catalog`, KHÔNG phải khoá cũ — ĐO ĐƯỢC, không suy đoán: mục gộp cũ
+// `dept_plan_suppliers` rơi vào nhánh CHUNG `active.startsWith("dept_plan_")` ⇒ mở `DepartmentTaskWorkspace`
+// (bảng nhiệm vụ phòng Kế hoạch); `SupplierManager` chỉ được render bởi `active === "supplier_catalog"`
+// (`app/page.tsx` — nhánh render màn). Vì vậy `moduleKey` (ĐÍCH ĐẾN) = `supplier_catalog`, còn
+// `permissionKeys` (CỔNG QUYỀN) giữ khoá cũ đã có `dept_plan_suppliers` — HAI việc KHÁC NHAU.
 // ─────────────────────────────────────────────────────────────────────────────
 type SupplierPartnerMenuView = "supplier" | "partner";
-const supplierPartnerMenuItems: { key: string; label: string; groupKey: "purchasing"; view: SupplierPartnerMenuView; permissionKeys: ModuleKey[] }[] = [
-  { key: "dept_plan_suppliers", label: "Nhà cung cấp", groupKey: "purchasing", view: "supplier", permissionKeys: ["dept_plan_suppliers"] },
-  { key: "dept_plan_partners", label: "Đối tác", groupKey: "purchasing", view: "partner", permissionKeys: ["dept_plan_suppliers"] },
+const supplierPartnerMenuItems: { key: string; label: string; groupKey: "purchasing"; moduleKey: ModuleKey; view: SupplierPartnerMenuView; permissionKeys: ModuleKey[] }[] = [
+  { key: "dept_plan_suppliers", label: "Nhà cung cấp", groupKey: "purchasing", moduleKey: "supplier_catalog", view: "supplier", permissionKeys: ["dept_plan_suppliers"] },
+  { key: "dept_plan_partners", label: "Đối tác", groupKey: "purchasing", moduleKey: "supplier_catalog", view: "partner", permissionKeys: ["dept_plan_suppliers"] },
 ];
 // Dòng `dept_plan_suppliers` trong bảng `modules` bị ẨN KHỎI CÂY MENU (đúng khuôn `legacyWorkMenuKeys` /
-// `legacyWarehouseMenuKeys`) — khoá vẫn SỐNG: quyền · tiêu đề màn · tìm kiếm · nhánh render `SupplierManager`.
+// `legacyWarehouseMenuKeys`) — khoá vẫn SỐNG: quyền · tiêu đề màn · tìm kiếm · nhánh render màn theo `dept_plan_*`.
 const legacySupplierPartnerMenuKeys: ModuleKey[] = ["dept_plan_suppliers"];
 
-// ĐÍCH ĐẾN THẬT của 2 mục: mục «Nhà cung cấp» mở chế độ nhà cung cấp, mục «Đối tác» mở chế độ đối tác — CÙNG
-// màn `SupplierManager` (KHÔNG màn mới, KHÔNG route mới, KHÔNG khoá module mới). Giống `warehouseMenuViewFor`,
-// hàm này trả `null` khi điều hướng cũ (không kèm `view`) để giữ nguyên hành vi hiện có.
+// ĐÍCH ĐẾN THẬT của 2 mục: CÙNG màn `SupplierManager` (`supplier_catalog`) — KHÔNG màn mới, KHÔNG route mới,
+// KHÔNG khoá module mới. `view` chỉ đổi TIÊU ĐỀ/bộ lọc của màn; điều hướng cũ (không kèm `view`) trả `null`
+// để GIỮ NGUYÊN hành vi (đúng cách `warehouseMenuViewFor` đang làm với `W-01`).
 function supplierPartnerViewFor(view: SupplierPartnerMenuView | null, active: ModuleKey): SupplierPartnerMenuView | null {
-  if (active !== "dept_plan_suppliers") return null;
+  if (active !== "supplier_catalog") return null;
   if (view === "supplier" || view === "partner") return view;
   return null;
 }
