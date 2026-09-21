@@ -90,11 +90,14 @@ async function pickRequest(boot) {
   if (!usable.length) return null;
   usable.sort((a, z) => z.lines.length - a.lines.length
     || String(z.r.requestNo).localeCompare(String(a.r.requestNo)));
-  const pick = usable[0];
-  return {
+  // ⚠ ĐÃ VA PHẢI (lượt chạy TASK-133): phiếu xuất PHỤ (để đo đối chứng âm «chưa duyệt») cấp trên CÙNG
+  // MR với phiếu chính ⇒ 400 «số lượng cấp lũy kế vượt nhu cầu MR» khi phần còn dư chỉ đủ cho 1 phiếu.
+  // Nay lấy 2 phiếu ĐỘC LẬP (mỗi phiếu có quota riêng) để cả 2 lần `issue_stock` đều hợp lệ.
+  const toSpec = (pick) => ({
     id: pick.r.id, no: pick.r.requestNo, status: pick.r.status, projectCode: pick.r.projectCode,
     lines: pick.lines.slice(0, 2), candidates: usable.length,
-  };
+  });
+  return { main: toSpec(usable[0]), alt: usable[1] ? toSpec(usable[1]) : null };
 }
 
 // ---------- Phiên đăng nhập theo từng tài khoản ----------
@@ -215,7 +218,10 @@ for (const u of ACTORS) {
 
 // ---------- 1. CHỌN PHIẾU ĐỀ NGHỊ CÒN DƯ (không hard-code) ----------
 console.log("\n── CHỌN PHIẾU ĐỀ NGHỊ ĐÃ DUYỆT CÒN DƯ ĐỂ CẤP PHÁT ──");
-MR = await pickRequest(boot0);
+const picked = await pickRequest(boot0);
+MR = picked?.main || null;
+// Phiếu ĐỀ NGHỊ THỨ HAI (độc lập) dùng cho phiếu xuất PHỤ ở đối chứng âm — xem `pickRequest`.
+const MR_ALT = picked?.alt || null;
 if (!MR || !MR.lines.length) {
   console.log("  ⛔ Không có phiếu ĐÃ DUYỆT nào còn dư chưa cấp ⇒ không thể đo bước tạo phiếu xuất.");
   console.log("     (Cần người dùng duyệt thêm phiếu đề nghị, hoặc tăng nhu cầu — KHÔNG tự sửa dữ liệu.)");
@@ -224,6 +230,7 @@ if (!MR || !MR.lines.length) {
   for (const l of MR.lines) {
     console.log(`    · ${l.code} ${l.name}: cấp ${l.issueQty}/${l.requestedQty} (còn dư ${l.remaining})`);
   }
+  console.log(`  phiếu đề nghị PHỤ (đối chứng âm ③④⑤): ${MR_ALT ? MR_ALT.no : "(không có phiếu thứ 2)"}`);
 }
 
 // ---------- 2. ĐĂNG NHẬP TỪNG VAI TRÒ ----------
@@ -235,17 +242,17 @@ for (const u of ACTORS) {
 
 // ---------- 2. ĐỐI CHỨNG ÂM A — user KHÔNG có quyền gọi issue_stock ----------
 console.log("\n── ĐỐI CHỨNG ÂM A: tài khoản KHÔNG có quyền cấp phát gọi issue_stock ──");
-const mkIssuePayload = () => ({
+const mkIssuePayload = (mr = MR) => ({
   projectId: PRJ.id,
   fromWarehouseId: PRJ.fromWarehouseId,
   teamId: PRJ.teamId,
-  requestId: MR?.id,
-  receivedByName: "Tổ trưởng TD-01 (kiểm thử TASK-130)",
-  note: `Kiểm thử TASK-130 ${RUN_TAG}`,
-  lines: (MR?.lines || []).map((i) => ({
+  requestId: mr?.id,
+  receivedByName: "Tổ trưởng TD-01 (kiểm thử TASK-130/133)",
+  note: `Kiểm thử TASK-130/133 ${RUN_TAG}`,
+  lines: (mr?.lines || []).map((i) => ({
     materialId: i.materialId, requestItemId: i.requestItemId, quantity: i.issueQty,
     contractId: i.contractId,
-    workPackageCode: "WP-TEST-T130", installationArea: "Khu A – kiểm thử TASK-130",
+    workPackageCode: "WP-TEST-T133", installationArea: "Khu A – kiểm thử TASK-133",
   })),
 });
 for (const who of ["engineer.demo", "giamdoc.demo"]) {
@@ -319,9 +326,12 @@ if (!issueId) {
   const st2 = approved?.status ?? "(không thấy phiếu trong bootstrap)";
   assertStep("2.2", "cha.ht", "sau duyệt: stock_issues.status = 'approved' (sẵn sàng xuất kho)",
     st2 === "approved", `status=${st2}`);
-  assertStep("2.3", "cha.ht", "khai báo `approved_by` trên phiếu đã duyệt",
-    approved != null && approved.approvedBy != null,
-    `approvedBy=${approved?.approvedBy ?? "(trống)"}`);
+  // ⚠ GHI NHẬN (TASK-133): bootstrap KHÔNG trả `approved_by` của phiếu xuất — payload `data.issues`
+  // chỉ có `id/issueNo/projectId/teamId/projectCode/teamName/issuedAt/status/receivedByName/itemCount/
+  // totalQty/installedQty` (`BootstrapDataAdapter.java:373-385`). Trước TASK-133 probe khẳng định
+  // «approvedBy != null» ⇒ ĐỎ GIẢ vĩnh viễn vì trường đó CHƯA BAO GIỜ tồn tại trên HTTP. Bằng chứng
+  // đúng cho `approved_by` là SQL (dòng ghi chú bên dưới) — đo được trên LIVE: `USR_911a47b2-…` = cha.ht.
+  console.log(`      ↳ (approved_by KHÔNG có trong payload bootstrap — đối chiếu bằng SQL ở mục dưới)`);
 
   // ĐỐI CHỨNG ÂM B3: duyệt LẦN 2 ⇒ 400 (đã duyệt rồi).
   const twice = await call("cha.ht", "approve_stock_issue", {
@@ -347,10 +357,12 @@ if (!issueId) {
   step("N-C1.ghost", "tkhodemo", "xuất kho phiếu KHÔNG tồn tại — ĐỐI CHỨNG ÂM, KỲ VỌNG 400", ghost3, { expectFail: true });
 
   // ĐỐI CHỨNG ÂM ③b — phiếu CHƯA DUYỆT (`pending_cht`) ⇒ 400. Tạo THÊM 1 phiếu mới rồi để nguyên
-  // `pending_cht` (dùng lại cho đối chứng âm của ④ và ⑤).
-  if (MR?.lines?.length) {
-    const p = await call("tkhodemo", "issue_stock", mkIssuePayload());
-    step("3.0", "tkhodemo", "tạo THÊM 1 phiếu để đo nhánh «chưa duyệt» (③ và ④)", p);
+  // `pending_cht` (dùng lại cho đối chứng âm của ④ và ⑤). Dùng PHIẾU ĐỀ NGHỊ THỨ HAI ĐỘC LẬP —
+  // cấp trên cùng MR sẽ bị 400 «cấp lũy kế vượt nhu cầu» khi phần dư chỉ đủ 1 phiếu.
+  const mrAlt = MR_ALT || MR;
+  if (mrAlt?.lines?.length) {
+    const p = await call("tkhodemo", "issue_stock", mkIssuePayload(mrAlt));
+    step("3.0", "tkhodemo", `tạo THÊM 1 phiếu để đo nhánh «chưa duyệt» (MR ${mrAlt.no})`, p);
     pendingId = p.json?.issueId || p.json?.data?.issueId || null;
   }
   if (pendingId) {
