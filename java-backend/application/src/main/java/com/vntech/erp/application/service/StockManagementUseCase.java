@@ -205,6 +205,188 @@ public final class StockManagementUseCase {
         return result;
     }
 
+    // ================= WF-XUATKHO-01 BƯỚC ③④⑤ (TASK-133) =================
+
+    /**
+     * issue_stock_confirm — WF-XUATKHO-01 **BƯỚC ③ «TIẾN HÀNH XUẤT KHO»** (TASK-133).
+     *
+     * <p><b>Vì sao phải có bước này (nợ kỹ thuật đã đo):</b> trước TASK-133, {@code issue_stock} ghi luôn
+     * {@code stock_movements} (SMI) + {@code contract_stock_ledger} NGAY LÚC TẠO PHIẾU ⇒ trừ tồn kho ở
+     * bước ①, TRƯỚC cả khi CHT duyệt ⇒ bước duyệt ② chỉ là «treo biển». Nay phần ghi kho nằm ở ĐÂY và
+     * CHỈ chạy khi phiếu {@code approved}.
+     *
+     * <p>Quyền: cổng VAI TRÒ {@code requireRole(["warehouse","commander","admin"])} (đúng khuôn
+     * {@link #issueStock}) + phạm vi DỰ ÁN và KHO NGUỒN; cổng MODULE dùng lại khoá SẴN CÓ
+     * {@code warehouse_issue} — ⛔ 0 khoá {@code module_catalog} mới.
+     *
+     * <p>Trạng thái: {@code approved} → {@code issued}. Gọi khi {@code pending_cht} (chưa duyệt) hoặc gọi
+     * lần 2 ⇒ 400 và KHÔNG ghi thêm kho.
+     */
+    public Map<String, Object> issueStockConfirm(Principal principal, Map<String, Object> payload) {
+        rbac.requireRole(principalAsCurrent(principal), List.of("warehouse", "commander", "admin"));
+        String issueId = issueIdOf(payload);
+        Map<String, Object> issue = store.findStockIssueFull(issueId)
+                .orElseThrow(() -> Api("Không tìm thấy phiếu xuất kho " + issueId + "."));
+        String status = sv(issue, "status");
+        if (!"approved".equals(status))
+            throw Api("Phiếu xuất kho " + sv(issue, "issueNo") + " chưa được chỉ huy trưởng duyệt (hiện tại: "
+                    + status + ").");
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), sv(issue, "projectId"), true,
+                "Tài khoản không có quyền xuất kho tại dự án này.");
+        accessScope.requireWarehouseAccess(principal.userId(), principal.role(),
+                principal.warehouseScopeKind(), sv(issue, "fromWarehouseId"), true,
+                "Tài khoản không có quyền xuất tại kho này.");
+        Instant now = Instant.now();
+        if (!store.issueStockConfirm(issueId, principal.userId(), now))
+            throw Api("Phiếu xuất kho " + sv(issue, "issueNo")
+                    + " đã được xuất kho hoặc không còn ở trạng thái đã duyệt.");
+        Map<String, Object> movement = store.issuedMovementSummary(issueId);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("message", "Đã xuất kho theo phiếu " + sv(issue, "issueNo") + " — tồn kho nguồn đã giảm,"
+                + " tồn kho tổ đội đã tăng.");
+        result.put("issueId", issueId);
+        result.put("issueNo", sv(issue, "issueNo"));
+        result.put("status", "issued");
+        result.put("movementCount", movement.get("movementCount"));
+        result.put("totalQty", movement.get("totalQty"));
+        return result;
+    }
+
+    /**
+     * confirm_stock_issue — WF-XUATKHO-01 **BƯỚC ④ «THỦ KHO XÁC NHẬN ĐÃ XUẤT ĐỦ»** (TASK-133).
+     *
+     * <p>Quyền: cổng VAI TRÒ {@code requireRole(["warehouse","admin"])} — ⛔ CHỈ thủ kho (`thu_kho`) hoặc
+     * quản trị, KHÔNG cho chỉ huy trưởng (`cha.ht` ⇒ 403) đúng đặc tả «thủ kho xác nhận».
+     *
+     * <p>Trạng thái: chỉ nhận phiếu đang {@code issued} (đã qua ③) ⇒ {@code completed} + đóng dấu
+     * {@code signed_at}. Xác nhận LẦN 2, xác nhận phiếu CHƯA qua ③, hoặc phiếu mà một dòng chưa có
+     * movement SMI đủ số lượng ⇒ 400.
+     */
+    public Map<String, Object> confirmStockIssue(Principal principal, Map<String, Object> payload) {
+        rbac.requireRole(principalAsCurrent(principal), List.of("warehouse", "admin"));
+        String issueId = issueIdOf(payload);
+        Map<String, Object> issue = store.findStockIssueFull(issueId)
+                .orElseThrow(() -> Api("Không tìm thấy phiếu xuất kho " + issueId + "."));
+        String status = sv(issue, "status");
+        if (!"issued".equals(status))
+            throw Api("Phiếu xuất kho " + sv(issue, "issueNo")
+                    + " chưa được xuất kho (hiện tại: " + status + ") ⇒ không thể xác nhận đã xuất đủ.");
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), sv(issue, "projectId"), true,
+                "Tài khoản không có quyền xác nhận xuất kho tại dự án này.");
+        accessScope.requireWarehouseAccess(principal.userId(), principal.role(),
+                principal.warehouseScopeKind(), sv(issue, "fromWarehouseId"), true,
+                "Chỉ thủ kho phụ trách kho xuất mới được xác nhận đã xuất đủ.");
+        // BẤT BIẾN «XUẤT ĐỦ» kiểm bằng DỮ LIỆU kho, không bằng niềm tin: số dòng đã ghi movement phải
+        // bằng số dòng phiếu xuất. (`Store.confirmStockIssue` kiểm lại lần nữa theo từng vật tư.)
+        List<Map<String, Object>> items = store.stockIssueItems(issueId);
+        Map<String, Object> movement = store.issuedMovementSummary(issueId);
+        long issuedLines = ((Number) movement.getOrDefault("issuedLines", 0)).longValue();
+        if (issuedLines < items.size())
+            throw Api("Phiếu xuất kho " + sv(issue, "issueNo") + " chưa xuất đủ số dòng ("
+                    + issuedLines + "/" + items.size() + ") ⇒ không thể xác nhận.");
+        Instant now = Instant.now();
+        if (!store.confirmStockIssue(issueId, principal.userId(), nvl(payload.get("comment")), now))
+            throw Api("Phiếu xuất kho " + sv(issue, "issueNo")
+                    + " đã được xác nhận hoặc chưa xuất đủ số lượng.");
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("message", "Đã xác nhận xuất đủ theo phiếu " + sv(issue, "issueNo") + ".");
+        result.put("issueId", issueId);
+        result.put("issueNo", sv(issue, "issueNo"));
+        result.put("status", "completed");
+        return result;
+    }
+
+    /**
+     * create_issue_grn — WF-XUATKHO-01 **BƯỚC ⑤ «CHUYỂN THÀNH GRN ĐỂ NHẬP VÀO KHO KHÁC»** (TASK-133).
+     *
+     * <p>⛔ **KHÔNG cần duyệt — CHỈ cần QUYỀN TẠO** (đúng đặc tả). Quyền: cổng VAI TRÒ
+     * {@code requireRole(["warehouse","engineer","admin"])} (nghiệp vụ tạo phiếu nhập hàng ngày là
+     * thủ kho/kỹ sư) + phạm vi DỰ ÁN. Cổng MODULE dùng lại khoá SẴN CÓ {@code receiving}
+     * (capability {@code canCreate}) — ⛔ 0 khoá {@code module_catalog} mới, 0 vòng phê duyệt.
+     *
+     * <p>Điều kiện: phiếu phải đã ở trạng thái **đã xuất đủ** ({@code completed} — bước ④ xong); chưa ⇒ 400.
+     *
+     * <p>Kho đích: tham số {@code toWarehouseId} (linh hoạt) hoặc mặc định KHO TỔ ĐỘI của phiếu
+     * ({@code teams.warehouse_id}); phải là kho đang hoạt động.
+     */
+    public Map<String, Object> createIssueGrn(Principal principal, Map<String, Object> payload) {
+        rbac.requireRole(principalAsCurrent(principal), List.of("warehouse", "engineer", "admin"));
+        String issueId = issueIdOf(payload);
+        Map<String, Object> issue = store.findStockIssueFull(issueId)
+                .orElseThrow(() -> Api("Không tìm thấy phiếu xuất kho " + issueId + "."));
+        String status = sv(issue, "status");
+        if (!"completed".equals(status))
+            throw Api("Phiếu xuất kho " + sv(issue, "issueNo")
+                    + " chưa được thủ kho xác nhận xuất đủ (hiện tại: " + status + ") ⇒ chưa thể sinh phiếu nhập.");
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), sv(issue, "projectId"), true,
+                "Tài khoản không có quyền tạo phiếu nhập tại dự án này.");
+        String toWarehouseId = trim(payload.get("toWarehouseId"));
+        if (toWarehouseId.isEmpty()) toWarehouseId = sv(issue, "toWarehouseId");
+        if (toWarehouseId.isEmpty())
+            throw Api("Phiếu xuất kho chưa gắn kho đích; cần truyền toWarehouseId.");
+        if (store.findActiveWarehouse(toWarehouseId, sv(issue, "projectId")).isEmpty())
+            throw Api("Kho đích của phiếu nhập phải thuộc đúng dự án.");
+        List<Map<String, Object>> lines = store.stockIssueGrnLines(issueId);
+        if (lines.isEmpty()) throw Api("Phiếu xuất kho không có dòng vật tư nào để sinh phiếu nhập.");
+        for (Map<String, Object> line : lines) {
+            if (sv(line, "purchaseOrderId").isEmpty() || sv(line, "purchaseOrderItemId").isEmpty())
+                throw Api("Dòng vật tư " + sv(line, "materialId") + " chưa có dòng đặt hàng (PO) tương ứng"
+                        + " ⇒ không thể lập phiếu nhập theo mẫu `goods_receipts` (cột purchase_order_id NOT NULL).");
+        }
+        Instant now = Instant.now();
+        int year = java.time.LocalDate.now().getYear();
+        String projectId = sv(issue, "projectId");
+        // Dòng số riêng `GRN-PX` (không dùng chung `GRN:project:year` của chuỗi mua hàng) để số phiếu nhập
+        // sinh từ phiếu xuất KHÔNG đụng độ số của GRN mua hàng.
+        long seq = store.nextSequenceNo("GRN-PX:" + projectId + ":" + year, "GRN-PX", projectId, year, now);
+        String receiptNo = "GRN-PX-" + year + "-" + String.format("%04d", seq);
+        String receiptId = idGenerator.next("GRN");
+        String purchaseOrderId = sv(lines.get(0), "purchaseOrderId");
+        List<Map<String, Object>> items = new ArrayList<>();
+        for (Map<String, Object> line : lines) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("purchaseOrderItemId", sv(line, "purchaseOrderItemId"));
+            item.put("contractId", sv(line, "contractId").isEmpty()
+                    ? sv(line, "requestContractId") : sv(line, "contractId"));
+            item.put("boqVersionId", sv(line, "boqVersionId").isEmpty() ? null : sv(line, "boqVersionId"));
+            item.put("quantity", numberValue(ci(line, "quantity")));
+            items.add(item);
+        }
+        Map<String, Object> header = new LinkedHashMap<>();
+        header.put("id", receiptId);
+        header.put("receiptNo", receiptNo);
+        header.put("purchaseOrderId", purchaseOrderId);
+        header.put("warehouseId", toWarehouseId);
+        header.put("receivedBy", principal.userId());
+        header.put("deliveryNoteNo", sv(issue, "issueNo"));
+        header.put("contractId", items.get(0).get("contractId"));
+        header.put("boqVersionId", items.get(0).get("boqVersionId"));
+        header.put("note", blankDefault(trim(payload.get("note")),
+                "Nhập kho theo phiếu xuất " + sv(issue, "issueNo")));
+        store.insertStockIssueGrn(header, items, now);
+        if (!store.markStockIssueGrnCreated(issueId, receiptId, principal.userId(), now))
+            throw Api("Phiếu xuất kho " + sv(issue, "issueNo") + " vừa được chuyển thành phiếu nhập."
+                    + " Không sinh thêm phiếu nhập thứ hai.");
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("message", "Đã sinh phiếu nhập " + receiptNo + " cho kho đích " + toWarehouseId + ".");
+        result.put("issueId", issueId);
+        result.put("issueNo", sv(issue, "issueNo"));
+        result.put("receiptId", receiptId);
+        result.put("receiptNo", receiptNo);
+        result.put("toWarehouseId", toWarehouseId);
+        result.put("lineCount", items.size());
+        result.put("status", "grn_created");
+        return result;
+    }
+
+    /** Mã phiếu xuất từ payload: nhận cả `issueId` và `id` (khuôn {@link #approveStockIssue}). */
+    private static String issueIdOf(Map<String, Object> payload) {
+        String issueId = trim(payload.get("issueId"));
+        if (issueId.isEmpty()) issueId = trim(payload.get("id"));
+        if (issueId.isEmpty()) throw Api("Thiếu mã phiếu xuất kho.");
+        return issueId;
+    }
+
     // ---- helpers ----
     /** return_stock — tổ đội hoàn trả kho dự án; Contract ownership bảo toàn. */
     public Map<String, Object> returnStock(Principal principal, Map<String, Object> payload) {

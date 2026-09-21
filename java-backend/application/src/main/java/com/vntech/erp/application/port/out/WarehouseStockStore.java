@@ -51,6 +51,70 @@ public interface WarehouseStockStore {
      */
     boolean approveStockIssue(String issueId, String userId, String department, String comment, Instant now);
 
+    // ============ WF-XUATKHO-01 BƯỚC ③④⑤ (TASK-133) ============
+
+    /**
+     * Header phiếu xuất ĐẦY ĐỦ cho bước ③④⑤: id/issueNo/projectId/teamId/requestId/status/
+     * approvedBy/issuedBy + {@code fromWarehouseId} + {@code toWarehouseId} (kho tổ đội, đích của
+     * movement SMI) — đủ để ghi kho mà KHÔNG phải đọc lại payload.
+     */
+    Optional<Map<String, Object>> findStockIssueFull(String issueId);
+
+    /** Các dòng của phiếu xuất (id/materialId/requestItemId/contractId/quantity/installedQty). */
+    List<Map<String, Object>> stockIssueItems(String issueId);
+
+    /**
+     * Đếm số dòng movement SMI đã ghi cho phiếu xuất + tổng số lượng đã ghi.
+     * Dùng cho (a) kiểm tra bước ③ đã ghi kho thật chưa trước khi cho xác nhận ④,
+     * (b) chống ghi kho LẦN 2 (idempotent).
+     */
+    Map<String, Object> issuedMovementSummary(String issueId);
+
+    /**
+     * BƯỚC ③ — GHI KHO cho phiếu ĐÃ DUYỆT: mỗi dòng phiếu xuất sinh 1 movement {@code SMI}
+     * (kho nguồn → kho tổ đội) + 2 dòng {@code contract_stock_ledger} (−qty kho nguồn, +qty kho tổ đội),
+     * rồi chuyển {@code stock_issues.status} sang {@code issued}.
+     *
+     * <p>Chốt chặn nằm TRONG câu UPDATE ({@code WHERE status='approved'}) ⇒ gọi lần 2, gọi khi
+     * {@code pending_cht}, hoặc gọi trên phiếu CŨ {@code posted} đều trả {@code false} (use-case ⇒ 400)
+     * và KHÔNG ghi thêm movement nào (chống đua + chống ghi kho trùng).
+     *
+     * @return {@code false} nếu phiếu không còn ở {@code approved}.
+     */
+    boolean issueStockConfirm(String issueId, String userId, Instant now);
+
+    /**
+     * BƯỚC ④ — THỦ KHO XÁC NHẬN ĐÃ XUẤT ĐỦ: {@code issued} → {@code completed} + đóng dấu
+     * {@code signed_at} (thời điểm ký nhận thực tế).
+     *
+     * <p>Chốt chặn trong UPDATE ({@code WHERE status='issued'}) ⇒ xác nhận lần 2 hoặc xác nhận khi
+     * phiếu CHƯA qua bước ③ đều {@code false} (use-case ⇒ 400).
+     */
+    boolean confirmStockIssue(String issueId, String userId, String comment, Instant now);
+
+    /**
+     * Với mỗi dòng phiếu xuất, tìm DÒNG ĐẶT HÀNG (nếu có) của cùng {@code request_item_id} +
+     * {@code material_id} — nguồn khoá ngoại hợp lệ cho {@code goods_receipt_items.purchase_order_item_id}
+     * và {@code goods_receipts.purchase_order_id} (hai cột NOT NULL, KHÔNG có FK nhưng mọi truy vấn
+     * bootstrap đều JOIN `goods_receipts gr JOIN purchase_orders po` ⇒ GRN thiếu PO sẽ VÔ HÌNH).
+     * Phiếu cấp phát thuần kho không có PO ⇒ trả {@code purchaseOrderItemId}/{@code purchaseOrderId} rỗng.
+     */
+    List<Map<String, Object>> stockIssueGrnLines(String issueId);
+
+    /**
+     * BƯỚC ⑤ — SINH PHIẾU NHẬP (GRN) cho phiếu xuất ĐÃ XÁC NHẬN ĐỦ: 1 header {@code goods_receipts}
+     * (kho đích = tham số {@code toWarehouseId}, {@code receipt_no} riêng dòng {@code GRN-PX}) +
+     * 1 dòng {@code goods_receipt_items} cho mỗi dòng phiếu xuất. KHÔNG sinh vòng duyệt nào.
+     */
+    void insertStockIssueGrn(Map<String, Object> header, List<Map<String, Object>> items, Instant now);
+
+    /**
+     * BƯỚC ⑤ — chuyển phiếu xuất sang {@code grn_created} và trả về {@code true}.
+     * Chốt chặn: {@code WHERE status='completed'} ⇒ phiếu chưa xác nhận đủ (hoặc đã sinh GRN rồi)
+     * trả {@code false} (use-case ⇒ 400) và KHÔNG sinh thêm GRN.
+     */
+    boolean markStockIssueGrnCreated(String issueId, String receiptId, String userId, Instant now);
+
     // ---- return_stock / confirm_installation ----
     Optional<Map<String, Object>> resolveOwnershipContract(String projectId, String warehouseId, String materialId,
                                                            String requestedContractId);

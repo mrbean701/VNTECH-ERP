@@ -27,6 +27,14 @@ public final class ActionRbacRegistry {
             // `approvals.can_approve=1` còn `warehouse_issue.can_approve=0` ⇒ nếu khai module
             // `warehouse_issue` thì chính CHT sẽ bị 403 oan.
             Map.entry("approve_stock_issue", List.of("approvals")),
+            // TASK-133 (21/09/2026) — 3 action MỚI cho WF-XUATKHO-01 BƯỚC ③④⑤. Cổng MODULE dùng lại các
+            // khoá SẴN CÓ trong `module_catalog` (⛔ 0 khoá mới): ③④ dùng `warehouse_issue` (đúng module
+            // của `issue_stock` — cùng nghiệp vụ xuất kho), ⑤ dùng `receiving` (đúng module của
+            // `receive_goods` — cùng nghiệp vụ TẠO phiếu nhập). Quyền THẬT vẫn do cổng VAI TRÒ
+            // `requireRole(...)` trong `StockManagementUseCase` quyết định (khuôn TASK-132).
+            Map.entry("issue_stock_confirm", List.of("warehouse_issue")),
+            Map.entry("confirm_stock_issue", List.of("warehouse_issue")),
+            Map.entry("create_issue_grn", List.of("receiving")),
             Map.entry("approve_team_production", List.of()),
             Map.entry("approve_transfer_order", List.of("inventory")),
             Map.entry("bulk_boq_item_action", List.of("boq")),
@@ -228,7 +236,11 @@ public final class ActionRbacRegistry {
             Map.entry("confirm_boq_material_mappings", "canApprove"),
             Map.entry("confirm_delivery", "canApprove"),
             Map.entry("confirm_installation", "canEdit"),
+            // TASK-133 — ④ thủ kho xác nhận đã xuất đủ (cập nhật trạng thái phiếu xuất ⇒ canEdit).
+            Map.entry("confirm_stock_issue", "canEdit"),
             Map.entry("create_central_return", "canCreate"),
+            // TASK-133 — ⑤ sinh GRN nhập kho khác: chỉ cần QUYỀN TẠO (đúng đặc tả «không cần duyệt»).
+            Map.entry("create_issue_grn", "canCreate"),
             Map.entry("create_po", "canCreate"),
             Map.entry("create_project", "canUse"),
             Map.entry("create_project_team", "canUse"),
@@ -279,6 +291,8 @@ public final class ActionRbacRegistry {
             Map.entry("import_material_catalog", "canUse"),
             Map.entry("install_license_foundation", "canUse"),
             Map.entry("issue_stock", "canCreate"),
+            // TASK-133 — ③ tiến hành xuất kho (ghi movement + ledger cho phiếu ĐÃ DUYỆT ⇒ canEdit).
+            Map.entry("issue_stock_confirm", "canEdit"),
             Map.entry("login", "canUse"),
             Map.entry("logout", "canUse"),
             Map.entry("mark_task_notification_read", "canView"),
