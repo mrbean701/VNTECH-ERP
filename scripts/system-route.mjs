@@ -2496,13 +2496,23 @@ async function handleAction(action, payload, user, request) {
         const warehouseId = id("WH");
         const warehouseCode = clean(payload.warehouseCode).toUpperCase() || `KHO-${code}`;
         const warehouseName = clean(payload.warehouseName) || `Kho công trường ${code}`;
-        await env.DB.batch([
+        // W-03 — «Tạo kho dự án? → Có thì tạo kho»: cờ `createWarehouse` MẶC ĐỊNH `true` (mọi nơi gọi cũ
+        // KHÔNG truyền cờ vẫn tạo kho như trước — tương thích ngược tuyệt đối). Chỉ tắt khi truyền tường minh
+        // `false` / `0` / `"0"` / `"false"` / `"no"` (UI hỏi Có/Không và gửi boolean).
+        const rawCreateWarehouse = payload.createWarehouse;
+        const createWarehouse = rawCreateWarehouse === undefined || rawCreateWarehouse === null || rawCreateWarehouse === ""
+            ? true
+            : ![false, 0, "0", "false", "no"].includes(typeof rawCreateWarehouse === "string" ? rawCreateWarehouse.trim().toLowerCase() : rawCreateWarehouse);
+        const statements = [
             env.DB.prepare(`INSERT INTO projects (id,code,name,status,manager_user_id,start_date,planned_end_date,contract_no,contract_name,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)`).bind(projectId, code, name, "active", user.id, clean(payload.startDate) || null, clean(payload.plannedEndDate) || null, clean(payload.contractNo) || null, clean(payload.contractName) || null, stamp, stamp),
-            env.DB.prepare(`INSERT INTO warehouses (id,code,name,type,project_id,parent_warehouse_id,keeper_user_id,active,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)`).bind(warehouseId, warehouseCode, warehouseName, "site", projectId, "WH-CENTRAL", user.id, 1, stamp, stamp),
-            env.DB.prepare(`INSERT OR IGNORE INTO user_project_scopes (id,user_id,project_id,permission,created_at,updated_at) VALUES (?,?,?,?,?,?)`).bind(id("SCOPE"), user.id, projectId, "admin", stamp, stamp),
-        ]);
-        await audit(user.id, "CREATE", "project", projectId, null, { code, name, warehouseCode, warehouseName }, request);
-        return { message: `Đã tạo dự án ${code} và kho công trường riêng.` };
+        ];
+        if (createWarehouse !== false) {
+            statements.push(env.DB.prepare(`INSERT INTO warehouses (id,code,name,type,project_id,parent_warehouse_id,keeper_user_id,active,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)`).bind(warehouseId, warehouseCode, warehouseName, "site", projectId, "WH-CENTRAL", user.id, 1, stamp, stamp));
+        }
+        statements.push(env.DB.prepare(`INSERT OR IGNORE INTO user_project_scopes (id,user_id,project_id,permission,created_at,updated_at) VALUES (?,?,?,?,?,?)`).bind(id("SCOPE"), user.id, projectId, "admin", stamp, stamp));
+        await env.DB.batch(statements);
+        await audit(user.id, "CREATE", "project", projectId, null, { code, name, warehouseCode, warehouseName, createWarehouse }, request);
+        return { message: createWarehouse !== false ? `Đã tạo dự án ${code} và kho công trường riêng.` : `Đã tạo dự án ${code} (không tạo kho công trường theo lựa chọn «Không»).` };
     }
     if (action === "update_project") {
         requireRole(user, ["admin"]);
