@@ -1,11 +1,12 @@
 // HỢP ĐỒNG TASK-122 · `Q1` = PHƯƠNG ÁN (A) — NỬA SAU: ĐỔI CÁCH **HIỂN THỊ** KHI XUẤT EXCEL/CSV BOQ.
 //
-// ⛔ KHÔNG sửa dữ liệu. Chỉ đổi GIÁ TRỊ GHI RA 2 CỘT «Mã dòng BOQ» của 2 nhánh xuất để **GUID không lộ ra**.
+// ⛔ KHÔNG sửa dữ liệu. Chỉ đổi GIÁ TRỊ GHI RA ở cột «Mã dòng BOQ» của 2 nhánh xuất để **GUID không lộ ra**.
 //
 // ĐO Ở HAI TẦNG:
 //   1) TẦNG HÀM THUẦN: import TRỰC TIẾP `lib/boq-line-display.ts` và đo trên DÒNG BOQ THẬT
 //      (`tests/q1-boq-lines-payload.json` — chép nguyên văn từ `GET /api/system` của stack đang chạy).
-//   2) TẦNG NGUỒN: khẳng định 2 nhánh xuất KHÔNG còn ghi `String(r.id…)` và không thêm câu SQL nào.
+//   2) TẦNG NGUỒN: khẳng định 2 nhánh xuất KHÔNG còn ghi `String(r.id…)`, cột lấy giá trị từ hàm thuần, và
+//      KHÔNG câu SQL ghi dữ liệu nào được thêm.
 //
 // Chạy riêng:  node --import tsx --test tests/q1-boq-export-display.test.mjs
 // (tệp CỐ Ý không nằm trong `package.json` → `test:regression` giữ nguyên 69 ca)
@@ -44,11 +45,17 @@ test("Q1-A ② — `boqLineDisplayCode` trả MÃ NGHIỆP VỤ khi dòng BOQ c�
   // Giá trị rỗng/khoảng trắng KHÔNG phải nguồn: phải rơi xuống nguồn kế tiếp, không được trả chuỗi trắng.
   assert.equal(boqLineDisplayCode({ boqCode: "   ", contractLineRef: "B-3" }), "B-3", "`boqCode` chỉ có khoảng trắng ⇒ KHÔNG tính là nguồn");
   assert.equal(boqLineDisplayCode({ boqCode: 0 }), "0", "số 0 là GIÁ TRỊ THẬT (khác rỗng) — không được coi là thiếu nguồn");
-  // Dòng BOQ THẬT (chuỗi ưu tiên rỗng) ⇒ rơi xuống mã vật tư đã lưu + số dòng nguồn, KHÔNG rỗng, KHÔNG GUID.
+  // Dòng BOQ THẬT (chuỗi ưu tiên rỗng) ⇒ rơi xuống mã vật tư đã LƯU + số dòng nguồn, KHÔNG rỗng, KHÔNG GUID.
   assert.equal(boqLineDisplayCode(payload[0]), `KHAC-VLXD-004 · Dòng ${payload[0].lineNo}`, "Dòng thật phải hiện mã vật tư thật + số dòng nguồn (không bịa mã mới)");
   assert.ok(payload.length >= 8, `Bằng chứng payload phải còn ≥ 8 dòng thật (đang có ${payload.length})`);
   const withSource = payload.filter((row) => boqLineDisplayCode(row) !== NO_SOURCE_TEXT).length;
   assert.equal(withSource, payload.length, `CẢ ${payload.length} dòng thật phải có mã hiển thị (không dòng nào rỗng)`);
+  // Fallback phải RÚT TỪ DỮ LIỆU THẬT của chính dòng đó (không chế mã mới): mã vật tư + số dòng nguồn.
+  for (const row of payload) {
+    const shown = boqLineDisplayCode(row);
+    assert.ok(shown.includes(String(row.materialCode)), `«${shown}» phải chứa mã vật tư THẬT «${row.materialCode}» của dòng`);
+    assert.ok(shown.includes(String(row.lineNo)), `«${shown}» phải chứa số dòng nguồn THẬT «${row.lineNo}» của dòng`);
+  }
 });
 
 // ── ③ Trả «chưa có nguồn» khi thiếu — và KHÔNG BAO GIỜ trả GUID ───────────────────────────────────
@@ -84,8 +91,24 @@ test("Q1-A ③ — thiếu MỌI nguồn ⇒ trả ĐÚNG `chưa có nguồn`; K
   }
 });
 
-// ── ④ KHÔNG thêm câu ghi dữ liệu nào (mã hay SQL), và giữ đúng phạm vi tệp ────────────────────────
-test("Q1-A ④ — KHÔNG thêm INSERT/UPDATE/DELETE/DDL (mã hay SQL); hàm thuần không import gì", () => {
+// ── ④ 2 CHỖ ĐÃ ĐỔI: mỗi mảng dòng của nhánh xuất lấy cột «Mã dòng BOQ» từ hàm thuần ───────────────
+test("Q1-A ④ — ĐÚNG 2 mảng dòng (XLSX + CSV) lấy cột thứ 2 từ `boqLineDisplayCode(r)`, không còn `id`", () => {
+  const fragments = exportSource.match(/return\[num\(r\.sourceOrder[\s\S]*?\];/g) || [];
+  assert.equal(fragments.length, 2, `Phải có ĐÚNG 2 mảng dòng của 2 nhánh xuất; đếm được ${fragments.length}`);
+  for (const [index, fragment] of fragments.entries()) {
+    assert.match(fragment, /^return\[num\(r\.sourceOrder\|\|r\.lineNo\|\|i\+1\),boqLineDisplayCode\(r\),/, `Nhánh #${index + 1}: cột «Thứ tự nguồn» → «Mã dòng BOQ» phải là \`boqLineDisplayCode(r)\``);
+    assert.doesNotMatch(fragment, /\bid\b/, `Nhánh #${index + 1}: mảng dòng KHÔNG được còn tham chiếu \`id\` (khoá GUID)`);
+    assert.match(fragment, /r\.(materialCode|contractMaterialCode)/, `Nhánh #${index + 1}: mảng dòng phải còn ghi mã vật tư thật (không đổi cấu trúc 13 cột)`);
+  }
+  // ĐỐI CHỨNG: cột «Mã dòng BOQ» của 2 nhánh này ghi ra ĐÚNG giá trị hàm thuần trên dòng BOQ THẬT.
+  const shown = payload.map((row) => boqLineDisplayCode(row));
+  assert.deepEqual(shown.slice(0, 3), ["KHAC-VLXD-004 · Dòng 1", "KHAC-VLXD-005 · Dòng 2", "KHAC-VLXD-003 · Dòng 3"], "3 dòng đầu phải hiện mã vật tư thật + số dòng nguồn");
+  assert.ok(shown.every((value) => !GUID.test(value)), "Không giá trị nào được là khoá kỹ thuật/GUID");
+  assert.ok(!shown.includes(String(payload[0].id)), "Không được trả lại chính `id` của dòng");
+});
+
+// ── ⑤ KHÔNG thêm câu ghi dữ liệu nào (mã hay SQL), và giữ đúng phạm vi tệp ────────────────────────
+test("Q1-A ⑤ — KHÔNG thêm INSERT/UPDATE/DELETE/DDL (mã hay SQL); hàm thuần không import gì", () => {
   const FORBIDDEN = [
     /\bINSERT\s+INTO\b/i, /\bUPDATE\s+[`"']?\w+[`"']?\s+SET\b/i, /\bDELETE\s+FROM\b/i,
     /\bALTER\s+TABLE\b/i, /\bDROP\s+(TABLE|DATABASE|INDEX)\b/i, /\bTRUNCATE\b/i,
