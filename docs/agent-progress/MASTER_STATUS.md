@@ -16,18 +16,18 @@
 
 | Phân loại (nguyên văn cột TT) | Số mục | % |
 |---|---|---|
-| **DONE** (`**DONE**` + `DONE` + `DONE / AP-DUNG n`) | **105** | **95,5 %** |
+| **DONE** (`**DONE**` + `DONE` + `DONE / AP-DUNG n`) | **106** | **96,4 %** |
 | ĐANG LÀM | 0 | 0 % |
 | KHUNG XONG nhưng **ÁP DỤNG 0** | 0 | 0 % |
 | **BỊ CHẶN** (`**BLOCKED**` = F-01 + W-03) | 2 | 1,8 % |
-| TODO | 3 | 2,7 % |
+| TODO | 2 | 1,8 % |
 
 | Phase | DONE / tổng | Ghi chú |
 |---|---|---|
 | PHASE 0 — AUDIT | **16 / 16 — ĐÓNG ✅** | A-01…A-16; A-13…A-16 còn TODO |
 | PHASE 0B — BẢO MẬT | **10 / 10** | ĐÓNG (theo yêu cầu người dùng) |
 | PHASE 1 — UI/UX | **17 / 17** | **ĐÓNG HOÀN TOÀN** — `U-12` bỏ **823 token `!important` chết** (9 lô, mỗi lô qua `tsc` + `npm test` + **cổng ảnh 64/64**) |
-| PHASE 2 — MUA HÀNG | **7 / 9** | `P-04` · `P-05` · `P-06` · **`P-09` DONE 22/09 (TASK-117)** — 5 call site `requireRole` ở `ProductionManagementUseCase` nay nhận **cả** mã ENGINE **và** mã chức danh THẬT của `role_catalog` (16 mã đo trên MySQL thật); `ProductionRoleCounterProofTest` **5 ca** (KHÔNG ca nào chạy bằng `admin`) **ĐỎ 2/4 → XANH 5/5**; cổng `web` **29→34 ca · 0 đỏ** (**`P-01` đã ROLLBACK 20/09 theo yêu cầu user — chưa chốt PHASE 2**) |
+| PHASE 2 — MUA HÀNG | **8 / 9** | `P-04` · `P-05` · `P-06` · **`P-09` DONE 22/09 (TASK-117)** — 5 call site `requireRole` ở `ProductionManagementUseCase` nay nhận **cả** mã ENGINE **và** mã chức danh THẬT của `role_catalog` (16 mã đo trên MySQL thật); `ProductionRoleCounterProofTest` **5 ca** (KHÔNG ca nào chạy bằng `admin`) **ĐỎ 2/4 → XANH 5/5**; cổng `web` **29→34 ca · 0 đỏ** (**`P-01` đã ROLLBACK 20/09 theo yêu cầu user — chưa chốt PHASE 2**) |
 | PHASE 3 — CÔNG VIỆC | **10 / 10** | `T-02` DONE 20/09 (audit mô hình dữ liệu: 32 cột + `work_item_events`) · **`T-03` + `T-04` DONE 20/09**: 2 bảng mới `work_item_comments`/`work_item_participants` (2 chuỗi drizzle + Flyway V20, COLLATE từng cột) · tệp đính kèm **dùng LẠI** `attachments` (`entity_type='work_item'`) · 2 action JS + 2 khoá bootstrap · **vá lỗi thật**: màn Công việc lọc `assigneeUserId` (tên KHÔNG tồn tại) ⇒ tab "Việc của tôi" luôn 0 việc |
 | PHASE 4 — DỰ ÁN | 6 / 6 | **ĐÓNG 20/09 (TASK-098)** — `PR-01` **DONE** (dải 6 tab + toolbar cân đối — probe hợp đồng ĐẠT exit 0 trên bundle mới `E2E11762304AD2B5`) · `PR-05` DONE (tạm đóng theo chỉ đạo) · **`PR-02` DONE** (lọc 4 chiều: Trạng thái · Quản lý dự án · Phòng ban · Ngày — 7/7 ca hợp đồng) · **`PR-03` DONE** (5 tab con chi tiết: chung · nhân sự · tổ đội · kho · lịch sử — 4/4 ca) · **`PR-04` DONE** (`EntityDetailModal` cho Project/User/Warehouse/Team — 6/6 ca) · **`PR-06` DONE** (CRUD BCH theo quyền + link entity — 6/6 ca) · nguồn % tiến độ = **NHẬT KÝ THI CÔNG** (user chốt 20/09, CHƯA có nghiệp vụ ⇒ khối tiến độ để trống kèm ghi chú, KHÔNG bịa công thức) |
 | PHASE 5 — KHO | 3 / 4 | **`W-02` DONE** (audit `Project : Warehouse` = **CONFIRMED 1:N** trên CSDL thật + code; FK khai ở drizzle, MySQL chỉ có INDEX) · **`W-01` DONE** (tách nhóm menu KHO thành **đúng 5 mục** khai trong code — Kho · Nhập · Xuất · Điều chuyển · Dashboard tồn kho; cổng quyền trỏ **6 khoá ĐÃ CÓ**; **0 khoá module mới, 0 migration**) · **`W-04` DONE** (tab «Dashboard tồn kho» đủ **8 chỉ số §19**, mọi số từ payload; «giá trị kho» = **«chưa có nguồn»** vì `unit_cost` không vào payload) · **`W-03` BLOCKED** (nhánh «Không» của *«Tạo kho dự án?»* không thi hành được: `create_project` luôn INSERT kho, không có action xoá/ngưng kho, mà `scripts/**` bị CẤM ⇒ chi tiết `TASK-100.md` §8) |
