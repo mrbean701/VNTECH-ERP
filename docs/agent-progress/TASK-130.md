@@ -216,10 +216,51 @@ node tools/probe-stock-issue-flow.mjs --apply    # thực thi
 |---|---|---|
 | 1 (chưa đặt mật khẩu) | **9/12** | ❌ `kttdemo` **401** (mật khẩu không phải `Vntech@2026`) ⇒ 2 bước đối chứng âm dùng `kttdemo` ra 401 **giả** |
 | 2 (sau khi thêm admin `update_user`) | **17/19** | ❌ 2 bước `decide_approval(issueId)` bị đếm HỎNG dù **400 là đúng** ⇒ kỳ vọng sai của probe |
-| **3 (chốt)** | **19/19 bước ĐẠT** | 0 bước HỎNG |
+| 3 (chốt bản đầu) | **19/19 bước ĐẠT** | 0 bước HỎNG |
+| 4 (**lượt chạy sáng 21/09 — phát hiện probe tự cạn dữ liệu**) | **15/18** | ❌ `issue_stock` **400 “số lượng cấp lũy kế vượt nhu cầu MR”** — **KHÔNG phải lỗi hệ thống**: chính 3 lượt probe trước đã cấp **hết** `MR_f4636c1c-…` (`issued_qty` 25/25). ⇒ probe hard-code 1 phiếu ⇒ **không chạy lại được** |
+| **5 (bản tự chọn phiếu — chốt)** | **19/19 bước ĐẠT** | chạy lại lần 2 ⇒ vẫn **19/19** (tự nhảy sang phiếu kế tiếp) ✔ |
 
-19 bước gồm: 7 đặt mật khẩu demo · 6 đăng nhập · **2 đối chứng âm A (403)** · 1 tạo phiếu (200) ·
-**1 đối chứng âm B (403)** · **2 đối chứng âm `decide_approval` trên phiếu xuất (400)**.
+### 7.1 ĐÃ SỬA PROBE THÀNH “TỰ CẤP DỮ LIỆU” (repeatable)
+
+`tools/probe-stock-issue-flow.mjs` — bỏ hard-code `MR_f4636c1c-…`, thêm `pickRequest(boot)`:
+
+| Điều kiện lọc (đo từ bootstrap, không đoán) | Lý do |
+|---|---|
+| `request.projectId = PRJ-DEMO-01` + `status ∈ {approved, ordered, partial_received, received, partial_issued}` | đúng điều kiện cho phép cấp phát ở `StockManagementUseCase.java:71-73` |
+| dòng còn `requested_qty − issued_qty ≥ 1` | tránh 400 «cấp lũy kế vượt nhu cầu MR» (:110-111) |
+| **`(materialId, contractId)` PHẢI có dòng `contractStockBalances` ở kho nguồn, số dư ≥ 1** | tránh 400 «Contract không đủ tồn kế toán tại kho nguồn» — lỗi đo được với phiếu `0002` (`material_request_items.contract_id = PCON_a6d9b6a3-…` nhưng kho nguồn chỉ có ownership `PCON_78092ea4-…`) |
+| gửi kèm `lines[].contractId` tường minh | loại bỏ nhánh suy diễn `line → MR header → rỗng` (:95-98) |
+| `issueQty = min(5, còn dư, ownership)` | luôn cấp một phần ⇒ đo được cả `partial` |
+
+**Bằng chứng repeatable:** lượt 5 tạo `PX-PRJ-DEMO-01-2026-0024`; lượt 6 (chạy lại ngay) tự chọn phiếu
+khác và tạo `PX-PRJ-DEMO-01-2026-0025` — **cả hai 19/19**.
+
+### 7.2 ĐO LẠI HỆ QUẢ sau bản tự chọn phiếu (lượt 5)
+
+```sql
+SELECT id,issue_no,status,issued_by,from_warehouse_id,team_id,request_id FROM stock_issues
+ WHERE id='ISS_95fd0b7d-37e8-4334-944e-febd7d96d36f';
+```
+| Cột | Giá trị |
+|---|---|
+| `issue_no` | **`PX-PRJ-DEMO-01-2026-0024`** |
+| `status` | **`posted`** (sinh ra đã posted — lặp lại đúng kết luận mục 3.1) |
+| `issued_by` | `USR_8984cf69-…` = **`tkhodemo`** |
+| `from_warehouse_id` → `team_id` | `WH_51e0f009-…` → `TEAM_8c1fecd9-…` (TD-01) |
+| `request_id` | `MR_62b3e402-…` (**0002 của lượt 4 bị loại**; lượt 5 chọn `DNMH-PRJ-DEMO-01-2026-0154`) |
+
+| Đo | Giá trị |
+|---|---|
+| `stock_issue_items` | **2 dòng**, `quantity=5` mỗi dòng, `installed_qty=0`, `contract_id=PCON_78092ea4-…` ✔ |
+| `stock_movements` | **2 dòng `SMI`**, `WH_51e0f009-… → WHTEAM_3d658322-…`, qty **5** & **5**, `posted_by=tkhodemo` ✔ |
+| `contract_stock_ledger` | 4 dòng: kho nguồn **−5/−5**, kho tổ đội **+5/+5** ✔ |
+| `approvals` `entity_type='stock_issue'` | **0** (lặp lại: không có chuỗi duyệt) |
+| Tổng `stock_issues` / `stock_issue_items` / `SMI` | **12 / 20 / 17** |
+
+**Trạng thái phiếu đề nghị (lượt 5, phiếu `…-0154`)**: `status` = **`approved`** (không đổi),
+`approval_stage` = `5`, `supply_status` = **`awaiting_bch_confirmation`** (không đổi sau xuất kho);
+`material_request_items.issued_qty` **0 → 10** (5+5) ✔, `line_status` = **`delivered_pending_confirmation`**
+⇒ **củng cố phát hiện #2**: chỉ số lượng đổi, **cột trạng thái phiếu đề nghị vẫn không phản ánh việc đã xuất kho**.
 
 ---
 
@@ -227,10 +268,11 @@ node tools/probe-stock-issue-flow.mjs --apply    # thực thi
 
 | Cổng | Kết quả |
 |---|---|
-| `npx tsc --noEmit` | **exit 0** (0 lỗi) ✔ |
+| `npx tsc --noEmit` | **exit 0** (0 lỗi) ✔ — chạy lại sau bản tự-chọn-phiếu |
 | `npm run test:regression` | **tests 69 · pass 69 · fail 0** · exit 0 ✔ |
 | `npm run test:workflow` | **ĐẠT** ✔ (`Workflow VNTECH ERP V5.3.0 FULL W2 passed: …`) |
 | Java `mvn -pl web -am test` | **KHÔNG chạy** — đợt này **không sửa dòng Java nào** (`git show --stat`: chỉ `tools/probe-stock-issue-flow.mjs`) |
+| `node tools/probe-stock-issue-flow.mjs --apply` | **19/19 bước ĐẠT** (2 lượt liên tiếp đều 19/19) ✔ |
 
 ## 9. BLOCKED / UNKNOWN — cần người dùng quyết
 
@@ -247,7 +289,9 @@ node tools/probe-stock-issue-flow.mjs --apply    # thực thi
    ⚠ **KHÔNG tự chạy DDL** và **không tự sửa Java** — chờ người dùng quyết.
 4. **UNKNOWN**: 6 phiếu `pending_approval` ở bước 5 của luồng mua hàng (từ TASK-128) vẫn còn —
    ngoài phạm vi TASK-130.
-5. **Dữ liệu do probe sinh (ĐÃ GHI, không phải DDL)**: 3 phiếu xuất `PX-PRJ-DEMO-01-2026-0013/0015/0016`
-   + 6 dòng `stock_issue_items` + 6 dòng `stock_movements` + 12 dòng `contract_stock_ledger`
-   + 3 dòng `supply_workflow_steps`; `material_request_items.issued_qty` của `MR_f4636c1c-…`
-   đã tăng lên 15/30 (do probe, không phải người dùng). Nếu cần hoàn tác ⇒ **SQL hoàn tác phải do captain chạy**.
+5. **Dữ liệu do probe sinh (ĐÃ GHI, không phải DDL)**: các phiếu xuất `PX-PRJ-DEMO-01-2026-0013/0015/0016`
+   (phiếu 0136) và **`…-0017/0018/0019/0020/0021/0022/0023/0024/0025`** (bản tự-chọn-phiếu) + các dòng
+   tương ứng trong `stock_issue_items`, `stock_movements`, `contract_stock_ledger`,
+   `supply_workflow_steps`; `material_request_items.issued_qty` của các phiếu MR đã dùng đã tăng
+   (do probe). Tổng hiện tại: **12 `stock_issues` · 20 `stock_issue_items` · 17 movement `SMI`**.
+   Nếu cần hoàn tác ⇒ **SQL hoàn tác phải do captain chạy**.

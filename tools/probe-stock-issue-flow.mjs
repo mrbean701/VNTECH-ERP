@@ -32,14 +32,59 @@ const PRJ = {
   fromWarehouseId: "WH_51e0f009-4873-4cb6-855c-e6e7fea41e4d", // KHO-PRJ-DEMO-01
   teamId: "TEAM_8c1fecd9-1060-4f0f-849d-fa8d8dd75878",         // TD-01 (đúng tổ của PRJ-DEMO-01)
   teamWarehouseId: "WHTEAM_3d658322-ae04-49a6-83cb-018748ac9fd3", // TD-PRJ-DEMO-01-TD-01
-  // Phiếu đề nghị ĐÃ DUYỆT dùng làm nguồn cấp phát (2 dòng, đủ tồn vật lý ở kho nguồn):
-  requestId: "MR_f4636c1c-85db-4b32-bf03-9592c17ed591",
-  requestNo: "DNMH-PRJ-DEMO-01-2026-0136",
-  items: [
-    { requestItemId: "MRI_f5b8a193-646a-44a9-9b7f-0f78fcbff2d0", materialId: "MAT_fc920779-6cc2-451c-8e12-c993141417f0", code: "KHAC-VLXD-004", name: "Thép hộp 40x40", unit: "cây", requestedQty: 25, issueQty: 5 },
-    { requestItemId: "MRI_45b4eda3-aa62-4177-a386-33f07a5875f0", materialId: "MAT_c3ff35ff-c562-4814-8b77-5e925e0d0589", code: "KHAC-VLXD-005", name: "Xi măng PCB40", unit: "bao", requestedQty: 60, issueQty: 10 },
-  ],
 };
+// Số lượng cấp mỗi dòng (không vượt phần CHƯA CẤP của dòng MR — chọn ở `pickRequest()`).
+const WANT_QTY = 5;
+// ⚠ ĐÃ VA PHẢI (lượt chạy 4): phiếu `MR_f4636c1c-…` (0136) bị CHÍNH PROBE cấp hết
+// (`issued_qty` 25/25) ⇒ `issue_stock` trả 400 «số lượng cấp lũy kế vượt nhu cầu MR» và probe
+// báo HỎNG GIẢ. Vì vậy KHÔNG hard-code phiếu: chọn động phiếu ĐÃ DUYỆT còn dư chưa cấp.
+let MR = null;
+
+// ---------- Chọn phiếu đề nghị ĐÃ DUYỆT còn dư (đo từ bootstrap, không đoán) ----------
+// LỌC BẮT BUỘC theo `contractStockBalances`: `issue_stock` còn kiểm **tồn kế toán theo Contract**
+// (`StockLedgerEngine.availability` → `contractBalance(projectId, contractId, warehouseId, materialId)`;
+// lỗi đo được: «Dòng 1: Contract không đủ tồn kế toán tại kho nguồn (còn 0.000)»). Phiếu 0002 có
+// `material_request_items.contract_id = PCON_a6d9b6a3-…` nhưng kho nguồn chỉ có ownership của
+// `PCON_78092ea4-…` ⇒ cấp từ kho này LUÔN 400. Vì vậy chỉ chọn phiếu mà **mọi dòng định cấp** đều có
+// Contract sở hữu tồn tại kho nguồn, và gửi kèm `contractId` tường minh.
+async function pickRequest(boot) {
+  const reqs = (boot?.data?.requests || []).filter((r) =>
+    String(r.projectId) === PRJ.id &&
+    ["approved", "ordered", "partial_received", "received", "partial_issued"].includes(String(r.status)));
+  // (materialId|contractId) -> số dư ownership tại KHO NGUỒN
+  const owned = new Map();
+  for (const b of boot?.data?.contractStockBalances || []) {
+    if (String(b.warehouseId) !== PRJ.fromWarehouseId) continue;
+    owned.set(`${b.materialId}|${b.contractId}`, Number(b.balance || 0));
+  }
+  const usable = [];
+  for (const r of reqs) {
+    const lines = [];
+    for (const i of r.items || []) {
+      const remaining = Number(i.requestedQty) - Number(i.issuedQty);
+      if (remaining < 1 || !i.materialId) continue;
+      const contractId = String(i.contractId || r.contractId || "");
+      const key = `${i.materialId}|${contractId}`;
+      const ownerBal = owned.get(key);
+      if (!ownerBal || ownerBal < 1) continue; // không có tồn kế toán ⇒ issue_stock chắc chắn 400
+      lines.push({
+        requestItemId: i.id, materialId: i.materialId, contractId,
+        code: i.materialCode, name: i.materialName, unit: i.unit,
+        requestedQty: Number(i.requestedQty), remaining,
+        issueQty: Math.min(WANT_QTY, remaining, ownerBal),
+      });
+    }
+    if (lines.length) usable.push({ r, lines });
+  }
+  if (!usable.length) return null;
+  usable.sort((a, z) => z.lines.length - a.lines.length
+    || String(z.r.requestNo).localeCompare(String(a.r.requestNo)));
+  const pick = usable[0];
+  return {
+    id: pick.r.id, no: pick.r.requestNo, status: pick.r.status, projectCode: pick.r.projectCode,
+    lines: pick.lines.slice(0, 2), candidates: usable.length,
+  };
+}
 
 // ---------- Phiên đăng nhập theo từng tài khoản ----------
 const sessions = new Map();
@@ -83,8 +128,7 @@ console.log(`  LUỒNG CẤP PHÁT / XUẤT KHO — ${PRJ.code} · ${APPLY ? "TH
 console.log("═".repeat(110));
 console.log(`  kho nguồn : KHO-PRJ-DEMO-01 (${PRJ.fromWarehouseId})`);
 console.log(`  kho nhận  : kho tổ đội TD-01 (${PRJ.teamWarehouseId})`);
-console.log(`  phiếu MR  : ${PRJ.requestNo} (${PRJ.requestId})`);
-console.log(`  dòng cấp  : ${PRJ.items.map((i) => `${i.code} ×${i.issueQty}`).join(" · ")}\n`);
+console.log(`  phiếu MR  : (chọn động sau khi đăng nhập — phiếu ĐÃ DUYỆT còn dư chưa cấp)\n`);
 
 const ACTORS = ["tkhodemo", "cha.ht", "kttdemo", "engineer.demo", "giamdoc.demo", "trdademo"];
 
@@ -126,7 +170,20 @@ for (const u of ACTORS) {
   step(`P.${u}`, "admin", `đặt mật khẩu demo cho ${u}`, r);
 }
 
-// ---------- 1. ĐĂNG NHẬP TỪNG VAI TRÒ ----------
+// ---------- 1. CHỌN PHIẾU ĐỀ NGHỊ CÒN DƯ (không hard-code) ----------
+console.log("\n── CHỌN PHIẾU ĐỀ NGHỊ ĐÃ DUYỆT CÒN DƯ ĐỂ CẤP PHÁT ──");
+MR = await pickRequest(boot0);
+if (!MR || !MR.lines.length) {
+  console.log("  ⛔ Không có phiếu ĐÃ DUYỆT nào còn dư chưa cấp ⇒ không thể đo bước tạo phiếu xuất.");
+  console.log("     (Cần người dùng duyệt thêm phiếu đề nghị, hoặc tăng nhu cầu — KHÔNG tự sửa dữ liệu.)");
+} else {
+  console.log(`  chọn: ${MR.no} (${MR.id}) · status=${MR.status} · ${MR.candidates} phiếu khả dụng`);
+  for (const l of MR.lines) {
+    console.log(`    · ${l.code} ${l.name}: cấp ${l.issueQty}/${l.requestedQty} (còn dư ${l.remaining})`);
+  }
+}
+
+// ---------- 2. ĐĂNG NHẬP TỪNG VAI TRÒ ----------
 console.log("\n── ĐĂNG NHẬP THEO TỪNG VAI TRÒ ──");
 for (const u of ACTORS) {
   const r = await login(u, PASS);
@@ -139,11 +196,12 @@ const mkIssuePayload = () => ({
   projectId: PRJ.id,
   fromWarehouseId: PRJ.fromWarehouseId,
   teamId: PRJ.teamId,
-  requestId: PRJ.requestId,
+  requestId: MR?.id,
   receivedByName: "Tổ trưởng TD-01 (kiểm thử TASK-130)",
   note: `Kiểm thử TASK-130 ${RUN_TAG}`,
-  lines: PRJ.items.map((i) => ({
+  lines: (MR?.lines || []).map((i) => ({
     materialId: i.materialId, requestItemId: i.requestItemId, quantity: i.issueQty,
+    contractId: i.contractId,
     workPackageCode: "WP-TEST-T130", installationArea: "Khu A – kiểm thử TASK-130",
   })),
 });
@@ -154,15 +212,20 @@ for (const who of ["engineer.demo", "giamdoc.demo"]) {
 
 // ---------- 3. TẠO PHIẾU XUẤT (đúng vai trò thủ kho) ----------
 console.log("\n── TẠO PHIẾU CẤP PHÁT / XUẤT KHO ──");
-let createRes = await call("tkhodemo", "issue_stock", mkIssuePayload());
-step("1a", "tkhodemo", "issue_stock — vai trò thu_kho (đúng mô tả WF-XUATKHO-01)", createRes);
-if (!createRes.ok) {
-  createRes = await call("cha.ht", "issue_stock", mkIssuePayload());
-  step("1b", "cha.ht", "issue_stock — vai trò cht (BCH)", createRes);
-}
-if (!createRes.ok) {
-  createRes = await call("admin", "issue_stock", mkIssuePayload());
-  step("1c", "admin", "issue_stock — BIỆN PHÁP TẠM nếu các vai trò nghiệp vụ đều bị chặn", createRes);
+let createRes = { status: 0, ok: false, json: null, text: "không có phiếu MR khả dụng" };
+if (MR?.lines?.length) {
+  createRes = await call("tkhodemo", "issue_stock", mkIssuePayload());
+  step("1a", "tkhodemo", "issue_stock — vai trò thu_kho (đúng mô tả WF-XUATKHO-01)", createRes);
+  if (!createRes.ok) {
+    createRes = await call("cha.ht", "issue_stock", mkIssuePayload());
+    step("1b", "cha.ht", "issue_stock — vai trò cht (BCH)", createRes);
+  }
+  if (!createRes.ok) {
+    createRes = await call("admin", "issue_stock", mkIssuePayload());
+    step("1c", "admin", "issue_stock — BIỆN PHÁP TẠM nếu các vai trò nghiệp vụ đều bị chặn", createRes);
+  }
+} else {
+  console.log("  ⛔ BỎ QUA bước tạo phiếu xuất — không có phiếu đề nghị ĐÃ DUYỆT nào còn dư.");
 }
 const issueId = createRes.json?.issueId || createRes.json?.data?.issueId || null;
 const issueNo = createRes.json?.issueNo || createRes.json?.data?.issueNo || null;
@@ -175,9 +238,9 @@ console.log("\n── CHUỖI DUYỆT WF-XUATKHO-01: bước 1 cha.ht (canApprov
 if (!issueId) {
   console.log("  ⛔ Không có issueId — dừng chuỗi duyệt.");
 } else {
-  // ĐỐI CHỨNG ÂM B: duyệt SAI BƯỚC (người của bước 2 đi duyệt bước 1).
+  // ĐỐI CHỨNG ÂM B: duyệt SAI BƯỚC (người của bước 2 đi duyệt bước 1 của PHIẾU ĐỀ NGHỊ đã chốt).
   const wrong = await call("kttdemo", "decide_approval", {
-    requestId: PRJ.requestId, stage: 1, decision: "approved",
+    requestId: MR.id, stage: 1, decision: "approved",
     comment: "Đối chứng âm TASK-130: kế toán duyệt sai bước 1",
   });
   step("N-B.ktt/b1", "kttdemo", "duyệt SAI BƯỚC 1 — ĐỐI CHỨNG ÂM, KỲ VỌNG 400/403", wrong, { expectFail: true });
@@ -206,7 +269,7 @@ try {
   const pick = mine[0] || issues.slice().sort((a, z) => String(z.issueNo).localeCompare(String(a.issueNo)))[0];
   console.log(`   ${issues.length} phiếu xuất trong bootstrap · chọn ${pick?.issueNo} · status=${pick?.status}`);
   const reqs = boot?.data?.requests || boot?.data?.materialRequests || [];
-  const mr = reqs.find((r) => String(r.id) === String(PRJ.requestId));
+  const mr = reqs.find((r) => String(r.id) === String(MR?.id));
   console.log(`   MR ${mr?.requestNo} · status=${mr?.status} · bước=${mr?.approvalStage} · cấp phát=${mr?.supplyStatus}`);
 } catch (e) {
   console.log(`   ⚠ không đọc được bootstrap: ${e.message}`);
