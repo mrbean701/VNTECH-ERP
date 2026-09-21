@@ -128,14 +128,11 @@ sinh ra đã ở bước 2. Nên `2.1 [cha.ht]` 400 là **đúng**, không phả
    Nguyên nhân **DỮ LIỆU**: `warehouses.keeper_user_id` của `KHO-PRJ-DEMO-01` = **admin**
    (`USR_2f435847…`) và `user_warehouse_scopes` **KHÔNG có dòng nào** cho `tkhodemo`
    (`tkhodemo` chỉ có `user_project_scopes` = `write` trên PRJ-DEMO-01 ⇒ qua được phép dự án, trượt phép kho).
-   ⇒ **SQL cần captain quyết** (KHÔNG tự chạy):
-   ```sql
-   -- (a) gán thủ kho thật cho kho công trường của dự án demo
-   UPDATE warehouses SET keeper_user_id='USR_8984cf69-c2d7-4162-bb4f-03ab51427e1e'   -- tkhodemo
-     WHERE id='WH_51e0f009-4873-4cb6-855c-e6e7fea41e4d';
-   -- (b) hoặc cấp phạm vi kho cho tài khoản thủ kho (kiểm schema trước khi chạy)
-   -- INSERT INTO user_warehouse_scopes (…user_id='USR_8984cf69-…', warehouse_id='WH_51e0f009-…', …);
-   ```
+   ⇒ **ĐÃ ĐƯỢC CAPTAIN XỬ LÝ** (cấp phạm vi kho — KHÔNG do tôi chạy): đo lại MySQL thấy
+   `user_warehouse_scopes` của `KHO-PRJ-DEMO-01` nay có **4 dòng `permission='write'`**, trong đó
+   `USR_8984cf69-c2d7-4162-bb4f-03ab51427e1e` = **`tkhodemo`** ⇒ lượt chạy lại **`4a` ✅ HTTP 200**.
+   (Phương án SQL gốc để tham chiếu: `UPDATE warehouses SET keeper_user_id='USR_8984cf69-…'
+   WHERE id='WH_51e0f009-…';` **hoặc** `INSERT INTO user_warehouse_scopes (…tkhodemo…, permission='write')`.)
 2. **`5a`/`5b` confirm_delivery → 400** “Phải tải ít nhất một ảnh giao hàng thực tế trước khi BCH xác nhận.”
    Đây là **luật nghiệp vụ THẬT** (bắt buộc có ảnh giao hàng) — chỉ mới chạm tới được vì nay đã có GRN.
    Không phải lỗi; cần ảnh thật hoặc nới luật theo quyết định của người dùng.
@@ -151,6 +148,25 @@ sinh ra đã ở bước 2. Nên `2.1 [cha.ht]` 400 là **đúng**, không phả
      WHERE id='PO:PRJ_fdbfab20-bf1f-4ad5-8159-7dcc582140c3:2026';
    ```
    Lượt sau 3a đã tự qua (bộ đếm đã tiến), nhưng rủi ro 409 vẫn còn ở các dự án khác.
+
+## 4.3 Lượt chạy lại SAU khi captain cấp phạm vi kho (trạng thái mới nhất, HEAD `af3fb0d`)
+
+```
+✅ 2.5c. [giamdoc.demo] duyệt bước 5 — Giám đốc (Owner ĐƯỢC PHÂN CÔNG của dự án) → chốt hồ sơ
+✅ 3a.  [nvkhdemo    ] lập PO bằng vai trò kh_nv (Nhân viên Kế hoạch)
+✅ 4a.  [tkhodemo    ] nhận hàng bằng vai trò thu_kho (Thủ kho)        ← trước đây 403
+❌ 5a/5b xác nhận giao hàng → 400 "Phải tải ít nhất một ảnh giao hàng thực tế trước khi BCH xác nhận."
+KẾT QUẢ: 33/35 bước ĐẠT
+```
+
+⇒ Toàn bộ chuỗi **đúng vai trò nghiệp vụ thật** đã chạy: `ksda.demo` lập phiếu → `thukydemo`/`nvdademo`/`nvkhdemo`
+duyệt bước 2/3/4 → **`giamdoc.demo` chốt bước 5** → **`nvkhdemo` lập PO** → **`tkhodemo` nhận hàng (GRN)**.
+Chỉ còn **1 luật nghiệp vụ thật** chặn bước xác nhận giao hàng: **bắt buộc có ảnh giao hàng thực tế**
+(không phải lỗi; cần ảnh thật hoặc quyết định nới luật).
+
+### 4.3.1 Cổng chạy lại tại HEAD `af3fb0d` (cây làm việc sạch cho 2 tệp của TASK-128)
+`npx tsc --noEmit` → **exit 0** · `npm run test:regression` → **tests 69 · pass 69 · fail 0 · exit 0**
+· `npm run test:workflow` → **ĐẠT · exit 0**.
 
 ### 4.2 Ảnh chụp `workflow_step_approvers` đã cũ — captain quyết
 Hiện màn “Workflow phê duyệt” (WF-MUAHANG-01 bước 5) hiển thị **`trdademo` (all_of)** trong khi
