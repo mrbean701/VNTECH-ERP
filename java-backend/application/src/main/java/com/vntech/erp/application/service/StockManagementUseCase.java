@@ -165,6 +165,46 @@ public final class StockManagementUseCase {
         return result;
     }
 
+    /**
+     * approve_stock_issue — WF-XUATKHO-01 **BƯỚC ②** (TASK-132): CHỈ HUY TRƯỞNG duyệt phiếu xuất.
+     *
+     * <p>Quyền: cổng VAI TRÒ {@code requireRole(["commander","admin"])} — đúng khuôn {@link #issueStock}
+     * (dòng requireRole ngay đầu hàm), KHÔNG thêm khoá {@code module_catalog} nào (cổng module dùng lại
+     * module sẵn có {@code approvals}). {@code roleBase} của {@code cha.ht} là {@code commander}.
+     *
+     * <p>Trạng thái: chỉ nhận phiếu đang {@code pending_cht} (do BƯỚC ① sinh ra) ⇒ duyệt LẦN 2 hoặc duyệt
+     * phiếu CŨ ({@code posted}) đều bị 400. Phiếu không tồn tại ⇒ 400.
+     *
+     * <p>Phạm vi: CHỈ đổi trạng thái + sinh bản ghi {@code approvals}; việc ③ tiến hành xuất kho
+     * (movement/ledger), ④ thủ kho xác nhận, ⑤ GRN thuộc nhánh sau.
+     */
+    public Map<String, Object> approveStockIssue(Principal principal, Map<String, Object> payload) {
+        rbac.requireRole(principalAsCurrent(principal), List.of("commander", "admin"));
+        String issueIdParam = trim(payload.get("issueId"));
+        String issueId = issueIdParam.isEmpty() ? trim(payload.get("id")) : issueIdParam;
+        if (issueId.isEmpty()) throw Api("Thiếu mã phiếu xuất kho cần duyệt.");
+        Map<String, Object> issue = store.findStockIssue(issueId)
+                .orElseThrow(() -> Api("Không tìm thấy phiếu xuất kho " + issueId + "."));
+        String status = sv(issue, "status");
+        if (!"pending_cht".equals(status))
+            throw Api("Phiếu xuất kho " + sv(issue, "issueNo")
+                    + " không ở trạng thái chờ chỉ huy trưởng duyệt (hiện tại: " + status + ").");
+        String decision = trim(payload.get("decision"));
+        if (!decision.isEmpty() && !"approved".equals(decision))
+            throw Api("Quyết định '" + decision + "' chưa được hỗ trợ ở bước ② (chỉ nhận 'approved').");
+        Instant now = Instant.now();
+        boolean isCommander = "commander".equals(principal.roleBase()) || "commander".equals(principal.role());
+        String department = isCommander ? "CHT duyệt phiếu xuất kho" : "Quản trị hệ thống duyệt phiếu xuất kho";
+        if (!store.approveStockIssue(issueId, principal.userId(), department, nvl(payload.get("comment")), now))
+            throw Api("Phiếu xuất kho đã được duyệt hoặc không còn ở trạng thái chờ duyệt.");
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("message", "Đã duyệt phiếu xuất kho " + sv(issue, "issueNo") + " — sẵn sàng xuất kho.");
+        result.put("issueId", issueId);
+        result.put("issueNo", sv(issue, "issueNo"));
+        result.put("status", "approved");
+        return result;
+    }
+
     // ---- helpers ----
     /** return_stock — tổ đội hoàn trả kho dự án; Contract ownership bảo toàn. */
     public Map<String, Object> returnStock(Principal principal, Map<String, Object> payload) {

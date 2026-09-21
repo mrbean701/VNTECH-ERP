@@ -199,6 +199,59 @@ class SupplyChainEndToEndIntegrationTest {
                 "movement SMI phải có destination_contract_id = contract của dòng (bug #10: trước đây NULL)");
         assertEquals(0, new java.math.BigDecimal("4").compareTo((java.math.BigDecimal) smi.get("quantity")),
                 "movement SMI phải đúng số lượng 4");
+
+        // ═══ TASK-132 — WF-XUATKHO-01 BƯỚC ①② («tạo phiếu» → «chỉ huy trưởng duyệt») ═══════════
+        // Phạm vi lượt này CHỈ 2 bước đầu: ③ tiến hành xuất kho · ④ thủ kho xác nhận · ⑤ GRN
+        // KHÔNG được thi hành ở đây (nhánh sau làm) ⇒ KHÔNG assert gì về 3 bước đó.
+        String issueId = jdbc.queryForObject(
+                "SELECT id FROM stock_issues WHERE project_id=? ORDER BY created_at DESC LIMIT 1",
+                String.class, projectId);
+        // ① phiếu MỚI sinh ra phải là CHỜ CHT DUYỆT, KHÔNG còn bind cứng 'posted'.
+        assertEquals("pending_cht",
+                jdbc.queryForObject("SELECT status FROM stock_issues WHERE id=?", String.class, issueId),
+                "phiếu xuất mới phải ở trạng thái pending_cht (chờ chỉ huy trưởng duyệt) — không được 'posted'");
+        // Cho người lập phiếu quyền `approvals.canApprove=1` để cổng MODULE đi qua, nhờ vậy 403 của
+        // ca dưới CHẮC CHẮN đến từ cổng VAI TRÒ `requireRole(["commander","admin"])` chứ không phải
+        // cổng module (đúng lời khẳng định «cổng vai trò mới là cái chặn thật»).
+        jdbc.update("INSERT INTO module_catalog (module_key,label,icon,active,sort_order,created_at,updated_at)"
+                + " SELECT 'approvals','Trung tâm phê duyệt','X',1,30,?,? WHERE NOT EXISTS"
+                + " (SELECT 1 FROM module_catalog WHERE module_key='approvals')", now, now);
+        jdbc.update("INSERT INTO user_module_permissions (id,user_id,module_key,can_view,can_use,can_create,"
+                        + "can_edit,can_approve,can_export,permission_source,created_at,updated_at)"
+                        + " VALUES (?,?,'approvals',1,1,0,0,1,0,'manual_override',?,?)",
+                "ump_ap_e2e", "u_req_e2e", now, now);
+        // ĐỐI CHỨNG ÂM 1: người KHÔNG phải chỉ huy trưởng (vai trò kh_nv) duyệt ⇒ 403.
+        MvcResult notCommander = postActionAs(requesterCookie,
+                action("approve_stock_issue", "\"issueId\":\"" + issueId + "\",\"decision\":\"approved\""), 403);
+        assertTrue(notCommander.getResponse().getContentAsString()
+                        .contains("không có quyền thực hiện nghiệp vụ này"),
+                "403 phải đến từ cổng VAI TRÒ (requireRole), không phải cổng module — body: "
+                        + abbreviate(notCommander.getResponse().getContentAsString()));
+        // ② chỉ huy trưởng duyệt ⇒ 200 + sinh bản ghi `approvals` + phiếu sang trạng thái sẵn sàng xuất.
+        postAction(action("approve_stock_issue",
+                "\"issueId\":\"" + issueId + "\",\"decision\":\"approved\",\"comment\":\"CHT duyệt (TASK-132)\""), 200);
+        assertEquals("approved",
+                jdbc.queryForObject("SELECT status FROM stock_issues WHERE id=?", String.class, issueId),
+                "sau khi CHT duyệt, stock_issues.status phải là 'approved'");
+        Map<String, Object> ap = jdbc.queryForMap(
+                "SELECT entity_type, entity_id, stage, approver_user_id, status, decided_at FROM approvals"
+                        + " WHERE entity_type='stock_issue' AND entity_id=?", issueId);
+        assertEquals("stock_issue", ap.get("entity_type"));
+        assertEquals(issueId, ap.get("entity_id"));
+        assertEquals(1, ((Number) ap.get("stage")).intValue());
+        assertEquals(adminId, ap.get("approver_user_id"), "approver_user_id phải là chính người duyệt");
+        assertEquals("approved", ap.get("status"));
+        assertEquals(adminId, jdbc.queryForObject(
+                "SELECT approved_by FROM stock_issues WHERE id=?", String.class, issueId),
+                "stock_issues.approved_by phải là người duyệt");
+        // ĐỐI CHỨNG ÂM 2: duyệt LẦN 2 cùng phiếu ⇒ 400 (đã duyệt rồi).
+        postAction(action("approve_stock_issue", "\"issueId\":\"" + issueId + "\",\"decision\":\"approved\""), 400);
+        assertEquals(1, jdbc.queryForObject(
+                "SELECT COUNT(*) FROM approvals WHERE entity_type='stock_issue' AND entity_id=?",
+                Integer.class, issueId), "duyệt lại KHÔNG được sinh thêm bản ghi approvals");
+        // ĐỐI CHỨNG ÂM 3: phiếu KHÔNG tồn tại ⇒ 400.
+        postAction(action("approve_stock_issue", "\"issueId\":\"ISS_khong-ton-tai\""), 400);
+
         // Production → Thu hồi → Thanh toán
         postAction(action("save_production_report",
                 "\"projectId\":\"" + projectId + "\",\"reportPeriod\":\"2026-09\",\"plannedValue\":100000000,"

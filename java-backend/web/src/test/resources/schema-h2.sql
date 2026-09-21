@@ -2309,4 +2309,14 @@ CREATE TABLE IF NOT EXISTS `partners` (
   PRIMARY KEY (`id`)
 ) ;
 CREATE UNIQUE INDEX IF NOT EXISTS `partners_code_uidx` ON `partners` (`code`);
+-- TASK-132 (21/09/2026) — `approvals` dùng cho phiếu XUẤT KHO (`approve_stock_issue`):
+--   • `entity_type`/`entity_id` đến từ Flyway `V17__workflow_dynamic_approvals.sql` (migration SAU V1
+--     nên generator `tools/generate-h2-test-schema.mjs` sinh từ V1 KHÔNG bắt được — cùng tiền lệ V21/V22/V23).
+--   • `request_id` trong MySQL THẬT đã là NULLABLE (V17: `MODIFY COLUMN request_id VARCHAR(64) NULL`),
+--     nhưng bản H2 sinh từ V1 vẫn `NOT NULL` ⇒ phiếu xuất (không gắn `material_requests`) INSERT sẽ đỏ.
+-- Cú pháp `DROP NOT NULL` + `ADD COLUMN IF NOT EXISTS` đã đo chạy được trên H2 2.3.232 (MODE=MySQL).
+ALTER TABLE `approvals` ALTER COLUMN `request_id` DROP NOT NULL;
+ALTER TABLE `approvals` ADD COLUMN IF NOT EXISTS `entity_type` varchar(64) NULL;
+ALTER TABLE `approvals` ADD COLUMN IF NOT EXISTS `entity_id` varchar(64) NULL;
+CREATE INDEX IF NOT EXISTS `approvals_entity_idx` ON `approvals` (`entity_type`, `entity_id`);
 -- [H2-MANUAL-END]

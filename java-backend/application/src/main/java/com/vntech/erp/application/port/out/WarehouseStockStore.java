@@ -38,6 +38,19 @@ public interface WarehouseStockStore {
     void insertSupplyWorkflowStepIssued(String requestId, String issueId, Instant now, long dueHours);
     String postingStatusOf(String issueId);
 
+    // ---- WF-XUATKHO-01 BƯỚC ② (TASK-132): CHỈ HUY TRƯỞNG duyệt phiếu xuất ----
+    /** Header phiếu xuất để duyệt: id/issueNo/projectId/teamId/requestId/status/approvedBy/issuedBy. */
+    Optional<Map<String, Object>> findStockIssue(String issueId);
+    /**
+     * Duyệt phiếu xuất ĐANG `pending_cht`: chuyển `stock_issues.status='approved'` + ghi `approved_by`,
+     * và SINH 1 bản ghi `approvals` (entity_type='stock_issue', entity_id=issueId, stage=1,
+     * approver_user_id=người duyệt, status='approved', decided_at=now) trong CÙNG transaction.
+     *
+     * @return {@code false} nếu phiếu KHÔNG ở trạng thái `pending_cht` (đã duyệt / phiếu cũ `posted`)
+     *         ⇒ tầng use-case trả 400 «đã duyệt rồi»; {@code true} nếu duyệt thành công.
+     */
+    boolean approveStockIssue(String issueId, String userId, String department, String comment, Instant now);
+
     // ---- return_stock / confirm_installation ----
     Optional<Map<String, Object>> resolveOwnershipContract(String projectId, String warehouseId, String materialId,
                                                            String requestedContractId);

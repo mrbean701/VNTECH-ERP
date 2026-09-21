@@ -225,6 +225,38 @@ public class WarehouseStockStoreAdapter implements WarehouseStockStore {
         return jdbcTemplate.queryForObject("SELECT status FROM stock_issues WHERE id=?", String.class, issueId);
     }
 
+    // ================= WF-XUATKHO-01 BƯỚC ② (TASK-132) — CHT DUYỆT PHIẾU XUẤT =================
+
+    @Override
+    public Optional<Map<String, Object>> findStockIssue(String issueId) {
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
+                SELECT id,issue_no AS issueNo,project_id AS projectId,team_id AS teamId,
+                       request_id AS requestId,status,approved_by AS approvedBy,issued_by AS issuedBy
+                FROM stock_issues WHERE id=?""", issueId);
+        return rows.isEmpty() ? Optional.empty() : Optional.of(new LinkedHashMap<>(rows.get(0)));
+    }
+
+    @Override
+    @Transactional
+    public boolean approveStockIssue(String issueId, String userId, String department, String comment, Instant now) {
+        // Điều kiện `status='pending_cht'` trong chính câu UPDATE là CHỐT CHẶN (chống đua + chống
+        // «duyệt lần 2» + chống duyệt phiếu CŨ đang `posted`): 0 dòng bị đổi ⇒ use-case trả 400.
+        int changed = jdbcTemplate.update("""
+                UPDATE stock_issues SET status='approved',approved_by=?,updated_at=?
+                WHERE id=? AND status='pending_cht'""", userId, now, issueId);
+        if (changed == 0) return false;
+        // `request_id` để NULL: phê duyệt này thuộc PHIẾU XUẤT (`entity_type/entity_id`), không thuộc
+        // `material_requests` — và UNIQUE `approvals_request_stage_uidx(request_id,stage)` của MySQL cho
+        // phép nhiều NULL. `department` NOT NULL nên luôn được truyền từ use-case.
+        jdbcTemplate.update("""
+                INSERT INTO approvals (id,entity_type,entity_id,request_id,stage,department,approver_user_id,
+                                       status,queued_at,decided_at,comment,created_at,updated_at)
+                VALUES (?,?,?,NULL,1,?,?,?,?,?,?,?,?)""",
+                "APR_" + java.util.UUID.randomUUID(), "stock_issue", issueId, department, userId,
+                "approved", now, now, comment, now, now);
+        return true;
+    }
+
     // ---------- return_stock / confirm_installation ----------
     @Override
     public Optional<Map<String, Object>> resolveOwnershipContract(String projectId, String warehouseId,

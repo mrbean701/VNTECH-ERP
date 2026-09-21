@@ -1183,6 +1183,18 @@ case "reject_po" -> {
                     out.put("warnings", requestStore.approvalWarnings("stock_issue", String.valueOf(result.getOrDefault("issueId", ""))));
                     return ResponseEntity.ok(jsonResult(out));
                 }
+                // TASK-132 (21/09/2026) — WF-XUATKHO-01 BƯỚC ②: CHỈ HUY TRƯỞNG DUYỆT PHIẾU XUẤT.
+                // Quyền: cổng VAI TRÒ `requireRole(["commander","admin"])` trong
+                // `StockManagementUseCase.approveStockIssue` (khuôn y `issueStock`). Cổng MODULE dùng lại
+                // module SẴN CÓ `approvals` + `canApprove` (ActionRbacRegistry) — ⛔ 0 khoá `module_catalog` mới.
+                // Sinh bản ghi `approvals` (entity_type='stock_issue', entity_id=issueId, stage=1,
+                // status='approved') và chuyển `stock_issues.status` sang `approved`. BƯỚC ③④⑤ (xuất kho
+                // thật / thủ kho xác nhận / GRN) KHÔNG thuộc lượt này.
+                case "approve_stock_issue" -> {
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                    Map<String, Object> result = stockManagementUseCase.approveStockIssue(asStockPrincipal(cu), payload);
+                    return ResponseEntity.ok(jsonResult(result));
+                }
                 case "save_supplier" -> {
                     AuthUseCase.CurrentUser cu = requireCurrentUser(request);
                     String m = supplierManagementUseCase.saveSupplier(asSupplierPrincipal(cu), payload);

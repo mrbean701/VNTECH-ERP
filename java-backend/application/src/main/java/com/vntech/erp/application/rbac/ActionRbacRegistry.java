@@ -20,6 +20,13 @@ public final class ActionRbacRegistry {
             Map.entry("approve_production_report", List.of("production")),
             Map.entry("approve_site_expense_claim", List.of("dept_finance_site_cost")),
             Map.entry("approve_stock_count", List.of("stocktake")),
+            // TASK-132 (21/09/2026) — action MỚI cho WF-XUATKHO-01 BƯỚC ② (CHT duyệt phiếu xuất).
+            // Cổng MODULE dùng lại module SẴN CÓ `approvals` (+ `canApprove`) — ⛔ 0 khoá `module_catalog`
+            // mới: quyền thật của bước này do cổng VAI TRÒ `requireRole(["commander","admin"])` trong
+            // `StockManagementUseCase.approveStockIssue` quyết định. Đo MySQL: `cha.ht` có
+            // `approvals.can_approve=1` còn `warehouse_issue.can_approve=0` ⇒ nếu khai module
+            // `warehouse_issue` thì chính CHT sẽ bị 403 oan.
+            Map.entry("approve_stock_issue", List.of("approvals")),
             Map.entry("approve_team_production", List.of()),
             Map.entry("approve_transfer_order", List.of("inventory")),
             Map.entry("bulk_boq_item_action", List.of("boq")),
@@ -205,6 +212,7 @@ public final class ActionRbacRegistry {
             Map.entry("approve_production_report", "canApprove"),
             Map.entry("approve_site_expense_claim", "canApprove"),
             Map.entry("approve_stock_count", "canApprove"),
+            Map.entry("approve_stock_issue", "canApprove"), // TASK-132 — bước ② WF-XUATKHO-01
             Map.entry("approve_team_production", "canUse"),
             Map.entry("approve_transfer_order", "canApprove"),
             Map.entry("bulk_boq_item_action", "canEdit"),
