@@ -152,3 +152,7 @@ Java toàn bộ (baseline cần so: **39–40 test · 3 ĐỎ CÓ SẴN** ở `P
 - `mvn -pl web -am test -Dtest=RequestNoProjectBootstrapIntegrationTest` (GREEN): `Tests run: 1, Failures: 0, Errors: 0` — BUILD SUCCESS.
 - `npx tsc --noEmit` → exit 0. `npm run test:regression` → 69/69. `npm run test:workflow` → ĐẠT.
 - `mvn -B -pl web -am test` (shell mới) → `Tests run: 42, Failures: 3` (cả 3 ở `ProductionRoleCounterProofTest` — ĐỎ CÓ SẴN) ⇒ BUILD FAILURE **vì 3 đỏ có sẵn**, không có đỏ mới; `RequestNoProjectBootstrapIntegrationTest` xanh 1/1.
+- **CHẠY LẠI TOÀN BỘ CỔNG trên cây hiện tại (sau `f105fd5` + sau khi bản test được bổ sung 2b/2c):**
+  `npx tsc --noEmit` → **exit 0** · `npm run test:regression` → **tests 69 / pass 69 / fail 0** · `npm run test:workflow` → **ĐẠT** ·
+  `mvn -B -pl web -am test` (shell mới) → domain 19/0 · application 23/0 · infrastructure 10/0 · **web 42 test / 3 đỏ = ĐÚNG 3 test CÓ SẴN `ProductionRoleCounterProofTest`** ·
+  `RequestNoProjectBootstrapIntegrationTest` **1/1 XANH** · `RequestApprovalIntegrationTest` 2/2 · `RequestApprovalOwnerOnlyTest` 1/1 · `PoRbacActionsIntegrationTest` 4/4 · `PoPriceFromRequestTest` 1/1 ⇒ **0 đỏ mới**.
