@@ -247,8 +247,7 @@ public final class RequestManagementUseCase {
             if (!creatorMatchedStageRole(stage, principal).isEmpty()) continue;
                 // TASK-136 — phiếu KHÔNG thuộc dự án nào: `approval_project_assignments.project_id`
                 // là NOT NULL nên KHÔNG thể có "phân công cấp công ty" ⇒ không gán Owner đích danh.
-                // Bước duyệt vẫn chạy được THEO VAI TRÒ (`allowed_role_codes_snapshot`) — xem nhánh
-                // (2) "ĐÚNG VAI TRÒ của bước" trong `canApproveRequestStage`.
+                // (TASK-140: nhánh duyệt THEO VAI TRÒ đã bị BỎ — xem `canApproveRequestStage`.)
                 if (projectId.isEmpty()) continue;
                 Map<String, Object> assignment = store.workflowAssignment(projectId, (int) numberValue(gi(stage, "stageNo")))
                         .orElse(null);
@@ -622,10 +621,18 @@ public final class RequestManagementUseCase {
         Map<String, Object> mr = store.findRequestForApproval(requestId)
                 .orElseThrow(() -> Api("Không tìm thấy đơn yêu cầu."));
         // JS 1076: phạm vi dự án của CHÍNH đơn (findRequestForApproval alias projectId).
-        accessScope.requireProjectAccess(principal.userId(), principal.role(), sv(mr, "projectId"), true,
-                "Tài khoản không có quyền tại dự án.");
+        // TASK-141 — phiếu KHÔNG thuộc dự án nào: KHÔNG có phạm vi dự án nào để kiểm.
+        // `canAccessProject(user, "", …)` LUÔN trả false khi `projectId` rỗng (AccessScopeService:67)
+        // ⇒ nếu vẫn gọi, MỌI người duyệt không phải admin đều bị 403 «Tài khoản không có quyền tại
+        // dự án.» ⇒ phiếu công ty lập xong nhưng không ai duyệt được. Cổng duyệt thật vẫn giữ nguyên
+        // bên dưới (`canApproveRequestStage`: owner được phân công của đúng bước) + RBAC `decide_approval`.
+        // Phiếu THUỘC dự án: ràng buộc phạm vi GIỮ NGUYÊN (không nới).
+        String requestProjectId = sv(mr, "projectId");
+        if (!requestProjectId.isEmpty())
+            accessScope.requireProjectAccess(principal.userId(), principal.role(), requestProjectId, true,
+                    "Tài khoản không có quyền tại dự án.");
         if (!canApproveRequestStage(principal.userId(), requestId, stage))
-            throw Api("Bạn không phải Owner được phân công của bước này hoặc không đủ RBAC để phê duyệt.");
+            throw Api("Bạn không phải Owner được phân công của bước này nên không được phê duyệt.");
         if ((int) numberValue(gi(mr, "approvalStage")) != stage || !"pending_approval".equals(sv(mr, "status")))
             throw Api("Hồ sơ chưa đến bước duyệt này hoặc đã được xử lý.");
         if (!List.of("approved", "rejected").contains(decision)) throw Api("Quyết định không hợp lệ.");
@@ -755,40 +762,36 @@ public final class RequestManagementUseCase {
         return Map.of("message", "Đã hoàn tất luồng phê duyệt; hồ sơ tự chuyển sang Mua hàng & PO và bắt đầu tính thời gian lập PO.");
     }
 
+    /**
+     * F4 / TASK-140 — CỔNG DUYỆT: <b>CHỈ người được PHÂN CÔNG ĐÍCH DANH của đúng bước</b> mới được quyết định.
+     *
+     * <p><b>Nguồn owner</b> (cả hai đều là phân công theo NGƯỜI — hợp nhất bằng ∪):
+     * <ol>
+     *   <li>{@code approvals.approver_user_id} — owner đã chốt cho chính phiếu này ở bước đó khi lập phiếu
+     *       ({@code approval_project_assignments} project+stage → owner, đã kiểm vai trò/phạm vi lúc tạo);</li>
+     *   <li>{@code store.stageApproverUserIds(projectId, stage)} — phân công nhiều người của quy trình
+     *       ({@code workflow_step_approvers}, P4 {@code all_of}/{@code any_of}).</li>
+     * </ol>
+     *
+     * <p><b>ĐÃ BỎ nhánh "THEO VAI TRÒ"</b> ({@code allowed_role_codes} / {@code base_role}): vai trò KHÔNG còn là
+     * căn cứ để qua cổng duyệt. Trước đây chỉ cần tài khoản trùng {@code allowed_role_codes} hoặc {@code base_role}
+     * của bước là qua cổng (ví dụ {@code base_role='procurement'} qua được bước 4 dù KHÔNG phải owner) — lỗ hổng
+     * quyền: người không được phân công vẫn duyệt được hồ sơ.
+     *
+     * <p>Mỗi bước CHỈ CẦN MỘT người duyệt là hồ sơ chuyển bước (xem {@code decideApproval}: single/any_of).
+     */
     private boolean canApproveRequestStage(String userId, String requestId, int stage) {
         Map<String, Object> stageRow = store.findApprovalRow(requestId, stage).orElse(null);
         if (stageRow == null) return false;
+        if (userId == null || userId.isBlank()) return false;
 
-        // CÓ HAI ĐƯỜNG ĐỦ ĐIỀU KIỆN DUYỆT — chỉ cần MỘT trong hai:
-        //   (1) CHỈ ĐỊNH — có tên trong workflow của bước (∪ owner của bước);
-        //   (2) THEO VAI TRÒ — vai trò (hoặc vai trò gốc) nằm trong allowed_role_codes của bước.
-        // Mỗi bước CHỈ CẦN MỘT NGƯỜI duyệt là hồ sơ chuyển bước (xem decideApproval: single/any_of).
-        //
-        // LỖI ĐÃ SỬA: trước đây hàm `return false` ngay khi người dùng không nằm trong danh sách
-        // chỉ định, nên phép kiểm vai trò ở cuối hàm KHÔNG BAO GIỜ chạy tới. Hệ quả: những tài
-        // khoản có ĐÚNG vai trò của bước và có quyền `approvals.canApprove` vẫn bị chặn, trái với
-        // thiết kế "ai có quyền duyệt bước đó thì duyệt được".
         Map<String, Object> req = store.findRequestForApproval(requestId).orElse(Map.of());
         java.util.Set<String> pool = new java.util.LinkedHashSet<>(
                 store.stageApproverUserIds(sv(req, "projectId"), stage));
         String owner = sv(stageRow, "ownerUserId");
         if (!owner.isEmpty()) pool.add(owner);
 
-        String role = sv(stageRow, "allowedRoleCodes");
-        java.util.Set<String> allowed = new java.util.HashSet<>(java.util.Arrays.asList(role.split(",")));
-        allowed.removeIf(String::isBlank);
-
-        Map<String, Object> userRole = store.findUserRoleInfo(userId).orElse(Map.of());
-        String userRoleCode = sv(userRole, "role");
-        String baseRole = sv(userRole, "baseRole");
-        boolean roleEligible = "admin".equals(userRoleCode)
-                || allowed.contains(userRoleCode) || allowed.contains(baseRole);
-
-        // (1) Được chỉ định đích danh: bước không giới hạn vai trò thì đương nhiên được duyệt;
-        //     nếu có giới hạn vai trò thì vẫn phải đúng vai trò.
-        if (pool.contains(userId)) return allowed.isEmpty() || roleEligible;
-        // (2) Không được chỉ định đích danh nhưng ĐÚNG VAI TRÒ của bước.
-        return !allowed.isEmpty() && roleEligible;
+        return pool.contains(userId);
     }
 
     private String matchedApprovalRole(Principal principal, Map<String, Object> stageConfig) {
