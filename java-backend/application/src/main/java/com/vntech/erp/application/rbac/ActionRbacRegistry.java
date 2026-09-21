@@ -16,7 +16,14 @@ public final class ActionRbacRegistry {
             Map.entry("add_work_item_comment", List.of("dept_plan_tasks", "dept_project_tasks", "dept_plan_assign", "dept_project_assign")),
             Map.entry("approve_central_return", List.of("central_warehouse")),
             Map.entry("approve_construction_daily_log", List.of("construction")),
-            Map.entry("approve_po", List.of()),
+            // TASK-135 (21/09/2026) — SỬA LỖI ĐO ĐƯỢC: `approve_po` khai MODULE RỖNG ⇒ rơi vào nhánh
+            // «mặc định từ chối» của RbacService.requireActionModule (PHASE 0B) ⇒ 403 «Thao tác chưa
+            // được khai báo quyền…» cho MỌI user không phải admin/C-level, dù họ có quyền `purchasing`.
+            // Bằng chứng LIVE (jar 21/09 11:10, probe `tools/probe-wf-muahang-standard.mjs --apply`):
+            // B6b `nvkhdemo` gọi `approve_po` ⇒ 403, trong khi B6a `create_po` của CÙNG user ⇒ 200.
+            // Tiền lệ ĐÚNG chuẩn cùng module: `create_po` (:54) và `close_po_line` (:48) = `purchasing`.
+            // ⛔ 0 khoá `module_catalog` mới — chỉ dùng khoá SẴN CÓ `purchasing`.
+            Map.entry("approve_po", List.of("purchasing")),
             Map.entry("approve_production_report", List.of("production")),
             Map.entry("approve_site_expense_claim", List.of("dept_finance_site_cost")),
             Map.entry("approve_stock_count", List.of("stocktake")),
@@ -112,7 +119,9 @@ public final class ActionRbacRegistry {
             Map.entry("receive_goods", List.of("receiving", "warehouse_receipt")),
             Map.entry("receive_transfer_order", List.of("inventory")),
             Map.entry("reconcile_contract_stock", List.of("inventory")),
-            Map.entry("reject_po", List.of()),
+            // TASK-135 — `reject_po` khai MODULE RỖNG ⇒ 403 «chưa khai báo quyền» (cùng lỗi với `approve_po`).
+            // Từ chối PO là quyết định trên CÙNG chứng từ PO ⇒ khai cùng module SẴN CÓ `purchasing`.
+            Map.entry("reject_po", List.of("purchasing")),
             Map.entry("reorder_form_fields", List.of()),
             Map.entry("reorder_menu_layout", List.of()),
             Map.entry("replace_boq_items", List.of("boq")),
@@ -203,7 +212,9 @@ public final class ActionRbacRegistry {
             Map.entry("ship_transfer_order", List.of("inventory")),
             Map.entry("transfer_contract_ownership", List.of("inventory")),
             Map.entry("update_boq_contract_prices", List.of("boq")),
-            Map.entry("update_po_price", List.of()),
+            // TASK-135 — `update_po_price` khai MODULE RỖNG ⇒ 403 «chưa khai báo quyền» (cùng lỗi).
+            // Sửa ĐƠN GIÁ của chính PO ⇒ khai module SẴN CÓ `purchasing` (cùng `create_po`/`close_po_line`).
+            Map.entry("update_po_price", List.of("purchasing")),
             Map.entry("update_profile_avatar", List.of()),
             Map.entry("update_project", List.of()),
             Map.entry("update_returned_request", List.of("requests")),
@@ -216,7 +227,12 @@ public final class ActionRbacRegistry {
             Map.entry("add_work_item_comment", "canUse"),
             Map.entry("approve_central_return", "canApprove"),
             Map.entry("approve_construction_daily_log", "canApprove"),
-            Map.entry("approve_po", "canUse"),
+            // TASK-135 — duyệt PO = HÀNH VI PHÊ DUYỆT ⇒ `canApprove` (trước: `canUse`).
+            // Tiền lệ cùng module `purchasing`: `close_po_line` (:234) = `canApprove` ✔ (duyệt/đóng dòng PO).
+            // Suy ra từ quy ước của chính bản đồ này: MỌI `approve_*` khác đều `canApprove`
+            // (approve_central_return/approve_construction_daily_log/approve_production_report/
+            //  approve_site_expense_claim/approve_stock_count/approve_transfer_order).
+            Map.entry("approve_po", "canApprove"),
             Map.entry("approve_production_report", "canApprove"),
             Map.entry("approve_site_expense_claim", "canApprove"),
             Map.entry("approve_stock_count", "canApprove"),
@@ -304,7 +320,10 @@ public final class ActionRbacRegistry {
             Map.entry("receive_goods", "canCreate"),
             Map.entry("receive_transfer_order", "canApprove"),
             Map.entry("reconcile_contract_stock", "canApprove"),
-            Map.entry("reject_po", "canUse"),
+            // TASK-135 — TỪ CHỐI PO = hành vi phê duyệt (âm) ⇒ `canApprove` (trước: `canUse`).
+            // Cùng cổng với `approve_po`: JS `decidePo()` dùng CHUNG một nhánh cho duyệt và từ chối ⇒
+            // nếu tách quyền thì người có quyền duyệt lại không thể từ chối (vô lý nghiệp vụ).
+            Map.entry("reject_po", "canApprove"),
             Map.entry("reorder_form_fields", "canUse"),
             Map.entry("reorder_menu_layout", "canUse"),
             Map.entry("replace_boq_items", "canEdit"),
@@ -395,7 +414,16 @@ public final class ActionRbacRegistry {
             Map.entry("ship_transfer_order", "canEdit"),
             Map.entry("transfer_contract_ownership", "canApprove"),
             Map.entry("update_boq_contract_prices", "canEdit"),
-            Map.entry("update_po_price", "canUse"),
+            // TASK-135 — SỬA ĐƠN GIÁ bản ghi đã có ⇒ `canEdit` (trước: `canUse` — mặc định của JS vì
+            // `update_po_price` KHÔNG có mặt trong ACTION_CAPABILITY của scripts/system-route.mjs).
+            // CĂN CỨ (không đoán): tiền lệ ĐỒNG DẠNG NHẤT trong chính JS — `update_boq_contract_prices`
+            // khai `canEdit` (system-route.mjs:34) và handler JS của nó CƯỠNG CHẾ
+            // `canUseModule(user,"boq","canEdit")` với lỗi «Chưa được cấp quyền sửa BOQ/Hợp đồng.»
+            // (system-route.mjs:3064) ⇒ sửa GIÁ = quyền SỬA ở cả nguồn JS. Java tương ứng
+            // `update_boq_contract_prices` (:226 in file này) cũng = `canEdit`.
+            // ⚠️ Hệ quả có chủ ý: user chỉ có `purchasing.can_use=1` (không `can_edit`) sẽ bị 403 —
+            // đúng quy ước «sửa ⇒ canEdit»; nếu đặc tả muốn rộng hơn thì đổi lại `canUse` (1 dòng).
+            Map.entry("update_po_price", "canEdit"),
             Map.entry("update_profile_avatar", "canUse"),
             Map.entry("update_project", "canUse"),
             Map.entry("update_returned_request", "canEdit"),
