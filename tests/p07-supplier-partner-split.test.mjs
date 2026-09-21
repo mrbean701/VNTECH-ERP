@@ -17,6 +17,8 @@ const ROOT = fileURLToPath(new URL("../", import.meta.url));
 const read = (relative) => readFileSync(new URL("../" + relative, import.meta.url), "utf8");
 const menuHelpers = read("lib/menu-helpers.ts");
 const uiShared = read("lib/ui-shared.tsx");
+const page = read("app/page.tsx");
+const supplierManager = read("app/screens/SupplierManager.tsx");
 
 // Bản GỐC trước `P-07` (tip nhánh lúc làm task) — dùng để chứng minh «mọi mục menu KHÁC không đổi».
 const BASELINE_COMMIT = "a11fe9e";
@@ -33,8 +35,8 @@ const baselineMenuHelpers = (() => {
 // ── BẢNG CHỐT `P-07` ────────────────────────────────────────────────────────────────────────────
 // # | key (tầng MENU CODE) | nhãn | đích đến (view) | cổng quyền (`permissionKeys` — khoá ĐÃ CÓ)
 const EXPECTED = [
-  { key: "dept_plan_suppliers", label: "Nhà cung cấp", view: "supplier", permissionKeys: ["dept_plan_suppliers"] },
-  { key: "dept_plan_partners", label: "Đối tác", view: "partner", permissionKeys: ["dept_plan_suppliers"] },
+  { key: "dept_plan_suppliers", label: "Nhà cung cấp", moduleKey: "dept_plan_suppliers", view: "supplier", permissionKeys: ["dept_plan_suppliers"] },
+  { key: "dept_plan_partners", label: "Đối tác", moduleKey: "dept_plan_suppliers", view: "partner", permissionKeys: ["dept_plan_suppliers"] },
 ];
 
 /** Cắt khối khai báo `const <name> … \n];` (không phụ thuộc kiểu xuống dòng; `];` phải ở ĐẦU DÒNG). */
@@ -95,7 +97,7 @@ const countIn = (text, needle) => text.split(needle).length - 1;
 test("P-07 — nhóm «MUA HÀNG» có ĐÚNG 2 mục menu riêng: «Nhà cung cấp» + «Đối tác»", () => {
   const block = blockOf(menuHelpers, "supplierPartnerMenuItems");
   for (const item of EXPECTED) {
-    const literal = `key: "${item.key}", label: "${item.label}", groupKey: "purchasing", view: "${item.view}", permissionKeys: ["${item.permissionKeys[0]}"]`;
+    const literal = `key: "${item.key}", label: "${item.label}", groupKey: "purchasing", moduleKey: "${item.moduleKey}", view: "${item.view}", permissionKeys: ["${item.permissionKeys[0]}"]`;
     assert.ok(block.includes(literal), `Thiếu/sai mục menu: ${literal}`);
   }
   assert.equal(countIn(block, 'key: "dept_plan_'), 2, "Phải khai báo ĐÚNG 2 mục menu");
@@ -137,6 +139,39 @@ test("P-07 — ẩn mục CŨ khỏi cây menu (khoá vẫn sống) + bộ đị
   assert.match(router, /active !== "dept_plan_suppliers"/, "Bộ định tuyến phải chốt theo khoá màn ĐÃ CÓ `dept_plan_suppliers`");
   assert.match(router, /view === "supplier" \|\| view === "partner"/, "Bộ định tuyến phải nhận cả 2 giá trị `supplier` / `partner`");
   assert.match(menuHelpers, /export type \{[^}]*SupplierPartnerMenuView[^}]*\}/, "Chưa export type `SupplierPartnerMenuView`");
+});
+
+// ── ①b ĐÃ NỐI VÀO CÂY MENU THẬT (`app/page.tsx`, khuôn `W-01`) ─────────────────────────────────
+test("P-07 — app/page.tsx nối ĐỦ 8 điểm chạm (khuôn `W-01`) cho 2 mục mới", () => {
+  for (const name of ["supplierPartnerMenuItems", "legacySupplierPartnerMenuKeys", "supplierPartnerViewFor"]) {
+    assert.match(page, new RegExp(`import \\{[^}]*${name}[^}]*\\} from "@/lib/menu-helpers";`), `Thiếu import \`${name}\``);
+  }
+  assert.match(page, /import type \{[^}]*SupplierPartnerMenuView[^}]*\} from "@\/lib\/menu-helpers";/, "Thiếu import type `SupplierPartnerMenuView`");
+  assert.match(page, /const \[supplierPartnerView, setSupplierPartnerView\] = useState<SupplierPartnerMenuView \| null>\(null\);/, "Thiếu state `supplierPartnerView`");
+  const children = page.slice(page.indexOf("const supplierPartnerMenuChildren"), page.indexOf("});", page.indexOf("const supplierPartnerMenuChildren")));
+  assert.match(children, /supplierPartnerMenuItems\.flatMap\(\(item\) => \{/, "Chưa suy ra mục menu từ khai báo code");
+  assert.match(children, /item\.permissionKeys\.find\(\(key\) => modulePermission\(data, key\)\.canView\)/, "Thiếu cổng quyền `modulePermission(…).canView`");
+  assert.doesNotMatch(children, /isAdminUser\(/, "Cổng quyền mục menu KHÔNG được hardcode «chỉ admin»");
+  assert.match(page, /function activateModule\(next:ModuleKey, view:WorkMenuView\|WarehouseMenuView\|SupplierPartnerMenuView\|null=null\)\{/, "`activateModule` chưa nhận type `view` mới");
+  assert.match(page, /setSupplierPartnerView\(view === "supplier" \|\| view === "partner" \? view : null\);/, "Thiếu `setSupplierPartnerView` trong `activateModule`");
+  assert.match(page, /const supplierPartnerScreenView = supplierPartnerViewFor\(supplierPartnerView, active\);/, "Thiếu bộ định tuyến `view`");
+  assert.match(page, /!legacySupplierPartnerMenuKeys\.includes\(item\.key\)/, "Cây menu chưa ẩn dòng khoá cũ `dept_plan_suppliers`");
+  assert.match(page, /\(String\(group\.groupKey\) === "purchasing" && supplierPartnerMenuChildren\.length > 0\)/, "Nhóm «MUA HÀNG» chưa được giữ sống");
+  assert.match(page, /const supplierPartnerMenuBadge = \(keys: ModuleKey\[\]\) => keys\.reduce\(\(sum, key\) => sum \+ badgeFor\(key\), 0\);/, "Thiếu phép cộng huy hiệu");
+  assert.match(page, /supplierPartnerMenuBadge\(item\.badgeKeys\)/, "Huy hiệu mục con chưa dùng `supplierPartnerMenuBadge`");
+  assert.equal((page.match(/groupKey==="purchasing"&&supplierPartnerMenuChildren\.map\(/g) || []).length, 2,
+    "Phải vẽ 2 mục ở CẢ menu desktop LẪN menu mobile");
+});
+
+test("P-07 — màn đích: khoá cũ render `SupplierManager` kèm `view`, và KHÔNG còn rơi vào nhánh chung `dept_plan_*`", () => {
+  assert.match(page, /active === "dept_plan_suppliers" && <SupplierManager data=\{data\} action=\{action\} view=\{supplierPartnerScreenView\} \/>/,
+    "Chưa render `SupplierManager` cho khoá cũ kèm `view`");
+  assert.doesNotMatch(page, /active\.startsWith\("dept_plan_"\) && active !== "dept_plan_tasks" && <DepartmentTaskWorkspace[\s\S]{0,600}?department="KH"/,
+    "Khoá `dept_plan_suppliers` VẪN rơi vào nhánh chung `dept_plan_*` ⇒ sẽ render 2 màn cùng lúc");
+  assert.match(supplierManager, /view\?:"supplier"\|"partner"\|null/, "`SupplierManager` chưa nhận prop `view`");
+  assert.match(supplierManager, /view==="partner"/, "`SupplierManager` chưa có nhánh xử lý riêng cho «Đối tác»");
+  assert.match(supplierManager, /CHƯA CÓ NGUỒN DỮ LIỆU ĐỐI TÁC RIÊNG/, "Thiếu cảnh báo «chưa có nguồn» cho dữ liệu đối tác (KHÔNG được bịa)");
+  assert.doesNotMatch(supplierManager, /partner_type|partnerType/, "KHÔNG được thêm cột/loại dữ liệu «đối tác» mới");
 });
 
 // ── ② MỌI MỤC MENU KHÁC KHÔNG ĐỔI ───────────────────────────────────────────────────────────────

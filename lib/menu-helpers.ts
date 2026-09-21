@@ -174,26 +174,30 @@ function warehouseMenuViewFor(view: WarehouseMenuView | null, active: ModuleKey)
 // hiện chỉ nhận `{data, action}` (`app/screens/SupplierManager.tsx` dòng 16) ⇒ muốn 2 mục HIỆN ra kèm lọc
 // theo `view` thì phải nối tiếp theo đúng khuôn `W-01` — xem `docs/agent-progress/TASK-121.md` mục 4.
 //
-// ⚠️ MÀN ĐÍCH LÀ `supplier_catalog`, KHÔNG phải khoá cũ — ĐO ĐƯỢC, không suy đoán: mục gộp cũ
-// `dept_plan_suppliers` rơi vào nhánh CHUNG `active.startsWith("dept_plan_")` ⇒ mở `DepartmentTaskWorkspace`
-// (bảng nhiệm vụ phòng Kế hoạch); `SupplierManager` chỉ được render bởi `active === "supplier_catalog"`
-// (`app/page.tsx` — nhánh render màn). Vì vậy `moduleKey` (ĐÍCH ĐẾN) = `supplier_catalog`, còn
-// `permissionKeys` (CỔNG QUYỀN) giữ khoá cũ đã có `dept_plan_suppliers` — HAI việc KHÁC NHAU.
+// ⚠️ MÀN ĐÍCH DÙNG CHÍNH KHOÁ CŨ `dept_plan_suppliers` — ĐO ĐƯỢC, không suy đoán:
+//   • TRƯỚC `P-07`, mục gộp cũ rơi vào nhánh CHUNG `active.startsWith("dept_plan_")` ⇒ mở
+//     `DepartmentTaskWorkspace` (bảng nhiệm vụ phòng Kế hoạch), KHÔNG phải `SupplierManager`.
+//   • Vì vậy `P-07` thêm NHÁNH RENDER RIÊNG cho `dept_plan_suppliers` → `SupplierManager` và LOẠI khoá này
+//     khỏi nhánh chung `dept_plan_*` (nối ở `app/page.tsx`).
+//   • KHÔNG trỏ sang `supplier_catalog`: `accessDenied` của màn được tính theo `active`
+//     (`app/page.tsx`: `permissionConfigured && !activePermission.canView`) ⇒ trỏ sang khoá KHÁC sẽ khiến
+//     người có quyền `dept_plan_suppliers` nhưng không có quyền `supplier_catalog` bị chặn quyền oan.
+//     Đích đến = CỔNG QUYỀN = khoá cũ ⇒ nhất quán.
 // ─────────────────────────────────────────────────────────────────────────────
 type SupplierPartnerMenuView = "supplier" | "partner";
 const supplierPartnerMenuItems: { key: string; label: string; groupKey: "purchasing"; moduleKey: ModuleKey; view: SupplierPartnerMenuView; permissionKeys: ModuleKey[] }[] = [
-  { key: "dept_plan_suppliers", label: "Nhà cung cấp", groupKey: "purchasing", moduleKey: "supplier_catalog", view: "supplier", permissionKeys: ["dept_plan_suppliers"] },
-  { key: "dept_plan_partners", label: "Đối tác", groupKey: "purchasing", moduleKey: "supplier_catalog", view: "partner", permissionKeys: ["dept_plan_suppliers"] },
+  { key: "dept_plan_suppliers", label: "Nhà cung cấp", groupKey: "purchasing", moduleKey: "dept_plan_suppliers", view: "supplier", permissionKeys: ["dept_plan_suppliers"] },
+  { key: "dept_plan_partners", label: "Đối tác", groupKey: "purchasing", moduleKey: "dept_plan_suppliers", view: "partner", permissionKeys: ["dept_plan_suppliers"] },
 ];
 // Dòng `dept_plan_suppliers` trong bảng `modules` bị ẨN KHỎI CÂY MENU (đúng khuôn `legacyWorkMenuKeys` /
 // `legacyWarehouseMenuKeys`) — khoá vẫn SỐNG: quyền · tiêu đề màn · tìm kiếm · nhánh render màn theo `dept_plan_*`.
 const legacySupplierPartnerMenuKeys: ModuleKey[] = ["dept_plan_suppliers"];
 
-// ĐÍCH ĐẾN THẬT của 2 mục: CÙNG màn `SupplierManager` (`supplier_catalog`) — KHÔNG màn mới, KHÔNG route mới,
-// KHÔNG khoá module mới. `view` chỉ đổi TIÊU ĐỀ/bộ lọc của màn; điều hướng cũ (không kèm `view`) trả `null`
-// để GIỮ NGUYÊN hành vi (đúng cách `warehouseMenuViewFor` đang làm với `W-01`).
+// ĐÍCH ĐẾN THẬT của 2 mục: CÙNG màn `SupplierManager` — KHÔNG màn mới, KHÔNG route mới, KHÔNG khoá module mới.
+// `view` chỉ đổi TIÊU ĐỀ/cảnh báo của màn; điều hướng cũ (không kèm `view`) trả `null` để GIỮ NGUYÊN hành vi
+// (đúng cách `warehouseMenuViewFor` đang làm với `W-01`).
 function supplierPartnerViewFor(view: SupplierPartnerMenuView | null, active: ModuleKey): SupplierPartnerMenuView | null {
-  if (active !== "supplier_catalog") return null;
+  if (active !== "dept_plan_suppliers") return null;
   if (view === "supplier" || view === "partner") return view;
   return null;
 }
