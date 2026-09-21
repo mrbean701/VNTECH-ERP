@@ -91,8 +91,9 @@ SELECT po.id, po.total_value, COALESCE(SUM(poi.ordered_qty*poi.unit_price),0) AS
 | `npx tsc --noEmit` | **exit 0** (0 lỗi) ✔ |
 | `npm run test:regression` | **69/69 ĐẠT** (`pass 69 · fail 0`) ✔ |
 | `npm run test:workflow` | **ĐẠT** — “Workflow VNTECH ERP V5.3.0 FULL W2 passed …” ✔ |
-| `cd java-backend; mvn -B -pl web -am test` (1 lượt, shell MỚI) | **Tests run: 42, Failures: 3** — 3 ĐỎ **CÓ SẴN** đúng `ProductionRoleCounterProofTest` (`productionRole_cht_duocPhep` · `productionRole_cht_roleBaseSai_vanDuocPhep` · `productionRole_engineer_biChan`), y hệt baseline |
+| `cd java-backend; mvn -B -pl web -am test` (1 lượt, shell MỚI) | **Tests run: 42, Failures: 3, Errors: 0** — 3 ĐỎ **CÓ SẴN** đúng `ProductionRoleCounterProofTest` (`productionRole_cht_duocPhep` · `productionRole_cht_roleBaseSai_vanDuocPhep` · `productionRole_engineer_biChan`), y hệt baseline. 2 test TASK-140 đều XANH (`PoPriceFromRequestTest` 1/0/0 · `RequestApprovalOwnerOnlyTest` 1/0/0) |
 | **BASELINE đo TRƯỚC khi sửa** | **Tests run: 39, Failures: 3** (cùng 3 test trên) ⇒ Δ = **+3 test mới, +0 lỗi mới**; 2 test của TASK-140 đều XANH |
+| ⚠️ Một lượt chạy GIỮA đã ra **42 test / 0 Failures / 37 Errors** — **KHÔNG phải lỗi mã**: cả 37 ca đều là `IllegalState Failed to load ApplicationContext` với `No qualifying bean of type 'com.vntech.erp.application.port.out.FileStore'`, trong khi `FileStoreAdapter.java` **nguyên vẹn** (`@Repository`, `implements FileStore`, `git diff` rỗng). Nguyên nhân: **2 tiến trình `mvn` chạy SONG SONG** trên cùng `target/` (teammate commit `b8d3b49` TASK-141 ngay lúc đó) ⇒ thư mục lớp dùng chung bị ghi đè giữa chừng. **Chạy lại 1 lượt (không có build nào khác) ⇒ 42/3/0 ĐÚNG NỀN** — bài học: đừng chạy `mvn` song song trong cùng cây; và phân biệt `Errors` (context/hạ tầng) với `Failures` (assert nghiệp vụ) trước khi kết luận có hồi quy |
 | `package` | ⛔ **KHÔNG chạy** (đúng ràng buộc) — dành cho captain ở §④ |
 
 ---
