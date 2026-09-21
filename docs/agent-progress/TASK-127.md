@@ -150,6 +150,21 @@ Tổng **79 test / 0 lỗi / 0 error / 0 skipped** (surefire-reports xác nhận
 4/4 và `SupplyChainEndToEndIntegrationTest`, `StockChainIntegrationTest` — các test đi qua bootstrap/DB).
 Thời gian ~2 phút ⇒ **trong hạn 5 phút** cho phép.
 
+**Lần 3 — CHẠY LẠI XÁC NHẬN trên đúng trạng thái đã commit (cổng xanh, sau mọi thay đổi):**
+
+```
+cd java-backend; mvn -B -pl web -am test
+[INFO] Tests run: 19, Failures: 0, Errors: 0, Skipped: 0   (Domain)
+[INFO] Tests run: 16, Failures: 0, Errors: 0, Skipped: 0   (Application)
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0   (Infrastructure)
+[INFO] Tests run: 34, Failures: 0, Errors: 0, Skipped: 0   (Web)
+[INFO] BUILD SUCCESS
+MVN_EXIT=0
+```
+
+⇒ **79/79 ĐẠT, exit code Maven = 0** (đã in `$LASTEXITCODE` tường minh để loại bỏ nghi ngờ về exit code của ống
+PowerShell ở lần 2). `SystemControllerAuthTest` **4/4** — chính lớp đã ĐỎ ở lần 1 vì thiếu bảng `partners`.
+
 ## 6. Commit
 
 | Commit | Nội dung |
