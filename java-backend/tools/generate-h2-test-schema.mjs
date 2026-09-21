@@ -1,4 +1,24 @@
 // Sinh schema-h2.sql (test) từ V1__baseline.sql — H2 MySQL-mode tương thích.
+//
+// ============================================================================================
+// [TASK-120] QUY TRÌNH DÙNG ĐÚNG — ĐỌC TRƯỚC KHI CHẠY (bắt buộc)
+// ============================================================================================
+// Chạy:  node java-backend/tools/generate-h2-test-schema.mjs
+//
+// ⚠️  Sinh lại là một THAY ĐỔI LƯỢC ĐỒ TEST, KHÔNG phải thao tác vô hại. Sau khi chạy:
+//   1. `git diff java-backend/web/src/test/resources/schema-h2.sql` — ĐỌC KỸ TỪNG DÒNG.
+//      Lần sinh lại CÓ THỂ THÊM BẢNG/CỘT MỚI từ các migration mới hơn (ví dụ đã từng thêm
+//      `work_item_comments`, `work_item_participants`), và có thể đổi thứ tự/định dạng dòng.
+//      Nếu diff KHÔNG như mong đợi/không giải thích được ⇒ `git checkout --` khôi phục NGUYÊN VĂN
+//      bản đang commit (bản bàn tay đã qua cổng xanh), KHÔNG commit bản vừa sinh.
+//   2. Chạy lại CỔNG trước khi commit:  mvn -B -pl web -am test   (bắt buộc XANH: 0 failure/0 error).
+//      Không có bước này thì không được commit schema-h2.sql.
+//   3. Chỉ commit khi (1) diff đã review xong VÀ (2) cổng xanh. Commit riêng, thông điệp ASCII.
+//
+// Ghi chú: `schema-h2.sql` đang commit là bản BÀN TAY (hand-edited) đã qua cổng — KHÔNG phải bản
+// vừa sinh. Generator có giữ khối `-- [H2-MANUAL-START/END]` và tôn trọng `DROP COLUMN`
+// (xem [TASK-115] bên dưới), nhưng vẫn KHÔNG được chạy "blindly".
+// ============================================================================================
 import { readFileSync, writeFileSync, mkdirSync, readdirSync } from "node:fs";
 import { dirname, resolve, join } from "node:path";
 import { fileURLToPath } from "node:url";

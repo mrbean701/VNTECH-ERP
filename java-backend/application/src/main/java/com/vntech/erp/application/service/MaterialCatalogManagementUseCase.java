@@ -572,14 +572,21 @@ public final class MaterialCatalogManagementUseCase {
                         // Q3 (18/09/2026) — 🔴 SỬA LỖI 409 KHI NHẬP DANH MỤC VẬT TƯ:
                         // JS `system-route.mjs:2604` chèn **9 cột** cho luồng NHẬP
                         // (`id,category_id,code,name,description,sort_order,active,created_at,updated_at`) ⇒ cột
-                        // `review_status` nhận **GIÁ TRỊ MẶC ĐỊNH của CSDL = 'approved'**.
+                        // `review_status` KHÔNG được ghi ⇒ nhận **GIÁ TRỊ MẶC ĐỊNH của CSDL = 'approved'**.
                         // Bản Java gọi hàm dùng chung `insertSubcategory` (12 cột, phục vụ MÀN nhóm con) và truyền
                         // **null** cho `review_status` — cột này **NOT NULL DEFAULT 'approved'** ⇒
                         // `DataIntegrityViolationException` ⇒ HTTP **409**; cả lô nằm trong 1 transaction nên
                         // **nhóm vừa tạo bị giữ lại, còn nhóm con + vật tư KHÔNG được ghi** — đúng triệu chứng
-                        // "vật tư nhập vào mất nhóm". Nay truyền giá trị mặc định ⇒ **giá trị lưu GIỐNG HỆT JS**.
+                        // "vật tư nhập vào mất nhóm".
+                        //
+                        // [TASK-120 — dọn nguồn sự thật thứ hai] Bản vá Q3 truyền thẳng `"approved"` trong mã ⇒
+                        // giá trị ĐÚNG nhưng trùng DEFAULT, tức mã là **nguồn sự thật thứ hai** so với CSDL.
+                        // Nay truyền **`null`** để `MaterialCatalogStoreAdapter.insertSubcategory` **BỎ CỘT**
+                        // khỏi câu INSERT — **DEFAULT `'approved'` của CSDL quyết định**, đúng parity với JS
+                        // `:2604` (không liệt kê cột) và đúng cách đã sửa ở tầng adapter. Hành vi lưu **KHÔNG ĐỔI**
+                        // (MySQL thật: `IS_NULLABLE=NO`, `COLUMN_DEFAULT='approved'`).
                         // (Hai cột còn lại `scope_examples`/`adjustment_note` là NULLABLE — JS cũng không ghi.)
-                        null, "approved", null,
+                        null, null, null,
                         ungrouped ? 9999 : 999, principal.userId(), now);            } else if (!subcategoryName.isEmpty() && !subcategoryName.equals(sv(subcategory, "name"))) {
                 subcategory.put("name", subcategoryName);
                 store.renameSubcategoryActive(sv(subcategory, "id"), subcategoryName, now);
