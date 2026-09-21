@@ -66,6 +66,12 @@
 - Khớp nguồn JS: `scripts/system-route.mjs:16` (ACTION_MODULE) và `:31` (ACTION_CAPABILITY).
 - ⚠️ Nếu không khai, `RbacService.requireActionModule` **mặc định TỪ CHỐI** (PHASE 0B S-03, `RbacService.java:50-59`) ⇒ 3 action sẽ 403 với mọi user thường. Đã khai nên không còn 403.
 
+### 3.5 Schema H2 của test — `java-backend/web/src/test/resources/schema-h2.sql` (khối `[H2-MANUAL-*]`, ~`:2308-2330`)
+
+- **CHỈ THÊM** `CREATE TABLE IF NOT EXISTS partners (…)` + `CREATE UNIQUE INDEX IF NOT EXISTS partners_code_uidx`.
+- Lý do: payload Java nay ĐỌC `partners` ⇒ test H2 (`SystemControllerAuthTest`) đỏ `Table "partners" not found`.
+  Chi tiết + bằng chứng đỏ/xanh: **§5**.
+
 ## 4. Biên dịch (BẮT BUỘC — XANH)
 
 Lệnh 1 (đúng lệnh được giao — chỉ phủ `application`):
@@ -103,44 +109,81 @@ cd java-backend; mvn -B -pl web -am -DskipTests compile
 ⇒ **5/5 module BUILD SUCCESS**, `javac [debug parameters release 21]`, **0 warning biên dịch của tệp mới**
 (chỉ còn cảnh báo `unchecked` có sẵn ở `AdminOpsManagementUseCase.java`).
 
-## 5. Test Java
+## 5. Test Java — CHẠY THẬT, ĐÃ BẮT ĐƯỢC 1 HỒI QUY VÀ VÁ XONG
 
-**KHÔNG chạy `-pl web -am test`** trong task này: hồ sơ thời gian ~25 phút, và bộ test web cần dựng
-Spring context + DB test; ưu tiên theo đúng chỉ đạo là **biên dịch xanh + commit ngay** (DSH restart giết
-nhánh chưa commit). Ngoài ra **CHƯA có test đỏ→xanh riêng cho TASK-127** — đây là **khoảng trống bằng
-chứng đã biết**, xem §7.
+```
+cd java-backend; mvn -B -pl web -am test
+```
+
+**Lần 1 — ĐỎ (phát hiện hồi quy do chính thay đổi này gây ra):**
+
+```
+[ERROR] Tests run: 4, Failures: 0, Errors: 1 -- in com.vntech.erp.web.controller.SystemControllerAuthTest
+[ERROR] com.vntech.erp.web.controller.SystemControllerAuthTest.fullAuthFlow_setupLoginBootstrapLogout
+Caused by: org.h2.jdbc.JdbcSQLSyntaxErrorException: Table "partners" not found; SQL statement:
+[ERROR] Tests run: 34, Failures: 0, Errors: 1, Skipped: 0
+[INFO] VNTECH ERP — Web ................................. FAILURE [01:18 min]
+[INFO] BUILD FAILURE
+```
+
+⇒ Nguyên nhân: test chạy H2 theo `java-backend/web/src/test/resources/schema-h2.sql`; bảng `partners` đến từ
+Flyway `V23` (**sau** V1 baseline) nên generator `tools/generate-h2-test-schema.mjs` không sinh ra nó.
+Nếu KHÔNG chạy test thì lỗi này chỉ nổ ở người sau ⇒ đây là lý do phải chạy `test`.
+
+**Vá (CHỈ THÊM) — `java-backend/web/src/test/resources/schema-h2.sql`, trong KHỐI THỦ CÔNG
+`-- [H2-MANUAL-START] … -- [H2-MANUAL-END]` (dòng ~2308-2330):** thêm `CREATE TABLE IF NOT EXISTS partners (…)`
++ `CREATE UNIQUE INDEX IF NOT EXISTS partners_code_uidx` (cột sao từ `V23__partners_table.sql`).
+⚠️ Đặt trong khối thủ công là **có chủ đích**: generator chỉ chép lại nguyên văn khối này (cùng tiền lệ
+`V21`/`V22`) ⇒ nếu đặt ngoài khối, lần sinh lại schema sẽ **xoá mất** bảng `partners` và làm đỏ lại cổng test.
+
+**Lần 2 — XANH:**
+
+```
+[INFO] Tests run: 19, Failures: 0, Errors: 0, Skipped: 0   (Domain)
+[INFO] Tests run: 16, Failures: 0, Errors: 0, Skipped: 0   (Application)
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0   (Infrastructure)
+[INFO] Tests run: 34, Failures: 0, Errors: 0, Skipped: 0   (Web)
+[INFO] BUILD SUCCESS
+```
+
+Tổng **79 test / 0 lỗi / 0 error / 0 skipped** (surefire-reports xác nhận từng lớp, gồm `SystemControllerAuthTest`
+4/4 và `SupplyChainEndToEndIntegrationTest`, `StockChainIntegrationTest` — các test đi qua bootstrap/DB).
+Thời gian ~2 phút ⇒ **trong hạn 5 phút** cho phép.
 
 ## 6. Commit
 
 | Commit | Nội dung |
 | --- | --- |
-| `b89729e` | `[TASK-127] JAVA cho doi tac (duong LIVE = Java :18081): PartnerStore port + PartnerManagementUseCase + PartnerStoreAdapter + BootstrapDataAdapter doc partners/adminPartners + ApplicationBeansConfig bean + 3 case SystemController (save_partner/set_partner_status/delete_partner) + ActionRbacRegistry. CHI THEM.` — 7 tệp, 255 (+) / 0 (−) |
+| `b89729e` | Code Java: `PartnerStore` + `PartnerManagementUseCase` + `PartnerStoreAdapter` (tệp mới) · `BootstrapDataAdapter` đọc `partners`/`adminPartners` · `ApplicationBeansConfig` bean · 3 `case` `SystemController` · `ActionRbacRegistry` 3 action — 7 tệp, **255 (+) / 0 (−)** |
+| `b0d39f6` | `schema-h2.sql`: thêm bảng `partners` trong khối `[H2-MANUAL-*]` — vá hồi quy `Table "partners" not found` |
+| (hồ sơ) | `docs/agent-progress/TASK-127.md` — tệp này |
 
-- Đã stage **đúng 7 tệp `java-backend/**`**; ⛔ KHÔNG `git add -A` (không stage `AGENTS.md`, `docs/28_*`,
-  `app/page.tsx`, `.docx/.xlsx`, `tools/baseline/**`, `tsconfig.tsbuildinfo`).
+- Đã stage **đúng các tệp trong `java-backend/**` + hồ sơ**; ⛔ KHÔNG `git add -A` (không stage `AGENTS.md`,
+  `docs/28_*`, `app/page.tsx`, `.docx/.xlsx`, `tools/baseline/**`, `tsconfig.tsbuildinfo`).
 - ⚠️ Ghi nhận cơ chế: `git add` của tôi xong thì một phiên **song song** (TASK-125/126) tạo commit
   `b89729e` **đúng bằng tập tệp tôi vừa stage**; `git commit` của tôi vì thế là no-op (không mất nội dung).
-  `git status --porcelain -- java-backend` hiện **rỗng** ⇒ HEAD chứa **đúng byte** bản đã sửa.
+  `git status --porcelain -- java-backend` sau đó **rỗng** ⇒ HEAD chứa **đúng byte** bản đã sửa.
 - **KHÔNG push** (đúng ràng buộc).
 
 ## 7. BLOCKED / UNKNOWN — điều còn lại cần CAPTAIN
 
-1. **Payload chưa lên LIVE (cần captain)**: `:18081` vẫn đang chạy **JAR cũ** ⇒ `GET /api/system` **vẫn chưa
-   trả** `partners`/`adminPartners`, và 3 action mới vẫn rơi vào nhánh `default` — *“Action '…' chưa được
-   triển khai trên backend Java (Strangler Fig).”* (`SystemController.java:1220-1223`).
-   ⇒ Cần `mvn package` + **restart dịch vụ `:18081`**, rồi đo lại payload LIVE (`data.partners.length` ≥ 3
-   theo 3 dòng mẫu).
+1. **Payload + 3 action CHƯA lên LIVE (cần captain)**: `:18081` vẫn chạy **JAR cũ** ⇒ `GET /api/system`
+   **vẫn chưa trả** `partners`/`adminPartners`, và 3 action mới vẫn rơi vào nhánh `default` — *“Action '…'
+   chưa được triển khai trên backend Java (Strangler Fig).”* (`SystemController.java:1220-1223`).
+   ⇒ Cần `mvn package` + **restart dịch vụ `:18081`**, rồi đo lại payload LIVE
+   (`data.partners.length` ≥ 3 theo 3 dòng mẫu) và bấm thử Lưu/Ngừng/Kích hoạt/Xoá trên màn Đối tác.
 2. **`ACTION_CATALOG.json` / `.md` ĐÃ CŨ** (sinh trước các thay đổi JS của TASK-125): **0 mục** `*_partner`
    trong `java-backend/ACTION_CATALOG.json` ⇒ 2 cổng đối chiếu (`tools/probe-action-parity.mjs`,
    `tools/probe-action-module-parity.mjs`) **sẽ báo lệch** (Java thừa 3 action). Cách sửa đúng hợp đồng
    “danh mục sinh từ nguồn JS”: chạy lại `node java-backend/tools/generate-action-catalog.mjs`
-   (+ `generate-rbac-registry.mjs`) — hai script này **chỉ ghi trong `java-backend/`**, nằm trong phạm vi
-   được phép, nhưng **chưa làm** vì phải cập nhật `java-backend/tools/migrated-actions.json` và cần đo lại
-   cổng. ⇒ **chuyển captain quyết** (hoặc giao TASK-128).
+   (+ `generate-rbac-registry.mjs`) và cập nhật `java-backend/tools/migrated-actions.json` — hai script chỉ
+   ghi trong `java-backend/`, **chưa làm** vì phải đo lại cổng. ⇒ **chuyển captain quyết** (hoặc giao TASK-128).
 3. **`delete_partner` ở Java CHẶT HƠN JS**: JS cho `isAdmin(user) || isDepartmentApprover(user,"KH")`
    (`scripts/system-route.mjs:1355`); Java dùng `requireRequireAdmin` vì trong Java **không có helper
-   tương đương** `isDepartmentApprover` (đã grep 0 kết quả) — đây là **khuôn `delete_supplier` sẵn có**.
-   Hệ quả: Trưởng phòng KH (không phải admin) sẽ bị **403** khi Xoá đối tác. ⇒ cần user quyết có làm
-   helper `isDepartmentApprover` hay không.
-4. **CHƯA có test Java đỏ→xanh** cho TASK-127 (mới có bằng chứng **biên dịch**). Đề xuất TASK-128:
-   test `SystemController` (H2) cho 3 action + test payload `partners` (khẳng định khoá + alias camelCase).
+   tương đương** `isDepartmentApprover` (grep 0 kết quả) — đây là **khuôn `delete_supplier` sẵn có**.
+   Hệ quả: Trưởng phòng KH (không phải admin) sẽ bị **403** khi Xoá đối tác. ⇒ cần user quyết.
+4. **CHƯA có test KHẲNG ĐỊNH riêng cho TASK-127**: cổng `-pl web -am test` đã XANH nhưng chưa có test nào
+   `assert` payload **có** khoá `partners`/`adminPartners` và 3 action ghi được (chưa có timeline đỏ→xanh
+   riêng cho hành vi mới; test chỉ chứng minh **không hồi quy**). Đề xuất TASK-128: thêm assertion vào
+   `SystemControllerAuthTest` (payload có `partners`) + 1 test ghi cho `save_partner`/`delete_partner` trên H2.
+
