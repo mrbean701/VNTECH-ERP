@@ -68,6 +68,13 @@ Kèm theo trong cùng commit: `lib/form-fields.ts:71` đổi `projectId.required
 | `npm run test:regression` | **69/69 ĐẠT** (`ℹ tests 69 · pass 69 · fail 0`, `exit 0`) sau khi đồng bộ 3 assertion lỗi thời — xem §4b |
 | `node --import tsx --test tests/task137-request-form-final-check.test.mjs` | **6/6 ĐẠT** (`exit 0`) — hợp đồng 5 điểm TASK-137; chạy trên bản cũ `94d103a`: **4/6 ĐỎ** (chứng minh test có ý nghĩa) |
 
+> **Ghi chú đo lại 13:33 21/09/2026:** sau commit này, một worker khác bắt đầu sửa `app/page.tsx` cho **TASK-139**
+> (đổi ô tìm vật tư sang **danh mục gốc**: `app/page.tsx:2386` = `"Gõ mã / tên vật tư để tìm trong danh mục…"`,
+> thay vì `"Gõ tên / mã / thông số để tìm BOQ…"`). Vì vậy `tests/runtime-admin-boq-regression.test.mjs:230`
+> (đòi placeholder BOQ cũ) **đỏ trở lại** ⇒ `npm run test:regression` tạm **68/69** trong lúc TASK-139 đang dở.
+> Đây **không phải** lỗi của TASK-137: test hợp đồng TASK-137 vẫn **6/6 XANH**, `tsc` 0 lỗi, `test:workflow` ĐẠT.
+> Chủ TASK-139 cần đồng bộ assertion `:230` giống cách TASK-137 đã đồng bộ `:226/:303/:304`.
+
 ### 4b. 3 assertion lỗi thời của TASK-136 — đã ĐỒNG BỘ (không phải lỗi do TASK-137 gây ra)
 
 Đo trên `151d1ef`: `npm run test:regression` = **67/69**; 2 test đỏ vì `tests/runtime-admin-boq-regression.test.mjs`
