@@ -82,7 +82,7 @@ function step(n, who, what, r, opts = {}) {
   const detail = r.ok ? "" : ` → HTTP ${r.status}: ${msg}`;
   const line = `${ok ? "✅" : "❌"} ${String(n).padEnd(7)} [${who.padEnd(13)}] ${what}${detail}`;
   console.log(line);
-  log.push({ n, who, what, ok, status: r.status, expectFail, error: msg, expectFail ? undefined : undefined });
+  log.push({ n, who, what, ok, status: r.status, expectFail, error: msg });
   return r;
 }
 function note(text) { console.log(`        ↳ ${text}`); }
