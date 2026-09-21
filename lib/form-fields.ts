@@ -70,7 +70,7 @@ export const BOQ_PURCHASE_DEFAULT_FIELDS: FormFieldConfig[] = [
 export const REQUEST_HEADER_DEFAULT_FIELDS: FormFieldConfig[] = [
   { formKey:"request_header", fieldKey:"projectId", displayName:"Dự án", dataType:"select", sourceKind:"core", visible:true, required:true, importable:false, exportable:true, editable:true, sortOrder:10, systemLocked:true },
   { formKey:"request_header", fieldKey:"area", displayName:"Phạm vi / Khu vực thi công", dataType:"text", sourceKind:"core", visible:true, required:false, importable:false, exportable:true, editable:true, sortOrder:30, systemLocked:true },
-  { formKey:"request_header", fieldKey:"neededAt", displayName:"Ngày cần vật tư tại công trường", dataType:"date", sourceKind:"core", visible:true, required:true, importable:false, exportable:true, editable:true, sortOrder:40, systemLocked:true },
+  { formKey:"request_header", fieldKey:"neededAt", displayName:"Ngày cần", dataType:"date", sourceKind:"core", visible:true, required:true, importable:false, exportable:true, editable:true, sortOrder:40, systemLocked:true },
   { formKey:"request_header", fieldKey:"priority", displayName:"Mức độ", dataType:"select", sourceKind:"core", visible:true, required:false, importable:false, exportable:true, editable:true, sortOrder:50, systemLocked:true },
   { formKey:"request_header", fieldKey:"purpose", displayName:"Phạm vi / Ghi chú chung", dataType:"textarea", sourceKind:"core", visible:true, required:false, importable:false, exportable:true, editable:true, sortOrder:60, systemLocked:true },
 ];
