@@ -102,7 +102,9 @@ trả về khi tạo phiếu: `"stock_issue <id>: chưa có bản ghi phê duy�
 | `npx tsc --noEmit` | **0 lỗi** (exit 0) |
 | `npm run test:regression` | **69/69 pass · 0 fail** |
 | `npm run test:workflow` | **ĐẠT** (`Workflow VNTECH ERP V5.3.0 FULL W2 passed`) |
-| `cd java-backend; mvn -B -pl web -am test` | **Tests run: 34, Failures: 3** — **3 lỗi CÓ SẴN từ trước**, KHÔNG do TASK-132: `ProductionRoleCounterProofTest.productionRole_cht_duocPhep` / `…_cht_roleBaseSai_vanDuocPhep` / `…_engineer_biChan` (đều về `save_team_subcontract` chưa khai trong `ActionRbacRegistry`). **Đã đo baseline trước khi sửa: 34/3 y hệt.** TASK-132: `SupplyChainEndToEndIntegrationTest` ✅ 1/1; `StockChainIntegrationTest` ✅ 1/1; `SystemControllerAuthTest` ✅ 4/4. |
+| `cd java-backend; mvn -B -pl web -am test` | **Tests run: 34, Failures: 3, Errors: 0** — **3 lỗi CÓ SẴN từ trước**, KHÔNG do TASK-132: `ProductionRoleCounterProofTest.productionRole_cht_duocPhep` / `…_cht_roleBaseSai_vanDuocPhep` / `…_engineer_biChan` (đều về `save_team_subcontract` chưa khai trong `ActionRbacRegistry`). **Đã đo baseline trước khi sửa: 34/3 y hệt.** TASK-132: `SupplyChainEndToEndIntegrationTest` ✅ 1/1; `StockChainIntegrationTest` ✅ 1/1; `SystemControllerAuthTest` ✅ 4/4; `RequestApprovalIntegrationTest` ✅ 2/2; `ProjectAdminIntegrationTest` ✅ 6/6. |
+| **Cổng XANH riêng cho TASK-132** (exit 0) | `mvn -B -pl web -am test -Dtest=SupplyChainEndToEndIntegrationTest+StockChainIntegrationTest+SystemControllerAuthTest -Dsurefire.failIfNoSpecifiedTests=false` ⇒ **BUILD SUCCESS · exit 0** |
+| ⚠ Ghi chú vận hành (flake) | Chạy **2 lượt `mvn` liên tiếp trong CÙNG một shell** ⇒ lượt 2 có thể báo `Tests run: 34, Failures: 0, Errors: 34` với `IllegalStateException: ApplicationContext failure threshold (1) exceeded` cho **mọi** lớp (lỗi lan do context bị đánh dấu hỏng, KHÔNG liên quan mã nguồn). Chạy `mvn` **một lượt độc lập** ⇒ kết quả bền, đúng 34/3 như trên. |
 
 ## 7. Ràng buộc đã tuân thủ
 
