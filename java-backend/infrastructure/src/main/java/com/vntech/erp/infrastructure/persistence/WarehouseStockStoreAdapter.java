@@ -110,6 +110,14 @@ public class WarehouseStockStoreAdapter implements WarehouseStockStore {
     @Transactional
     public void insertStockIssue(Map<String, Object> header, List<Map<String, Object>> items, Instant now) {
         String issueId = (String) header.get("id");
+        // WF-XUATKHO-01 — BƯỚC ① (TASK-132, 21/09/2026): phiếu xuất MỚI KHÔNG còn sinh ra ở trạng thái
+        // `posted` (đã xuất kho) như bản cũ. Trạng thái ban đầu là `pending_cht` — CHỜ CHỈ HUY TRƯỞNG
+        // DUYỆT; việc duyệt do action `approve_stock_issue` thực hiện (SystemController → use-case).
+        // TÊN TRẠNG THÁI: chọn `pending_cht` vì (a) hệ thống CHƯA có sẵn trạng thái chờ-duyệt nào cho
+        // `stock_issues` (10/10 phiếu cũ đều `posted`; không có `draft`/`pending*`), (b) khớp tên vai
+        // trò nghiệp vụ trong dữ liệu (`workflow_steps` WFS-XK-1 `canApprove` → `cha.ht`; nhãn
+        // `approvals.department` đang dùng «CHT xác nhận nhu cầu»).
+        // ⚠ TƯƠNG THÍCH NGƯỢC: 10 phiếu CŨ giữ nguyên `posted` — KHÔNG có câu UPDATE nào chạm dữ liệu cũ.
         jdbcTemplate.update("""
                 INSERT INTO stock_issues (id,issue_no,project_id,from_warehouse_id,team_id,request_id,
                                           issued_by,received_by_name,approved_by,issued_at,status,signed_at,
@@ -118,7 +126,7 @@ public class WarehouseStockStoreAdapter implements WarehouseStockStore {
                 issueId, header.get("issueNo"), header.get("projectId"), header.get("fromWarehouseId"),
                 header.get("teamId"), header.get("requestId"), header.get("issuedBy"),
                 header.get("receivedByName"), header.get("approvedBy"), header.get("issuedAt"),
-                "posted", header.get("signedAt"), header.get("note"), now, now);
+                "pending_cht", header.get("signedAt"), header.get("note"), now, now);
         for (Map<String, Object> item : items) {
             String issueItemId = (String) item.get("id");
             jdbcTemplate.update("""

@@ -133,7 +133,11 @@ public final class StockManagementUseCase {
         header.put("requestId", requestId);
         header.put("issuedBy", principal.userId());
         header.put("receivedByName", nvl(payload.get("receivedByName")));
-        header.put("approvedBy", principal.userId());
+        // WF-XUATKHO-01 — BƯỚC ① (TASK-132): phiếu MỚI chờ CHT duyệt nên CHƯA có người duyệt.
+        // Trước đây gán `approvedBy = principal.userId()` (chính người tạo) ⇒ sai dấu vết kiểm toán:
+        // phiếu `pending_cht` lại có sẵn approved_by. Nay để NULL; `approve_stock_issue` (BƯỚC ②) ghi
+        // đúng người duyệt vào `stock_issues.approved_by`.
+        header.put("approvedBy", null);
         header.put("issuedAt", now);
         header.put("signedAt", now);
         header.put("note", nvl(payload.get("note")));
