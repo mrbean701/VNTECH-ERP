@@ -26,6 +26,9 @@ const BASE = process.env.PROBE_BASE || "http://127.0.0.1:9000";
 const ADMIN = { username: "admin", password: "Admin123456@" };
 const PASS = "Vntech@2026";
 const APPLY = process.argv.includes("--apply");
+// Nhãn DUY NHẤT cho mỗi lượt chạy — dùng cho số phiếu giao hàng / số lô để lượt chạy lại
+// không đụng ràng buộc duy nhất của lượt trước (trước đây là hằng số `GN-TEST-0001`).
+const RUN_TAG = new Date().toISOString().replace(/[-:T.]/g, "").slice(0, 14);
 
 // ---------- Dữ liệu PRJ-DEMO-01 (tra từ DB ở GĐ-A) ----------
 const PRJ = {
@@ -263,8 +266,12 @@ if (!requestId) {
   const poId = poRes.ok ? await (async () => {
     const b = await (await fetch(`${BASE}/api/system`, { headers: { cookie: sessions.get("__admin") } })).json();
     const pos = b?.data?.purchaseOrders || [];
-    const pick = pos.slice().sort((a, z) => String(z.poNo).localeCompare(String(a.poNo)))[0];
-    console.log(`      (${pos.length} PO trong bootstrap · chọn ${pick?.poNo} · trạng thái ${pick?.status})`);
+    // PHẢI lọc theo CHÍNH phiếu vừa duyệt: bootstrap còn nhiều PO seed số lớn
+    // (`PO-PRJ-DEMO-01-2026-9308`…) nên sắp xếp theo `poNo` sẽ chọn nhầm PO CŨ của
+    // phiếu khác ⇒ các bước nhận hàng/xác nhận giao hàng đo sai đối tượng.
+    const mine = pos.filter((p) => String(p.requestId) === String(requestId));
+    const pick = (mine.length ? mine : pos).slice().sort((a, z) => String(z.poNo).localeCompare(String(a.poNo)))[0];
+    console.log(`      (${pos.length} PO trong bootstrap · ${mine.length} PO của phiếu ${requestId} · chọn ${pick?.poNo} · trạng thái ${pick?.status})`);
     return pick?.id;
   })() : null;
 
@@ -276,11 +283,14 @@ if (!requestId) {
     const po = (b?.data?.purchaseOrders || []).find((p) => p.id === poId);
     const items = (b?.data?.purchaseOrderItems || []).filter((i) => String(i.purchaseOrderId) === String(poId));
     const recvLines = (items.length ? items : po?.items || []).map((i) => ({
-      purchaseOrderItemId: i.id, quantity: Number(i.orderedQty || i.quantity || 0), lotNo: "LOT-TEST-01",
+      purchaseOrderItemId: i.id, quantity: Number(i.orderedQty || i.quantity || 0),
+      // Số lô DUY NHẤT theo lượt chạy: hằng số cũ `LOT-TEST-01` bị dùng lại từ các lượt trước
+      // ⇒ lượt sau vi phạm ràng buộc và trả 409 (báo động giả, không phải lỗi nghiệp vụ).
+      lotNo: `LOT-TEST-${RUN_TAG}`,
     })).filter((l) => l.quantity > 0);
     console.log(`      PO ${po?.poNo} · ${recvLines.length} dòng cần nhận`);
 
-    const recvPayload = { purchaseOrderId: poId, deliveryNoteNo: "GN-TEST-0001", qcOk: true,
+    const recvPayload = { purchaseOrderId: poId, deliveryNoteNo: `GN-TEST-${RUN_TAG}`, qcOk: true,
       certificateStatus: "complete", deliveryDocumentStatus: "complete", lines: recvLines };
     let recvRes = await call("tkhodemo", "receive_goods", recvPayload);
     step("4a", "tkhodemo", "nhận hàng bằng vai trò thu_kho (Thủ kho — đúng mô tả workflow)", recvRes);
