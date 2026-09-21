@@ -2444,27 +2444,29 @@ function EmailSettingsModal({ data, close, submit }: { data: AppData; close: () 
 
 // PHASE 5 (`W-03`) — «Khi tạo dự án: hỏi *"Tạo kho dự án?"* → Có thì tạo kho» (nguyên văn roadmap).
 //
-// TRẠNG THÁI: nhánh **Có** LÀM ĐƯỢC bằng action THẬT `create_project` (`scripts/system-route.mjs:2438`) — action này
-// ghi CẢ `projects` + `warehouses` (kho `site`) + `user_project_scopes` trong MỘT batch (`:2448-2452`), KHÔNG có
+// TRẠNG THÁI: nhánh **Có** LÀM ĐƯỢC bằng action THẬT `create_project` (`scripts/system-route.mjs`) — action này
+// ghi `projects` + (khi chọn Có) `warehouses` kho `site` + `user_project_scopes` trong MỘT batch, KHÔNG có
 // action/API nào khác để tạo kho. Đó là lý do W-03 KHÔNG thêm API mới (đúng ràng buộc đề bài).
 //
-// ⛔ NHÁNH **Không** BỊ CHẶN (đã báo BLOCKED, xem `docs/agent-progress/TASK-100.md` mục 8):
-//   `create_project` LUÔN INSERT kho; không có tham số nào để bỏ, và **không tồn tại action xoá/ngưng kho riêng**
-//   (chỉ `delete_project_team` xoá kho của TỔ ĐỘI — `:1650`). Muốn nhánh «Không» chạy thật thì phải sửa
-//   `scripts/system-route.mjs`, nhưng `scripts/**` nằm trong **DANH SÁCH CẤM** của đợt PHASE 5 ⇒ DỪNG theo đúng
-//   chỉ đạo "nếu buộc sửa tệp khác ⇒ DỪNG, báo BLOCKED".
-//   Vì vậy ở đây: câu hỏi là THẬT, hai nhánh là THẬT, nhưng chọn «Không» thì biểu mẫu **NÓI RÕ lý do** và
-//   KHOÁ nút lưu — TUYỆT ĐỐI không im lặng tạo kho trái ý người dùng (lỗi im lặng kiểu "nút bấm không có gì xảy ra").
+// ✅ NHÁNH **Không** ĐÃ THI HÀNH ĐƯỢC (gỡ BLOCKED): máy chủ được phép sửa — action THẬT `create_project`
+//   (`scripts/system-route.mjs`, nhánh `if (action === "create_project")`) nay ĐỌC cờ `createWarehouse` và chỉ
+//   `INSERT INTO warehouses` khi `createWarehouse !== false`. Cờ **MẶC ĐỊNH `true`** ⇒ mọi nơi gọi CŨ không truyền
+//   cờ vẫn tạo kho y như trước (tương thích ngược tuyệt đối). Chọn «Không» ⇒ dự án được tạo mà KHÔNG có kho công
+//   trường — hợp lệ theo W-02 (quan hệ 1:N, `warehouses.project_id` cho phép NULL ⇒ N=0 là trạng thái hợp lệ).
+//   KHÔNG thêm action/API mới: biểu mẫu vẫn đi qua ĐÚNG 2 action thật `create_project` / `update_project`.
 function ProjectModal({ data, row, close, submit }: { data: AppData; row: Row | null; close: () => void; submit: (name: string, payload: Row) => Promise<boolean> }) {
   const editing = Boolean(row?.id); const warehouse = row?.id ? data.warehouses.find((item) => item.projectId === row.id && item.type === "site") : null;
   // Chỉ hỏi khi TẠO MỚI (sửa dự án đã có kho thì không hỏi lại để tránh sinh kho thứ hai ngoài ý muốn).
   const [createWarehouse, setCreateWarehouse] = useState("yes");
-  const warehouseBlocked = !editing && createWarehouse === "no";
+  // `W-03`: chọn «Không» ⇒ bỏ trống 2 ô kho (không gửi `warehouseCode`/`warehouseName`); máy chủ bỏ câu INSERT kho.
+  const skipWarehouse = !editing && createWarehouse === "no";
   async function send(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (warehouseBlocked) return;
     const payload = Object.fromEntries(new FormData(event.currentTarget));
-    if (await submit(editing ? "update_project" : "create_project", { ...payload, projectId: row?.id })) close();
+    // Nối câu trả lời Có/Không xuống action THẬT `create_project` dạng boolean — đặt SAU `...payload` để THẮNG
+    // giá trị chuỗi "yes"/"no" của ô radio trong FormData. Khi SỬA dự án thì KHÔNG gửi cờ (giữ nguyên hành vi cũ).
+    const body = editing ? { ...payload, projectId: row?.id } : { ...payload, projectId: row?.id, createWarehouse: createWarehouse === "yes" };
+    if (await submit(editing ? "update_project" : "create_project", body)) close();
   }
   return <BaseModal title={editing ? `Sửa dự án ${row?.code}` : "Thêm dự án"} note="Mã dự án, tên dự án, hợp đồng và tên/mã kho đều do Quản trị viên tự cấu hình." close={close}><form onSubmit={send}><div className="modal-body">
     {!editing && <section className="permission-section" data-project-warehouse-question="create"><h3>Tạo kho dự án?</h3>
@@ -2472,28 +2474,26 @@ function ProjectModal({ data, row, close, submit }: { data: AppData; row: Row | 
       <div className="permission-grid">
         <label><span><b>Có</b> · tạo kèm kho công trường <small>Action thật `create_project` tạo dự án + kho `site` trong cùng một batch</small></span>
           <input type="radio" name="createWarehouse" value="yes" checked={createWarehouse === "yes"} onChange={() => setCreateWarehouse("yes")} /></label>
-        <label><span><b>Không</b> · chỉ tạo dự án <small>CHƯA THI HÀNH ĐƯỢC — xem cảnh báo bên dưới</small></span>
+        <label><span><b>Không</b> · chỉ tạo dự án <small>Dự án tạo ra KHÔNG có kho công trường (máy chủ bỏ câu <code>INSERT INTO warehouses</code>)</small></span>
           <input type="radio" name="createWarehouse" value="no" checked={createWarehouse === "no"} onChange={() => setCreateWarehouse("no")} /></label>
       </div>
-      {warehouseBlocked && <div className="inline-alert danger" data-project-warehouse-blocked="true">
-        <b>Chưa thể chọn «Không»:</b> action THẬT duy nhất (`create_project`) luôn tạo kèm kho công trường và hệ thống
-        <b> không có action xoá/ngưng kho riêng</b>. Muốn bỏ kho phải sửa <code>scripts/system-route.mjs</code>, mà tệp đó
-        nằm trong DANH SÁCH CẤM của đợt này ⇒ đã DỪNG và báo BLOCKED. Vui lòng chọn <b>Có</b> để tạo dự án, hoặc cho phép
-        sửa máy chủ (chi tiết trong <code>docs/agent-progress/TASK-100.md</code>).
+      {skipWarehouse && <div className="inline-alert" data-project-warehouse-skipped="true">
+        <b>Đã chọn «Không»:</b> dự án sẽ được tạo <b>không kèm kho công trường</b>. Hai ô Mã/Tên kho bên dưới được bỏ trống.
+        Vẫn có thể bổ sung kho cho dự án sau này bằng chức năng <b>Sửa dự án</b>.
       </div>}
     </section>}
     <div className="form-grid">
       <label><span>Mã dự án *</span><input name="code" required defaultValue={row?.code || ""} placeholder="DA06" /></label>
       <label><span>Tên dự án *</span><input name="name" required defaultValue={row?.name || ""} /></label>
-      <label><span>Mã kho công trường *</span><input name="warehouseCode" required defaultValue={warehouse?.code || (row?.code ? `KHO-${row.code}` : "")} placeholder="KHO-DA06" /></label>
-      <label><span>Tên kho công trường *</span><input name="warehouseName" required defaultValue={warehouse?.name || (row?.code ? `Kho công trường ${row.code}` : "")} placeholder="Kho công trường dự án..." /></label>
+      <label><span>Mã kho công trường{skipWarehouse ? " (bỏ trống vì không tạo kho)" : " *"}</span><input name="warehouseCode" required={!skipWarehouse} disabled={skipWarehouse} defaultValue={warehouse?.code || (row?.code ? `KHO-${row.code}` : "")} placeholder="KHO-DA06" /></label>
+      <label><span>Tên kho công trường{skipWarehouse ? " (bỏ trống vì không tạo kho)" : " *"}</span><input name="warehouseName" required={!skipWarehouse} disabled={skipWarehouse} defaultValue={warehouse?.name || (row?.code ? `Kho công trường ${row.code}` : "")} placeholder="Kho công trường dự án..." /></label>
       <label><span>Số Hợp đồng</span><input name="contractNo" defaultValue={row?.contractNo || ""} placeholder="HĐ-..." /></label>
       <label><span>Tên / Gói hợp đồng</span><input name="contractName" defaultValue={row?.contractName || ""} /></label>
       <label><span>Ngày bắt đầu</span><input type="date" name="startDate" defaultValue={row?.startDate || ""} /></label>
       <label><span>Dự kiến kết thúc</span><input type="date" name="plannedEndDate" defaultValue={row?.plannedEndDate || ""} /></label>
     </div>
     <div className="inline-alert">Dự án và kho được quản lý độc lập. Đổi tên/mã kho tại đây không làm gộp tồn kho với dự án khác.</div></div>
-    <ModalFooter close={close} label={editing ? "Lưu dự án & kho →" : warehouseBlocked ? "Chọn «Có» để tạo được dự án" : "Tạo dự án & kho riêng →"} disabled={warehouseBlocked} /></form></BaseModal>;
+    <ModalFooter close={close} label={editing ? "Lưu dự án & kho →" : skipWarehouse ? "Tạo dự án (không kèm kho) →" : "Tạo dự án & kho riêng →"} /></form></BaseModal>;
 }
 function CategoryModal({ row, close, submit }: { row: Row | null; close: () => void; submit: (name: string, payload: Row) => Promise<boolean> }) {
   async function send(event: FormEvent<HTMLFormElement>) { event.preventDefault(); if (await submit("save_material_category", { ...Object.fromEntries(new FormData(event.currentTarget)), categoryId: row?.id })) close(); }
