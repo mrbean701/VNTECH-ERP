@@ -19,7 +19,7 @@
 | **DONE** (`**DONE**` + `DONE` + `DONE / AP-DUNG n`) | **108** | **98,2 %** |
 | ĐANG LÀM | 0 | 0 % |
 | KHUNG XONG nhưng **ÁP DỤNG 0** | 0 | 0 % |
-| **BỊ CHẶN** (`**BLOCKED**` = F-01 + W-03) | 2 | 1,8 % |
+| **BỊ CHẶN** (`**BLOCKED**` = F-01) | 1 | 0,9 % |
 | TODO | 1 | 0,9 % |
 
 | Phase | DONE / tổng | Ghi chú |
