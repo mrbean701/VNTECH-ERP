@@ -316,7 +316,11 @@ public class RequestStoreAdapter implements RequestStore {
                        mr.source_warehouse_id AS sourceWarehouseId,
                        (SELECT COUNT(*) FROM material_request_items mri WHERE mri.request_id=mr.id) AS itemCount
                 FROM material_requests mr
-                JOIN projects p ON p.id=mr.project_id
+                -- TASK-141 — LEFT JOIN (trước đây INNER JOIN): phiếu KHÔNG thuộc dự án nào
+                -- (`project_id` NULL/rỗng) vẫn phải MỞ ĐƯỢC để duyệt. INNER JOIN làm
+                -- `findRequestForApproval` trả rỗng ⇒ `decide_approval` báo
+                -- «Không tìm thấy đơn yêu cầu.» (400) cho mọi phiếu không-dự-án.
+                LEFT JOIN projects p ON p.id=mr.project_id
                 JOIN users u ON u.id=mr.requested_by
                 WHERE mr.id=?""", requestId);
         return rows.isEmpty() ? Optional.empty() : Optional.of(new LinkedHashMap<>(rows.get(0)));

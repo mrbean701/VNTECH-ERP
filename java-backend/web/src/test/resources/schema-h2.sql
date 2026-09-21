@@ -2319,4 +2319,9 @@ ALTER TABLE `approvals` ALTER COLUMN `request_id` DROP NOT NULL;
 ALTER TABLE `approvals` ADD COLUMN IF NOT EXISTS `entity_type` varchar(64) NULL;
 ALTER TABLE `approvals` ADD COLUMN IF NOT EXISTS `entity_id` varchar(64) NULL;
 CREATE INDEX IF NOT EXISTS `approvals_entity_idx` ON `approvals` (`entity_type`, `entity_id`);
+-- TASK-141 (21/09/2026) — Flyway `V24__material_request_project_nullable.sql` nới
+--   `material_requests.project_id` thành NULLABLE (phiếu đề nghị KHÔNG thuộc dự án nào —
+--   nhân viên văn phòng công ty, yêu cầu người dùng 21/09/2026). Bản H2 sinh từ V1 vẫn
+--   ghi `NOT NULL` (dòng ~1033) nên INSERT phiếu không-dự-án đỏ ở test ⇒ vá tay như V17/V21.
+ALTER TABLE `material_requests` ALTER COLUMN `project_id` DROP NOT NULL;
 -- [H2-MANUAL-END]

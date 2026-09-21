@@ -69,7 +69,10 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                        COALESCE(ri.item_count,0) AS itemCount,COALESCE(ri.total_qty,0) AS totalQty,
                        COALESCE(ri.received_qty,0) AS receivedQty,COALESCE(ri.issued_qty,0) AS issuedQty
                 FROM material_requests mr
-                JOIN projects p ON p.id=mr.project_id
+                -- TASK-141 — LEFT JOIN (trước đây INNER JOIN): phiếu KHÔNG thuộc dự án nào
+                -- (`project_id` NULL/rỗng — yêu cầu người dùng 21/09/2026) bị INNER JOIN loại khỏi
+                -- `data.requests` ⇒ biến mất khỏi danh sách phiếu VÀ khỏi hàng đợi phê duyệt.
+                LEFT JOIN projects p ON p.id=mr.project_id
                 LEFT JOIN project_contracts pc ON pc.id=mr.contract_id
                 LEFT JOIN boq_versions bv ON bv.id=mr.boq_version_id
                 LEFT JOIN teams t ON t.id=mr.team_id
@@ -77,7 +80,11 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                 LEFT JOIN (SELECT request_id,COUNT(*) AS item_count,COALESCE(SUM(requested_qty),0) AS total_qty,
                                   COALESCE(SUM(received_qty),0) AS received_qty,COALESCE(SUM(issued_qty),0) AS issued_qty
                            FROM material_request_items GROUP BY request_id) ri ON ri.request_id=mr.id
-                WHERE mr.project_id IN (%s)
+                -- TASK-141 — phạm vi dự án: phiếu KHÔNG thuộc dự án (NULL — hoặc '' do tầng ứng
+                -- dụng ghi chuỗi rỗng) luôn đi qua, vì không có phạm vi dự án nào để vi phạm.
+                -- Phiếu THUỘC dự án vẫn giữ nguyên ràng buộc bảo mật `IN (visibleProjectIds)`;
+                -- khi user không có phạm vi nào thì `pidSql = "NULL"` ⇒ chỉ còn nhánh không-dự-án.
+                WHERE (mr.project_id IS NULL OR mr.project_id='' OR mr.project_id IN (%s))
                 ORDER BY mr.requested_at DESC LIMIT 500""".formatted(pidSql), params(pids));
         List<String> requestIds = requests.stream().map(r -> String.valueOf(r.get("id"))).toList();
         if (!requestIds.isEmpty()) {
