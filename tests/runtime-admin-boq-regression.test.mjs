@@ -228,7 +228,11 @@ await test('Project context đồng bộ ĐNMH + tìm vật tư BOQ + collapse/b
   assert.match(ui,/const contractId=contracts\.some/);
   assert.match(ui,/const boqVersionId=versions\.some/);
   assert.match(ui,/setContractSelection\(""\);setBoqVersionSelection\(""\)/);
-  assert.match(ui,/Gõ tên \/ mã \/ thông số để tìm BOQ/);
+  // TASK-139 (21/09/2026) — chỉ đạo người dùng: ô «tên vật tư» tìm theo DANH MỤC VẬT TƯ GỐC (`data.materials`),
+  // BỎ logic tìm theo BOQ / danh mục vật tư dự án. Hợp đồng mới thay assertion `:230` cũ (đòi placeholder BOQ).
+  assert.match(ui,/Gõ mã \/ tên vật tư để tìm trong danh mục/);
+  assert.doesNotMatch(ui,/để tìm BOQ/);
+  assert.match(ui,/materialSearchListId/);
   assert.match(ui,/module-section-collapse/);
   assert.match(css,/linear-gradient\(180deg,#f59e0b 0%,#ff7a18 42%,#2f8cf0 100%\)/);
   assert.match(css,/\.module-section-collapse>summary/);
