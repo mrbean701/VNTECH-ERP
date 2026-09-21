@@ -11,8 +11,12 @@
 //   thukydemo  → bước 2  Thư ký Tổng giám đốc duyệt  (vai trò thuky)
 //   nvdademo   → bước 3  Phòng Dự án kiểm tra khối lượng (da_nv)
 //   nvkhdemo   → bước 4  Phòng Kế hoạch tiếp nhận    (kh_nv)
-//   trdademo   → bước 5  Trưởng phòng DA + KH xác nhận cuối (da_truong, all_of)
-//   trinhtrench→ bước 5  (kh_truong — kiểm tra xem có bắt buộc không)
+//   giamdoc.demo → bước 5 Giám đốc — OWNER ĐƯỢC PHÂN CÔNG của dự án (director)
+//                  (TASK-106 ngày 20/09/2026 đã đổi `approval_project_assignments` bước 5
+//                   từ trdademo/da_truong sang giamdoc.demo/director; catalog bước 5 =
+//                   "Giám đốc" · allowed_role_codes = director,tgd,giam_doc)
+//   trdademo   → bước 5  ĐỐI CHỨNG ÂM: ảnh chụp CŨ `workflow_step_approvers` (V8 seed 18/09)
+//   trinhtrench→ bước 5  ĐỐI CHỨNG ÂM: kh_truong — không phân công, không đúng vai trò
 //   nvkhdemo   → lập PO
 //   tkhodemo   → nhận hàng (thủ kho)
 //
@@ -71,12 +75,18 @@ async function call(username, action, payload = {}) {
 async function adminCall(action, payload = {}) { return call("__admin", action, payload); }
 
 const log = [];
-function step(n, who, what, r) {
-  const ok = r.ok;
-  const detail = ok ? "" : ` → HTTP ${r.status}: ${String(r.json?.error || r.json?.message || r.text || "").slice(0, 200)}`;
+// `opts.expectFail = true` ⇒ ca ĐỐI CHỨNG ÂM: bị từ chối (HTTP 400) MỚI là ĐẠT.
+// Trước đây probe đếm mọi 400 là HỎNG, kể cả khi 400 là hành vi ĐÚNG của hệ thống
+// (bước không tồn tại trong catalog · tài khoản không được phân công) ⇒ báo động giả.
+function step(n, who, what, r, opts = {}) {
+  const expectFail = opts.expectFail === true;
+  const ok = expectFail ? !r.ok : r.ok;
+  const detail = r.ok === ok
+    ? (r.ok ? "" : ` → HTTP ${r.status}: ${String(r.json?.error || r.json?.message || r.text || "").slice(0, 200)}`)
+    : ` → HTTP ${r.status}: ${String(r.json?.error || r.json?.message || r.text || "").slice(0, 200)} (kỳ vọng BỊ TỪ CHỐI)`;
   const line = `${ok ? "✅" : "❌"} ${String(n).padStart(2)}. [${who.padEnd(12)}] ${what}${detail}`;
   console.log(line);
-  log.push({ n, who, what, ok, status: r.status, error: r.json?.error || r.json?.message || null });
+  log.push({ n, who, what, ok, status: r.status, expectFail, error: r.json?.error || r.json?.message || null });
   return r;
 }
 
@@ -98,7 +108,7 @@ const data = boot?.data || {};
 const staff = data.users || data.staffDirectory || [];
 const byName = (u) => staff.find((s) => s.username === u);
 
-const ACTORS = ["engineer.demo", "ksda.demo", "cha.ht", "thukydemo", "nvdademo", "nvkhdemo", "trdademo", "trinhtrench", "tkhodemo"];
+const ACTORS = ["engineer.demo", "ksda.demo", "cha.ht", "thukydemo", "nvdademo", "nvkhdemo", "trdademo", "trinhtrench", "giamdoc.demo", "tkhodemo"];
 console.log(`[bootstrap] ${staff.length} tài khoản · tìm thấy ${ACTORS.filter(byName).length}/${ACTORS.length} tài khoản cần dùng\n`);
 
 if (!APPLY) {
@@ -178,16 +188,26 @@ const requestId = createRes.json?.data?.id || createRes.json?.id || createRes.js
   })();
 
 // ---------- 4. NĂM BƯỚC DUYỆT ----------
-console.log("\n── 5 BƯỚC DUYỆT THEO WF-MUAHANG ──");
+console.log("\n── CHUỖI DUYỆT THEO CẤU HÌNH ĐANG CHẠY (§6 · `approval_stage_catalog` + `approval_project_assignments`) ──");
+// ÁNH XẠ THẬT (đo từ MySQL `vntech_erp`, không đoán):
+//   catalog ASTAGE-1 `active=0`  ⇒ phiếu KHÔNG có bước 1, sinh ra đã ở bước 2.
+//   catalog ASTAGE-2 thukydemo(thuky) · ASTAGE-3 nvdademo(da_nv) · ASTAGE-4 nvkhdemo(kh_nv)
+//   catalog ASTAGE-5 "Giám đốc" · allowed_role_codes=`director,tgd,giam_doc`
+//     ↳ Owner của dự án (TASK-106, 20/09/2026) = **giamdoc.demo** (director).
+// ⚠️ BẢNG `workflow_step_approvers` (WF-MUAHANG bước 5 = trdademo) là ẢNH CHỤP do migration
+//    `V8__workflow_multi.sql` seed ngày 18/09/2026 từ `approval_project_assignments`, và KHÔNG
+//    được cập nhật khi TASK-106 đổi Owner bước 5. Vì vậy trdademo KHÔNG phải người được phân
+//    công của bước 5 của phiếu này ⇒ 400 là ĐÚNG. Dùng làm ĐỐI CHỨNG ÂM, không phải kỳ vọng ĐẠT.
 const APPROVERS = [
-  [1, "cha.ht", "CHT xác nhận nhu cầu"],
   [2, "thukydemo", "Thư ký Tổng giám đốc duyệt"],
   [3, "nvdademo", "Phòng Dự án kiểm tra khối lượng"],
   [4, "nvkhdemo", "Phòng Kế hoạch tiếp nhận"],
-  // BƯỚC 5 dùng người KHÔNG được chỉ định đích danh (trinhtrench · kh_truong) để chứng minh
-  // ai ĐÚNG VAI TRÒ của bước cũng duyệt được. Hai người cùng đủ điều kiện (da_truong và
-  // kh_truong) nhưng CHỈ MỘT người duyệt là bước qua.
-  [5, "trinhtrench", "bước 5 — Trưởng phòng KH (KHÔNG được chỉ định đích danh, chỉ đúng vai trò)"],
+];
+// ĐỐI CHỨNG ÂM — phải bị TỪ CHỐI (400) mới là ĐẠT.
+const NEGATIVE = [
+  [1, "cha.ht", "bước 1 đã TẮT trong catalog (active=0) ⇒ phiếu không có bước 1"],
+  [5, "trinhtrench", "kh_truong — không được phân công bước 5, không đúng vai trò"],
+  [5, "trdademo", "da_truong — chỉ có trong ẢNH CHỤP CŨ workflow_step_approvers"],
 ];
 if (!requestId) {
   console.log("  ⛔ Không lấy được mã phiếu — dừng chuỗi duyệt.");
@@ -197,9 +217,19 @@ if (!requestId) {
     const r = await call(who, "decide_approval", { requestId, stage, decision: "approved", comment: `Kiểm thử GĐ-C bước ${stage}` });
     step(`2.${stage}`, who, `duyệt bước ${stage} — ${what}`, r);
   }
-  // bước 5 mô tả "all_of": kiểm tra xem có BẮT BUỘC thêm kh_truong không
-  const r5b = await call("trdademo", "decide_approval", { requestId, stage: 5, decision: "approved", comment: "Kiểm thử: người chỉ định đích danh duyệt SAU" });
-  step("2.5b", "trdademo", "duyệt bước 5 lần hai — KỲ VỌNG BỊ TỪ CHỐI vì hồ sơ đã qua bước (chỉ cần 1 người)", r5b);
+  // ĐỐI CHỨNG ÂM trước khi chốt hồ sơ.
+  for (const [stage, who, what] of NEGATIVE) {
+    const r = await call(who, "decide_approval", { requestId, stage, decision: "approved", comment: `Đối chứng âm GĐ-C bước ${stage}` });
+    step(`2.${stage}✗`, who, `PHẢI bị từ chối — ${what}`, r, { expectFail: true });
+  }
+  // BƯỚC 5 — do ĐÚNG người được phân công của dự án (giamdoc.demo · director).
+  const r5 = await call("giamdoc.demo", "decide_approval", {
+    requestId, stage: 5, decision: "approved", comment: "Kiểm thử GĐ-C bước 5 — Giám đốc (Owner được phân công)",
+  });
+  step("2.5c", "giamdoc.demo", "duyệt bước 5 — Giám đốc (Owner ĐƯỢC PHÂN CÔNG của dự án) → chốt hồ sơ", r5);
+  // Sau khi chốt: trdademo phải bị từ chối vì hồ sơ đã qua bước (đối chứng âm thứ hai).
+  const r5b = await call("trdademo", "decide_approval", { requestId, stage: 5, decision: "approved", comment: "Đối chứng âm: hồ sơ đã qua bước 5" });
+  step("2.5d", "trdademo", "PHẢI bị từ chối — hồ sơ đã qua bước 5", r5b, { expectFail: true });
 
   // ---------- 5. LẬP PO ----------
   console.log("\n── SAU DUYỆT: LẬP PO ──");
