@@ -164,7 +164,7 @@ test("P-07 — app/page.tsx nối ĐỦ 8 điểm chạm (khuôn `W-01`) cho 2 m
 });
 
 test("P-07 — màn đích: khoá cũ render `SupplierManager` kèm `view`, và KHÔNG còn rơi vào nhánh chung `dept_plan_*`", () => {
-  assert.match(page, /active === "dept_plan_suppliers" && <SupplierManager data=\{data\} action=\{action\} view=\{supplierPartnerScreenView\} \/>/,
+  assert.match(page, /active === "dept_plan_suppliers" && <SupplierManager data=\{data\} action=\{action\} view=\{supplierPartnerScreenView\}[^>]*\/>/,
     "Chưa render `SupplierManager` cho khoá cũ kèm `view`");
   assert.doesNotMatch(page, /active\.startsWith\("dept_plan_"\) && active !== "dept_plan_tasks" && <DepartmentTaskWorkspace[\s\S]{0,600}?department="KH"/,
     "Khoá `dept_plan_suppliers` VẪN rơi vào nhánh chung `dept_plan_*` ⇒ sẽ render 2 màn cùng lúc");

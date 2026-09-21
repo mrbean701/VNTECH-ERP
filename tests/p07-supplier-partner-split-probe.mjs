@@ -102,7 +102,9 @@ console.log("3) BẤM VÀO MỤC → mở ĐÚNG MÀN `SupplierManager` với Đ
 for (const item of tree.supplierPartnerMenuChildren) {
   const active = item.moduleKey;
   const view = supplierPartnerViewFor(item.view, active);
-  const branch = active === "dept_plan_suppliers" && page.includes('active === "dept_plan_suppliers" && <SupplierManager data={data} action={action} view={supplierPartnerScreenView} />');
+  // Cho phép prop KHÁC đi kèm (ví dụ `[P-08]` thêm `open={open}`) — chỉ chốt `view={supplierPartnerScreenView}`.
+  const branch = active === "dept_plan_suppliers"
+    && /active === "dept_plan_suppliers" && <SupplierManager data=\{data\} action=\{action\} view=\{supplierPartnerScreenView\}[^>]*\/>/.test(page);
   console.log(`   "${item.label}" → active=${active} · view=${view} · nhánh render có thật: ${branch}`);
   check(view === item.view, `«${item.label}» → \`supplierPartnerViewFor\` trả ĐÚNG "${item.view}"`);
   check(branch === true, `«${item.label}» → \`app/page.tsx\` render \`SupplierManager\` (kèm \`view\`)`);
