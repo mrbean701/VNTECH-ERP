@@ -136,44 +136,12 @@ public class WarehouseStockStoreAdapter implements WarehouseStockStore {
                     issueItemId, issueId, item.get("materialId"), item.get("requestItemId"),
                     item.get("contractId"), item.get("quantity"), 0, item.get("workPackageCode"),
                     item.get("installationArea"), now, now);
-            // stock_movements: xuất kho vật lý — JS ghi movement_type 'SMI' và chuyển sang KHO TỔ ĐỘI
-            // (to_warehouse_id = team.warehouseId) để tồn tổ đội có hàng cho hoàn trả/kiểm kê.
-            // Bản port trước đây để to_warehouse_id/ destination_contract_id NULL và type 'ISSUE'
-            // ⇒ tồn tổ đội luôn 0, return_stock báo "vượt tồn vật lý tổ đội".
-            jdbcTemplate.update("""
-                    INSERT INTO stock_movements (id,project_id,contract_id,destination_contract_id,material_id,
-                                                 from_warehouse_id,to_warehouse_id,movement_type,quantity,unit_cost,
-                                                 occurred_at,reference_type,reference_id,posted_by,reversal_of_id,
-                                                 created_at,updated_at)
-                    VALUES (?,?,?,?,?,?,?,?,?,0,?,?,?,?,NULL,?,?)""",
-                    "MOV_" + java.util.UUID.randomUUID(), header.get("projectId"), item.get("contractId"),
-                    item.get("contractId"), item.get("materialId"), header.get("fromWarehouseId"),
-                    header.get("toWarehouseId"), "SMI", item.get("quantity"),
-                    now, "stock_issue", issueId, header.get("issuedBy"), now, now);
-            // contract ledger: giảm tồn kế toán ở kho NGUỒN (JS giảm tại fromWarehouseId)
-            jdbcTemplate.update("""
-                    INSERT INTO contract_stock_ledger (id,project_id,contract_id,warehouse_id,material_id,
-                                                       movement_type,quantity_delta,occurred_at,reference_type,
-                                                       reference_id,reference_item_id,counterparty_contract_id,
-                                                       actor_user_id,note,created_at)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,NULL,?,?,?)""",
-                    "CSL_" + java.util.UUID.randomUUID(), header.get("projectId"), item.get("contractId"),
-                    header.get("fromWarehouseId"), item.get("materialId"), "SMI",
-                    -((Number) item.get("quantity")).doubleValue(),
-                    now, "stock_issue", issueId, issueItemId, header.get("issuedBy"),
-                    "Xuất phục vụ lắp đặt", now);
-            // Tồn kế toán tại KHO TỔ ĐỘI tăng tương ứng (JS ghi thêm dòng ledger cho kho nhận).
-            jdbcTemplate.update("""
-                    INSERT INTO contract_stock_ledger (id,project_id,contract_id,warehouse_id,material_id,
-                                                       movement_type,quantity_delta,occurred_at,reference_type,
-                                                       reference_id,reference_item_id,counterparty_contract_id,
-                                                       actor_user_id,note,created_at)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,NULL,?,?,?)""",
-                    "CSL_" + java.util.UUID.randomUUID(), header.get("projectId"), item.get("contractId"),
-                    header.get("toWarehouseId"), item.get("materialId"), "SMI",
-                    ((Number) item.get("quantity")).doubleValue(),
-                    now, "stock_issue", issueId, issueItemId, header.get("issuedBy"),
-                    "Nhận tại kho tổ đội", now);
+            // ⛔ BƯỚC ③ (TASK-133, 21/09/2026) — ĐÃ TÁCH PHẦN GHI KHO RA KHỎI ĐƯỜNG TẠO PHIẾU.
+            // NỢ KỸ THUẬT ĐÃ ĐO (TASK-130/132): chỗ này TRƯỚC ĐÂY ghi ngay `stock_movements` (SMI, kho
+            // nguồn → kho tổ đội) + 2 dòng `contract_stock_ledger` (−qty nguồn, +qty tổ đội) NGAY LÚC TẠO
+            // PHIẾU ⇒ TRỪ TỒN KHO Ở BƯỚC ①, trước cả khi chỉ huy trưởng duyệt ⇒ bước duyệt ② chỉ là
+            // «treo biển». Nay phần ghi kho nằm ở `issueStockConfirm` (bên dưới) — CHỈ chạy khi phiếu
+            // `approved`. ⚠ TƯƠNG THÍCH NGƯỢC: KHÔNG có câu lệnh nào chạm các phiếu CŨ đang `posted`.
         }
     }
 
@@ -210,14 +178,23 @@ public class WarehouseStockStoreAdapter implements WarehouseStockStore {
     @Override
     @Transactional
     public void insertSupplyWorkflowStepIssued(String requestId, String issueId, Instant now, long dueHours) {
+        // ⛔ SỬA LỖI (TASK-133, nợ #5 đã đo): bản cũ dùng `ON DUPLICATE KEY UPDATE` nhưng bảng
+        // `supply_workflow_steps` **KHÔNG có UNIQUE key** (đo MySQL thật: chỉ PRIMARY(id) +
+        // `supply_workflow_request_idx(request_id,step(191),queued_at)` NON-unique +
+        // `supply_workflow_status_idx`) ⇒ mệnh đề đó KHÔNG BAO GIỜ kích hoạt ⇒ mỗi lần xuất kho cùng một
+        // MR lại CHÈN THÊM 1 dòng `step='issue'` (đo được: `MR_f4636c1c-…` 5 dòng · `MR_62b3e402-…`
+        // 4 dòng) ⇒ NHÂN BẢN vết nghiệp vụ. Nay đổi sang **UPDATE-then-INSERT** (không cần DDL, không
+        // `ALTER`): dòng đã tồn tại thì cập nhật, chưa có thì chèn ⇒ đúng 1 dòng cho mỗi (request, step).
+        int updated = jdbcTemplate.update("""
+                UPDATE supply_workflow_steps SET status='completed',completed_at=?,completed_by=?,updated_at=?
+                WHERE request_id=? AND step='issue'""", now, null, now, requestId);
+        if (updated > 0) return;
         jdbcTemplate.update("""
                 INSERT INTO supply_workflow_steps (id,request_id,purchase_order_id,receipt_id,step,status,
                                                    queued_at,due_at,completed_at,completed_by,comment,created_at,updated_at)
-                VALUES (?,?,NULL,NULL,'issue','completed',?,?,?,?,?,?,?)
-                ON DUPLICATE KEY UPDATE status='completed',completed_at=?,completed_by=?,updated_at=?""",
+                VALUES (?,?,NULL,NULL,'issue','completed',?,?,?,?,?,?,?)""",
                 "SWF_" + java.util.UUID.randomUUID(), requestId, now,
-                now.plusSeconds(dueHours * 3600), now, null, "Cấp phát vật tư đã hoàn tất", now, now,
-                now, null, now);
+                now.plusSeconds(dueHours * 3600), now, null, "Cấp phát vật tư đã hoàn tất", now, now);
     }
 
     @Override
@@ -255,6 +232,215 @@ public class WarehouseStockStoreAdapter implements WarehouseStockStore {
                 "APR_" + java.util.UUID.randomUUID(), "stock_issue", issueId, department, userId,
                 "approved", now, now, comment, now, now);
         return true;
+    }
+
+    // ================= WF-XUATKHO-01 BƯỚC ③④⑤ (TASK-133) =================
+
+    @Override
+    public Optional<Map<String, Object>> findStockIssueFull(String issueId) {
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
+                SELECT si.id,si.issue_no AS issueNo,si.project_id AS projectId,si.team_id AS teamId,
+                       si.request_id AS requestId,si.status,si.approved_by AS approvedBy,si.issued_by AS issuedBy,
+                       si.from_warehouse_id AS fromWarehouseId,t.warehouse_id AS toWarehouseId
+                FROM stock_issues si LEFT JOIN teams t ON t.id=si.team_id
+                WHERE si.id=?""", issueId);
+        return rows.isEmpty() ? Optional.empty() : Optional.of(new LinkedHashMap<>(rows.get(0)));
+    }
+
+    @Override
+    public List<Map<String, Object>> stockIssueItems(String issueId) {
+        return jdbcTemplate.queryForList("""
+                SELECT id,issue_id AS issueId,material_id AS materialId,request_item_id AS requestItemId,
+                       contract_id AS contractId,quantity,installed_qty AS installedQty
+                FROM stock_issue_items WHERE issue_id=? ORDER BY created_at,id""", issueId);
+    }
+
+    @Override
+    public Map<String, Object> issuedMovementSummary(String issueId) {
+        // Đếm DÒNG và tổng số lượng movement SMI đã ghi cho phiếu xuất: `issuedLines` = số dòng phiếu
+        // xuất ĐÃ có movement, `totalQty` = tổng lượng tồn đã dịch chuyển. Tầng use-case so với số dòng
+        // phiếu xuất để khẳng định «đã xuất ĐỦ» trước khi cho thủ kho xác nhận (bước ④).
+        Map<String, Object> row = jdbcTemplate.queryForMap("""
+                SELECT COUNT(*) AS movementCount,COUNT(DISTINCT material_id) AS issuedLines,
+                       COALESCE(SUM(quantity),0) AS totalQty
+                FROM stock_movements
+                WHERE movement_type='SMI' AND reference_type='stock_issue' AND reference_id=?""", issueId);
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("movementCount", ((Number) row.getOrDefault("movementCount", 0)).longValue());
+        out.put("issuedLines", ((Number) row.getOrDefault("issuedLines", 0)).longValue());
+        out.put("totalQty", ((Number) row.getOrDefault("totalQty", 0)).doubleValue());
+        return out;
+    }
+
+    @Override
+    @Transactional
+    public boolean issueStockConfirm(String issueId, String userId, Instant now) {
+        // CHỐT CHẶN Ở CHÍNH CÂU UPDATE (chống đua + chống xuất kho lần 2 + chống xuất phiếu CŨ `posted`):
+        // 0 dòng bị đổi ⇒ use-case trả 400 và KHÔNG câu INSERT kho nào bên dưới được chạy.
+        int changed = jdbcTemplate.update("""
+                UPDATE stock_issues SET status='issued',updated_at=?
+                WHERE id=? AND status='approved'""", now, issueId);
+        if (changed == 0) return false;
+        Map<String, Object> issue = findStockIssueFull(issueId).orElseThrow();
+        String projectId = String.valueOf(issue.get("projectId"));
+        String fromWarehouseId = String.valueOf(issue.get("fromWarehouseId"));
+        String toWarehouseId = issue.get("toWarehouseId") == null ? null : String.valueOf(issue.get("toWarehouseId"));
+        for (Map<String, Object> item : stockIssueItems(issueId)) {
+            String issueItemId = String.valueOf(item.get("id"));
+            String contractId = item.get("contractId") == null ? null : String.valueOf(item.get("contractId"));
+            String materialId = String.valueOf(item.get("materialId"));
+            double qty = ((Number) item.get("quantity")).doubleValue();
+            // stock_movements: xuất kho vật lý — movement_type 'SMI', chuyển sang KHO TỔ ĐỘI
+            // (to_warehouse_id = team.warehouseId) để tồn tổ đội có hàng cho hoàn trả/kiểm kê.
+            jdbcTemplate.update("""
+                    INSERT INTO stock_movements (id,project_id,contract_id,destination_contract_id,material_id,
+                                                 from_warehouse_id,to_warehouse_id,movement_type,quantity,unit_cost,
+                                                 occurred_at,reference_type,reference_id,posted_by,reversal_of_id,
+                                                 created_at,updated_at)
+                    VALUES (?,?,?,?,?,?,?,?,?,0,?,?,?,?,NULL,?,?)""",
+                    "MOV_" + java.util.UUID.randomUUID(), projectId, contractId, contractId, materialId,
+                    fromWarehouseId, toWarehouseId, "SMI", qty, now, "stock_issue", issueId, userId, now, now);
+            // contract ledger: giảm tồn kế toán ở kho NGUỒN.
+            jdbcTemplate.update("""
+                    INSERT INTO contract_stock_ledger (id,project_id,contract_id,warehouse_id,material_id,
+                                                       movement_type,quantity_delta,occurred_at,reference_type,
+                                                       reference_id,reference_item_id,counterparty_contract_id,
+                                                       actor_user_id,note,created_at)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,NULL,?,?,?)""",
+                    "CSL_" + java.util.UUID.randomUUID(), projectId, contractId, fromWarehouseId, materialId,
+                    "SMI", -qty, now, "stock_issue", issueId, issueItemId, userId,
+                    "Xuất phục vụ lắp đặt", now);
+            // Tồn kế toán tại KHO TỔ ĐỘI tăng tương ứng.
+            jdbcTemplate.update("""
+                    INSERT INTO contract_stock_ledger (id,project_id,contract_id,warehouse_id,material_id,
+                                                       movement_type,quantity_delta,occurred_at,reference_type,
+                                                       reference_id,reference_item_id,counterparty_contract_id,
+                                                       actor_user_id,note,created_at)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,NULL,?,?,?)""",
+                    "CSL_" + java.util.UUID.randomUUID(), projectId, contractId, toWarehouseId, materialId,
+                    "SMI", qty, now, "stock_issue", issueId, issueItemId, userId,
+                    "Nhận tại kho tổ đội", now);
+            // NỢ #4 — cập nhật TIẾN ĐỘ CẤP PHÁT của dòng phiếu đề nghị (issued_qty đã được cộng ở
+            // bước ①; ở đây chỉ cập nhật TRẠNG THÁI để cột trạng thái phản ánh việc đã xuất kho).
+            if (item.get("requestItemId") != null) {
+                jdbcTemplate.update("""
+                        UPDATE material_request_items
+                        SET line_status=CASE WHEN issued_qty+received_qty>=requested_qty-0.0001 THEN 'issued'
+                                             ELSE 'partial_issued' END,
+                            updated_at=?
+                        WHERE id=?""", now, String.valueOf(item.get("requestItemId")));
+            }
+        }
+        // NỢ #5 — UPDATE-then-INSERT (xem insertSupplyWorkflowStepIssued) ⇒ KHÔNG nhân dòng.
+        if (issue.get("requestId") != null) {
+            insertSupplyWorkflowStepIssued(String.valueOf(issue.get("requestId")), issueId, now, 24);
+            // NỢ #4 — TRẠNG THÁI PHIẾU ĐỀ NGHỊ: `partial_issued` khi còn dòng chưa cấp đủ, `issued` khi đủ.
+            jdbcTemplate.update("""
+                    UPDATE material_requests
+                    SET supply_status=CASE WHEN EXISTS (
+                            SELECT 1 FROM material_request_items mri
+                            WHERE mri.request_id=material_requests.id
+                              AND mri.requested_qty>0
+                              AND mri.issued_qty+mri.received_qty<mri.requested_qty-0.0001
+                        ) THEN 'partial_issued' ELSE 'issued' END,
+                        updated_at=?
+                    WHERE id=?""", now, String.valueOf(issue.get("requestId")));
+        }
+        return true;
+    }
+
+    @Override
+    @Transactional
+    public boolean confirmStockIssue(String issueId, String userId, String comment, Instant now) {
+        // ④ THỦ KHO XÁC NHẬN ĐÃ XUẤT ĐỦ. Chốt chặn: chỉ nhận phiếu đang `issued`.
+        //
+        // BẤT BIẾN «ĐÃ XUẤT ĐỦ» được kiểm bằng DỮ LIỆU, không bằng niềm tin: mỗi dòng phiếu xuất phải
+        // có ĐÚNG 1 movement SMI với đúng số lượng (tổng SMI = tổng phiếu). Nếu bước ③ ghi thiếu dòng
+        // (hoặc bị rollback giữa đường) thì xác nhận KHÔNG được phép thành công.
+        int lines = 0;
+        for (Map<String, Object> item : stockIssueItems(issueId)) {
+            String issueItemId = String.valueOf(item.get("id"));
+            Double moved = jdbcTemplate.queryForObject("""
+                    SELECT COALESCE(SUM(quantity),0) FROM stock_movements
+                    WHERE movement_type='SMI' AND reference_type='stock_issue' AND reference_id=?
+                      AND material_id=?""", Double.class, issueId, String.valueOf(item.get("materialId")));
+            double expected = ((Number) item.get("quantity")).doubleValue();
+            if (moved == null || Math.abs(moved - expected) > 1e-7) return false;
+            lines++;
+        }
+        if (lines == 0) return false;
+        // `signed_at` = thời điểm thủ kho KÝ XÁC NHẬN thực tế (① chỉ ghi mốc tạo phiếu).
+        int changed = jdbcTemplate.update("""
+                UPDATE stock_issues SET status='completed',signed_at=?,updated_at=?
+                WHERE id=? AND status='issued'""", now, now, issueId);
+        if (changed == 0) return false;
+        return true;
+    }
+
+    @Override
+    public List<Map<String, Object>> stockIssueGrnLines(String issueId) {
+        // `goods_receipts.purchase_order_id` và `goods_receipt_items.purchase_order_item_id` là NOT NULL.
+        // KHÔNG có FOREIGN KEY, nhưng MỌI truy vấn bootstrap đều `JOIN purchase_orders po ON
+        // po.id=gr.purchase_order_id` ⇒ GRN thiếu PO sẽ VÔ HÌNH trên UI. Vì vậy tìm dòng đặt hàng của
+        // CÙNG `request_item_id` + vật tư để làm khoá hợp lệ; phiếu cấp phát thuần kho (không có PO)
+        // trả chuỗi rỗng ⇒ use-case trả 400 có thông báo đọc được thay vì ghi GRN mồ côi.
+        return jdbcTemplate.queryForList("""
+                SELECT sii.id AS issueItemId,sii.material_id AS materialId,sii.contract_id AS contractId,
+                       sii.quantity,sii.installed_qty AS installedQty,sii.request_item_id AS requestItemId,
+                       (SELECT poi.id FROM purchase_order_items poi
+                         WHERE poi.request_item_id=sii.request_item_id AND poi.material_id=sii.material_id
+                         ORDER BY poi.created_at DESC,poi.id DESC LIMIT 1) AS purchaseOrderItemId,
+                       (SELECT po.id FROM purchase_order_items poi
+                          JOIN purchase_orders po ON po.id=poi.purchase_order_id
+                         WHERE poi.request_item_id=sii.request_item_id AND poi.material_id=sii.material_id
+                         ORDER BY poi.created_at DESC,poi.id DESC LIMIT 1) AS purchaseOrderId,
+                       (SELECT mri.contract_id FROM material_request_items mri WHERE mri.id=sii.request_item_id)
+                           AS requestContractId,
+                       (SELECT mri.boq_version_id FROM material_request_items mri WHERE mri.id=sii.request_item_id)
+                           AS boqVersionId
+                FROM stock_issue_items sii WHERE sii.issue_id=? ORDER BY sii.created_at,sii.id""", issueId);
+    }
+
+    @Override
+    @Transactional
+    public void insertStockIssueGrn(Map<String, Object> header, List<Map<String, Object>> items, Instant now) {
+        String receiptId = (String) header.get("id");
+        // `posting_status='posted'` + `qc_status='passed'` + chứng từ `complete`: GRN sinh từ phiếu xuất
+        // KHÔNG đi qua vòng kiểm QC/nhận hàng mua (hàng đã nằm trong kho nguồn và đã được ③ ghi kho).
+        // `bch_confirmation_status='confirmed'` để KHÔNG sinh vòng chờ BCH xác nhận (đặc tả ⑤: không duyệt).
+        jdbcTemplate.update("""
+                INSERT INTO goods_receipts (id,receipt_no,purchase_order_id,contract_id,boq_version_id,
+                                            warehouse_id,received_by,received_at,delivery_note_no,qc_status,
+                                            document_status,certificate_status,delivery_document_status,
+                                            bch_confirmation_status,bch_confirmed_by,bch_confirmed_at,bch_comment,
+                                            posting_status,created_at,updated_at)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                receiptId, header.get("receiptNo"), header.get("purchaseOrderId"), header.get("contractId"),
+                header.get("boqVersionId"), header.get("warehouseId"), header.get("receivedBy"),
+                now, header.get("deliveryNoteNo"), "passed", "complete", "complete", "complete",
+                "confirmed", header.get("receivedBy"), now, header.get("note"), "posted", now, now);
+        for (Map<String, Object> item : items) {
+            double qty = ((Number) item.get("quantity")).doubleValue();
+            jdbcTemplate.update("""
+                    INSERT INTO goods_receipt_items (id,receipt_id,purchase_order_item_id,contract_id,
+                                                     boq_version_id,boq_item_id,received_qty,accepted_qty,
+                                                     rejected_qty,lot_no,qc_result,created_at,updated_at)
+                    VALUES (?,?,?,?,?,NULL,?,?,0,NULL,'passed',?,?)""",
+                    "GRNI_" + java.util.UUID.randomUUID(), receiptId, item.get("purchaseOrderItemId"),
+                    item.get("contractId"), item.get("boqVersionId"), qty, qty, now, now);
+        }
+    }
+
+    @Override
+    @Transactional
+    public boolean markStockIssueGrnCreated(String issueId, String receiptId, String userId, Instant now) {
+        // Chốt chặn: chỉ nhận phiếu đang `completed` ⇒ chưa xác nhận đủ (hoặc đã sinh GRN rồi) ⇒ false.
+        int changed = jdbcTemplate.update("""
+                UPDATE stock_issues SET status='grn_created',
+                       note=CASE WHEN note IS NULL THEN ? ELSE CONCAT(note,' | ',?) END,updated_at=?
+                WHERE id=? AND status='completed'""",
+                "Đã sinh phiếu nhập " + receiptId, "Đã sinh phiếu nhập " + receiptId, now, issueId);
+        return changed > 0;
     }
 
     // ---------- return_stock / confirm_installation ----------

@@ -1195,6 +1195,37 @@ case "reject_po" -> {
                     Map<String, Object> result = stockManagementUseCase.approveStockIssue(asStockPrincipal(cu), payload);
                     return ResponseEntity.ok(jsonResult(result));
                 }
+                // ── TASK-133 (21/09/2026) — WF-XUATKHO-01 BƯỚC ③④⑤ ─────────────────────────────
+                // ③ `issue_stock_confirm` — TIẾN HÀNH XUẤT KHO. Đây là chỗ DUY NHẤT ghi
+                //    `stock_movements` (SMI) + `contract_stock_ledger` của luồng xuất kho: phần ghi kho
+                //    đã được TÁCH RA KHỎI `insertStockIssue` (đường tạo phiếu ①) vì trước đây nó ghi
+                //    ngay lúc tạo phiếu ⇒ trừ tồn kho trước cả khi CHT duyệt. Chỉ chạy khi
+                //    `stock_issues.status='approved'`. Quyền: cổng VAI TRÒ
+                //    requireRole(["warehouse","commander","admin"]) + phạm vi dự án/kho nguồn, cổng MODULE
+                //    dùng lại khoá SẴN CÓ `warehouse_issue` (⛔ 0 khoá `module_catalog` mới).
+                case "issue_stock_confirm" -> {
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                    Map<String, Object> result = stockManagementUseCase.issueStockConfirm(asStockPrincipal(cu), payload);
+                    return ResponseEntity.ok(jsonResult(result));
+                }
+                // ④ `confirm_stock_issue` — THỦ KHO XÁC NHẬN ĐÃ XUẤT ĐỦ. ⛔ CHỈ `thu_kho`/`admin`
+                //    (requireRole(["warehouse","admin"]) trong use-case) ⇒ `cha.ht` (commander) bị 403
+                //    đúng đặc tả. `issued` → `completed` + đóng dấu `signed_at`. Cổng MODULE dùng lại
+                //    khoá SẴN CÓ `warehouse_issue` với capability `canEdit` (⛔ 0 khoá mới).
+                case "confirm_stock_issue" -> {
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                    Map<String, Object> result = stockManagementUseCase.confirmStockIssue(asStockPrincipal(cu), payload);
+                    return ResponseEntity.ok(jsonResult(result));
+                }
+                // ⑤ `create_issue_grn` — SINH GRN NHẬP VÀO KHO KHÁC. ⛔ KHÔNG cần duyệt, CHỈ cần QUYỀN
+                //    TẠO (đúng đặc tả): requireRole(["warehouse","engineer","admin"]) + phạm vi dự án,
+                //    cổng MODULE dùng lại khoá SẴN CÓ `receiving` với `canCreate` (khuôn `receive_goods`).
+                //    Chỉ chạy khi phiếu đã `completed` (bước ④ xong) ⇒ `grn_created`.
+                case "create_issue_grn" -> {
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                    Map<String, Object> result = stockManagementUseCase.createIssueGrn(asStockPrincipal(cu), payload);
+                    return ResponseEntity.ok(jsonResult(result));
+                }
                 case "save_supplier" -> {
                     AuthUseCase.CurrentUser cu = requireCurrentUser(request);
                     String m = supplierManagementUseCase.saveSupplier(asSupplierPrincipal(cu), payload);
