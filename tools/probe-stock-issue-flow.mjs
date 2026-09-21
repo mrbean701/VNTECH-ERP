@@ -1,4 +1,4 @@
-// TASK-130 — CHẠY TRỌN LUỒNG CẤP PHÁT + XUẤT KHO (WF-XUATKHO-01) BẰNG ĐÚNG TÀI KHOẢN TỪNG VAI TRÒ
+// TASK-130 → TASK-132 — CHẠY TRỌN LUỒNG CẤP PHÁT + XUẤT KHO (WF-XUATKHO-01) BẰNG ĐÚNG TÀI KHOẢN TỪNG VAI TRÒ
 //
 //   node tools/probe-stock-issue-flow.mjs            # chạy thử, in kế hoạch (KHÔNG gọi HTTP)
 //   node tools/probe-stock-issue-flow.mjs --apply    # thực thi thật
@@ -7,17 +7,22 @@
 // Quy ước ĐẠT/HỎNG: bước có `expectFail: true` là ĐỐI CHỨNG ÂM —
 //   bị TỪ CHỐI mới là ĐẠT, được chấp nhận là HỎNG.
 //
+// ── PHẠM VI LƯỢT NÀY (TASK-132): CHỈ 2 BƯỚC ĐẦU CỦA WF-XUATKHO-01 ────────────────
+//  ① tạo phiếu (chỉ cần quyền tạo) · ② CHỈ HUY TRƯỞNG DUYỆT  ⇒ probe này ĐO 2 bước đó.
+//  ③ tiến hành xuất kho · ④ thủ kho xác nhận đã xuất đủ · ⑤ chuyển thành GRN
+//  ⇒ **CHƯA LÀM** (nhánh sau) — probe ĐÁNH DẤU RÕ và **KHÔNG đếm là HỎNG**.
+//
 // ── ĐÃ ĐO TRƯỚC (không đoán) ────────────────────────────────────────────────────
-//  · `issue_stock` (Java `SystemController.java:1179` → `StockManagementUseCase.issueStock`
-//    `StockManagementUseCase.java:53-162`) TẠO PHIẾU Ở TRẠNG THÁI `posted` NGAY, trong MỘT
-//    lệnh HTTP duy nhất: `WarehouseStockStoreAdapter.insertStockIssue` dòng 121 bind cứng
-//    `"posted"` cho `stock_issues.status`. ⇒ KHÔNG có bước duyệt nào chặn giữa.
-//  · `WF-XUATKHO-01` có THẬT trong dữ liệu (`workflow_definitions` module_key='warehouse_issue',
-//    `workflow_steps` WFS-XK-1 `canApprove` → `cha.ht`, WFS-XK-2 `canApprove` → `kttdemo`) nhưng
-//    KHÔNG có action Java nào đọc nó: `decide_approval` (SystemController.java:1063 →
-//    `RequestManagementUseCase.decideApproval` :595) chỉ nhận `material_requests` (tra
-//    `findRequestForApproval`), và `RequestStoreAdapter.approvalWarnings` (:22) chỉ CẢNH BÁO
-//    chứ không chặn. Probe này ĐO đúng thực tế đó thay vì giả định có chuỗi duyệt.
+//  · TRƯỚC TASK-132: `issue_stock` (Java `SystemController.java:1179` →
+//    `StockManagementUseCase.issueStock` :53-162) TẠO PHIẾU Ở TRẠNG THÁI `posted` NGAY, trong MỘT
+//    lệnh HTTP: `WarehouseStockStoreAdapter.insertStockIssue` dòng 121 bind cứng `"posted"`.
+//    `SELECT COUNT(*) FROM approvals WHERE entity_id LIKE 'ISS%'` = **0** ⇒ không bước duyệt nào.
+//  · `WF-XUATKHO-01` có THẬT trong dữ liệu (`workflow_steps` WFS-XK-1 `canApprove` → `cha.ht`) nhưng
+//    KHÔNG action Java nào đọc nó: `decide_approval` (SystemController.java:1063 →
+//    `RequestManagementUseCase.decideApproval`) CHỈ nhận `material_requests` ⇒ gọi trên phiếu xuất = 400.
+//  · TRƯỚC 132, tài khoản CHT (`cha.ht`) có `warehouse_issue.can_approve = 0` (đo MySQL) ⇒ cổng MODULE
+//    của action duyệt PHẢI là `approvals` (`cha.ht.approvals.can_approve = 1`), còn cổng VAI TRÒ
+//    (`requireRole(["commander","admin"])`) mới là cái chặn thật.
 const BASE = process.env.PROBE_BASE || "http://127.0.0.1:9000";
 const PASS = "Vntech@2026";
 const APPLY = process.argv.includes("--apply");
@@ -123,6 +128,25 @@ function step(n, who, what, r, opts = {}) {
   return r;
 }
 
+// `assertStep` — bước KHẲNG ĐỊNH (không phải HTTP call): ĐẠT khi `cond` đúng.
+function assertStep(n, who, what, cond, detail) {
+  const ok = !!cond;
+  console.log(`${ok ? "✅" : "❌"} ${String(n).padStart(6)}. [${who.padEnd(14)}] ${what} → ${detail}`);
+  log.push({ n, who, what, ok, status: 0, expectFail: false, error: ok ? null : detail });
+  return ok;
+}
+
+// Đọc bootstrap (nguồn trạng thái qua API, KHÔNG đoán) bằng phiên của `who`.
+async function bootstrap(who) {
+  const cookie = sessions.get(who) || sessions.get("admin") || "";
+  const res = await fetch(`${BASE}/api/system`, { headers: { cookie } });
+  return res.json();
+}
+function issueIn(boot, id) {
+  const issues = boot?.data?.stockIssues || boot?.data?.issues || [];
+  return issues.find((i) => String(i.id) === String(id)) || null;
+}
+
 console.log("═".repeat(110));
 console.log(`  LUỒNG CẤP PHÁT / XUẤT KHO — ${PRJ.code} · ${APPLY ? "THỰC THI" : "XEM TRƯỚC"}`);
 console.log("═".repeat(110));
@@ -136,14 +160,16 @@ if (!APPLY) {
   console.log("KẾ HOẠCH (chạy lại với --apply để thực thi):");
   console.log("  1. đăng nhập từng vai trò: " + ACTORS.join(", "));
   console.log("  2. ĐỐI CHỨNG ÂM A — engineer.demo / giamdoc.demo gọi issue_stock ⇒ KỲ VỌNG 403");
-  console.log("  3. TẠO phiếu xuất bằng tkhodemo (thủ kho, vai trò thu_kho) ⇒ kỳ vọng 200 + status='posted'");
-  console.log("  4. nếu tkhodemo bị chặn → thử cha.ht (cht) → admin (biện pháp tạm)");
-  console.log("  5. CHUỖI DUYỆT: bước 1 cha.ht (canApprove) → bước 2 kttdemo (canApprove)");
-  console.log("     ⚠ đã đo trước: `stock_issues` sinh ra ĐÃ `posted` (adapter bind cứng), nên đây là");
-  console.log("       phép ĐO xem action duyệt có tồn tại hay không — không phải giả định.");
-  console.log("  6. ĐỐI CHỨNG ÂM B — duyệt sai bước (kttdemo duyệt bước 1 / cha.ht duyệt bước 2)");
-  console.log("  7. ĐO HỆ QUẢ SQL: stock_issues.status · stock_issue_items · stock_movements (SMI) ·");
-  console.log("     tồn kho TRƯỚC/SAU ở kho nguồn & kho tổ đội · material_requests.status + items.issued_qty");
+  console.log("  3. BƯỚC ① — TẠO phiếu xuất bằng tkhodemo (thủ kho) ⇒ kỳ vọng 200 + status='pending_cht'");
+  console.log("     (KHẲNG ĐỊNH status ≠ 'posted' đo lại qua bootstrap — đây là hành vi TASK-132 sửa)");
+  console.log("  4. BƯỚC ② — cha.ht (chỉ huy trưởng) gọi approve_stock_issue ⇒ kỳ vọng 200 +");
+  console.log("     status='approved' + 1 bản ghi `approvals(entity_type='stock_issue', stage=1, status='approved')`");
+  console.log("  5. ĐỐI CHỨNG ÂM B — engineer.demo duyệt ⇒ KỲ VỌNG 403 · duyệt LẦN 2 ⇒ KỲ VỌNG 400 ·");
+  console.log("     duyệt phiếu KHÔNG tồn tại ⇒ KỲ VỌNG 400");
+  console.log("  6. ĐO HỆ QUẢ SQL (do người chạy đối chiếu): stock_issues.status · stock_issue_items ·");
+  console.log("     stock_movements (SMI) · approvals theo (entity_type,entity_id)");
+  console.log("  ⛔ CHƯA LÀM (nhánh sau, KHÔNG tính vào x/y): ③ tiến hành xuất kho ·");
+  console.log("     ④ thủ kho xác nhận đã xuất đủ · ⑤ chuyển thành GRN để nhập kho khác");
   process.exitCode = 0;
 } else {
 
@@ -233,37 +259,72 @@ console.log(`      ↳ issueId=${issueId} · issueNo=${issueNo}`);
 const warnings = createRes.json?.warnings || [];
 if (warnings.length) console.log(`      ↳ warnings (chế độ CHỈ CẢNH BÁO): ${JSON.stringify(warnings)}`);
 
-// ---------- 4. CHUỖI DUYỆT WF-XUATKHO-01 (cha.ht → kttdemo) ----------
-console.log("\n── CHUỖI DUYỆT WF-XUATKHO-01: bước 1 cha.ht (canApprove) → bước 2 kttdemo (canApprove) ──");
-if (!issueId) {
-  console.log("  ⛔ Không có issueId — dừng chuỗi duyệt.");
+// BƯỚC ① — KHẲNG ĐỊNH trạng thái phiếu MỚI: phải là `pending_cht`, KHÔNG được là `posted`.
+if (issueId) {
+  const bootAfterCreate = await bootstrap("tkhodemo");
+  const fresh = issueIn(bootAfterCreate, issueId);
+  const st = fresh?.status ?? "(không thấy phiếu trong bootstrap)";
+  assertStep("1d", "tkhodemo", "BƯỚC ① — phiếu MỚI KHÔNG còn 'posted' (kỳ vọng pending_cht)",
+    st === "pending_cht", `status=${st}`);
 } else {
-  // ĐỐI CHỨNG ÂM B: duyệt SAI BƯỚC (người của bước 2 đi duyệt bước 1 của PHIẾU ĐỀ NGHỊ đã chốt).
-  const wrong = await call("kttdemo", "decide_approval", {
-    requestId: MR.id, stage: 1, decision: "approved",
-    comment: "Đối chứng âm TASK-130: kế toán duyệt sai bước 1",
-  });
-  step("N-B.ktt/b1", "kttdemo", "duyệt SAI BƯỚC 1 — ĐỐI CHỨNG ÂM, KỲ VỌNG 400/403", wrong, { expectFail: true });
+  console.log("  ⛔ Không tạo được phiếu ⇒ bỏ qua khẳng định trạng thái (BƯỚC ①).");
+}
 
-  // Thử trên chính PHIẾU XUẤT (nếu API có nhận issueId) để đo xem có chuỗi duyệt cho stock_issue.
-  // ĐO CHUỖI DUYỆT TRÊN PHIẾU XUẤT: `decide_approval` tra `material_requests`
-  // (`RequestManagementUseCase.java:600` → `findRequestForApproval`) nên truyền `issueId` vào
-  // LUÔN trả 400 «Không tìm thấy đơn yêu cầu.» ⇒ **ĐỐI CHỨNG ÂM**: 400 mới là ĐẠT.
-  const s1 = await call("cha.ht", "decide_approval", {
-    requestId: issueId, stage: 1, decision: "approved", comment: "Kiểm thử TASK-130 bước 1 (CHT/BCH xác nhận)",
+// ---------- 4. BƯỚC ② — CHỈ HUY TRƯỞNG DUYỆT (`approve_stock_issue`) ----------
+// TASK-132: action MỚI ở `SystemController` cạnh `issue_stock`, quyền = `requireRole(["commander","admin"])`
+// (KHÔNG thêm khoá `module_catalog` mới — cổng module dùng lại `approvals`), và SINH bản ghi `approvals`
+// với entity_type='stock_issue', entity_id=issueId, stage=1, status='approved', decided_at=now.
+console.log("\n── BƯỚC ② — CHỈ HUY TRƯỞNG DUYỆT PHIẾU XUẤT (`approve_stock_issue`) ──");
+if (!issueId) {
+  console.log("  ⛔ Không có issueId — dừng bước duyệt.");
+} else {
+  // ĐỐI CHỨNG ÂM B1: người KHÔNG phải chỉ huy trưởng duyệt ⇒ 403.
+  const eng = await call("engineer.demo", "approve_stock_issue", {
+    issueId, decision: "approved", comment: "Đối chứng âm TASK-132: kỹ sư không được duyệt",
   });
-  step("2.1", "cha.ht", "duyệt bước 1 phiếu XUẤT — ĐỐI CHỨNG ÂM: stock_issue KHÔNG có API duyệt, KỲ VỌNG 400", s1, { expectFail: true });
-  const s2 = await call("kttdemo", "decide_approval", {
-    requestId: issueId, stage: 2, decision: "approved", comment: "Kiểm thử TASK-130 bước 2 (Kế toán xác nhận)",
+  step("N-B1.eng", "engineer.demo", "duyệt phiếu xuất — ĐỐI CHỨNG ÂM, KỲ VỌNG 403", eng, { expectFail: true });
+
+  // ĐỐI CHỨNG ÂM B2: phiếu KHÔNG tồn tại ⇒ 400.
+  const ghost = await call("cha.ht", "approve_stock_issue", {
+    issueId: "ISS_khong-ton-tai", decision: "approved", comment: "Đối chứng âm TASK-132: phiếu không tồn tại",
   });
-  step("2.2", "kttdemo", "duyệt bước 2 phiếu XUẤT — ĐỐI CHỨNG ÂM: stock_issue KHÔNG có API duyệt, KỲ VỌNG 400", s2, { expectFail: true });
+  step("N-B2.ghost", "cha.ht", "duyệt phiếu KHÔNG tồn tại — ĐỐI CHỨNG ÂM, KỲ VỌNG 400", ghost, { expectFail: true });
+
+  // BƯỚC ② THẬT: cha.ht (chỉ huy trưởng) duyệt ⇒ 200.
+  const ok2 = await call("cha.ht", "approve_stock_issue", {
+    issueId, decision: "approved", comment: "CHT duyệt phiếu xuất (TASK-132 bước ②)",
+  });
+  step("2.1", "cha.ht", "approve_stock_issue — CHỈ HUY TRƯỞNG duyệt", ok2);
+  if (ok2.ok) console.log(`      ↳ ${String(ok2.json?.message || "").slice(0, 200)}`);
+
+  const bootAfterApprove = await bootstrap("cha.ht");
+  const approved = issueIn(bootAfterApprove, issueId);
+  const st2 = approved?.status ?? "(không thấy phiếu trong bootstrap)";
+  assertStep("2.2", "cha.ht", "sau duyệt: stock_issues.status = 'approved' (sẵn sàng xuất kho)",
+    st2 === "approved", `status=${st2}`);
+  assertStep("2.3", "cha.ht", "khai báo `approved_by` trên phiếu đã duyệt",
+    approved != null && approved.approvedBy != null,
+    `approvedBy=${approved?.approvedBy ?? "(trống)"}`);
+
+  // ĐỐI CHỨNG ÂM B3: duyệt LẦN 2 ⇒ 400 (đã duyệt rồi).
+  const twice = await call("cha.ht", "approve_stock_issue", {
+    issueId, decision: "approved", comment: "Đối chứng âm TASK-132: duyệt lần 2",
+  });
+  step("N-B3.2lan", "cha.ht", "duyệt LẦN 2 cùng phiếu — ĐỐI CHỨNG ÂM, KỲ VỌNG 400", twice, { expectFail: true });
+}
+
+// ---------- 4b. GHI CHÚ KIỂM SQL BẮT BUỘC (probe chỉ đi HTTP) ----------
+console.log("\n── KIỂM CHỨNG SQL (người chạy đối chiếu MySQL `vntech_erp`) ──");
+if (issueId) {
+  console.log(`   SELECT id,status,approved_by FROM stock_issues WHERE id='${issueId}';`);
+  console.log(`   SELECT entity_type,entity_id,stage,approver_user_id,status,decided_at FROM approvals`);
+  console.log(`     WHERE entity_type='stock_issue' AND entity_id='${issueId}';`);
 }
 
 // ---------- 5. TRẠNG THÁI CUỐI QUA API ----------
 console.log("\n── TRẠNG THÁI ĐO QUA API (bootstrap) ──");
 try {
-  const cookie = sessions.get("tkhodemo") || sessions.get("admin") || "";
-  const boot = await (await fetch(`${BASE}/api/system`, { headers: { cookie } })).json();
+  const boot = await bootstrap("tkhodemo");
   const issues = boot?.data?.stockIssues || boot?.data?.issues || [];
   const mine = issues.filter((i) => String(i.id) === String(issueId));
   const pick = mine[0] || issues.slice().sort((a, z) => String(z.issueNo).localeCompare(String(a.issueNo)))[0];
@@ -274,12 +335,20 @@ try {
 } catch (e) {
   console.log(`   ⚠ không đọc được bootstrap: ${e.message}`);
 }
+
+// ---------- 5b. BƯỚC ③④⑤ — CHƯA LÀM (nhánh sau), KHÔNG tính là HỎNG ----------
+console.log("\n── ⛔ BƯỚC ③④⑤ CỦA WF-XUATKHO-01: CHƯA LÀM TRONG LƯỢT NÀY (TASK-132 chỉ ①②) ──");
+console.log("   ⛔ ③ tiến hành xuất kho (tách ghi kho/movement/ledger khỏi lúc tạo phiếu)");
+console.log("   ⛔ ④ thủ kho xác nhận đã xuất đủ");
+console.log("   ⛔ ⑤ chuyển thành GRN để nhập vào kho khác");
+console.log("   ⇒ 3 bước này KHÔNG được probe đếm vào x/y; nhánh sau sẽ làm.");
 }
 
 // ---------- 6. KẾT QUẢ ----------
 console.log("\n" + "═".repeat(110));
 const okc = log.filter((l) => l.ok).length;
-console.log(`KẾT QUẢ: ${okc}/${log.length} bước ĐẠT`);
+console.log(`KẾT QUẢ: ${okc}/${log.length} bước ĐẠT  (chỉ tính 2 bước ① tạo phiếu + ② CHT duyệt và các đối chứng âm)`);
 for (const l of log.filter((x) => !x.ok)) console.log(`   ❌ [${l.who}] ${l.what} → HTTP ${l.status} ${l.error || ""}`);
+console.log("   ⛔ BƯỚC ③ tiến hành xuất kho · ④ thủ kho xác nhận · ⑤ chuyển GRN: CHƯA LÀM (nhánh sau) — KHÔNG tính vào x/y.");
 console.log("═".repeat(110));
 console.log(`\nMật khẩu tài khoản demo: ${PASS} · nhãn lượt chạy: ${RUN_TAG}`);
