@@ -101,24 +101,27 @@ test("TASK-136 (4) gửi phiếu không còn popup xác nhận", () => {
 });
 
 test("TASK-136 (5) máy chủ chịu được projectId/contractId/BOQ rỗng (KHÔNG đổi schema)", () => {
-  // (5a) rỗng ⇒ rơi về dự án mặc định trong phạm vi tài khoản thay vì lỗi cứng
+  // (5a) rỗng ⇒ KHÔNG lỗi cứng và KHÔNG tự gán dự án mặc định:
+  //      người dùng đã chốt PHƯƠNG ÁN (A) — "bất cứ ai cũng lập được phiếu,
+  //      kể cả nhân viên văn phòng KHÔNG thuộc dự án nào, KHÔNG thuộc kho nào"
+  //      ⇒ phiếu không thuộc dự án nào ⇒ `material_requests.project_id` = NULL.
   assert.ok(
-    USE_CASE.includes("defaultProjectIdForUser"),
-    "createRequest chưa rơi về dự án mặc định của tài khoản khi projectId rỗng",
+    USE_CASE.includes("projectId.isEmpty() ? null"),
+    "createRequest phải coi dự án rỗng là KHÔNG có dự án (không dựng đối tượng dự án)",
   );
   assert.ok(
-    PORT.includes("defaultProjectIdForUser"),
-    "RequestStore chưa khai báo defaultProjectIdForUser",
+    !USE_CASE.includes("defaultProjectIdForUser") &&
+      !PORT.includes("defaultProjectIdForUser") &&
+      !ADAPTER.includes("defaultProjectIdForUser"),
+    "KHÔNG được tự gán dự án mặc định khi người dùng để trống (phương án A: phiếu không thuộc dự án)",
+  );
+  // (5a2) có migration nới cột thành NULL (thay đổi cấu trúc ĐÃ được người dùng đồng ý)
+  const migrationV24 = read(
+    "java-backend/infrastructure/src/main/resources/db/migration/V24__material_request_project_nullable.sql",
   );
   assert.ok(
-    ADAPTER.includes("defaultProjectIdForUser"),
-    "RequestStoreAdapter chưa cài defaultProjectIdForUser",
-  );
-  assert.ok(
-    /project_id\) NOT NULL|`project_id` VARCHAR\(64\) NOT NULL/.test(
-      read("java-backend/infrastructure/src/main/resources/db/migration/V1__baseline.sql"),
-    ),
-    "cột material_requests.project_id phải vẫn NOT NULL (TASK-136 KHÔNG được đổi schema)",
+    /material_requests/i.test(migrationV24) && /project_id/i.test(migrationV24) && /NULL/i.test(migrationV24),
+    "phải có migration V24 nới material_requests.project_id thành NULL (phương án A)",
   );
   // (5b) không còn chốt cứng "phải có dự án và ít nhất một dòng vật tư"
   assert.ok(
