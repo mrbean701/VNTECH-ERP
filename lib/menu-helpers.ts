@@ -39,7 +39,7 @@ const modules: { key: ModuleKey; label: string; icon: string; groupKey?: string;
   { key: "dept_plan_purchasing", label: "Mua hàng vật tư thiết bị", icon: "MH", groupKey: "purchasing", subGroup: "Phòng Kế hoạch" },
   { key: "dept_plan_supply", label: "Cung ứng vật tư cho dự án", icon: "CU", groupKey: "purchasing", subGroup: "Phòng Kế hoạch" },
   { key: "dept_plan_contracts", label: "Hợp đồng các loại", icon: "HD", groupKey: "purchasing", subGroup: "Phòng Kế hoạch" },
-  { key: "dept_plan_suppliers", label: "Nhà cung cấp / Đối tác", icon: "NC", groupKey: "purchasing", subGroup: "Phòng Kế hoạch" },
+  { key: "dept_plan_suppliers", label: "Nhà cung cấp", icon: "NC", groupKey: "purchasing", subGroup: "Phòng Kế hoạch" },
   { key: "dept_plan_price_data", label: "Giá & dữ liệu thương mại", icon: "DG", groupKey: "purchasing", subGroup: "Phòng Kế hoạch" },
   { key: "dept_plan_kpi", label: "KPI & hiệu suất nhân viên", icon: "KP", groupKey: "reports", subGroup: "Phòng Kế hoạch" },
   { key: "dept_plan_alerts", label: "Báo cáo & cảnh báo", icon: "CB", groupKey: "reports", subGroup: "Phòng Kế hoạch" },
@@ -156,6 +156,42 @@ function warehouseMenuViewFor(view: WarehouseMenuView | null, active: ModuleKey)
   return null;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// PHASE 7 (`P-07`) — NHÓM «MUA HÀNG»: TÁCH MỤC GỘP CŨ THÀNH 2 MỤC RIÊNG
+// «Nhà cung cấp» + «Đối tác» (ĐÚNG KHUÔN `T-01`/`W-01`: khai báo trong CODE, KHÔNG migration,
+// KHÔNG thêm dòng `module_catalog`).
+//
+// VÌ SAO 2 MỤC NÀY KHAI TRONG CODE: muốn 2 NHÃN riêng thì phải có 2 mục menu riêng; khoá menu của mục
+// «Đối tác» là khoá MỚI **KHÔNG** có `config` trong `module_catalog` ⇒ nhãn lấy từ code (cùng lý do `T-01`).
+// Khoá CŨ `dept_plan_suppliers` GIỮ NGUYÊN (tương thích ngược: quyền · tiêu đề màn · tìm kiếm · nhánh render
+// `SupplierManager` trong `app/page.tsx` đều vẫn treo trên khoá này) — mục menu chỉ ĐỔI NHÃN + ĐÍCH ĐẾN.
+//
+// ⚠️ CỔNG QUYỀN: CẢ HAI mục dùng CHUNG khoá ĐÃ CÓ `dept_plan_suppliers` (`permissionKeys`) — đúng chỉ dẫn
+// «nếu hệ thống bắt buộc có khoá module để `canView` ⇒ trỏ cùng `permissionKeys` của khoá cũ».
+// KHÔNG khoá module mới · KHÔNG hardcode admin · KHÔNG dòng `module_catalog`.
+//
+// ⚠️ CHƯA NỐI VÀO `app/page.tsx` (lượt `P-07` này CHỈ được sửa `lib/menu-helpers.ts`): màn `SupplierManager`
+// hiện chỉ nhận `{data, action}` (`app/screens/SupplierManager.tsx` dòng 16) ⇒ muốn 2 mục HIỆN ra kèm lọc
+// theo `view` thì phải nối tiếp theo đúng khuôn `W-01` — xem `docs/agent-progress/TASK-121.md` mục 4.
+// ─────────────────────────────────────────────────────────────────────────────
+type SupplierPartnerMenuView = "supplier" | "partner";
+const supplierPartnerMenuItems: { key: string; label: string; groupKey: "purchasing"; view: SupplierPartnerMenuView; permissionKeys: ModuleKey[] }[] = [
+  { key: "dept_plan_suppliers", label: "Nhà cung cấp", groupKey: "purchasing", view: "supplier", permissionKeys: ["dept_plan_suppliers"] },
+  { key: "dept_plan_partners", label: "Đối tác", groupKey: "purchasing", view: "partner", permissionKeys: ["dept_plan_suppliers"] },
+];
+// Dòng `dept_plan_suppliers` trong bảng `modules` bị ẨN KHỎI CÂY MENU (đúng khuôn `legacyWorkMenuKeys` /
+// `legacyWarehouseMenuKeys`) — khoá vẫn SỐNG: quyền · tiêu đề màn · tìm kiếm · nhánh render `SupplierManager`.
+const legacySupplierPartnerMenuKeys: ModuleKey[] = ["dept_plan_suppliers"];
+
+// ĐÍCH ĐẾN THẬT của 2 mục: mục «Nhà cung cấp» mở chế độ nhà cung cấp, mục «Đối tác» mở chế độ đối tác — CÙNG
+// màn `SupplierManager` (KHÔNG màn mới, KHÔNG route mới, KHÔNG khoá module mới). Giống `warehouseMenuViewFor`,
+// hàm này trả `null` khi điều hướng cũ (không kèm `view`) để giữ nguyên hành vi hiện có.
+function supplierPartnerViewFor(view: SupplierPartnerMenuView | null, active: ModuleKey): SupplierPartnerMenuView | null {
+  if (active !== "dept_plan_suppliers") return null;
+  if (view === "supplier" || view === "partner") return view;
+  return null;
+}
+
 // KP #96 (18/09/2026) — ĐÃ DỌN "cây workspace theo dự án" (8 mục/dự án + khoá ngữ cảnh dự án).
 // Lý do: hai nhánh render treo trên một SENTINEL không bao giờ khớp — `configuredMenuGroups()` chỉ ghép từ
 // `menu_group_catalog` (12 nhóm thật, đo trên CẢ MySQL + SQLite) + bản fallback (12 nhóm), và nhóm
@@ -186,11 +222,14 @@ export {
   approvalCenterMenuKey,
   configuredMenuGroups,
   independentMenuKeys,
+  legacySupplierPartnerMenuKeys,
   legacyWarehouseMenuKeys,
   legacyWorkMenuKeys,
   modules,
+  supplierPartnerMenuItems,
+  supplierPartnerViewFor,
   warehouseMenuItems,
   warehouseMenuViewFor,
   workMenuItems,
 };
-export type { WarehouseMenuView, WorkMenuView };
+export type { SupplierPartnerMenuView, WarehouseMenuView, WorkMenuView };
