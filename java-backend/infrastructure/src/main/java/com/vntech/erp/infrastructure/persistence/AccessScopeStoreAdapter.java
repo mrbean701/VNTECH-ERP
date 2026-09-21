@@ -46,6 +46,19 @@ public class AccessScopeStoreAdapter implements AccessScopeStore {
     public Optional<Map<String, Object>> findActiveWarehouseBasic(String warehouseId) {
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(
                 "SELECT id,type,project_id AS projectId FROM warehouses WHERE id=? AND active=1", warehouseId);
-        return rows.isEmpty() ? Optional.empty() : Optional.of(new LinkedHashMap<>(rows.get(0)));
+        if (rows.isEmpty()) return Optional.empty();
+        // ⛔ SỬA LỖI (TASK-133, phát hiện khi viết test H2 cho luồng xuất kho):
+        // `AccessScopeService.canAccessWarehouse` đọc `warehouse.get("projectId")` — tên alias do CÂU SQL
+        // quyết định. H2 (MODE=MySQL) **hạ chữ thường nhãn cột** nên trả về khoá `projectid`, còn MySQL
+        // giữ `projectId` ⇒ trên H2 phép đọc LUÔN ra null ⇒ projectId="" ⇒ nhánh «kho site» của
+        // canAccessWarehouse **LUÔN false** ⇒ MỌI thao tác kho của vai trò kho (thủ kho) bị 403 OAN trong
+        // test H2 (đo được: `AccessScopeService:96` `canAccessProject(userId,role,"",true)` = false dù
+        // `user_project_scopes` CÓ dòng write). Chuẩn hoá khoá về đúng tên alias để hai engine hành xử giống nhau.
+        Map<String, Object> row = new LinkedHashMap<>();
+        for (Map.Entry<String, Object> e : rows.get(0).entrySet()) {
+            row.put("projectid".equalsIgnoreCase(e.getKey()) && !"projectId".equals(e.getKey())
+                    ? "projectId" : e.getKey(), e.getValue());
+        }
+        return Optional.of(row);
     }
 }

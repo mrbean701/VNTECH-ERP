@@ -143,15 +143,19 @@ public final class StockManagementUseCase {
         header.put("note", nvl(payload.get("note")));
         store.insertStockIssue(header, items, now);
         for (Map<String, Object> item : items) {
-            store.updateRequestItemIssued(sv(item, "requestItemId"), (double) item.get("quantity"), 0, now);
-            // ĐÃ XOÁ (TASK-040 nhóm 4): lệnh gọi cũ `updateIssueItemInstalled(item.id, 0, now)` ở đây là
-            // THỪA — `insertStockIssue` đã ghi `installed_qty=0` ngay trong câu INSERT (adapter dòng ~129),
-            // đúng như JS (system-route.mjs:1511 bind giá trị 0 cho cột installed_qty). JS không có câu ghi
-            // lại nào sau khi chèn. Nay phương thức đó mang nghĩa CỘNG DỒN nên gọi với 0 chỉ là vô nghĩa.
+            // ⛔ BƯỚC ③ (TASK-133) — ĐÃ DỜI `updateRequestItemIssued` RA KHỎI ĐƯỜNG TẠO PHIẾU.
+            // Bản TASK-130/132 cộng `material_request_items.issued_qty` NGAY khi tạo phiếu ⇒ cùng một lỗi
+            // «trừ/thừa nhận trước khi duyệt» như phần ghi kho: phiếu đang `pending_cht` đã làm dòng nhu
+            // cầu báo `issued` (đo trên dữ liệu THẬT: `MRI_f5b8a193-…` 25/25 `issued` dù MR chưa cấp đủ).
+            // Nay `issued_qty` + `line_status` + `supply_status` đều được ghi ở `issueStockConfirm` (③)
+            // — đúng thời điểm hàng THỰC SỰ rời kho. Việc giải phóng giữ chỗ vẫn làm ngay tại ① (giữ chỗ
+            // là ý định, không phải tồn kho).
             store.releaseReservationsForRequest(requestId, sv(item, "materialId"), fromWarehouseId, now);
         }
-        long sla = 24;
-        store.insertSupplyWorkflowStepIssued(requestId, issueId, now, sla);
+        // `supply_workflow_steps` (bước 'issue') cũng dời sang ③ — chạy 2 lần cùng 1 MR không nhân dòng.
+        // ĐÃ XOÁ (TASK-133): `store.updateIssueItemInstalled(item.id, 0, now)` — xem ghi chú cũ bên dưới.
+        // ĐÃ XOÁ (TASK-040 nhóm 4): lệnh gọi cũ `updateIssueItemInstalled` tại đây là THỪA — `insertStockIssue`
+        // đã ghi `installed_qty=0` trong câu INSERT. JS không có câu ghi lại nào sau khi chèn.
         boolean anyRemaining = false;
         for (Map<String, Object> item : items) {
             double issued = numberValue(item.get("quantity"));
@@ -236,6 +240,13 @@ public final class StockManagementUseCase {
         accessScope.requireWarehouseAccess(principal.userId(), principal.role(),
                 principal.warehouseScopeKind(), sv(issue, "fromWarehouseId"), true,
                 "Tài khoản không có quyền xuất tại kho này.");
+        // BẤT BIẾN DỮ LIỆU (đo được khi viết test H2): `contract_stock_ledger.warehouse_id` là NOT NULL,
+        // nên nếu phiếu KHÔNG phân giải được KHO NHẬN (tổ đội chưa gắn `teams.warehouse_id`) thì việc ghi
+        // kho sẽ nổ ràng buộc GIỮA transaction. Chặn TRƯỚC khi ghi bất cứ dòng nào ⇒ 400 đọc được, không
+        // để lại movement nửa vời.
+        if (sv(issue, "toWarehouseId").isEmpty())
+            throw Api("Phiếu xuất kho " + sv(issue, "issueNo")
+                    + " chưa xác định được KHO NHẬN (tổ đội chưa gắn kho) ⇒ không thể xuất kho.");
         Instant now = Instant.now();
         if (!store.issueStockConfirm(issueId, principal.userId(), now))
             throw Api("Phiếu xuất kho " + sv(issue, "issueNo")
@@ -328,7 +339,14 @@ public final class StockManagementUseCase {
             throw Api("Kho đích của phiếu nhập phải thuộc đúng dự án.");
         List<Map<String, Object>> lines = store.stockIssueGrnLines(issueId);
         if (lines.isEmpty()) throw Api("Phiếu xuất kho không có dòng vật tư nào để sinh phiếu nhập.");
-        for (Map<String, Object> line : lines) {
+        // `stock_issue_items` : `purchase_order_items` là 1-N (một dòng nhu cầu có thể được đặt ở nhiều PO)
+        // ⇒ giữ DÒNG MỚI NHẤT cho mỗi dòng phiếu xuất (adapter đã ORDER BY ... poi.created_at DESC) để
+        // GRN có ĐÚNG 1 dòng vật tư cho 1 dòng phiếu xuất.
+        Map<String, Map<String, Object>> byIssueItem = new LinkedHashMap<>();
+        for (Map<String, Object> line : lines)
+            byIssueItem.putIfAbsent(sv(line, "issueItemId"), line);
+        List<Map<String, Object>> selected = new ArrayList<>(byIssueItem.values());
+        for (Map<String, Object> line : selected) {
             if (sv(line, "purchaseOrderId").isEmpty() || sv(line, "purchaseOrderItemId").isEmpty())
                 throw Api("Dòng vật tư " + sv(line, "materialId") + " chưa có dòng đặt hàng (PO) tương ứng"
                         + " ⇒ không thể lập phiếu nhập theo mẫu `goods_receipts` (cột purchase_order_id NOT NULL).");
@@ -341,9 +359,9 @@ public final class StockManagementUseCase {
         long seq = store.nextSequenceNo("GRN-PX:" + projectId + ":" + year, "GRN-PX", projectId, year, now);
         String receiptNo = "GRN-PX-" + year + "-" + String.format("%04d", seq);
         String receiptId = idGenerator.next("GRN");
-        String purchaseOrderId = sv(lines.get(0), "purchaseOrderId");
+        String purchaseOrderId = sv(selected.get(0), "purchaseOrderId");
         List<Map<String, Object>> items = new ArrayList<>();
-        for (Map<String, Object> line : lines) {
+        for (Map<String, Object> line : selected) {
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("purchaseOrderItemId", sv(line, "purchaseOrderItemId"));
             item.put("contractId", sv(line, "contractId").isEmpty()

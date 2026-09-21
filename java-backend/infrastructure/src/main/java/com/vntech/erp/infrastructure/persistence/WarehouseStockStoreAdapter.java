@@ -235,13 +235,20 @@ public class WarehouseStockStoreAdapter implements WarehouseStockStore {
     }
 
     // ================= WF-XUATKHO-01 BƯỚC ③④⑤ (TASK-133) =================
+    //
+    // ⚠ QUY ƯỚC BẮT BUỘC (lỗi đã đo khi chạy test H2): alias camelCase PHẢI được **TRÍCH DẪN**,
+    // vd `AS "issueNo"`. H2 (MODE=MySQL) hạ chữ thường nhãn cột KHÔNG trích dẫn (`AS issueNo` ⇒ khoá
+    // `issueno`) trong khi MySQL giữ nguyên ⇒ mọi phép đọc `map.get("issueNo")`/`sv(map,"issueNo")`
+    // trả RỖNG trên H2. MySQL của dự án KHÔNG bật `ANSI_QUOTES` (đo `@@sql_mode`) nên dấu `"` là định
+    // danh chuỗi ⇒ cách viết này chạy đúng trên CẢ HAI engine.
 
     @Override
     public Optional<Map<String, Object>> findStockIssueFull(String issueId) {
         List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
-                SELECT si.id,si.issue_no AS issueNo,si.project_id AS projectId,si.team_id AS teamId,
-                       si.request_id AS requestId,si.status,si.approved_by AS approvedBy,si.issued_by AS issuedBy,
-                       si.from_warehouse_id AS fromWarehouseId,t.warehouse_id AS toWarehouseId
+                SELECT si.id,si.issue_no AS "issueNo",si.project_id AS "projectId",si.team_id AS "teamId",
+                       si.request_id AS "requestId",si.status,si.approved_by AS "approvedBy",
+                       si.issued_by AS "issuedBy",si.from_warehouse_id AS "fromWarehouseId",
+                       t.warehouse_id AS "toWarehouseId"
                 FROM stock_issues si LEFT JOIN teams t ON t.id=si.team_id
                 WHERE si.id=?""", issueId);
         return rows.isEmpty() ? Optional.empty() : Optional.of(new LinkedHashMap<>(rows.get(0)));
@@ -250,16 +257,17 @@ public class WarehouseStockStoreAdapter implements WarehouseStockStore {
     @Override
     public List<Map<String, Object>> stockIssueItems(String issueId) {
         return jdbcTemplate.queryForList("""
-                SELECT id,issue_id AS issueId,material_id AS materialId,request_item_id AS requestItemId,
-                       contract_id AS contractId,quantity,installed_qty AS installedQty
+                SELECT id,issue_id AS "issueId",material_id AS "materialId",
+                       request_item_id AS "requestItemId",contract_id AS "contractId",quantity,
+                       installed_qty AS "installedQty"
                 FROM stock_issue_items WHERE issue_id=? ORDER BY created_at,id""", issueId);
     }
 
     @Override
     public Map<String, Object> issuedMovementSummary(String issueId) {
-        // Đếm DÒNG và tổng số lượng movement SMI đã ghi cho phiếu xuất: `issuedLines` = số dòng phiếu
-        // xuất ĐÃ có movement, `totalQty` = tổng lượng tồn đã dịch chuyển. Tầng use-case so với số dòng
-        // phiếu xuất để khẳng định «đã xuất ĐỦ» trước khi cho thủ kho xác nhận (bước ④).
+        // Đếm DÒNG và tổng số lượng movement SMI đã ghi cho phiếu xuất: `issuedLines` = số vật tư ĐÃ có
+        // movement, `totalQty` = tổng lượng tồn đã dịch chuyển. Tầng use-case so với số dòng phiếu xuất để
+        // khẳng định «đã xuất ĐỦ» trước khi cho thủ kho xác nhận (bước ④).
         Map<String, Object> row = jdbcTemplate.queryForMap("""
                 SELECT COUNT(*) AS movementCount,COUNT(DISTINCT material_id) AS issuedLines,
                        COALESCE(SUM(quantity),0) AS totalQty
@@ -285,6 +293,13 @@ public class WarehouseStockStoreAdapter implements WarehouseStockStore {
         String projectId = String.valueOf(issue.get("projectId"));
         String fromWarehouseId = String.valueOf(issue.get("fromWarehouseId"));
         String toWarehouseId = issue.get("toWarehouseId") == null ? null : String.valueOf(issue.get("toWarehouseId"));
+        // Phòng thủ 2 lớp (use-case đã chặn trước): `contract_stock_ledger.warehouse_id` NOT NULL ⇒ không
+        // được phép nổ ràng buộc GIỮA transaction. Thiếu kho nhận ⇒ coi như không xuất kho được.
+        if (fromWarehouseId == null || fromWarehouseId.isBlank()
+                || toWarehouseId == null || toWarehouseId.isBlank()) {
+            throw new org.springframework.dao.DataIntegrityViolationException(
+                    "Phiếu xuất thiếu kho nguồn/kho nhận ⇒ không thể ghi kho.");
+        }
         for (Map<String, Object> item : stockIssueItems(issueId)) {
             String issueItemId = String.valueOf(item.get("id"));
             String contractId = item.get("contractId") == null ? null : String.valueOf(item.get("contractId"));
@@ -320,15 +335,18 @@ public class WarehouseStockStoreAdapter implements WarehouseStockStore {
                     "CSL_" + java.util.UUID.randomUUID(), projectId, contractId, toWarehouseId, materialId,
                     "SMI", qty, now, "stock_issue", issueId, issueItemId, userId,
                     "Nhận tại kho tổ đội", now);
-            // NỢ #4 — cập nhật TIẾN ĐỘ CẤP PHÁT của dòng phiếu đề nghị (issued_qty đã được cộng ở
-            // bước ①; ở đây chỉ cập nhật TRẠNG THÁI để cột trạng thái phản ánh việc đã xuất kho).
+            // NỢ #4 — TIẾN ĐỘ CẤP PHÁT của dòng phiếu đề nghị. ⛔ TASK-133: việc CỘNG `issued_qty` được
+            // DỜI từ bước ① (tạo phiếu) về ĐÂY — cùng lý do như phần ghi kho: cộng ở ① nghĩa là phiếu
+            // `pending_cht` đã làm dòng nhu cầu báo đã cấp (đo trên dữ liệu THẬT: `MRI_f5b8a193-…` 25/25
+            // `issued` trong khi MR chưa cấp đủ). `line_status` cũng ghi tại đây.
             if (item.get("requestItemId") != null) {
                 jdbcTemplate.update("""
                         UPDATE material_request_items
-                        SET line_status=CASE WHEN issued_qty+received_qty>=requested_qty-0.0001 THEN 'issued'
+                        SET issued_qty=issued_qty+?,
+                            line_status=CASE WHEN issued_qty+?+received_qty>=requested_qty-0.0001 THEN 'issued'
                                              ELSE 'partial_issued' END,
                             updated_at=?
-                        WHERE id=?""", now, String.valueOf(item.get("requestItemId")));
+                        WHERE id=?""", qty, qty, now, String.valueOf(item.get("requestItemId")));
             }
         }
         // NỢ #5 — UPDATE-then-INSERT (xem insertSupplyWorkflowStepIssued) ⇒ KHÔNG nhân dòng.
@@ -384,21 +402,27 @@ public class WarehouseStockStoreAdapter implements WarehouseStockStore {
         // po.id=gr.purchase_order_id` ⇒ GRN thiếu PO sẽ VÔ HÌNH trên UI. Vì vậy tìm dòng đặt hàng của
         // CÙNG `request_item_id` + vật tư để làm khoá hợp lệ; phiếu cấp phát thuần kho (không có PO)
         // trả chuỗi rỗng ⇒ use-case trả 400 có thông báo đọc được thay vì ghi GRN mồ côi.
-        return jdbcTemplate.queryForList("""
-                SELECT sii.id AS issueItemId,sii.material_id AS materialId,sii.contract_id AS contractId,
-                       sii.quantity,sii.installed_qty AS installedQty,sii.request_item_id AS requestItemId,
-                       (SELECT poi.id FROM purchase_order_items poi
-                         WHERE poi.request_item_id=sii.request_item_id AND poi.material_id=sii.material_id
-                         ORDER BY poi.created_at DESC,poi.id DESC LIMIT 1) AS purchaseOrderItemId,
-                       (SELECT po.id FROM purchase_order_items poi
-                          JOIN purchase_orders po ON po.id=poi.purchase_order_id
-                         WHERE poi.request_item_id=sii.request_item_id AND poi.material_id=sii.material_id
-                         ORDER BY poi.created_at DESC,poi.id DESC LIMIT 1) AS purchaseOrderId,
-                       (SELECT mri.contract_id FROM material_request_items mri WHERE mri.id=sii.request_item_id)
-                           AS requestContractId,
-                       (SELECT mri.boq_version_id FROM material_request_items mri WHERE mri.id=sii.request_item_id)
-                           AS boqVersionId
-                FROM stock_issue_items sii WHERE sii.issue_id=? ORDER BY sii.created_at,sii.id""", issueId);
+        // Dùng LEFT JOIN (không phải subquery tương quan lồng trong cả hai cột) — H2 MODE=MySQL không
+        // chấp nhận tổ hợp alias trích dẫn + subquery tương quan ở CÙNG danh sách chọn (đo được:
+        // `BadSqlGrammarException`).
+        // ⚠ ĐO ĐƯỢC: `purchase_order_items` **KHÔNG có cột `material_id`** (vật tư suy ra qua
+        // `request_item_id` → `material_request_items`). Điều kiện khớp cột cũ là lỗi cột không tồn tại —
+        // join CHỈ theo `request_item_id`; nếu một dòng nhu cầu có nhiều PO thì giữ dòng mới nhất bằng
+        // sắp xếp + khử trùng ở tầng Java.
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
+                SELECT sii.id AS "issueItemId",sii.material_id AS "materialId",
+                       sii.contract_id AS "contractId",sii.quantity,
+                       sii.request_item_id AS "requestItemId",
+                       poi.id AS "purchaseOrderItemId",po.id AS "purchaseOrderId",
+                       mri.contract_id AS "requestContractId",mri.boq_version_id AS "boqVersionId",
+                       poi.created_at AS "poCreatedAt"
+                FROM stock_issue_items sii
+                LEFT JOIN material_request_items mri ON mri.id=sii.request_item_id
+                LEFT JOIN purchase_order_items poi ON poi.request_item_id=sii.request_item_id
+                LEFT JOIN purchase_orders po ON po.id=poi.purchase_order_id
+                WHERE sii.issue_id=?
+                ORDER BY sii.created_at,sii.id,poi.created_at DESC,poi.id DESC""", issueId);
+        return rows;
     }
 
     @Override

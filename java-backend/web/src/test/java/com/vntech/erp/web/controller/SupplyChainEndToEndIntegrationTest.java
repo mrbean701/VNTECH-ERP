@@ -183,22 +183,15 @@ class SupplyChainEndToEndIntegrationTest {
                 "\"projectId\":\"" + projectId + "\",\"fromWarehouseId\":\"wh_e2e\",\"teamId\":\"team_e2e\","
                         + "\"requestId\":\"" + requestId + "\",\"receivedByName\":\"Tổ trưởng E2E\","
                         + "\"lines\":[{\"materialId\":\"" + materialId + "\",\"quantity\":4,\"requestItemId\":\"" + mriId + "\"}]"), 200);
-        // BUG #10 (regression guard): cấp phát PHẢI chuyển hàng sang kho TỔ ĐỘI, không được để
-        // to_warehouse_id NULL — nếu sai thì tồn tổ đội luôn 0 và return_stock/kiểm kê đều hỏng.
-        // Lưu ý: fixture này seed team_e2e trỏ CHÍNH wh_e2e, nên chỉ khẳng định được trên movement
-        // (đúng chỗ bug nằm) + destination_contract_id; không khẳng định ledger vì 2 kho trùng nhau.
+        // [TASK-133] BUG #10 (regression guard) — TASK-133 DỜI phần ghi kho từ bước ① (tạo phiếu) sang
+        // bước ③ (`issue_stock_confirm`, sau khi CHT duyệt) nên movement SMI KHÔNG còn xuất hiện ngay sau
+        // `issue_stock`. Bất biến được kiểm ở đây là phần CHẶN: chưa duyệt/chưa xuất thì CHƯA có movement.
         String teamWarehouseId = jdbc.queryForObject(
                 "SELECT warehouse_id FROM teams WHERE id='team_e2e'", String.class);
-        Map<String, Object> smi = jdbc.queryForMap(
-                "SELECT to_warehouse_id AS toWh, destination_contract_id AS destContract, quantity "
-                        + "FROM stock_movements WHERE movement_type='SMI' AND from_warehouse_id='wh_e2e' "
-                        + "AND reference_type='stock_issue' ORDER BY occurred_at DESC LIMIT 1");
-        assertEquals(teamWarehouseId, smi.get("toWh"),
-                "movement SMI phải có to_warehouse_id = kho tổ đội (bug #10: trước đây là NULL)");
-        assertEquals(contractId, smi.get("destContract"),
-                "movement SMI phải có destination_contract_id = contract của dòng (bug #10: trước đây NULL)");
-        assertEquals(0, new java.math.BigDecimal("4").compareTo((java.math.BigDecimal) smi.get("quantity")),
-                "movement SMI phải đúng số lượng 4");
+        assertEquals(0, jdbc.queryForObject(
+                "SELECT COUNT(*) FROM stock_movements WHERE movement_type='SMI' AND from_warehouse_id='wh_e2e'"
+                        + " AND reference_type='stock_issue'", Integer.class),
+                "TASK-133: tạo phiếu ① KHÔNG được ghi movement SMI (phần ghi kho đã dời sang bước ③)");
 
         // ═══ TASK-132 — WF-XUATKHO-01 BƯỚC ①② («tạo phiếu» → «chỉ huy trưởng duyệt») ═══════════
         // Phạm vi lượt này CHỈ 2 bước đầu: ③ tiến hành xuất kho · ④ thủ kho xác nhận · ⑤ GRN
@@ -251,6 +244,38 @@ class SupplyChainEndToEndIntegrationTest {
                 Integer.class, issueId), "duyệt lại KHÔNG được sinh thêm bản ghi approvals");
         // ĐỐI CHỨNG ÂM 3: phiếu KHÔNG tồn tại ⇒ 400.
         postAction(action("approve_stock_issue", "\"issueId\":\"ISS_khong-ton-tai\""), 400);
+
+        // ═══ TASK-133 — WF-XUATKHO-01 BƯỚC ③④⑤ («xuất kho» → «thủ kho xác nhận đủ» → «GRN») ═══════
+        // ③ tiến hành xuất kho — ĐÂY mới là chỗ ghi `stock_movements` (SMI) + `contract_stock_ledger`.
+        // BUG #10 (regression guard) được kiểm LẠI ở đúng bước ③: movement PHẢI chuyển hàng sang kho TỔ
+        // ĐỘI, không được để `to_warehouse_id` NULL (nếu sai thì tồn tổ đội luôn 0, return_stock/kiểm kê
+        // đều hỏng). Lưu ý: fixture này seed `team_e2e` trỏ CHÍNH `wh_e2e` nên chỉ khẳng định trên movement
+        // + `destination_contract_id`; không khẳng định ledger vì 2 kho trùng nhau.
+        postAction(action("issue_stock_confirm", "\"issueId\":\"" + issueId + "\""), 200);
+        assertEquals("issued",
+                jdbc.queryForObject("SELECT status FROM stock_issues WHERE id=?", String.class, issueId),
+                "TASK-133 ③: sau khi xuất kho, stock_issues.status phải là 'issued'");
+        Map<String, Object> smi = jdbc.queryForMap(
+                "SELECT to_warehouse_id AS toWh, destination_contract_id AS destContract, quantity "
+                        + "FROM stock_movements WHERE movement_type='SMI' AND from_warehouse_id='wh_e2e' "
+                        + "AND reference_type='stock_issue' ORDER BY occurred_at DESC LIMIT 1");
+        assertEquals(teamWarehouseId, smi.get("toWh"),
+                "movement SMI phải có to_warehouse_id = kho tổ đội (bug #10: trước đây là NULL)");
+        assertEquals(contractId, smi.get("destContract"),
+                "movement SMI phải có destination_contract_id = contract của dòng (bug #10: trước đây NULL)");
+        assertEquals(0, new java.math.BigDecimal("4").compareTo((java.math.BigDecimal) smi.get("quantity")),
+                "movement SMI phải đúng số lượng 4");
+        // ④ thủ kho xác nhận đã xuất đủ ⇒ `completed`.
+        postAction(action("confirm_stock_issue", "\"issueId\":\"" + issueId + "\",\"comment\":\"Đã xuất đủ\""), 200);
+        assertEquals("completed",
+                jdbc.queryForObject("SELECT status FROM stock_issues WHERE id=?", String.class, issueId),
+                "TASK-133 ④: thủ kho xác nhận đủ ⇒ status 'completed'");
+        // ⑤ sinh GRN nhập vào kho khác — ⛔ KHÔNG cần duyệt, CHỈ cần quyền tạo.
+        postAction(action("create_issue_grn",
+                "\"issueId\":\"" + issueId + "\",\"toWarehouseId\":\"wh_e2e\""), 200);
+        assertEquals("grn_created",
+                jdbc.queryForObject("SELECT status FROM stock_issues WHERE id=?", String.class, issueId),
+                "TASK-133 ⑤: sinh GRN xong ⇒ status 'grn_created'");
 
         // Production → Thu hồi → Thanh toán
         postAction(action("save_production_report",
