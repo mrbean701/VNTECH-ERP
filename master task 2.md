@@ -8,6 +8,8 @@ Trung tâm phê duyệt:
 - Phiếu đang xử lý: quy trình phê duyệt đang hiển thị theo dạng cột từ trên xuống không đúng như yêu cầu của tôi về cách thức hiển thị hãy sửa lại theo ý tưởng ví dụ: bước 1 o----o bước 2 o----o bước 3 o----o ....
 dứoi mỗi bước sẽ hiển thị ai đã duyệt (tên người duyệt, phòng ban, thời gian duyệt), bước duyệt tiếp theo sẽ không hiển thị thông tin người duyệt và phòng ban mà chỉ hiển thị đang chờ (hoặc pending). Cho hiển thị nút duyệt kể cả khi SLA quá hạn, nhưng bắt buộc phải điền vào lý do (lý do để đơn hàng quá hạn) và có cơ chế tính số lượng đơn hàng quá hạn để xây dựng logic xử lý đơn hàng quá hạn trong tương lai.
 - Hồ sơ chi tiết, phần tài liệu đính kèm : chữ và ô chọn tệp tải lên đang bị lỗi font chữ chồng chéo lên nhau.
+- Menu Trung tâm phê duyệt chỉ có 1 item nên không cần thiết phải hiển thị menuitem -> click vào là hiển thị ra màn trung tâm phê duyệt luôn.
+
 
 Quản lý dự án:
 - quản lý dự án: danh sách dự án phần hiển thị các nút chức năng search sort filter đang hiển thị theo 1 cột dọc lệch sang bên phải trong khi đó phần bên trái chỉ hiển thị label nhìn rất mất cân đối tôi muốn phân bố lại các nút chức năng nằm ngang bên trên là label "DANH SÁCH DỰ ÁN".
