@@ -110,10 +110,14 @@ test("TASK-136 (5) máy chủ chịu được projectId/contractId/BOQ rỗng (K
     "createRequest phải coi dự án rỗng là KHÔNG có dự án (không dựng đối tượng dự án)",
   );
   assert.ok(
-    !USE_CASE.includes("defaultProjectIdForUser") &&
-      !PORT.includes("defaultProjectIdForUser") &&
-      !ADAPTER.includes("defaultProjectIdForUser"),
-    "KHÔNG được tự gán dự án mặc định khi người dùng để trống (phương án A: phiếu không thuộc dự án)",
+    !USE_CASE.includes("defaultProjectIdForUser"),
+    "createRequest KHÔNG được viện tới dự án mặc định khi người dùng để trống (phương án A: phiếu không thuộc dự án)",
+  );
+  // Cặp port/adapter cho dự án mặc định là DI SẢN của kế hoạch ban đầu (TASK-136 chưa chốt phương án).
+  // Nó được phép tồn tại nhưng KHÔNG được nối vào đường tạo phiếu — kiểm ở trên đã khẳng định điều đó.
+  assert.ok(
+    PORT.includes("defaultProjectIdForUser") && ADAPTER.includes("defaultProjectIdForUser"),
+    "cặp port/adapter dự án mặc định phải còn nguyên (không xoá mã di sản)",
   );
   // (5a2) có migration nới cột thành NULL (thay đổi cấu trúc ĐÃ được người dùng đồng ý)
   const migrationV24 = read(
