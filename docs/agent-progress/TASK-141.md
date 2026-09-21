@@ -1,6 +1,7 @@
 # TASK-141 — 2 việc để tính năng “phiếu đề nghị KHÔNG thuộc dự án” HOẠT ĐỘNG + khôi phục cổng hồi quy
 
 **Trạng thái:** mã đã sửa · test H2 **ĐỎ → XANH** · cổng `tsc 0` · `test:regression` **69/69** · `test:workflow` **ĐẠT**.
+**Commit:** `b8d3b49` (VIỆC 1 — LEFT JOIN + test H2 + schema-h2 + probe + hồ sơ này) · `ca104fc` (phần cổng phạm vi `decide_approval` bị cuốn vào commit của nhánh TASK-140 — xem ①).
 **Phạm vi ghi tệp (đúng uỷ quyền):** `java-backend/**` · `tests/runtime-admin-boq-regression.test.mjs` *(KHÔNG phải sửa — xem ③)* · `tools/probe-request-no-project.mjs` · `docs/agent-progress/TASK-141.md`.
 **⛔ KHÔNG chạm:** `app/page.tsx` (nhánh TASK-139 đang sửa) · `AGENTS.md` · `docs/28_*` · `drizzle/**` · `lib/form-fields.ts` · `tools/baseline/**`.
 **⛔ KHÔNG** package / build web / start-stop dịch vụ / `git add -A` / push.
@@ -41,6 +42,12 @@ GREEN (bản vá 1a+1b+1c):
    approvalStage=1 · admin duyệt bước 1 → approval_stage=2 · người duyệt KHÔNG phạm vi dự án duyệt
    bước 2 → status=approved, supply_status=awaiting_po)
 ```
+
+**2 chiều của điều kiện phạm vi đều được đo (bổ sung sau lượt chạy đầu):**
+
+- **2b (yêu cầu người dùng):** bootstrap bằng CHÍNH tài khoản nhân viên văn phòng (`kh_nv`, **0 dòng** `user_project_scopes`) ⇒ **thấy** phiếu không-dự-án của mình ✔
+- **2c (đối chứng bảo mật — KHÔNG nới quá mức):** dựng thêm dự án `p_out` (ngoài phạm vi) + phiếu gắn `p_out`, rồi bootstrap bằng tài khoản `kh.scoped` **chỉ có phạm vi `p_self`** ⇒ **KHÔNG** thấy phiếu của `p_out` ✔ **nhưng VẪN** thấy phiếu không-dự-án ✔
+- Lượt chạy lại sau khi bổ sung 2b/2c: `Tests run: 1, Failures: 0, Errors: 0` — BUILD SUCCESS ✔
 
 ### Cổng phạm vi ở `decide_approval` — sửa kèm (bắt buộc để “duyệt được”)
 

@@ -71,6 +71,21 @@ class RequestNoProjectBootstrapIntegrationTest {
         return text == null || text.isEmpty() ? null : text;
     }
 
+    /** Tập `id` phiếu mà MỘT tài khoản thấy được trong bootstrap `GET /api/system`. */
+    private java.util.Set<String> requestIdsFromBootstrap(Cookie cookie) throws Exception {
+        MvcResult res = mockMvc.perform(get("/api/system").cookie(cookie))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode rows = OM.readTree(res.getResponse().getContentAsString(StandardCharsets.UTF_8))
+                .path("data").path("requests");
+        java.util.Set<String> ids = new java.util.LinkedHashSet<>();
+        for (JsonNode row : rows) {
+            JsonNode idNode = field(row, "id");
+            if (idNode != null && !idNode.isNull()) ids.add(idNode.asText());
+        }
+        return ids;
+    }
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -210,6 +225,44 @@ class RequestNoProjectBootstrapIntegrationTest {
         Assertions.assertNotNull(stageNode, "bootstrap phải trả bước duyệt hiện tại — row: " + mine);
         Assertions.assertEquals(1, stageNode.asInt(),
                 "phiếu phải nằm ở bước duyệt 1 (chưa auto-approve)");
+
+        // ── 2b) NGƯỜI LẬP PHIẾU KHÔNG có `user_project_scopes` nào (⇒ ko có phạm vi dự án) VẪN
+        //        phải THẤY phiếu không-dự-án trong danh sách của mình ────────────────────────────
+        Assertions.assertTrue(requestIdsFromBootstrap(officeCookie).contains(requestId),
+                "nhân viên KHÔNG có phạm vi dự án nào vẫn phải thấy phiếu không-dự-án trong data.requests");
+
+        // ── 2c) ĐỐI CHỨNG BẢO MẬT «KHÔNG NỚI QUÁ MỨC»: user CÓ phạm vi dự án KHÔNG được thấy
+        //        phiếu của dự án NGOÀI phạm vi (ràng buộc cũ phải còn nguyên) ──────────────────────
+        Instant now = Instant.now();
+        jdbc.update("INSERT INTO projects (id,code,name,status,created_at,updated_at)"
+                + " VALUES (?,?,?,'active',?,?)", "p_self", "PRJ-SELF", "Dự án trong phạm vi", now, now);
+        jdbc.update("INSERT INTO projects (id,code,name,status,created_at,updated_at)"
+                + " VALUES (?,?,?,'active',?,?)", "p_out", "PRJ-OUT", "Dự án NGOÀI phạm vi", now, now);
+        jdbc.update("INSERT INTO approval_project_assignments (id,project_id,stage,owner_user_id,active,created_at,updated_at)"
+                + " VALUES (?,?,?,?,1,?,?)", "apa_1", "p_out", 1, adminId, now, now);
+        jdbc.update("INSERT INTO approval_project_assignments (id,project_id,stage,owner_user_id,active,created_at,updated_at)"
+                + " VALUES (?,?,?,?,1,?,?)", "apa_2", "p_out", 2, adminId, now, now);
+        mockMvc.perform(post("/api/system")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"action":"create_request","projectId":"p_out","neededAt":"2026-09-16",
+                                 "area":"Dự án ngoài phạm vi","priority":"normal","purpose":"Phiếu của dự án ngoài phạm vi",
+                                 "lines":[{"materialId":"m_1","quantity":1,"unitPrice":1000,
+                                           "itemType":"outside_contract","note":"Ngoài phạm vi"}]}""")
+                        .cookie(adminCookie))
+                .andExpect(status().isOk());
+        String outOfScopeRequestId = jdbc.queryForObject(
+                "SELECT id FROM material_requests WHERE purpose='Phiếu của dự án ngoài phạm vi'", String.class);
+        // Người dùng CHỈ có phạm vi `p_self` (không phải admin) ⇒ KHÔNG được thấy phiếu của `p_out`.
+        seedUserWithoutAnyScope("u_scoped", "kh.scoped", "Nhân viên có phạm vi", "kh_nv", "requests", "can_create");
+        jdbc.update("INSERT INTO user_project_scopes (id,user_id,project_id,permission,created_at,updated_at)"
+                + " VALUES (?,?,?,'write',?,?)", "ups_u_scoped", "u_scoped", "p_self", now, now);
+        Cookie scopedCookie = TestActors.login(mockMvc, "kh.scoped");
+        java.util.Set<String> scopedIds = requestIdsFromBootstrap(scopedCookie);
+        Assertions.assertFalse(scopedIds.contains(outOfScopeRequestId),
+                "user có phạm vi dự án KHÔNG được thấy phiếu của dự án NGOÀI phạm vi (nới quá mức!)");
+        Assertions.assertTrue(scopedIds.contains(requestId),
+                "user có phạm vi dự án VẪN thấy phiếu không-dự-án (nhánh project_id IS NULL đi qua)");
 
         // ── 3) MỞ ĐỂ DUYỆT: admin (người được phân công bước 1) duyệt → chuyển bước 2 ─────────
         mockMvc.perform(post("/api/system")
