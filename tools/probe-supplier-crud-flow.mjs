@@ -28,8 +28,12 @@
 // RBAC (ActionRbacRegistry): cả 6 action đòi module `supplier_catalog`; capability = `canEdit`
 // (trừ 2 action delete bị cổng admin ở controller chặn TRƯỚC).
 // Ma trận đo từ `user_module_permissions` (MySQL) cho các tài khoản demo:
-//   can_edit=1 : admin(bỏ qua RBAC) · nvkhdemo · trinhtrench · giamdoc.demo(director — cũng bỏ qua RBAC)
-//   can_edit=0 : engineer.demo · ksda.demo · cha.ht · tkhodemo · ntdademo · trdademo · thukydemo
+//   can_edit=1 : admin(bỏ qua RBAC) · nvkhdemo · trinhtrench
+//   can_edit=0 : engineer.demo · ksda.demo · cha.ht · tkhodemo · ntrdademo · thukydemo · nvdademo
+//   director/accountant (giamdoc.demo) — RbacService.java:49 cho qua MỌI module trừ "admin" TRƯỚC khi
+//     xét capability ⇒ probe ĐO LẠI (khối 5c/10c) thay vì suy đoán JS vs Java.
+//   ⚠️ `kttdemo` KHÔNG đăng nhập được bằng mật khẩu demo (HTTP 401) ⇒ không dùng làm đối chứng âm.
+
 // ─────────────────────────────────────────────────────────────────────────────────────────────
 
 import { spawnSync } from "node:child_process";
@@ -147,7 +151,8 @@ if (!APPLY) {
   console.log(`
 KẾ HOẠCH (chạy lại với --apply để thực thi):
   ĐĂNG NHẬP  : admin · nvkhdemo (kh_nv, can_edit=1) · trinhtrench (kh_truong, can_edit=1)
-               · giamdoc.demo (director) · ĐỐI CHỨNG ÂM: engineer.demo · cha.ht · tkhodemo · kttdemo
+               · ĐỐI CHỨNG ÂM: engineer.demo · cha.ht · tkhodemo · ksda.demo
+               · CROSS-CHECK lãnh đạo: giamdoc.demo (director) · ghi nhận kttdemo (401)
   NCC        : save_supplier (nvkhdemo → thêm ${SUP_CODE}) → SQL đọc lại
                save_supplier (nvkhdemo → sửa tên+phone)          → SQL đọc lại
                set_supplier_status (nvkhdemo → 0 rồi 1)          → SQL đọc lại
@@ -175,7 +180,9 @@ step("1.0", "admin", "đăng nhập admin", al);
 if (!al.ok) throw new Error("Không đăng nhập được admin — dừng.");
 
 const EDIT_USERS = ["nvkhdemo", "trinhtrench"];              // can_edit=1
-const NOEDIT_USERS = ["engineer.demo", "cha.ht", "tkhodemo", "kttdemo"]; // can_edit=0
+// `can_edit=0` ⇒ PHẢI 403. Cố ý KHÔNG dùng `kttdemo`: tài khoản này trả 401 khi đăng nhập
+// (mật khẩu demo không khớp) ⇒ phiên trống ⇒ 401, KHÔNG chứng minh được gì về phân quyền.
+const NOEDIT_USERS = ["engineer.demo", "cha.ht", "tkhodemo", "ksda.demo"];
 const LEADERSHIP = ["giamdoc.demo"];                          // roleBase/role = director ⇒ RbacService bỏ qua capability
 for (const u of [...EDIT_USERS, ...NOEDIT_USERS, ...LEADERSHIP]) {
   const r = await login(u, PASS);
@@ -184,12 +191,12 @@ for (const u of [...EDIT_USERS, ...NOEDIT_USERS, ...LEADERSHIP]) {
 
 // ---------- 2. NHÀ CUNG CẤP: THÊM ----------
 console.log("\n── 2. NCC — THÊM MỚI (save_supplier) ──");
-const saveSup = (who, extra, n) => call(who, "save_supplier", {
+const saveSup = (who, extra) => call(who, "save_supplier", {
   code: SUP_CODE, name: "Công ty TNHH Kiểm thử TASK-131", taxCode: "0312345678",
   contactName: "Nguyễn Văn Test", phone: "0900000131", leadTimeDays: 5, rating: 4.5, active: 1,
   ...extra,
 });
-let r = await saveSup("nvkhdemo", {}, "2.1");
+let r = await saveSup("nvkhdemo", {});
 step("2.1", "nvkhdemo", `THÊM NCC ${SUP_CODE}`, r);
 let sup = one(`SELECT id FROM suppliers WHERE code='${SUP_CODE}'`);
 assert("2.2", "SQL: bản ghi NCC đã lưu", !!sup, sup ? `id=${sup.id}` : "KHÔNG thấy trong DB ✗");
@@ -204,7 +211,7 @@ if (supId) {
 // ---------- 3. NCC: SỬA ----------
 console.log("\n── 3. NCC — SỬA (save_supplier có supplierId) ──");
 const before3 = supId ? supplierRow(supId) : null;
-r = await saveSup("nvkhdemo", { supplierId: supId, name: "Công ty TNHH Kiểm thử TASK-131 (ĐÃ SỬA)", phone: "0900000999", active: 1 }, "3.1");
+r = await saveSup("nvkhdemo", { supplierId: supId, name: "Công ty TNHH Kiểm thử TASK-131 (ĐÃ SỬA)", phone: "0900000999", active: 1 });
 step("3.1", "nvkhdemo", "SỬA tên + điện thoại NCC", r);
 const after3 = supId ? supplierRow(supId) : null;
 console.log(`      TRƯỚC: name=${vi(before3?.name)} · phone=${vi(before3?.phone)}`);
@@ -227,7 +234,7 @@ assert("4.4", "SQL: active đã về 1", s4?.active === "1", `active=${vi(s4?.ac
 // ---------- 5. ĐỐI CHỨNG ÂM QUYỀN TRÊN NCC (ngoài admin) ----------
 console.log("\n── 5. ĐỐI CHỨNG ÂM QUYỀN — NCC (can_edit=0 ⇒ PHẢI 403) ──");
 for (const u of NOEDIT_USERS) {
-  const rr = await saveSup(u, { code: `${SUP_CODE}-X`, name: "Đối chứng âm" }, `5.${u}`);
+  const rr = await saveSup(u, { code: `${SUP_CODE}-X`, name: "Đối chứng âm" });
   step(`5.${u}`, u, "PHẢI bị chặn — save_supplier", rr, { expectStatus: 403 });
 }
 for (const u of NOEDIT_USERS) {
@@ -236,6 +243,25 @@ for (const u of NOEDIT_USERS) {
 }
 const supX = one(`SELECT id FROM suppliers WHERE code='${SUP_CODE}-X'`);
 assert("5.9", "SQL: NCC đối chứng âm KHÔNG được tạo", !supX, supX ? `CÓ bản ghi ${supX.id} ⇒ LỖI BẢO MẬT ✗` : "không có bản ghi ✔");
+
+// ---------- 5c. CROSS-CHECK «LÃNH ĐẠO CẤP CÔNG TY» (RbacService:49 bỏ qua capability) ----------
+// `RbacService.requireActionModule` cho `director`/`accountant` qua MỌI module (trừ "admin") TRƯỚC khi
+// xét `can_edit`. Đây là chủ ý đã ghi trong JS gốc ⇒ probe ĐO LẠI bằng chứng thay vì suy đoán:
+// nếu `giamdoc.demo` (role=director, can_edit=1) GHI ĐƯỢC thì Java KHỚP JS.
+console.log("\n── 5c. ĐỐI CHỨNG «director/accountant bỏ qua can_edit» (RbacService.java:49) ──");
+const supLeadCode = `${SUP_CODE}-LEAD`;
+const rLead = await saveSup("giamdoc.demo", { code: supLeadCode, name: "NCC do Giám đốc tạo (cross-check)" });
+step("5c.1", "giamdoc.demo", "save_supplier bằng director (kỳ vọng 200 = khớp JS)", rLead, { expectStatus: 200 });
+const supLead = one(`SELECT id,active FROM suppliers WHERE code='${supLeadCode}'`);
+assert("5c.2", "SQL: director đã GHI được ⇒ Java khớp JS", !!supLead, supLead ? `id=${supLead.id}` : "KHÔNG tạo được ⇒ Java khác JS ✗");
+if (supLead) {
+  const rd = await call("__admin", "delete_supplier", { supplierId: supLead.id });
+  step("5c.3", "admin", "dọn NCC do director tạo (đúng bản ghi vừa tạo)", rd);
+  assert("5c.4", "SQL: đã dọn sạch", !one(`SELECT id FROM suppliers WHERE id='${supLead.id}'`), "không còn bản ghi ✔");
+}
+const kttLogin = await login("kttdemo", PASS);
+step("5c.5", "kttdemo", "đăng nhập (ghi nhận ngoài phạm vi phân quyền)", kttLogin, { expectStatus: 200 });
+console.log("      ↳ Nếu ❌ ở 5c.5: `kttdemo` không đăng nhập được bằng mật khẩu demo ⇒ KHÔNG dùng làm đối chứng âm.");
 
 // ---------- 6. NCC: XOÁ (chỉ admin) ----------
 console.log("\n── 6. NCC — XOÁ (delete_supplier · SystemController: requireRequireAdmin) ──");
@@ -252,13 +278,13 @@ assert("6.10", "SQL: NCC đã bị xoá khỏi DB", !!r.ok && !gone, gone ? "v�
 
 // ---------- 7. ĐỐI TÁC: THÊM ----------
 console.log("\n── 7. ĐỐI TÁC — THÊM MỚI (save_partner) ──  ⭐ chức năng MỚI");
-const savePtr = (who, extra, n) => call(who, "save_partner", {
+const savePtr = (who, extra) => call(who, "save_partner", {
   code: PTR_CODE, name: "Công ty CP Đối tác Kiểm thử TASK-131", taxCode: "0398765432",
   address: "Số 131 đường Test, Hà Nội", contactName: "Trần Thị Test", contactPhone: "0911000131",
   email: "doitac131@example.com", partnerType: "contractor", active: 1,
   ...extra,
 });
-r = await savePtr("nvkhdemo", {}, "7.1");
+r = await savePtr("nvkhdemo", {});
 step("7.1", "nvkhdemo", `THÊM đối tác ${PTR_CODE}`, r);
 let ptr = one(`SELECT id FROM partners WHERE code='${PTR_CODE}'`);
 assert("7.2", "SQL: bản ghi đối tác đã lưu vào `partners`", !!ptr, ptr ? `id=${ptr.id}` : "KHÔNG thấy trong DB ✗");
@@ -277,7 +303,7 @@ assert("7.4", "SQL: đối tác KHÔNG bị trộn với bảng suppliers",
 // ---------- 8. ĐỐI TÁC: SỬA ----------
 console.log("\n── 8. ĐỐI TÁC — SỬA (save_partner có partnerId) ──");
 const before8 = ptrId ? partnerRow(ptrId) : null;
-r = await savePtr("trinhtrench", { partnerId: ptrId, name: "Công ty CP Đối tác Kiểm thử TASK-131 (ĐÃ SỬA)", email: "doitac131-sua@example.com", partnerType: "consultant" }, "8.1");
+r = await savePtr("trinhtrench", { partnerId: ptrId, name: "Công ty CP Đối tác Kiểm thử TASK-131 (ĐÃ SỬA)", email: "doitac131-sua@example.com", partnerType: "consultant" });
 step("8.1", "trinhtrench", "SỬA tên + email + loại đối tác", r);
 const after8 = ptrId ? partnerRow(ptrId) : null;
 console.log(`      TRƯỚC: name=${vi(before8?.name)} · email=${vi(before8?.email)} · partner_type=${vi(before8?.partner_type)}`);
@@ -301,7 +327,7 @@ assert("9.4", "SQL: active=1 VÀ status='active'", s9?.active === "1" && s9?.sta
 // ---------- 10. ĐỐI CHỨNG ÂM QUYỀN TRÊN ĐỐI TÁC ----------
 console.log("\n── 10. ĐỐI CHỨNG ÂM QUYỀN — ĐỐI TÁC (can_edit=0 ⇒ PHẢI 403) ──");
 for (const u of NOEDIT_USERS) {
-  const rr = await savePtr(u, { code: PTR_CODE_2, name: "Đối chứng âm đối tác" }, `10.${u}`);
+  const rr = await savePtr(u, { code: PTR_CODE_2, name: "Đối chứng âm đối tác" });
   step(`10.${u}`, u, "PHẢI bị chặn — save_partner", rr, { expectStatus: 403 });
 }
 for (const u of NOEDIT_USERS) {
@@ -312,6 +338,18 @@ const ptrX = one(`SELECT id FROM partners WHERE code='${PTR_CODE_2}'`);
 assert("10.9", "SQL: đối tác đối chứng âm KHÔNG được tạo", !ptrX, ptrX ? `CÓ bản ghi ${ptrX.id} ⇒ LỖI BẢO MẬT ✗` : "không có bản ghi ✔");
 assert("10.10", "SQL: đối tác test vẫn active=1 sau các lần bị chặn",
   (partnerRow(ptrId)?.active) === "1", `active=${vi(partnerRow(ptrId)?.active)}`);
+
+// 10c. Cross-check director trên ĐỐI TÁC (cùng cổng RbacService) — dọn ngay bằng admin.
+const ptrLeadCode = `${PTR_CODE}-LEAD`;
+const rLeadP = await savePtr("giamdoc.demo", { code: ptrLeadCode, name: "Đối tác do Giám đốc tạo (cross-check)" });
+step("10c.1", "giamdoc.demo", "save_partner bằng director (kỳ vọng 200 = khớp JS)", rLeadP, { expectStatus: 200 });
+const ptrLead = one(`SELECT id FROM partners WHERE code='${ptrLeadCode}'`);
+assert("10c.2", "SQL: director đã GHI được đối tác", !!ptrLead, ptrLead ? `id=${ptrLead.id}` : "KHÔNG tạo được ✗");
+if (ptrLead) {
+  const rd = await call("__admin", "delete_partner", { partnerId: ptrLead.id });
+  step("10c.3", "admin", "dọn đối tác do director tạo", rd);
+  assert("10c.4", "SQL: đã dọn sạch", !one(`SELECT id FROM partners WHERE id='${ptrLead.id}'`), "không còn bản ghi ✔");
+}
 
 // ---------- 11. ĐỐI TÁC: XOÁ (chỉ admin) ----------
 console.log("\n── 11. ĐỐI TÁC — XOÁ (delete_partner · requireRequireAdmin) ──");
