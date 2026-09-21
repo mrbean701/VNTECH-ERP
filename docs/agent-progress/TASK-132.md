@@ -2,7 +2,7 @@
 
 - **Ngày**: 2026-09-21 · **Nhánh**: `unity-p2-full-20260920`
 - **Phạm vi**: **CHỈ 2 BƯỚC ĐẦU** của luồng xuất kho. Bước ③④⑤ **KHÔNG làm** trong lượt này (xem §5).
-- **Commit**: `53299e9` (bước ①) · `6f3a9cd` (bước ② — Java + test + schema H2) · `13e912c` (probe + tài liệu này)
+- **Commit**: `53299e9` (bước ①) · `6f3a9cd` (bước ② — Java + test + schema H2) · commit `probe-stock-issue-flow.mjs`/tài liệu (bản mới nhất `git log --oneline -1` — nhánh TASK-132 có 4 commit, các bản `--amend` đổi hash nên ghi theo LỐI VÀO ở đây là không bền)
 
 ---
 
