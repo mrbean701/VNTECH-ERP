@@ -127,8 +127,28 @@ Error [ERR_MODULE_NOT_FOUND]: Cannot find module '…\lib\boq-line-display.ts'
 2. Trong CSDL hiện tại, mã hiển thị luôn có dạng **`<mã vật tư> · Dòng <số>`**. Hệ quả: nếu **2 dòng BOQ cùng vật tư** ở 2 dòng nguồn khác nhau thì mã hiển thị vẫn **phân biệt được** (khác số dòng); nhưng nếu **cùng vật tư VÀ cùng số dòng** (dòng lặp) thì mã hiển thị **trùng nhau** — truy vết ngược cần thêm **mã dòng của hợp đồng** (mục 1). Bản ghi vẫn tra được bằng `mã dự án + mã vật tư + số dòng` khi mở hệ thống.
 3. `buildBoqXlsxBytes`/`downloadBoqCsv` (xuất BOQ **theo cấu hình cột**) **không** có cột «Mã dòng BOQ»; nếu Admin cấu hình thêm trường khoá `id` vào danh sách Export thì GUID sẽ quay lại ở đường đó — **chưa xử lý trong TASK-122** (ngoài 2 nhánh đã chỉ định).
 
-## 8. Việc KHÔNG làm (đúng ràng buộc)
+## 8. CHẠY LẠI TOÀN BỘ CỔNG SAU KHI CHỐT MÃ (bản ghi xác nhận)
 
+Sau commit `bafead8` (chỉ đụng tệp hồ sơ, **không** chạm `lib/**`), toàn bộ cổng được chạy lại trên **đúng cây làm việc hiện tại**:
+
+| # | Cổng | Kết quả đo được |
+|---|---|---|
+| 1 | `node --import tsx --test tests/q1-boq-export-display.test.mjs` | `✔ ① ② ③ ④ ⑤` · `tests 5 · pass 5 · fail 0` · **exit 0** |
+| 2 | `npm run test:regression` | `tests 69 · pass 69 · fail 0` · **exit 0** |
+| 3 | `npm run test:workflow` | `Workflow VNTECH ERP V5.3.0 FULL W2 passed` · **exit 0** |
+| 4 | `node --import tsx tests/t01-work-menu-probe.mjs` | `═══ KẾT QUẢ: 7 ĐẠT · 0 HỎNG ═══` · **exit 0** |
+| 5 | `npx tsc --noEmit` | **exit 0** |
+| 6 | `npm run lint` | `187 problems (0 errors, 187 warnings)` · **exit 0** — **0 error** |
+| 7 | `node --import tsx tests/q1-boq-export-artifact-probe.mjs` | `═══ KẾT QUẢ: 7 ĐẠT · 0 HỎNG ═══` · **exit 0** |
+| 8 | `node tools/probe-project-screen.mjs` | `KẾT LUẬN: ĐẠT ✅` · **exit 0** |
+| 9 | `node --import tsx tests/q1-boq-line-source-probe.mjs` | **exit 0** (chỉ đọc, in bảng trường thật) |
+
+**Ghi chú về cảnh báo lint** (không phải lỗi, không chặn): 1 cảnh báo trong `lib/boq-export.ts` là
+`'maxCols' is assigned a value but never used` ở dòng 88 — **có SẴN TỪ TRƯỚC** (bản gốc dòng 85, nằm trong `downloadBoqPdf`,
+KHÔNG thuộc 3 dòng đã sửa của TASK-122). Tổng cảnh báo toàn repo tăng 186 → 187 là do phiên khác thêm tệp mới
+(`lib/p08-nav-trace.ts` / `app/page.tsx` chưa commit) — **số ERROR vẫn là 0**.
+
+## 9. Việc KHÔNG làm (đúng ràng buộc)
 - ⛔ **KHÔNG** sửa `app/page.tsx` (nhánh khác đang giữ) — **2 commit của task này KHÔNG chạm tệp đó**
   (`git show --name-only a11fe9e 495bb4c` = 0 dòng `app/page.tsx`; thay đổi `M app/page.tsx` trong working tree là của **phiên khác**, commit gần nhất là `7ac5dc2 [P-07]`)
 - ⛔ **KHÔNG** `INSERT/UPDATE/DELETE/ALTER/DROP/TRUNCATE` — chỉ `POST login` + `GET /api/system` (**đọc**)
