@@ -6,7 +6,8 @@
   `tests/q1-boq-export-display.test.mjs` (**MỚI**, hợp đồng) · `tests/q1-boq-line-source-probe.mjs` (**MỚI**, probe) ·
   `tests/q1-boq-export-artifact-probe.mjs` (**MỚI**, probe bytes) · `tests/q1-boq-lines-payload.json` (**MỚI**, bằng chứng) ·
   tệp hồ sơ này
-- **Commit**: `a11fe9e` (sửa mã + test hợp đồng) · `495bb4c` (bằng chứng `.xlsx` + mở rộng hợp đồng lên 5 ca)
+- **Commit**: `a11fe9e` (sửa mã + test hợp đồng) · `495bb4c` (bằng chứng `.xlsx` + mở rộng hợp đồng lên 5 ca) · `ea6824c` (tệp hồ sơ này)
+- ⚠️ **KHÔNG cập nhật** `docs/agent-progress/TASK_INDEX.md` / `MASTER_STATUS.md`: tệp đang bị nhánh khác giữ (tránh ghi đè nhau) — captain cập nhật sau.
 - ⛔ **KHÔNG** đụng `app/page.tsx`, `app/**`, `scripts/**`, `java-backend/**`, `drizzle/**`, `AGENTS.md`, `docs/28_*`, `.docx/.xlsx`, `tools/baseline/**`, `docs/agent-progress/TASK-094…121.md`
 
 ## 1. Yêu cầu (nguyên văn, rút gọn)
