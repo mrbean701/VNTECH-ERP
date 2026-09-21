@@ -17,6 +17,7 @@ import com.vntech.erp.application.service.RequestManagementUseCase;
 import com.vntech.erp.application.service.StockManagementUseCase;
 import com.vntech.erp.application.service.SystemSettingsUseCase;
 import com.vntech.erp.application.service.SupplierManagementUseCase;
+import com.vntech.erp.application.service.PartnerManagementUseCase;
 import com.vntech.erp.application.service.UserManagementUseCase;
 import com.vntech.erp.web.security.SessionCookieFactory;
 import jakarta.servlet.http.HttpServletRequest;
@@ -63,6 +64,8 @@ public class SystemController {
     private final AdminOpsManagementUseCase adminOpsManagementUseCase;
     private final RequestManagementUseCase requestManagementUseCase;
     private final SupplierManagementUseCase supplierManagementUseCase;
+    // TASK-127 — use-case ĐỐI TÁC (bảng riêng `partners`), CHỈ THÊM trường mới.
+    private final PartnerManagementUseCase partnerManagementUseCase;
     private final StockManagementUseCase stockManagementUseCase;
     private final SystemSettingsUseCase systemSettingsUseCase;
     private final com.vntech.erp.infrastructure.excel.ExcelTemplateService excelTemplateService;
@@ -96,6 +99,7 @@ public class SystemController {
                             AdminOpsManagementUseCase adminOpsManagementUseCase,
                             RequestManagementUseCase requestManagementUseCase,
                             SupplierManagementUseCase supplierManagementUseCase,
+                            PartnerManagementUseCase partnerManagementUseCase,
                             StockManagementUseCase stockManagementUseCase,
                             SystemSettingsUseCase systemSettingsUseCase,
                             com.vntech.erp.infrastructure.excel.ExcelTemplateService excelTemplateService,
@@ -117,6 +121,7 @@ public class SystemController {
         this.adminOpsManagementUseCase = adminOpsManagementUseCase;
         this.requestManagementUseCase = requestManagementUseCase;
         this.supplierManagementUseCase = supplierManagementUseCase;
+        this.partnerManagementUseCase = partnerManagementUseCase;
         this.stockManagementUseCase = stockManagementUseCase;
         this.systemSettingsUseCase = systemSettingsUseCase;
         this.excelTemplateService = excelTemplateService;
@@ -1193,6 +1198,25 @@ case "reject_po" -> {
                     String m = supplierManagementUseCase.deleteSupplier(asSupplierPrincipal(cu), payload);
                     return ResponseEntity.ok(json(Map.of("ok", true, "message", m)));
                 }
+                // ── TASK-127 (21/09/2026) «ĐỐI TÁC LÀ BẢNG RIÊNG» — 3 action MỚI, CHỈ THÊM ────────
+                // Khuôn y hệt 3 action `supplier` ở trên. Quyền: khoá SẴN CÓ `supplier_catalog` +
+                // capability `canEdit` (ActionRbacRegistry) ⇒ 0 khoá `module_catalog` mới.
+                case "save_partner" -> {
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                    String m = partnerManagementUseCase.savePartner(asPartnerPrincipal(cu), payload);
+                    return ResponseEntity.ok(json(Map.of("ok", true, "message", m)));
+                }
+                case "set_partner_status" -> {
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                    String m = partnerManagementUseCase.setPartnerStatus(asPartnerPrincipal(cu), payload);
+                    return ResponseEntity.ok(json(Map.of("ok", true, "message", m)));
+                }
+                case "delete_partner" -> {
+                    // Khuôn `delete_supplier`: chỉ admin (Java chưa có helper isDepartmentApprover("KH")).
+                    AuthUseCase.CurrentUser cu = requireRequireAdmin(request);
+                    String m = partnerManagementUseCase.deletePartner(asPartnerPrincipal(cu), payload);
+                    return ResponseEntity.ok(json(Map.of("ok", true, "message", m)));
+                }
                 default -> {
                     return ResponseEntity.status(400).body(json(Map.of("ok", false,
                             "error", "Action '" + action + "' chưa được triển khai trên backend Java (Strangler Fig).")));
@@ -1269,6 +1293,7 @@ case "reject_po" -> {
             case "material_aliases_uidx_normalized_name" -> "Tên vật tư (alias)";
             case "material_norms_uidx_norm_code" -> "Mã định mức";
             case "suppliers_code_uidx" -> "Mã nhà cung cấp";
+            case "partners_code_uidx" -> "Mã đối tác";
             case "users_username_uidx" -> "Tên đăng nhập";
             case "users_email_uidx" -> "Email";
             case "users_employee_code_uidx" -> "Mã nhân viên";
@@ -1422,6 +1447,14 @@ case "reject_po" -> {
 
     private static SupplierManagementUseCase.Principal asSupplierPrincipal(AuthUseCase.CurrentUser cu) {
         return new SupplierManagementUseCase.Principal() {
+            @Override public String userId() { return cu.id(); }
+            @Override public String role() { return cu.role(); }
+        };
+    }
+
+    // TASK-127 — principal cho use-case ĐỐI TÁC (khuôn y hệt `asSupplierPrincipal`).
+    private static PartnerManagementUseCase.Principal asPartnerPrincipal(AuthUseCase.CurrentUser cu) {
+        return new PartnerManagementUseCase.Principal() {
             @Override public String userId() { return cu.id(); }
             @Override public String role() { return cu.role(); }
         };

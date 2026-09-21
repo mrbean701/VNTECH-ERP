@@ -21,6 +21,7 @@ import com.vntech.erp.application.port.out.ProjectScopeStore;
 import com.vntech.erp.application.port.out.PurchaseStore;
 import com.vntech.erp.application.port.out.RequestStore;
 import com.vntech.erp.application.port.out.SessionStore;
+import com.vntech.erp.application.port.out.PartnerStore;
 import com.vntech.erp.application.port.out.SupplierStore;
 import com.vntech.erp.application.port.out.SystemSettingsStore;
 import com.vntech.erp.application.port.out.SystemSetupPort;
@@ -47,6 +48,7 @@ import com.vntech.erp.application.service.PurchaseManagementUseCase;
 import com.vntech.erp.application.service.RequestManagementUseCase;
 import com.vntech.erp.application.service.StockManagementUseCase;
 import com.vntech.erp.application.service.SystemSettingsUseCase;
+import com.vntech.erp.application.service.PartnerManagementUseCase;
 import com.vntech.erp.application.service.SupplierManagementUseCase;
 import com.vntech.erp.application.service.UserManagementUseCase;
 import org.springframework.context.annotation.Bean;
@@ -125,6 +127,13 @@ public class ApplicationBeansConfig {
     public SupplierManagementUseCase supplierManagementUseCase(SupplierStore supplierStore,
                                                                IdGenerator idGenerator) {
         return new SupplierManagementUseCase(supplierStore, idGenerator);
+    }
+
+    // TASK-127 — use-case ĐỐI TÁC (bảng riêng `partners`), CHỈ THÊM bean mới.
+    @Bean
+    public PartnerManagementUseCase partnerManagementUseCase(PartnerStore partnerStore,
+                                                             IdGenerator idGenerator) {
+        return new PartnerManagementUseCase(partnerStore, idGenerator);
     }
 
     @Bean

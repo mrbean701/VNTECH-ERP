@@ -213,6 +213,25 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                        lead_time_days AS leadTimeDays,rating,active FROM suppliers
                 ORDER BY CASE WHEN active=1 THEN 0 ELSE 1 END,code"""));
 
+        // TASK-127 (21/09/2026) — «ĐỐI TÁC LÀ BẢNG RIÊNG»: ĐỌC THÊM bảng `partners` vào payload
+        // (CHỈ THÊM — không sửa câu `suppliers` ở trên). Khuôn y hệt `suppliers`/`adminSuppliers`.
+        // Khoá `partners`/`adminPartners` khớp đường ĐỌC của UI: `app/screens/PartnerManager.tsx:32`
+        // (`data.partners`) + `lib/ui-shared.tsx:196` (khai `partners: Row[]; adminPartners: Row[]`).
+        // Alias camelCase + thứ tự khoá giống tiền lệ JS `scripts/system-route.mjs:681-682`.
+        // ⛔ CHỈ ĐỌC bảng — không INSERT/UPDATE/ALTER (bảng đã có sẵn: Flyway `V23__partners_table.sql`).
+        List<Map<String, Object>> partners = query("""
+                SELECT id,code,name,tax_code AS taxCode,address,contact_name AS contactName,
+                       contact_phone AS contactPhone,email,partner_type AS partnerType,status,active,
+                       created_at AS createdAt,updated_at AS updatedAt FROM partners
+                WHERE active=1 ORDER BY code""");
+        data.put("partners", partners);
+        // Giống JS `:682`: admin thấy TOÀN BỘ (kể cả ngừng sử dụng), người thường thấy chính danh sách trên.
+        data.put("adminPartners", admin ? query("""
+                SELECT id,code,name,tax_code AS taxCode,address,contact_name AS contactName,
+                       contact_phone AS contactPhone,email,partner_type AS partnerType,status,active,
+                       created_at AS createdAt,updated_at AS updatedAt FROM partners
+                ORDER BY CASE WHEN active=1 THEN 0 ELSE 1 END,code""") : partners);
+
         // ---- kho: inventory (CTE balances/reservations như JS) ----
         data.put("inventory", pids.isEmpty() ? List.of() : query("""
                 WITH movements AS (SELECT sm.material_id AS material_id,sm.to_warehouse_id AS warehouse_id,sm.quantity AS qty
