@@ -1,4 +1,4 @@
-// TASK-130 → TASK-132 — CHẠY TRỌN LUỒNG CẤP PHÁT + XUẤT KHO (WF-XUATKHO-01) BẰNG ĐÚNG TÀI KHOẢN TỪNG VAI TRÒ
+// TASK-130 → TASK-132 → TASK-133 — CHẠY TRỌN LUỒNG CẤP PHÁT + XUẤT KHO (WF-XUATKHO-01) BẰNG ĐÚNG TÀI KHOẢN TỪNG VAI TRÒ
 //
 //   node tools/probe-stock-issue-flow.mjs            # chạy thử, in kế hoạch (KHÔNG gọi HTTP)
 //   node tools/probe-stock-issue-flow.mjs --apply    # thực thi thật
@@ -7,22 +7,24 @@
 // Quy ước ĐẠT/HỎNG: bước có `expectFail: true` là ĐỐI CHỨNG ÂM —
 //   bị TỪ CHỐI mới là ĐẠT, được chấp nhận là HỎNG.
 //
-// ── PHẠM VI LƯỢT NÀY (TASK-132): CHỈ 2 BƯỚC ĐẦU CỦA WF-XUATKHO-01 ────────────────
-//  ① tạo phiếu (chỉ cần quyền tạo) · ② CHỈ HUY TRƯỞNG DUYỆT  ⇒ probe này ĐO 2 bước đó.
-//  ③ tiến hành xuất kho · ④ thủ kho xác nhận đã xuất đủ · ⑤ chuyển thành GRN
-//  ⇒ **CHƯA LÀM** (nhánh sau) — probe ĐÁNH DẤU RÕ và **KHÔNG đếm là HỎNG**.
+// ── PHẠM VI LƯỢT NÀY (TASK-133): TRỌN 5 BƯỚC CỦA WF-XUATKHO-01 ──────────────────
+//  ① tạo phiếu (chỉ cần quyền tạo) · ② CHỈ HUY TRƯỞNG DUYỆT · ③ TIẾN HÀNH XUẤT KHO ·
+//  ④ THỦ KHO XÁC NHẬN ĐÃ XUẤT ĐỦ · ⑤ CHUYỂN THÀNH GRN NHẬP KHO KHÁC (không duyệt).
+//  ⇒ KHÔNG còn bước nào «CHƯA LÀM».
 //
 // ── ĐÃ ĐO TRƯỚC (không đoán) ────────────────────────────────────────────────────
 //  · TRƯỚC TASK-132: `issue_stock` (Java `SystemController.java:1179` →
 //    `StockManagementUseCase.issueStock` :53-162) TẠO PHIẾU Ở TRẠNG THÁI `posted` NGAY, trong MỘT
 //    lệnh HTTP: `WarehouseStockStoreAdapter.insertStockIssue` dòng 121 bind cứng `"posted"`.
 //    `SELECT COUNT(*) FROM approvals WHERE entity_id LIKE 'ISS%'` = **0** ⇒ không bước duyệt nào.
-//  · `WF-XUATKHO-01` có THẬT trong dữ liệu (`workflow_steps` WFS-XK-1 `canApprove` → `cha.ht`) nhưng
-//    KHÔNG action Java nào đọc nó: `decide_approval` (SystemController.java:1063 →
-//    `RequestManagementUseCase.decideApproval`) CHỈ nhận `material_requests` ⇒ gọi trên phiếu xuất = 400.
-//  · TRƯỚC 132, tài khoản CHT (`cha.ht`) có `warehouse_issue.can_approve = 0` (đo MySQL) ⇒ cổng MODULE
-//    của action duyệt PHẢI là `approvals` (`cha.ht.approvals.can_approve = 1`), còn cổng VAI TRÒ
-//    (`requireRole(["commander","admin"])`) mới là cái chặn thật.
+//  · TRƯỚC TASK-133 (nợ kỹ thuật đã đo): `insertStockIssue` ghi LUÔN `stock_movements` (SMI) +
+//    `contract_stock_ledger` NGAY LÚC TẠO PHIẾU ⇒ TRỪ TỒN KHO Ở BƯỚC ①, trước cả khi CHT duyệt ⇒
+//    bước duyệt ② chỉ là «treo biển». TASK-133 TÁCH phần ghi kho sang action `issue_stock_confirm`
+//    (③, chỉ chạy khi phiếu `approved`).
+//  · `supply_workflow_steps` KHÔNG có UNIQUE key (đo `SHOW INDEX`: chỉ PRIMARY(id) + 2 index
+//    NON-unique) ⇒ `ON DUPLICATE KEY UPDATE` cũ KHÔNG BAO GIỜ kích hoạt ⇒ mỗi lần xuất cùng một MR
+//    chèn thêm 1 dòng `step='issue'` (đo được: `MR_f4636c1c-…` 5 dòng · `MR_62b3e402-…` 4 dòng).
+//    TASK-133 đổi sang UPDATE-then-INSERT ⇒ đúng 1 dòng/MR (probe này ĐO số dòng TRƯỚC/SAU).
 const BASE = process.env.PROBE_BASE || "http://127.0.0.1:9000";
 const PASS = "Vntech@2026";
 const APPLY = process.argv.includes("--apply");
@@ -44,6 +46,10 @@ const WANT_QTY = 5;
 // (`issued_qty` 25/25) ⇒ `issue_stock` trả 400 «số lượng cấp lũy kế vượt nhu cầu MR» và probe
 // báo HỎNG GIẢ. Vì vậy KHÔNG hard-code phiếu: chọn động phiếu ĐÃ DUYỆT còn dư chưa cấp.
 let MR = null;
+// Phiếu PHỤ cố ý để nguyên `pending_cht` — dùng làm «phiếu chưa duyệt/chưa xuất đủ» cho các đối chứng
+// âm của bước ③ (xuất khi chưa duyệt ⇒ 400), ④ (xác nhận khi chưa qua ③ ⇒ 400) và ⑤ (sinh GRN khi chưa
+// xác nhận đủ ⇒ 400). Khai ở phạm vi MODULE vì được dùng xuyên nhiều khối bước.
+let pendingId = null;
 
 // ---------- Chọn phiếu đề nghị ĐÃ DUYỆT còn dư (đo từ bootstrap, không đoán) ----------
 // LỌC BẮT BUỘC theo `contractStockBalances`: `issue_stock` còn kiểm **tồn kế toán theo Contract**
@@ -166,10 +172,21 @@ if (!APPLY) {
   console.log("     status='approved' + 1 bản ghi `approvals(entity_type='stock_issue', stage=1, status='approved')`");
   console.log("  5. ĐỐI CHỨNG ÂM B — engineer.demo duyệt ⇒ KỲ VỌNG 403 · duyệt LẦN 2 ⇒ KỲ VỌNG 400 ·");
   console.log("     duyệt phiếu KHÔNG tồn tại ⇒ KỲ VỌNG 400");
-  console.log("  6. ĐO HỆ QUẢ SQL (do người chạy đối chiếu): stock_issues.status · stock_issue_items ·");
-  console.log("     stock_movements (SMI) · approvals theo (entity_type,entity_id)");
-  console.log("  ⛔ CHƯA LÀM (nhánh sau, KHÔNG tính vào x/y): ③ tiến hành xuất kho ·");
-  console.log("     ④ thủ kho xác nhận đã xuất đủ · ⑤ chuyển thành GRN để nhập kho khác");
+  console.log("  6. BƯỚC ③ — tkhodemo gọi `issue_stock_confirm` ⇒ kỳ vọng 200 + status='issued'");
+  console.log("     (ĐO ĐƯỢC: trước TASK-133 tồn kho đã bị trừ NGAY ở bước ①; nay chỉ trừ ở ③)");
+  console.log("     ĐỐI CHỨNG ÂM: gọi ③ khi phiếu còn `pending_cht` ⇒ 400 · user không có quyền kho ⇒ 403 ·");
+  console.log("     gọi ③ LẦN 2 cùng phiếu ⇒ 400 (KHÔNG ghi thêm movement/ledger)");
+  console.log("  7. BƯỚC ④ — tkhodemo (thủ kho) gọi `confirm_stock_issue` ⇒ kỳ vọng 200 + status='completed'");
+  console.log("     ĐỐI CHỨNG ÂM: cha.ht (không phải thủ kho) ⇒ 403 · xác nhận LẦN 2 ⇒ 400 ·");
+  console.log("     phiếu chưa qua ③ ⇒ 400");
+  console.log("  8. BƯỚC ⑤ — gọi `create_issue_grn` (CHỈ cần quyền TẠO, KHÔNG duyệt) ⇒ kỳ vọng 200 +");
+  console.log("     status='grn_created' + 1 `goods_receipts` + N `goods_receipt_items` cho kho đích");
+  console.log("     ĐỐI CHỨNG ÂM: phiếu chưa `completed` ⇒ 400 · user không có quyền tạo phiếu nhập ⇒ 403 ·");
+  console.log("     phiếu không tồn tại ⇒ 400 · sinh GRN LẦN 2 ⇒ 400");
+  console.log("  9. ĐO HỆ QUẢ SQL (do người chạy đối chiếu): `stock_issues.status` · `stock_issue_items` ·");
+  console.log("     `stock_movements` (SMI) TRƯỚC/SAU · `contract_stock_ledger` · `approvals` ·");
+  console.log("     `goods_receipts`/`goods_receipt_items` · `material_requests.supply_status` ·");
+  console.log("     `material_request_items.issued_qty`/`line_status` · số dòng `supply_workflow_steps` (step='issue')");
   process.exitCode = 0;
 } else {
 
@@ -313,12 +330,184 @@ if (!issueId) {
   step("N-B3.2lan", "cha.ht", "duyệt LẦN 2 cùng phiếu — ĐỐI CHỨNG ÂM, KỲ VỌNG 400", twice, { expectFail: true });
 }
 
-// ---------- 4b. GHI CHÚ KIỂM SQL BẮT BUỘC (probe chỉ đi HTTP) ----------
+// ---------- 4c. BƯỚC ③ — TIẾN HÀNH XUẤT KHO (`issue_stock_confirm`) ----------
+// TASK-133: action MỚI. ĐÂY mới là chỗ ghi `stock_movements` (SMI) + `contract_stock_ledger` — phần
+// ghi kho đã được TÁCH RA khỏi `insertStockIssue` (đường tạo phiếu ①) vì trước đây nó trừ tồn kho
+// ngay lúc tạo phiếu, TRƯỚC cả khi CHT duyệt ⇒ bước ② chỉ là «treo biển».
+// Quyền: cổng VAI TRÒ requireRole(["warehouse","commander","admin"]) + phạm vi dự án/kho nguồn.
+// Cổng MODULE dùng lại khoá SẴN CÓ `warehouse_issue` (⛔ 0 khoá `module_catalog` mới).
+// ⚠ Trên tài khoản CHT (`cha.ht`): cổng VAI TRÒ cho qua (commander) nhưng `warehouse_issue` có thể
+// thiếu ⇒ dùng `tkhodemo` (thu_kho, đúng vai trò «thủ kho xuất kho») cho bước nghiệp vụ.
+console.log("\n── BƯỚC ③ — TIẾN HÀNH XUẤT KHO (`issue_stock_confirm`) ──");
+if (!issueId) {
+  console.log("  ⛔ Không có issueId — dừng bước ③.");
+} else {
+  // ĐỐI CHỨNG ÂM ③a — phiếu KHÔNG tồn tại ⇒ 400.
+  const ghost3 = await call("tkhodemo", "issue_stock_confirm", { issueId: "ISS_khong-ton-tai" });
+  step("N-C1.ghost", "tkhodemo", "xuất kho phiếu KHÔNG tồn tại — ĐỐI CHỨNG ÂM, KỲ VỌNG 400", ghost3, { expectFail: true });
+
+  // ĐỐI CHỨNG ÂM ③b — phiếu CHƯA DUYỆT (`pending_cht`) ⇒ 400. Tạo THÊM 1 phiếu mới rồi để nguyên
+  // `pending_cht` (dùng lại cho đối chứng âm của ④ và ⑤).
+  if (MR?.lines?.length) {
+    const p = await call("tkhodemo", "issue_stock", mkIssuePayload());
+    step("3.0", "tkhodemo", "tạo THÊM 1 phiếu để đo nhánh «chưa duyệt» (③ và ④)", p);
+    pendingId = p.json?.issueId || p.json?.data?.issueId || null;
+  }
+  if (pendingId) {
+    const notApproved = await call("tkhodemo", "issue_stock_confirm", { issueId: pendingId });
+    step("N-C2.pending", "tkhodemo", "xuất kho khi phiếu CHƯA DUYỆT — ĐỐI CHỨNG ÂM, KỲ VỌNG 400",
+      notApproved, { expectFail: true });
+  } else {
+    console.log("  ⚠️  không tạo được phiếu phụ ⇒ bỏ qua đối chứng âm «chưa duyệt» (③).");
+  }
+
+  // ĐỐI CHỨNG ÂM ③c — vai trò KHÔNG có quyền xuất kho ⇒ 403.
+  const eng3 = await call("engineer.demo", "issue_stock_confirm", { issueId });
+  step("N-C3.eng", "engineer.demo", "xuất kho — ĐỐI CHỨNG ÂM, KỲ VỌNG 403", eng3, { expectFail: true });
+
+  // BƯỚC ③ THẬT.
+  const ok3 = await call("tkhodemo", "issue_stock_confirm", {
+    issueId, note: `Xuất kho theo phiếu đã duyệt (TASK-133 bước ③) ${RUN_TAG}`,
+  });
+  step("3.1", "tkhodemo", "issue_stock_confirm — TIẾN HÀNH XUẤT KHO", ok3);
+  if (ok3.ok) {
+    console.log(`      ↳ movementCount=${ok3.json?.movementCount} · totalQty=${ok3.json?.totalQty}`
+      + ` · status=${ok3.json?.status}`);
+  }
+
+  const boot3 = await bootstrap("tkhodemo");
+  const issued = issueIn(boot3, issueId);
+  assertStep("3.2", "tkhodemo", "③ sau xuất kho: stock_issues.status = 'issued'",
+    issued?.status === "issued", `status=${issued?.status ?? "(không thấy phiếu)"}`);
+
+  // ĐỐI CHỨNG ÂM ③d — xuất kho LẦN 2 cùng phiếu ⇒ 400 (KHÔNG ghi thêm kho).
+  const twice3 = await call("tkhodemo", "issue_stock_confirm", { issueId });
+  step("N-C4.2lan", "tkhodemo", "xuất kho LẦN 2 cùng phiếu — ĐỐI CHỨNG ÂM, KỲ VỌNG 400", twice3, { expectFail: true });
+  console.log(`      ↳ SQL đối chiếu movement (KHÔNG được tăng sau lần gọi thứ 2):`);
+  console.log(`        SELECT COUNT(*),COALESCE(SUM(quantity),0) FROM stock_movements`);
+  console.log(`         WHERE movement_type='SMI' AND reference_type='stock_issue' AND reference_id='${issueId}';`);
+}
+
+// ---------- 4d. BƯỚC ④ — THỦ KHO XÁC NHẬN ĐÃ XUẤT ĐỦ (`confirm_stock_issue`) ----------
+// Quyền: requireRole(["warehouse","admin"]) — ⛔ CHỈ thủ kho/admin, KHÔNG cho commander
+// (`cha.ht` ⇒ 403) đúng đặc tả «thủ kho xác nhận». Trạng thái: issued → completed + đóng dấu signed_at.
+console.log("\n── BƯỚC ④ — THỦ KHO XÁC NHẬN ĐÃ XUẤT ĐỦ (`confirm_stock_issue`) ──");
+if (!issueId) {
+  console.log("  ⛔ Không có issueId — dừng bước ④.");
+} else {
+  // ĐỐI CHỨNG ÂM ④a — `cha.ht` (chỉ huy trưởng, KHÔNG phải thủ kho) ⇒ 403.
+  const cht4 = await call("cha.ht", "confirm_stock_issue", { issueId });
+  step("N-D1.cht", "cha.ht", "xác nhận xuất đủ bằng CHỈ HUY TRƯỞNG — ĐỐI CHỨNG ÂM, KỲ VỌNG 403",
+    cht4, { expectFail: true });
+
+  // ĐỐI CHỨNG ÂM ④b — phiếu KHÔNG tồn tại ⇒ 400.
+  const ghost4 = await call("tkhodemo", "confirm_stock_issue", { issueId: "ISS_khong-ton-tai" });
+  step("N-D2.ghost", "tkhodemo", "xác nhận phiếu KHÔNG tồn tại — ĐỐI CHỨNG ÂM, KỲ VỌNG 400",
+    ghost4, { expectFail: true });
+
+  // BƯỚC ④ THẬT.
+  const ok4 = await call("tkhodemo", "confirm_stock_issue", {
+    issueId, comment: `Đã xuất đủ theo phiếu (TASK-133 bước ④) ${RUN_TAG}`,
+  });
+  step("4.1", "tkhodemo", "confirm_stock_issue — THỦ KHO XÁC NHẬN ĐÃ XUẤT ĐỦ", ok4);
+
+  const boot4 = await bootstrap("tkhodemo");
+  const done = issueIn(boot4, issueId);
+  assertStep("4.2", "tkhodemo", "④ sau xác nhận: stock_issues.status = 'completed'",
+    done?.status === "completed", `status=${done?.status ?? "(không thấy phiếu)"}`);
+
+  // ĐỐI CHỨNG ÂM ④c — xác nhận LẦN 2 ⇒ 400.
+  const twice4 = await call("tkhodemo", "confirm_stock_issue", { issueId });
+  step("N-D3.2lan", "tkhodemo", "xác nhận LẦN 2 cùng phiếu — ĐỐI CHỨNG ÂM, KỲ VỌNG 400", twice4, { expectFail: true });
+}
+
+// ---------- 4e. BƯỚC ⑤ — SINH GRN NHẬP VÀO KHO KHÁC (`create_issue_grn`) ----------
+// ⛔ KHÔNG cần duyệt — CHỈ cần QUYỀN TẠO (đúng đặc tả). Cổng VAI TRÒ
+// requireRole(["warehouse","engineer","admin"]) + cổng MODULE dùng lại khoá SẴN CÓ `receiving`
+// (capability canCreate — khuôn `receive_goods`). Chỉ chạy khi phiếu đã `completed` (bước ④ xong).
+console.log("\n── BƯỚC ⑤ — SINH GRN NHẬP VÀO KHO KHÁC (`create_issue_grn`) ──");
+let receiptId = null;
+let receiptNo = null;
+if (!issueId) {
+  console.log("  ⛔ Không có issueId — dừng bước ⑤.");
+} else {
+  // ĐỐI CHỨNG ÂM ⑤a — phiếu KHÔNG tồn tại ⇒ 400.
+  const ghost5 = await call("tkhodemo", "create_issue_grn",
+    { issueId: "ISS_khong-ton-tai", toWarehouseId: PRJ.teamWarehouseId });
+  step("N-E1.ghost", "tkhodemo", "sinh GRN cho phiếu KHÔNG tồn tại — ĐỐI CHỨNG ÂM, KỲ VỌNG 400",
+    ghost5, { expectFail: true });
+
+  // ĐỐI CHỨNG ÂM ⑤b — phiếu CHƯA `completed` ⇒ 400.
+  if (pendingId) {
+    const early5 = await call("tkhodemo", "create_issue_grn",
+      { issueId: pendingId, toWarehouseId: PRJ.teamWarehouseId });
+    step("N-E2.chuaXong", "tkhodemo", "sinh GRN khi phiếu CHƯA xác nhận đủ — ĐỐI CHỨNG ÂM, KỲ VỌNG 400",
+      early5, { expectFail: true });
+  }
+
+  // ĐỐI CHỨNG ÂM ⑤c — vai trò KHÔNG có quyền tạo phiếu nhập ⇒ 403.
+  const eng5 = await call("giamdoc.demo", "create_issue_grn",
+    { issueId, toWarehouseId: PRJ.teamWarehouseId });
+  step("N-E3.gd", "giamdoc.demo", "sinh GRN — ĐỐI CHỨNG ÂM, KỲ VỌNG 403", eng5, { expectFail: true });
+
+  // BƯỚC ⑤ THẬT — kho đích = KHO TỔ ĐỘI (đúng đặc tả «nhập vào kho khác»).
+  const ok5 = await call("tkhodemo", "create_issue_grn", {
+    issueId, toWarehouseId: PRJ.teamWarehouseId,
+    note: `Nhập vào kho khác theo phiếu xuất (TASK-133 bước ⑤) ${RUN_TAG}`,
+  });
+  step("5.1", "tkhodemo", "create_issue_grn — SINH GRN NHẬP KHO KHÁC (không duyệt)", ok5);
+  receiptId = ok5.json?.receiptId || null;
+  receiptNo = ok5.json?.receiptNo || null;
+  if (ok5.ok) {
+    console.log(`      ↳ receiptId=${receiptId} · receiptNo=${receiptNo}`
+      + ` · kho đích=${ok5.json?.toWarehouseId} · lineCount=${ok5.json?.lineCount}`);
+  }
+
+  const boot5 = await bootstrap("tkhodemo");
+  const grnDone = issueIn(boot5, issueId);
+  assertStep("5.2", "tkhodemo", "⑤ sau sinh GRN: stock_issues.status = 'grn_created'",
+    grnDone?.status === "grn_created", `status=${grnDone?.status ?? "(không thấy phiếu)"}`);
+
+  // ĐỐI CHỨNG ÂM ⑤d — sinh GRN LẦN 2 ⇒ 400, KHÔNG sinh phiếu nhập thứ 2.
+  const twice5 = await call("tkhodemo", "create_issue_grn",
+    { issueId, toWarehouseId: PRJ.teamWarehouseId });
+  step("N-E4.2lan", "tkhodemo", "sinh GRN LẦN 2 cùng phiếu — ĐỐI CHỨNG ÂM, KỲ VỌNG 400", twice5, { expectFail: true });
+
+  // NỢ #4 — trạng thái PHIẾU ĐỀ NGHỊ sau khi xuất kho (đọc lại qua API bootstrap).
+  const bootMr = await bootstrap("tkhodemo");
+  const reqs2 = bootMr?.data?.requests || bootMr?.data?.materialRequests || [];
+  const mr2 = reqs2.find((r) => String(r.id) === String(MR?.id));
+  assertStep("5.3", "tkhodemo", "MR cập nhật trạng thái cấp phát (supplyStatus phải ∈ partial_issued/issued)",
+    ["partial_issued", "issued"].includes(String(mr2?.supplyStatus)),
+    `supplyStatus=${mr2?.supplyStatus ?? "(không thấy)"}`);
+}
+
+// ---------- 4f. GHI CHÚ KIỂM SQL BẮT BUỘC (probe chỉ đi HTTP) ----------
 console.log("\n── KIỂM CHỨNG SQL (người chạy đối chiếu MySQL `vntech_erp`) ──");
 if (issueId) {
-  console.log(`   SELECT id,status,approved_by FROM stock_issues WHERE id='${issueId}';`);
+  console.log(`   SELECT id,status,approved_by,signed_at FROM stock_issues WHERE id='${issueId}';`);
   console.log(`   SELECT entity_type,entity_id,stage,approver_user_id,status,decided_at FROM approvals`);
   console.log(`     WHERE entity_type='stock_issue' AND entity_id='${issueId}';`);
+  console.log(`   -- ③ TỒN KHO: kho XUẤT phải GIẢM, kho ĐÍCH (tổ đội) phải TĂNG (tồn = tổng hợp stock_movements)`);
+  console.log(`   SELECT from_warehouse_id,to_warehouse_id,movement_type,quantity FROM stock_movements`);
+  console.log(`     WHERE reference_type='stock_issue' AND reference_id='${issueId}';`);
+  console.log(`   SELECT warehouse_id,SUM(quantity_delta) FROM contract_stock_ledger`);
+  console.log(`     WHERE reference_type='stock_issue' AND reference_id='${issueId}' GROUP BY warehouse_id;`);
+  console.log(`   -- ⑤ PHIẾU NHẬP sinh ra`);
+  if (receiptId) {
+    console.log(`   SELECT id,receipt_no,warehouse_id,purchase_order_id,posting_status FROM goods_receipts`);
+    console.log(`     WHERE id='${receiptId}';`);
+    console.log(`   SELECT COUNT(*) FROM goods_receipt_items WHERE receipt_id='${receiptId}';`);
+  } else {
+    console.log(`   (chưa sinh được GRN ở lượt này)`);
+  }
+  console.log(`   -- NỢ #4/#5: trạng thái phiếu đề nghị + số dòng workflow`);
+  if (MR?.id) {
+    console.log(`   SELECT id,supply_status FROM material_requests WHERE id='${MR.id}';`);
+    console.log(`   SELECT id,issued_qty,line_status FROM material_request_items WHERE request_id='${MR.id}';`);
+    console.log(`   SELECT COUNT(*) FROM supply_workflow_steps WHERE request_id='${MR.id}' AND step='issue';`);
+    console.log(`     -- phải là 1 (TASK-133 sửa lỗi trùng dòng; TRƯỚC khi sửa: 4-5 dòng cho MR đã xuất nhiều lần)`);
+  }
 }
 
 // ---------- 5. TRẠNG THÁI CUỐI QUA API ----------
@@ -336,19 +525,12 @@ try {
   console.log(`   ⚠ không đọc được bootstrap: ${e.message}`);
 }
 
-// ---------- 5b. BƯỚC ③④⑤ — CHƯA LÀM (nhánh sau), KHÔNG tính là HỎNG ----------
-console.log("\n── ⛔ BƯỚC ③④⑤ CỦA WF-XUATKHO-01: CHƯA LÀM TRONG LƯỢT NÀY (TASK-132 chỉ ①②) ──");
-console.log("   ⛔ ③ tiến hành xuất kho (tách ghi kho/movement/ledger khỏi lúc tạo phiếu)");
-console.log("   ⛔ ④ thủ kho xác nhận đã xuất đủ");
-console.log("   ⛔ ⑤ chuyển thành GRN để nhập vào kho khác");
-console.log("   ⇒ 3 bước này KHÔNG được probe đếm vào x/y; nhánh sau sẽ làm.");
-}
-
 // ---------- 6. KẾT QUẢ ----------
 console.log("\n" + "═".repeat(110));
 const okc = log.filter((l) => l.ok).length;
-console.log(`KẾT QUẢ: ${okc}/${log.length} bước ĐẠT  (chỉ tính 2 bước ① tạo phiếu + ② CHT duyệt và các đối chứng âm)`);
+console.log(`KẾT QUẢ: ${okc}/${log.length} bước ĐẠT  (trọn 5 bước ① tạo phiếu → ② CHT duyệt → ③ xuất kho`
+  + ` → ④ thủ kho xác nhận đủ → ⑤ sinh GRN, kèm đối chứng âm 400/403 cho từng bước)`);
 for (const l of log.filter((x) => !x.ok)) console.log(`   ❌ [${l.who}] ${l.what} → HTTP ${l.status} ${l.error || ""}`);
-console.log("   ⛔ BƯỚC ③ tiến hành xuất kho · ④ thủ kho xác nhận · ⑤ chuyển GRN: CHƯA LÀM (nhánh sau) — KHÔNG tính vào x/y.");
 console.log("═".repeat(110));
 console.log(`\nMật khẩu tài khoản demo: ${PASS} · nhãn lượt chạy: ${RUN_TAG}`);
+}

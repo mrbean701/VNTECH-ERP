@@ -307,8 +307,13 @@ public final class ActionRbacRegistry {
             Map.entry("import_material_catalog", "canUse"),
             Map.entry("install_license_foundation", "canUse"),
             Map.entry("issue_stock", "canCreate"),
-            // TASK-133 — ③ tiến hành xuất kho (ghi movement + ledger cho phiếu ĐÃ DUYỆT ⇒ canEdit).
-            Map.entry("issue_stock_confirm", "canEdit"),
+            // TASK-133 — ③ tiến hành xuất kho. Capability chọn `canCreate` (KHÔNG phải `canEdit`) vì đây
+            // là CÙNG một hành vi nghiệp vụ với `issue_stock` («thực hiện cấp phát/xuất kho») và vì DỮ
+            // LIỆU THẬT của vai trò thủ kho: đo `user_module_permissions` trên MySQL ⇒ `tkhodemo`
+            // (thu_kho) có `warehouse_issue.can_create=1` nhưng `can_edit=0`; nếu khai `canEdit` thì chính
+            // thủ kho — người ĐÚNG vai trò của bước ③ — bị 403 oan, y hệt cái bẫy TASK-132 đã gặp với
+            // `approvals.canApprove` của CHT. Bước ④ vẫn giữ `canEdit` vì đó là bước XÁC NHẬN trạng thái.
+            Map.entry("issue_stock_confirm", "canCreate"),
             Map.entry("login", "canUse"),
             Map.entry("logout", "canUse"),
             Map.entry("mark_task_notification_read", "canView"),
