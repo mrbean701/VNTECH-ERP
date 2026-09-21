@@ -2286,4 +2286,27 @@ ALTER TABLE `user_project_scopes` ADD COLUMN IF NOT EXISTS `position_name` varch
 -- [H2-MANUAL-START]
 ALTER TABLE `approval_stage_catalog` ADD COLUMN IF NOT EXISTS `stage_kind` varchar(16) NOT NULL DEFAULT 'approval';
 ALTER TABLE `audit_logs` ADD COLUMN IF NOT EXISTS `result` varchar(32) NOT NULL DEFAULT 'ok';
+-- TASK-127 (21/09/2026) — bảng `partners` (ĐỐI TÁC là BẢNG RIÊNG): payload bootstrap Java
+-- (BootstrapDataAdapter) ĐỌC bảng này ⇒ schema H2 của test PHẢI có, nếu không
+-- `SystemControllerAuthTest` đỏ vì `Table "partners" not found` (H2 JdbcSQLSyntaxErrorException).
+-- Vì DDL này đến từ Flyway `V23__partners_table.sql` (migration SAU V1 baseline) nên generator
+-- `tools/generate-h2-test-schema.mjs` (sinh từ V1) KHÔNG tự bắt được ⇒ đặt trong KHỐI THỦ CÔNG này
+-- (cùng tiền lệ V21/V22 ở trên). Cột sao chép từ `V23__partners_table.sql`, cú pháp H2 như `suppliers`.
+CREATE TABLE IF NOT EXISTS `partners` (
+  `id` VARCHAR(64) NOT NULL,
+  `code` VARCHAR(64) NOT NULL,
+  `name` TEXT NOT NULL,
+  `tax_code` VARCHAR(64) NULL,
+  `address` TEXT NULL,
+  `contact_name` TEXT NULL,
+  `contact_phone` TEXT NULL,
+  `email` VARCHAR(191) NULL,
+  `partner_type` VARCHAR(32) NOT NULL DEFAULT 'supplier',
+  `status` VARCHAR(32) NOT NULL DEFAULT 'active',
+  `active` TINYINT(1) NOT NULL DEFAULT 1,
+  `created_at` TIMESTAMP(3) NOT NULL,
+  `updated_at` TIMESTAMP(3) NOT NULL,
+  PRIMARY KEY (`id`)
+) ;
+CREATE UNIQUE INDEX IF NOT EXISTS `partners_code_uidx` ON `partners` (`code`);
 -- [H2-MANUAL-END]
