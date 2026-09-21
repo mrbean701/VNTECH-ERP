@@ -45,6 +45,19 @@ public class RequestStoreAdapter implements RequestStore {
     }
 
     @Override
+    public Optional<String> defaultProjectIdForUser(String userId) {
+        // TASK-136 — dự án mặc định khi phiếu không chọn dự án. Cố ý CHỈ lấy dự án trong phạm vi
+        // tài khoản (`user_project_scopes`): KHÔNG đoán bừa dự án đầu tiên của hệ thống, vì mọi
+        // chốt phê duyệt/SLA về sau đều đi theo `project_id` của phiếu.
+        List<String> rows = jdbcTemplate.queryForList("""
+                SELECT ups.project_id FROM user_project_scopes ups
+                JOIN projects p ON p.id = ups.project_id
+                WHERE ups.user_id=? AND p.status='active'
+                ORDER BY ups.created_at, ups.project_id LIMIT 1""", String.class, userId);
+        return rows.isEmpty() ? Optional.empty() : Optional.of(rows.get(0));
+    }
+
+    @Override
     public Optional<Map<String, Object>> findContract(String projectId, String contractId) {
         List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
                 SELECT id,project_id AS projectId,contract_no AS contractNo,contract_name AS contractName,

@@ -63,24 +63,35 @@ public final class RequestManagementUseCase {
         // Quyền TẠO vẫn đi qua CỔNG RBAC do quản trị viên cấu hình (`requireModule`/`user_module_permissions`
         // — module `requests`, năng lực `canCreate`) + phạm vi dự án ở ngay dưới ⇒ KHÔNG mở toang.
         String projectId = trim(payload.get("projectId"));
-        // JS 907.
-        accessScope.requireProjectAccess(principal.userId(), principal.role(), projectId, true,
-                "Tài khoản không được lập đơn cho dự án này.");
+        // TASK-136 (A) — «bất cứ ai cũng có thể lập phiếu đề nghị», kể cả tài khoản KHÔNG thuộc dự án
+        // nào và KHÔNG thuộc kho nào: phiếu được phép KHÔNG thuộc dự án ⇒ ghi NULL vào
+        // `material_requests.project_id` (migration V24 nới cột thành NULL; KHÔNG đụng cột khác).
+        // Dự án / Hợp đồng / BOQ Version / Kho đều KHÔNG bắt buộc ⇒ phiếu vào luồng duyệt ngay.
         String neededAt = trim(payload.get("neededAt"));
         String area = trim(payload.get("area"));
         List<?> rawLines = payload.get("lines") instanceof List<?> l ? l : List.of();
-        if (projectId.isEmpty() || rawLines.isEmpty())
-            throw Api("Phiếu đề nghị phải có dự án và ít nhất một dòng vật tư.");
+        // TASK-136 — chỉ còn chốt "phải có ít nhất 1 dòng vật tư" (bỏ chốt "phải có dự án").
+        if (rawLines.isEmpty())
+            throw Api("Phiếu đề nghị phải có ít nhất một dòng vật tư.");
         if (rawLines.size() > 100) throw Api("Mỗi phiếu đề nghị được nhập tối đa 100 dòng vật tư.");
+
+        // JS 907 — CHỈ kiểm phạm vi dự án khi phiếu THỰC SỰ thuộc một dự án; phiếu không-dự-án
+        // (văn phòng công ty) không có phạm vi nào để kiểm.
+        if (!projectId.isEmpty())
+            accessScope.requireProjectAccess(principal.userId(), principal.role(), projectId, true,
+                    "Tài khoản không được lập đơn cho dự án này.");
 
         // Header required theo form_field_config request_header
         checkRequiredHeader(payload, neededAt);
-        Map<String, Object> project = store.findActiveProject(projectId)
+        Map<String, Object> project = projectId.isEmpty() ? null : store.findActiveProject(projectId)
                 .orElseThrow(() -> Api("Dự án không tồn tại hoặc đã ngừng hoạt động."));
 
         // Resolve contract + BOQ version
-        Map<String, Object> contract = resolveContract(projectId, trim(payload.get("contractId")));
-        String contractId = sv(contract, "id");
+        // TASK-136 — «không bắt buộc chọn hợp đồng / BOQ»: rỗng ⇒ lấy hợp đồng mặc định của dự án;
+        // dự án KHÔNG có hợp đồng đang hiệu lực ⇒ `contractId` rỗng (cột `contract_id` cho phép rỗng,
+        // `procurement_allocations.contract_id` NOT NULL nên giữ CHUỖI RỖNG, không dùng NULL).
+        Map<String, Object> contract = resolveContractOrNull(projectId, trim(payload.get("contractId")));
+        String contractId = contract == null ? "" : sv(contract, "id");
         Optional<Map<String, Object>> version = resolveBoqVersion(projectId, contractId, trim(payload.get("boqVersionId")));
         String boqVersionId = version.map(v -> sv(v, "id")).orElse(null);
 
@@ -89,7 +100,10 @@ public final class RequestManagementUseCase {
         // Sequence DNMH
         int year = neededAt.matches("\\d{4}-.*") ? Integer.parseInt(neededAt.substring(0, 4)) : LocalDate.now().getYear();
         long seq = store.nextSequence("DNMH:" + projectId + ":" + year, "DNMH", projectId, year, Instant.now());
-        String requestNo = "DNMH-" + sv(project, "code").toUpperCase() + "-" + year + "-"
+        // TASK-136 — phiếu KHÔNG thuộc dự án nào ⇒ mã phiếu dùng tiền tố CÔNG TY `CTY`
+        // (`DNMH-CTY-<năm>-xxxx`) thay vì mã dự án; trước đây `sv(project,"code")` rỗng ⇒ "DNMH--…".
+        String projectCode = project == null ? "" : sv(project, "code");
+        String requestNo = "DNMH-" + (projectCode.isBlank() ? "CTY" : projectCode.toUpperCase()) + "-" + year + "-"
                 + String.format("%04d", seq);
 
         // Material catalog index
@@ -175,7 +189,10 @@ public final class RequestManagementUseCase {
                 boolean outsideContract = List.of("outside_contract", "variation", "phat_sinh")
                         .contains(trim(line.get("itemType")).toLowerCase())
                         || Boolean.TRUE.equals(line.get("outsideContract"));
-                if (boqItemId.isEmpty() && !outsideContract)
+                // TASK-136 — chỉ siết đối chiếu BOQ khi THỰC SỰ có dòng BOQ để đối chiếu. Không chọn
+                // Hợp đồng/BOQ (hoặc dự án/hợp đồng chưa có BOQ) ⇒ dòng là nhu cầu tự do, việc đòi
+                // "map đúng dòng BOQ" là bất khả thi (trước đây chặn cứng ⇒ không thể gửi phiếu).
+                if (boqItemId.isEmpty() && !outsideContract && !boqRows.isEmpty())
                     throw new IllegalStateException("chưa đối chiếu được đúng dòng BOQ/Hợp đồng. Hãy chọn dòng BOQ hoặc đánh dấu hợp lệ là Ngoài HĐ/Phát sinh kèm lý do trước khi gửi duyệt.");
                 if (outsideContract && trim(line.get("note")).isEmpty() && trim(line.get("reason")).isEmpty())
                     throw new IllegalStateException("vật tư Ngoài HĐ/Phát sinh bắt buộc nhập lý do/ghi chú.");
@@ -228,6 +245,11 @@ public final class RequestManagementUseCase {
         for (Map<String, Object> stage : stages) {
             if (isOne(gi(stage, "autoApproveOnSubmit"))) continue;
             if (!creatorMatchedStageRole(stage, principal).isEmpty()) continue;
+                // TASK-136 — phiếu KHÔNG thuộc dự án nào: `approval_project_assignments.project_id`
+                // là NOT NULL nên KHÔNG thể có "phân công cấp công ty" ⇒ không gán Owner đích danh.
+                // Bước duyệt vẫn chạy được THEO VAI TRÒ (`allowed_role_codes_snapshot`) — xem nhánh
+                // (2) "ĐÚNG VAI TRÒ của bước" trong `canApproveRequestStage`.
+                if (projectId.isEmpty()) continue;
                 Map<String, Object> assignment = store.workflowAssignment(projectId, (int) numberValue(gi(stage, "stageNo")))
                         .orElse(null);
                 if (assignment == null || !isOne(gi(assignment, "ownerActive")))
@@ -808,11 +830,18 @@ public final class RequestManagementUseCase {
         }
     }
 
-    private Map<String, Object> resolveContract(String projectId, String requestedContractId) {
-        Optional<Map<String, Object>> contract = requestedContractId.isEmpty()
-                ? store.defaultContract(projectId)
-                : store.findContract(projectId, requestedContractId);
-        return contract.orElseThrow(() -> Api("Hợp đồng không tồn tại/đã ngừng áp dụng trong dự án này."));
+    /**
+     * TASK-136 — Hợp đồng KHÔNG còn bắt buộc: rỗng ⇒ hợp đồng mặc định của dự án; dự án không có
+     * hợp đồng đang hiệu lực ⇒ trả {@code null} để phiếu vẫn lập được (trước đây ném 400
+     * "Hợp đồng không tồn tại/đã ngừng áp dụng trong dự án này."). Hợp đồng ĐƯỢC CHỌN nhưng không
+     * thuộc dự án / đã ngừng áp dụng ⇒ GIỮ NGUYÊN lỗi cũ.
+     */
+    private Map<String, Object> resolveContractOrNull(String projectId, String requestedContractId) {
+        if (!requestedContractId.isEmpty()) {
+            return store.findContract(projectId, requestedContractId)
+                    .orElseThrow(() -> Api("Hợp đồng không tồn tại/đã ngừng áp dụng trong dự án này."));
+        }
+        return store.defaultContract(projectId).orElse(null);
     }
 
     private Optional<Map<String, Object>> resolveBoqVersion(String projectId, String contractId, String requestedVersionId) {

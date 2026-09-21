@@ -15,6 +15,15 @@ public interface RequestStore {
     List<String> approvalWarnings(String entityType, String entityId);
 
     Optional<Map<String, Object>> findActiveProject(String projectId);       // {code,name,status}
+    /**
+     * TASK-136 — DỰ ÁN MẶC ĐỊNH của tài khoản khi phiếu KHÔNG chọn dự án: dòng
+     * {@code user_project_scopes} còn hiệu lực ( {@code projects.status='active'} ).
+     * <p>
+     * Rỗng ⇒ tài khoản không thuộc dự án nào. Hiện CHƯA thể lập phiếu "không-dự-án" vì
+     * {@code material_requests.project_id} là NOT NULL — cần quyết định cho cột NULL (migration mới)
+     * hoặc dùng một dự án mặc định cấp công ty; xem {@code docs/agent-progress/TASK-136.md}.
+     */
+    Optional<String> defaultProjectIdForUser(String userId);
     Optional<Map<String, Object>> findContract(String projectId, String contractId);
     Optional<Map<String, Object>> defaultContract(String projectId);          // is_primary=1 active, fallback active đầu tiên
     Optional<Map<String, Object>> findBoqVersion(String projectId, String contractId, String versionId);
