@@ -44,10 +44,13 @@ public class PurchaseStoreAdapter implements PurchaseStore {
 
     @Override
     public List<Map<String, Object>> requestSourceItems(String requestId) {
+        // TASK-140 (b) — F3: PHẢI mang theo ĐƠN GIÁ của dòng phiếu đề nghị, nếu không `createPo` không có
+        // nguồn nào để ghi `purchase_order_items.unit_price` (lỗi thật: 9/9 PO có unit_price/total_value = 0).
         return jdbcTemplate.queryForList("""
                 SELECT mri.id,mri.material_id AS materialId,mri.contract_id AS contractId,
                        mri.boq_version_id AS boqVersionId,mri.boq_item_id AS boqItemId,
                        mri.approved_purchase_qty AS approvedQty,mri.ordered_qty AS orderedQty,
+                       mri.estimated_unit_price AS estimatedUnitPrice,
                        m.`system`,m.requires_mar AS requiresMar
                 FROM material_request_items mri
                 JOIN materials m ON m.id=mri.material_id
@@ -145,9 +148,10 @@ public class PurchaseStoreAdapter implements PurchaseStore {
                                                       boq_version_id,boq_item_id,line_no,ordered_qty,unit_price,
                                                       system_code,planned_delivery_at,delivered_qty,received_qty,
                                                       closed_qty,status,created_at,updated_at)
-                    VALUES (?,?,?,?,?,?,?,?,0,?,?,0,0,0,'ordered',?,?)""",
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,0,0,0,'ordered',?,?)""",
                     poiId, poId, line.get("requestItemId"), line.get("contractId"), line.get("boqVersionId"),
-                    line.get("boqItemId"), lineNo++, line.get("qty"), line.get("systemCode"),
+                    line.get("boqItemId"), lineNo++, line.get("qty"), poUnitPrice(line.get("unitPrice")),
+                    line.get("systemCode"),
                     line.get("plannedDeliveryAt"), now, now);
             jdbcTemplate.update("""
                     INSERT INTO procurement_allocations (id,project_id,contract_id,boq_version_id,boq_item_id,
@@ -158,6 +162,34 @@ public class PurchaseStoreAdapter implements PurchaseStore {
                     allocationBoqVersionId, line.get("boqItemId"), line.get("materialId"),
                     line.get("requestItemId"), "PO", line.get("qty"), requestNo, now, now);
         }
+        // TASK-140 (b) — F3: `purchase_orders.total_value` là giá trị DẪN XUẤT của các dòng PO, tính ở
+        // ĐÚNG MỘT chỗ (`recomputePoTotal`) để không có nguồn sự thật thứ hai.
+        recomputePoTotal(poId);
+    }
+
+    /**
+     * TASK-140 (b) — công thức DUY NHẤT của {@code purchase_orders.total_value}:
+     * {@code Σ(purchase_order_items.ordered_qty × purchase_order_items.unit_price)}.
+     * Dùng chung cho lúc tạo PO và lúc sửa đơn giá PO ⇒ tổng luôn khớp các dòng, không lệch về sau.
+     */
+    private void recomputePoTotal(String poId) {
+        jdbcTemplate.update("""
+                UPDATE purchase_orders SET total_value=(SELECT COALESCE(SUM(ordered_qty*unit_price),0)
+                                                        FROM purchase_order_items WHERE purchase_order_id=?)
+                WHERE id=?""", poId, poId);
+    }
+
+    /** Đơn giá dòng PO: số hữu hạn ≥ 0; thiếu/không hợp lệ ⇒ 0 (KHÔNG bịa giá). */
+    private static double poUnitPrice(Object raw) {
+        if (raw == null) return 0;
+        double price;
+        try {
+            price = Double.parseDouble(String.valueOf(raw));
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+        if (!Double.isFinite(price) || price < 0) return 0;
+        return price;
     }
 
     @Override
@@ -253,6 +285,8 @@ public void updatePoItemPrice(String poId, String poItemId, double unitPrice, In
     jdbcTemplate.update(
         "UPDATE purchase_order_items SET unit_price=?, updated_at=? WHERE id=? AND purchase_order_id=?",
         unitPrice, now, poItemId, poId);
+    // TASK-140 (b) — sửa đơn giá phải tính lại tổng bằng ĐÚNG công thức dẫn xuất đã dùng lúc tạo PO.
+    recomputePoTotal(poId);
 }
 
     @Override

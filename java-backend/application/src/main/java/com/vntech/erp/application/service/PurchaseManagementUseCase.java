@@ -114,6 +114,10 @@ public final class PurchaseManagementUseCase {
             Map<String, Object> nl = new LinkedHashMap<>();
             nl.put("requestItemId", requestItemId);
             nl.put("qty", qty);
+            // TASK-140 (b) — F3: ĐƠN GIÁ của dòng PO lấy từ CHÍNH dòng phiếu đề nghị
+            // (`material_request_items.estimated_unit_price`) — nguồn sự thật duy nhất của giá.
+            // Dòng phiếu KHÔNG có đơn giá ⇒ 0 (GIỮ NGUYÊN hành vi cũ, KHÔNG bịa giá từ BOQ/material).
+            nl.put("unitPrice", Math.max(0, numberValue(ci(source, "estimatedUnitPrice"))));
             nl.put("supplierId", supplierId);
             nl.put("plannedDeliveryAt", plannedDeliveryAt);
             String systemCode = trim(line.get("systemCode"));
