@@ -1,7 +1,20 @@
 {
   "generatedFrom": "D:\\13. Duong Trong Thang\\Tai lieu\\1. Du an chuan hoa quy trinh\\VNTECH_ERP_V5_3_0_MASTER_BASELINE_R1_1_1_PROJECT_NAV_FINAL_FP_FIXED_20260908\\scripts\\system-route.mjs",
-  "count": 174,
+  "count": 182,
   "actions": [
+    {
+      "action": "add_work_item_comment",
+      "module": [
+        "dept_plan_tasks",
+        "dept_project_tasks",
+        "dept_plan_assign",
+        "dept_project_assign"
+      ],
+      "capability": "canUse",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": false
+    },
     {
       "action": "approve_central_return",
       "module": [
@@ -21,6 +34,14 @@
       "dispatcher": true,
       "origin": "handleAction",
       "migrated": true
+    },
+    {
+      "action": "approve_po",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": false
     },
     {
       "action": "approve_production_report",
@@ -479,6 +500,16 @@
       "migrated": true
     },
     {
+      "action": "delete_partner",
+      "module": [
+        "supplier_catalog"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": false
+    },
+    {
       "action": "delete_payment_plan",
       "module": [
         "dept_finance_payment_plan"
@@ -773,6 +804,14 @@
       "dispatcher": true,
       "origin": "handleAction",
       "migrated": true
+    },
+    {
+      "action": "reject_po",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": false
     },
     {
       "action": "reorder_form_fields",
@@ -1173,6 +1212,16 @@
       "migrated": true
     },
     {
+      "action": "save_partner",
+      "module": [
+        "supplier_catalog"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": false
+    },
+    {
       "action": "save_payment_plan",
       "module": [
         "dept_finance_payment_plan"
@@ -1444,6 +1493,16 @@
       "migrated": true
     },
     {
+      "action": "set_partner_status",
+      "module": [
+        "supplier_catalog"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": false
+    },
+    {
       "action": "set_payment_plan_status",
       "module": [
         "dept_finance_payment_plan"
@@ -1518,6 +1577,17 @@
       "migrated": true
     },
     {
+      "action": "set_work_item_participant",
+      "module": [
+        "dept_plan_assign",
+        "dept_project_assign"
+      ],
+      "capability": "canEdit",
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": false
+    },
+    {
       "action": "settle_advance_request",
       "module": [
         "dept_finance_advance"
@@ -1572,6 +1642,14 @@
       "dispatcher": true,
       "origin": "handleAction",
       "migrated": true
+    },
+    {
+      "action": "update_po_price",
+      "module": [],
+      "capability": null,
+      "dispatcher": true,
+      "origin": "handleAction",
+      "migrated": false
     },
     {
       "action": "update_profile_avatar",

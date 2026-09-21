@@ -1,13 +1,14 @@
 # ACTION CATALOG — VNTECH ERP (backend Java mục tiêu)
 
 - Nguồn: `scripts/system-route.mjs` (monolith JS — reference implementation, branch `unity`)
-- Tổng action: **174** (write dispatcher + reserved)
+- Tổng action: **182** (write dispatcher + reserved)
 - Cột `migrated` = false: action chưa được port sang Java (Strangler Fig — gateway sẽ proxy sang JS legacy).
 
 ## Theo module
 
-### (unassigned) (64)
+### (unassigned) (67)
 
+- `approve_po` — 
 - `approve_team_production` — 
 - `bulk_import_projects` — 
 - `bulk_import_users` — 
@@ -31,6 +32,7 @@
 - `install_license_foundation` — 
 - `login` — 
 - `logout` — 
+- `reject_po` — 
 - `reorder_form_fields` — 
 - `reorder_menu_layout` — 
 - `request_license_transfer` — 
@@ -69,6 +71,7 @@
 - `set_user_status` — 
 - `settle_team_subcontract` — 
 - `setup` — 
+- `update_po_price` — 
 - `update_profile_avatar` — 
 - `update_project` — 
 - `update_user` — 
@@ -182,26 +185,32 @@
 - `save_seal` — canCreate
 - `set_seal_status` — canEdit
 
-### dept_plan_assign (3)
+### dept_plan_assign (5)
 
+- `add_work_item_comment` — canUse
 - `create_work_item` — canCreate
 - `reassign_work_item` — canEdit
+- `set_work_item_participant` — canEdit
 - `update_work_item_status` — canEdit
 
-### dept_plan_tasks (3)
+### dept_plan_tasks (4)
 
+- `add_work_item_comment` — canUse
 - `mark_task_notification_read` — canView
 - `update_work_item_progress` — canEdit
 - `update_work_item_status` — canEdit
 
-### dept_project_assign (3)
+### dept_project_assign (5)
 
+- `add_work_item_comment` — canUse
 - `create_work_item` — canCreate
 - `reassign_work_item` — canEdit
+- `set_work_item_participant` — canEdit
 - `update_work_item_status` — canEdit
 
-### dept_project_tasks (3)
+### dept_project_tasks (4)
 
+- `add_work_item_comment` — canUse
 - `mark_task_notification_read` — canView
 - `update_work_item_progress` — canEdit
 - `update_work_item_status` — canEdit
@@ -284,10 +293,13 @@
 - `return_stock` — canCreate
 - `reverse_stock_movement` — canApprove
 
-### supplier_catalog (3)
+### supplier_catalog (6)
 
+- `delete_partner` — canEdit
 - `delete_supplier` — canEdit
+- `save_partner` — canEdit
 - `save_supplier` — canEdit
+- `set_partner_status` — canEdit
 - `set_supplier_status` — canEdit
 
 ### teams (3)
@@ -309,8 +321,10 @@
 
 | action | module | capability | dispatcher | migrated |
 |---|---|---|---|---|
+| add_work_item_comment | dept_plan_tasks, dept_project_tasks, dept_plan_assign, dept_project_assign | canUse | ✅ |  |
 | approve_central_return | central_warehouse | canApprove | ✅ | ✅ |
 | approve_construction_daily_log | construction | canApprove | ✅ | ✅ |
+| approve_po |  |  | ✅ |  |
 | approve_production_report | production | canApprove | ✅ | ✅ |
 | approve_site_expense_claim | dept_finance_site_cost | canApprove | ✅ | ✅ |
 | approve_stock_count | stocktake | canApprove | ✅ | ✅ |
@@ -359,6 +373,7 @@
 | delete_material_norm | material_norms | canEdit | ✅ | ✅ |
 | delete_material_subcategory |  |  | ✅ | ✅ |
 | delete_menu_group |  |  | ✅ | ✅ |
+| delete_partner | supplier_catalog | canEdit | ✅ |  |
 | delete_payment_plan | dept_finance_payment_plan | canEdit | ✅ | ✅ |
 | delete_project |  |  | ✅ | ✅ |
 | delete_project_contract | boq | canEdit | ✅ | ✅ |
@@ -390,6 +405,7 @@
 | receive_goods | receiving, warehouse_receipt | canCreate | ✅ | ✅ |
 | receive_transfer_order | inventory | canApprove | ✅ | ✅ |
 | reconcile_contract_stock | inventory | canApprove | ✅ | ✅ |
+| reject_po |  |  | ✅ |  |
 | reorder_form_fields |  |  | ✅ | ✅ |
 | reorder_menu_layout |  |  | ✅ | ✅ |
 | replace_boq_items | boq | canEdit | ✅ | ✅ |
@@ -433,6 +449,7 @@
 | save_menu_group |  |  | ✅ | ✅ |
 | save_module_catalog |  |  | ✅ | ✅ |
 | save_organization_unit |  |  | ✅ | ✅ |
+| save_partner | supplier_catalog | canEdit | ✅ |  |
 | save_payment_plan | dept_finance_payment_plan | canCreate | ✅ | ✅ |
 | save_production_report | production | canCreate | ✅ | ✅ |
 | save_project_contract | boq | canEdit | ✅ | ✅ |
@@ -463,6 +480,7 @@
 | set_module_status |  |  | ✅ | ✅ |
 | set_organization_unit_member | site_command | canEdit | ✅ | ✅ |
 | set_organization_unit_status |  |  | ✅ | ✅ |
+| set_partner_status | supplier_catalog | canEdit | ✅ |  |
 | set_payment_plan_status | dept_finance_payment_plan | canEdit | ✅ | ✅ |
 | set_project_contract_status | boq | canEdit | ✅ | ✅ |
 | set_project_status | admin | canEdit | ✅ | ✅ |
@@ -471,12 +489,14 @@
 | set_seal_status | dept_legal_seal | canEdit | ✅ | ✅ |
 | set_supplier_status | supplier_catalog | canEdit | ✅ | ✅ |
 | set_user_status |  |  | ✅ | ✅ |
+| set_work_item_participant | dept_plan_assign, dept_project_assign | canEdit | ✅ |  |
 | settle_advance_request | dept_finance_advance | canApprove | ✅ | ✅ |
 | settle_team_subcontract |  |  | ✅ | ✅ |
 | setup |  |  | ✅ | ✅ |
 | ship_transfer_order | inventory | canEdit | ✅ | ✅ |
 | transfer_contract_ownership | inventory | canApprove | ✅ | ✅ |
 | update_boq_contract_prices | boq | canEdit | ✅ | ✅ |
+| update_po_price |  |  | ✅ |  |
 | update_profile_avatar |  |  | ✅ | ✅ |
 | update_project |  |  | ✅ | ✅ |
 | update_returned_request | requests | canEdit | ✅ | ✅ |
