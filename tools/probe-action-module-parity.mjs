@@ -53,10 +53,16 @@ const jsModules = parseJsMap(js, "const ACTION_MODULE =");
 const jsCaps = parseJsMap(js, "const ACTION_CAPABILITY =");
 
 // --- Java: Map.entry("action", List.of("a","b"))
+// ⚠️ SỬA LỖI CÔNG CỤ (MT2-P14-03c, 23/09/2026): bản cũ cắt khối bằng `text.indexOf(");", at)` ⇒ gặp `);`
+// ĐẦU TIÊN, mà các ghi chú MT2 trong tệp registry có chứa `);`/`List.of())` ⇒ khối bị cắt SỚM (đo được chỉ
+// **38/≈210** khoá ⇒ mọi «LỆCH» đều là ảo giác của công cụ). Nay: ① bỏ ghi chú `//` TRƯỚC khi cắt
+// ② cắt tới dòng đóng `);` của `Map.ofEntries(` (regex `\n\s*\);`), ⛔ không dùng `);` bất kỳ.
 function parseJavaMap(text, name) {
-  const at = text.indexOf(name);
+  const clean = text.replace(/\/\/[^\n]*/g, "");
+  const at = clean.indexOf(name);
   if (at < 0) throw new Error(`Không thấy ${name}`);
-  const body = text.slice(at, text.indexOf(");", at));
+  const closer = /\n\s*\);/.exec(clean.slice(at));
+  const body = closer ? clean.slice(at, at + closer.index) : clean.slice(at);
   const out = {};
   // Hai dạng giá trị trong Java: List.of("a","b") và chuỗi đơn "canCreate".
   const re = /Map\.entry\(\s*"([^"]+)"\s*,\s*(List\.of\([^)]*\)|"[^"]*")\s*\)/g;

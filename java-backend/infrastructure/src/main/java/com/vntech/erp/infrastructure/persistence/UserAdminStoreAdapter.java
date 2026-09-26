@@ -116,6 +116,15 @@ public class UserAdminStoreAdapter implements UserAdminStore {
         jdbcTemplate.update("UPDATE users SET active=?,updated_at=? WHERE id=?", active ? 1 : 0, now, userId);
     }
 
+    /** MT2 §13.4 — ghi chữ ký (đường QUẢN TRỊ). ⚠️ `now` ở đây là {@code Instant} ⇒ phải dùng {@code Timestamp.from}. */
+    @Override
+    @Transactional
+    public void setUserSignature(String userId, String signatureUrl, Instant now) {
+        String value = (signatureUrl == null || signatureUrl.isBlank()) ? null : signatureUrl;
+        jdbcTemplate.update("UPDATE users SET signature_url=?,updated_at=? WHERE id=?",
+                value, java.sql.Timestamp.from(now), userId);
+    }
+
     @Override
     @Transactional
     public void setPassword(String userId, String passwordHash, boolean mustChangePassword, Instant now) {

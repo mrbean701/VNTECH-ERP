@@ -27,16 +27,20 @@ function loadPure(names) {
   return new Function(`${js}\nreturn { ${names.join(", ")} };`)();
 }
 
-// Nguyên văn 13 nhãn theo đúng thứ tự yêu cầu của người dùng.
-const REQUIRED_LABELS = ["Mã", "Tên đăng nhập", "Họ tên", "Email", "Phòng", "Chức danh", "Cấp", "Hạn mức",
+// ⚠️ CẬP NHẬT 23/09/2026 (MT2-P12-03 §13.3) — DANH SÁCH TÀI KHOẢN NAY **12 CỘT**: MT2 gỡ cột «Hạn mức»
+// (`users.approval_limit`) theo nguyên văn «⛔ Bỏ trường "Hạn mức" — không thay bằng trường khác nếu chưa có
+// nghiệp vụ». ⛔ Cột CSDL GIỮ NGUYÊN (V25 ghi rõ «KHÔNG drop») — chỉ ẩn khỏi UI/API.
+const REQUIRED_LABELS = ["Mã", "Tên đăng nhập", "Họ tên", "Email", "Phòng", "Chức danh", "Cấp",
   "Trạng thái", "Số quyền", "Vai trò", "Đăng nhập cuối", "Ngày tạo"];
 const columnsGate = (columns) => JSON.stringify((columns || []).map((c) => c.label)) === JSON.stringify(REQUIRED_LABELS);
 
-test("AD-02 — ĐÚNG 13 cột, ĐÚNG nhãn, ĐÚNG thứ tự nguyên văn", () => {
+test("AD-02 — ĐÚNG 12 cột, ĐÚNG nhãn, ĐÚNG thứ tự nguyên văn", () => {
   const { ACCOUNT_COLUMNS } = loadPure(["ACCOUNT_COLUMNS"]);
-  assert.equal(ACCOUNT_COLUMNS.length, 13, "Phải có ĐÚNG 13 cột");
-  assert.deepEqual(ACCOUNT_COLUMNS.map((c) => c.label), REQUIRED_LABELS, "13 nhãn phải khớp nguyên văn + đúng thứ tự");
+  assert.equal(ACCOUNT_COLUMNS.length, 12, "Phải có ĐÚNG 12 cột (13 cột gốc − «Hạn mức» đã bị MT2-P12-03 gỡ)");
+  assert.deepEqual(ACCOUNT_COLUMNS.map((c) => c.label), REQUIRED_LABELS, "12 nhãn phải khớp nguyên văn + đúng thứ tự");
   assert.equal(columnsGate(ACCOUNT_COLUMNS), true, "Cổng cột phải ĐẠT với dữ liệu thật");
+  assert.ok(!ACCOUNT_COLUMNS.some((c) => c.label === "Hạn mức"),
+    "⛔ KHÔNG được để lại cột «Hạn mức» (MT2-P12-03 đã gỡ theo §13.3)");
 });
 
 test("AD-02 — ĐỐI CHỨNG ÂM: thiếu «Số quyền» hoặc sai thứ tự ⇒ cổng HỎNG", () => {
@@ -49,19 +53,28 @@ test("AD-02 — ĐỐI CHỨNG ÂM: thiếu «Số quyền» hoặc sai thứ t�
   assert.equal(columnsGate(swapped), false, "[đối chứng âm] đảo thứ tự 2 cột phải bị bắt");
 });
 
-test("AD-02 — «chưa có nguồn» ≠ 0 giả: 2 trường không nguồn để `null` + có LÝ DO cụ thể", () => {
+test("AD-02 — «chưa có nguồn» ≠ 0 giả: MỌI cột nay CÓ NGUỒN khai báo, giá trị rỗng vẫn phải có LÝ DO cụ thể", () => {
   const { ACCOUNT_COLUMNS, ACCOUNT_UNSOURCED_REASON, accountRows } = loadPure(
     ["ACCOUNT_COLUMNS", "ACCOUNT_UNSOURCED_REASON", "accountRows"]);
+  // ⚠️ CẬP NHẬT 23/09/2026 (MT2-P12-04 §13.3): 2 trường từng «chưa có nguồn» nay ĐÃ CÓ NGUỒN THẬT
+  // (`users.last_login_at` ghi khi đăng nhập — migration V29; `users.created_at` đã chiếu trong payload `users`)
+  // ⇒ `source === null` phải là **RỖNG**. Lý do chỉ còn dùng khi GIÁ TRỊ rỗng (user chưa đăng nhập lần nào).
   const unsourced = ACCOUNT_COLUMNS.filter((c) => c.source === null).map((c) => c.key).sort();
-  assert.deepEqual(unsourced, ["createdAt", "lastLoginAt"], "Chỉ 2 trường được phép không nguồn: đăng nhập cuối + ngày tạo");
-  for (const key of unsourced) {
+  assert.deepEqual(unsourced, [], "⛔ KHÔNG còn cột nào thiếu nguồn — mọi cột phải khai `source` thật");
+  for (const column of ACCOUNT_COLUMNS) {
+    assert.ok(String(column.source || "").length > 0, `Cột «${column.key}» phải có \`source\` (không để trống)`);
+  }
+  // Vẫn PHẢI có lý do cụ thể cho 2 trường dễ rỗng nhất (⛔ không hiện 0/«—» giả).
+  for (const key of ["createdAt", "lastLoginAt"]) {
     assert.ok(String(ACCOUNT_UNSOURCED_REASON[key] || "").length > 40,
       `Trường «${key}» phải có LÝ DO cụ thể (chuỗi > 40 ký tự), không được để trống`);
   }
   // Lý do phải nói rõ VÌ SAO thiếu nguồn (cột không tồn tại / payload không trả) — bằng chứng nêu tên tệp.
-  assert.match(ACCOUNT_UNSOURCED_REASON.lastLoginAt, /users|activeSessions/, "Lý do «đăng nhập cuối» phải nêu nguồn đã kiểm");
-  assert.match(ACCOUNT_UNSOURCED_REASON.createdAt, /system-route\.mjs|BootstrapDataAdapter\.java/,
-    "Lý do «ngày tạo» phải chỉ ra đường bootstrap đã kiểm");
+  // ⚠️ CẬP NHẬT 23/09/2026: lý do nay nói rõ GIÁ TRỊ rỗng + NGUỒN THẬT (MT2-P12-04) ⇒ kiểm đúng điều đó.
+  assert.match(ACCOUNT_UNSOURCED_REASON.lastLoginAt, /users\.last_login_at|login/,
+    "Lý do «đăng nhập cuối» phải nêu NGUỒN THẬT đã kiểm");
+  assert.match(ACCOUNT_UNSOURCED_REASON.createdAt, /users\.created_at/,
+    "Lý do «ngày tạo» phải chỉ ra nguồn `users.created_at`");
   // accountRows: thiếu nguồn ⇒ null (KHÔNG phải 0 hay chuỗi rỗng giả).
   const rows = accountRows([{ id: "U1", fullName: "A", employeeCode: "NV01", active: 1 }], [], []);
   assert.equal(rows[0].lastLoginAt, null, "«đăng nhập cuối» không có nguồn phải là null (không hiện 0 giả)");

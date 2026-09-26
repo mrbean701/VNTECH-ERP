@@ -85,61 +85,85 @@ console.log("═══ 1) TAB NHÂN SỰ (QUẢN TRỊ) ═══");
 errs = [];
 await gotoModule("system_admin", "PHÂN QUYỀN");
 await sleep(3500);
+// ⚠️ MT2-P14-03c (23/09/2026) — VÁ LỖI CÔNG CỤ: bước 1 màn Quản trị nay tên là **«Tài khoản»**
+// (`ADMIN_STEP_LABELS[0]`, đổi tên theo AD-01: «Nhân sự → Tài khoản») và danh sách người dùng được render
+// bằng **BẢNG** (`ListToolbar` + `table`), ⛔ KHÔNG còn là thẻ `.admin-mini-list button` như bản cũ kỳ vọng
+// ⇒ bản cũ đếm được **0** và báo oan 13 mục. Nay nhận **CẢ HAI** hình dạng (thẻ HOẶC dòng bảng).
 await ev(`(()=>{const b=[...document.querySelectorAll('.permission-steps button')][0];if(b)b.click();return 1})()`);
 await sleep(2000);
-const userCards = await ev(`document.querySelectorAll('.admin-mini-list button').length`);
-check(userCards > 0, "Tab Nhân sự có danh sách người dùng bấm được", `${userCards} dòng`);
-await ev(`(()=>{const b=document.querySelector('.admin-mini-list button');if(b){b.click();return 1}return 0})()`);
+const userRows = JSON.parse(await ev(`(()=>{
+  const cards=[...document.querySelectorAll('.admin-mini-list button')];
+  const tbl=document.querySelector('.table-wrap')||document.querySelector('table');
+  const rows=tbl?[...tbl.querySelectorAll('tbody tr')].filter(r=>r.querySelectorAll('td').length>2):[];
+  return JSON.stringify({cards:cards.length, rows:rows.length});
+})()`));
+const userCards = (userRows.cards || 0) + (userRows.rows || 0);
+check(userCards > 0, "Bước «Tài khoản» có danh sách người dùng bấm được (thẻ HOẶC dòng bảng)", `${userCards} mục (thẻ ${userRows.cards} · dòng bảng ${userRows.rows})`);
+await ev(`(()=>{
+  const card=document.querySelector('.admin-mini-list button');
+  if(card){card.click();return 1}
+  const tbl=document.querySelector('.table-wrap')||document.querySelector('table');
+  const rows=tbl?[...tbl.querySelectorAll('tbody tr')].filter(r=>r.querySelectorAll('td').length>2):[];
+  if(!rows.length) return 0;
+  const row=rows[0];
+  const btn=[...row.querySelectorAll('button')].find(b=>/chi tiết|hồ sơ|xem/i.test(b.textContent||''));
+  if(btn){btn.click();return 1}
+  row.click();return 1;
+})()`);
 await sleep(2200);
+// ⚠️ MT2-P14-03c (23/09/2026) — CẬP NHẬT KỲ VỌNG THEO CẤU TRÚC ĐO ĐƯỢC (`app/screens/ProjectEntityModal.tsx:102-118`):
+//   tiêu đề nay là «Chi tiết nhân sự · <tên>»; panel nay là `EntityDetailModal` **4 TAB**: «Hồ sơ» · «Dự án tham gia» ·
+//   «Tổ đội» · «Kho phụ trách» (⛔ không còn ‘Thông tin cá nhân / Dự án đã và đang tham gia / Thao tác gần đây’).
+//   ⛔ KHÔNG hạ nhẹ phép kiểm: 4 trường định danh vẫn phải có; 3 trường CCCD/học vấn/ngày vào làm được kiểm ở
+//   **màn Hồ sơ nhân sự** (§3 dưới) vì ⛔ không thuộc panel Quản trị.
 let title = await modalTitle();
-check(/Hồ sơ nhân sự/i.test(String(title)), "Bấm vào một dòng người dùng ⇒ mở panel hồ sơ chi tiết", String(title) || "(không mở)");
+check(/Chi tiết nhân sự|Hồ sơ nhân sự/i.test(String(title)), "Bấm vào một dòng người dùng ⇒ mở panel hồ sơ chi tiết",
+  String(title) || "(không mở)");
+const panelTabs = await ev(`[...document.querySelectorAll('.modal .edm-tabs button, .modal nav[role=tablist] button')].map(e=>e.innerText.trim())`);
+const tabs = Array.isArray(panelTabs) ? panelTabs : [];
+tabs.forEach((s) => console.log(`     · tab: ${s}`));
+check(tabs.some((s) => /Hồ sơ/i.test(s)), "Panel Quản trị có tab «Hồ sơ»", tabs.join(" · "));
+check(tabs.some((s) => /Dự án tham gia/i.test(s)), "Panel Quản trị có tab «Dự án tham gia»", tabs.join(" · "));
 const sections = await ev(`[...document.querySelectorAll('.modal .card-head h2')].map(e=>e.innerText.trim())`);
 const sec = Array.isArray(sections) ? sections : [];
 sec.forEach((s) => console.log(`     · mục: ${s}`));
-check(sec.some((s) => /Thông tin cá nhân/i.test(s)), "Panel có mục Thông tin cá nhân");
-check(sec.some((s) => /Dự án đã và đang tham gia/i.test(s)), "Panel có mục Dự án đã và đang tham gia");
-check(sec.some((s) => /Thao tác gần đây/i.test(s)), "Panel có mục Thao tác gần đây");
 check(!sec.some((s) => /Đơn từ & giấy tờ/i.test(s)), "Panel ở Quản trị KHÔNG hiện mục Đơn từ (đúng yêu cầu)");
-const bodyText = String(await ev(`(()=>{const m=document.querySelector('.modal');if(!m)return '';const b=m.querySelector('.modal-body');return (b&&b.innerText)||m.innerText||''})()`));
+const bodyText = String(await ev(`(()=>{const m=document.querySelector('.modal');if(!m)return '';const b=m.querySelector('.modal-body, .edm-body');return (b&&b.innerText)||m.innerText||''})()`));
 console.log(`     (độ dài văn bản panel: ${bodyText.length} ký tự)`);
 // CSS đặt text-transform:uppercase cho <th> nên innerText trả chữ HOA — so khớp không phân biệt hoa/thường.
 const bodyLower = bodyText.toLocaleLowerCase("vi");
-for (const field of ["Mã nhân viên", "Chức danh", "Phòng ban", "Email", "Số CCCD/CMND", "Trình độ học vấn", "Ngày vào làm"]) {
-  check(bodyLower.includes(field.toLocaleLowerCase("vi")), `Panel có trường "${field}"`);
+for (const field of ["Họ tên", "Mã nhân viên", "Tài khoản", "Email", "Chức danh", "Phòng ban"]) {
+  check(bodyLower.includes(field.toLocaleLowerCase("vi")), `Panel Quản trị có trường "${field}"`);
 }
 const e1 = clean();
 check(e1.length === 0, "Không lỗi JS khi mở panel", e1[0] || "");
 await shot("panel-quan-tri");
 
-// ---------- 2) Dự án: đang tham gia trước, đã kết thúc sau ----------
-console.log("\n═══ 2) THỨ TỰ DỰ ÁN ĐÃ/ĐANG THAM GIA ═══");
-const order = await ev(`(()=>{
-  const cards=[...document.querySelectorAll('.modal .card')];
-  const c=cards.find(x=>/Dự án đã và đang tham gia/.test((x.querySelector('.card-head h2')||{}).innerText||''));
-  if(!c)return null;
-  const dimmed=[...c.querySelectorAll('.admin-mini-list > div')].map(d=>({
-    text:(d.querySelector('strong')||{}).innerText||'',
-    opacity: getComputedStyle(d).opacity,
-    pill: (d.querySelector('.pill')||{}).innerText||''
-  }));
-  const bars=[...c.querySelectorAll('.table-toolbar strong')].map(e=>e.innerText.trim());
-  return {dimmed, bars};
+// ---------- 2) Tab «Dự án tham gia» của panel Quản trị (cấu trúc MỚI: tab + SimpleTable) ----------
+// ⚠️ MT2-P14-03c: phép kiểm CŨ «đang tham gia trước · đã kết thúc sau · đã kết thúc bị làm mờ» áp cho khối
+// `.admin-mini-list > div` — ⛔ KHÔNG còn tồn tại ở panel Quản trị (nay là tab + bảng 3 cột «Dự án · Phạm vi ·
+// Ngày tham gia»). Phép kiểm đó vẫn được giữ **nguyên vẹn ở §3** (màn Hồ sơ nhân sự — nơi panel còn khối đó).
+console.log("\n═══ 2) TAB «DỰ ÁN THAM GIA» CỦA PANEL QUẢN TRỊ ═══");
+const projTab = await ev(`(()=>{
+  const b=[...document.querySelectorAll('.modal .edm-tabs button, .modal nav[role=tablist] button')].find(x=>/Dự án tham gia/i.test(x.textContent||''));
+  if(!b) return 'NO_TAB';
+  b.click(); return 'CLICKED';
 })()`);
-if (order) {
-  order.dimmed.forEach((d) => console.log(`     · ${d.text} · ${d.pill} · opacity=${d.opacity}`));
-  console.log(`     · thanh phân cách: ${JSON.stringify(order.bars)}`);
-  const activeIdx = order.dimmed.findIndex((d) => /Đang tham gia/.test(d.pill));
-  const endedIdx = order.dimmed.findIndex((d) => /Đã kết thúc/.test(d.pill));
-  if (activeIdx !== -1 && endedIdx !== -1) {
-    check(activeIdx < endedIdx, "Dự án đang tham gia xếp TRƯỚC dự án đã kết thúc", `đang=${activeIdx}, kết thúc=${endedIdx}`);
-    check(Number(order.dimmed[endedIdx].opacity) < 1, "Dự án đã kết thúc được làm mờ", `opacity=${order.dimmed[endedIdx].opacity}`);
-  } else {
-    console.log("     ℹ️  Dữ liệu hiện chỉ có dự án đang hoạt động — bỏ qua kiểm tra thứ tự/màu xám.");
-  }
-  check(order.dimmed.length > 0, "Panel liệt kê được dự án của nhân sự", `${order.dimmed.length} dự án`);
-} else {
-  check(false, "Không đọc được khối dự án trong panel");
-}
+await sleep(900);
+const projState = JSON.parse(await ev(`(()=>{
+  const m=document.querySelector('.modal'); if(!m) return JSON.stringify({ok:false});
+  const tbl=m.querySelector('table');
+  const rows=tbl?[...tbl.querySelectorAll('tbody tr')].length:0;
+  const txt=(m.querySelector('.modal-body, .edm-body')||m).innerText||'';
+  return JSON.stringify({ok:true, rows, empty:/Chưa tham gia dự án nào/i.test(txt)});
+})()`));
+console.log(`     · tab Dự án tham gia: ${projTab} · dòng=${projState.rows} · có nhãn rỗng «Chưa tham gia dự án nào»=${projState.empty}`);
+check(projTab === "CLICKED", "Bấm được tab «Dự án tham gia»", projTab);
+check(projState.ok === true && (projState.rows > 0 || projState.empty === true),
+  "Tab «Dự án tham gia» render ĐƯỢC dữ liệu hoặc nhãn rỗng rõ ràng (§12 — ⛔ không để bảng trống vô nghĩa)",
+  `dòng=${projState.rows} · rỗng=${projState.empty}`);
+// (⛔ ĐÃ GỠ khối `order` cũ: nó đọc `.admin-mini-list > div` trong panel Quản trị — lớp ⛔ không còn ở màn đó.
+//  Phép kiểm «đang tham gia trước · đã kết thúc sau · đã kết thúc bị làm mờ» nay do **§3 màn Hồ sơ nhân sự** lo.)
 await closeModal();
 
 // ---------- 3) Màn "Hồ sơ nhân sự" (Hành chính – Pháp chế) ----------

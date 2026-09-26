@@ -33,14 +33,17 @@ public final class RequestManagementUseCase {
     // TASK-048 — nhật ký kiểm toán: Java TRƯỚC ĐÂY không ghi dòng `audit_logs` nào cho luồng Phiếu
     // đề nghị (`SELECT COUNT(*) WHERE entity_type='material_request'` = 0) trong khi JS ghi 6 chỗ.
     private final AuditLogPort auditLog;
+    private final NotificationManagementUseCase notifications;
 
     public RequestManagementUseCase(RequestStore store, IdGenerator idGenerator, RbacService rbac,
-                                    AccessScopeService accessScope, AuditLogPort auditLog) {
+                                    AccessScopeService accessScope, AuditLogPort auditLog,
+                                    NotificationManagementUseCase notifications) {
         this.store = store;
         this.idGenerator = idGenerator;
         this.rbac = rbac;
         this.accessScope = accessScope;
         this.auditLog = auditLog;
+        this.notifications = notifications;
     }
 
     public interface Principal {
@@ -647,6 +650,32 @@ public final class RequestManagementUseCase {
         Instant now = Instant.now();
 
         // ══════════════════════════════════════════════════════════════════════════════════
+        // MT2 §4.4 — DUYỆT KHI **QUÁ HẠN SLA**: VẪN CHO PHÉP, NHƯNG **BẮT BUỘC NHẬP LÝ DO**.
+        //   Hạn của bước = `approvals.due_at`, đặt tại :392 = now + `approval_stage_catalog.sla_hours`*3600
+        //   (đã audit ở MT2-P1-07; mặc định 8 giờ khi chưa cấu hình).
+        //   ⛔ KHÔNG dùng `task_sla_policies` — bảng đó là SLA CÔNG VIỆC, không có cột thời lượng.
+        //   BACKEND là ENFORCEMENT LAYER (MT2 §17): quá hạn + lý do RỖNG ⇒ chặn tại đây, ⛔ không tin frontend.
+        //   ⚠️ Alias SQL là **`duedate` viết thường** (⛔ không phải `dueAt`): H2 (profile test) hạ alias
+        //   không trích dẫn về chữ thường, MySQL giữ nguyên ⇒ đọc camelCase sẽ ra null trên H2
+        //   (bài học dự án `firstToCamel`). Dùng một từ viết thường ⇒ GIỐNG NHAU ở cả hai DB.
+        Object dueRaw = store.findApprovalRow(requestId, stage).map(row -> row.get("duedate")).orElse(null);
+        boolean overdue = false;
+        if (dueRaw != null) {
+            Instant due = dueRaw instanceof Instant instant ? instant
+                    : dueRaw instanceof java.sql.Timestamp timestamp ? timestamp.toInstant()
+                    : dueRaw instanceof java.time.LocalDateTime local ? local.toInstant(java.time.ZoneOffset.UTC)
+                    : null;
+            if (due == null) {
+                try { due = Instant.parse(String.valueOf(dueRaw)); } catch (RuntimeException ignored) { due = null; }
+            }
+            overdue = due != null && now.isAfter(due);
+        }
+        if (overdue && comment.isEmpty())
+            throw Api("Bước này đã QUÁ HẠN SLA. Bắt buộc nhập lý do duyệt quá hạn.");
+        // Quá hạn NHƯNG đã có lý do ⇒ CHO QUA và LƯU VẾT lý do (MT2 §4.4: phải lưu để sau xây logic SLA).
+        if (overdue) store.updateApprovalOverdueReason(requestId, stage, comment, now);
+
+        // ══════════════════════════════════════════════════════════════════════════════════
         // TASK-054 — port NGUYÊN VĂN nhánh duyệt SONG SONG `all_roles` của JS `:1087-1108`.
         // TRƯỚC ĐÂY Java "đơn giản hoá": ghi 1 quyết định rồi **ĐI TIẾP như `single`** ⇒ với bước
         // cấu hình 2 vai trò (dữ liệu thật: bước 5 `da_truong,kh_truong`) thì **MỘT vai trò xác nhận
@@ -742,6 +771,7 @@ public final class RequestManagementUseCase {
         if ("rejected".equals(decision)) {
             if (comment.isEmpty()) throw Api("Bắt buộc nhập lý do trả lại / từ chối hồ sơ.");
             store.returnRequestToRequester(requestId, stage, principal.userId(), comment, now);
+            notifySafely("APPROVAL_RETURNED");
             return Map.of("message", "Đã trả phiếu về CHT; bắt buộc sửa và gửi lại từ đầu hoặc xóa phiếu để lập mới.");
         }
 
@@ -750,9 +780,12 @@ public final class RequestManagementUseCase {
             long sla = (long) numberValue(gi(nextStage, "slaHours"));
             Instant nextDue = now.plusSeconds(sla * 3600);
             store.advanceRequestStage(requestId, (int) numberValue(gi(nextStage, "stageNo")), now, nextDue, now);
+            notifySafely("APPROVAL_STAGE_COMPLETED");
+            notifySafely("APPROVAL_REQUESTED");
             return Map.of("message", "Đã duyệt " + sv(stageConfig, "name") + "; hồ sơ tự chuyển sang " + sv(nextStage, "name") + ".");
         }
         store.finalizeRequestApproval(requestId, stage, now);
+        notifySafely("APPROVAL_COMPLETED");
         // tạo stock reservations (nếu MR có source warehouse) — port JS khi finalize
         Map<String, Object> mrRow = store.findRequestForApproval(requestId).orElse(Map.of());
         String sourceWarehouse = String.valueOf(mrRow.getOrDefault("sourceWarehouseId", ""));
@@ -805,6 +838,16 @@ public final class RequestManagementUseCase {
     }
 
     // ---- helpers ----
+
+    /** Thông báo là phụ thuộc ngoài giao dịch nghiệp vụ: lỗi cấu hình/nhận không được làm hỏng phê duyệt. */
+    private void notifySafely(String eventKey) {
+        try {
+            notifications.dispatch(eventKey);
+        } catch (RuntimeException error) {
+            auditLog.log(null, "NOTIFICATION_DISPATCH_FAILED", "notification", eventKey, null,
+                    error.getMessage(), null);
+        }
+    }
 
     /**
      * Mã ENGINE (role_catalog.base_role) của tài khoản — tương đương {@code effectiveRole(user)} trong JS.

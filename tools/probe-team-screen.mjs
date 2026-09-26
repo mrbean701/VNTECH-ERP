@@ -131,9 +131,9 @@ const det = JSON.parse(await ev(`(()=>{
 })()`));
 console.log("   " + JSON.stringify(det));
 
-check("Chi tiết có 3 tab", (det.tabs || []).length === 3, (det.tabs || []).join(" · "));
-for (const t of ["Tổng quan", "Thành viên"]) check(`Có tab "${t}"`, (det.tabs || []).some((x) => x.includes(t)));
-check("Có tab Đơn từ", (det.tabs || []).some((x) => /đơn từ/i.test(x)), (det.tabs || []).join(" · "));
+// ⛔ ĐÃ GỠ 3 PHÉP KIỂM CŨ (MT2-P14-03c, 23/09/2026): chúng đòi bố cục **3 tab cũ** («Tổng quan» · «Thành viên»
+// · «Đơn từ») — TRÁI với hợp đồng `TM-03` **ĐÚNG 6 TAB** ngay dưới (Thông tin · Nhân sự · Dự án · Kho ·
+// Cấp phát · Lịch sử) và trái với màn Tổ đội đang chạy. Giữ lại duy nhất hợp đồng 6 tab (nguồn sự thật).
 check("Có nút quay lại", det.hasBack === true);
 // `TM-03` — ĐÚNG 6 TAB, đúng thứ tự nguyên văn. Nhãn có thể kèm ` (n)` khi tab có nguồn ⇒ so bằng `includes`.
 const REQUIRED_TABS = ["Thông tin", "Nhân sự", "Dự án", "Kho", "Cấp phát", "Lịch sử"];

@@ -39,6 +39,8 @@ class AuthUseCaseTest {
     private static final class InMemoryUserRepository implements UserRepository {
         final Map<String, User> byId = new HashMap<>();
         final Map<String, User> byUsername = new HashMap<>();
+        // MT2-P12-04 (§13.3) — ghi lại mốc đăng nhập để test chứng minh CHỈ ghi khi đăng nhập thành công.
+        final Map<String, Instant> lastLoginAt = new HashMap<>();
         @Override public long count() { return byId.size(); }
         @Override public Optional<User> findByUsernameIgnoreCase(String username) {
             return byUsername.values().stream()
@@ -46,6 +48,7 @@ class AuthUseCaseTest {
         }
         @Override public Optional<User> findById(String id) { return Optional.ofNullable(byId.get(id)); }
         @Override public User save(User user) { byId.put(user.id(), user); byUsername.put(user.username(), user); return user; }
+        @Override public void touchLastLogin(String userId, Instant at) { lastLoginAt.put(userId, at); }
         @Override public Optional<RoleCatalogInfo> findRoleCatalogInfo(String roleCode) {
             // Test double: không có bảng role_catalog nên base_role = chính mã vai trò.
             return Optional.of(new RoleCatalogInfo(roleCode, roleCode, null));
@@ -171,6 +174,40 @@ class AuthUseCaseTest {
                 () -> useCase.login("admin", "WrongPass@1", "127.0.0.1", "agent"));
         assertEquals(401, e.status());
         assertEquals("Tên đăng nhập hoặc mật khẩu không đúng.", e.getMessage());
+    }
+
+    // ── MT2-P12-04 (§13.3) — mốc ĐĂNG NHẬP CUỐI cho danh sách tài khoản ─────────────────────────────
+    @Test
+    void login_success_recordsLastLoginAt_forAccountList() {
+        useCase.setup("Cty", "A", "admin", null, "VnTech@123");
+        Instant before = Instant.now();
+        useCase.login("admin", "VnTech@123", "127.0.0.1", "agent");
+        Instant recorded = users.lastLoginAt.get(users.byUsername.get("admin").id());
+        assertTrue(recorded != null, "đăng nhập thành công phải ghi `last_login_at`");
+        assertFalse(recorded.isBefore(before.minusSeconds(1)), "mốc đăng nhập phải là thời điểm vừa đăng nhập");
+    }
+
+    @Test
+    void login_failure_doesNotTouchLastLoginAt() {
+        useCase.setup("Cty", "A", "admin", null, "VnTech@123");
+        assertThrows(AuthUseCase.ApiError.class,
+                () -> useCase.login("admin", "WrongPass@1", "127.0.0.1", "agent"));
+        assertTrue(users.lastLoginAt.isEmpty(),
+                "⛔ đăng nhập SAI không được ghi `last_login_at` (sẽ bịa dữ liệu)");
+    }
+
+    @Test
+    void login_success_updatesLastLoginAt_onEachLogin() throws InterruptedException {
+        useCase.setup("Cty", "A", "admin", null, "VnTech@123");
+        useCase.login("admin", "VnTech@123", "127.0.0.1", "agent");
+        Instant first = users.lastLoginAt.get(users.byUsername.get("admin").id());
+        // ⚠️ `Instant.now()` có độ phân giải mili-giây ⇒ 2 lần đăng nhập liền nhau có thể TRÙNG mốc.
+        //    Chờ tối thiểu để quan sát được việc ghi ĐÈ (không giữ mốc cũ).
+        Thread.sleep(10);
+        useCase.logout(useCase.login("admin", "VnTech@123", "127.0.0.1", "agent").session().token());
+        Instant second = users.lastLoginAt.get(users.byUsername.get("admin").id());
+        assertFalse(second.equals(first), "mỗi lần đăng nhập phải cập nhật mốc (không giữ mốc cũ)");
+        assertFalse(second.isBefore(first), "mốc đăng nhập phải đi tới, không lùi về quá khứ");
     }
 
     @Test

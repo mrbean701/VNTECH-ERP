@@ -331,7 +331,8 @@ public class RequestStoreAdapter implements RequestStore {
         List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
                 SELECT a.approver_user_id AS ownerUserId,
                        COALESCE(NULLIF(a.allowed_role_codes_snapshot,''),cfg.allowed_role_codes,'') AS allowedRoleCodes,
-                       COALESCE(NULLIF(a.approval_mode_snapshot,''),cfg.approval_mode,'single') AS approvalMode
+                       COALESCE(NULLIF(a.approval_mode_snapshot,''),cfg.approval_mode,'single') AS approvalMode,
+                       a.due_at AS duedate
                 FROM approvals a LEFT JOIN approval_stage_catalog cfg ON cfg.stage_no=a.stage
                 WHERE a.request_id=? AND a.stage=?""", requestId, stage);
         return rows.isEmpty() ? Optional.empty() : Optional.of(new LinkedHashMap<>(rows.get(0)));
@@ -378,6 +379,13 @@ public class RequestStoreAdapter implements RequestStore {
 
     @Override
     @Transactional
+    /** MT2 §4.4 — lưu lý do duyệt quá hạn SLA vào `approvals.overdue_reason` (cột có từ migration V25). */
+    public void updateApprovalOverdueReason(String requestId, int stage, String reason, Instant now) {
+        jdbcTemplate.update("UPDATE approvals SET overdue_reason=?,updated_at=? WHERE request_id=? AND stage=?",
+                reason, now, requestId, stage);
+    }
+
+    @Override
     public void advanceRequestStage(String requestId, int nextStage, Instant queuedAt, Instant dueAt, Instant now) {
         jdbcTemplate.update("UPDATE material_requests SET approval_stage=?,updated_at=? WHERE id=?",
                 nextStage, now, requestId);

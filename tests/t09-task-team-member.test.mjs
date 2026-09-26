@@ -160,5 +160,7 @@ test("T-09 — GẮN vào màn Công việc: WorkCenter import + render, KHÔNG 
   assert.match(workCenter, /scopeNote=\{/, "Khối phân cấp chưa nhận ghi chú phạm vi (T-06)");
   assert.match(workCenter, /permission=\{modulePermission\(data, "dept_plan_assign"\)\}/, "Khối phân cấp chưa nhận cổng quyền THẬT của tab «Phòng ban»");
   assert.equal((workCenter.match(/const WORK_TABS = \["Cá nhân", "Phòng ban", "Giao việc", "Dashboard", "Báo cáo"\];/g) || []).length, 1, "Không được đổi dải 5 tab đã chốt ở T-01");
-  assert.match(workCenter, /const WORK_TAB_OF_VIEW: Record<WorkMenuView, number> = \{ personal: 0, department: 1, assign: 2, kpi: 3, reports: 4 \};/, "Không được đổi ánh xạ view → tab");
+  // ⚠️ CẬP NHẬT 23/09/2026 (MT2-P5-01 §3.1): ánh xạ nay có THÊM khoá `dashboard: 3` (cùng tab «Dashboard»)
+  // và GIỮ `kpi: 3` để tương thích ngược — xem `app/screens/WorkCenter.tsx:84-88`. ⛔ 5 tab KHÔNG đổi (dòng trên).
+  assert.match(workCenter, /const WORK_TAB_OF_VIEW: Record<WorkMenuView, number> = \{ personal: 0, department: 1, assign: 2, kpi: 3, dashboard: 3, reports: 4 \};/, "Không được đổi ánh xạ view → tab");
 });

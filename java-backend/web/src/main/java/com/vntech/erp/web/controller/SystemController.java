@@ -68,6 +68,8 @@ public class SystemController {
     private final PartnerManagementUseCase partnerManagementUseCase;
     private final StockManagementUseCase stockManagementUseCase;
     private final SystemSettingsUseCase systemSettingsUseCase;
+    // MT2 §15.1 — NOTIFICATION ENGINE (Service · Rule · Resolver · Log). Bean ở `ApplicationBeansConfig`.
+    private final com.vntech.erp.application.service.NotificationManagementUseCase notificationManagementUseCase;
     private final com.vntech.erp.infrastructure.excel.ExcelTemplateService excelTemplateService;
     /**
      * PHASE 0B (S-02) — kiểm quyền ở tầng action.
@@ -103,7 +105,8 @@ public class SystemController {
                             StockManagementUseCase stockManagementUseCase,
                             SystemSettingsUseCase systemSettingsUseCase,
                             com.vntech.erp.infrastructure.excel.ExcelTemplateService excelTemplateService,
-                            com.vntech.erp.application.rbac.RbacService rbacService) {
+                            com.vntech.erp.application.rbac.RbacService rbacService,
+                            com.vntech.erp.application.service.NotificationManagementUseCase notificationManagementUseCase) {
         this.authUseCase = authUseCase;
         this.sessionCookieFactory = sessionCookieFactory;
         this.bootstrapUseCase = bootstrapUseCase;
@@ -124,6 +127,7 @@ public class SystemController {
         this.partnerManagementUseCase = partnerManagementUseCase;
         this.stockManagementUseCase = stockManagementUseCase;
         this.systemSettingsUseCase = systemSettingsUseCase;
+        this.notificationManagementUseCase = notificationManagementUseCase;
         this.excelTemplateService = excelTemplateService;
         this.rbacService = rbacService;
         this.accessScopeService = accessScopeService;
@@ -136,6 +140,15 @@ public class SystemController {
      * để loại bỏ hoàn toàn khả năng giải mã sai.
      */
     static final String JSON_UTF8 = "application/json;charset=UTF-8";
+
+    /**
+     * MT2-P14-03b — bộ parse JSON của TẦNG WEB: action {@code install_license_foundation} của JS nhận
+     * {@code payload.licenseEnvelope} và tự {@code JSON.parse} khi giá trị là CHUỖI. Tầng web (có Jackson)
+     * parse trước rồi mới chuyển object xuống use case; parse hỏng thì giữ nguyên chuỗi để use case ném
+     * đúng câu «Nội dung license không phải JSON hợp lệ.» của JS.
+     */
+    private static final com.fasterxml.jackson.databind.ObjectMapper JSON_MAPPER =
+            new com.fasterxml.jackson.databind.ObjectMapper();
 
     @GetMapping(produces = JSON_UTF8)
     public ResponseEntity<?> get(HttpServletRequest request) {
@@ -1029,7 +1042,19 @@ public class SystemController {
                 }
                                 case "install_license_foundation" -> {
                     AuthUseCase.CurrentUser cu = requireCurrentUser(request);
-                    Map<String, Object> result = systemSettingsUseCase.installLicenseFoundation(asSystemSettingsPrincipal(cu), payload);
+                    // MT2-P14-03b — JS nhận `payload.licenseEnvelope` và tự `JSON.parse` khi là CHUỖI
+                    // ("Nội dung license không phải JSON hợp lệ." nếu hỏng). Tầng web (có Jackson) parse trước;
+                    // nếu parse lỗi thì GIỮ NGUYÊN chuỗi để use case ném đúng câu của JS (⛔ không tự bịa câu khác).
+                    Map<String, Object> licensePayload = new java.util.LinkedHashMap<>(payload);
+                    if (payload.get("licenseEnvelope") instanceof String envelopeText) {
+                        try {
+                            licensePayload.put("licenseEnvelope",
+                                    JSON_MAPPER.readValue(envelopeText, Map.class));
+                        } catch (Exception invalidJson) {
+                            licensePayload.put("licenseEnvelope", envelopeText);
+                        }
+                    }
+                    Map<String, Object> result = systemSettingsUseCase.installLicenseFoundation(asSystemSettingsPrincipal(cu), licensePayload);
                     return ResponseEntity.ok(jsonResult(result));
                 }
                                 case "request_license_transfer" -> {
@@ -1225,6 +1250,104 @@ case "reject_po" -> {
                     AuthUseCase.CurrentUser cu = requireCurrentUser(request);
                     Map<String, Object> result = stockManagementUseCase.createIssueGrn(asStockPrincipal(cu), payload);
                     return ResponseEntity.ok(jsonResult(result));
+                }
+                // MT2 §7.4 — `create_transfer_grn`: SINH PHIẾU NHẬP TỪ **LỆNH ĐIỀU CHUYỂN (STO)**.
+                //    Cùng khuôn ⑤ `create_issue_grn`: ⛔ không cần duyệt, CHỈ cần QUYỀN TẠO
+                //    (requireRole(["warehouse","engineer","admin"]) + phạm vi dự án + module `receiving.canCreate`).
+                //    Kho nhận lấy TỰ ĐỘNG từ `transfer_orders.destination_warehouse_id` (§7.4 «tự động fill»).
+                case "create_transfer_grn" -> {
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                    Map<String, Object> result = stockManagementUseCase.createTransferGrn(asStockPrincipal(cu), payload);
+                    return ResponseEntity.ok(jsonResult(result));
+                }
+                // MT2 §13.1/§13.2 — CẤU HÌNH THÔNG BÁO (tab Thông báo · màn Quản trị): module `admin`.
+                //    ⛔ KHÔNG đụng `task_notifications` (hàng đợi in-app của luồng CÔNG VIỆC).
+                case "save_notification_config" -> {
+                    requireCurrentUser(request);
+                    return ResponseEntity.ok(jsonResult(notificationManagementUseCase.saveConfig(payload)));
+                }
+                case "set_notification_config_status" -> {
+                    requireCurrentUser(request);
+                    return ResponseEntity.ok(jsonResult(notificationManagementUseCase.setConfigActive(payload)));
+                }
+                // MT2-P3-02 §13.1 — **DANH SÁCH** cấu hình thông báo (chữ R của CRUD · tab Quản trị).
+                //   Search/Sort/Filter do UI lo trên danh sách này ✔.
+                case "notification_configs" -> {
+                    requireCurrentUser(request);
+                    return ResponseEntity.ok(jsonResult(java.util.Map.of(
+                            "configs", notificationManagementUseCase.listConfigs())));
+                }
+                // MT2-P3-02 §13.1 — **XOÁ** cấu hình (chữ D của CRUD) · ⛔ KHÔNG xoá lịch sử đọc của user.
+                case "delete_notification_config" -> {
+                    requireCurrentUser(request);
+                    return ResponseEntity.ok(jsonResult(notificationManagementUseCase.deleteConfig(payload)));
+                }
+                // MT2 §15.1 — LOG + DELIVERY STATUS tổng hợp từ các bảng sẵn có; ⛔ không tạo bảng trùng.
+                case "notification_log" -> {
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                    if (!"admin".equals(cu.role()) && !"admin".equals(cu.roleBase()))
+                        throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.FORBIDDEN,
+                                "Chỉ quản trị viên được xem nhật ký thông báo.");
+                    return ResponseEntity.ok(jsonResult(java.util.Map.of(
+                            "logs", notificationManagementUseCase.notificationLog())));
+                }
+                // MT2 §14 — trạng thái đọc THEO TỪNG USER: mọi user đã đăng nhập (RBAC `List.of()`),
+                //    ⛔ KHÔNG cho phép thao tác lên user khác (luôn dùng `cu.id()` của CHÍNH người gọi).
+                case "mark_notification_read" -> {
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                    return ResponseEntity.ok(jsonResult(notificationManagementUseCase.markRead(cu.id(), payload)));
+                }
+                case "mark_notification_all_read" -> {
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                    return ResponseEntity.ok(jsonResult(notificationManagementUseCase.markAllRead(cu.id())));
+                }
+                case "mark_notification_snooze" -> {
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                    return ResponseEntity.ok(jsonResult(notificationManagementUseCase.snooze(cu.id(), payload)));
+                }
+                // MT2 §13.4 — CHỮ KÝ của CHÍNH người dùng (RBAC `PUBLIC_ACTIONS` — ⛔ KHÔNG gác module).
+                //   ⛔ Luôn dùng `cu.id()`: ⛔ KHÔNG cho phép sửa chữ ký của người khác qua đường này.
+                case "update_profile_signature" -> {
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                    String message = authUseCase.updateProfileSignature(cu.id(), trim(payload.get("signatureDataUrl")));
+                    return ResponseEntity.ok(jsonResult(java.util.Map.of("message", message)));
+                }
+                // MT2-P3-05 §6.3 Tab 3 — danh sách vật tư của NCC (module `supplier_catalog`).
+                case "supplier_materials" -> {
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                    return ResponseEntity.ok(jsonResult(java.util.Map.of(
+                            "materials", supplierManagementUseCase.supplierMaterials(asSupplierPrincipal(cu), payload))));
+                }
+                // MT2-P3-05 §6.4 — thêm vật tư vào danh mục NCC (⛔ chỉ khi user ĐỒNG Ý, ⛔ không tự động).
+                case "save_supplier_material" -> {
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                    return ResponseEntity.ok(jsonResult(java.util.Map.of(
+                            "message", supplierManagementUseCase.saveSupplierMaterial(asSupplierPrincipal(cu), payload))));
+                }
+                // MT2-P3-05 §6.4 — **TÍN HIỆU AUTO-DETECT**: trả danh sách vật tư PO cần mà NCC chưa có
+                //   ⇒ UI hỏi «Bạn có muốn thêm không?» (backend ⛔ KHÔNG tự thêm).
+                // MT2-P4-03 (§4.1) — card «Chờ Giám đốc duyệt»: dữ liệu THỰC từ approval engine.
+            // §4.1:51 «Kiểm permission/RBAC ở backend» ⇒ use-case ném 403 nếu không phải admin và level_rank < 30.
+            // RBAC theo module `approvals` / capability `canView` (ActionRbacRegistry) ⇒ 2 LỚP.
+            // MT2-P4-01 / P5-03 (§3.2 · đề án ①A user chốt 26/09/2026) — PHẠM VI XEM/GIAO THEO CẤP BẬC.
+            // §3.2:41 «Trưởng phòng trở lên → xem công việc của nhân viên thuộc phòng ban mình»
+            // §3.2:42 «Phó giám đốc trở lên → xem toàn bộ phòng ban · toàn bộ nhân viên công ty»
+            // ⇒ CHỈ ĐỌC (idempotent, ⛔ không mở quyền): trả SELF/DEPARTMENT/COMPANY cho UI P5-03 hiển thị.
+            // Ngưỡng 30/35 ĐO từ `system_level_catalog` (cấp `pho_giam_doc` thêm ở V30) — ⛔ không hard-code ở UI.
+            case "work_scope" -> {
+                AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                return ResponseEntity.ok(jsonResult(
+                        opsTaskManagementUseCase.workScope(asOpsTaskPrincipal(cu))));
+            }
+            case "director_pending_approvals" -> {
+                AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                return ResponseEntity.ok(jsonResult(
+                        opsTaskManagementUseCase.directorPendingApprovals(asOpsTaskPrincipal(cu))));
+            }
+            case "supplier_material_gaps" -> {
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                    return ResponseEntity.ok(jsonResult(
+                            supplierManagementUseCase.supplierMaterialGaps(asSupplierPrincipal(cu), payload)));
                 }
                 case "save_supplier" -> {
                     AuthUseCase.CurrentUser cu = requireCurrentUser(request);

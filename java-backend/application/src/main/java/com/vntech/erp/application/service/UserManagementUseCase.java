@@ -58,12 +58,27 @@ public final class UserManagementUseCase {
         Map<String, Object> org = resolveOrganization(payload, roleRow);
         if (org == null)
             throw new AuthUseCase.ApiError("Phòng/bộ phận không tồn tại hoặc đã được lưu trữ.", 400);
+        // MT2-P12-05 (§13.3) — ROOT CAUSE: `createUser` **TRƯỚC ĐÂY** lấy `employeeCode` mà KHÔNG kiểm tra rỗng
+        // ⇒ có thể tạo tài khoản **không có mã** (đã đo được: 1 user có `employee_code` rỗng trên MySQL),
+        // trong khi `updateUser` lại ĐÃ chặn ⇒ lệch không nhất quán. ⇒ Chặn ngay tại đây (§17 backend là
+        // lớp kiểm soát) với CÙNG thông điệp như `updateUser` để không lộ chi tiết nội bộ.
+        String employeeCode = trim(payload.get("employeeCode"));
+        if (employeeCode.isEmpty())
+            throw new AuthUseCase.ApiError("Mã nhân viên là bắt buộc.", 400);
         String userId = idGenerator.next("USR");
         Instant now = Instant.now();
-        store.insertUser(userId, trim(payload.get("employeeCode")), trim(payload.get("fullName")),
+        store.insertUser(userId, employeeCode, trim(payload.get("fullName")),
                 username, trim(payload.get("email")).toLowerCase().isEmpty() ? null : trim(payload.get("email")).toLowerCase(),
                 passwordHasher.hash(password), role, sv(org, "name"), sv(org, "id"),
                 numberValue(payload.get("approvalLimit")), true, now);
+        // MT2-P12-06 (§13.4) — chữ ký PHẢI có ở modal **TẠO** lẫn modal **CHỈNH SỬA**
+        // («Trong modal tạo user và chỉnh sửa user ⇒ thêm Chữ ký»). `updateUser` đã xử lý từ P3-04,
+        // nhưng `createUser` **CHƯA** lưu ⇒ ⛔ nếu chỉ sửa UI thì chọn ảnh lúc tạo sẽ KHÔNG được lưu
+        // (nút chết / mất dữ liệu). Ghi CHỈ khi payload có khoá `signatureUrl` (⛔ không ghi đè mặc định NULL).
+        if (payload.containsKey("signatureUrl")) {
+            String signature = trim(payload.get("signatureUrl"));
+            store.setUserSignature(userId, signature, now);
+        }
         List<String> scopes = listOf(payload.get("projectIds")).stream().map(String::valueOf).toList();
         for (String projectId : scopes)
             store.insertProjectScope(idGenerator.next("SCOPE"), userId, projectId, "read", now);
@@ -111,6 +126,17 @@ public final class UserManagementUseCase {
         String oldRole = sv(target, "role");
         store.updateUser(targetUserId, employeeCode, fullName, username, email, role, department,
                 sv(org, "id"), numberValue(payload.get("approvalLimit")), active, Instant.now());
+        // MT2 §13.4 — «Trong modal tạo user và CHỈNH SỬA user ⇒ thêm Chữ ký»: đường QUẢN TRỊ.
+        // ⚠️ CHỈ xử lý khi payload CÓ khoá `signatureUrl` (⛔ không ghi đè chữ ký khi client không gửi trường này).
+        // Luật giống hệt đường tự phục vụ (§13.4): data-URL JPG/PNG/WebP · ≤ 2,8 MB · rỗng/null ⇒ XOÁ.
+        if (payload.containsKey("signatureUrl")) {
+            String signature = trim(payload.get("signatureUrl"));
+            if (!signature.isEmpty() && !signature.matches("(?i)^data:image/(png|jpeg|webp);base64,.*"))
+                throw new AuthUseCase.ApiError("Chữ ký chỉ hỗ trợ JPG, PNG hoặc WebP.", 400);
+            if (signature.length() > 2_800_000)
+                throw new AuthUseCase.ApiError("Ảnh chữ ký vượt quá giới hạn 2 MB.", 400);
+            store.setUserSignature(targetUserId, signature, Instant.now());
+        }
         if (!oldDepartment.equals(department) || !oldRole.equals(role)) replaceDepartmentDefaults(targetUserId);
         if (!active) store.deleteSessionsByUser(targetUserId);
         String newPassword = trim(payload.get("newPassword"));

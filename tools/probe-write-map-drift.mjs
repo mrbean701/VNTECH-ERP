@@ -117,12 +117,26 @@ for (const r of rows) {
 console.log(`\nTổng: ${rows.length} bảng có lệch.`);
 
 // ---------- ĐỐI CHỨNG DƯƠNG BẮT BUỘC ----------
+// ⚠️ CẬP NHẬT 23/09/2026 (MT2-P14-03c): ca đối chứng cũ `vntech_license_installations` ĐÃ HẾT LỆCH —
+// sau MT2-P14-03b, Java ghi ĐỦ cột như JS (18 cột thật) ⇒ ⛔ không còn là «ca lệch đã biết».
+// Vì vậy đối chứng nay kiểm HAI điều, ⛔ không phụ thuộc một bảng cụ thể còn lệch hay không:
+//   ① công cụ vẫn PARSE được bảng đối chứng ở CẢ 2 phía (nếu không ⇒ công cụ hỏng thật)
+//   ② công cụ vẫn phát hiện được ≥1 bảng lệch (nếu 0 ⇒ hoặc mã đã hoàn hảo, hoặc bộ dò hỏng — phải xem log)
 const control = "vntech_license_installations";
 const got = rows.find((r) => r.t === control);
-console.log("\n──── ĐỐI CHỨNG DƯƠNG (ca lệch ĐÃ BIẾT — TASK-040 nhóm 6) ────");
-if (!got) {
-  console.log(`  ✖ CÔNG CỤ HỎNG: không phát hiện ${control} dù đây là ca lệch đã biết.`);
+const parsedBothSides = jsWrite.has(control) && javaWrite.has(control);
+console.log("\n──── ĐỐI CHỨNG DƯƠNG (ca lệch ĐÃ BIẾT — TASK-040 nhóm 6 ⇒ nay đã HẾT LỆCH sau P14-03b) ────");
+console.log(`  Bảng đối chứng ${control}: JS ${jsWrite.has(control) ? "ĐỌC ĐƯỢC" : "KHÔNG đọc được"} · Java ${javaWrite.has(control) ? "ĐỌC ĐƯỢC" : "KHÔNG đọc được"}`);
+if (!parsedBothSides) {
+  console.log("  ✖ CÔNG CỤ HỎNG: không parse được bảng đối chứng ở cả 2 phía ⇒ bộ dò không đáng tin.");
   process.exitCode = 2;
+} else if (rows.length === 0) {
+  console.log("  ⚠ Không phát hiện bảng lệch nào — hoặc mã đã hoàn hảo, hoặc bộ dò hỏng; đọc log phía trên trước khi kết luận.");
+  process.exitCode = 2;
+} else if (!got) {
+  console.log(`  ✔ Công cụ CHẠY ĐÚNG: vẫn bắt ${rows.length} bảng lệch khác, và ${control} nay KHỚP (ca cũ đã được vá).`);
+  console.log("    ⛔ Danh sách bảng lệch là ỨNG VIÊN, không phải kết luận: phải đọc từng câu lệnh và đối chiếu nghiệp vụ.");
+  process.exitCode = 0;
 } else {
   console.log(`  ✔ Bắt được ${control}`);
   console.log(`      JS GHI mà Java KHÔNG ghi : ${got.jsOnly.join(", ") || "(không)"}`);

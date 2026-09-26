@@ -53,7 +53,11 @@ test("W-03 — ACTION THẬT đã tồn tại (KHÔNG bịa API mới): `create_
   assert.match(action, /INSERT INTO warehouses \(id,code,name,type,project_id,parent_warehouse_id,keeper_user_id,active,created_at,updated_at\)/,
     "Thiếu câu INSERT kho — đây là action THẬT dùng để tạo kho dự án (không có action riêng nào khác)");
   assert.match(action, /INSERT OR IGNORE INTO user_project_scopes/, "Thiếu cấp phạm vi dự án cho người tạo");
-  assert.match(action, /env\.DB\.batch\(\[/, "Ba câu ghi phải nằm trong MỘT batch (nguyên tử)");
+  // ⚠️ CẬP NHẬT 23/09/2026 — NHÁNH ĐÃ TIẾN HOÁ (xem `w03-project-warehouse-flag.test.mjs` là hợp đồng HIỆN HÀNH):
+  // câu kho nay nằm trong `if (createWarehouse !== false)` và cả 3 câu gom vào MẢNG `statements`
+  // rồi `await env.DB.batch(statements)` — vẫn NGUYÊN TỬ, ⛔ không phải 3 câu rời.
+  assert.match(action, /await env\.DB\.batch\(statements\)/, "Ba câu ghi phải nằm trong MỘT batch (nguyên tử)");
+  assert.match(action, /if \(createWarehouse !== false\) \{/, "Câu INSERT kho phải nằm trong điều kiện cờ «Tạo kho dự án?»");
   // KHÔNG được thêm action/API mới cho việc tạo kho: quét tên action `create_warehouse`.
   assert.doesNotMatch(route, /action === "create_warehouse"/, "KHÔNG được thêm action `create_warehouse` mới");
   assert.doesNotMatch(route, /action === "save_warehouse"/, "KHÔNG được thêm action tạo kho mới");
@@ -73,33 +77,30 @@ test("W-03 — UI có câu hỏi «Tạo kho dự án?» với ĐÚNG 2 nhánh C
   assert.match(modal, /project_id/, "Câu hỏi phải nói rõ `warehouses.project_id` cho phép NULL");
 });
 
-test("W-03 — NHÁNH «KHÔNG» BỊ CHẶN: KHÔNG im lặng tạo kho, KHÔNG tự thêm API — UI nói rõ lý do và khoá nút lưu", () => {
+test("W-03 — NHÁNH «KHÔNG» ĐÃ THI HÀNH ĐƯỢC (hết BLOCKED): UI gửi cờ thật, ⛔ không còn khoá nút lưu", () => {
   const modal = projectModal();
-  // Phải có cờ nhận biết nhánh bị chặn + khoá submit (nếu không người dùng bấm Lưu mà kho vẫn được tạo ⇒ lỗi im lặng).
-  assert.match(modal, /const warehouseBlocked = !editing && createWarehouse === "no";/, "Thiếu cờ `warehouseBlocked` cho nhánh «Không»");
-  assert.match(modal, /if \(warehouseBlocked\) return;/, "Nhánh «Không» phải DỪNG trước khi gọi action (không gửi lên máy chủ)");
-  assert.match(modal, /data-project-warehouse-blocked="true"/, "Thiếu khối cảnh báo cho nhánh «Không»");
-  assert.match(modal, /disabled=\{warehouseBlocked\}/, "Nút lưu phải bị KHOÁ khi chọn «Không»");
-  // Văn bản cảnh báo phải nói ĐÚNG nguyên nhân kỹ thuật: action thật luôn tạo kho, không có action xoá/ngưng kho,
-  // và tệp phải sửa nằm trong DANH SÁCH CẤM ⇒ đã DỪNG + báo BLOCKED.
-  assert.match(modal, /không có action xoá\/ngưng kho/i, "Cảnh báo phải nêu nguyên nhân: không có action xoá/ngưng kho riêng");
-  assert.match(modal, /scripts\/system-route\.mjs/, "Cảnh báo phải chỉ đích danh tệp cần sửa");
-  assert.match(modal, /DANH SÁCH CẤM/, "Cảnh báo phải nêu lý do DỪNG: tệp nằm trong danh sách cấm");
-  assert.match(modal, /BLOCKED/, "Cảnh báo phải nói rõ trạng thái BLOCKED");
-  assert.match(modal, /TASK-100\.md/, "Cảnh báo phải trỏ tới hồ sơ chi tiết (TASK-100.md)");
+  // ⚠️ CẬP NHẬT 23/09/2026 — trạng thái BLOCKED đã được gỡ (đúng như ghi chú cũ ở dòng ~98: khi `create_project`
+  // BẮT ĐẦU đọc cờ thì phải gỡ cảnh báo BLOCKED). Nay nhánh «Không» ĐI THẲNG qua action thật với `createWarehouse: false`,
+  // ⛔ KHÔNG còn cờ `warehouseBlocked` chặn submit, ⛔ KHÔNG còn khối cảnh báo `data-project-warehouse-blocked`.
+  assert.match(modal, /const \[createWarehouse, setCreateWarehouse\] = useState\("yes"\)/,
+    "UI phải giữ state cho câu hỏi «Tạo kho dự án?» (mặc định «Có»)");
+  assert.match(modal, /createWarehouse: createWarehouse === "yes"/,
+    "Nhánh «Không» phải GỬI cờ `createWarehouse: false` xuống action thật — ⛔ không im lặng tạo kho");
+  assert.doesNotMatch(modal, /warehouseBlocked/, "⛔ KHÔNG còn cờ chặn `warehouseBlocked` (đã hết BLOCKED)");
+  assert.doesNotMatch(modal, /data-project-warehouse-blocked/, "⛔ KHÔNG còn khối cảnh báo BLOCKED");
   // Nhánh «Có» vẫn đi qua ĐÚNG 2 action thật — KHÔNG tự thêm action/endpoint mới.
   assert.match(modal, /submit\(editing \? "update_project" : "create_project"/, "Vẫn phải gọi ĐÚNG 2 action thật");
   assert.doesNotMatch(modal, /fetch\(/, "Biểu mẫu dự án KHÔNG được gọi API mới (phải đi qua `submit` = action thật)");
 });
 
-test("W-03 — ĐỐI CHỨNG ÂM: KHÔNG có tham số/action nào bỏ được kho; máy chủ LUÔN tạo kho (nên nhánh Không mới chặn)", () => {
+test("W-03 — ĐỐI CHỨNG ÂM (CẬP NHẬT): máy chủ ĐỌC cờ bỏ kho, ⛔ KHÔNG thêm action kho mới", () => {
   const action = createProjectAction();
-  // Máy chủ chưa (và trong phạm vi cho phép thì KHÔNG) đọc cờ nào để bỏ kho ⇒ khẳng định lại điều đã báo BLOCKED.
-  assert.doesNotMatch(action, /createWarehouse/,
-    "Nếu `create_project` BẮT ĐẦU đọc cờ bỏ kho thì nhánh «Không» đã thi hành được ⇒ phải gỡ cảnh báo BLOCKED và cập nhật tài liệu");
+  // ⚠️ CẬP NHẬT 23/09/2026: khẳng định cũ «máy chủ LUÔN tạo kho» đã HẾT ĐÚNG — cờ đã được thi hành.
+  assert.match(action, /const rawCreateWarehouse = payload\.createWarehouse;/,
+    "Máy chủ PHẢI đọc cờ `createWarehouse` từ payload (nhánh «Không» mới thi hành được)");
   // Không tồn tại action xoá/ngưng kho riêng ⇒ không có đường nào khác để "không tạo kho".
   assert.doesNotMatch(route, /action === "(delete_warehouse|remove_warehouse|create_warehouse|save_warehouse)"/,
-    "Nếu xuất hiện action tạo/xoá kho riêng thì phải thi hành nhánh «Không» bằng action đó (không còn BLOCKED)");
+    "⛔ KHÔNG được thêm action tạo/xoá kho riêng — cờ nằm trong chính `create_project`");
   // Bằng chứng dương: đúng MỘT action tạo kho (nằm trong create_project) — chứng minh không bịa API.
   const inserts = route.match(/INSERT INTO warehouses \(id,code,name,type,project_id/g) || [];
   assert.ok(inserts.length >= 1, "Phải tồn tại câu INSERT kho THẬT trong `create_project`");

@@ -1,6 +1,6 @@
 # 28 — DANH SÁCH 110 MỤC CỦA MASTER TASK (bản đọc nhanh)
 
-- **Sinh tự động lúc:** 17:34:18 17/9/2026
+- **Sinh tự động lúc:** 11:46:03 19/9/2026
 - **Nguồn sự thật:** `docs/25_TODO_ROADMAP.md` (bản phân rã MASTER TASK thành 12 phase có mục) — tệp này **không tự thêm/bớt mục nào**;
   mọi thay đổi phải sửa ở `25_TODO_ROADMAP.md` rồi chạy lại `node tools/gen-roadmap-110-md.mjs`.
 - **Căn cứ audit:** `docs/24_SYSTEM_AUDIT_REPORT.md` · **Nhật ký thực thi:** `docs/agent-progress/TASK_INDEX.md`
@@ -9,9 +9,9 @@
 
 | Trạng thái | Số mục | Tỷ lệ |
 |---|---:|---:|
-| **DONE** | 23 | 21% |
-| Một phần (khung xong — chưa áp dụng / đang làm) | 6 | 5% |
-| **TODO** (chưa bắt đầu) | 80 | 73% |
+| **DONE** | 48 | 44% |
+| Một phần (khung xong — chưa áp dụng / đang làm) | 0 | 0% |
+| **TODO** (chưa bắt đầu) | 61 | 55% |
 | BLOCKED (cần quyết định/spec của người dùng) | 1 | 1% |
 | **Tổng** | **110** | 100% |
 
@@ -20,15 +20,15 @@
 | Phase | Tổng | DONE | Một phần | TODO | BLOCKED |
 |---|---:|---:|---:|---:|---:|
 | PHASE 0 — AUDIT | 16 | 12 | 0 | 4 | 0 |
-| PHASE 0B — BỊT LỖ HỔNG BẢO MẬT (CHẶN MỌI THỨ KHÁC) | 10 | 8 | 0 | 2 | 0 |
-| PHASE 1 — HẠ TẦNG UI DÙNG CHUNG | 17 | 3 | 6 | 8 | 0 |
-| PHASE 2 — MUA HÀNG & CUNG ỨNG | 9 | 0 | 0 | 9 | 0 |
+| PHASE 0B — BỊT LỖ HỔNG BẢO MẬT (CHẶN MỌI THỨ KHÁC) | 10 | 10 | 0 | 0 | 0 |
+| PHASE 1 — HẠ TẦNG UI DÙNG CHUNG | 17 | 17 | 0 | 0 | 0 |
+| PHASE 2 — MUA HÀNG & CUNG ỨNG | 9 | 3 | 0 | 6 | 0 |
 | PHASE 3 — CÔNG VIỆC / TASK MANAGEMENT | 10 | 0 | 0 | 10 | 0 |
 | PHASE 4 — QUẢN LÝ DỰ ÁN | 6 | 0 | 0 | 6 | 0 |
 | PHASE 5 — KHO VẬT TƯ | 4 | 0 | 0 | 4 | 0 |
 | PHASE 6 — TỔ ĐỘI | 6 | 0 | 0 | 6 | 0 |
 | PHASE 7 — QUẢN TRỊ HỆ THỐNG | 16 | 0 | 0 | 16 | 0 |
-| PHASE 8 — WORKFLOW | 6 | 0 | 0 | 6 | 0 |
+| PHASE 8 — WORKFLOW | 6 | 6 | 0 | 0 | 0 |
 | PHASE 9 — BÁO CÁO & DASHBOARD | 5 | 0 | 0 | 5 | 0 |
 | PHASE 10 — MODULE TƯƠNG LAI (CHỈ AUDIT + CHUẨN BỊ KIẾN TRÚC) | 5 | 0 | 0 | 4 | 1 |
 
@@ -56,35 +56,35 @@
 - [x] `S-02` · **Toàn hệ** — **Bật `requireActionModule`** tại một điểm kiểm duy nhất trong `SystemController` · `DONE`
 - [x] `S-03` · **Toàn hệ** — Đổi mặc định thành **TỪ CHỐI** khi action chưa khai module + `PUBLIC_ACTIONS` allowlist 5 hành động · `DONE`
 - [x] `S-04` · **Toàn hệ** — Bật an toàn: thu hẹp phạm vi còn 29 action nghiệp vụ, không đụng 41 action đã che · `DONE`
-- [ ] `S-05` · **Tệp** — Kiểm quyền cho `/api/files` (endpoint riêng, không đi qua action) · `TODO`
+- [x] `S-05` · **Tệp** — Kiểm quyền cho `/api/files` (endpoint riêng, không đi qua action) · `DONE / KIEM-CHUNG-3-CA`
 - [x] `S-06` · **Phòng ban** — Cấp `canApprove` cho BCH trên `receiving`/`warehouse_receipt` để bước "BCH xác nhận giao hàng" chạy được · `DONE`
 - [x] `S-07` · **Toàn hệ** — Chạy `tools/probe-security-rbac.mjs` — viết lại để đo theo **quyền thật** của tài khoản · `DONE`
-- [ ] `S-08` · **Workflow** — Snapshot **danh sách người được chỉ định**, không đọc live · `TODO`
+- [x] `S-08` · **Workflow** — Snapshot **danh sách người được chỉ định**, không đọc live · `DONE / AP-DUNG 100`
 - [x] `S-09` · **Toàn hệ** — 🐛 Sửa lỗi có sẵn: `ModulePermissionStoreAdapter.canUseModule` dùng `queryForObject` → ném `EmptyResultDataAccessException` (500) khi người dùng không có dòng quyền. Đổi sang `queryForList` · `DONE`
 - [x] `S-10` · **Toàn hệ** — Chạy hồi quy sau khi bật RBAC: 13 probe + luồng mua hàng · `DONE`
-- [ ] `U-01` · **UI** — `EntityDetailModal` — 1 khung cho User/Project/Warehouse/Team/Material/Supplier/Task · `KHUNG-XONG / AP-DUNG 0`
-- [ ] `U-02` · **UI** — `DataTable` dùng chung: cột, sắp xếp, lọc, phân trang, rỗng/đang tải/lỗi · `KHUNG-XONG / AP-DUNG 0`
+- [x] `U-01` · **UI** — `EntityDetailModal` — 1 khung cho User/Project/Warehouse/Team/Material/Supplier/Task · `DONE / AP-DUNG 1`
+- [x] `U-02` · **UI** — `DataTable` dùng chung: cột, sắp xếp, lọc, phân trang, rỗng/đang tải/lỗi · `DONE / AP-DUNG 30`
 - [x] `U-03` · **UI** — `ListToolbar`: TIÊU ĐỀ + SỐ LƯỢNG ‖ TÌM · LỌC · SẮP XẾP · HÀNH ĐỘNG · `DONE / AP-DUNG 10`
-- [ ] `U-04` · **UI** — `PermissionGuard` (ẩn/hiện theo quyền; backend vẫn kiểm) · `KHUNG-XONG / AP-DUNG 0`
-- [x] `U-05` · **UI** — `StatusBadge` thống nhất toàn hệ · `DONE / AP-DUNG 2`
-- [ ] `U-06` · **UI** — `ApprovalTimeline`: số bước · người duyệt · phòng ban · thời gian · trạng thái · ý kiến · `KHUNG-XONG / AP-DUNG 0`
-- [ ] `U-07` · **UI** — `ActivityTimeline` dùng cho mọi lịch sử · `KHUNG-XONG / AP-DUNG 0`
+- [x] `U-04` · **UI** — `PermissionGuard` (ẩn/hiện theo quyền; backend vẫn kiểm) · `DONE / GUARD-DUNG-5-CHO`
+- [x] `U-05` · **UI** — `StatusBadge` thống nhất toàn hệ · `DONE / AP-DUNG 90`
+- [x] `U-06` · **UI** — `ApprovalTimeline`: số bước · người duyệt · phòng ban · thời gian · trạng thái · ý kiến · `DONE / AP-DUNG 1`
+- [x] `U-07` · **UI** — `ActivityTimeline` dùng cho mọi lịch sử · `DONE / AP-DUNG 2`
 - [x] `U-08` · **UI** — Kiểm responsive 4 kích thước cho mọi màn sau khi chuẩn hoá · `DONE`
-- [ ] `U-09` · **UI** — Chuyển các danh sách sang khuôn Toolbar chuẩn (§5) · `DANG-LAM 9/32`
-- [ ] `U-10` · **UI** — Sửa modal vượt viewport · `TODO`
-- [ ] `U-11` · **Kiến trúc** — Tách `page.tsx` (4.057 dòng) thành module theo màn hình · `TODO`
-- [ ] `U-12` · **CSS** — Loại `!important` theo từng nhóm; gộp 1.183 selector trùng · `TODO`
-- [ ] `U-13` · **Kiến trúc** — Tách `TaskTable` ra khỏi thân render của `WorkCenter` — nợ có sẵn: `react-hooks/static-components` tại page.tsx:774, dùng ở 837/862/866 · `TODO`
-- [ ] `U-14` · **UI** — **ÁP DỤNG** `EntityDetailModal` — dùng thật **0** lần; còn **4** chỗ tự viết .overlay · `TODO`
-- [ ] `U-15` · **UI** — **ÁP DỤNG** `DataTable` + `StatusBadge` — DataTable dùng thật **0** lần, còn **100** bảng tự viết + **100** trạng thái rỗng tự viết; StatusBadge mới **2/88** chỗ · `TODO`
-- [ ] `U-16` · **UI** — **ÁP DỤNG** `PermissionGuard` — dùng thật **0** lần; còn **50** chỗ điều kiện quyền rải rác · `TODO`
-- [ ] `U-17` · **UI** — **ÁP DỤNG** `ApprovalTimeline`/`ActivityTimeline` — dùng thật **0** lần; còn **3** chỗ tự viết dải · `TODO`
+- [x] `U-09` · **UI** — Chuyển các danh sách sang khuôn Toolbar chuẩn (§5) · `DONE / AP-DUNG 25`
+- [x] `U-10` · **UI** — Sửa modal vượt viewport · `DONE`
+- [x] `U-11` · **Kiến trúc** — Tách `page.tsx` (4.057 dòng) thành module theo màn hình · `DONE / TACH-3-MAN-WORKCENTER-REQUESTS-BOQCONTROL`
+- [x] `U-12` · **CSS** — Loại `!important` theo từng nhóm; gộp 1.183 selector trùng · `DONE / 823-TOKEN-IMPORTANT-CHET-DA-BO + 5-KHOI-TRUNG-DA-GOP`
+- [x] `U-13` · **Kiến trúc** — Tách `TaskTable` ra khỏi thân render của `WorkCenter` — nợ có sẵn: `react-hooks/static-components` tại page.tsx:774, dùng ở 837/862/866 · `DONE`
+- [x] `U-14` · **UI** — **ÁP DỤNG** `EntityDetailModal` — dùng thật **0** lần; còn **4** chỗ tự viết .overlay · `DONE / CONG-ANH-64-64`
+- [x] `U-15` · **UI** — **ÁP DỤNG** `DataTable` + `StatusBadge` — DataTable dùng thật **30** lần (TASK-083: 13 → 30, **17 bảng** chuyển trong phiên 18/09), còn **70** bảng tự viết + **73** trạng thái rỗng tự viết — trong đó **~70 bảng KHÔNG chuyển được** theo bộ quét tiêu chí an toàn (bảng in HTML `printTabularReport` · nhóm dòng `<Fragment>` · lưới nhập liệu · bảng tổng hợp tĩnh; xem `TASK-083.md` mục 3); StatusBadge đã dùng **90** chỗ (TASK-020 đã chuyển 88 `<Pill>` → 0; đo lại bằng `probe-ui-adoption.mjs`) · `DONE / AP-DUNG 30`
+- [x] `U-16` · **UI** — **ÁP DỤNG** `PermissionGuard` — dùng thật **0** lần; còn **50** chỗ điều kiện quyền rải rác · `DONE / GUARD-DUNG-5-CHO`
+- [x] `U-17` · **UI** — **ÁP DỤNG** `ApprovalTimeline`/`ActivityTimeline` — dùng thật **3** lần (`ApprovalTimeline` 1 · `ActivityTimeline` **2**); còn **0** chỗ tự viết dải · `DONE`
 - [ ] `P-01` · **Mua hàng** — Tách **MR · PR · PO** thành 3 tab riêng · `TODO`
 - [ ] `P-02` · **Mua hàng** — Sắp xếp mặc định `created DESC`; Completed/Rejected xuống cuối · `TODO`
 - [ ] `P-03` · **Mua hàng** — Lọc theo Trạng thái · Ngày · Phòng ban · Người tạo · NCC · Dự án · `TODO`
-- [ ] `P-04` · **Phiếu** — **Approval Timeline** trong chi tiết phiếu (§8.1) · `TODO`
-- [ ] `P-05` · **Phiếu** — **Tổng hợp giao nhận** → modal riêng (§8.2) · `TODO`
-- [ ] `P-06` · **Phiếu** — Hồ sơ vật tư đặc thù: ảnh/tệp xem được, không tràn khung (§8.3) · `TODO`
+- [x] `P-04` · **Phiếu** — **Approval Timeline** trong chi tiết phiếu (§8.1) · `DONE`
+- [x] `P-05` · **Phiếu** — **Tổng hợp giao nhận** → modal riêng (§8.2) · `DONE`
+- [x] `P-06` · **Phiếu** — Hồ sơ vật tư đặc thù: ảnh/tệp xem được, không tràn khung (§8.3) · `DONE`
 - [ ] `P-07` · **NCC** — Tách **Nhà cung cấp / Đối tác** thành menu độc lập (§17) · `TODO`
 - [ ] `P-08` · **NCC** — Liên kết Supplier ↔ MR/PR/PO ↔ Material · `TODO`
 - [ ] `P-09` · **Mua hàng** — Sửa **5 chỗ `requireRole` dùng mã vai trò cũ** ở `ProductionManagementUseCase` · `TODO`
@@ -130,12 +130,12 @@
 - [ ] `AD-14` · **Audit log** — Thêm: hành động · module · thực thể · mã thực thể · thời gian · IP · kết quả · metadata · `TODO`
 - [ ] `AD-15` · **Cấu hình** — Audit phụ thuộc; nếu không ảnh hưởng roadmap → **ghi backlog** · `TODO`
 - [ ] `AD-16` · **Tài khoản cá nhân** — Cho user sửa thông tin được phép (tên hiển thị · ảnh · liên hệ · mật khẩu) · `TODO`
-- [ ] `WF-01` · **Workflow** — Đổi tên tab thành **Workflow** · `TODO`
-- [ ] `WF-02` · **Workflow** — **Snapshot danh sách người được chỉ định** vào phiếu (bịt rủi ro §20.3) · `TODO`
-- [ ] `WF-03` · **Workflow** — Dùng cột `workflow_definitions.version` hoặc xoá nếu không dùng · `TODO`
-- [ ] `WF-04` · **Workflow** — Hợp nhất 2 hệ (`workflow_*` và `approval_stage_catalog`) hoặc ghi rõ hệ nào là chính · `TODO`
-- [ ] `WF-05` · **Workflow** — Kiểm thử: đổi workflow khi có phiếu đang chờ → phiếu cũ phải giữ nguyên luồng · `TODO`
-- [ ] `WF-06` · **Workflow** — Chuẩn bị mở rộng: nghỉ phép · tăng ca · chấm công bù · form tương lai · `TODO`
+- [x] `WF-01` · **Workflow** — Đổi tên tab thành **Workflow** · `DONE / DOI-TEN-TAB-WORKFLOW`
+- [x] `WF-02` · **Workflow** — **Snapshot danh sách người được chỉ định** vào phiếu (bịt rủi ro §20.3) · `DONE / AP-DUNG 100`
+- [x] `WF-03` · **Workflow** — Dùng cột `workflow_definitions.version` hoặc xoá nếu không dùng · `DONE / XOA-COT-DEAD-V19`
+- [x] `WF-04` · **Workflow** — Hợp nhất 2 hệ (`workflow_*` và `approval_stage_catalog`) hoặc ghi rõ hệ nào là chính · `DONE / GHI-RO-HE-CHINH`
+- [x] `WF-05` · **Workflow** — Kiểm thử: đổi workflow khi có phiếu đang chờ → phiếu cũ phải giữ nguyên luồng · `DONE`
+- [x] `WF-06` · **Workflow** — Chuẩn bị mở rộng: nghỉ phép · tăng ca · chấm công bù · form tương lai · `DONE / SAN-SANG-MO-RONG`
 - [ ] `R-01` · **Báo cáo** — Kiến trúc báo cáo dùng chung (không hard-code từng báo cáo) · `TODO`
 - [ ] `R-02` · **Báo cáo** — Báo cáo Mua hàng: số lượng MR/PR/PO · chờ · xong · từ chối · thời gian xử lý · `TODO`
 - [ ] `R-03` · **Báo cáo** — Báo cáo Kho: tồn theo kho · giá trị · sắp hết · nhập/xuất · `TODO`
@@ -172,7 +172,7 @@
 | `A-15` | Admin | Xác định **nhóm quyền nghiệp vụ** có tham gia kiểm quyền không | **P0** | — | - | - | - | MODEL | **TODO** |
 | `A-16` | Toàn hệ | Kiểm thử **cross-department / cross-project** | P1 | A-06 | - | - | - | CHECK | **TODO** |
 
-### PHASE 0B — BỊT LỖ HỔNG BẢO MẬT (CHẶN MỌI THỨ KHÁC) — 10 mục (DONE 8)
+### PHASE 0B — BỊT LỖ HỔNG BẢO MẬT (CHẶN MỌI THỨ KHÁC) — 10 mục (DONE 10)
 
 | ID | Module | Việc | Ưu tiên | Phụ thuộc | DB | API | UI | QUYỀN | TT |
 |---|---|---|---|---|---|---|---|---|---|
@@ -180,45 +180,45 @@
 | `S-02` | Toàn hệ | **Bật `requireActionModule`** tại một điểm kiểm duy nhất trong `SystemController` | **P0** | S-01 | - | - | - | CHECK | **DONE** |
 | `S-03` | Toàn hệ | Đổi mặc định thành **TỪ CHỐI** khi action chưa khai module + `PUBLIC_ACTIONS` allowlist 5 hành động | **P0** | S-02 | - | - | - | CHECK | **DONE** |
 | `S-04` | Toàn hệ | Bật an toàn: thu hẹp phạm vi còn 29 action nghiệp vụ, không đụng 41 action đã che | **P0** | S-03 | - | - | - | CHECK | **DONE** |
-| `S-05` | Tệp | Kiểm quyền cho `/api/files` (endpoint riêng, không đi qua action) | **P0** | — | - | CHG | - | CHECK | **TODO** |
+| `S-05` | Tệp | Kiểm quyền cho `/api/files` (endpoint riêng, không đi qua action) | **P0** | — | - | CHG | - | CHECK | **DONE / KIEM-CHUNG-3-CA** |
 | `S-06` | Phòng ban | Cấp `canApprove` cho BCH trên `receiving`/`warehouse_receipt` để bước "BCH xác nhận giao hàng" chạy được | **P0** | S-01 | - | - | - | MODEL | **DONE** |
 | `S-07` | Toàn hệ | Chạy `tools/probe-security-rbac.mjs` — viết lại để đo theo **quyền thật** của tài khoản | **P0** | S-04 | - | - | - | CHECK | **DONE** |
-| `S-08` | Workflow | Snapshot **danh sách người được chỉ định**, không đọc live | P1 | — | COL | - | - | - | **TODO** |
+| `S-08` | Workflow | Snapshot **danh sách người được chỉ định**, không đọc live | P1 | — | COL | - | - | - | **DONE / AP-DUNG 100** |
 | `S-09` | Toàn hệ | 🐛 Sửa lỗi có sẵn: `ModulePermissionStoreAdapter.canUseModule` dùng `queryForObject` → ném `EmptyResultDataAccessException` (500) khi người dùng không có dòng quyền. Đổi sang `queryForList` | **P0** | — | - | - | - | CHECK | **DONE** |
 | `S-10` | Toàn hệ | Chạy hồi quy sau khi bật RBAC: 13 probe + luồng mua hàng | **P0** | S-07 | - | - | - | - | **DONE** |
 
-### PHASE 1 — HẠ TẦNG UI DÙNG CHUNG — 17 mục (DONE 3)
+### PHASE 1 — HẠ TẦNG UI DÙNG CHUNG — 17 mục (DONE 17)
 
 | ID | Module | Việc | Ưu tiên | Phụ thuộc | DB | API | UI | QUYỀN | TT |
 |---|---|---|---|---|---|---|---|---|---|
-| `U-01` | UI | `EntityDetailModal` — 1 khung cho User/Project/Warehouse/Team/Material/Supplier/Task | P1 | S-07 | - | - | REUSE | CHECK | **KHUNG-XONG / AP-DUNG 0** |
-| `U-02` | UI | `DataTable` dùng chung: cột, sắp xếp, lọc, phân trang, rỗng/đang tải/lỗi | P1 | — | - | - | REUSE | - | **KHUNG-XONG / AP-DUNG 0** |
+| `U-01` | UI | `EntityDetailModal` — 1 khung cho User/Project/Warehouse/Team/Material/Supplier/Task | P1 | S-07 | - | - | REUSE | CHECK | **DONE / AP-DUNG 1** |
+| `U-02` | UI | `DataTable` dùng chung: cột, sắp xếp, lọc, phân trang, rỗng/đang tải/lỗi | P1 | — | - | - | REUSE | - | **DONE / AP-DUNG 30** |
 | `U-03` | UI | `ListToolbar`: TIÊU ĐỀ + SỐ LƯỢNG ‖ TÌM · LỌC · SẮP XẾP · HÀNH ĐỘNG | P1 | — | - | - | REUSE | - | **DONE / AP-DUNG 10** |
-| `U-04` | UI | `PermissionGuard` (ẩn/hiện theo quyền; backend vẫn kiểm) | P1 | S-07 | - | - | REUSE | CHECK | **KHUNG-XONG / AP-DUNG 0** |
-| `U-05` | UI | `StatusBadge` thống nhất toàn hệ | P1 | — | - | - | REUSE | - | **DONE / AP-DUNG 2** |
-| `U-06` | UI | `ApprovalTimeline`: số bước · người duyệt · phòng ban · thời gian · trạng thái · ý kiến | P1 | — | - | - | NEW | - | **KHUNG-XONG / AP-DUNG 0** |
-| `U-07` | UI | `ActivityTimeline` dùng cho mọi lịch sử | P1 | — | - | - | NEW | - | **KHUNG-XONG / AP-DUNG 0** |
+| `U-04` | UI | `PermissionGuard` (ẩn/hiện theo quyền; backend vẫn kiểm) | P1 | S-07 | - | - | REUSE | CHECK | **DONE / GUARD-DUNG-5-CHO** |
+| `U-05` | UI | `StatusBadge` thống nhất toàn hệ | P1 | — | - | - | REUSE | - | **DONE / AP-DUNG 90** |
+| `U-06` | UI | `ApprovalTimeline`: số bước · người duyệt · phòng ban · thời gian · trạng thái · ý kiến | P1 | — | - | - | NEW | - | **DONE / AP-DUNG 1** |
+| `U-07` | UI | `ActivityTimeline` dùng cho mọi lịch sử | P1 | — | - | - | NEW | - | **DONE / AP-DUNG 2** |
 | `U-08` | UI | Kiểm responsive 4 kích thước cho mọi màn sau khi chuẩn hoá | P1 | U-02,U-03 | - | - | FIX | - | **DONE** |
-| `U-09` | UI | Chuyển các danh sách sang khuôn Toolbar chuẩn (§5) | P1 | U-03 | - | - | FIX | - | **DANG-LAM 9/32** |
-| `U-10` | UI | Sửa modal vượt viewport | P1 | — | - | - | FIX | - | **TODO** |
-| `U-11` | Kiến trúc | Tách `page.tsx` (4.057 dòng) thành module theo màn hình | P1 | U-01…U-05 | - | - | - | - | **TODO** |
-| `U-12` | CSS | Loại `!important` theo từng nhóm; gộp 1.183 selector trùng | P2 | U-11 | - | - | FIX | - | **TODO** |
-| `U-13` | Kiến trúc | Tách `TaskTable` ra khỏi thân render của `WorkCenter` — nợ có sẵn: `react-hooks/static-components` tại page.tsx:774, dùng ở 837/862/866 | P2 | U-11 | - | - | - | - | **TODO** |
-| `U-14` | UI | **ÁP DỤNG** `EntityDetailModal` — dùng thật **0** lần; còn **4** chỗ tự viết .overlay | P1 | U-01 | - | - | REUSE | CHECK | **TODO** |
-| `U-15` | UI | **ÁP DỤNG** `DataTable` + `StatusBadge` — DataTable dùng thật **0** lần, còn **100** bảng tự viết + **100** trạng thái rỗng tự viết; StatusBadge mới **2/88** chỗ | P1 | U-02,U-05 | - | - | REUSE | - | **TODO** |
-| `U-16` | UI | **ÁP DỤNG** `PermissionGuard` — dùng thật **0** lần; còn **50** chỗ điều kiện quyền rải rác | P1 | U-04 | - | - | REUSE | CHECK | **TODO** |
-| `U-17` | UI | **ÁP DỤNG** `ApprovalTimeline`/`ActivityTimeline` — dùng thật **0** lần; còn **3** chỗ tự viết dải | P1 | U-06,U-07 | - | - | REUSE | - | **TODO** |
+| `U-09` | UI | Chuyển các danh sách sang khuôn Toolbar chuẩn (§5) | P1 | U-03 | - | - | FIX | - | **DONE / AP-DUNG 25** |
+| `U-10` | UI | Sửa modal vượt viewport | P1 | — | - | - | FIX | - | **DONE** |
+| `U-11` | Kiến trúc | Tách `page.tsx` (4.057 dòng) thành module theo màn hình | P1 | U-01…U-05 | - | - | - | - | **DONE / TACH-3-MAN-WORKCENTER-REQUESTS-BOQCONTROL** |
+| `U-12` | CSS | Loại `!important` theo từng nhóm; gộp 1.183 selector trùng | P2 | U-11 | - | - | FIX | - | **DONE / 823-TOKEN-IMPORTANT-CHET-DA-BO + 5-KHOI-TRUNG-DA-GOP** |
+| `U-13` | Kiến trúc | Tách `TaskTable` ra khỏi thân render của `WorkCenter` — nợ có sẵn: `react-hooks/static-components` tại page.tsx:774, dùng ở 837/862/866 | P2 | U-11 | - | - | - | - | **DONE** |
+| `U-14` | UI | **ÁP DỤNG** `EntityDetailModal` — dùng thật **0** lần; còn **4** chỗ tự viết .overlay | P1 | U-01 | - | - | REUSE | CHECK | **DONE / CONG-ANH-64-64** |
+| `U-15` | UI | **ÁP DỤNG** `DataTable` + `StatusBadge` — DataTable dùng thật **30** lần (TASK-083: 13 → 30, **17 bảng** chuyển trong phiên 18/09), còn **70** bảng tự viết + **73** trạng thái rỗng tự viết — trong đó **~70 bảng KHÔNG chuyển được** theo bộ quét tiêu chí an toàn (bảng in HTML `printTabularReport` · nhóm dòng `<Fragment>` · lưới nhập liệu · bảng tổng hợp tĩnh; xem `TASK-083.md` mục 3); StatusBadge đã dùng **90** chỗ (TASK-020 đã chuyển 88 `<Pill>` → 0; đo lại bằng `probe-ui-adoption.mjs`) | P1 | U-02,U-05 | - | - | REUSE | - | **DONE / AP-DUNG 30** |
+| `U-16` | UI | **ÁP DỤNG** `PermissionGuard` — dùng thật **0** lần; còn **50** chỗ điều kiện quyền rải rác | P1 | U-04 | - | - | REUSE | CHECK | **DONE / GUARD-DUNG-5-CHO** |
+| `U-17` | UI | **ÁP DỤNG** `ApprovalTimeline`/`ActivityTimeline` — dùng thật **3** lần (`ApprovalTimeline` 1 · `ActivityTimeline` **2**); còn **0** chỗ tự viết dải | P1 | U-06,U-07 | - | - | REUSE | - | **DONE** |
 
-### PHASE 2 — MUA HÀNG & CUNG ỨNG — 9 mục (DONE 0)
+### PHASE 2 — MUA HÀNG & CUNG ỨNG — 9 mục (DONE 3)
 
 | ID | Module | Việc | Ưu tiên | Phụ thuộc | DB | API | UI | QUYỀN | TT |
 |---|---|---|---|---|---|---|---|---|---|
 | `P-01` | Mua hàng | Tách **MR · PR · PO** thành 3 tab riêng | P2 | U-03 | - | - | NEW | CHECK | **TODO** |
 | `P-02` | Mua hàng | Sắp xếp mặc định `created DESC`; Completed/Rejected xuống cuối | P2 | P-01 | - | - | FIX | - | **TODO** |
 | `P-03` | Mua hàng | Lọc theo Trạng thái · Ngày · Phòng ban · Người tạo · NCC · Dự án | P2 | P-01 | - | - | FIX | - | **TODO** |
-| `P-04` | Phiếu | **Approval Timeline** trong chi tiết phiếu (§8.1) | P2 | U-06 | - | - | NEW | - | **TODO** |
-| `P-05` | Phiếu | **Tổng hợp giao nhận** → modal riêng (§8.2) | P2 | U-01 | - | - | NEW | - | **TODO** |
-| `P-06` | Phiếu | Hồ sơ vật tư đặc thù: ảnh/tệp xem được, không tràn khung (§8.3) | P2 | — | - | - | FIX | - | **TODO** |
+| `P-04` | Phiếu | **Approval Timeline** trong chi tiết phiếu (§8.1) | P2 | U-06 | - | - | NEW | - | **DONE** |
+| `P-05` | Phiếu | **Tổng hợp giao nhận** → modal riêng (§8.2) | P2 | U-01 | - | - | NEW | - | **DONE** |
+| `P-06` | Phiếu | Hồ sơ vật tư đặc thù: ảnh/tệp xem được, không tràn khung (§8.3) | P2 | — | - | - | FIX | - | **DONE** |
 | `P-07` | NCC | Tách **Nhà cung cấp / Đối tác** thành menu độc lập (§17) | P2 | S-07 | - | - | NEW | CHECK | **TODO** |
 | `P-08` | NCC | Liên kết Supplier ↔ MR/PR/PO ↔ Material | P3 | P-07 | - | - | NEW | - | **TODO** |
 | `P-09` | Mua hàng | Sửa **5 chỗ `requireRole` dùng mã vai trò cũ** ở `ProductionManagementUseCase` | P2 | S-07 | - | - | - | CHECK | **TODO** |
@@ -290,16 +290,16 @@
 | `AD-15` | Cấu hình | Audit phụ thuộc; nếu không ảnh hưởng roadmap → **ghi backlog** | P4 | — | - | - | - | - | **TODO** |
 | `AD-16` | Tài khoản cá nhân | Cho user sửa thông tin được phép (tên hiển thị · ảnh · liên hệ · mật khẩu) | P3 | S-07 | - | - | FIX | CHECK | **TODO** |
 
-### PHASE 8 — WORKFLOW — 6 mục (DONE 0)
+### PHASE 8 — WORKFLOW — 6 mục (DONE 6)
 
 | ID | Module | Việc | Ưu tiên | Phụ thuộc | DB | API | UI | QUYỀN | TT |
 |---|---|---|---|---|---|---|---|---|---|
-| `WF-01` | Workflow | Đổi tên tab thành **Workflow** | P3 | — | - | - | FIX | - | **TODO** |
-| `WF-02` | Workflow | **Snapshot danh sách người được chỉ định** vào phiếu (bịt rủi ro §20.3) | **P1** | — | COL | - | - | - | **TODO** |
-| `WF-03` | Workflow | Dùng cột `workflow_definitions.version` hoặc xoá nếu không dùng | P3 | WF-02 | - | - | - | - | **TODO** |
-| `WF-04` | Workflow | Hợp nhất 2 hệ (`workflow_*` và `approval_stage_catalog`) hoặc ghi rõ hệ nào là chính | P3 | WF-02 | - | - | - | MODEL | **TODO** |
-| `WF-05` | Workflow | Kiểm thử: đổi workflow khi có phiếu đang chờ → phiếu cũ phải giữ nguyên luồng | **P1** | WF-02 | - | - | - | - | **TODO** |
-| `WF-06` | Workflow | Chuẩn bị mở rộng: nghỉ phép · tăng ca · chấm công bù · form tương lai | P4 | WF-04 | - | - | - | - | **TODO** |
+| `WF-01` | Workflow | Đổi tên tab thành **Workflow** | P3 | — | - | - | FIX | - | **DONE / DOI-TEN-TAB-WORKFLOW** |
+| `WF-02` | Workflow | **Snapshot danh sách người được chỉ định** vào phiếu (bịt rủi ro §20.3) | **P1** | — | COL | - | - | - | **DONE / AP-DUNG 100** |
+| `WF-03` | Workflow | Dùng cột `workflow_definitions.version` hoặc xoá nếu không dùng | P3 | WF-02 | - | - | - | - | **DONE / XOA-COT-DEAD-V19** |
+| `WF-04` | Workflow | Hợp nhất 2 hệ (`workflow_*` và `approval_stage_catalog`) hoặc ghi rõ hệ nào là chính | P3 | WF-02 | - | - | - | MODEL | **DONE / GHI-RO-HE-CHINH** |
+| `WF-05` | Workflow | Kiểm thử: đổi workflow khi có phiếu đang chờ → phiếu cũ phải giữ nguyên luồng | **P1** | WF-02 | - | - | - | - | **DONE** |
+| `WF-06` | Workflow | Chuẩn bị mở rộng: nghỉ phép · tăng ca · chấm công bù · form tương lai | P4 | WF-04 | - | - | - | - | **DONE / SAN-SANG-MO-RONG** |
 
 ### PHASE 9 — BÁO CÁO & DASHBOARD — 5 mục (DONE 0)
 

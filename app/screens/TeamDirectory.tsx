@@ -199,6 +199,9 @@ function teamListRows(data: AppData) {
       projectCode: String(project?.code ?? ""),
       projectName: String(project?.name ?? ""),
       projectKnown: Boolean(project),
+      // MT2-P10-01 (§8) — «Filter theo dự án» phải lọc theo `projectId` THẬT (`teams.project_id`),
+      // ⛔ không lọc bằng chuỗi mã dự án đã hiển thị (mã rỗng/trùng sẽ lọc sai).
+      projectId: String(team.projectId ?? ""),
       lastActivityAt: activity.value,
       lastActivitySource: activity.source,
       stoppedShownInPayload: true,
@@ -323,6 +326,9 @@ function TeamDirectory({ data, action, permission }: TeamDirectoryProps) {
   const [tab, setTab] = useState(0);
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState("");
+  // MT2-P10-01 (§8) — «Filter theo dự án» của DANH SÁCH TỔ ĐỘI. §8 chỉ yêu cầu ĐÚNG 2 thứ:
+  // danh sách tổ đội + filter theo dự án ⇒ ⛔ KHÔNG thêm nghiệp vụ/sort/cột nào ngoài phạm vi (§14).
+  const [projectFilter, setProjectFilter] = useState("ALL");
 
   const teams: Row[] = data.teams || [];
   // `activePermission` của `modulePermission(data, "teams")` (do `app/page.tsx` truyền) đã trả sẵn TOÀN QUYỀN
@@ -334,9 +340,13 @@ function TeamDirectory({ data, action, permission }: TeamDirectoryProps) {
   const warehouseOf = (id: unknown) => (data.warehouses || []).find((item) => String(item.id) === String(id));
   const userOf = (id: unknown) => (data.staffDirectory || []).concat(data.users || []).find((item) => String(item.id) === String(id));
 
-  const rows = teamListRows(data).filter((row) => !q.trim()
-    || `${row.code} ${row.name} ${row.trade} ${row.projectCode} ${row.projectName}`
-      .toLocaleLowerCase("vi").includes(q.trim().toLocaleLowerCase("vi")));
+  // MT2-P10-01 (§8) — LỌC TẠI NGUỒN: `rows` được dùng cho CẢ số lượng lẫn bảng ⇒ lọc ở đây thì
+  // mọi nơi tiêu thụ đều theo dự án đã chọn (không phải sửa từng chỗ hiển thị).
+  const rows = teamListRows(data)
+    .filter((row) => projectFilter === "ALL" || row.projectId === projectFilter)
+    .filter((row) => !q.trim()
+      || `${row.code} ${row.name} ${row.trade} ${row.projectCode} ${row.projectName}`
+        .toLocaleLowerCase("vi").includes(q.trim().toLocaleLowerCase("vi")));
 
   const detail = teams.find((item) => String(item.id) === String(detailId));
   const runAction = async (name: string, payload: Row) => {
@@ -524,7 +534,7 @@ function TeamDirectory({ data, action, permission }: TeamDirectoryProps) {
   }
 
   return <div className="stack team-management">
-    <section className="card">
+    <section className="card" data-vntech="team-project-filter">
       <ListToolbar
         title="DANH SÁCH TỔ ĐỘI"
         note={`${rows.length}/${teamListRows(data).length} tổ đội · mỗi tổ đội thuộc đúng một dự án`}
@@ -532,6 +542,16 @@ function TeamDirectory({ data, action, permission }: TeamDirectoryProps) {
         total={teamListRows(data).length}
         unit="tổ đội"
         search={{ value: q, onChange: setQ, placeholder: "Tìm mã, tên tổ đội, hạng mục, dự án…" }}
+        filters={[{
+          key: "project",
+          label: "Dự án",
+          value: projectFilter,
+          onChange: setProjectFilter,
+          options: [{ value: "ALL", label: "Tất cả dự án" }].concat((data.projects || []).map((project) => ({
+            value: String(project.id),
+            label: `${String(project.code || "")} · ${String(project.name || "")}`,
+          }))),
+        }]}
         actions={<>
           <button type="button" className="primary" disabled={!gates.canCreate || busy !== ""} title={gates.canCreate ? "Tạo tổ đội (action create_project_team)" : "Thiếu quyền: cần capability canUse của module site_command (ActionRbacRegistry :39/:233)"}>＋ TẠO TỔ ĐỘI</button>
         </>}

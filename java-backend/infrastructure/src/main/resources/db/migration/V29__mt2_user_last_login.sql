@@ -1,0 +1,14 @@
+-- MT2-P12-04 (§13.3) — «Danh sách tài khoản phải hiển thị **Last Login · Created At** ⇒ fix root cause».
+--
+-- AUDIT ĐO ĐƯỢC (không phải suy đoán):
+--   · `users` **CÓ** cột `created_at` nhưng CẢ HAI đường bootstrap đều KHÔNG chiếu nó ⇒ UI hiện «chưa có nguồn».
+--   · `users` **KHÔNG CÓ** cột đăng nhập cuối (grep toàn `db/migration/*.sql` = 0 dòng `last_login`).
+--   · ⛔ KHÔNG suy ra «đăng nhập cuối = session còn hiệu lực»: `AuthUseCase.logout` XOÁ dòng session
+--     (`sessionStore.deleteByTokenHash`) ⇒ lịch sử đăng nhập sẽ MẤT, không dùng làm nguồn được.
+--
+-- ⇒ Cần 1 cột lưu mốc đăng nhập gần nhất trên chính bản ghi người dùng.
+--
+-- ⚠️ AN TOÀN (§19 NO DESTRUCTIVE): `ADD COLUMN` **NULLABLE** ⇒ không ghi đè dữ liệu cũ, không khóa bảng dài,
+--    dòng cũ có `NULL` = «chưa đăng nhập lần nào» (⛔ KHÔNG bịa ngày giả). ⛔ KHÔNG drop/reorder cột cũ.
+--    `TIMESTAMP` chạy được trên CẢ MySQL 8 lẫn H2 (schema kiểm thử dùng bản sao `schema-h2.sql`).
+ALTER TABLE `users` ADD COLUMN `last_login_at` TIMESTAMP NULL;

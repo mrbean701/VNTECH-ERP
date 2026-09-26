@@ -26,6 +26,15 @@ public class HrStoreAdapter implements HrStore {
         return rows.isEmpty() ? Optional.empty() : Optional.of(new LinkedHashMap<>(rows.get(0)));
     }
 
+    /**
+     * MT2 §10.4 (②A) — rỗng/trắng ⇒ {@code NULL} cho cột khoá {@code correspondence_id}.
+     * ⛔ Không ghi chuỗi rỗng: để UI gỡ liên kết (bỏ chọn công văn) phải XOÁ ĐƯỢC liên kết, không phải
+     * để lại một "id rỗng" rồi mất khả năng phân biệt với NULL khi tra cứu.
+     */
+    private static Object blankToNull(String value) {
+        return (value == null || value.isBlank()) ? null : value.trim();
+    }
+
     @Override
     public Optional<Map<String, Object>> findUser(String userId) {
         return first("SELECT id FROM users WHERE id=?", userId);
@@ -177,24 +186,25 @@ public class HrStoreAdapter implements HrStore {
     @Transactional
     public void insertLegalDocument(String id, String docNo, String docType, String title, String issueDate,
                                     String issuer, String effectiveDate, String expiryDate, String scope,
-                                    String attachmentId, String createdBy, Instant now) {
+                                    String attachmentId, String correspondenceId, String createdBy, Instant now) {
         jdbcTemplate.update("""
                 INSERT INTO legal_documents (id,doc_no,doc_type,title,issue_date,issuer,effective_date,expiry_date,
-                                             scope,attachment_id,status,created_by,created_at,updated_at)
-                VALUES (?,?,?,?,?,?,?,?,?,?,'active',?,?,?)""",
+                                             scope,attachment_id,correspondence_id,status,created_by,created_at,updated_at)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,'active',?,?,?)""",
                 id, docNo, docType, title, issueDate, issuer, effectiveDate, expiryDate, scope, attachmentId,
-                createdBy, now, now);
+                blankToNull(correspondenceId), createdBy, now, now);
     }
 
     @Override
     @Transactional
     public void updateLegalDocument(String id, String docNo, String docType, String title, String issueDate,
                                     String issuer, String effectiveDate, String expiryDate, String scope,
-                                    String attachmentId, Instant now) {
+                                    String attachmentId, String correspondenceId, Instant now) {
         jdbcTemplate.update("""
                 UPDATE legal_documents SET doc_no=?,doc_type=?,title=?,issue_date=?,issuer=?,effective_date=?,
-                       expiry_date=?,scope=?,attachment_id=?,updated_at=? WHERE id=?""",
-                docNo, docType, title, issueDate, issuer, effectiveDate, expiryDate, scope, attachmentId, now, id);
+                       expiry_date=?,scope=?,attachment_id=?,correspondence_id=?,updated_at=? WHERE id=?""",
+                docNo, docType, title, issueDate, issuer, effectiveDate, expiryDate, scope, attachmentId,
+                blankToNull(correspondenceId), now, id);
     }
 
     @Override

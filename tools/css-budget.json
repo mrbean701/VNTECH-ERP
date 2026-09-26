@@ -7,6 +7,8 @@
   "_duplicateNote": "PHASE 1 (16/09/2026) — ĐỊNH NGHĨA LẠI 'selector định nghĩa trùng': chỉ đếm khi selector bị định nghĩa lại NHIỀU LẦN TRONG CÙNG NGỮ CẢNH (cùng tổ hợp at-rule bao ngoài). Ghi đè trong `@media` là CSS hợp lệ và có chủ đích, KHÔNG phải nợ. Trước đây tính cả các lần ghi đè responsive nên chỉ số bị thổi phồng: globals.css 1.183 → thực chất 739; canonical.css 27 → thực chất 0.",
   "_gd1Note": "GĐ1 (16/09/2026): gom 16 token từ canonical.css :root và font-floor.css về một nguồn duy nhất app/styles/tokens.css — GIÁ TRỊ KHÔNG ĐỔI.",
   "_phase1Note": "PHASE 1 (16/09/2026): thêm MỤC 14 trong canonical.css — kiểu dáng cho thư viện thành phần dùng chung app/components/ui (ListToolbar · DataTable · StatusBadge · PermissionGuard · Timeline · EntityDetailModal). canonical.css 747 → 930 dòng. ĐÂY LÀ TĂNG CÓ CHỦ ĐÍCH: các thành phần này thay thế khuôn lặp lại ở 31 modal thực thể và 27 màn hình; khi các màn chuyển sang dùng chung thì CSS nội tuyến của chúng sẽ được gỡ, bù lại phần đã tăng.",
+  "_uiModalNote": "USER 26/09/2026 duyệt phương án A1 (nâng trần) cho yêu cầu sửa modal phiếu ở Trung tâm phê duyệt: thêm MỤC 14.4 — dải trạng thái đơn + thẻ hành động (ô BÌNH LUẬN nằm TRÊN, nút XẾP HÀNG NGANG) + bỏ luật ẩn thông tin người duyệt/phòng ban/thời gian ở bước chưa duyệt. canonical.css 967 → 1013 dòng. TĂNG CÓ CHỦ ĐÍCH như PHASE 1: mọi mô tả nằm trong bộ thành phần dùng chung, không nhân bản theo từng màn.",
+  "_uiStepperNote": "USER 26/09/2026 (cùng chính sách A1 đã duyệt): MỤC 14.5 — dải phê duyệt NGANG `o---o----o----o` ở cột «PHIẾU ĐANG XỬ LÝ» của Trung tâm phê duyệt (TRẠNG THÁI ở TRÊN mốc · AI DUYỆT/PHÒNG BAN/THỜI GIAN ở DƯỚI mốc) + tắt đường nối DỌC cũ. canonical.css 1013 → 1076 dòng. TĂNG CÓ CHỦ ĐÍCH: thay bố cục theo yêu cầu người dùng, ⛔ không thêm màn/thành phần mới.",
   "ceilings": {
     "important": 5014,
     "tableWrap": 52,
@@ -21,7 +23,7 @@
       "duplicateSelectorBlocks": 739
     },
     "app/styles/canonical.css": {
-      "lines": 930,
+      "lines": 1076,
       "important": 62,
       "duplicateSelectorBlocks": 0
     },

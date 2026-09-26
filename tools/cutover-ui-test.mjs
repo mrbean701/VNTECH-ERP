@@ -141,5 +141,6 @@ console.log(`\n===== GIAO DIỆN: ${ok ? "ĐĂNG NHẬP VÀ VÀO ĐƯỢC HỆ T
 
 ws.close();
 browser.kill();
-rmSync(profile, { recursive: true, force: true });
+await sleep(1000);
+try { rmSync(profile, { recursive: true, force: true }); } catch { /* Edge may still release profile; do not convert a successful UI check into a false red. */ }
 process.exit(ok ? 0 : 1);

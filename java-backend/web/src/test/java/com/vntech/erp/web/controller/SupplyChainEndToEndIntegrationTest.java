@@ -277,6 +277,58 @@ class SupplyChainEndToEndIntegrationTest {
                 jdbc.queryForObject("SELECT status FROM stock_issues WHERE id=?", String.class, issueId),
                 "TASK-133 ⑤: sinh GRN xong ⇒ status 'grn_created'");
 
+        // ══════════════════════════════════════════════════════════════════════════════════════════
+        // MT2 §7.4 — **TẠO PHIẾU NHẬP TỪ LỆNH ĐIỀU CHUYỂN (STO)** (nguồn còn thiếu; nguồn phiếu xuất đã
+        // kiểm ở ⑤ phía trên). Nguyên văn: “tạo phiếu nhập từ STO/phiếu xuất kho: nếu phiếu liên quan đã có
+        // kho đi/kho đến ⇒ tự động fill”. ⇒ Kho nhận LẤY TỰ ĐỘNG từ `transfer_orders.destination_warehouse_id`.
+        // ⚠️ Tái dùng ĐÚNG PO mà `fullSupplyChain()` đã tạo qua API (cùng dự án `p_e2e`, cùng vật tư `m_e2e`)
+        //    ⇒ ⛔ KHÔNG seed thêm MR/PO; chỉ thêm 1 KHO ĐÍCH + 1 lệnh điều chuyển.
+        // ══════════════════════════════════════════════════════════════════════════════════════════
+        Instant stoT = Instant.now();
+        jdbc.update("INSERT INTO warehouses (id,code,name,type,project_id,parent_warehouse_id,keeper_user_id,active,created_at,updated_at) VALUES (?,?,?,'site',?,'WH-CENTRAL',?,1,?,?)",
+                "wh_e2e_dest", "KHO-E2E-DICH", "Kho đích E2E", projectId, adminId, stoT, stoT);
+        jdbc.update("INSERT INTO transfer_orders (id,transfer_no,source_warehouse_id,destination_warehouse_id,"
+                        + "transit_warehouse_id,source_project_id,destination_project_id,requested_by,requested_at,"
+                        + "status,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                "to_e2e", "STO-E2E-001", "wh_e2e", "wh_e2e_dest", "wh_e2e", projectId, projectId,
+                adminId, stoT, "received", stoT, stoT);
+        jdbc.update("INSERT INTO transfer_order_items (id,transfer_order_id,material_id,requested_qty,"
+                        + "received_qty,created_at,updated_at) VALUES (?,?,?,?,?,?,?)",
+                "toi_e2e", "to_e2e", "m_e2e", 4, 4, stoT, stoT);
+
+        // ⑥a. ÂM — trạng thái KHÔNG phải `received` ⇒ 400 và ⛔ KHÔNG sinh phiếu nhập.
+        jdbc.update("UPDATE transfer_orders SET status='approved' WHERE id='to_e2e'");
+        postAction(action("create_transfer_grn", "\"transferId\":\"to_e2e\""), 400);
+        assertEquals(0, jdbc.queryForObject(
+                "SELECT COUNT(*) FROM goods_receipts WHERE receipt_no LIKE 'GRN-STO-%'", Integer.class),
+                "MT2 §7.4 (âm): STO chưa nhận hàng ⇒ ⛔ KHÔNG được sinh phiếu nhập nào");
+
+        // ⑥b. DƯƠNG — STO `received` ⇒ sinh 1 GRN, số dòng `GRN-STO-`, kho nhận TỰ ĐIỀN từ STO.
+        jdbc.update("UPDATE transfer_orders SET status='received' WHERE id='to_e2e'");
+        postAction(action("create_transfer_grn", "\"transferId\":\"to_e2e\""), 200);
+        assertEquals("grn_created",
+                jdbc.queryForObject("SELECT status FROM transfer_orders WHERE id='to_e2e'", String.class),
+                "MT2 §7.4: sinh GRN xong ⇒ `transfer_orders.status` = 'grn_created'");
+        Map<String, Object> stoGrn = jdbc.queryForMap(
+                "SELECT receipt_no AS rn, warehouse_id AS wh, posting_status AS ps, purchase_order_id AS po "
+                        + "FROM goods_receipts WHERE receipt_no LIKE 'GRN-STO-%'");
+        assertTrue(String.valueOf(stoGrn.get("rn")).startsWith("GRN-STO-"),
+                "MT2 §7.4: số phiếu nhập sinh từ STO phải theo dòng riêng `GRN-STO-` (⛔ không lẫn `GRN-PX`/mua hàng)");
+        assertEquals("wh_e2e_dest", stoGrn.get("wh"),
+                "MT2 §7.4: kho nhận phải TỰ ĐỘNG lấy từ `transfer_orders.destination_warehouse_id`");
+        assertEquals("posted", stoGrn.get("ps"), "GRN sinh từ STO phải ở trạng thái `posted` (⛔ không vòng QC/duyệt)");
+        assertTrue(stoGrn.get("po") != null && !String.valueOf(stoGrn.get("po")).isEmpty(),
+                "chốt PO: mọi GRN hiện có đều gắn PO (32/32) ⇒ dòng STO phải tra được PO của dự án");
+        assertEquals(1, jdbc.queryForObject(
+                "SELECT COUNT(*) FROM goods_receipt_items WHERE receipt_id=(SELECT id FROM goods_receipts WHERE receipt_no LIKE 'GRN-STO-%')",
+                Integer.class), "GRN phải có ĐÚNG 1 dòng vật tư (theo 1 dòng STO)");
+
+        // ⑥c. ÂM — GỌI LẦN HAI ⇒ 400 và ⛔ vẫn CHỈ 1 phiếu nhập (chốt chặn không sinh trùng).
+        postAction(action("create_transfer_grn", "\"transferId\":\"to_e2e\""), 400);
+        assertEquals(1, jdbc.queryForObject(
+                "SELECT COUNT(*) FROM goods_receipts WHERE receipt_no LIKE 'GRN-STO-%'", Integer.class),
+                "MT2 §7.4 (âm): gọi lần hai ⛔ KHÔNG được sinh phiếu nhập thứ hai");
+
         // Production → Thu hồi → Thanh toán
         postAction(action("save_production_report",
                 "\"projectId\":\"" + projectId + "\",\"reportPeriod\":\"2026-09\",\"plannedValue\":100000000,"

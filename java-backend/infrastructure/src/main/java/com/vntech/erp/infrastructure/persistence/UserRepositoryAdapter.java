@@ -30,6 +30,14 @@ public class UserRepositoryAdapter implements UserRepository {
         return jpaRepository.countByActiveTrue();
     }
 
+    // MT2-P12-04 (§13.3) — ghi mốc đăng nhập gần nhất. ⛔ UPDATE 1 cột, ⛔ KHÔNG chạm mật khẩu/active.
+    //   `CURRENT_TIMESTAMP` chạy giống nhau trên MySQL 8 và H2 (bài học cũ ở `stockIssueGrnLines`).
+    @Override
+    public void touchLastLogin(String userId, java.time.Instant at) {
+        jdbcTemplate.update("UPDATE users SET last_login_at=? WHERE id=?",
+                java.sql.Timestamp.from(at == null ? java.time.Instant.now() : at), userId);
+    }
+
     @Override
     public Optional<User> findByUsernameIgnoreCase(String username) {
         return jpaRepository.findByUsernameIgnoreCase(username).filter(UserJpaEntity::isActive).map(this::toDomain);
@@ -74,14 +82,20 @@ public class UserRepositoryAdapter implements UserRepository {
     private UserJpaEntity merge(UserJpaEntity existing, User user) {
         existing.setPasswordHash(user.passwordHash());
         existing.setAvatarUrl(user.avatarUrl());
+        // MT2 §13.4 — chữ ký: gán giá trị hiện tại của domain (null ⇒ XOÁ chữ ký — «thay/xoá ảnh cũ»).
+        existing.setSignatureUrl(user.signatureUrl());
         existing.setUpdatedAt(Instant.now());
         return existing;
     }
 
     private User toDomain(UserJpaEntity e) {
-        return new User(e.getId(), e.getEmployeeCode(), e.getFullName(), e.getUsername(), e.getEmail(),
+        User user = new User(e.getId(), e.getEmployeeCode(), e.getFullName(), e.getUsername(), e.getEmail(),
                 e.getPasswordHash(), e.getRole(), e.getDepartment(), e.getOrganizationUnitId(),
                 e.getApprovalLimit(), e.isActive(), e.isMustChangePassword(), e.getAvatarUrl());
+        // ⚠️ `User.signatureUrl` ⛔ KHÔNG nằm trong hàm khởi tạo (để ⛔ không vỡ mọi `new User(...)`)
+        // ⇒ nạp qua setter domain, đúng kế hoạch an toàn của MT2-P3-04.
+        user.changeSignature(e.getSignatureUrl());
+        return user;
     }
 
     private static String str(Object value) {

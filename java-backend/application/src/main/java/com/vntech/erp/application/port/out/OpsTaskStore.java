@@ -11,6 +11,18 @@ public interface OpsTaskStore {
     boolean userIsDepartmentManager(String userId, String departmentCode);
     boolean userCanReceiveDepartmentTask(String userId, String departmentCode, String projectId);
     /**
+     * MT2-P4-01 (§3.2 · đề án ①A user chốt 26/09/2026) — **phòng ban của một người dùng**.
+     *
+     * <p>VÌ SAO CẦN: MT2 §3.2 (dòng 41-42) quy định «**Trưởng phòng trở lên** → xem công việc của
+     * nhân viên **thuộc phòng ban mình**», còn «**Phó giám đốc trở lên** → xem **toàn bộ phòng ban**
+     * · **toàn bộ nhân viên công ty**». Muốn phân biệt 2 tầng đó thì tầng application **phải biết
+     * phòng ban của người đang xem** — trước đây Java ⛔ không có cửa nào để đọc (chỉ có
+     * {@code userIsDepartmentManager(userId, departmentCode)} trả boolean nên ⛔ không suy ra được phòng).
+     *
+     * @return mã phòng (`users.department`, thường là `KH` / `DA` / `CN` …); **rỗng** nếu trống/không thấy.
+     */
+    String userDepartment(String userId);
+    /**
      * Người nhận việc MẶC ĐỊNH của phòng khi người giao không chọn ai — JS `system-route.mjs:256-259`
      * ({@code defaultDepartmentAssignee}). Trả {@code null} nếu phòng không có nhân sự phù hợp.
      * <p><b>TASK-080C:</b> thêm để port đủ nhánh "không truyền assignedTo" của JS; trước đây Java ghi
@@ -97,6 +109,41 @@ public interface OpsTaskStore {
     long countActiveStages();
     /** Đếm hồ sơ đang chờ ở một bước (join `material_requests`) — JS `:2187`. */
     long countPendingApprovalsForStageNo(int stageNo);
+
+    // ══════════════════════════════════════════════════════════════════════════════════════════════════
+    // MT2-P4-03 (§4.1) — CARD «CHỜ GIÁM ĐỐC DUYỆT»: liệt kê phiếu ĐANG CHỜ ở bước mà **MÃ QUYỀN**
+    // của bước có chứa vai trò Giám đốc. Hàm MỚI (thuần thêm) — ⛔ KHÔNG đổi 2 hàm `…ForStageNo` ở trên ✗.
+    //
+    // ⚠️ VÌ SAO KHÔNG DÙNG LẠI `countPendingApprovalsForStageNo` (⛔ đã ĐO, không phải suy đoán ✗):
+    //    `approval_stage_catalog` bước 5 có **HAI snapshot KHÁC NHAU** trên `approvals`:
+    //       `director,tgd,giam_doc` = 24 phiếu (ĐÚNG nhóm Giám đốc)
+    //       `da_truong,kh_truong`   =  7 phiếu (⛔ KHÔNG có director)
+    //    ⇒ đếm theo `stage_no = 5` sẽ **GỘP NHẦM 7 phiếu** ⛔ không thuộc Giám đốc ⇒ SAI nghiệp vụ ✗
+    //
+    // ⚠️ CÀI ĐẶT PHẢI: SELECT các dòng `status='pending'` rồi **LỌC MÃ Ở JAVA**:
+    //    tách `allowed_role_codes_snapshot` theo dấu phẩy → `trim()` → so **CHÍNH XÁC** với `roleCodes`.
+    //    ⛔ KHÔNG dùng `LIKE '%director%'` ✗ (khớp nhầm chuỗi con).
+    // ══════════════════════════════════════════════════════════════════════════════════════════════════
+
+    /**
+     * MT2-P4-03 — phiếu ĐANG CHỜ (`status='pending'`) ở bước có **mã quyền** thuộc {@code roleCodes}.
+     * Trả về danh sách để UI dựng card «Chờ Giám đốc duyệt» (⛔ chỉ ĐỌC — không đổi luồng duyệt §20).
+     */
+    List<Map<String, Object>> pendingApprovalsForRoleCodes(List<String> roleCodes);
+
+    /**
+     * MT2-P4-03 — **CẤP BẬC của một user** (`system_level_catalog.level_rank`) để tầng **application**
+     * kiểm được điều kiện «≥ trưởng phòng» (rank ≥ 30) giống MT2-P4-02.
+     *
+     * <p>⚠️ <b>VÌ SAO CẦN HÀM NÀY</b>: MT2-P4-02 đã cài điều kiện «admin OR `level_rank>=30`» **inline trong
+     * `BootstrapDataAdapter`** (tầng **infrastructure**) ⇒ tầng **application ⛔ không gọi lại được** ✗.
+     * Nếu use-case tự viết SQL ⇒ **trùng logic** ✗ (§15). Vì vậy **trích thành hàm PORT dùng chung** ở đây ✔
+     * (⛔ KHÔNG copy SQL sang tầng khác ✗, ⛔ KHÔNG sửa `BootstrapDataAdapter` ✗ — giữ P4-02 nguyên trạng).
+     *
+     * @return `level_rank`; **`null`** nếu user không có / `system_level_code` trống / không tìm thấy
+     *         (⚠️ NULL ⇒ coi như **KHÔNG đủ**, ⛔ không suy diễn thành đủ ✗)
+     */
+    Integer userLevelRank(String userId);
 
     Optional<Map<String, Object>> findMaterialMarApproval(String projectId, String materialId);
     void insertMarApproval(String id, String projectId, String materialId, String approvalNo, String status,

@@ -32,10 +32,20 @@ public final class RbacService {
      *   • logout / change_password / update_profile_avatar — việc TỰ PHỤC VỤ của chính
      *     người dùng: nếu bắt buộc phải có quyền module thì một tài khoản bị thu hồi
      *     hết quyền cũng không thể đổi mật khẩu hay thoát ra được.
+     *   • mark_notification_read / mark_notification_snooze / mark_notification_all_read (MT2 §14) —
+     *     CÙNG nhóm tự phục vụ: thông báo là **CỦA CHÍNH user** (`cu.id()`), và một tài khoản bị thu hồi
+     *     hết quyền module vẫn phải đọc/đánh dấu đọc được thông báo của mình.
+     *     ⚠️ Vì sao KHÔNG khai `List.of()` ở map module: `requireActionModule` coi map rỗng là
+     *     **MẶC ĐỊNH TỪ CHỐI (403)** (PHASE 0B S-03, xem nhánh `required.isEmpty()` bên dưới) —
+     *     ⛔ map rỗng KHÔNG có nghĩa là "không gác".
      * Đây là danh sách ĐÓNG (allowlist) — mọi action khác đều phải qua kiểm quyền.
      */
     public static final java.util.Set<String> PUBLIC_ACTIONS = java.util.Set.of(
-            "login", "setup", "logout", "change_password", "update_profile_avatar");
+            "login", "setup", "logout", "change_password", "update_profile_avatar",
+            "mark_notification_read", "mark_notification_snooze", "mark_notification_all_read",
+            // MT2 §13.4 — chữ ký là dữ liệu TỰ PHỤC VỤ của chính user (cùng nhóm `update_profile_avatar`).
+            // ⚠️ Phải nằm ở ĐÂY (⛔ KHÔNG phải `List.of()` ở map module — map rỗng = NÉM 403).
+            "update_profile_signature");
 
     public boolean isCompanyLeadership(AuthUseCase.CurrentUser user) {
         return List.of("director", "accountant").contains(user.role());

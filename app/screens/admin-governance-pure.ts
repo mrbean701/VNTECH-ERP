@@ -32,14 +32,21 @@ export const ADMIN_STEP_LABELS = [
   "Ngoại lệ cá nhân",
   "Audit log",
   "Cấu hình hệ thống",
+  // MT2-P12-01 (§13.1) — THÊM bước «Thông báo» (tab cấu hình thông báo Web/Email). Trước đây backend
+  // `save_notification_config`/`notification_configs`/… ĐÃ CÓ (module `admin`) nhưng **UI = 0 dòng** ⇒
+  // người dùng không cấu hình được. ⛔ Không thêm khoá module mới — dùng chính module `admin` sẵn có.
+  "Thông báo",
 ];
 
 /** Lý do «chưa có nguồn» — KHÔNG bịa số, KHÔNG hiện 0 giả. */
 export const ACCOUNT_UNSOURCED_REASON = {
+  // MT2-P12-04 (§13.3) — 2 trường ĐÃ CÓ NGUỒN THẬT: `last_login_at` (cột V29, ghi khi `AuthUseCase.login` thành
+  // công) và `created_at` (cột có sẵn, nay đã được chiếu trong payload `users`). Các lý do bên dưới chỉ còn hiện
+  // khi GIÁ TRỊ RỖNG — tức user chưa đăng nhập lần nào (⛔ KHÔNG bịa ngày).
   lastLoginAt:
-    "Bảng `users` KHÔNG có cột đăng nhập cuối; bootstrap chỉ trả `activeSessions` (phiên CÒN hiệu lực) với `createdAt`/`expiresAt` (`BootstrapDataAdapter.java` khối activeSessions) — đó là phiên hiện tại, không phải lần đăng nhập cuối.",
+    "Tài khoản chưa đăng nhập lần nào ⇒ `users.last_login_at` NULL. Cột này được ghi khi `AuthUseCase.login` xác thực thành công (migration V29).",
   createdAt:
-    "Bảng `users` CÓ cột `created_at` nhưng CẢ HAI đường bootstrap đều không trả cột này (`scripts/system-route.mjs:746` và `BootstrapDataAdapter.java:1180`) ⇒ UI không có nguồn. Thêm vào payload phải sửa `scripts/**`/`java-backend/**` — BỊ CẤM trong nhánh này.",
+    "Giá trị rỗng ⇒ chưa có mốc tạo tài khoản trong dữ liệu (`users.created_at` NULL). Không hiển thị ngày bịa.",
 };
 
 // ── AD-02 — 13 CỘT TÀI KHOẢN (nguyên văn thứ tự yêu cầu) ───────────────────────────────────────
@@ -52,12 +59,14 @@ export const ACCOUNT_COLUMNS = [
   { key: "organizationName", label: "Phòng", source: "organization_units.name (qua users.organization_unit_id)" },
   { key: "roleName", label: "Chức danh", source: "role_catalog.name (qua users.role)" },
   { key: "systemLevelName", label: "Cấp", source: "system_level_catalog.name (qua users.system_level_code)" },
-  { key: "approvalLimit", label: "Hạn mức", source: "users.approval_limit" },
+  // MT2-P12-03 (§13.3) — ⛔ BỎ cột «Hạn mức» (`users.approval_limit`): «⛔ **Bỏ trường "Hạn mức"** —
+  // không thay bằng trường khác **nếu chưa có nghiệp vụ**» ⇒ gỡ khỏi danh sách cột (không thêm cột thay thế).
+  // ⚠️ ⛔ CỘT CSDL **GIỮ NGUYÊN** (`V25__…` đã ghi rõ «KHÔNG drop») — chỉ ẩn khỏi UI/API, dữ liệu cũ vẫn còn.
   { key: "statusLabel", label: "Trạng thái", source: "users.active" },
   { key: "permissionCount", label: "Số quyền", source: "user_module_permissions (đếm dòng có ≥1 capability)" },
   { key: "roleBase", label: "Vai trò", source: "role_catalog.base_role (System Role dùng để kiểm quyền)" },
-  { key: "lastLoginAt", label: "Đăng nhập cuối", source: null },
-  { key: "createdAt", label: "Ngày tạo", source: null },
+  { key: "lastLoginAt", label: "Đăng nhập cuối", source: "users.last_login_at (V29 — ghi khi AuthUseCase.login thành công)" },
+  { key: "createdAt", label: "Ngày tạo", source: "users.created_at" },
 ];
 
 /** Nhãn hiển thị khi trường không có nguồn — chuỗi DÙNG CHUNG cho mọi màn (không tự chế mỗi nơi một kiểu). */

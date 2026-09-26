@@ -855,6 +855,9 @@ CREATE TABLE IF NOT EXISTS `legal_documents` (
   `effective_date` DATE NULL,
   `expiry_date` DATE NULL,
   `scope` TEXT NULL,
+  -- MT2 §10.4 (②A) — khoá liên kết tới công văn (`official_correspondence.id`); NULL = chưa gắn.
+  -- ⚠️ Phải khai Ở CẢ HAI bản schema H2 (test + demo) vì `application-test.yml` dùng `ddl-auto: none`.
+  `correspondence_id` VARCHAR(64) NULL,
   `attachment_id` VARCHAR(64) NULL,
   `status` VARCHAR(255) NOT NULL DEFAULT 'active',
   `created_by` TEXT NOT NULL,
@@ -1653,6 +1656,9 @@ CREATE TABLE IF NOT EXISTS `suppliers` (
   `tax_code` VARCHAR(64) NULL,
   `contact_name` TEXT NULL,
   `phone` TEXT NULL,
+  -- MT2-P8-04 (§6.2) — đồng bộ với Flyway `V28__mt2_supplier_email.sql`
+  -- (⚠️ H2 test profile ⛔ KHÔNG chạy Flyway ⇒ schema này PHẢI khớp migration — §43 dependency).
+  `email` TEXT NULL,
   `lead_time_days` INT NOT NULL DEFAULT 0,
   `rating` DECIMAL(18,4) NOT NULL DEFAULT 0,
   `active` TINYINT(1) NOT NULL DEFAULT 1,
@@ -1922,6 +1928,8 @@ CREATE TABLE IF NOT EXISTS `users` (
   `avatar_url` TEXT NULL,
   `organization_unit_id` VARCHAR(64) NULL,
   `must_change_password` INT NOT NULL DEFAULT 0,
+  -- MT2-P12-04 (§13.3) — khớp V29 (`ADD COLUMN` NULLABLE): mốc đăng nhập gần nhất cho danh sách tài khoản.
+  `last_login_at` TIMESTAMP(3) NULL,
   `password_reset_at` TIMESTAMP(3) NULL,
   `password_reset_by` TEXT NULL,
   PRIMARY KEY (`id`)
@@ -2324,4 +2332,59 @@ CREATE INDEX IF NOT EXISTS `approvals_entity_idx` ON `approvals` (`entity_type`,
 --   nhân viên văn phòng công ty, yêu cầu người dùng 21/09/2026). Bản H2 sinh từ V1 vẫn
 --   ghi `NOT NULL` (dòng ~1033) nên INSERT phiếu không-dự-án đỏ ở test ⇒ vá tay như V17/V21.
 ALTER TABLE `material_requests` ALTER COLUMN `project_id` DROP NOT NULL;
+-- MT2-P1-03 (21/09/2026) — Flyway `V25__mt2_approval_overdue_reason_and_user_signature.sql`
+--   thêm `approvals.overdue_reason` (MT2 §4.4 — LÝ DO khi duyệt quá hạn SLA; backend bắt buộc nhập).
+--   `approvals` KHÔNG phải JPA entity ⇒ khai ở đây là đủ cho profile test H2.
+--   ⚠️ `users.signature_url` (MT2 §13.4) PHẢI khai Ở CẢ HAI NƠI — đã đo bằng test thật:
+--      ① `UserJpaEntity.signatureUrl` (Hibernate ĐỌC cột theo entity — thiếu ⇒
+--         `Column "uje1_0.signature_url" not found` làm hỏng 38 test);
+--      ② `ALTER` dưới đây (bảng H2 `users` lấy từ schema-h2.sql nên phải CÓ cột thật).
+ALTER TABLE `approvals` ADD COLUMN IF NOT EXISTS `overdue_reason` text NULL;
+ALTER TABLE `users` ADD COLUMN IF NOT EXISTS `signature_url` varchar(500) NULL;
+-- MT2-P1-04 (21/09/2026) — Flyway `V26__mt2_notification_config.sql`: 3 bảng cấu hình thông báo
+--   (§45 cấu hình + người nhận, §48/§49 trạng thái đọc/nhắc lại THEO TỪNG USER).
+--   H2 (MODE=MySQL) KHÔNG nhận một số cú pháp riêng của MySQL ⇒ lược bỏ: `COMMENT`, `ON UPDATE CURRENT_TIMESTAMP`,
+--   `KEY ... idx` (thay bằng CREATE INDEX riêng) và `ENGINE/CHARSET/COLLATE`.
+CREATE TABLE IF NOT EXISTS `notification_configs` (
+  `id` VARCHAR(64) NOT NULL, `code` VARCHAR(64) NOT NULL, `name` VARCHAR(255) NOT NULL,
+  `channel` VARCHAR(16) NOT NULL, `content` TEXT NULL,
+  `recipient_mode` VARCHAR(24) NOT NULL DEFAULT 'all',
+  `send_at` TIMESTAMP(3) NULL, `end_at` TIMESTAMP(3) NULL,
+  `active` TINYINT NOT NULL DEFAULT 1, `created_by` VARCHAR(64) NULL,
+  `created_at` TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS `notification_configs_code_uq` ON `notification_configs` (`code`);
+CREATE INDEX IF NOT EXISTS `notification_configs_channel_idx` ON `notification_configs` (`channel`, `active`);
+CREATE TABLE IF NOT EXISTS `notification_config_targets` (
+  `id` VARCHAR(64) NOT NULL, `config_id` VARCHAR(64) NOT NULL,
+  `target_type` VARCHAR(24) NOT NULL, `target_id` VARCHAR(64) NULL,
+  `created_at` TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+);
+CREATE INDEX IF NOT EXISTS `notification_config_targets_cfg_idx` ON `notification_config_targets` (`config_id`, `target_type`);
+CREATE TABLE IF NOT EXISTS `notification_user_states` (
+  `id` VARCHAR(64) NOT NULL, `config_id` VARCHAR(64) NOT NULL, `user_id` VARCHAR(64) NOT NULL,
+  `read_at` TIMESTAMP(3) NULL, `snooze_until` TIMESTAMP(3) NULL, `delivered_at` TIMESTAMP(3) NULL,
+  `created_at` TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS `notification_user_states_uq` ON `notification_user_states` (`config_id`, `user_id`);
+CREATE INDEX IF NOT EXISTS `notification_user_states_user_idx` ON `notification_user_states` (`user_id`, `read_at`);
+-- MT2-P1-06 (21/09/2026) — Flyway `V27__mt2_supplier_materials.sql`: liên kết NCC ↔ Vật tư
+--   (§6.3 nguồn PO → PO Items → Supplier Materials; §6.4 tra cứu nhanh để hỏi user khi tạo PO).
+--   H2: lược bỏ COMMENT / ON UPDATE CURRENT_TIMESTAMP / KEY trong CREATE (thay bằng CREATE INDEX).
+CREATE TABLE IF NOT EXISTS `supplier_materials` (
+  `id` VARCHAR(64) NOT NULL, `supplier_id` VARCHAR(64) NOT NULL, `material_id` VARCHAR(64) NOT NULL,
+  `times_ordered` INT NOT NULL DEFAULT 0, `last_ordered_at` TIMESTAMP(3) NULL,
+  `last_unit_price` DECIMAL(18,4) NULL, `active` TINYINT NOT NULL DEFAULT 1,
+  `created_at` TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS `supplier_materials_uq` ON `supplier_materials` (`supplier_id`, `material_id`);
+CREATE INDEX IF NOT EXISTS `supplier_materials_material_idx` ON `supplier_materials` (`material_id`);
+CREATE INDEX IF NOT EXISTS `supplier_materials_last_idx` ON `supplier_materials` (`supplier_id`, `last_ordered_at`);
 -- [H2-MANUAL-END]

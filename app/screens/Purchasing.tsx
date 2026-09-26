@@ -130,7 +130,42 @@ const PO_STATUS_LABEL: Record<string, string> = {
   delivered_pending_confirmation: "Chờ BCH xác nhận", completed: "Đã giao đủ", completed_with_exceptions: "Đã giao đủ",
   rejected: "Từ chối", cancelled: "Đã huỷ",
 };
-const purchasingStatusLabel = (value: unknown) => PR_STATUS_LABEL[String(value ?? "")] || PO_STATUS_LABEL[String(value ?? "")] || String(value || "—");
+// MT2 §6.9 — ⛔ ĐÃ XOÁ `purchasingStatusLabel`: nó tra `PR_STATUS_LABEL` rồi **lùi về** `PO_STATUS_LABEL`,
+// nghĩa là một giá trị của PR không có nhãn PR sẽ bị dán nhãn của **PO** — đúng cái “trộn” mà §6.9 cấm.
+// Nay tách 3 hàm: `purchasingPrStatusLabel` (hồ sơ PR) · `purchasingSupplyStatusLabel` (giai đoạn cung ứng)
+// · `statusOptionLabel` (trong component, theo đúng loại dòng) ⇒ ⛔ không còn đường trộn nào.
+
+// ─────────── MT2 §6.9 — TÁCH BẠCH 3 TRỤC, ⛔ KHÔNG TRỘN `PR status` VỚI `Approval step` ───────────
+// Nguyên văn yêu cầu (`docs/dsh/MASTER_TASK_2.md:161-162`): “cột bước duyệt hiển thị sai · cột trạng thái
+// bị trộn · trạng thái `issued` không phù hợp … ⛔ Không trộn `PR status` với `Approval step`.”
+// Vì sao phải tách hàm: `purchasingStatusLabel` tra `PR_STATUS_LABEL` **rồi lùi về** `PO_STATUS_LABEL`
+// ⇒ một giá trị của PR mà PR không có nhãn sẽ bị dán nhãn của **PO** (đúng lỗi “trộn” của §6.9).
+/** Trạng thái HỒ SƠ của phiếu đề nghị — CHỈ tra `PR_STATUS_LABEL`, ⛔ KHÔNG lùi về nhãn PO. */
+const purchasingPrStatusLabel = (value: unknown) => {
+  const raw = String(value ?? "");
+  return PR_STATUS_LABEL[raw] || raw || "—";
+};
+// Giai đoạn CUNG ỨNG của phiếu là trục THỨ BA, ⛔ không dùng chung nhãn với `status`.
+// ⚠️ `issued` CỐ Ý không có nhãn: MT2 §6.9 chốt nghiệp vụ PR kết thúc ở `completed`
+//    ⇒ ⛔ KHÔNG tự thêm state `Issued` cho PR. Giá trị lạ hiện NGUYÊN VĂN (minh bạch, ⛔ không bịa nhãn).
+const SUPPLY_STATUS_LABEL: Record<string, string> = {
+  approval_pending: "Chờ duyệt", awaiting_bch_confirmation: "Chờ BCH xác nhận", awaiting_po: "Chờ lập PO",
+  waiting_delivery: "Chờ giao", partial_delivery: "Giao một phần", completed: "Hoàn thành",
+  rejected: "Từ chối", cancelled: "Đã huỷ",
+};
+const purchasingSupplyStatusLabel = (value: unknown) => {
+  const raw = String(value ?? "");
+  return SUPPLY_STATUS_LABEL[raw] || raw || "—";
+};
+/** BƯỚC DUYỆT — hiển thị **TÊN bước** (nguồn `data.approvalStages` = `approval_stage_catalog`),
+ *  KHÔNG hiển thị con số trần. Thiếu cấu hình thì lùi về «Bước N» (⛔ không bịa tên bước). */
+const purchasingApprovalStageLabel = (row: Row, data: AppData) => {
+  const stage = row.approvalStage;
+  if (stage === undefined || stage === null || stage === "") return "—";
+  const config = (data.approvalStages || []).find((item) => Number(item.stageNo) === Number(stage));
+  const name = String(config?.name || "").trim();
+  return name || `Bước ${stage}`;
+};
 
 /** Dòng nào là PO (có `poNo`) — dùng để chọn đúng cột ngày: PO `ordered_at`, PR `requested_at`. */
 const isPurchaseOrderRow = (row: Row) => Boolean(row.poNo) || (row.status !== undefined && row.supplierName !== undefined);
@@ -146,7 +181,8 @@ const purchasingDepartmentOf = (row: Row, data: AppData) => {
 };
 const purchasingCreatorOf = (row: Row) => String(row.requestedBy || row.buyerName || "");
 /** Dòng nào là PR (phiếu đề nghị) — luôn là dòng KHÔNG phải PO. */
-const isPurchaseRequestRow = (row: Row) => !isPurchaseOrderRow(row);
+// MT2 §6.9 — `isPurchaseRequestRow` đã BỎ: nó chỉ tồn tại để bộ lọc «Trạng thái» khớp chéo sang
+// `supplyStatus` (đúng cái “trộn 2 trục” mà §6.9 cấm). Nay lọc tách bạch ⇒ ⛔ không còn chỗ dùng (dead code, §27).
 /** Lựa chọn của 3 chiều `select` (Phòng ban · Người tạo · NCC) được suy từ CHÍNH dữ liệu đang có — không hard-code. */
 function purchasingChoiceOptions(values: unknown[], allValue: string, allLabel: string): { value: string; label: string }[] {
   const distinct = [...new Set(
@@ -161,7 +197,8 @@ function filterPurchasingRows(rows: Row[], filters?: Partial<FilterState>, data:
   return (rows || []).filter((row) => {
     // Chiều 1 · Trạng thái: PR có 2 trạng thái thật (`status` của phiếu + `supply_status` cung ứng) · PO chỉ `status`.
     if (f.supplyStatus !== "ALL" && String(row.supplyStatus) !== f.supplyStatus) return false;
-    if (f.status !== "ALL" && String(row.status) !== f.status && !(isPurchaseRequestRow(row) && String(row.supplyStatus) === f.status)) return false;
+    // MT2 §6.9 — ⛔ KHÔNG trộn 2 trục: lọc «Trạng thái» chỉ so `status`; «Giai đoạn cung ứng» so `supplyStatus` (dòng trên).
+    if (f.status !== "ALL" && String(row.status) !== f.status) return false;
     const day = datePart(purchasingRowDate(row));
     if (f.dateFrom && (!day || day < f.dateFrom)) return false;
     if (f.dateTo && (!day || day > f.dateTo)) return false;
@@ -201,12 +238,18 @@ function Purchasing({ data, project, open, action, canUse }: { data: AppData; pr
   // tab PR luôn đọc `counts.PR`, tab PO luôn đọc `counts.PO`, đi qua `format.format` (định dạng vi-VN).
   const counts = { PR: visiblePR.length, PO: visiblePO.length };
   const optionsFrom=(values:string[],allLabel:string)=>({options:purchasingChoiceOptions(values,"ALL",allLabel)});
-  const statusOptions=[...new Set(
-    // Trạng thái cũng suy từ dữ liệu đang có của cả 2 tab (status của phiếu/đơn + supply_status của phiếu).
-    [...requests,...pos].map((row)=>String(row.status||"")).filter(Boolean),
-  )]
-    .sort((a,b)=>String(purchasingStatusLabel(a)).localeCompare(String(purchasingStatusLabel(b)),"vi"))
-    .map((value)=>({value,label:purchasingStatusLabel(value)}));
+  // MT2 §6.9 — nhãn bộ lọc «Trạng thái» phải theo ĐÚNG LOẠI DÒNG chứa giá trị đó:
+  //   giá trị chỉ có ở PR ⇒ nhãn PR · chỉ có ở PO ⇒ nhãn PO · có ở CẢ HAI ⇒ hiện CẢ HAI nhãn
+  //   (⛔ KHÔNG chọn bừa một nhãn — chính là cái “trộn” mà §6.9 cấm).
+  const statusOptionLabel = (value: string) => {
+    const labels = new Set<string>();
+    if (requests.some((row) => String(row.status || "") === value)) labels.add(PR_STATUS_LABEL[value] || value);
+    if (pos.some((row) => String(row.status || "") === value)) labels.add(PO_STATUS_LABEL[value] || value);
+    return labels.size ? [...labels].join(" / ") : value;
+  };
+  const statusOptions = [...new Set([...requests, ...pos].map((row) => String(row.status || "")).filter(Boolean))]
+    .sort((a, b) => statusOptionLabel(a).localeCompare(statusOptionLabel(b), "vi"))
+    .map((value) => ({ value, label: statusOptionLabel(value) }));
   const departmentOptions=optionsFrom(requests.map((row)=>purchasingDepartmentOf(row,data)),"Tất cả phòng ban").options;
   const creatorOptions=optionsFrom(requests.map(purchasingCreatorOf),"Tất cả người tạo").options;
   const supplierOptions=optionsFrom(pos.map((row)=>String(row.supplierName||row.supplierId||"")),"Tất cả NCC").options;
@@ -246,7 +289,7 @@ function Purchasing({ data, project, open, action, canUse }: { data: AppData; pr
       />
       <p className="purchasing-tab-note"><small>Nguồn cột: <code>docs/agent-progress/P01-TAB-SPEC.md</code> mục 2 (đo bằng dữ liệu MySQL thật) · Nguồn 6 chiều lọc: <code>docs/25_TODO_ROADMAP.md</code> dòng <code>P-03</code> (Trạng thái · Ngày · Phòng ban · Người tạo · NCC · Dự án) · Chiều «Ngày»: PR theo <code>requestedAt</code>, PO theo <code>orderedAt</code> · Chiều «Phòng ban» lấy từ <code>staffDirectory</code> (phiếu không có trường phòng ban riêng). Chiều «Dự án» bám thanh phạm vi dự án: dòng của dự án ngoài phạm vi đang chọn không nằm trong danh sách này.</small></p>
       <p className="purchasing-tab-note"><small>Đây là thay đổi <strong>GIAO DIỆN</strong>: KHÔNG xoá bảng/cột/dòng nào. <code>material_requests</code> · <code>purchase_orders</code> · <code>approvals</code> giữ nguyên; màn chỉ ĐỌC rồi tổ chức lại thành 2 tab (chỉ còn PR và PO).</small></p>
-      {activeTab==="PR"&&<div className="table-wrap" role="tabpanel" data-vntech="purchasing-pr-table" aria-label="Danh sách phiếu đề nghị mua hàng (PR)">{visiblePR.length?<table className="data-table"><thead><tr>{PURCHASING_PR_COLUMNS.map((column)=><th key={column.key}>{column.header}</th>)}</tr></thead><tbody>{visiblePR.map((row)=><tr key={String(row.id)} data-vntech="purchasing-pr-row"><td><strong className="code">{row.requestNo||row.id}</strong></td><td>{data.projects.find((p)=>p.id===row.projectId)?.code||row.projectCode||"—"}</td><td>{row.projectCode||data.projects.find((p)=>p.id===row.projectId)?.code||"—"}</td><td>{row.requestedBy||"—"}</td><td>{datePart(row.requestedAt)||"—"}</td><td>{datePart(row.neededAt)||"—"}</td><td><StatusBadge value={purchasingStatusLabel(row.status)}/></td><td>{format.format(Number(row.itemCount||0))}</td><td>{format.format(Number(row.totalEstimatedValue||0))}</td><td>{purchasingStatusLabel(row.supplyStatus)}</td><td>{row.approvalStage??"—"}</td></tr>)}</tbody></table>:<Empty text="Chưa có phiếu đề nghị mua (PR) nào khớp bộ lọc trong phạm vi đang chọn."/>}</div>}
+      {activeTab==="PR"&&<div className="table-wrap" role="tabpanel" data-vntech="purchasing-pr-table" aria-label="Danh sách phiếu đề nghị mua hàng (PR)">{visiblePR.length?<table className="data-table"><thead><tr>{PURCHASING_PR_COLUMNS.map((column)=><th key={column.key}>{column.header}</th>)}</tr></thead><tbody>{visiblePR.map((row)=><tr key={String(row.id)} data-vntech="purchasing-pr-row"><td><strong className="code">{row.requestNo||row.id}</strong></td><td>{data.projects.find((p)=>p.id===row.projectId)?.code||row.projectCode||"—"}</td><td>{row.projectCode||data.projects.find((p)=>p.id===row.projectId)?.code||"—"}</td><td>{row.requestedBy||"—"}</td><td>{datePart(row.requestedAt)||"—"}</td><td>{datePart(row.neededAt)||"—"}</td><td><StatusBadge value={purchasingPrStatusLabel(row.status)}/></td><td>{format.format(Number(row.itemCount||0))}</td><td>{format.format(Number(row.totalEstimatedValue||0))}</td><td>{purchasingSupplyStatusLabel(row.supplyStatus)}</td><td>{purchasingApprovalStageLabel(row, data)}</td></tr>)}</tbody></table>:<Empty text="Chưa có phiếu đề nghị mua (PR) nào khớp bộ lọc trong phạm vi đang chọn."/>}</div>}
       {activeTab==="PO"&&<div className="table-wrap" role="tabpanel" data-vntech="purchasing-po-table" aria-label="Danh sách đơn mua (PO)">{visiblePO.length?<table className="data-table"><thead><tr>{PURCHASING_PO_COLUMNS.map((column)=><th key={column.key}>{column.header}</th>)}</tr></thead><tbody>{visiblePO.map((po)=>{const progress=deliveryProgress(po);return <tr key={String(po.id)} data-vntech="purchasing-po-row"><td><strong className="code">{po.poNo||po.id}</strong></td><td>{po.supplierName||"—"}</td>{progress.audit.hasData?<><td>{format.format(numeric(progress.audit.ordered))}</td><td>{format.format(numeric(progress.audit.received))}</td><td className={progress.audit.remaining>0?"red-text":"green-text"}>{format.format(numeric(progress.audit.remaining))}</td></>:<td colSpan={3}><small>chưa có nguồn — {progress.audit.reason}</small></td>}<td>{datePart(po.orderedAt)||"—"}</td><td>{po.eta?datePart(po.eta):"—"}</td><td><StatusBadge value={progress.complete?"Đã giao đủ":"Đang giao"}/></td><td>{format.format(Number(po.totalValue||0))}</td></tr>;})}</tbody></table>:<Empty text="Chưa có đơn mua (PO) nào khớp bộ lọc trong phạm vi đang chọn."/>}</div>}
     </section>
     {/* PHASE 2 (§21) — MỞ MÀN CHI TIẾT PO: danh sách PO của phạm vi đang chọn, bấm để xem Source PR · Ordered/Received/Remaining · GRN · Timeline.

@@ -308,6 +308,97 @@ public final class StockManagementUseCase {
     }
 
     /**
+     * MT2 §7.4 — **TẠO PHIẾU NHẬP (GRN) TỪ LỆNH ĐIỀU CHUYỂN (STO)**.
+     *
+     * <p>Nguyên văn MT2 §7.4: “Cho phép tạo phiếu nhập từ STO/phiếu xuất kho: nếu phiếu liên quan đã có
+     * **kho đi/kho đến** ⇒ **tự động fill**; nếu chưa có ⇒ cho user nhập.”
+     * ⇒ Kho nhận LẤY TỰ ĐỘNG từ {@code transfer_orders.destination_warehouse_id}; chỉ khi STO chưa gắn
+     * kho nhận mới cho phép truyền {@code toWarehouseId} (đúng vế “nếu chưa có ⇒ cho user nhập”).
+     *
+     * <p>⛔ **KHÔNG cần duyệt — CHỈ cần QUYỀN** (giống ⑤ của phiếu xuất): vai trò
+     * {@code warehouse|engineer|admin} + phạm vi DỰ ÁN + cổng MODULE SẴN CÓ {@code receiving.canCreate}.
+     *
+     * <p>Điều kiện: STO phải ở trạng thái **đã nhận hàng** ({@code received}) ⇒ ngược lại 400.
+     *
+     * <p>⚠️ Giữ NGUYÊN độ chặt của {@code create_issue_grn}: {@code goods_receipts.purchase_order_id} và
+     * {@code goods_receipt_items.purchase_order_item_id} đều **NOT NULL**, và đo trên CSDL thật
+     * **32/32 GRN đều gắn PO, 0 GRN có PO rỗng** ⇒ dòng nào ⛔ không tra được PO thì **400**
+     * (⛔ KHÔNG tạo GRN với PO rỗng — mẫu dữ liệu toàn hệ thống CHƯA từng có).
+     */
+    public Map<String, Object> createTransferGrn(Principal principal, Map<String, Object> payload) {
+        rbac.requireRole(principalAsCurrent(principal), List.of("warehouse", "engineer", "admin"));
+        String transferId = trim(payload.get("transferId"));
+        if (transferId.isEmpty()) throw Api("Thiếu transferId của lệnh điều chuyển.");
+        Map<String, Object> transfer = store.findTransferOrder(transferId)
+                .orElseThrow(() -> Api("Không tìm thấy lệnh điều chuyển " + transferId + "."));
+        String status = sv(transfer, "status");
+        if (!"received".equals(status))
+            throw Api("Lệnh điều chuyển " + sv(transfer, "transferNo")
+                    + " chưa ở trạng thái đã nhận hàng (hiện tại: " + status + ") ⇒ chưa thể sinh phiếu nhập.");
+        String projectId = sv(transfer, "destinationProjectId");
+        if (projectId.isEmpty()) projectId = sv(transfer, "sourceProjectId");
+        accessScope.requireProjectAccess(principal.userId(), principal.role(), projectId, true,
+                "Tài khoản không có quyền tạo phiếu nhập tại dự án này.");
+        String toWarehouseId = trim(payload.get("toWarehouseId"));
+        if (toWarehouseId.isEmpty()) toWarehouseId = sv(transfer, "destinationWarehouseId");
+        if (toWarehouseId.isEmpty())
+            throw Api("Lệnh điều chuyển chưa gắn kho nhận; cần truyền toWarehouseId.");
+        if (store.findActiveWarehouse(toWarehouseId, projectId).isEmpty())
+            throw Api("Kho nhận của phiếu nhập phải thuộc đúng dự án.");
+        List<Map<String, Object>> lines = store.transferOrderGrnLines(transferId);
+        if (lines.isEmpty()) throw Api("Lệnh điều chuyển không có dòng vật tư nào để sinh phiếu nhập.");
+        // `transfer_order_items` : `purchase_order_items` là 1-N (một vật tư của dự án đích có thể nằm ở
+        // nhiều PO) ⇒ giữ DÒNG MỚI NHẤT cho mỗi dòng STO (adapter đã ORDER BY … poi.created_at DESC) để
+        // GRN có ĐÚNG 1 dòng vật tư cho 1 dòng lệnh điều chuyển (khuôn y hệt `createIssueGrn`).
+        Map<String, Map<String, Object>> byTransferItem = new LinkedHashMap<>();
+        for (Map<String, Object> line : lines)
+            byTransferItem.putIfAbsent(sv(line, "transferOrderItemId"), line);
+        lines = new ArrayList<>(byTransferItem.values());
+        for (Map<String, Object> line : lines) {
+            if (sv(line, "purchaseOrderId").isEmpty() || sv(line, "purchaseOrderItemId").isEmpty())
+                throw Api("Dòng vật tư " + sv(line, "materialId") + " chưa có dòng đặt hàng (PO) tương ứng"
+                        + " ⇒ không thể lập phiếu nhập theo mẫu `goods_receipts` (cột purchase_order_id NOT NULL).");
+        }
+        Instant now = Instant.now();
+        int year = java.time.LocalDate.now().getYear();
+        // Dòng số riêng `GRN-STO` (⛔ KHÔNG dùng chung `GRN:project:year` của mua hàng, ⛔ KHÔNG lẫn `GRN-PX`).
+        long seq = store.nextSequenceNo("GRN-STO:" + projectId + ":" + year, "GRN-STO", projectId, year, now);
+        String receiptNo = "GRN-STO-" + year + "-" + String.format("%04d", seq);
+        String receiptId = idGenerator.next("GRN");
+        List<Map<String, Object>> items = new ArrayList<>();
+        for (Map<String, Object> line : lines) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("purchaseOrderItemId", sv(line, "purchaseOrderItemId"));
+            item.put("contractId", sv(line, "contractId").isEmpty() ? null : sv(line, "contractId"));
+            item.put("boqVersionId", null);
+            item.put("quantity", numberValue(ci(line, "quantity")));
+            items.add(item);
+        }
+        Map<String, Object> header = new LinkedHashMap<>();
+        header.put("id", receiptId);
+        header.put("receiptNo", receiptNo);
+        header.put("purchaseOrderId", sv(lines.get(0), "purchaseOrderId"));
+        header.put("warehouseId", toWarehouseId);
+        header.put("receivedBy", principal.userId());
+        header.put("deliveryNoteNo", sv(transfer, "transferNo"));
+        header.put("contractId", items.get(0).get("contractId"));
+        header.put("boqVersionId", null);
+        header.put("note", blankDefault(trim(payload.get("note")),
+                "Nhập kho theo lệnh điều chuyển " + sv(transfer, "transferNo")));
+        store.insertTransferOrderGrn(header, items, now);
+        if (!store.markTransferOrderGrnCreated(transferId, receiptId, principal.userId(), now))
+            throw Api("Lệnh điều chuyển " + sv(transfer, "transferNo") + " vừa được chuyển thành phiếu nhập."
+                    + " Không sinh thêm phiếu nhập thứ hai.");
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("message", "Đã sinh phiếu nhập " + receiptNo + " cho kho nhận " + toWarehouseId + ".");
+        result.put("transferId", transferId);
+        result.put("transferNo", sv(transfer, "transferNo"));
+        result.put("receiptId", receiptId);
+        result.put("receiptNo", receiptNo);
+        return result;
+    }
+
+    /**
      * create_issue_grn — WF-XUATKHO-01 **BƯỚC ⑤ «CHUYỂN THÀNH GRN ĐỂ NHẬP VÀO KHO KHÁC»** (TASK-133).
      *
      * <p>⛔ **KHÔNG cần duyệt — CHỈ cần QUYỀN TẠO** (đúng đặc tả). Quyền: cổng VAI TRÒ

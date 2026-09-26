@@ -16,6 +16,14 @@ public interface UserRepository {
     User save(User user);
 
     /**
+     * MT2-P12-04 (§13.3) — GHI MỐC ĐĂNG NHẬP GẦN NHẤT vào bản ghi người dùng.
+     * <p>⚠️ VÌ SAO KHÔNG SUY RA TỪ SESSION: {@code AuthUseCase.logout} XOÁ dòng session
+     * ({@code sessionStore.deleteByTokenHash}) ⇒ lịch sử đăng nhập sẽ mất, không dùng làm nguồn được.
+     * <p>Người chưa đăng nhập lần nào ⇒ cột {@code last_login_at} NULL (⛔ không bịa ngày).
+     */
+    void touchLastLogin(String userId, java.time.Instant at);
+
+    /**
      * Thông tin role_catalog theo mã vai trò — port nguyên trạng truy vấn phiên của monolith JS
      * ({@code LEFT JOIN role_catalog rc ON rc.code=u.role}), lấy đúng 3 cột mà JS trả về:
      * {@code COALESCE(rc.base_role,u.role) AS roleBase}, {@code COALESCE(rc.name,u.role) AS roleName},

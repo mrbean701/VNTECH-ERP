@@ -152,7 +152,10 @@ test("P-07 — app/page.tsx nối ĐỦ 8 điểm chạm (khuôn `W-01`) cho 2 m
   assert.match(children, /supplierPartnerMenuItems\.flatMap\(\(item\) => \{/, "Chưa suy ra mục menu từ khai báo code");
   assert.match(children, /item\.permissionKeys\.find\(\(key\) => modulePermission\(data, key\)\.canView\)/, "Thiếu cổng quyền `modulePermission(…).canView`");
   assert.doesNotMatch(children, /isAdminUser\(/, "Cổng quyền mục menu KHÔNG được hardcode «chỉ admin»");
-  assert.match(page, /function activateModule\(next:ModuleKey, view:WorkMenuView\|WarehouseMenuView\|SupplierPartnerMenuView\|null=null\)\{/, "`activateModule` chưa nhận type `view` mới");
+  // ⚠️ CẬP NHẬT 23/09/2026 (MT2-P9-06 §7.6): `activateModule` nay nhận THÊM giá trị `"list"`
+  // (màn «Cấp phát & hoàn trả» nhóm KHO) ⇒ chữ ký rộng hơn bản P-07 gốc. Khẳng định lại ĐÚNG Ý ĐỊNH:
+  // vẫn nhận ĐỦ 3 loại `view` của P-07 (`supplier`/`partner` + warehouse/work).
+  assert.match(page, /function activateModule\(next:ModuleKey, view:WorkMenuView\|WarehouseMenuView\|SupplierPartnerMenuView\|"list"\|null=null\)\{/, "`activateModule` chưa nhận type `view` mới");
   assert.match(page, /setSupplierPartnerView\(view === "supplier" \|\| view === "partner" \? view : null\);/, "Thiếu `setSupplierPartnerView` trong `activateModule`");
   assert.match(page, /const supplierPartnerScreenView = supplierPartnerViewFor\(supplierPartnerView, active\);/, "Thiếu bộ định tuyến `view`");
   assert.match(page, /!legacySupplierPartnerMenuKeys\.includes\(item\.key\)/, "Cây menu chưa ẩn dòng khoá cũ `dept_plan_suppliers`");
@@ -164,8 +167,13 @@ test("P-07 — app/page.tsx nối ĐỦ 8 điểm chạm (khuôn `W-01`) cho 2 m
 });
 
 test("P-07 — màn đích: khoá cũ render `SupplierManager` kèm `view`, và KHÔNG còn rơi vào nhánh chung `dept_plan_*`", () => {
-  assert.match(page, /active === "dept_plan_suppliers" && <SupplierManager data=\{data\} action=\{action\} view=\{supplierPartnerScreenView\}[^>]*\/>/,
-    "Chưa render `SupplierManager` cho khoá cũ kèm `view`");
+  // ⚠️ CẬP NHẬT 23/09/2026 (MT2 §6.5/T-125): tách mục GỘP nay đã đi XA HƠN bản P-07 gốc — `page.tsx` có
+  // **2 nhánh riêng**: `=== "partner"` → `<PartnerManager>` (màn Đối tác THẬT) và `!== "partner"` →
+  // `<SupplierManager>` (màn NCC). ⛔ KHÔNG còn một nhánh duy nhất kèm prop `view=` ⇒ hợp đồng cũ đỏ oan.
+  assert.match(page, /active === "dept_plan_suppliers" && supplierPartnerScreenView !== "partner" && <SupplierManager data=\{data\} action=\{action\}/,
+    "Chưa render `SupplierManager` cho khoá cũ khi KHÔNG ở nhánh «Đối tác»");
+  assert.match(page, /active === "dept_plan_suppliers" && supplierPartnerScreenView === "partner" && <PartnerManager data=\{data\} action=\{action\} \/>/,
+    "Chưa render `PartnerManager` cho nhánh «Đối tác» (T-125)");
   assert.doesNotMatch(page, /active\.startsWith\("dept_plan_"\) && active !== "dept_plan_tasks" && <DepartmentTaskWorkspace[\s\S]{0,600}?department="KH"/,
     "Khoá `dept_plan_suppliers` VẪN rơi vào nhánh chung `dept_plan_*` ⇒ sẽ render 2 màn cùng lúc");
   assert.match(supplierManager, /view\?:"supplier"\|"partner"\|null/, "`SupplierManager` chưa nhận prop `view`");
@@ -174,18 +182,30 @@ test("P-07 — màn đích: khoá cũ render `SupplierManager` kèm `view`, và 
   assert.doesNotMatch(supplierManager, /partner_type|partnerType/, "KHÔNG được thêm cột/loại dữ liệu «đối tác» mới");
 });
 
-// ── ② MỌI MỤC MENU KHÁC KHÔNG ĐỔI ───────────────────────────────────────────────────────────────
-test("P-07 — MỌI khai báo menu KHÁC không đổi so với bản gốc (chỉ 1 nhãn đổi)", () => {
-  for (const name of ["modules", "workMenuItems", "warehouseMenuItems"]) {
-    const { out, sameOrder } = diffTables(tableOf(baselineMenuHelpers, name), tableOf(menuHelpers, name));
-    assert.equal(sameOrder, true, `Thứ tự mục menu của khối \`${name}\` đã bị đổi`);
-    if (name !== "modules") {
-      assert.deepEqual(out, [], `Khối \`${name}\` phải GIỮ NGUYÊN (không thêm/bớt/đổi nhãn)`);
-    } else {
-      assert.deepEqual(out, [{ key: "dept_plan_suppliers", from: "Nhà cung cấp / Đối tác", to: "Nhà cung cấp", kind: "relabelled" }],
-        "Bảng `modules` chỉ được phép đổi ĐÚNG 1 nhãn: «Nhà cung cấp / Đối tác» → «Nhà cung cấp»");
-    }
+// ── ② CÁC BẤT BIẾN CỦA P-07 VẪN GIỮ (⛔ KHÔNG so byte-với commit cũ — MT2 đã đổi menu CÓ CHỦ Ý) ───────
+// ⚠️ CẬP NHẬT 23/09/2026 (GOAL §4 + MT2 §§3.1/6.1/7.6): hợp đồng cũ so THỨ TỰ/khe byte của 3 bảng menu với
+// commit `a11fe9e` ⇒ ⛔ KHÔNG còn hợp lệ vì MT2 đã: thêm mục «Dashboard» nhóm Công việc (P5-01), đổi vị trí
+// «Nhà cung cấp» xuống cuối khối `modules` (P8-01/§6.1) và thay bộ mục nhóm KHO (§7.6). Nay kiểm ĐÚNG
+// những gì P-07 phải bảo đảm: ① khoá cũ GIỮ NGUYÊN + ĐÚNG 1 nhãn «Nhà cung cấp» ② ⛔ KHÔNG nhét
+// `dept_plan_partners` vào bảng khoá module THẬT ③ 2 mục code-level của P-07 vẫn tồn tại.
+test("P-07 — BẤT BIẾN: khoá cũ giữ nguyên nhãn gốc, ⛔ KHÔNG có `dept_plan_partners` trong bảng module", () => {
+  const supplier = tableOf(menuHelpers, "modules").filter(([key]) => key === "dept_plan_suppliers");
+  assert.equal(supplier.length, 1, "`modules` phải còn ĐÚNG 1 dòng khoá cũ `dept_plan_suppliers` (tương thích ngược)");
+  assert.equal(supplier[0][1], "Nhà cung cấp", "Nhãn dòng `modules` của khoá cũ phải là «Nhà cung cấp»");
+  assert.ok(!tableOf(menuHelpers, "modules").some(([key]) => key === "dept_plan_partners"),
+    "KHÔNG được thêm `dept_plan_partners` vào bảng `modules` (bảng đó là khoá module thật)");
+  // 2 mục code-level của P-07 (khai trong `supplierPartnerMenuItems`) vẫn phải còn.
+  const items = menuHelpers.slice(menuHelpers.indexOf("const supplierPartnerMenuItems"),
+    menuHelpers.indexOf("legacySupplierPartnerMenuKeys", menuHelpers.indexOf("const supplierPartnerMenuItems")));
+  for (const item of EXPECTED) {
+    assert.ok(items.includes(`key: "${item.key}"`), `Thiếu mục menu code-level của P-07: ${item.key}`);
   }
+  // Bản gốc commit trước P-07 vẫn phải đọc được (giữ tinh thần «đối chiếu có nguồn»): khoá GỘP cũ phải có,
+  // còn khối `supplierPartnerMenuItems` là DO P-07 tạo ⇒ ⛔ không được đòi nó có trong bản gốc.
+  assert.ok(baselineMenuHelpers.includes("dept_plan_suppliers"),
+    "Bản gốc `a11fe9e` phải có khoá gộp cũ `dept_plan_suppliers` — nếu không, hằng số baseline đã sai");
+  assert.ok(!baselineMenuHelpers.includes("supplierPartnerMenuItems"),
+    "Bản gốc `a11fe9e` (TRƯỚC P-07) ⛔ không được đã có `supplierPartnerMenuItems` — nếu có thì baseline chọn sai mốc");
 });
 
 // ── ③ KHÔNG ĐỤNG `drizzle/**` (KHÔNG thêm dòng `module_catalog`) ────────────────────────────────
@@ -204,9 +224,12 @@ test("P-07 — KHÔNG thêm dòng `module_catalog`/migration: `drizzle/**` khôn
   const hits = drizzle.filter((path) => readFileSync(path, "utf8").includes("dept_plan_partners"));
   assert.deepEqual(hits, [], `KHÔNG được thêm dòng \`module_catalog\` cho khoá mới. Tệp vi phạm: ${hits.join(", ")}`);
 
-  const git = (args) => execFileSync("git", args, { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
-  const pending = git(["status", "--porcelain", "--", "drizzle"]).trim();
-  assert.equal(pending, "", `Thay đổi trong \`drizzle/\` là NGOÀI PHẠM VI \`P-07\`:\n${pending}`);
-  const committed = git(["diff", "--name-only", "HEAD", "--", "drizzle"]).trim();
-  assert.equal(committed, "", `Diff \`drizzle/\` là NGOÀI PHẠM VI \`P-07\`:\n${committed}`);
+  // ⚠️ CẬP NHẬT 23/09/2026 (GOAL §28/§29: MASTER TASK 2 ⛔ CẤM COMMIT): khẳng định cũ đòi `git status`/
+  // `git diff` trên `drizzle/` phải TRỐNG — ⛔ không còn hợp lệ trong phiên MT2 vì cả cây làm việc đang có
+  // ~200 thay đổi CHƯA commit (kể cả `drizzle/` của các task MT2 khác). Bất biến CẦN BẢO ĐẢM là NỘI DUNG:
+  // `drizzle/**` ⛔ không được nhắc khoá mới `dept_plan_partners` (đã kiểm ở trên) ⇒ giữ kiểm nội dung,
+  // bỏ kiểm tính "sạch git" (thuộc quy trình commit, không phải phạm vi P-07).
+  const drizzleHits = drizzle.filter((path) => readFileSync(path, "utf8").includes("dept_plan_partners"));
+  assert.equal(drizzleHits.length, 0,
+    `\`drizzle/**\` ⛔ KHÔNG được nhắc \`dept_plan_partners\` (khoá mới của P-07 phải nằm ở tầng CODE). Tệp vi phạm: ${drizzleHits.join(", ")}`);
 });

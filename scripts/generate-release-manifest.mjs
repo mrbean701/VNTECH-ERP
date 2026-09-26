@@ -8,7 +8,12 @@ const out = join(root, 'MANIFEST_SHA256.txt');
 
 const excludedTopDirs = new Set([
   '.git', '.sites-runtime', '.wrangler', 'node_modules', '.cache', '.npm', '.pnpm-store', '.yarn', 'coverage', 'tmp', 'temp', 'dist', 'docs',
-  '.local-data', '.local-backups', '.server-data', 'server-data', '.vntech_backups', '.vntech_update_state'
+  '.local-data', '.local-backups', '.server-data', 'server-data', '.vntech_backups', '.vntech_update_state',
+  // MT2 (bản vá #31 — user duyệt ở ⑤.5b A): `.ai/**` và `.memsearch/**` là TỆP TRẠNG THÁI NỘI BỘ hay đổi
+  // (agent state / chỉ mục bộ nhớ) ⇒ nếu đưa vào manifest thì cổng `test:release-static` tầng ③ báo
+  // «SHA256 không khớp» một cách NGẪU NHIÊN dù mã nguồn không đổi. Tệp này ĐÃ loại sẵn `.local-data`,
+  // `.sites-runtime`… theo đúng cùng lý lẽ ⇒ đây là BỔ SUNG NHẤT QUÁN, ⛔ không đổi chính sách.
+  '.ai', '.memsearch'
 ]);
 const excludedNames = new Set(['MANIFEST_SHA256.txt', 'SHA256_MANIFEST.txt', '.env', 'deploy/.active-profile.json']);
 const volatileFile = (name) => /(?:^|[-_.])(debug|error)?\.log$/i.test(name) || /^(npm|yarn|pnpm)-debug\.log/i.test(name) || /\.tmp$/i.test(name) || /\.(?:zip|sqlite|db|log)$/i.test(name);

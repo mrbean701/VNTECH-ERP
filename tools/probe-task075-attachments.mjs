@@ -149,7 +149,12 @@ try {
   check("ĐC4 · PNG dựng tại chỗ của cổng là ẢNH HỢP LỆ theo chữ ký", signatureOf(png) === "image/png", `${png.length} byte`);
 
   // ── D. KIỂM TĨNH ──────────────────────────────────────────────────────────────
-  const page = readFileSync("app/page.tsx", "utf8");
+  // ⚠️ MT2-P14-03c (23/09/2026) — VÁ TỆP ĐÍCH (⛔ KHÔNG hạ nhẹ phép kiểm): khối ĐÍNH KÈM đã được **TÁI SỬ DỤNG**
+  // và CHUYỂN sang thư viện dùng chung **`lib/ui-shared.tsx`** (xem `CorrespondenceScreen.tsx:24`: «đã có sẵn ở
+  // `lib/ui-shared.tsx:295`, `input multiple` + `/api/files`»). Bản cũ chỉ đọc `app/page.tsx` ⇒ báo ❌ OAN 3 mục
+  // (D1/D2/D6) dù ĐO ĐƯỢC trong `lib/ui-shared.tsx`: D1 **1** khớp · D2 (ảnh `src`) **2** khớp · D6 (nhãn rỗng) **1** khớp.
+  // Nay đọc **CẢ HAI** tệp (giữ nguyên toàn bộ nội dung phép kiểm).
+  const page = readFileSync("app/page.tsx", "utf8") + "\n" + readFileSync("lib/ui-shared.tsx", "utf8");
   // CSS nằm ở HAI tệp: `app/globals.css` bị ĐÓNG BĂNG (cổng `master-baseline-gate.mjs` cấm append
   // sau mốc R1.1.1 END và chặn > 400653 byte) nên luật mới của TASK-075 nằm ở
   // `app/styles/canonical.css` — stylesheet của thư viện dùng chung.

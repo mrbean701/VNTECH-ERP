@@ -30,11 +30,62 @@ import { isAdminUser, modulePermission, roleBase } from "@/lib/permissions";
 import { REPORT_CATALOG, findEntry, sourceRows } from "@/lib/report-catalog";
 import { CardHead, Kpi, UI_TODAY, WORK_CLOSED, WORK_STATUS_LABELS, date } from "@/lib/ui-shared";
 import type { AppData, Row } from "@/lib/ui-shared";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+// ══════════════════════════════════════════════════════════════════════════════════════════════════
+// MT2-P6-01 (§4.1) — CARD «Chờ Giám đốc duyệt»: dữ liệu **THỰC** từ approval engine.
+// Dùng API `director_pending_approvals` (MT2-P4-03) — backend **tự chặn 403** theo CẤP BẬC.
+// §4.1: «⛔ Không hiển thị card cho user không đủ quyền» ⇒ **403 ⇒ ẨN card** (⛔ không vỡ màn khi lỗi).
+// ⛔ KHÔNG đụng khối thuần `T06` của tệp này, ⛔ KHÔNG đụng `WorkDashboard` (có test riêng `t08`).
+// ══════════════════════════════════════════════════════════════════════════════════════════════════
+function DirectorPendingCard() {
+  const [state, setState] = useState<{ loading: boolean; total: number | null; hidden: boolean }>(
+    { loading: true, total: null, hidden: false });
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const response = await fetch("/api/system", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "director_pending_approvals" }),
+        });
+        // ⚠️ `fetch` ⛔ KHÔNG throw khi 403 ⇒ PHẢI tự kiểm (`response.ok` là chưa đủ).
+        if (response.status === 403) { if (alive) setState({ loading: false, total: null, hidden: true }); return; }
+        const result = await response.json();
+        if (!response.ok) { if (alive) setState({ loading: false, total: null, hidden: true }); return; }
+        if (alive) setState({ loading: false, total: Number(result.total || 0), hidden: false });
+      } catch {
+        if (alive) setState({ loading: false, total: null, hidden: true });   // lỗi mạng ⇒ ẩn, KHÔNG vỡ màn
+      }
+    })();
+    return () => { alive = false; };
+  }, []);
+  if (state.hidden) return null;
+  return <Kpi icon="GD" label="Chờ Giám đốc duyệt" value={state.loading ? "…" : String(state.total ?? 0)} note="Phiếu đang chờ ở bước Giám đốc" tone="amber"/>;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════════════════════════
+// MT2-P6-06 (§4.4) — ĐẾM ĐƠN QUÁ HẠN SLA. TÍNH từ dữ liệu **ĐANG CÓ** trong payload:
+// `requests[].approvals[]` mang đúng 2 trường §4.4 yêu cầu lưu (`status` + `due_at`/`dueAt`).
+// ⛔ KHÔNG gọi API mới · ⛔ KHÔNG thêm migration · ⛔ KHÔNG BỊA SỐ:
+// thiếu nguồn ⇒ trả `null` để UI ghi rõ «chưa có nguồn» (⛔ KHÔNG hiện 0) — theo chuẩn `WorkDashboard.tsx:6`.
+// ══════════════════════════════════════════════════════════════════════════════════════════════════
+function overdueApprovalCount(data: AppData): number | null {
+  const rows: Row[] = Array.isArray(data.requests) ? (data.requests as Row[]) : [];
+  const steps: Row[] = rows.flatMap((r: Row) => (Array.isArray(r.approvals) ? (r.approvals as Row[]) : []));
+  if (steps.length === 0) return null;                       // ⛔ chưa có nguồn ⇒ KHÔNG hiện 0
+  const now = Date.now();
+  return steps.filter((a: Row) => String(a.status) === "pending"
+    && Boolean(a.dueAt) && Date.parse(String(a.dueAt)) < now).length;
+}
 
 // PHASE 3 (`T-01`) — 5 TAB NHÓM «CÔNG VIỆC», ĐÚNG thứ tự đã chốt (5 mục menu ⇄ 5 tab).
 const WORK_TABS = ["Cá nhân", "Phòng ban", "Giao việc", "Dashboard", "Báo cáo"];
-const WORK_TAB_OF_VIEW: Record<WorkMenuView, number> = { personal: 0, department: 1, assign: 2, kpi: 3, reports: 4 };
+// MT2-P5-01 (§3.1) — thêm khoá `dashboard` (tab «Dashboard»). Số 3 ĐO từ `WORK_TABS` ở trên:
+// «Cá nhân»=0 · «Phòng ban»=1 · «Giao việc»=2 · **«Dashboard»=3** · «Báo cáo»=4 ⇒ `dashboard: 3` ✔
+// ⚠️ GIỮ `kpi: 3` (cùng index) vì `WorkMenuView` vẫn còn `"kpi"` — dùng chung đúng tab Dashboard.
+const WORK_TAB_OF_VIEW: Record<WorkMenuView, number> = { personal: 0, department: 1, assign: 2, kpi: 3, dashboard: 3, reports: 4 };
 // Báo cáo CÔNG VIỆC dùng LẠI catalog chung (`R-05a/b/c`, nguồn `workItems`) — không khai định nghĩa mới.
 const WORK_REPORT_CATALOG = REPORT_CATALOG.filter((entry) => entry.source === "workItems");
 
@@ -287,6 +338,9 @@ function WorkCenter({ data, action, refresh, view = "personal" }: { data: AppDat
       {/* PHASE 3 (`T-08`) — §11: 3 KHỐI «cá nhân · phòng ban · dự án». Mọi số tính từ dữ liệu ĐANG CÓ trong payload
           (KHÔNG gọi API mới); chỉ số nào không có nguồn thì ghi rõ «chưa có nguồn», KHÔNG bịa số.
           Khối «Cá nhân» nhận ĐÚNG tập việc của tôi; hai khối kia nhận tập việc trong PHẠM VI ĐƯỢC PHÉP (T-06). */}
+      {/* MT2-P6-01 (§4.1) — card «Chờ Giám đốc duyệt»: chỉ hiện khi user ĐỦ QUYỀN (API 403 ⇒ tự ẩn). */}
+      {/* MT2-P6-06 (§4.4) — card «Đơn quá hạn SLA»: ĐẾM từ payload; thiếu nguồn ⇒ «chưa có nguồn» (⛔ không hiện 0). */}
+      <div className="kpi-grid small"><DirectorPendingCard/><Kpi icon="QH" label="Đơn quá hạn SLA" value={overdueApprovalCount(data) === null ? "chưa có nguồn" : String(overdueApprovalCount(data))} note="Phiếu đang chờ đã quá hạn xử lý" tone="red"/></div>
       <WorkDashboard data={data} personalRows={mine} scopeRows={scopedWork} isLate={isTaskLate} scopeNote={scopeNote}/>
     </div>}
 

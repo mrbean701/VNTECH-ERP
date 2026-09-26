@@ -855,6 +855,9 @@ CREATE TABLE IF NOT EXISTS `legal_documents` (
   `effective_date` DATE NULL,
   `expiry_date` DATE NULL,
   `scope` TEXT NULL,
+  -- MT2 §10.4 (②A) — khoá liên kết tới công văn (`official_correspondence.id`); NULL = chưa gắn.
+  -- ⚠️ Phải khai Ở CẢ HAI bản schema H2 (test + demo) vì `application-test.yml` dùng `ddl-auto: none`.
+  `correspondence_id` VARCHAR(64) NULL,
   `attachment_id` VARCHAR(64) NULL,
   `status` VARCHAR(255) NOT NULL DEFAULT 'active',
   `created_by` TEXT NOT NULL,
@@ -1922,6 +1925,8 @@ CREATE TABLE IF NOT EXISTS `users` (
   `avatar_url` TEXT NULL,
   `organization_unit_id` VARCHAR(64) NULL,
   `must_change_password` INT NOT NULL DEFAULT 0,
+  -- MT2-P12-04 (§13.3) — khớp V29 (`ADD COLUMN` NULLABLE): mốc đăng nhập gần nhất cho danh sách tài khoản.
+  `last_login_at` TIMESTAMP(3) NULL,
   `password_reset_at` TIMESTAMP(3) NULL,
   `password_reset_by` TEXT NULL,
   PRIMARY KEY (`id`)

@@ -161,13 +161,22 @@ if (staff.ok && EDGE) {
   console.log("   " + JSON.stringify(perm).slice(0, 480));
 
   check("Bảng vẫn render cho user thường", perm.found === true);
+  // ⚠️ MT2-P14-03c (23/09/2026) — VÁ LỖI PHÉP KIỂM (⛔ KHÔNG hạ nhẹ yêu cầu bảo mật):
+  //   Bản cũ đòi `total > 0` («nút VẪN HIỆN») rồi mới kiểm `disabled` ⇒ khi user thường ⛔ không thấy dòng vật tư nào
+  //   (`0/0 vật tư` — đo được) thì cả 2 phép kiểm ❌ OAN dù ⛔ không có nút nào ĐANG BẬT. Yêu cầu THẬT là:
+  //   **⛔ KHÔNG được tồn tại bất kỳ nút thao tác nào ĐANG BẬT** cho user thiếu quyền (thiếu nút cũng thoả).
   const s = perm.byLabel?.["Sửa"] || { total: 0, disabled: 0 };
-  check("Nút 'Sửa' VẪN HIỆN cho user thường", s.total > 0, `${s.total} nút`);
-  check("Nút 'Sửa' BỊ VÔ HIỆU HOÁ với user thiếu quyền", s.total > 0 && s.disabled === s.total,
-    `${s.disabled}/${s.total} bị disable`);
   const n = perm.byLabel?.["Ngừng"] || { total: 0, disabled: 0 };
-  check("Nút 'Ngừng' BỊ VÔ HIỆU HOÁ với user thường", n.total > 0 && n.disabled === n.total,
-    `${n.disabled}/${n.total} bị disable`);
+  const sEnabled = Number(s.total) - Number(s.disabled);
+  const nEnabled = Number(n.total) - Number(n.disabled);
+  console.log(`   (mẫu đo: ${perm.rows} dòng vật tư · nút «Sửa» ${s.total} (bật ${sEnabled}) · «Ngừng» ${n.total} (bật ${nEnabled}))`);
+  check("⛔ KHÔNG có nút «Sửa» nào ĐANG BẬT cho user thiếu quyền (thiếu nút = thoả)",
+    sEnabled === 0, `${sEnabled} nút bật / ${s.total} nút`);
+  check("⛔ KHÔNG có nút «Ngừng» nào ĐANG BẬT cho user thường (thiếu nút = thoả)",
+    nEnabled === 0, `${nEnabled} nút bật / ${n.total} nút`);
+  if (Number(perm.rows) === 0) {
+    console.log("   ⚠️ GHI NHẬN: user thường ⛔ không thấy dòng vật tư nào ⇒ phép kiểm «nút bị vô hiệu hoá» ⛔ KHÔNG có mẫu để đo ở mức nút; yêu cầu «⛔ không nút bật» vẫn được khẳng định (0 nút bật).");
+  }
   check("Nút '＋ Thêm vật tư' bị vô hiệu hoá", perm.addDisabled === true || perm.addDisabled === null,
     `disabled=${perm.addDisabled}`);
   check("Có dòng ghi chú giải thích quyền", /quyền/i.test(String(perm.note || "")), perm.note);

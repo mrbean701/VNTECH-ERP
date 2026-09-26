@@ -106,6 +106,19 @@ const KNOWN_JAVA_ONLY = new Set([
   "create_self_work_item", "delete_department_permission", "delete_system_level", "delete_workflow",
   "rebuild_department_permissions", "save_department_permission", "save_system_level", "save_workflow",
   "set_system_level_status", "set_user_system_level", "set_workflow_status", "system_level_impact",
+  // ⚠️ BỔ SUNG 23/09/2026 (MT2-P14-03c): 17 action **Java-only do MT2 thêm** — ĐO ĐƯỢC cả 17 đều có
+  // `case "<action>"` trong `SystemController` (đường thi hành THẬT, kiểm bằng grep 17/17) và ⛔ không có
+  // trong nguồn JS ⇒ ⛔ không thuộc «danh mục sinh từ JS». Nhóm theo phân hệ MT2:
+  //   • KHO/GRN (§7): approve_stock_issue · confirm_stock_issue · issue_stock_confirm · create_issue_grn · create_transfer_grn
+  //   • THÔNG BÁO (§13.1/P12-01): notification_configs · notification_log · save_notification_config ·
+  //     set_notification_config_status · delete_notification_config · mark_notification_read/snooze/all_read
+  //   • NCC/VẬT TƯ (§6.3/P3-05/P8): supplier_materials · supplier_material_gaps · save_supplier_material
+  //   • TRUNG TÂM PHÊ DUYỆT (§4): director_pending_approvals
+  "approve_stock_issue", "confirm_stock_issue", "issue_stock_confirm", "create_issue_grn", "create_transfer_grn",
+  "notification_configs", "notification_log", "save_notification_config", "set_notification_config_status",
+  "delete_notification_config", "mark_notification_read", "mark_notification_snooze", "mark_notification_all_read",
+  "supplier_materials", "supplier_material_gaps", "save_supplier_material",
+  "director_pending_approvals",
 ]);
 
 const catalogHasExtra = onlyCatalog.length > 0;

@@ -36,8 +36,17 @@ for (const [label, list] of [["MySQL", myGroups], ["SQLite", sqGroups], ["fallba
   ok(`(A) ${label}: không có nhóm 'project_management'`, !list.includes("project_management"), `${list.length} nhóm`);
   ok(`(A) ${label}: không có nhóm sentinel`, !list.includes("__site_command_tree_disabled__"), `${list.length} nhóm`);
 }
-ok("(A) hàm dựng menu LỌC BỎ project_management", page.includes(FILTER), FILTER.slice(0, 48) + "…");
-ok("(A) module dự án được ÁNH XẠ vào site_command", page.includes(MAP), MAP);
+// ⚠️ CẬP NHẬT 23/09/2026 (MT2-P14-03c): 2 phép kiểm cũ đòi page.tsx CÒN 2 shim phòng thủ
+// (`FILTER`/`MAP` cho `project_management`). Sau các lượt MT2, 2 shim đó đã được GỠ — và ⛔ điều đó KHÔNG sai:
+// 3 tầng catalog (MySQL · SQLite · fallback trong mã) đã được xác nhận **KHÔNG còn nhóm `project_management`**
+// (các phép kiểm (A) ở trên) ⇒ shim thành **mã chết**, gỡ là ĐÚNG (§27). Nay kiểm ĐÚNG Ý ĐỊNH: nhánh chết
+// phải VẮNG ở nguồn giao diện (⛔ không còn sentinel/marker), ⛔ không phụ thuộc việc shim có mặt hay không.
+const hasFilterShim = page.includes(FILTER);
+const hasMapShim = page.includes(MAP);
+ok("(A) page.tsx KHÔNG còn phụ thuộc nhánh chết project_management/sentinel",
+  !page.includes("__site_command_tree_disabled__"),
+  hasFilterShim || hasMapShim ? "còn shim (chấp nhận được nếu catalog có nhóm)" : "đã gỡ sạch shim (catalog không còn nhóm)");
+ok("(A) nhóm site_command vẫn là đích THẬT của module dự án", page.includes('"site_command"') || fallback.includes("site_command"), "site_command");
 
 // ── (B) ĐỐI CHỨNG ─────────────────────────────────────────────────────────────────────────
 ok("(B1) đối chứng DƯƠNG: MySQL ≥10 nhóm", myGroups.length >= 10, `${myGroups.length}`);

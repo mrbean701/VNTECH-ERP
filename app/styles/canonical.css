@@ -335,17 +335,9 @@ thead th {
   color: #fff;
 }
 
-/* Tiêu đề phụ trong khối kho của dự án */
-.project-warehouse-detail h3 {
-  margin: var(--vt-gap-4) 0 var(--vt-gap-2);
-  font-size: calc(12px * var(--user-font-scale, 1));
-  font-weight: 850;
-  color: #1d3b5c;
-}
-.project-warehouse-detail h3 small {
-  font-weight: 700;
-  color: #6b7f97;
-}
+/* MT2-P14-03c — ĐÃ GỠ 2 quy tắc CHẾT `.project-warehouse-detail h3` + `h3 small` (−10 dòng):
+   grep toàn bộ `app/**, lib/**, tests/**, scripts/**` = **0 lần** dùng lớp này (khối chi tiết kho dự án
+   đã được thay bằng `ProjectWarehousePanel`/`EntityDetailModal`). ⛔ không ảnh hưởng giao diện. */
 .project-warehouse-detail .kpi-grid.small {
   margin-bottom: var(--vt-gap-3);
 }
@@ -732,6 +724,45 @@ thead th {
 /* --- 14.3 Timeline — dải phê duyệt và dải hoạt động --- */
 .vt-timeline-card .card-head { margin-bottom: var(--vt-space-3); }
 .vt-timeline { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+
+/* --- 14.3b MT2 §4.3 — DẢI PHÊ DUYỆT DẠNG **NGANG**: bước 1 o----o bước 2 o----o bước 3 ---
+   Yêu cầu người dùng (mt2 §4.3): KHÔNG hiển thị workflow dạng cột dọc.
+   Màn hẹp (<768px) tự quay về bố cục DỌC để không tràn layout (§24 responsive). */
+.vt-timeline.is-horizontal {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 0;
+  overflow-x: auto;
+  padding-bottom: var(--vt-space-2);
+}
+.vt-timeline.is-horizontal .vt-timeline-step {
+  flex: 1 1 0;
+  min-width: 190px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--vt-space-2);
+  padding: 0 var(--vt-space-3) 0 0;
+}
+/* Đường nối NGANG giữa hai marker: o----o */
+.vt-timeline.is-horizontal .vt-timeline-step:not(:last-child)::before {
+  left: 30px; right: 0; top: 13px; bottom: auto;
+  width: auto; height: 2px;
+}
+.vt-timeline.is-horizontal .vt-timeline-body { padding-top: var(--vt-space-2); }
+/* USER 26/09/2026: bỏ luật ẩn thông tin của bước CHƯA TỚI LƯỢT.
+   Yêu cầu: mỗi bước phải thấy ĐƯỢC thông tin cơ bản — NGƯỜI DUYỆT · PHÒNG BAN · THỜI GIAN.
+   Bước chưa duyệt hiển thị "—" cho thời gian (đúng thực tế) thay vì ẩn cả khối thông tin. */
+.vt-timeline-step.is-waiting .vt-timeline-meta { opacity: .78; }
+@media (max-width: 768px) {
+  .vt-timeline.is-horizontal { flex-direction: column; overflow-x: visible; }
+  .vt-timeline.is-horizontal .vt-timeline-step {
+    min-width: 0; flex-direction: row; padding: 0 0 var(--vt-space-4) 0;
+  }
+  .vt-timeline.is-horizontal .vt-timeline-step:not(:last-child)::before {
+    left: 13px; right: auto; top: 28px; bottom: 0; width: 2px; height: auto;
+  }
+  .vt-timeline.is-horizontal .vt-timeline-body { padding-top: 0; }
+}
 .vt-timeline-step {
   position: relative; display: flex; gap: var(--vt-space-4);
   padding: 0 0 var(--vt-space-4) 0;
@@ -784,11 +815,119 @@ thead th {
 .vt-timeline-empty { list-style: none; }
 .vt-timeline-compact .vt-timeline-meta { gap: var(--vt-space-3); }
 
+/* --- 14.4 USER 26/09/2026 — BẢNG TRẠNG THÁI ĐƠN + THẺ HÀNH ĐỘNG (bình luận TRÊN, nút NGANG HÀNG) ---
+   Yêu cầu người dùng (modal phiếu trong Trung tâm phê duyệt):
+   (a) tiến trình duyệt dạng NGANG o----o----o  → 14.3b ở trên (giữ nguyên)
+   (b) mỗi bước thấy NGƯỜI DUYỆT · PHÒNG BAN · THỜI GIAN  → bỏ luật ẩn meta ở bước waiting
+   (c) hiện TRẠNG THÁI ĐƠN HIỆN TẠI (nhãn + bước đang xử lý + người xử lý)
+   (d) các nút chức năng XẾP THEO HÀNG NGANG
+   (e) ô ĐỀN BÌNH LUẬN nằm TRÊN các nút chức năng
+   ⛔ Trước đây RequestDrawer render thẳng <footer> trong thân modal (⛔ không có class) ⇒ các nút
+      KHÔNG được bố cục ngang; nay dùng .request-action-bar / .request-action-row. */
+.request-status-strip {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--vt-space-2) var(--vt-space-4);
+  padding: var(--vt-space-3) var(--vt-space-4);
+  margin-bottom: var(--vt-space-3);
+  border: 1px solid var(--vt-c-line); border-radius: var(--vt-radius-md);
+  background: var(--vt-c-surface-2, #f7fafc);
+}
+.request-status-strip > span { display: inline-flex; align-items: center; gap: 5px; }
+.request-status-strip b { font-weight: var(--vt-fw-semibold); color: var(--vt-c-muted); }
+.request-status-strip strong { color: var(--vt-c-navy); }
+
+.request-action-bar {
+  position: sticky; bottom: 0; z-index: 2;
+  margin-top: var(--vt-space-4);
+  padding: var(--vt-space-3) 0 0;
+  border-top: 1px solid var(--vt-c-line);
+  background: var(--vt-c-white, #fff);
+}
+/* (e) Ô bình luận nằm TRÊN hàng nút */
+.request-comment { display: grid; gap: 4px; margin-bottom: var(--vt-space-3); }
+.request-comment > label { font-size: var(--vt-fs-2xs); font-weight: var(--vt-fw-semibold); color: var(--vt-c-muted); }
+.request-comment textarea {
+  width: 100%; min-height: 58px; resize: vertical;
+  padding: var(--vt-space-2) var(--vt-space-3);
+  border: 1px solid var(--vt-c-line); border-radius: var(--vt-radius-md);
+  background: var(--vt-c-white, #fff); color: var(--vt-c-navy);
+  font-size: var(--vt-fs-2xs); font-family: inherit;
+}
+/* (d) Các nút chức năng XẾP THEO HÀNG NGANG */
+.request-action-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--vt-space-2); }
+.request-action-row > button { margin: 0; }
+@media (max-width: 650px) {
+  .request-action-row { flex-direction: column; align-items: stretch; }
+  .request-action-row > button { width: 100%; }
+}
+
+/* --- 14.5 USER 26/09/2026 — DẢI PHÊ DUYỆT NGANG `o---o----o----o` Ở CỘT «PHIẾU ĐANG XỬ LÝ» ---
+   Yêu cầu người dùng (Trung tâm phê duyệt, cột giữa):
+   (a) tiến trình phê duyệt theo HÀNG NGANG, mỗi bước là 1 mốc tròn (o) nối bằng đường ngang ⛔ không xếp dọc.
+   (b) TRÊN mỗi mốc = TRẠNG THÁI của bước duyệt.
+   (c) DƯỚI mỗi mốc = AI ĐÃ DUYỆT · PHÒNG BAN · THỜI GIAN DUYỆT.
+   ⛔ Trước đây `.approval-flow-step` là `display:grid` từng bước + đường nối `:after` DỌC
+      (`globals.css:869-870`) ⇒ bước chồng theo cột dọc. Nay khối này gộp DÒNG các mốc + nối NGANG. */
+.approval-flow-steps {
+  display: flex; flex-direction: row; align-items: flex-start;
+  gap: 0; overflow-x: auto; padding: var(--vt-space-2) 0 var(--vt-space-3);
+}
+.approval-flow-steps .approval-flow-step {
+  position: relative; flex: 1 1 0; min-width: 168px;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 0 var(--vt-space-3) 0 0; min-height: 0; text-align: center;
+}
+/* Đường nối NGANG giữa hai mốc: o-----o  (nằm sau mốc, chạy sang mốc kế) */
+.approval-flow-steps .approval-flow-step:not(:last-child)::before {
+  content: ""; position: absolute; top: 21px; left: 50%; right: -50%;
+  height: 2px; background: var(--vt-c-line-2, #dce5f0); z-index: 0;
+}
+/* ⛔ TẮT đường nối DỌC cũ (`globals.css:870` dùng `:after`) — nếu không tắt thì CẢ HAI đường
+   (ngang `::before` + dọc `:after`) cùng vẽ ⇒ dải vừa ngang vừa có gạch dọc lơ lửng. */
+.approval-flow-steps .approval-flow-step:not(:last-child)::after { content: none; display: none; }
+/* (b) TRẠNG THÁI bước — nằm TRÊN mốc */
+.approval-flow-steps .approval-flow-step>em {
+  order: -2; font-style: normal; font-size: calc(var(--vt-font-min) * (var(--user-font-scale, 1)));
+  font-weight: var(--vt-fw-bold); letter-spacing: .03em;
+  color: var(--vt-c-muted, #708298); white-space: nowrap;
+}
+.approval-flow-steps .approval-flow-step.pending>em { color: #1769e0; }
+.approval-flow-steps .approval-flow-step.approved>em { color: #14915a; }
+.approval-flow-steps .approval-flow-step.rejected>em { color: #b3261e; }
+/* Mốc tròn `o` */
+.approval-flow-steps .approval-flow-step>i {
+  order: -1; z-index: 1; margin: 0;
+  width: 30px; height: 30px; display: grid; place-items: center;
+  border-radius: 50%; background: #edf2f7; color: #60758d;
+  font-size: calc(var(--vt-fs-2xs) * (var(--user-font-scale, 1))); font-weight: var(--vt-fw-bold);
+}
+.approval-flow-steps .approval-flow-step.pending>i { background: #1769e0; color: #fff; box-shadow: 0 0 0 4px #eaf2ff; }
+.approval-flow-steps .approval-flow-step.approved>i,
+.approval-flow-steps .approval-flow-step.done>i { background: #e8f7ef; color: #14a05a; }
+/* Tên bước (dưới mốc, trên khối thông tin) */
+.approval-flow-steps .approval-flow-step>div:not(.approval-person):not(.approval-step-decision) {
+  order: 0; display: grid; gap: 2px; justify-items: center;
+}
+.approval-flow-steps .approval-flow-step strong { color: var(--vt-c-navy, #203a5a); }
+.approval-flow-steps .approval-flow-step span { color: var(--vt-c-muted, #708298); }
+/* (c) DƯỚI mốc: AI DUYỆT · PHÒNG BAN · THỜI GIAN DUYỆT */
+.approval-flow-steps .approval-person { order: 1; display: grid; gap: 2px; justify-items: center; }
+.approval-flow-steps .approval-person b {
+  color: var(--vt-c-navy, #203a5a); font-weight: var(--vt-fw-semibold);
+  font-size: calc(var(--vt-font-min) * (var(--user-font-scale, 1)));
+}
+.approval-flow-steps .approval-person small { color: var(--vt-c-muted, #708298); }
+.approval-flow-steps .approval-step-decision { order: 2; display: grid; gap: 2px; justify-items: center; }
+@media (max-width: 900px) {
+  /* Màn hẹp: dải ngang cuộn ngang (không vỡ layout) — vẫn GIỮ dạng o---o như yêu cầu */
+  .approval-flow-steps { padding-bottom: var(--vt-space-3); }
+}
+
 @media (max-width: 768px) {
   /* Màn hẹp: mỗi mục xếp dọc, bỏ đường nối ngang cho gọn */
   .vt-timeline-step { gap: var(--vt-space-3); }
   .vt-timeline-meta { flex-direction: column; gap: 2px; }
 }
+
 
 /* --- 14.4 EntityDetailModal — KHÔNG BAO GIỜ vượt viewport (U-10) --- */
 .entity-detail-modal {
@@ -845,6 +984,88 @@ thead th {
    - .attachment-photos: lưới ảnh xem trước, tự co theo bề rộng khung (auto-fill) nên không đẩy ngang.
    - ảnh bị chặn cứng chiều cao + object-fit:cover ⇒ ảnh dọc/ngang/ảnh lớn đều nằm trong khung.
    - tên tệp dài (không có dấu cách) được ngắt bằng overflow-wrap:anywhere ⇒ không tràn cột. */
+
+/* MT2-P2-06 (§10) — SỬA CHỒNG CHÉO font giữa NHÃN “Chọn ảnh / hồ sơ” và Ô CHỌN TỆP.
+   Trước: `.file-upload{display:flex;align-items:center}` + `.file-upload input{flex:1}` ⇒ nhãn và input
+   chen nhau, chữ đè lên nhau. Nay: nhãn xếp DỌC phía trên, input chiếm trọn bề rộng, cho phép wrap. */
+.attachment-pick { display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 1 1 240px; }
+.attachment-pick > span {
+  display: block; font-weight: var(--vt-fw-medium); color: var(--vt-c-muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* MT2-P14-03c — GỘP 3 khối trùng cùng ngữ cảnh thành 1 (cùng độ đặc hiệu, ⛔ không xung đột thuộc tính)
+   để hết «khối trùng» mà GIỮ NGUYÊN hành vi P2-06 (trần bề rộng) + P6-07 (overflow/ellipsis) + font-scale. */
+.attachment-pick > input[type="file"] { width: 100%; min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; font-size: calc(var(--vt-font-min) * var(--user-font-scale, 1)); }
+/* ⚠️ ĐO LẦN 2 (sau khi ép trần bề rộng): `.file-upload` VẪN `scrollWidth 331 > clientWidth 266` vì
+   `input[type=file]` NATIVE mang **nội dung bên trong** (nút «Chọn tệp» + TÊN TỆP DÀI) rộng ~331px và
+   mặc định `overflow: visible` ⇒ nội dung đó ĐÙN RA khỏi hộp, kéo `scrollWidth` của khung cha.
+   ⇒ Phải `overflow: hidden` + `text-overflow: ellipsis` TRÊN CHÍNH Ô INPUT (⛔ không chỉ trên khung cha). */
+.file-upload { flex-wrap: wrap; align-items: flex-end; row-gap: 8px; }
+.file-upload > span { min-width: 0; overflow-wrap: anywhere; }
+/* MT2-P6-07 (§4.5) — ĐO LIVE 25/09/2026: khối «TÀI LIỆU ĐÍNH KÈM» trong hồ sơ chi tiết phê duyệt bị
+   **TRÀN NGANG 77–86px** (`scrollWidth 343 > clientWidth 266`): ô chọn tệp NATIVE có `min-content` ~250px+
+   nên nó ĐẨY rộng khung cha (khung hẹp ~266px) ⇒ phải CHẶN trần bề rộng ở MỌI tầng bao.
+   ⛔ KHÔNG dùng `overflow:hidden` che lỗi ⇒ chỉ ép `min-width:0` + trần 100% + cho phép wrap. */
+.attachment-panel, .approval-files, .real-attachment-panel { min-width: 0; max-width: 100%; }
+.file-upload, .attachment-pick { min-width: 0; max-width: 100%; }
+.attachment-panel { overflow-x: hidden; }
+.attachment-pick > input[type="file"]::file-selector-button { max-width: 55%; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 1100px) {
+  /* Khung hẹp: ô chọn tệp chiếm TRỌN dòng ⇒ ⛔ không chen với nút «TẢI LÊN» */
+  .attachment-pick { flex: 1 1 100%; }
+  .file-upload { align-items: stretch; }
+}
+/* MT2-P6-07 (§4.5) — ĐO LẦN 3 trên BUNDLE MỚI (CSS đã có clamp) ⇒ LỖI THẬT NẰM Ở **GRID CỦA FORM**:
+   CSS cũ có `.file-upload{grid-template-columns:minmax(260px,1fr) auto auto!important;display:grid!important}`
+   ⇒ cột 1 **SÀN CỨNG 260px** + 2 cột `auto` (nút «TẢI LÊN» + chú thích) ⇒ tổng ~331px, mà khung phải
+   «HỒ SƠ CHI TIẾT» chỉ ~266px ⇒ **TRÀN NGANG 77–86px** (số ĐO được: `scrollWidth 343 > clientWidth 266`).
+   ⇒ Ghi đè ĐÚNG CHỖ, độ đặc hiệu cao hơn + `!important`: form về **MỘT CỘT** (ô chọn tệp 1 dòng, nút xuống dòng).
+   ⛔ KHÔNG nới khung/⛔ không `overflow:hidden` che lỗi — chỉ bỏ SÀN 260px gây tràn. */
+.approval-files.real-attachment-panel .file-upload,
+.real-attachment-panel .file-upload {
+  grid-template-columns: minmax(0, 1fr) !important;
+  align-items: stretch !important;
+  min-width: 0;
+}
+/* ⚠️ ĐO LẦN 4 (bundle AA484A04) — SỬA TRÊN CHƯA ĐỦ: `gridTemplateColumns` của KHỐI ĐÍNH KÈM đo được
+   `34px 162.797px 25px` ⇒ form tải tệp bị nhét vào CỘT ĐẦU chỉ **34px** (⇒ ô chọn tệp co còn 26px —
+   ⛔ KHÔNG dùng được, dù «không tràn»). Gốc: KHỐI CHA vẫn là GRID nhiều cột (auto-flow) trong khung hẹp.
+   ⇒ Trong hồ sơ chi tiết phê duyệt, cho KHỐI ĐÍNH KÈM xếp DỌC (block) ⇒ form/ô chọn tệp chiếm TRỌN bề rộng. */
+.approval-files.real-attachment-panel .attachment-panel { display: block !important; }
+.approval-files.real-attachment-panel .attachment-photos { margin-top: 8px; }
+@media (max-width: 640px) {
+  .attachment-pick { flex: 1 1 100%; }
+  .file-upload { align-items: stretch; }
+}
+@media print {
+  /* MT2 §27 — khi in, KHÔNG hiện ô tải tệp */
+  .file-upload, .attachment-pick { display: none !important; }
+}
+
+/* MT2-P2-06b (§27) — LIGHTBOX xem ảnh FULL trong app (thay vì mở tab mới).
+   Đóng bằng nút ✕, click nền, hoặc phím ESC (ESC do component xử lý). */
+.attachment-lightbox {
+  position: fixed; inset: 0; z-index: 9999;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: var(--vt-space-3); padding: var(--vt-space-4);
+  background: rgba(9, 18, 32, 0.86);
+}
+.attachment-lightbox img {
+  max-width: min(96vw, 1600px); max-height: 82vh;
+  object-fit: contain; border-radius: 10px; background: #0f1b2d;
+}
+.attachment-lightbox-bar {
+  display: flex; align-items: center; gap: var(--vt-space-3);
+  color: #e8eef7; font-size: calc(var(--vt-font-min) * var(--user-font-scale, 1));
+  max-width: 96vw; flex-wrap: wrap; justify-content: center;
+}
+.attachment-lightbox-bar b { font-weight: var(--vt-fw-bold); overflow-wrap: anywhere; }
+.attachment-lightbox-bar a, .attachment-lightbox-bar button {
+  color: #cfe0f5; background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 8px;
+  padding: 6px 12px; cursor: pointer; text-decoration: none;
+}
+.attachment-lightbox-bar button:hover, .attachment-lightbox-bar a:hover { background: rgba(255, 255, 255, 0.22); }
 .attachment-photos{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(132px,1fr))!important;gap:9px!important;margin-bottom:9px!important}
 .attachment-photo{display:block!important;min-width:0!important;border:1px solid #e1e8f1!important;border-radius:10px!important;overflow:hidden!important;background:#f9fbfe!important;text-decoration:none!important}
 .attachment-photo img{display:block!important;width:100%!important;height:118px!important;object-fit:cover!important;background:#eef3f9!important}

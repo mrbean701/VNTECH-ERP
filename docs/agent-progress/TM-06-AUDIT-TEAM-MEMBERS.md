@@ -5,6 +5,18 @@
 - **Cổng sinh bằng chứng:** `tools/audit-team-members.mjs` → `docs/agent-progress/TM-06-TEAM-MEMBERS-AUDIT.csv` (25 dòng).
 - **Hợp đồng kiểm lại:** `tests/tm06-team-members-audit.test.mjs`.
 
+## 🟢 ĐÍNH CHÍNH SỐ ĐO — **ĐO LẠI 26/09/2026** (đây là số ĐÚNG hiện tại; các mục dưới ghi số cũ 20/09)
+| Chỉ số | Số cũ (20/09) | **Số mới (26/09)** | Vì sao đổi |
+|---|---|---|---|
+| `team_members` tổng | 6 dòng | **4 dòng** | Đã **dọn 2 dòng tàn dư fixture** `PRB073-A` / `PRB073-B` (phương án **A** trong câu hỏi ở §5) ⇒ probe `probe-task073` nay tự dọn trong `finally` |
+| `active=1` | 5 dòng | **4 dòng** | 1 trong 5 dòng cũ là fixture `PRB073-A` (`active=1`) ⇒ đã bị dọn |
+| Tàn dư fixture (`id` tiền tố `PRB%`) | 2 dòng | **0 dòng** | đã dọn |
+| `teams` tổng | 1 tổ đội | **3 tổ đội** | dữ liệu tổ đội đã được bổ sung sau 20/09 |
+
+⇒ **KẾT LUẬN ĐOẠT GIỮ NGUYÊN:** roadmap ghi «**0 dòng**» ⇒ ❌ **SAI**; CSDL thật **có** dữ liệu (**4 dòng** thật) và **không có action nào của sản phẩm ghi bảng này ⇒ `team_members` là khoá Java-only, dữ liệu đến từ **SQL ngoài sản phẩm** (seed `tools/task080-seed-real-data.sql`).
+**Bằng chứng máy:** `docs/agent-progress/TM-06-TEAM-MEMBERS-AUDIT.csv` (sinh lại bằng `node tools/audit-team-members.mjs`).
+⚠️ Các mục **§1.1 / §3 / §5** bên dưới còn ghi số **20/09** (6 dòng / 5 active / 2 tàn dư) ⇒ coi là **LỊCH SỬ**, giá trị hiện hành là bảng trên.
+
 ---
 
 ## 1. ⚠️ ĐÍNH CHÍNH TIỀN ĐỀ — roadmap ghi SAI

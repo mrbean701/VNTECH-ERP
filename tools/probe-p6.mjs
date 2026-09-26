@@ -93,8 +93,12 @@ await sleep(1500);
 
 const after = await audits();
 console.log(`     số bản ghi sau : ${after.length}`);
-check(after.length > before.length, "Thao tác thay đổi dữ liệu SINH RA bản ghi nhật ký", `${before.length} → ${after.length}`);
+// ⚠️ MT2-P14-03c (#27) — VÁ CÁCH ĐO: `BootstrapDataAdapter` trả `data.audits` với **`ORDER BY al.occurred_at DESC LIMIT 100`**
+// ⇒ khi đã đủ 100 dòng thì **SO SỐ LƯỢNG KHÔNG BAO GIỜ TĂNG**. Cách đúng: so **ID dòng MỚI** (không có trong tập trước)
+// — ⛔ KHÔNG hạ nhẹ: vẫn bắt buộc phải có bản ghi mới + đủ 3 hành động (2 phép kiểm dưới).
 const fresh = after.filter((a) => !beforeIds.has(String(a.id)));
+check(fresh.length > 0, "Thao tác thay đổi dữ liệu SINH RA bản ghi nhật ký (so ID dòng MỚI — ⛔ không so số lượng vì LIMIT 100)",
+  `${before.length} → ${after.length} · mới ${fresh.length}`);
 check(fresh.length >= 3, "Ghi đủ các thao tác vừa thực hiện", `${fresh.length} bản ghi mới`);
 const actions = fresh.map((a) => String(a.action));
 ["save_system_level", "save_department_permission", "delete_department_permission"].forEach((a) =>
@@ -125,15 +129,20 @@ await sleep(900);
 await ev(`(()=>{const g=document.querySelector('.nav-tree-group[data-nav-group="system_admin"]');const c=[...g.querySelectorAll('.nav-child')].find(x=>/phân quyền/i.test(x.innerText||''));if(c){c.click();return 1}return 0})()`);
 await sleep(3500);
 const tabs = await ev(`[...document.querySelectorAll('.permission-steps button')].map(b=>(b.innerText||'').replace(/^\\d+\\s*/,'').replace(/\\s+/g,' ').trim())`);
-check(Array.isArray(tabs) && tabs.length === 12, "Có đúng 12 tab", `${(tabs || []).length}`);
-check((tabs || [])[10] === "Audit log", "Tab 11 = Audit log", (tabs || [])[10] || "");
+// ⚠️ MT2-P14-03c (#27) — BỎ KHOÁ TỔNG SỐ TAB: MT2-P12-01 đã THÊM tab «Thông báo» (12 → 13) và tab «Audit log»
+// KHÔNG còn ở vị trí 11 ⇒ nay khẳng định theo **TÊN TAB** (⛔ không khoá vị trí/tổng số) nhưng VẪN đòi ≥12 tab.
+check(Array.isArray(tabs) && tabs.length >= 12, "Có ÍT NHẤT 12 tab (⛔ không khoá tổng số)", `${(tabs || []).length}`);
+check((tabs || []).includes("Audit log"), 'Có tab "Audit log" (theo TÊN, ⛔ không theo vị trí)',
+  `vị trí ${((tabs || []).indexOf("Audit log") + 1) || 0}/${(tabs || []).length}`);
 await openTab("Audit log");
 const headOk = await ev(`/Nhật ký kiểm toán/.test(document.body.innerText)`);
 check(headOk === true, "Mở được mục “Nhật ký kiểm toán”");
 const kpi = await ev(`document.querySelectorAll('.kpi-grid .card, .kpi').length`);
 check(kpi > 0, "Có thẻ số liệu tổng quan");
-const filters = await ev(`(()=>{const c=[...document.querySelectorAll('.card')].find(x=>/Nhật ký kiểm toán/.test(x.innerText||''));if(!c)return null;return {search:!!c.querySelector('input.admin-search'),selects:c.querySelectorAll('select').length,dates:c.querySelectorAll('input[type=date]').length,clear:[...c.querySelectorAll('button')].some(b=>/Xóa lọc/i.test(b.innerText||''))}})()`);
-check(filters?.search === true, "Có ô tìm kiếm");
+const filters = await ev(`(()=>{const c=[...document.querySelectorAll('.card')].find(x=>/Nhật ký kiểm toán/.test(x.innerText||''));if(!c)return null;return {search:!!c.querySelector('input[type=search], input.admin-search'),selects:c.querySelectorAll('select').length,dates:c.querySelectorAll('input[type=date]').length,clear:[...c.querySelectorAll('button')].some(b=>/Xóa lọc/i.test(b.innerText||''))}})()`);
+// ⚠️ MT2-P14-03c (#27): ô tìm kiếm nay do component DÙNG CHUNG `ListToolbar` render (`ListToolbar.tsx:83` `type="search"`)
+// ⇒ nhận CẢ `input[type=search]` lẫn lớp cũ `input.admin-search` (⛔ không hạ nhẹ: vẫn đòi CÓ ô tìm kiếm thật).
+check(filters?.search === true, "Có ô tìm kiếm (qua ListToolbar dùng chung)");
 check((filters?.selects || 0) >= 2, "Có lọc theo người dùng và chức năng", `${filters?.selects} dropdown`);
 check((filters?.dates || 0) === 2, "Có lọc khoảng ngày", `${filters?.dates} ô ngày`);
 check(filters?.clear === true, "Có nút xóa lọc");
@@ -151,7 +160,18 @@ check(clean().length === 0, "Không lỗi JS ở tab Audit log", clean()[0] || "
 // ---- 4) Lọc ----
 console.log("\n═══ 4) BỘ LỌC ═══");
 const total = await ev(`document.querySelectorAll('.card table tbody tr').length`);
-await ev(`(()=>{const i=document.querySelector('.card input.admin-search');const s=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set;s.call(i,'save_system_level');i.dispatchEvent(new Event('input',{bubbles:true}));return 1})()`);
+await ev(`(()=>{
+  // MT2-P14-03c (#27) - VA BUOC GO TU KHOA: ban cu dung lop CU .card input.admin-search nen khong tim thay input
+  // => khong go duoc => danh sach khong loc (101 -> 101, bao OAN). Nay nhan CA input[type=search] (ListToolbar.tsx:83)
+  // lan lop cu; van BAT BUOC go that + ban su kien React de loc that (khong ha nhe phep kiem).
+  // (khong dung dau huyen trong chu thich nam TRONG template literal cua ev)
+  const i=document.querySelector('.card input[type=search], .card input.admin-search, input[type=search]');
+  if(!i) return 'NO_INPUT';
+  const s=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set;
+  s.call(i,'save_system_level');
+  i.dispatchEvent(new Event('input',{bubbles:true}));
+  return 'TYPED';
+})()`);
 await sleep(1200);
 const filtered = await ev(`document.querySelectorAll('.card table tbody tr').length`);
 check(filtered > 0 && filtered < total, "Tìm kiếm lọc được nhật ký", `${total} → ${filtered}`);

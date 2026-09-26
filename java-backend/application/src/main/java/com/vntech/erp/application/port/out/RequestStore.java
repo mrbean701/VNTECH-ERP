@@ -65,6 +65,16 @@ public interface RequestStore {
     boolean ownerHasProjectScope(String userId, String projectId);
     void updateApprovalDecision(String requestId, int stage, String decision, String userId,
                                 String comment, String snapshot, Instant now);
+
+    /**
+     * MT2 §4.4 — LƯU VẾT lý do duyệt QUÁ HẠN SLA (cột `approvals.overdue_reason` — tạo ở migration **V25**).
+     *
+     * <p>MT2 §4.4: “Hệ thống phải lưu dữ liệu để sau này xây dựng logic xử lý SLA: approval id · workflow step ·
+     * due time · approved time · expired flag · overdue duration · <b>overdue reason</b> · approver · department.”
+     * <p>Ở bảng `approvals` ĐÃ CÓ `due_at` + `decided_at` ⇒ thời lượng quá hạn TÍNH ĐƯỢC và cờ `expired`
+     * SUY RA ĐƯỢC (⛔ không thêm cột dư). Hàm này chỉ lưu phần KHÔNG suy ra được: **lý do người duyệt nhập**.
+     */
+    void updateApprovalOverdueReason(String requestId, int stage, String reason, Instant now);
     void advanceRequestStage(String requestId, int nextStage, Instant queuedAt, Instant dueAt, Instant now);
     void finalizeRequestApproval(String requestId, int stage, Instant now); // approved + items + supply step
     void createStockReservations(String requestId, String warehouseId, String userId, Instant now);

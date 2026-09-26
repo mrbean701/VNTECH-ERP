@@ -17,11 +17,14 @@ const workCenter = read("app/screens/WorkCenter.tsx");
 
 // ── BẢNG CHỐT `T-01` (nguyên văn quyết định của captain — PHƯƠNG ÁN A) ───────────────────────────
 // # | Nhãn | Đích đến | Cổng quyền (modulePermission(data, key).canView)
+// ⚠️ CẬP NHẬT 23/09/2026 (MT2 §3.1 + P5-01): `work_dashboard.view` PHẢI là **`dashboard`** —
+// trước đây bảng này ghi `view: "kpi"` (SAI: trỏ vào tab KPI). Nay theo MT2 §3.1 «click menu Công việc
+// ⇒ hiển thị Dashboard NGAY» và `lib/menu-helpers.ts:110-122` (chính mã ghi rõ `view: "kpi"` là SAI).
 const EXPECTED = [
   { key: "work_personal", label: "Cá nhân", view: "personal", permissionKeys: ["dept_plan_tasks", "dept_project_tasks"] },
   { key: "work_department", label: "Phòng ban", view: "department", permissionKeys: ["dept_plan_assign", "dept_project_assign"] },
   { key: "work_assign", label: "Giao việc", view: "assign", permissionKeys: ["dept_plan_assign", "dept_project_assign"] },
-  { key: "work_dashboard", label: "Dashboard", view: "kpi", permissionKeys: ["dept_plan_kpi", "dept_project_kpi"] },
+  { key: "work_dashboard", label: "Dashboard", view: "dashboard", permissionKeys: ["dept_plan_kpi", "dept_project_kpi"] },
   { key: "work_reports", label: "Báo cáo", view: "reports", permissionKeys: ["dept_plan_alerts", "dept_project_alerts"] },
 ];
 const LEGACY = ["dept_plan_tasks", "dept_project_tasks", "dept_plan_assign", "dept_project_assign"];
@@ -91,7 +94,9 @@ test("T-01 — menu (sidebar + mobile) dựng 5 mục MỚI của nhóm «CÔNG 
 test("T-01 — ĐÍCH ĐẾN: 4 mục → `WorkCenter` đúng tab; «Giao việc» → `DepartmentTaskWorkspace` (GIỮ NGUYÊN)", () => {
   assert.ok(workCenter.includes('const WORK_TABS = ["Cá nhân", "Phòng ban", "Giao việc", "Dashboard", "Báo cáo"];'),
     "WorkCenter chưa có ĐÚNG 5 tab theo đúng thứ tự Cá nhân · Phòng ban · Giao việc · Dashboard · Báo cáo");
-  assert.ok(workCenter.includes('const WORK_TAB_OF_VIEW: Record<WorkMenuView, number> = { personal: 0, department: 1, assign: 2, kpi: 3, reports: 4 };'),
+  // ⚠️ CẬP NHẬT 23/09/2026 (MT2-P5-01 §3.1): bảng ánh xạ nay có THÊM khoá `dashboard` (cùng trỏ tab 3
+  // = «Dashboard» trong `WORK_TABS`) và GIỮ `kpi: 3` để tương thích ngược — xem `app/screens/WorkCenter.tsx:84-88`.
+  assert.ok(workCenter.includes('const WORK_TAB_OF_VIEW: Record<WorkMenuView, number> = { personal: 0, department: 1, assign: 2, kpi: 3, dashboard: 3, reports: 4 };'),
     "Thiếu bảng ánh xạ view → tab trong WorkCenter");
   for (const index of [0, 1, 2, 3, 4]) assert.match(workCenter, new RegExp(`\\{tab === ${index} &&`), `Thiếu nhánh render tab ${index}`);
 
@@ -101,7 +106,10 @@ test("T-01 — ĐÍCH ĐẾN: 4 mục → `WorkCenter` đúng tab; «Giao việc
   const fn = page.slice(start, end);
   assert.doesNotMatch(fn, /"assign"/, "«Giao việc» (view assign) TUYỆT ĐỐI không được mở WorkCenter");
   assert.match(page, /workCenterView !== null && <WorkCenter key=\{workCenterView\} view=\{workCenterView\}/, "Chưa truyền view của mục menu vào WorkCenter");
-  assert.match(page, /workCenterView === null && active\.startsWith\("dept_plan_"\) && active !== "dept_plan_tasks" && <DepartmentTaskWorkspace data=\{data\} department="KH"/,
+  // ⚠️ CẬP NHẬT 23/09/2026: nhánh render CŨ vẫn SỐNG (đã kiểm bằng grep `<DepartmentTaskWorkspace` = 2 chỗ),
+  // nhưng nay có THÊM điều kiện loại trừ `dept_plan_suppliers` + truyền thêm props (`moduleKey/project/onProject/
+  // action/navigate`) — hợp đồng cũ chỉ khớp CHUỖI HẸP nên đỏ oan. Khẳng định lại ĐÚNG Ý ĐỊNH: KH/DA còn lối vào.
+  assert.match(page, /workCenterView === null && active\.startsWith\("dept_plan_"\) && active !== "dept_plan_tasks" && active !== "dept_plan_suppliers" && <DepartmentTaskWorkspace data=\{data\} department="KH"/,
     "Màn giao việc chi tiết (KH) đã MẤT lối vào");
   assert.match(page, /workCenterView === null && active\.startsWith\("dept_project_"\) && active !== "dept_project_tasks" && <DepartmentTaskWorkspace data=\{data\} department="DA"/,
     "Màn giao việc chi tiết (DA) đã MẤT lối vào");

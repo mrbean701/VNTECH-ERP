@@ -26,18 +26,22 @@ public class ProjectAdminStoreAdapter implements ProjectAdminStore {
                                            String managerUserId, String startDate, String plannedEndDate,
                                            String contractNo, String contractName,
                                            String warehouseCode, String warehouseName, String scopeId,
-                                           String userId, Instant now) {
+                                           String userId, boolean createWarehouse, Instant now) {
         jdbcTemplate.update("""
                 INSERT INTO projects (id,code,name,status,manager_user_id,start_date,planned_end_date,
                                       contract_no,contract_name,created_at,updated_at)
                 VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
                 projectId, code, name, "active", managerUserId, startDate, plannedEndDate,
                 contractNo, contractName, now, now);
-        jdbcTemplate.update("""
-                INSERT INTO warehouses (id,code,name,type,project_id,parent_warehouse_id,keeper_user_id,
-                                        active,created_at,updated_at)
-                VALUES (?,?,?,?,?,?,?,1,?,?)""",
-                warehouseId, warehouseCode, warehouseName, "site", projectId, "WH-CENTRAL", userId, now, now);
+        // MT2-P14-03c — TÔN TRỌNG CỜ «Tạo kho dự án?» của UI: ⛔ không sinh kho khi người dùng chọn «Không»
+        // (JS `scripts/system-route.mjs` nhánh `create_project` bọc đúng câu này trong `if (createWarehouse !== false)`).
+        if (createWarehouse) {
+            jdbcTemplate.update("""
+                    INSERT INTO warehouses (id,code,name,type,project_id,parent_warehouse_id,keeper_user_id,
+                                            active,created_at,updated_at)
+                    VALUES (?,?,?,?,?,?,?,1,?,?)""",
+                    warehouseId, warehouseCode, warehouseName, "site", projectId, "WH-CENTRAL", userId, now, now);
+        }
         jdbcTemplate.update("""
                 INSERT INTO user_project_scopes (id,user_id,project_id,permission,created_at,updated_at)
                 VALUES (?,?,?,?,?,?)""", scopeId, userId, projectId, "admin", now, now);

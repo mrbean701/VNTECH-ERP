@@ -551,5 +551,70 @@ public class OpsTaskStoreAdapter implements OpsTaskStore {
         return first("SELECT id FROM materials WHERE id=? AND active=1", materialId);
     }
 
+    // ══════════════════════════════════════════════════════════════════════════════════════════════════
+    // MT2-P4-03 (§4.1) — CARD «CHỜ GIÁM ĐỐC DUYỆT» (⛔ CHỈ ĐỌC — ⛔ KHÔNG đụng luồng duyệt, GOAL §20)
+    // ⚠️ LỌC MÃ Ở **JAVA** (tách theo dấu phẩy + `trim()` + so **CHÍNH XÁC**) — ⛔ KHÔNG `LIKE '%director%'` ✗.
+    // ⚠️ ⛔ KHÔNG lọc theo `stage_no` ✗ — bước 5 có **2 snapshot** khác nhau (24 có director vs 7 không) ✗.
+    // ══════════════════════════════════════════════════════════════════════════════════════════════════
+    @Override
+    public List<Map<String, Object>> pendingApprovalsForRoleCodes(List<String> roleCodes) {
+        if (roleCodes == null || roleCodes.isEmpty()) return List.of();
+        java.util.Set<String> wanted = new java.util.LinkedHashSet<>();
+        for (String code : roleCodes) {
+            if (code != null && !code.isBlank()) wanted.add(code.trim());
+        }
+        if (wanted.isEmpty()) return List.of();
+
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
+                SELECT id,stage,department,entity_type AS "entityType",entity_id AS "entityId",
+                       request_id AS "requestId",due_at AS "dueAt",approver_user_id AS "approverUserId",
+                       allowed_role_codes_snapshot AS "allowedRoleCodesSnapshot"
+                FROM approvals WHERE status='pending' ORDER BY due_at,id""");
+
+        List<Map<String, Object>> out = new java.util.ArrayList<>();
+        for (Map<String, Object> row : rows) {
+            Object raw = row.get("allowedRoleCodesSnapshot");
+            if (raw == null) continue;                     // ⛔ thiếu snapshot ⇒ ⛔ KHÔNG suy diễn là đủ ✗
+            boolean match = false;
+            for (String part : String.valueOf(raw).split(",")) {
+                if (wanted.contains(part.trim())) { match = true; break; }
+            }
+            if (match) out.add(row);
+        }
+        return out;
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════════════════════════════
+    // MT2-P4-03 — CẤP BẬC của user (dùng chung cho tầng application; ⛔ CHỈ ĐỌC)
+    // ⚠️ Trích từ điều kiện P4-02 (đang cài inline ở `BootstrapDataAdapter`) ⇒ ⛔ KHÔNG copy SQL rải rác ✗
+    // ⛔ KHÔNG suy diễn: 0 dòng / NULL ⇒ trả **null** (coi như KHÔNG đủ) ✗
+    // ══════════════════════════════════════════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════════════════════════════════
+    // MT2-P4-01 (§3.2 · đề án ①A) — PHÒNG BAN của user (⛔ CHỈ ĐỌC) để tách 2 tầng phạm vi công việc:
+    //   «trưởng phòng trở lên = phòng ban MÌNH»  ↔  «phó GĐ trở lên = TOÀN CÔNG TY» (§3.2:41-42)
+    // ⛔ KHÔNG suy diễn: user không tồn tại / `department` NULL ⇒ trả **""** (rỗng) ⇒ tầng trên coi như
+    //    KHÔNG có phạm vi phòng ban ⇒ rơi về tầng SELF (an toàn, không mở rộng quyền) ✗
+    // ══════════════════════════════════════════════════════════════════════════════════════════════════
+    @Override
+    public String userDepartment(String userId) {
+        if (userId == null || userId.isBlank()) return "";
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(
+                "SELECT department FROM users WHERE id=?", userId);
+        if (rows.isEmpty()) return "";
+        return sv(rows.get(0), "department").trim();
+    }
+
+    @Override
+    public Integer userLevelRank(String userId) {
+        if (userId == null || userId.isBlank()) return null;
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(
+                "SELECT l.level_rank AS \"levelRank\" FROM users u "
+                        + "LEFT JOIN system_level_catalog l ON l.code=u.system_level_code WHERE u.id=?",
+                userId);
+        if (rows.isEmpty()) return null;
+        Object v = rows.get(0).get("levelRank");
+        return v instanceof Number n ? n.intValue() : null;
+    }
+
     private static String sv(Map<String, Object> m, String k) { Object v = m.get(k); return v == null ? "" : String.valueOf(v); }
 }

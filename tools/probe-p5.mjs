@@ -99,15 +99,30 @@ check((tabs || [])[6] === "Cấp bậc hệ thống", "Tab 7 = Cấp bậc hệ 
 console.log("\n═══ 2) TAB 5 — PHÂN QUYỀN PHÒNG BAN ═══");
 errs = [];
 await openTab("Phân quyền phòng ban");
-const deptOpts = await ev(`(()=>{const s=[...document.querySelectorAll('.card select')][0];return s?[...s.options].map(o=>o.textContent.trim()):[]})()`);
+const deptInfo = JSON.parse(await ev(`(()=>{
+  // MT2-P14-03c (#27) - DO DUNG MAU MOI (app/page.tsx:1824-1830): moi phong ban la 1 NUT chua <b>ma</b> + <small>ten</small>
+  // + <span>"n" quyen</span> => innerText BAT DAU bang MA (vi du "AD-01 ...") nen regex cu (bat dau bang "Phong") tra 0.
+  // Nhan CA select cu de khong pha ban cu.
+  const sel=[...document.querySelectorAll('.card select')][0];
+  if(sel && sel.options && sel.options.length>2) return JSON.stringify({names:[...sel.options].map(o=>o.textContent.trim()), codeInName:false, kind:'select'});
+  const btns=[...document.querySelectorAll('.card button')].filter(b=>b.querySelector('small'));
+  const rows=btns.map(b=>({code:((b.querySelector('b')||{}).innerText||'').trim(), name:((b.querySelector('small')||{}).innerText||'').trim()}));
+  return JSON.stringify({names:rows.map(r=>r.name).filter(Boolean), codeInName:rows.some(r=>r.code && r.name && r.name.includes(r.code)), kind:'nut-ma-ten'});
+})()`));
+const deptOpts = deptInfo.names || [];
+console.log(`     kiểu điều khiển: ${deptInfo.kind} · ${JSON.stringify(deptOpts.slice(0, 6))}`);
+check(deptOpts.length > 2, "Có danh sách chọn phòng ban (mẫu mới: nút mã+tên)", `${deptOpts.length} phòng`);
+check(deptOpts.some((o) => /Kế hoạch/.test(o)) && deptInfo.codeInName === false, "Danh sách hiển thị TÊN phòng ban (không kèm mã trong tên)");
 console.log(`     ${JSON.stringify((deptOpts || []).slice(0, 6))}`);
 check(Array.isArray(deptOpts) && deptOpts.length > 2, "Có dropdown chọn phòng ban", `${(deptOpts || []).length} lựa chọn`);
 check((deptOpts || []).some((o) => /Phòng Kế hoạch/.test(o)), "Dropdown hiển thị TÊN phòng ban (không kèm mã)");
 const capHeaders = (await ev(`[...document.querySelectorAll('.card table thead th')].map(e=>e.innerText.trim()).filter(Boolean)`) || []).map((x) => String(x).toLocaleLowerCase("vi"));
 // CSS đặt text-transform:uppercase cho <th>/<button> nên innerText trả chữ HOA — so khớp không phân biệt hoa/thường.
 ["Xem", "Thao tác", "Tạo", "Sửa", "Duyệt", "Xuất"].forEach((c) => check(capHeaders.includes(c.toLocaleLowerCase("vi")), `Có cột quyền "${c}"`));
-const bulkBtns = await ev(`[...document.querySelectorAll('.card button')].map(e=>e.innerText.trim()).filter(t=>/cấp nhóm|bỏ chọn|lưu thay đổi/i.test(t))`);
-check(bulkBtns.length >= 5, "Có nút cấp quyền hàng loạt theo nhóm + lưu", bulkBtns.join(" | "));
+// MT2-P14-03c (#27): nut hang loat nay co nhan «Nhom Ke hoach / Nhom Du an / Nhom Tai chinh / Nhom Hanh chinh /
+// Bo chon tat ca / Luu thay doi» (app/page.tsx:103-108) - ban cu chi khop «cap nhom» nen dem thieu. Van doi >=5 nut.
+const bulkBtns = await ev(`[...document.querySelectorAll('.card button')].map(e=>e.innerText.trim()).filter(t=>/nhóm |bỏ chọn|lưu thay đổi/i.test(t))`);
+check(bulkBtns.length >= 5, "Có nút cấp quyền hàng loạt theo nhóm + lưu (Nhóm … / Bỏ chọn tất cả / Lưu thay đổi)", bulkBtns.join(" | "));
 const cbCount = await ev(`document.querySelectorAll('.card table input[type="checkbox"]').length`);
 check(cbCount > 100, "Bảng có ô tick cho từng chức năng", `${cbCount} ô`);
 await shot("tab5-phong-ban");
@@ -119,7 +134,7 @@ errs = [];
 await openTab("Phân quyền người dùng");
 const filters = await ev(`[...document.querySelectorAll('.card input,.card select')].map(e=>e.placeholder||e.tagName).join(' | ')`);
 console.log(`     bộ lọc: ${filters}`);
-const hasSearch = await ev(`!!document.querySelector('.card input.admin-search')`);
+const hasSearch = await ev(`!!document.querySelector('.card input[type=search], .card input.admin-search, input[type=search]')`);
 check(hasSearch === true, "Có ô tìm kiếm theo tên/mã/chức danh");
 const filterSelects = await ev(`document.querySelectorAll('.card select').length`);
 check(filterSelects >= 2, "Có bộ lọc phòng ban và cấp bậc", `${filterSelects} dropdown`);
@@ -128,11 +143,11 @@ const heads = (await ev(`[...document.querySelectorAll('.card table thead th')].
 const rowCount = await ev(`document.querySelectorAll('.card table tbody tr').length`);
 check(rowCount > 0, "Hiển thị ma trận quyền của người dùng", `${rowCount} dòng`);
 // Thu hẹp bằng tìm kiếm
-await ev(`(()=>{const i=document.querySelector('.card input.admin-search');const s=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set;s.call(i,'Kế hoạch');i.dispatchEvent(new Event('input',{bubbles:true}));return 1})()`);
+await ev(`(()=>{const i=document.querySelector('.card input[type=search], .card input.admin-search, input[type=search]');const s=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set;s.call(i,'Kế hoạch');i.dispatchEvent(new Event('input',{bubbles:true}));return 1})()`);
 await sleep(1200);
 const filtered = await ev(`document.querySelectorAll('.card table tbody tr').length`);
 check(filtered > 0 && filtered < rowCount, "Tìm kiếm lọc được danh sách", `${rowCount} → ${filtered}`);
-await ev(`(()=>{const i=document.querySelector('.card input.admin-search');const s=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set;s.call(i,'');i.dispatchEvent(new Event('input',{bubbles:true}));return 1})()`);
+await ev(`(()=>{const i=document.querySelector('.card input[type=search], .card input.admin-search, input[type=search]');const s=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set;s.call(i,'');i.dispatchEvent(new Event('input',{bubbles:true}));return 1})()`);
 await sleep(1000);
 await ev(`(()=>{const b=[...document.querySelectorAll('.card button')].find(x=>/Chi tiết/.test(x.innerText||''));if(b){b.click();return 1}return 0})()`);
 await sleep(1200);
@@ -184,19 +199,50 @@ check(!after.some((d) => d.organizationUnitId === khUnitId && String(d.moduleKey
 console.log("\n═══ 6) RÀNG BUỘC PHÒNG BAN (và không mất quyền khi bị chặn) ═══");
 const khUser = (data.users || []).find((u) => u.organizationUnitId === khUnitId && String(u.role) !== "admin");
 check(Boolean(khUser), "Tìm được người dùng thuộc phòng Kế hoạch", khUser?.fullName || "");
-const permsBefore = await ev(`(async()=>{const r=await fetch("/api/system");const j=await r.json();const u=(j.data.users||[]).find(x=>x.id===${JSON.stringify(khUser?.id || "")});const p=(j.data.allModulePermissions||[]).filter(x=>x.userId===${JSON.stringify(khUser?.id || "")}).length;const s=(j.data.userScopes||[]).filter(x=>x.userId===${JSON.stringify(khUser?.id || "")}).length;const w=(j.data.userWarehouseScopes||[]).filter(x=>x.userId===${JSON.stringify(khUser?.id || "")}).length;return {perms:p,scopes:s,wh:w,caps:u?1:0}})()`);
-console.log(`     trước: ${JSON.stringify(permsBefore)}`);
-const blocked = await api("save_user_access", {
-  userId: khUser?.id, projectScopes: [], warehouseScopes: [],
-  modulePermissions: [{ moduleKey: "dept_legal_correspondence", canView: 1, canUse: 1, canCreate: 1, canEdit: 1, canApprove: 1, canExport: 1 }],
-});
-check(blocked?.ok === false, "CHẶN cấp quyền mà phòng ban không có", String(blocked?.error || "").slice(0, 140));
-const permsAfter = await ev(`(async()=>{const r=await fetch("/api/system");const j=await r.json();const p=(j.data.allModulePermissions||[]).filter(x=>x.userId===${JSON.stringify(khUser?.id || "")}).length;const s=(j.data.userScopes||[]).filter(x=>x.userId===${JSON.stringify(khUser?.id || "")}).length;const w=(j.data.userWarehouseScopes||[]).filter(x=>x.userId===${JSON.stringify(khUser?.id || "")}).length;return {perms:p,scopes:s,wh:w}})()`);
-console.log(`     sau : ${JSON.stringify(permsAfter)}`);
-check(permsAfter?.perms === permsBefore?.perms, "Quyền chức năng KHÔNG bị mất khi yêu cầu bị chặn",
-  `${permsBefore?.perms} → ${permsAfter?.perms}`);
-check(permsAfter?.scopes === permsBefore?.scopes, "Phạm vi dự án KHÔNG bị mất khi yêu cầu bị chặn",
-  `${permsBefore?.scopes} → ${permsAfter?.scopes}`);
+// MT2-P14-03c (#27) — VIẾT LẠI BƯỚC 6 (đã truy tận gốc ở §H.15.2): `assertDepartmentAllowsPermissions`
+// có 3 CỬA THOÁT SỚM (admin/auto_grant_all · orgUnitId rỗng · **phòng CHƯA cấu hình quyền nào**).
+// Bản cũ ⛔ không cấu hình phòng ⇒ rơi cửa ③ ⇒ lệnh được CHẤP NHẬN (đúng thiết kế) ⇒ probe báo ❌ OAN.
+// Nay: (1) chụp SNAPSHOT quyền user → (2) CẤU HÌNH phòng trước → (3) xin module phòng ⛔ không có ⇒ BẮT BUỘC 400
+// → (4) kiểm KHÔNG mất quyền/phạm vi → (5) DỌN trong `finally`: thu hồi quyền phòng + KHÔI PHỤC quyền user (#25).
+const UID = JSON.stringify(khUser?.id || "");
+const readState = async () => ev(`(async()=>{const r=await fetch("/api/system");const j=await r.json();const d=j.data||{};
+  const perms=(d.allModulePermissions||[]).filter(x=>x.userId===${UID}).map(x=>({moduleKey:x.moduleKey,canView:Number(x.canView)||0,canUse:Number(x.canUse)||0,canCreate:Number(x.canCreate)||0,canEdit:Number(x.canEdit)||0,canApprove:Number(x.canApprove)||0,canExport:Number(x.canExport)||0}));
+  const ps=(d.userScopes||[]).filter(x=>x.userId===${UID}).map(x=>({projectId:x.projectId,permission:x.permission||"read"}));
+  const ws=(d.userWarehouseScopes||[]).filter(x=>x.userId===${UID}).map(x=>({warehouseId:x.warehouseId,permission:x.permission||"read"}));
+  return {perms:perms.length,scopes:ps.length,wh:ws.length,modulePermissions:perms,projectScopes:ps,warehouseScopes:ws}})()`);
+const snap = await readState();
+console.log(`     trước: perms=${snap?.perms} scopes=${snap?.scopes} wh=${snap?.wh}`);
+// ⚠️ ĐO LẠI TIỀN ĐỀ (23/09/2026 — §H.19): bản vá trước vẫn ❌ vì probe XIN cấp `dept_legal_correspondence`
+// nhưng ĐO CSDL cho thấy phòng KH **ĐÃ CÓ** chức năng đó (`department_module_permissions`: active=1, can_view=1)
+// ⇒ `assertDepartmentAllowsPermissions` CHO PHÉP là ĐÚNG ⇒ ⛔ KHÔNG phải lỗi sản phẩm, mà là TIỀN ĐỀ SAI.
+// Nay: (a) khẳng định phòng ĐÃ được cấu hình (đo được), (b) xin chức năng mà phòng **CHẮC CHẮN không có**
+// = `testModule` (đã kiểm `!khModules.has(testModule)` ở bước 5) ⇒ ràng buộc PHẢI chặn.
+check(khModules.size > 0, "Phòng Kế hoạch ĐÃ được cấu hình quyền (tiền đề để ràng buộc có hiệu lực)", `${khModules.size} chức năng`);
+check(!khModules.has(testModule), "Chức năng dùng để thử CHẶN không thuộc phòng Kế hoạch (đo được)", testModule);
+try {
+  const blocked = await api("save_user_access", {
+    userId: khUser?.id, projectScopes: [], warehouseScopes: [],
+    modulePermissions: [{ moduleKey: testModule, canView: 1, canUse: 1, canCreate: 1, canEdit: 1, canApprove: 1, canExport: 1 }],
+  });
+  check(blocked?.ok === false, `CHẶN cấp quyền mà phòng ban không có (${testModule})`, String(blocked?.error || "").slice(0, 140));
+  const after = await readState();
+  console.log(`     sau : perms=${after?.perms} scopes=${after?.scopes} wh=${after?.wh}`);
+  check(after?.perms === snap?.perms, "Quyền chức năng KHÔNG bị mất khi yêu cầu bị chặn", `${snap?.perms} → ${after?.perms}`);
+  check(after?.scopes === snap?.scopes, "Phạm vi dự án KHÔNG bị mất khi yêu cầu bị chặn", `${snap?.scopes} → ${after?.scopes}`);
+  check(after?.wh === snap?.wh, "Phạm vi kho KHÔNG bị mất khi yêu cầu bị chặn", `${snap?.wh} → ${after?.wh}`);
+} finally {
+  const hasState = (snap?.modulePermissions?.length || 0) + (snap?.projectScopes?.length || 0) + (snap?.warehouseScopes?.length || 0) > 0;
+  const restore = hasState
+    ? await api("save_user_access", {
+        userId: khUser?.id, projectScopes: snap.projectScopes || [], warehouseScopes: snap.warehouseScopes || [],
+        modulePermissions: snap.modulePermissions || [],
+      })
+    : { ok: true };
+  const back = await readState();
+  check(restore?.ok === true && back?.perms === snap?.perms && back?.scopes === snap?.scopes,
+    "DỌN DẸP: khôi phục quyền/phạm vi người dùng về TRẠNG THÁI ĐẦU (⛔ không để lại tác dụng phụ)",
+    `perms ${snap?.perms} → ${back?.perms} · scopes ${snap?.scopes} → ${back?.scopes}`);
+}
 
 // ---- 7) Cấp bậc: gán + chặn xóa ----
 console.log("\n═══ 7) CẤP BẬC — GÁN VÀ CHẶN XÓA ═══");

@@ -36,7 +36,7 @@ function ensure(t) {
 }
 
 const migFiles = readdirSync(MIGRATION_DIR).filter((f) => /^V\d+__.*\.sql$/.test(f)).sort();
-for (const f of migFiles) {
+for (const f of migFiles.sort((a, b) => Number(a.match(/^V(\d+)/)[1]) - Number(b.match(/^V(\d+)/)[1]) || a.localeCompare(b))) {
   let sql = readFileSync(join(MIGRATION_DIR, f), "utf8");
   sql = sql.replace(/--[^\n]*/g, "").replace(/\/\*[\s\S]*?\*\//g, "");   // bỏ chú thích
   // CREATE TABLE [IF NOT EXISTS] `t` ( ... );
@@ -47,6 +47,7 @@ for (const f of migFiles) {
       if (!c) continue;
       const name = c[1].toLowerCase();
       if (["primary", "unique", "key", "index", "constraint", "foreign", "check", "fulltext", "spatial"].includes(name)) continue;
+      if (name === "comment" && !line.trim().startsWith("`")) continue;
       schema.get(t).add(name);
     }
   }

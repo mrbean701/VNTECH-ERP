@@ -112,15 +112,26 @@ public class ApplicationBeansConfig {
         return new ProjectContractUseCase(projectAdminStore, idGenerator, accessScopeService);
     }
 
+    // MT2 §15.1 — NOTIFICATION ENGINE. ⚠️ Các use-case của dự án KHÔNG dùng `@Service` mà wire ở đây
+    // ⇒ ⛔ quên đăng ký @Bean thì Spring không inject được vào `SystemController`.
+    // ⛔ KHÔNG đụng `task_notifications` (hàng đợi in-app của luồng CÔNG VIỆC — cơ chế song song).
+    @Bean
+    public com.vntech.erp.application.service.NotificationManagementUseCase notificationManagementUseCase(
+            com.vntech.erp.application.port.out.NotificationStore notificationStore,
+            IdGenerator idGenerator) {
+        return new com.vntech.erp.application.service.NotificationManagementUseCase(notificationStore, idGenerator);
+    }
+
     @Bean
     public RequestManagementUseCase requestManagementUseCase(RequestStore requestStore,
                                                              IdGenerator idGenerator,
                                                              RbacService rbacService,
                                                              AccessScopeService accessScopeService,
-                                                             AuditLogPort auditLogPort) {
+                                                             AuditLogPort auditLogPort,
+                                                             com.vntech.erp.application.service.NotificationManagementUseCase notifications) {
         // TASK-048 — nối `AuditLogPort` để ghi 5/6 mốc nhật ký kiểm toán của luồng Phiếu đề nghị.
         return new RequestManagementUseCase(requestStore, idGenerator, rbacService, accessScopeService,
-                auditLogPort);
+                auditLogPort, notifications);
     }
 
     @Bean
@@ -140,8 +151,9 @@ public class ApplicationBeansConfig {
     public PurchaseManagementUseCase purchaseManagementUseCase(PurchaseStore purchaseStore,
                                                                IdGenerator idGenerator,
                                                                RbacService rbacService,
-                                                               AccessScopeService accessScopeService) {
-        return new PurchaseManagementUseCase(purchaseStore, idGenerator, rbacService, accessScopeService);
+                                                               AccessScopeService accessScopeService,
+                                                               com.vntech.erp.application.service.NotificationManagementUseCase notifications) {
+        return new PurchaseManagementUseCase(purchaseStore, idGenerator, rbacService, accessScopeService, notifications);
     }
 
     @Bean
@@ -199,9 +211,22 @@ public class ApplicationBeansConfig {
 
     @Bean
     public OpsTaskManagementUseCase opsTaskManagementUseCase(OpsTaskStore opsTaskStore, IdGenerator idGenerator,
-                                                              RbacService rbacService,
-                                                              AccessScopeService accessScopeService) {
-        return new OpsTaskManagementUseCase(opsTaskStore, idGenerator, rbacService, accessScopeService);
+                                                               RbacService rbacService,
+                                                               AccessScopeService accessScopeService,
+                                                               com.vntech.erp.application.service.NotificationManagementUseCase notifications,
+                                                               com.vntech.erp.application.rbac.WorkScopeService workScopeService) {
+        return new OpsTaskManagementUseCase(opsTaskStore, idGenerator, rbacService, accessScopeService, notifications,
+                workScopeService);
+    }
+
+    /**
+     * MT2-P4-01/P5-03/P5-04 (§3.2 · đề án ①A user chốt 26/09/2026) — phạm vi xem/giao công việc
+     * theo CẤP BẬC. Ngưỡng 30 (`truong_phong`) / 35 (`pho_giam_doc` — thêm ở
+     * `V30__mt2_p4_01_add_pho_giam_doc_level.sql`) ĐO từ `system_level_catalog`.
+     */
+    @Bean
+    public com.vntech.erp.application.rbac.WorkScopeService workScopeService(OpsTaskStore opsTaskStore) {
+        return new com.vntech.erp.application.rbac.WorkScopeService(opsTaskStore);
     }
 
     @Bean

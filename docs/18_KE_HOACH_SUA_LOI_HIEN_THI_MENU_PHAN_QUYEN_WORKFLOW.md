@@ -350,6 +350,21 @@ Cổng chất lượng (đều ĐẠT): `mvn package` (BUILD SUCCESS) · fingerp
 
 **(d) H2 + `ddl-auto=create-drop`:** Hibernate **DROP và tạo lại** `users` SAU khi chạy `schema-h2.sql`, nên cột thêm bằng `ALTER TABLE` trong schema bị xoá. Phải khai báo `system_level_code` trong `UserJpaEntity`. Đồng thời mở rộng `generate-h2-test-schema.mjs` để hiểu `ADD COLUMN` và `CHANGE COLUMN` của migration sau V1.
 
+> ## ⚠️ CẬP NHẬT 23/09/2026 — GHI CHÚ (d) **CHƯA ĐỦ** — NGUỒN SỰ THẬT MỚI (MT2-P1-03 / P1-03b)
+>
+> **Nội dung cũ đúng về HIỆN TƯỢNG nhưng SAI khi dùng làm QUY TẮC:** câu «chỉ cần khai ở entity» khiến người sau bỏ `ALTER TABLE` trong `schema-h2.sql` ⇒ hỏng hàng loạt test.
+>
+> **SỰ THẬT ĐÃ ĐO (⛔ không suy luận — `MT2-P1-03`, 2 cột `UserJpaEntity.signatureUrl` + `material_requests.issued`):**
+> 1. **Hibernate ĐỌC CỘT THEO ENTITY** ⇒ thiếu trường ở entity thì lỗi `Column "uje1_0.signature_url" not found` — cột có trong schema H2 cũng vô ích.
+> 2. **Bảng H2 lấy từ `schema-h2.sql`** ⇒ thiếu `ALTER TABLE … ADD COLUMN IF NOT EXISTS` (khối `[H2-MANUAL-START/END]`) thì cột **không tồn tại thật** trong lược đồ test.
+> 3. ⇒ **PHẢI KHAI Ở CẢ 2 NƠI: `*JpaEntity` + `schema-h2.sql`.** Thiếu **một trong hai** là ĐỎ.
+>
+> **BẰNG CHỨNG SỐ (đo bằng `mvn test`)**: trước khi vá `0 Failures / **38 Errors**` → sau khi vá **42 test · 3 Failures (đúng 3 ca CÓ SẴN `ProductionRoleCounterProofTest`) · 0 Errors** ✔
+>
+> **VÌ SAO QUY TẮC CŨ KHÔNG CÒN ĐÚNG HOÀN TOÀN:** hướng dẫn «chỉ cần entity» dựa trên `ddl-auto=create-drop`. Nay test chạy **`ddl-auto: none`** (`java-backend/web/src/test/resources/application-test.yml:18` — xem `TASK-115`) ⇒ **lược đồ H2 = chính `schema-h2.sql`**, ĐÚNG như production (`application.yml:14`). Nghĩa là `ALTER TABLE` trong `schema-h2.sql` **KHÔNG còn bị Hibernate xoá** ⇒ cột thêm bằng ALTER là **BẮT BUỘC**, ⛔ không phải «đã bị xoá nên khỏi khai».
+>
+> **⚠️ HỆ QUẢ KHÁC ĐÃ TRẢ GIÁ:** ① có **HAI bản sao** schema H2 — bản cho TEST `java-backend/web/src/test/resources/schema-h2.sql` và bản cho DEMO/DEV `java-backend/web/src/main/resources/db/demo/schema-h2.sql` (⚠️ `glob **/schema-h2.sql` xác nhận; ⛔ KHÔNG có đường dẫn `db/demo/schema-h2.sql` ở gốc repo như vài ghi chép cũ) — sửa một bản rồi quên bản kia là bug kinh điển ⇒ sửa **CẢ HAI**; ② migration dùng **DDL ĐỘNG** (`SET @ddl := IF(…)…PREPARE/EXECUTE`, ví dụ V21/V22) thì `generate-h2-test-schema.mjs` **không bắt được** ⇒ phải tự thêm cột vào khối `[H2-MANUAL-*]` (`schema-h2.sql:2291`); ③ sửa `schema-h2.sql` là sửa **file test** — phải chạy lại `mvn test` và so **ĐÚNG baseline 42/3/0**, ⛔ không chỉ nhìn «xanh là xong». Hợp đồng khoá bài học này: `tests/p1-03b-h2-lesson.test.mjs`.
+
 ### 10.3 Bằng chứng nghiệm thu
 
 ```

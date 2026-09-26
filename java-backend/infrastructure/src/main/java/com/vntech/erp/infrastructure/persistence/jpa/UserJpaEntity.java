@@ -53,6 +53,16 @@ public class UserJpaEntity {
     private String avatarUrl;
 
     /**
+     * MT2 §13.4 — chữ ký user: ĐÚNG 1 ảnh cho mỗi user; upload ảnh mới thì THAY ảnh cũ
+     * (backend chịu trách nhiệm xoá/thay tệp). ⛔ KHÔNG dùng chung với `avatarUrl`.
+     * PHẢI khai báo ở đây (không chỉ ở migration V25): test dùng H2 với
+     * `spring.jpa.hibernate.ddl-auto=create-drop`, Hibernate DROP + tạo lại bảng `users`
+     * SAU khi chạy schema-h2.sql, nên cột thêm bằng ALTER trong schema sẽ bị xoá.
+     */
+    @Column(name = "signature_url", length = 500)
+    private String signatureUrl;
+
+    /**
      * P5 — mã cấp bậc trong `system_level_catalog`.
      * PHẢI khai báo ở đây (không chỉ ở migration): test dùng H2 với
      * `spring.jpa.hibernate.ddl-auto=create-drop`, Hibernate DROP + tạo lại bảng `users`
@@ -103,6 +113,8 @@ public class UserJpaEntity {
     public boolean isActive() { return active; }
     public boolean isMustChangePassword() { return mustChangePassword; }
     public String getAvatarUrl() { return avatarUrl; }
+    /** MT2 §13.4 — chữ ký user (ảnh data-URL; ĐÚNG 1 ảnh, ảnh mới THAY ảnh cũ). */
+    public String getSignatureUrl() { return signatureUrl; }
     public String getSystemLevelCode() { return systemLevelCode; }
     public void setSystemLevelCode(String systemLevelCode) { this.systemLevelCode = systemLevelCode; }
     public Instant getCreatedAt() { return createdAt; }
@@ -110,5 +122,6 @@ public class UserJpaEntity {
 
     public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
     public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
+    public void setSignatureUrl(String signatureUrl) { this.signatureUrl = signatureUrl; }
     public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
 }

@@ -21,6 +21,13 @@ public final class User {
     private final boolean active;
     private boolean mustChangePassword;
     private String avatarUrl;
+    /**
+     * MT2 §13.4 — CHỮ KÝ CỦA USER (ảnh data-URL; ĐÚNG 1 ảnh: ảnh mới THAY ảnh cũ).
+     * ⚠️ Cố ý ⛔ **KHÔNG** đưa vào hàm khởi tạo: `avatarUrl` đang là tham số cuối của hàm khởi tạo (`:27`)
+     * nên thêm tham số nữa sẽ làm **vỡ MỌI chỗ `new User(...)`** (kể cả test). Trường này được nạp qua
+     * {@link #changeSignature(String)} khi ánh xạ từ entity ⇒ **an toàn, ⛔ 0 caller vỡ**.
+     */
+    private String signatureUrl;
 
     public User(String id, String employeeCode, String fullName, String username, String email,
                 String passwordHash, String role, String department, String organizationUnitId,
@@ -67,4 +74,14 @@ public final class User {
     public boolean active() { return active; }
     public boolean mustChangePassword() { return mustChangePassword; }
     public String avatarUrl() { return avatarUrl; }
+
+    /**
+     * MT2 §13.4 — đặt/THAY chữ ký. {@code null} hoặc chuỗi rỗng ⇒ **XOÁ** chữ ký (đúng vế
+     * «Nếu upload ảnh mới ⇒ xoá/thay ảnh cũ» của đặc tả: mỗi user giữ **đúng 1** ảnh chữ ký).
+     */
+    public void changeSignature(String newUrl) {
+        this.signatureUrl = (newUrl == null || newUrl.isBlank()) ? null : newUrl;
+    }
+
+    public String signatureUrl() { return signatureUrl; }
 }

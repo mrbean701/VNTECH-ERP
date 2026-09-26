@@ -26,6 +26,13 @@ public interface UserAdminStore {
                     String role, String department, String organizationUnitId, double approvalLimit,
                     boolean active, Instant now);
     void setUserActive(String userId, boolean active, Instant now);
+    /**
+     * MT2 §13.4 — ghi **CHỮ KÝ** của user (đường QUẢN TRỊ: modal tạo/sửa user).
+     * ⚠️ Cố ý là **hàm MỚI, thuần thêm** — ⛔ KHÔNG thêm tham số vào {@link #insertUser}/{@link #updateUser}
+     * vì hai hàm đó dùng **tham số vị trí** ⇒ thêm tham số sẽ lan toả sang adapter + mọi caller (⛔ rủi ro vỡ).
+     * {@code signatureUrl} null/rỗng ⇒ ghi NULL = **XOÁ** (đúng vế «xoá/thay ảnh cũ» của §13.4).
+     */
+    void setUserSignature(String userId, String signatureUrl, Instant now);
     void setPassword(String userId, String passwordHash, boolean mustChangePassword, Instant now);
     void resetPassword(String userId, String passwordHash, Instant now, String resetByUserId);
     void deleteOwned(Object userId); // delete user + scopes + permissions + sessions (kiểm tra lịch sử trước ở use-case)

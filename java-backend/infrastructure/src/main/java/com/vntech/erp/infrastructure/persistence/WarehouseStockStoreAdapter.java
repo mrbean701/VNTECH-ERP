@@ -467,7 +467,82 @@ public class WarehouseStockStoreAdapter implements WarehouseStockStore {
         return changed > 0;
     }
 
-    // ---------- return_stock / confirm_installation ----------
+    // ══════════════════════════════════════════════════════════════════════════════════════════
+    // MT2 §7.4 — GRN TỪ **LỆNH ĐIỀU CHUYỂN (STO)**. Soi gương CHÍNH 3 hàm của phiếu xuất ở trên
+    // (`stockIssueGrnLines` / `insertStockIssueGrn` / `markStockIssueGrnCreated`) ⇒ ⛔ không kiến trúc mới.
+    // Kho nhận = `destination_warehouse_id`, kho gửi = `source_warehouse_id` ⇒ TỰ ĐỘNG ĐIỀN theo §7.4.
+    // ⚠️ `goods_receipts.purchase_order_id` là NOT NULL: STO thuần kho có thể KHÔNG có PO ⇒ điền chuỗi rỗng
+    //    (⛔ KHÔNG bịa PO). Hệ quả đã biết: bootstrap JOIN `gr ⋈ po` ⇒ GRN không gắn PO sẽ vô hình trên UI —
+    //    đây là hành vi SẴN CÓ của đường phiếu xuất (`GRN-PX`), ⛔ không sửa khác đi ở đây.
+    // ══════════════════════════════════════════════════════════════════════════════════════════
+    @Override
+    public List<Map<String, Object>> transferOrderGrnLines(String transferId) {
+        // ⚠️ HAI BÀI HỌC ĐÃ CÓ SẴN TRONG CHÍNH TỆP NÀY (xem chú thích `stockIssueGrnLines` ngay trên) —
+        //    em từng vi phạm cả hai và TEST ĐÃ BẮT ĐƯỢC:
+        //    ① ⛔ KHÔNG dùng **subquery tương quan** trong danh sách chọn ⇒ H2 MODE=MySQL ném
+        //       `BadSqlGrammarException` (MySQL chấp nhận, H2 ⛔ không).
+        //    ② ⛔ `purchase_order_items` **KHÔNG có cột `material_id`** ⇒ mọi điều kiện khớp theo cột đó là
+        //       lỗi cột không tồn tại; vật tư suy ra qua `material_request_items`.
+        //    ⇒ Dùng toàn **LEFT JOIN** + **alias TRÍCH DẪN** (giữ nguyên chữ hoa ở CẢ MySQL và H2).
+        //    Đường nối của lệnh điều chuyển (transfer_item ⛔ không có `request_item_id`):
+        //      dòng STO → `material_request_items` cùng VẬT TƯ thuộc dự án **ĐÍCH**
+        //      → `purchase_order_items.request_item_id` → `purchase_orders` của dự án **ĐÍCH**.
+        return jdbcTemplate.queryForList("""
+                SELECT toi.id AS "transferOrderItemId",toi.material_id AS "materialId",
+                       COALESCE(toi.received_qty,toi.shipped_qty,toi.approved_qty,toi.requested_qty,0) AS "quantity",
+                       toi.destination_contract_id AS "contractId",
+                       poi.id AS "purchaseOrderItemId",po.id AS "purchaseOrderId",
+                       poi.created_at AS "poCreatedAt"
+                FROM transfer_order_items toi
+                JOIN transfer_orders t ON t.id=toi.transfer_order_id
+                LEFT JOIN material_request_items mri ON mri.material_id=toi.material_id
+                LEFT JOIN material_requests mr ON mr.id=mri.request_id AND mr.project_id=t.destination_project_id
+                LEFT JOIN purchase_order_items poi ON poi.request_item_id=mri.id
+                LEFT JOIN purchase_orders po ON po.id=poi.purchase_order_id AND po.project_id=t.destination_project_id
+                WHERE toi.transfer_order_id=?
+                ORDER BY toi.created_at,toi.id,poi.created_at DESC,poi.id DESC""", transferId);
+    }
+
+    @Override
+    @Transactional
+    public void insertTransferOrderGrn(Map<String, Object> header, List<Map<String, Object>> items, Instant now) {
+        String receiptId = (String) header.get("id");
+        // Cùng bộ cờ với GRN của phiếu xuất: hàng đã nằm trong kho nguồn và STO đã qua bước nhận
+        // ⇒ ⛔ KHÔNG đi lại vòng QC/nhận hàng mua, ⛔ KHÔNG sinh vòng chờ BCH xác nhận (§7.4: không duyệt).
+        jdbcTemplate.update("""
+                INSERT INTO goods_receipts (id,receipt_no,purchase_order_id,contract_id,boq_version_id,
+                                            warehouse_id,received_by,received_at,delivery_note_no,qc_status,
+                                            document_status,certificate_status,delivery_document_status,
+                                            bch_confirmation_status,bch_confirmed_by,bch_confirmed_at,bch_comment,
+                                            posting_status,created_at,updated_at)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                receiptId, header.get("receiptNo"), header.get("purchaseOrderId"), header.get("contractId"),
+                header.get("boqVersionId"), header.get("warehouseId"), header.get("receivedBy"),
+                now, header.get("deliveryNoteNo"), "passed", "complete", "complete", "complete",
+                "confirmed", header.get("receivedBy"), now, header.get("note"), "posted", now, now);
+        for (Map<String, Object> item : items) {
+            double qty = ((Number) item.get("quantity")).doubleValue();
+            jdbcTemplate.update("""
+                    INSERT INTO goods_receipt_items (id,receipt_id,purchase_order_item_id,contract_id,
+                                                     boq_version_id,boq_item_id,received_qty,accepted_qty,
+                                                     rejected_qty,lot_no,qc_result,created_at,updated_at)
+                    VALUES (?,?,?,?,?,NULL,?,?,0,NULL,'passed',?,?)""",
+                    "GRNI_" + java.util.UUID.randomUUID(), receiptId, item.get("purchaseOrderItemId"),
+                    item.get("contractId"), item.get("boqVersionId"), qty, qty, now, now);
+        }
+    }
+
+    @Override
+    @Transactional
+    public boolean markTransferOrderGrnCreated(String transferId, String receiptId, String userId, Instant now) {
+        // Chốt chặn: chỉ nhận STO đang `received` ⇒ chưa nhận hàng (hoặc đã sinh GRN rồi) ⇒ false.
+        int changed = jdbcTemplate.update("""
+                UPDATE transfer_orders SET status='grn_created',
+                       note=CASE WHEN note IS NULL THEN ? ELSE CONCAT(note,' | ',?) END,updated_at=?
+                WHERE id=? AND status='received'""",
+                "Đã sinh phiếu nhập " + receiptId, "Đã sinh phiếu nhập " + receiptId, now, transferId);
+        return changed > 0;
+    }
     @Override
     public Optional<Map<String, Object>> resolveOwnershipContract(String projectId, String warehouseId,
                                                                   String materialId, String requestedContractId) {

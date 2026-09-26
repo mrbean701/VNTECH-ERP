@@ -309,7 +309,11 @@ test('FULL W2 UX/workflow contract: header, drawer rộng, ngày Việt Nam, lu�
   // cảnh báo "không tự thu hồi" chuyển thành ghi chú đầu form (BaseModal `note`).
   assert.doesNotMatch(page,/Bạn có chắc chắn muốn gửi phiếu này\?/,'Gửi phiếu KHÔNG còn popup xác nhận (chỉ đạo người dùng 21/09/2026)');
   assert.match(page,/Sau khi gửi, phiếu vào luồng phê duyệt ngay và không tự thu hồi\./,'Đầu form phải cảnh báo không thể tự thu hồi sau khi gửi');
-  assert.match(page,/XEM \/ TẢI PHIẾU/,'Màn duyệt phải mở được phiếu trước khi quyết định');
+  // ⚠️ MT2-P6-02 (§4.2, 23/09/2026) — ĐỔI NHÃN nút trong khu vực «PHIẾU ĐANG XỬ LÝ»:
+  //    «◉ XEM / TẢI PHIẾU» ⇒ **«◉ CHI TIẾT»** vì §4.2 yêu cầu «Trong bảng Phiếu đang xử lý phải có nút “Chi tiết” ⇒ mở modal».
+  //    ⛔ HÀNH VI KHÔNG ĐỔI: cùng `onClick={()=>open("detail",selected)}` ⇒ vẫn mở được phiếu TRƯỚC khi quyết định
+  //    (đúng Ý NGHĨA gốc của phép kiểm này) — chỉ nhãn đổi theo yêu cầu mới của MASTER TASK 2 (GOAL §4: MT2 ưu tiên).
+  assert.match(page,/>◉ CHI TIẾT<\/button>/,'Màn duyệt phải mở được phiếu (nút «Chi tiết» — §4.2) trước khi quyết định');
 });
 
 test('FULL W2 account recovery + project offline archive contract', async () => {

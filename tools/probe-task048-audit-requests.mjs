@@ -118,12 +118,17 @@ const savedRequestIds = new Map();
 
 try {
   // ---------- 0. ĐIỀU KIỆN: mọi bước hoạt động phải có Owner đang hoạt động ----------
+  // ⚠️ MT2-P14-03c (#33) — VÁ TIỀN ĐỀ THEO NGUỒN SỰ THẬT: MT2 §7 (Kho vật tư) **⛔ KHÔNG** quy định bước duyệt cho
+  // chuỗi xuất/nhập kho (§7.5 chỉ đòi «CRUD · Search · Sort · Filter»; §7.6 ghi rõ «workflow … sẽ triển khai SAU khi
+  // business rule được xác định»). Vì vậy 3 dòng `stage_kind='supply'` (101–103) là **hàng MIRROR/legacy**, ⛔ không
+  // thuộc phạm vi MT2 ⇒ tiền đề «MỌI bước đang hoạt động phải có Owner» là SAI. Nay chỉ kiểm các bước thuộc chuỗi
+  // phiếu đề nghị (`stage_kind='approval'`) — vẫn giữ nguyên ĐỘ CHẶT cho 8 bước thật.
   const missing = sqlRows(`SELECT s.stage_no FROM approval_stage_catalog s
      LEFT JOIN approval_project_assignments apa ON apa.project_id=${q(PROJECT_ID)} AND apa.stage=s.stage_no AND apa.active=1
      LEFT JOIN users u ON u.id=apa.owner_user_id
-     WHERE s.active=1 AND COALESCE(s.auto_approve_on_submit,0)=0
+     WHERE s.active=1 AND COALESCE(s.stage_kind,'approval')='approval' AND COALESCE(s.auto_approve_on_submit,0)=0
        AND (apa.id IS NULL OR u.active IS NULL OR u.active=0)`).map((r) => r[0]);
-  check("điều kiện nghiệp vụ: mọi bước đang hoạt động đều có Owner đang hoạt động (KHÔNG tự thêm phân công)",
+  check("điều kiện nghiệp vụ: mọi bước chuỗi PHIẾU ĐỀ NGHỊ (stage_kind='approval') đều có Owner đang hoạt động",
     missing.length === 0, missing.length ? `thiếu bước ${missing.join(", ")}` : "đủ");
   if (missing.length) throw new Error("thiếu phân công — dừng để tránh tạo dữ liệu dở dang");
 

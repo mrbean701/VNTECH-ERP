@@ -3,6 +3,24 @@
 Trạng thái hợp lệ: `PENDING` · `IN PROGRESS` · `DONE` · `BLOCKED` · `CANCELLED`
 **Không bao giờ xoá hồ sơ việc đã xong.**
 
+---
+
+> ⚠️ **TỆP NÀY CHỈ ĐÁNH CHỈ MỤC **MASTER TASK 1** (các dòng `TASK-1xx` bên dưới).**
+> **MASTER TASK 2 CÓ SỔ ĐĂNG KÝ RIÊNG** — nguồn chuẩn theo **§37** (có `TASK ID · MODULE · MÔ TẢ · TRẠNG THÁI · PHỤ THUỘC · CẬP NHẬT`):
+> ### 📇 `docs/dsh/MT2_PHASE_TASK_LIST.md` — **100 task / 14 phase**
+> * Trạng thái (mốc **23/09/2026**): **DONE 93 · IN_PROGRESS 0 · TODO 0 · BLOCKED 5** (`P4-01` · `P5-03` · `P5-04` · `P10-05` · `P14-05`) **· SKIPPED 2** (`P7-05` · `P11-05` — ⛔ có nêu LÝ DO theo §38)
+> * Tiến độ: **74/81 = 91,4 % (số đếm được — ⚠️ đang đối soát mẫu số)** · **0 lỗi sản phẩm đang đỏ**
+> * Bằng chứng cổng/probe: `docs/dsh/MT2_GATE_SWEEP_23-09.md` · Trạng thái chi tiết: `docs/dsh/MT2_EXECUTION_STATE.md` · Đối chiếu requirement: `docs/dsh/AUDIT_MT2_GAP.md`
+> * Phạm vi bỏ qua có ĐĂNG KÝ: **PHỤ LỤC A** trong `MT2_PHASE_TASK_LIST.md` (9 miền)
+> * 📄 **Nhật ký task theo §35**: **`docs/agent-progress/TASK-MT2-P14-03c.md`** (rà cổng bằng probe + vá 1 lỗi sản phẩm thật: nút «Thu gọn khối» · 109 tệp probe · 28 lỗi công cụ · 0 ca BLOCKED)
+> * 🧭 **CHECKPOINT PHIÊN (đọc TRƯỚC khi tiếp tục)**: **`docs/dsh/MT2_CHECKPOINT.md`** — trạng thái đo được · 8 quyết định đang chờ user · việc kế tiếp từng nhánh · ⚠️ bẫy/quy tắc phải giữ
+> * 🧭 **Đặc tả SẴN SÀNG THI HÀNH (⛔ chưa mở task, chờ user)**: **`docs/dsh/MT2-P14-06-SPEC.md`** — vá 3 khe hở ghi cột (`stage_kind` 🔴 CAO · `avatar_url` · `boq_versions.approved_at`)
+> * 🧭 **BẢN VÁ SẴN SÀNG ÁP LẠI (đã viết + kiểm chứng rồi HOÀN TÁC)**: **`docs/dsh/MT2-PATCH-31-32.md`** — #31 tệp trạng thái khỏi manifest · #32 thiếu ánh xạ `datetime(n) → timestamp(n)`; kèm **quy trình 4 bước đúng thứ tự** + hệ quả (mã FP sẽ đổi)
+> * 📄 **BÁO CÁO TỔNG HỢP theo khung §53 (STATUS: CHƯA CHỐT)**: **`docs/dsh/MT2_FINAL_REPORT.md`** — 10 mục đủ trường, mỗi dòng có số đo; chờ user trả lời 5 nhóm quyết định để chốt `P14-05`
+> * ⛔ **NO COMMIT · NO PUSH** (đang hiệu lực cho MT2)
+
+---
+
 | Task | Tiêu đề | Trạng thái | Commit | Ngày | Ghi chú |
 |---|---|---|---|---|---|
 | TASK-101 | **PHASE 6 — TỔ ĐỘI**: `TM-01` danh sách 6 cột · `TM-02` thứ tự ưu tiên · `TM-03` chi tiết 6 tab · `TM-04` **BLOCKED** (thiếu action «sửa») · `TM-05` tab Cấp phát tái dùng kho · `TM-06` audit `team_members` **đính chính 6 dòng** | **DONE 5/6 — `TM-04` BLOCKED** | *(xem mục Commit của `TASK-101.md`)* | 20/09/2026 | Màn mới `app/screens/TeamDirectory.tsx` (thay `TeamManagement` 3 tab ở call-site `app/page.tsx`) — **0 bảng/cột/migration/khoá module mới**, dùng lại khoá `teams`. `TM-01`: đúng **6 cột** (mã·tên·trạng thái·thành viên·dự án·hoạt động gần nhất), mọi ô kèm NGUỒN, «hoạt động gần nhất» = `max(stock_issues.issued_at, material_returns.returned_at)` theo `teamId`; thiếu nguồn ⇒ **«chưa có nguồn»**, KHÔNG hiện 0 giả. `TM-02`: `tmCompare` (đang hoạt động → ngày ↓ → ngừng); **bộ test bắt được 2 LỖI THẬT** khi viết ("last write wins" + `localeCompare` với chuỗi rỗng làm tổ đội không có hoạt động nhảy lên đầu). `TM-03`: đúng **6 tab** (thông tin·nhân sự·dự án·kho·cấp phát·lịch sử), tab thiếu nguồn có lý do. `TM-04`: đã làm **tạo·xem·ngừng theo quyền** (call-site cũ KHÔNG truyền `action`/`permission` ⇒ trước đây mọi thao tác ghi BẤT KHẢ — đã vá), **CHẶN ở nhánh «sửa»** vì không có action ở CẢ 2 route và `scripts/**` bị cấm. `TM-05`: tái dùng `stock_issues`/`material_returns` + action `issue_stock`/`return_stock`. `TM-06`: **CSDL thật 6 dòng (5 active), KHÔNG phải «0 dòng»** như roadmap ghi; cách nạp = **CONFIRMED SQL ngoài sản phẩm** (0 action ghi ở JS lẫn Java). 8 cổng XANH: `tsc` 0 · lint **0 error/181 warning nền** · regression **69/69** · workflow **passed** · 6 test mới **30/30** · `t01-work-menu-probe` 7/7 · `probe-project-screen` ĐẠT · `probe-work-item-field-contract` 18/18. Lộ trình **81/110 = 73,6 %**, PHASE 6 **5/6**. Chi tiết: `TASK-101.md` · audit: `TM-06-AUDIT-TEAM-MEMBERS.md` |

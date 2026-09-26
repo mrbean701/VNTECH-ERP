@@ -140,13 +140,15 @@ public final class HrManagementUseCase {
             store.findLegalDocument(docId).orElseThrow(() -> Api("Không tìm thấy văn bản."));
             store.updateLegalDocument(docId, docNo, docType, title, nvl(payload.get("issueDate")),
                     nvl(payload.get("issuer")), nvl(payload.get("effectiveDate")), nvl(payload.get("expiryDate")),
-                    nvl(payload.get("scope")), nvl(payload.get("attachmentId")), now);
+                    nvl(payload.get("scope")), nvl(payload.get("attachmentId")),
+                    nvl(payload.get("correspondenceId")), now);
             return Map.of("message", "Đã cập nhật văn bản pháp lý.");
         }
         if (store.findLegalDocumentByDocNo(docNo).isPresent()) throw Api("Số văn bản đã tồn tại.");
         store.insertLegalDocument(idGenerator.next("LGD"), docNo, docType, title, nvl(payload.get("issueDate")),
                 nvl(payload.get("issuer")), nvl(payload.get("effectiveDate")), nvl(payload.get("expiryDate")),
-                nvl(payload.get("scope")), nvl(payload.get("attachmentId")), principal.userId(), now);
+                nvl(payload.get("scope")), nvl(payload.get("attachmentId")),
+                nvl(payload.get("correspondenceId")), principal.userId(), now);
         return Map.of("message", "Đã lưu văn bản pháp lý.");
     }
 

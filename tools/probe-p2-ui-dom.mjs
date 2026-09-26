@@ -403,7 +403,10 @@ try {
       navResult = await ev(`(()=>{
         const norm=(s)=>String(s||"").replace(/\\s+/g," ").trim().toLowerCase();
         const target=norm("Trung tâm phê duyệt");
-        const kids=[...document.querySelectorAll(".sidebar .nav-child")];
+        // MT2-P14-03c (#30) - VA MENU 1 MUC: P6-08 (page.tsx:578-580) ve nhom CHI CO 1 MUC thanh NUT DI THANG
+        // (lop .nav-single-direct / .nav-dashboard-direct), KHONG con .nav-child => ban cu tim .nav-child nen
+        // luon "NOT_FOUND" va bi BLOCKED oan. Nay tim TRONG MOI phan tu bam duoc cua sidebar; van uu tien KHOP DUNG nhan.
+        const kids=[...document.querySelectorAll(".sidebar button, .sidebar .nav-child, .sidebar .nav-single-direct, .sidebar .nav-dashboard-direct, .sidebar .nav-parent")];
         const el=kids.find(e=>norm(e.textContent)===target)||kids.find(e=>norm(e.textContent).includes(target));
         if(el){ el.click(); return "OK"; }
         const closed=[...document.querySelectorAll(".sidebar .nav-tree-group > button.nav-parent")].filter(b=>b.getAttribute("aria-expanded")==="false");

@@ -56,11 +56,14 @@ console.log("═".repeat(104));
 let r = await login(ADMIN.username, ADMIN.password);
 let adminCookie = cookie;
 if (r.status !== 200) throw new Error("Không đăng nhập được admin.");
+// Read a real project before creating the probe account; the payment-plan action also enforces project scope.
+const adminBootForScope = await (await fetch(`${BASE}/api/system`, { headers: { cookie: adminCookie } })).json();
+const probeProjectId = adminBootForScope?.data?.projects?.[0]?.id || "";
 const stamp = Date.now().toString().slice(-6);
 const uname = `sec_probe_${stamp}`;
 r = await post("create_user", {
   username: uname, fullName: `Tài khoản kiểm thử ${stamp}`, employeeCode: `SEC-${stamp}`,
-  role: "ksda", password: PASS, projectIds: [],
+  role: "ksda", password: PASS, projectIds: [probeProjectId],
 });
 console.log(`[tạo tài khoản] ${uname} (vai trò ksda) — HTTP ${r.status}`);
 
@@ -94,7 +97,7 @@ const CASES = [
   ["create_self_work_item", { title: "x" }],
   ["update_work_item_status", { workItemId: "x" }],
   ["save_project_contract", { contractNo: "x" }],
-  ["save_payment_plan", { amount: 1 }],
+  ["save_payment_plan", { projectId: probeProjectId, plannedAmount: 1, plannedDate: "2030-01-01" }],
   ["save_cashbook_entry", { amount: 1 }],
   ["save_hr_record", { fullName: "x" }],
   ["save_labor_contract", { salary: 1 }],
@@ -123,7 +126,11 @@ for (const [action, payload] of CASES) {
   const declared = mods !== undefined && mods.length > 0;
   const noModule = mods !== undefined && mods.length === 0;
   const notRegistered = mods === undefined;
-  const allowed = declared && mods.some((mk) => hasModule(mk, ACTION_CAPABILITY.get(action)));
+  const hasProjectWrite = (boot?.data?.userScopes || [])
+    .some((s) => String(s.userId) === String(me?.id) && String(s.projectId) === String(probeProjectId)
+      && ["write", "approve", "admin"].includes(String(s.permission)));
+  const allowed = declared && mods.some((mk) => hasModule(mk, ACTION_CAPABILITY.get(action)))
+    && (action !== "save_payment_plan" || hasProjectWrite);
   const blocked = res.status === 403;
 
   let verdict, kind;

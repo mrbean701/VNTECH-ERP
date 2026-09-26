@@ -60,8 +60,19 @@ test("TM-04 — ACTION THẬT tồn tại và tự khai `requireRole` trong rout
 });
 
 test("TM-04 — QUYỀN THẬT: capability + module của 3 action theo registry đang cưỡng chế", () => {
+  // ⚠️ CẬP NHẬT 23/09/2026 (MT2-P14-03c) — ĐỐI CHIẾU NGUỒN SỰ THẬT JS `scripts/system-route.mjs`:
+  //   • `create_project_team` (:1699) = `requireRole(user,["commander","admin"])` ⇒ **commander PHẢI tạo được**
+  //     ⇒ registry phải là `List.of("site_command")` (⛔ `List.of()` rỗng = MẶC ĐỊNH TỪ CHỐI ⇒ chặn oan commander
+  //     vì `SystemController:225` kiểm action TRƯỚC khi use case kịp gọi `requireRole`).
+  //   • `set_project_team_status` (:1716) và `delete_project_team` (:1720) = `requireRole(user,["admin"])`
+  //     ⇒ **CHỈ admin** ⇒ registry giữ `List.of()` (admin-only) là ĐÚNG, ⛔ KHÔNG nới `site_command`.
+  assert.ok(rbac.includes('Map.entry("create_project_team", List.of("site_command"))'),
+    "create_project_team phải gắn module «site_command» (§8 Tổ đội + JS :1699 cho commander)");
+  for (const action of ["set_project_team_status", "delete_project_team"]) {
+    assert.ok(rbac.includes(`Map.entry("${action}", List.of())`),
+      `${action} phải là ADMIN-ONLY (JS :1716/:1720 = requireRole(["admin"])) — ⛔ không nới module`);
+  }
   for (const action of ["create_project_team", "delete_project_team", "set_project_team_status"]) {
-    assert.ok(rbac.includes(`Map.entry("${action}", List.of("site_command"))`), `${action} phải gắn module «site_command»`);
     assert.ok(rbac.includes(`Map.entry("${action}", "canUse")`), `${action} phải gắn capability «canUse»`);
   }
   const { TEAM_ACTION_GATES } = loadPure();

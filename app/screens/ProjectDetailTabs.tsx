@@ -18,12 +18,15 @@
 // vụ này CHƯA tồn tại (`projects` không có cột tiến độ — xem `tools/_live-schema.tsv`) ⇒ khối tiến độ
 // hiển thị "CHƯA CÓ NGUỒN DỮ LIỆU TIẾN ĐỘ" và KHÔNG suy diễn phần trăm nào. Không bịa công thức.
 
+import { useState } from "react";
+import type { FormEvent } from "react";
 import { DataTable, StatusBadge } from "@/app/components/ui";
 import { daysFromToday } from "@/lib/date-helpers";
-import { downloadCsv } from "@/lib/tabular-export";
+import { downloadCsv, downloadSimpleXlsx } from "@/lib/tabular-export";
 import { CardHead, UI_TODAY, date, format, money, PROJECT_STATUS_LABELS } from "@/lib/ui-shared";
 import type { AppData, Row } from "@/lib/ui-shared";
 import { projectManagerName } from "@/app/screens/project-filters";
+import { BaseModal } from "@/lib/ui-blocks";
 
 /** Nhãn 5 tab con — nguyên văn roadmap: chung · nhân sự · tổ đội · kho · lịch sử. */
 export const PROJECT_DETAIL_SUB_TABS = ["Chung", "Nhân sự", "Tổ đội", "Kho", "Lịch sử"];
@@ -37,6 +40,10 @@ type ProjectDetailTabsProps = {
   section: string;
   onSection: (value: string) => void;
   openEntity: (kind: EntityKind, row: Row) => void;
+  /** MT2-P7-04 (§5.3) — TẠO CÔNG VIỆC/NHIỆM VỤ cho dự án đang mở.
+   *  ⚠️ §5.3: CHỈ phần NHẬP DỮ LIỆU — ⛔ KHÔNG suy diễn % tiến độ (P7-05 SKIPPED).
+   *  Backend `create_work_item` là tầng chặn quyền (§17); trả `true` khi thành công. */
+  createWorkItem?: (payload: Row) => Promise<boolean>;
   permission: Row;
 };
 
@@ -51,7 +58,71 @@ function projectLateDays(row: Row): number {
   return late !== null && late > 0 ? late : 0;
 }
 
-function ProjectDetailTabs({ data, project, section, onSection, openEntity, permission }: ProjectDetailTabsProps) {
+/** MT2-P7-04 (§5.3) — Khối NHẬP DỮ LIỆU công việc/nhiệm vụ cho dự án.
+ *  ⚠️ §5.3: CHỈ triển khai phần HIỂN THỊ + NHẬP DỮ LIỆU —
+ *  ⛔ KHÔNG tự tạo logic đánh giá tiến độ (＝ P7-05 SKIPPED, §38).
+ *  ✅ MODAL theo §23 (⛔ không sideform) · ✅ TÁI DÙNG `downloadSimpleXlsx` (§15)
+ *  · ✅ quyền do BACKEND chặn `create_work_item` (§17) · ✅ §24: form lưới tự wrap. */
+function WorkItemCreateCard({ project, createWorkItem }: { project: Row; createWorkItem?: (payload: Row) => Promise<boolean> }) {
+  const [openForm, setOpenForm] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  async function submitForm(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!createWorkItem) { setMessage("Tài khoản chưa được cấp quyền THAO TÁC (backend chặn)."); return; }
+    const f = new FormData(event.currentTarget);
+    setBusy(true);
+    const ok = await createWorkItem({
+      projectId: String(project.id),
+      title: String(f.get("title") || ""),
+      description: String(f.get("description") || ""),
+      workGroup: String(f.get("workGroup") || ""),
+      assignedTo: String(f.get("assignedTo") || ""),
+      dueAt: String(f.get("dueAt") || ""),
+      priority: String(f.get("priority") || "normal"),
+      requiredOutput: String(f.get("requiredOutput") || ""),
+    });
+    setBusy(false);
+    if (ok) { setOpenForm(false); setMessage("Đã gửi yêu cầu tạo công việc/nhiệm vụ."); }
+    else setMessage("Không tạo được công việc — kiểm tra quyền hoặc dữ liệu bắt buộc.");
+  }
+  function downloadWorkTemplate() {
+    downloadSimpleXlsx({
+      sheetName: "Cong viec",
+      title: "MẪU NHẬP CÔNG VIỆC / NHIỆM VỤ DỰ ÁN",
+      subtitle: `Dự án ${String(project.code || "")} — điền rồi import lại để tạo hàng loạt (cùng bộ cột với form tạo).`,
+      headers: ["Tiêu đề", "Mô tả", "Nhóm việc", "Người phụ trách (tên đăng nhập)", "Hạn (YYYY-MM-DD)", "Ưu tiên", "Kết quả cần đạt"],
+      rows: [],
+      widths: [36, 40, 18, 26, 16, 12, 32],
+      freezeRows: 3,
+    }, `Mau_Cong_Viec_${String(project.code || "DuAn")}`);
+  }
+  return <>
+    <div className="row-actions">
+      <button type="button" className="primary" disabled={!createWorkItem} title={createWorkItem ? "Mở FORM tạo công việc/nhiệm vụ cho dự án này" : "Tài khoản chưa được cấp quyền THAO TÁC cho màn Quản lý dự án"} onClick={() => { setMessage(""); setOpenForm(true); }}>＋ TẠO CÔNG VIỆC</button>
+      <button type="button" className="secondary" onClick={downloadWorkTemplate} title="Tải file Excel mẫu để điền rồi nhập lại">⇩ MẪU EXCEL CÔNG VIỆC</button>
+    </div>
+    {message && <div className="inline-alert">{message}</div>}
+    {openForm && <BaseModal title="Tạo công việc/nhiệm vụ" note={`${String(project.code || "")} · ${String(project.name || "")} — quyền tạo do BACKEND chặn (create_work_item); hệ thống KHÔNG tự tính % tiến độ.`} close={() => setOpenForm(false)}>
+      <form onSubmit={submitForm}>
+        <div className="modal-body">
+          <div className="form-grid">
+            <label>Tiêu đề <input name="title" required placeholder="Ví dụ: Nghiệm thu móng trục A" /></label>
+            <label>Nhóm việc <input name="workGroup" placeholder="Ví dụ: Thi công" /></label>
+            <label>Người phụ trách <input name="assignedTo" placeholder="Tên đăng nhập" /></label>
+            <label>Hạn xử lý <input name="dueAt" type="date" /></label>
+            <label>Ưu tiên <select name="priority" defaultValue="normal"><option value="low">Thấp</option><option value="normal">Bình thường</option><option value="high">Cao</option><option value="urgent">Khẩn</option></select></label>
+            <label>Kết quả cần đạt <input name="requiredOutput" placeholder="Ví dụ: Biên bản nghiệm thu" /></label>
+          </div>
+          <label>Mô tả <textarea name="description" rows={3} /></label>
+        </div>
+        <footer className="modal-footer"><button type="button" className="secondary" onClick={() => setOpenForm(false)}>Hủy</button><button type="submit" className="primary" disabled={busy}>{busy ? "Đang gửi…" : "✓ TẠO CÔNG VIỆC"}</button></footer>
+      </form>
+    </BaseModal>}
+  </>;
+}
+
+function ProjectDetailTabs({ data, project, section, onSection, openEntity, createWorkItem, permission }: ProjectDetailTabsProps) {
   const pid = String(project.id);
   const userScopes: Row[] = data.userScopes || [];
   const directory: Row[] = data.staffDirectory || [];
@@ -140,9 +211,16 @@ function ProjectDetailTabs({ data, project, section, onSection, openEntity, perm
         </div>
       </section>
 
-      <section className="card">
-        <CardHead title="Công việc cần hoàn thành" note="Danh sách đầu việc còn lại của dự án" />
-        <div className="development-screen-notice"><b>ĐANG PHÁT TRIỂN</b><span>Khối này sẽ liên kết với BOQ, tiến độ thi công và nhiệm vụ nhân viên. Hiện chưa triển khai theo yêu cầu “phần này sẽ phát triển về sau”.</span></div>
+      <section className="card project-detail-workitems">
+        <CardHead title="Công việc cần hoàn thành" note="Tạo công việc/nhiệm vụ · nhập Excel — ⛔ KHÔNG đánh giá % tiến độ" />
+        <WorkItemCreateCard project={project} createWorkItem={createWorkItem} />
+        {(data.workItems || []).filter((row) => String(row.projectId) === pid).length === 0
+          ? <div className="empty"><span>✓</span><strong>Chưa có công việc/nhiệm vụ.</strong><p>Dùng «＋ TẠO CÔNG VIỆC» hoặc «⇩ MẪU EXCEL CÔNG VIỆC» để nhập dữ liệu.</p></div>
+          : <div className="table-wrap"><table><thead><tr><th>Tiêu đề</th><th>Nhóm việc</th><th>Phụ trách</th><th>Hạn</th><th>Ưu tiên</th><th>Trạng thái</th></tr></thead><tbody>
+              {(data.workItems || []).filter((row) => String(row.projectId) === pid).map((row) => (
+                <tr key={String(row.id)}><td><strong>{String(row.title || "—")}</strong></td><td>{String(row.workGroup || "—")}</td><td>{String(row.assignedToName || row.assignedTo || "—")}</td><td>{row.dueAt ? date(String(row.dueAt)) : "—"}</td><td>{String(row.priority || "—")}</td><td><StatusBadge value={String(row.status || "todo")} /></td></tr>
+              ))}
+            </tbody></table></div>}
       </section>
     </div>}
 

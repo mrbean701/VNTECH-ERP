@@ -93,8 +93,11 @@ public class SessionStoreAdapter implements SessionStore {
     }
 
     private User toDomain(UserJpaEntity e) {
-        return new User(e.getId(), e.getEmployeeCode(), e.getFullName(), e.getUsername(), e.getEmail(),
+        User user = new User(e.getId(), e.getEmployeeCode(), e.getFullName(), e.getUsername(), e.getEmail(),
                 e.getPasswordHash(), e.getRole(), e.getDepartment(), e.getOrganizationUnitId(),
                 e.getApprovalLimit(), e.isActive(), e.isMustChangePassword(), e.getAvatarUrl());
+        // MT2 §13.4 — chữ ký nằm NGOÀI hàm khởi tạo (⛔ không vỡ `new User(...)`) ⇒ nạp qua setter domain.
+        user.changeSignature(e.getSignatureUrl());
+        return user;
     }
 }

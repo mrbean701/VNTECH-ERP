@@ -51,14 +51,32 @@ public final class ProjectManagementUseCase {
         if (!CODE.matcher(code).matches() || name.isEmpty())
             throw new AuthUseCase.ApiError("Mã dự án gồm 2–24 ký tự A-Z, số, dấu chấm/gạch; tên dự án là bắt buộc.", 400);
         Instant now = Instant.now();
+        // MT2-P14-03c (23/09/2026) — ĐỌC CỜ «Tạo kho dự án?» như JS/UI, ⛔ trước đây Java BỎ QUA cờ này
+        // ⇒ người dùng chọn «Không» vẫn bị sinh kho công trường (lệch `scripts/system-route.mjs` + UI).
+        boolean createWarehouse = createWarehouseFlag(payload.get("createWarehouse"));
         store.insertProjectWithWarehouse(
                 idGenerator.next("PRJ"), idGenerator.next("WH"), code, name, principal.userId(),
                 nullIfBlank(payload.get("startDate")), nullIfBlank(payload.get("plannedEndDate")),
                 nullIfBlank(payload.get("contractNo")), nullIfBlank(payload.get("contractName")),
                 codeOf(trim(payload.get("warehouseCode")), "KHO-" + code),
                 blankFallsBack(trim(payload.get("warehouseName")), "Kho công trường " + code),
-                idGenerator.next("SCOPE"), principal.userId(), now);
-        return "Đã tạo dự án " + code + " và kho công trường riêng.";
+                idGenerator.next("SCOPE"), principal.userId(), createWarehouse, now);
+        return createWarehouse
+                ? "Đã tạo dự án " + code + " và kho công trường riêng."
+                : "Đã tạo dự án " + code + " (không tạo kho công trường theo lựa chọn).";
+    }
+
+    /**
+     * Cờ «Tạo kho dự án?» — bản sao ĐÚNG biểu thức của JS `scripts/system-route.mjs` (nhánh `create_project`):
+     * vắng / {@code null} / chuỗi rỗng ⇒ **true** (tương thích ngược: mọi nơi gọi CŨ không truyền cờ vẫn tạo kho);
+     * chỉ **false** khi giá trị là {@code false}, {@code 0}, {@code "0"}, {@code "false"}, {@code "no"}.
+     */
+    static boolean createWarehouseFlag(Object raw) {
+        if (raw == null) return true;
+        if (raw instanceof Boolean flag) return flag;
+        String text = String.valueOf(raw).trim().toLowerCase(java.util.Locale.ROOT);
+        if (text.isEmpty()) return true;
+        return !("0".equals(text) || "false".equals(text) || "no".equals(text));
     }
 
     public String updateProject(Principal principal, Map<String, Object> payload) {

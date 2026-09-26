@@ -30,16 +30,21 @@ function loadPure(names) {
 /** Cổng kiểm dùng CHUNG cho đối chứng âm: nhãn bước 1 phải là «Tài khoản» và KHÔNG còn «Nhân sự». */
 const labelGate = (labels) => labels[0] === "Tài khoản" && !labels.includes("Nhân sự");
 
-test("AD-01 — bước 1 của màn Quản trị đổi tên thành «Tài khoản», 12 bước giữ nguyên thứ tự", () => {
+test("AD-01 — bước 1 của màn Quản trị đổi tên thành «Tài khoản», các bước còn lại giữ nguyên thứ tự", () => {
   const { ADMIN_STEP_LABELS } = loadPure(["ADMIN_STEP_LABELS"]);
-  assert.equal(ADMIN_STEP_LABELS.length, 12, "Màn Quản trị phải còn ĐÚNG 12 bước (không thêm/bớt bước)");
+  // ⚠️ CẬP NHẬT 23/09/2026 (MT2-P12-01 §13.1): màn Quản trị nay có **13 bước** — MT2 thêm bước «Thông báo»
+  // (tab cấu hình thông báo Web/Email; backend đã có `save_notification_config` nhưng trước đó UI = 0 dòng).
+  // ⇒ bất biến AD-01 cần giữ là: bước 1 = «Tài khoản», ⛔ KHÔNG còn «Nhân sự», và 12 nhãn CŨ giữ nguyên THỨ TỰ.
+  // Xem `app/screens/admin-governance-pure.ts:22` (chính mã ghi mốc MT2-P12-01).
+  assert.equal(ADMIN_STEP_LABELS.length, 13, "Màn Quản trị phải có ĐÚNG 13 bước (12 bước AD-01 + «Thông báo» của MT2-P12-01)");
   assert.equal(ADMIN_STEP_LABELS[0], "Tài khoản", "Nguyên văn AD-01: bước «Nhân sự» đổi thành «Tài khoản»");
   assert.equal(labelGate(ADMIN_STEP_LABELS), true, "Cổng nhãn phải ĐẠT với dữ liệu thật");
-  // Các bước khác KHÔNG được đổi tên (AD-01 chỉ đổi 1 nhãn).
-  assert.deepEqual(ADMIN_STEP_LABELS.slice(1), [
+  // 12 bước của AD-01 KHÔNG được đổi tên/đổi thứ tự; bước 13 là phần THÊM của MT2.
+  assert.deepEqual(ADMIN_STEP_LABELS.slice(1, 12), [
     "Tổ chức", "Chức danh / vai trò", "Nhóm quyền nghiệp vụ", "Phân quyền phòng ban", "Phân quyền người dùng",
     "Cấp bậc hệ thống", "Phạm vi dự án & kho", "Workflow phê duyệt", "Ngoại lệ cá nhân", "Audit log", "Cấu hình hệ thống",
-  ], "AD-01 KHÔNG được đổi nhãn các bước khác");
+  ], "AD-01 KHÔNG được đổi nhãn/thứ tự 12 bước cũ");
+  assert.equal(ADMIN_STEP_LABELS[12], "Thông báo", "Bước thêm của MT2-P12-01 phải là «Thông báo» (đặt SAU «Cấu hình hệ thống»)");
 });
 
 test("AD-01 — ĐỐI CHỨNG ÂM: cổng nhãn PHẢI HỎNG nếu ai đổi lại thành «Nhân sự»", () => {

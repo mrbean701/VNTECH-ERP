@@ -42,7 +42,25 @@ public final class ActionRbacRegistry {
             Map.entry("issue_stock_confirm", List.of("warehouse_issue")),
             Map.entry("confirm_stock_issue", List.of("warehouse_issue")),
             Map.entry("create_issue_grn", List.of("receiving")),
-            Map.entry("approve_team_production", List.of()),
+            // MT2 §7.4 — sinh phiếu nhập từ **LỆNH ĐIỀU CHUYỂN (STO)**: DÙNG LẠI khoá module
+            // SẴN CÓ `receiving` (⛔ 0 module mới, ⛔ 0 khoá `module_catalog` mới) — cùng nghiệp vụ TẠO phiếu nhập.
+            Map.entry("create_transfer_grn", List.of("receiving")),
+            // MT2 §13.1 — «Thêm tab Thông báo» trong màn **Quản trị** ⇒ 2 action cấu hình gác bằng module
+            // SẴN CÓ `admin` (⛔ 0 module mới, ⛔ 0 khoá `module_catalog` mới).
+            Map.entry("save_notification_config", List.of("admin")),
+            // MT2-P3-02 §13.1 — CRUD: **Danh sách (R)** và **Xoá (D)** của tab Thông báo (màn Quản trị).
+            Map.entry("notification_configs", List.of("admin")),
+            Map.entry("notification_log", List.of("admin")),
+            Map.entry("delete_notification_config", List.of("admin")),
+            Map.entry("set_notification_config_status", List.of("admin")),
+            // MT2 §14 — «Login → Check notifications by userID»: MỌI user đã đăng nhập phải đánh dấu đọc
+            // được thông báo CỦA CHÍNH MÌNH ⇒ dùng mẫu `List.of()` = KHÔNG gác module (khuôn `bulk_import_projects`).
+            // ⛔ KHÔNG gác bằng module nghiệp vụ nào: nếu gác, user không có module đó sẽ KHÔNG đọc được thông báo.
+            Map.entry("mark_notification_read", List.of()),
+            Map.entry("mark_notification_snooze", List.of()),
+            // MT2 §14 — «Đánh dấu TẤT CẢ đã đọc» NHƯNG chỉ cho CHÍNH user (⛔ không global).
+            Map.entry("mark_notification_all_read", List.of()),
+            Map.entry("approve_team_production", List.of("teams")),
             Map.entry("approve_transfer_order", List.of("inventory")),
             Map.entry("bulk_boq_item_action", List.of("boq")),
             Map.entry("bulk_import_projects", List.of()),
@@ -60,7 +78,14 @@ public final class ActionRbacRegistry {
             Map.entry("create_central_return", List.of("central_warehouse")),
             Map.entry("create_po", List.of("purchasing")),
             Map.entry("create_project", List.of()),
-            Map.entry("create_project_team", List.of()),
+            // MT2-P14-03c (23/09/2026) — SỬA LỖI CHẶN OAN «CHỈ HUY TRƯỞNG»:
+            // JS `scripts/system-route.mjs:1699` mở action này bằng `requireRole(user,["commander","admin"])`
+            // (⛔ KHÔNG module-gate) ⇒ `commander` ĐƯỢC tạo tổ đội. Nhưng registry để `List.of()` = MẶC ĐỊNH TỪ CHỐI
+            // ⇒ `SystemController:225` chặn 403 TRƯỚC khi use case kịp gọi `requireRole(["commander","admin"])`
+            // ⇒ **commander ⛔ không tạo được tổ đội** (lệch JS). Nay mở bằng module `site_command` (module THẬT của
+            // phân hệ Tổ đội) ⇒ commander có `site_command.canUse` qua được cả 2 cổng (module + requireRole);
+            // ⛔ KHÔNG nới cho 2 action còn lại (xem `delete_project_team`/`set_project_team_status` — JS chỉ cho admin).
+            Map.entry("create_project_team", List.of("site_command")),
             Map.entry("create_request", List.of("requests")),
             Map.entry("create_stock_count", List.of("stocktake")),
             Map.entry("create_transfer_order", List.of("inventory")),
@@ -79,6 +104,12 @@ public final class ActionRbacRegistry {
             Map.entry("delete_construction_daily_log", List.of("construction")),
             Map.entry("delete_contract_payment", List.of("payments")),
             Map.entry("delete_correspondence", List.of("dept_legal_correspondence")),
+            // MT2-P14-03c (23/09/2026) — BỔ SUNG KHOÁ CÒN THIẾU: action này CHỈ dành cho admin
+            // (`SystemController:413` gọi `requireRequireAdmin`) và trước đây ⛔ **không có dòng nào** trong registry
+            // ⇒ rơi vào nhánh `getOrDefault(..., List.of())` = MẶC ĐỊNH TỪ CHỐI. Hành vi vẫn AN TOÀN (fail-closed),
+            // nhưng thiếu khai báo ⇒ ① hợp đồng `ad08` báo đỏ ② audit coverage không phân loại được action.
+            // Nay khai tường minh `List.of()` = nhóm «admin-only» đúng quy ước tệp này.
+            Map.entry("delete_department_permission", List.of()),
             Map.entry("delete_form_field_config", List.of()),
             Map.entry("delete_labor_contract", List.of("dept_legal_labor")),
             Map.entry("delete_legal_document", List.of("dept_legal_documents")),
@@ -96,6 +127,12 @@ public final class ActionRbacRegistry {
             Map.entry("delete_role_catalog", List.of()),
             Map.entry("delete_seal", List.of("dept_legal_seal")),
             Map.entry("delete_selected_materials", List.of("material_catalog")),
+            // MT2-P14-03c (23/09/2026) — 5 action của màn «Cấp bậc hệ thống» TRƯỚC ĐÂY ⛔ KHÔNG có dòng nào
+            // trong registry (đo: grep `system_level` trong tệp này = 0) ⇒ rơi vào `getOrDefault(..., List.of())`
+            // = MẶC ĐỊNH TỪ CHỐI. Hành vi vẫn AN TOÀN vì `SystemController:423-443` gác bằng `requireRequireAdmin`
+            // (admin qua, người khác 403) — nhưng thiếu khai báo ⇒ ① hợp đồng `ad10` đỏ ② audit coverage không
+            // phân loại được. Nay khai tường minh nhóm ADMIN-ONLY đúng quy ước tệp.
+            Map.entry("delete_system_level", List.of()),
             Map.entry("delete_site_expense_claim", List.of("dept_finance_site_cost")),
             Map.entry("delete_supplier", List.of("supplier_catalog")),
             Map.entry("delete_unused_materials", List.of("material_catalog")),
@@ -106,7 +143,7 @@ public final class ActionRbacRegistry {
             Map.entry("factory_reset_preview", List.of("admin")),
             Map.entry("import_contract_payments", List.of("payments")),
             Map.entry("import_material_catalog", List.of()),
-            Map.entry("install_license_foundation", List.of()),
+            Map.entry("install_license_foundation", List.of("admin")),
             Map.entry("issue_stock", List.of("teams", "warehouse_issue")),
             Map.entry("login", List.of()),
             Map.entry("logout", List.of()),
@@ -125,7 +162,7 @@ public final class ActionRbacRegistry {
             Map.entry("reorder_form_fields", List.of()),
             Map.entry("reorder_menu_layout", List.of()),
             Map.entry("replace_boq_items", List.of("boq")),
-            Map.entry("request_license_transfer", List.of()),
+            Map.entry("request_license_transfer", List.of("admin")),
             Map.entry("request_material_master_from_boq", List.of("material_catalog", "boq")),
             Map.entry("reset_material_catalog_test", List.of("material_catalog")),
             Map.entry("reset_user_password", List.of()),
@@ -173,9 +210,33 @@ public final class ActionRbacRegistry {
             Map.entry("save_seal", List.of("dept_legal_seal")),
             Map.entry("save_site_expense_claim", List.of("dept_finance_site_cost")),
             Map.entry("save_supplier", List.of("supplier_catalog")),
-            Map.entry("save_team_payment", List.of()),
-            Map.entry("save_team_production", List.of()),
-            Map.entry("save_team_subcontract", List.of()),
+            // MT2-P3-05 §6.3/§6.4 — vật tư của nhà cung cấp: cùng module **`supplier_catalog`**
+            // như `save_supplier` (⛔ 0 module mới).
+            Map.entry("save_supplier_material", List.of("supplier_catalog")),
+            // MT2-P4-03 (§4.1) — card «Chờ Giám đốc duyệt»: ĐỌC vùng duyệt ⇒ module **`approvals`**
+            // (ĐO: `decide_approval` :86 · `approve_stock_issue` :36 đều dùng `List.of("approvals")`) — ⛔ 0 module mới.
+            // ⚠️ Điều kiện «admin HOẶC ≥ trưởng phòng» (§4.1:51) do **USE-CASE** chặn 403 (2 LỚP đúng ý đồ).
+            Map.entry("director_pending_approvals", List.of("approvals")),
+            // ⚠️ MT2-P4-05 VÁ LỖI CỦA MT2-P3-05: `case "supplier_materials"` (Tab 3) đã thêm ở controller
+            // nhưng ⛔ **quên khai khoá** ⇒ `required.isEmpty()` = **default-DENY** ⇒ user có module
+            // `supplier_catalog` bị **403 NHẦM** khi xem danh sách vật tư NCC (test P3-05 vẫn xanh vì gọi bằng admin).
+            Map.entry("supplier_materials", List.of("supplier_catalog")),
+            // ⚠️ MT2-P4-05 bước ② — 4 action thiếu khai báo (bằng chứng: `requireAdmin` ⛔ KHÔNG có trong thân case
+            // ⇒ `required.isEmpty()` = default-DENY ⇒ user hợp lệ bị **403 NHẦM**).
+            // · `save/set_status/delete_workflow`: quản lý **định nghĩa quy trình** ở màn Quản trị
+            //   (`WorkflowModal.tsx:79` · `page.tsx:2194-2195`); `module_catalog` ⛔ không có module `workflow`
+            //   ⇒ dùng **`admin`** (đúng nhóm "Quản trị/Danh mục", ⛔ 0 module mới).
+            Map.entry("save_workflow", List.of("admin")),
+            Map.entry("set_workflow_status", List.of("admin")),
+            Map.entry("delete_workflow", List.of("admin")),
+            // · `create_self_work_item` (`WorkCenter.tsx:216`): SOI GƯƠNG `mark_task_notification_read` —
+            //   đăng ký **2 module** để ai có 1 trong 2 đều làm được (⛔ không tự đặt luật mới).
+            Map.entry("create_self_work_item", List.of("dept_plan_tasks", "dept_project_tasks")),
+            Map.entry("supplier_material_gaps", List.of("supplier_catalog")),
+            Map.entry("save_system_level", List.of()),
+            Map.entry("save_team_payment", List.of("teams")),
+            Map.entry("save_team_production", List.of("teams")),
+            Map.entry("save_team_subcontract", List.of("teams")),
             Map.entry("save_trust_development_settings", List.of()),
             Map.entry("save_ui_display_settings", List.of()),
             Map.entry("save_user_access", List.of()),
@@ -204,10 +265,13 @@ public final class ActionRbacRegistry {
             Map.entry("set_role_status", List.of()),
             Map.entry("set_seal_status", List.of("dept_legal_seal")),
             Map.entry("set_supplier_status", List.of("supplier_catalog")),
+            Map.entry("set_system_level_status", List.of()),
             Map.entry("set_user_status", List.of()),
+            Map.entry("set_user_system_level", List.of()),
             Map.entry("set_work_item_participant", List.of("dept_plan_assign", "dept_project_assign")),
+            Map.entry("system_level_impact", List.of()),
             Map.entry("settle_advance_request", List.of("dept_finance_advance")),
-            Map.entry("settle_team_subcontract", List.of()),
+            Map.entry("settle_team_subcontract", List.of("teams")),
             Map.entry("setup", List.of()),
             Map.entry("ship_transfer_order", List.of("inventory")),
             Map.entry("transfer_contract_ownership", List.of("inventory")),
@@ -257,6 +321,19 @@ public final class ActionRbacRegistry {
             Map.entry("create_central_return", "canCreate"),
             // TASK-133 — ⑤ sinh GRN nhập kho khác: chỉ cần QUYỀN TẠO (đúng đặc tả «không cần duyệt»).
             Map.entry("create_issue_grn", "canCreate"),
+            // MT2 §7.4 — sinh GRN từ lệnh điều chuyển: cũng chỉ cần QUYỀN TẠO (⛔ không vòng duyệt).
+            Map.entry("create_transfer_grn", "canCreate"),
+            // MT2 §13.1/§13.2 — tạo/sửa và bật/tắt cấu hình thông báo (tab Thông báo của màn Quản trị).
+            Map.entry("save_notification_config", "canCreate"),
+            Map.entry("notification_configs", "canView"),
+            // MT2-P4-05 VÁ THIẾU: `notification_log` khai module `admin` nhưng ⛔ THIẾU capability ⇒ rơi về
+            // mặc định `canUse`, trong khi đây là thao tác ĐỌC (soi gương `notification_configs` = canView).
+            Map.entry("notification_log", "canView"),
+            Map.entry("delete_notification_config", "canEdit"),
+            Map.entry("set_notification_config_status", "canEdit"),
+            Map.entry("mark_notification_read", "canView"),
+            Map.entry("mark_notification_snooze", "canView"),
+            Map.entry("mark_notification_all_read", "canView"),
             Map.entry("create_po", "canCreate"),
             Map.entry("create_project", "canUse"),
             Map.entry("create_project_team", "canUse"),
@@ -295,6 +372,7 @@ public final class ActionRbacRegistry {
             Map.entry("delete_role_catalog", "canUse"),
             Map.entry("delete_seal", "canEdit"),
             Map.entry("delete_selected_materials", "canEdit"),
+            Map.entry("delete_system_level", "canUse"),
             Map.entry("delete_site_expense_claim", "canEdit"),
             Map.entry("delete_supplier", "canEdit"),
             Map.entry("delete_unused_materials", "canEdit"),
@@ -380,6 +458,16 @@ public final class ActionRbacRegistry {
             Map.entry("save_seal", "canCreate"),
             Map.entry("save_site_expense_claim", "canCreate"),
             Map.entry("save_supplier", "canEdit"),
+            Map.entry("save_supplier_material", "canEdit"),
+            // MT2-P4-03 — hành động **ĐỌC** ⇒ `canView` (⛔ KHÔNG `canApprove` ✗; điều kiện cấp bậc do use-case chặn 403).
+            Map.entry("director_pending_approvals", "canView"),
+            Map.entry("supplier_materials", "canView"),
+            Map.entry("save_workflow", "canCreate"),
+            Map.entry("set_workflow_status", "canEdit"),
+            Map.entry("delete_workflow", "canEdit"),
+            Map.entry("create_self_work_item", "canUse"),
+            Map.entry("supplier_material_gaps", "canUse"),
+            Map.entry("save_system_level", "canUse"),
             Map.entry("save_team_payment", "canUse"),
             Map.entry("save_team_production", "canUse"),
             Map.entry("save_team_subcontract", "canUse"),
@@ -411,8 +499,11 @@ public final class ActionRbacRegistry {
             Map.entry("set_role_status", "canUse"),
             Map.entry("set_seal_status", "canEdit"),
             Map.entry("set_supplier_status", "canEdit"),
+            Map.entry("set_system_level_status", "canUse"),
             Map.entry("set_user_status", "canUse"),
+            Map.entry("set_user_system_level", "canUse"),
             Map.entry("set_work_item_participant", "canEdit"),
+            Map.entry("system_level_impact", "canUse"),
             Map.entry("settle_advance_request", "canApprove"),
             Map.entry("settle_team_subcontract", "canUse"),
             Map.entry("setup", "canUse"),

@@ -54,14 +54,39 @@ mà mọi session dsh (web, CLI, Telegram) phải tuân theo khi làm việc tro
   - Cập nhật lại TODO ngay khi có lỗi hoặc đổi kế hoạch.
 - Không có vai trò nào được phép bỏ qua `todo_write`.
 
-## Báo cáo tiến độ qua Telegram (bắt buộc, định kỳ)
+## Báo cáo tiến độ qua Telegram (bắt buộc — mỗi task 2 lần)
 
-- Kết thúc mỗi mục master task (hoặc sau mỗi khối công việc đáng kể), gọi tool **`notify`**
-  của dsh-notifier để gửi báo cáo ngắn gọn qua Telegram cho user:
-  tóm tắt đã xong gì, trạng thái mục đó, chỉ số tiến độ mới, việc kế tiếp.
-- Trong các nhiệm vụ dài, cứ sau vài bước TODOs hoàn thành hãy gửi một cập nhật ngắn
-  (không spam; báo cáo có chất lượng thay vì mỗi tool call).
-- Nội dung báo cáo bằng tiếng Việt, ngắn gọn, súc tích.
+Gọi tool **`notify`** của dsh-notifier để gửi báo cáo qua Telegram cho user. Báo cáo bằng
+tiếng Việt, ngắn gọn, súc tích. **Mỗi task trong master task = đúng 2 bản tin**: 1 khi
+bắt đầu, 1 khi hoàn thành. Không báo cáo spam ngoài 2 mốc này (trừ khi user hỏi hoặc có
+chặn/đổi kế hoạch đáng kể).
+
+### 1. Khi BẮT ĐẦU một task (trước khi thực thi)
+
+Gửi 1 bản tin dạng:
+
+```
+🛠 Bắt đầu task <TÊN/TASK-ID>
+Đang làm: <việc cụ thể sắp làm>
+Thuộc: <PHASE + mục> trong master task
+```
+
+### 2. Khi HOÀN THÀNH một task (sau khi commit / đóng)
+
+Gửi 1 bản tin dạng:
+
+```
+✅ Vừa hoàn thành <TÊN/TASK-ID>: <việc đã xong gọn 1 dòng>
+Tiến độ task: <done/total task> (task trong đợt làm hiện tại)
+Tiến độ master task: <DONE/tổng 110> (<%>) — lấy số mới nhất từ MASTER_STATUS sau khi cập nhật
+```
+
+- **`done`/`total` task**: đếm các task đã hoàn thành trong **đợt/phạm vi đang triển khai**
+  (ví dụ: công việc U-11 có N bước, xong đến bước nào thì `x/N`).
+- **`DONE/tổng 110`**: đọc thẳng con số trong `docs/agent-progress/MASTER_STATUS.md`
+  (cột/§ Overall, DONE x/110 + %) **sau khi đã cập nhật** trạng thái task vừa xong,
+  không báo cáo số cũ.
+- Nếu task để lại chặn/việc kế tiếp cần user biết, có thể thêm 1 dòng cuối ngắn gọn.
 
 ## Khi goal bị disarmed / vòng lặp dừng
 

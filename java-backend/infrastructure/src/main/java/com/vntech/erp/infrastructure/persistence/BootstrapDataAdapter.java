@@ -160,6 +160,48 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                 out.put("items", groupBy(itemRowsEnriched, "requestId", rid));
                 return out;
             }).toList());
+
+            // ══════════════════════════════════════════════════════════════════════════════════
+            // MT2 §4.4 (phần sau) — **“Total overdue”**: TỔNG HỢP QUÁ HẠN DUYỆT.
+            //   Yêu cầu nguyên văn: “Total overdue: đếm số lượng đơn quá hạn + phòng ban/thời lượng.”
+            //   ⛔ KHÔNG thêm bảng/cột: `approvalRows` NGAY TRÊN đã có `dueAt`, `decidedAt`, `department`
+            //   ⇒ SUY RA TẠI CHỖ bằng Java. ⛔ KHÔNG viết SQL riêng vì `TIMESTAMPDIFF` là cú pháp MySQL,
+            //   H2 (profile test) sẽ hỏng ⇒ tính bằng Java là cách DUY NHẤT chạy đúng ở cả hai.
+            //   Chỉ tính bước **CHƯA có quyết định** (`decidedAt == null`) mà `dueAt` đã qua —
+            //   bước đã quyết định thì dù muộn cũng đã xử lý xong (lý do lưu ở `overdue_reason`).
+            java.time.Instant nowOverdue = java.time.Instant.now();
+            long overdueTotal = 0;
+            Map<String, long[]> overdueByDeptAgg = new LinkedHashMap<>();   // phòng ban → [số bước, tổng phút, phút lớn nhất]
+            for (Map<String, Object> approvalRow : approvalRows) {
+                Object rawDue = approvalRow.get("dueAt");
+                java.time.Instant due = rawDue instanceof java.time.Instant i2 ? i2
+                        : rawDue instanceof java.sql.Timestamp ts2 ? ts2.toInstant()
+                        : rawDue instanceof java.time.LocalDateTime ld2 ? ld2.toInstant(java.time.ZoneOffset.UTC)
+                        : null;
+                if (due == null || approvalRow.get("decidedAt") != null || !nowOverdue.isAfter(due)) continue;
+                long minutes = java.time.Duration.between(due, nowOverdue).toMinutes();
+                String dept = String.valueOf(approvalRow.getOrDefault("department", ""));
+                long[] agg = overdueByDeptAgg.computeIfAbsent(dept, k -> new long[3]);
+                agg[0]++;
+                agg[1] += minutes;
+                if (minutes > agg[2]) agg[2] = minutes;
+                overdueTotal++;
+            }
+            List<Map<String, Object>> overdueByDepartment = new ArrayList<>();
+            for (Map.Entry<String, long[]> entry : overdueByDeptAgg.entrySet()) {
+                Map<String, Object> dept = new LinkedHashMap<>();
+                dept.put("department", entry.getKey());
+                dept.put("total", entry.getValue()[0]);
+                dept.put("avgOverdueMinutes", entry.getValue()[0] == 0 ? 0 : entry.getValue()[1] / entry.getValue()[0]);
+                dept.put("maxOverdueMinutes", entry.getValue()[2]);
+                overdueByDepartment.add(dept);
+            }
+            overdueByDepartment.sort((x, y) -> Long.compare(
+                    ((Number) y.get("total")).longValue(), ((Number) x.get("total")).longValue()));
+            Map<String, Object> approvalOverdue = new LinkedHashMap<>();
+            approvalOverdue.put("total", overdueTotal);
+            approvalOverdue.put("byDepartment", overdueByDepartment);
+            data.put("approvalOverdue", approvalOverdue);
         } else {
             data.put("requests", List.of());
         }
@@ -186,17 +228,23 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                        ms.sort_order AS sortOrder,ms.active,mc.code AS categoryCode,mc.name AS categoryName
                 FROM material_subcategories ms JOIN material_categories mc ON mc.id=ms.category_id
                 WHERE ms.active=1 AND mc.active=1 ORDER BY mc.sort_order,ms.sort_order,ms.name"""));
+        // MT2-BLK-05 (user chốt 26/09/2026: «Cho phép user thường nhìn thấy mã vật tư gốc đã ngừng»)
+        // ⇒ BỎ `m.active=1` khỏi payload `materials`: user thường PHẢI THẤY cả mã đã ngừng.
+        // ⛔ KHÔNG xoá dòng, ⛔ KHÔNG đổi quyền ghi: mã vẫn còn cột `active` (0/1) nên UI render
+        // đúng nhãn «Đã ngừng» (MaterialListTable đọc `Number(m.active)===0`).
+        // ⚠️ Còn giữ lọc theo phân loại (dưới đây) — đó là phân loại BỊ ẨN, khác với vật tư đã ngừng.
         List<Map<String, Object>> materials = new ArrayList<>(query("""
                 SELECT m.id,m.code,m.name,m.`system`,m.category_id AS categoryId,mc.code AS categoryCode,
                        mc.name AS categoryName,m.subcategory_id AS subcategoryId,ms.code AS subcategoryCode,
                        ms.name AS subcategoryName,m.specification,m.brand,m.unit,m.standard_price AS standardPrice,
-                       m.min_stock AS minStock,m.requires_cocq AS requiresCocq,m.requires_mar AS requiresMar
+                       m.min_stock AS minStock,m.requires_cocq AS requiresCocq,m.requires_mar AS requiresMar,
+                       m.active AS active
                 FROM materials m
                 LEFT JOIN material_categories mc ON mc.id=m.category_id
                 LEFT JOIN material_subcategories ms ON ms.id=m.subcategory_id
-                WHERE m.active=1 AND (m.category_id IS NULL OR mc.active=1)
+                WHERE (m.category_id IS NULL OR mc.active=1)
                   AND (m.subcategory_id IS NULL OR ms.active=1)
-                ORDER BY COALESCE(mc.sort_order,999),COALESCE(ms.sort_order,9999),m.code"""));
+                ORDER BY m.active ASC,COALESCE(mc.sort_order,999),COALESCE(ms.sort_order,9999),m.code"""));
         List<Map<String, Object>> aliases = query("""
                 SELECT id,material_id AS materialId,alias_name AS aliasName,normalized_name AS normalizedName,
                        verified,active FROM material_aliases WHERE active=1 ORDER BY alias_name""");
@@ -212,11 +260,14 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
         });
         data.put("materials", materials);
 
+        // MT2-P8-04 (§6.2) — THÊM `email` vào CẢ 2 câu (cột `suppliers.email` tạo ở migration V28).
+        // ⚠️ §16 «UI CHANGE ⛔ KHÔNG phải UI-ONLY»: câu SELECT liệt kê cột TƯỜNG MINH ⇒ thiếu `email`
+        //    thì `row.email` LUÔN undefined và UI hiển thị TRỐNG (⛔ không phải «xong»).
         data.put("suppliers", query("""
-                SELECT id,code,name,tax_code AS taxCode,contact_name AS contactName,phone,
+                SELECT id,code,name,tax_code AS taxCode,contact_name AS contactName,phone,email,
                        lead_time_days AS leadTimeDays,rating,active FROM suppliers WHERE active=1 ORDER BY code"""));
         if (admin) data.put("adminSuppliers", query("""
-                SELECT id,code,name,tax_code AS taxCode,contact_name AS contactName,phone,
+                SELECT id,code,name,tax_code AS taxCode,contact_name AS contactName,phone,email,
                        lead_time_days AS leadTimeDays,rating,active FROM suppliers
                 ORDER BY CASE WHEN active=1 THEN 0 ELSE 1 END,code"""));
 
@@ -865,7 +916,7 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                 SELECT u.id,u.employee_code AS employeeCode,u.full_name AS fullName,u.email,u.role,
                        COALESCE(rc.name,u.role) AS roleName,u.department,
                        u.organization_unit_id AS organizationUnitId,ou.code AS organizationCode,
-                       COALESCE(ou.name,u.department) AS organizationName,u.avatar_url AS avatarUrl,
+                       COALESCE(ou.name,u.department) AS organizationName,u.avatar_url AS avatarUrl,u.signature_url AS signatureUrl,
                        u.system_level_code AS systemLevelCode
                 FROM users u
                 LEFT JOIN role_catalog rc ON rc.code=u.role
@@ -1203,8 +1254,16 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                            COALESCE(rc.name,u.role) AS roleName,COALESCE(rc.base_role,u.role) AS roleBase,
                            rc.warehouse_scope_kind AS warehouseScopeKind,u.department,
                            u.organization_unit_id AS organizationUnitId,ou.code AS organizationCode,
-                           COALESCE(ou.name,u.department) AS organizationName,u.avatar_url AS avatarUrl,
-                           u.approval_limit AS approvalLimit,u.must_change_password AS mustChangePassword,
+                           COALESCE(ou.name,u.department) AS organizationName,u.avatar_url AS avatarUrl,u.signature_url AS signatureUrl,
+                           -- MT2-P12-03 (§13.3) — ⛔ BỎ trường «Hạn mức» khỏi **payload API**: «⛔ Bỏ trường
+                           -- "Hạn mức" — không thay bằng trường khác nếu chưa có nghiệp vụ» ⇒ ngừng trả `approvalLimit`
+                           -- cho UI. ⚠️ ⛔ CỘT `users.approval_limit` **GIỮ NGUYÊN** (không drop, không migration) —
+                           -- `V25__mt2_approval_overdue_reason_and_user_signature.sql:11` đã ghi rõ điều này.
+                           u.must_change_password AS mustChangePassword,
+                           -- MT2-P12-04 (§13.3) — ROOT CAUSE: `created_at` CÓ sẵn trong CSDL nhưng ⛔ chưa từng được
+                           -- chiếu ra payload ⇒ UI hiện «chưa có nguồn»; `last_login_at` là cột V29 (nullable) ghi lúc
+                           -- `AuthUseCase.login` thành công. Người chưa đăng nhập ⇒ NULL ⇒ UI hiện «chưa đăng nhập».
+                           u.last_login_at AS lastLoginAt,u.created_at AS createdAt,
                            u.password_reset_at AS passwordResetAt,u.active,
                            u.system_level_code AS systemLevelCode
                     FROM users u
@@ -1413,7 +1472,8 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
         data.put("legalDocuments", query("""
                 SELECT d.id,d.doc_no AS docNo,d.doc_type AS docType,d.title,d.issue_date AS issueDate,
                        d.issuer,d.effective_date AS effectiveDate,d.expiry_date AS expiryDate,d.scope,
-                       d.attachment_id AS attachmentId,d.status,d.created_by AS createdBy,
+                       d.attachment_id AS attachmentId,d.correspondence_id AS correspondenceId,
+                       d.status,d.created_by AS createdBy,
                        u.full_name AS createdByName,d.created_at AS createdAt
                 FROM legal_documents d LEFT JOIN users u ON u.id=d.created_by
                 ORDER BY d.issue_date DESC,d.created_at DESC"""));
@@ -1537,6 +1597,40 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                        n.work_item_id AS taskId,COALESCE(NULLIF(n.title,''),n.body) AS message
                 FROM task_notifications n WHERE n.user_id=?
                 ORDER BY CASE WHEN n.read_at IS NULL THEN 0 ELSE 1 END,n.created_at DESC LIMIT 100""", ctx.userId()));
+        // ══════════════════════════════════════════════════════════════════════════════════════════
+        // MT2 §14 — «Login → Check notifications by userID → **Check active period** → Display system
+        // notification modal». CHỈ thông báo **CỦA CHÍNH user** (`ctx.userId()`), đã trừ **đã đọc** và
+        // **đang tạm ẩn**; cửa sổ hiệu lực: `active=1` · `send_at ≤ now` · `end_at > now` (hoặc NULL).
+        //   · Nguồn: 3 bảng migration **V26** (MT2-P1-04/P1-05) — ⛔ KHÔNG đụng `taskNotifications` ở trên
+        //     (bảng `task_notifications` là hàng đợi in-app của luồng CÔNG VIỆC — hai cơ chế SONG SONG).
+        //   · ⛔ KHÔNG subquery `ORDER BY … LIMIT` trong danh sách chọn (bài học H2 ở `stockIssueGrnLines`);
+        //     dùng `CURRENT_TIMESTAMP` (chạy đúng ở CẢ MySQL và H2) thay vì truyền tham số thời gian.
+        // ══════════════════════════════════════════════════════════════════════════════════════════
+        data.put("systemNotifications", query("""
+                -- MT2-P13-01 (§14) — modal thông báo phải hiện **người tạo** ⇒ phải chiếu `created_by`.
+                -- ⚠️ TRƯỚC ĐÂY khối này KHÔNG trả trường đó ⇒ UI không thể hiện «người tạo» theo §14.
+                SELECT c.id AS configId,c.code,c.name,c.content,c.send_at AS sendAt,c.end_at AS endAt,
+                       c.created_by AS createdBy,c.created_at AS createdAt,
+                       s.read_at AS readAt,s.snooze_until AS snoozeUntil,s.delivered_at AS deliveredAt
+                FROM notification_configs c
+                LEFT JOIN notification_user_states s ON s.config_id=c.id AND s.user_id=?
+                LEFT JOIN notification_config_targets t
+                       ON t.config_id=c.id
+                      AND ( (c.recipient_mode='user' AND t.target_type='user' AND t.target_id=?)
+                         OR (c.recipient_mode='department' AND t.target_type='department'
+                             AND t.target_id=(SELECT u.department FROM users u WHERE u.id=?))
+                         OR (c.recipient_mode='project' AND t.target_type='project'
+                             AND t.target_id IN (SELECT sc.project_id FROM user_project_scopes sc WHERE sc.user_id=?)) )
+                WHERE c.active=1 AND c.channel='web'
+                  AND (c.send_at IS NULL OR c.send_at<=CURRENT_TIMESTAMP)
+                  AND (c.end_at IS NULL OR c.end_at>CURRENT_TIMESTAMP)
+                  AND s.read_at IS NULL
+                  AND (s.snooze_until IS NULL OR s.snooze_until<=CURRENT_TIMESTAMP)
+                  -- MT2 §13.2 «Recipient Resolver»: ⛔ KHÔNG gửi cho người không nằm trong cấu hình.
+                  -- (Lỗi này đã bị `NotificationCenterTest` BẮT ĐƯỢC khi bản đầu chỉ lọc theo thời gian.)
+                  AND (c.recipient_mode='all' OR t.id IS NOT NULL)
+                ORDER BY c.created_at DESC,c.id LIMIT 100""",
+                ctx.userId(), ctx.userId(), ctx.userId(), ctx.userId()));
         data.put("constructionDailyLogs", pids.isEmpty() ? List.of() : query("""
                 SELECT l.id,l.log_no AS logNo,l.project_id AS projectId,p.code AS projectCode,
                        p.name AS projectName,l.warehouse_id AS warehouseId,l.work_date AS workDate,
@@ -1705,7 +1799,32 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
             }
             if (!anyModule(view, "requests", "approvals", "purchasing", "supplier_catalog",
                     "receiving", "delivered")) {
-                blank(data, "requests", "supplySteps", "purchaseOrders", "receipts");
+                // ⚠️ MT2-P4-02 VÁ LỖ RÒ DỮ LIỆU DUYỆT: điều kiện `anyModule(...)` ở trên **CÓ** kiểm
+                // `"approvals"` nhưng danh sách `blank(...)` ⛔ **thiếu `"approvals"`/`"approvalOverdue"`**
+                // ⇒ user KHÔNG có module duyệt vẫn nhận **nguyên dữ liệu card «phiếu chờ duyệt»** (rò dữ liệu).
+                // Nay đưa 2 khoá đó vào đúng cơ chế `blank(...)` sẵn có — ⛔ 0 cơ chế song song (§15).
+                blank(data, "requests", "supplySteps", "purchaseOrders", "receipts",
+                        "approvals", "approvalOverdue");
+            }
+            // ══════════════════════════════════════════════════════════════════════════════════════
+            // MT2-P4-02 (PHẦN 2) — §: «Ẩn card “phiếu chờ duyệt” cho user không đủ quyền
+            //   (**quản trị hệ thống HOẶC ≥ trưởng phòng**)» — **BACKEND là tầng quyết định** (GOAL §17).
+            // · Tiêu chí ADMIN lấy ĐÚNG theo `RbacService.isAdmin` = `"admin".equals(user.role())`
+            //   (ĐO từ mã — ⛔ KHÔNG phải `auto_grant_all` ✗).
+            // · «≥ trưởng phòng» = `system_level_catalog.level_rank >= 30`  (30 = `truong_phong`, ĐO từ CSDL ✔).
+            // · ⚠️ NULL / 0 dòng ⇒ **KHÔNG đủ** (⛔ không suy diễn thành đủ ✗).
+            // · ⛔ Chỉ đụng 2 khoá vùng duyệt — ⛔ KHÔNG đụng 4 khối `blank(...)` khác (tránh hồi quy).
+            // ══════════════════════════════════════════════════════════════════════════════════════
+            Integer levelRank = query("SELECT l.level_rank FROM users u "
+                    + "LEFT JOIN system_level_catalog l ON l.code=u.system_level_code WHERE u.id=?",
+                    ctx.userId()).stream().findFirst()
+                    .map(r -> r.get("level_rank") instanceof Number n ? n.intValue() : null)
+                    .orElse(null);
+            boolean laQuanTri = query("SELECT role FROM users WHERE id=?", ctx.userId()).stream().findFirst()
+                    .map(r -> "admin".equals(String.valueOf(r.get("role")))).orElse(false);
+            if (!laQuanTri && (levelRank == null || levelRank < 30)) {
+                // Vùng duyệt: PO/đơn chờ duyệt + lịch sử duyệt + số quá hạn.
+                blank(data, "approvals", "approvalOverdue");
             }
             if (!anyModule(view, "warehouse_receipt", "warehouse_issue", "inventory", "stocktake",
                     "central_warehouse", "material_catalog")) {

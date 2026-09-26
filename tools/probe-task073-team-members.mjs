@@ -61,6 +61,10 @@ let inserted = false;
 try {
   console.log("═══ TASK-073 · CỔNG `teamMembers` (khoá JAVa-only, bảng chưa từng có dữ liệu) ═══\n");
 
+  // ⚠️ MT2-P14-03c (#28) — DỌN TRƯỚC KHI ĐO MỨC NỀN: nếu lần chạy trước đã để lại fixture `PRB073-*` thì
+  // mức nền bị «phồng» ⇒ phép kiểm C8 («sau dọn = mức nền») ⛔ không thể đúng. Dọn đúng 2 id CỦA PROBE trước,
+  // rồi mới đo ⇒ mức nền phản ánh trạng thái SẠCH.
+  sql(`DELETE FROM team_members WHERE id IN (${q(ID_A)},${q(ID_B)})`);
   baseline = Number(sqlOne("SELECT COUNT(*) FROM team_members"));
   teamId = sqlOne("SELECT id FROM teams ORDER BY created_at LIMIT 1");
   console.log(`Mức nền: team_members = ${baseline} dòng · teams = ${sqlOne("SELECT COUNT(*) FROM teams")} · users = ${sqlOne("SELECT COUNT(*) FROM users")}`);
@@ -77,6 +81,11 @@ try {
   console.log(`Người dùng thật dùng làm mốc: ${realUser.id} · role=${realUser.role}\n`);
 
   // ── CẮM FIXTURE ───────────────────────────────────────────────────────────────
+  // ⚠️ MT2-P14-03c (#28) — VÁ TÍNH LẶP LẠI: bản cũ ⛔ không dọn fixture của LẦN CHẠY TRƯỚC ⇒
+  // `ERROR 1062 Duplicate entry 'PRB073-A' for key 'team_members.PRIMARY'` ⇒ ném ngoại lệ ⇒ «0/1 ĐẠT».
+  // Nay: DỌN TRƯỚC đúng 2 id CỦA CHÍNH PROBE (PRB073-*), rồi mới cắm ⇒ chạy lại được nhiều lần.
+  // ⛔ An toàn: chỉ xoá fixture do probe tạo (id cố định `PRB073-A/B`), ⛔ không chạm dữ liệu nghiệp vụ.
+  sql(`DELETE FROM team_members WHERE id IN (${q(ID_A)},${q(ID_B)})`);
   sql(`INSERT INTO team_members (id,team_id,user_id,role_in_team,joined_at,left_at,active,created_at,updated_at) VALUES
        (${q(ID_A)},${q(teamId)},${q(realUser.id)},'PROBE-073-A',${q(J_A)},NULL,1,${q(J_A)},${q(J_A)}),
        (${q(ID_B)},${q(teamId)},${q(ORPHAN_USER)},'PROBE-073-B',${q(J_B)},NULL,0,${q(J_B)},${q(J_B)})`);

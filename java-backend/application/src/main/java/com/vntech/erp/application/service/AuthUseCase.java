@@ -125,12 +125,17 @@ public final class AuthUseCase {
         }
         loginLockout.clearFailures(ipAddress, uname);
         User user = found.get();
+        // MT2-P12-04 (§13.3) — GHI MỐC ĐĂNG NHẬP GẦN NHẤT (danh sách tài khoản phải hiện Last Login).
+        // ⚠️ Ghi SAU khi xác thực thành công (⛔ đăng nhập sai ⛔ không được đụng cột này) và dùng CHUNG 1 mốc thời gian
+        //    với session để «đăng nhập lúc nào» khớp «phiên tạo lúc nào».
+        Instant loginAt = Instant.now();
+        userRepository.touchLastLogin(user.id(), loginAt);
         // Rotate hash nếu iterations cũ < 600.000 (hash từ bản JS giai đoạn đầu)
         if (passwordHasher.storedIterations(user.passwordHash()) < 600_000) {
             user.replacePasswordHash(passwordHasher.hash(pass));
             userRepository.save(user);
         }
-        SessionToken session = createSession(user.id(), Instant.now(), ipAddress, userAgent);
+        SessionToken session = createSession(user.id(), loginAt, ipAddress, userAgent);
         return new LoginResult(session, user.mustChangePassword());
     }
 
@@ -201,6 +206,30 @@ public final class AuthUseCase {
                 "{\"avatarUpdated\":" + (avatarDataUrl != null && !avatarDataUrl.isBlank()) + "}", null);
         return avatarDataUrl == null || avatarDataUrl.isBlank()
                 ? "Đã xóa ảnh đại diện." : "Đã cập nhật ảnh đại diện.";
+    }
+
+    /**
+     * MT2 §13.4 — cập nhật/xoá **CHỮ KÝ** của chính người dùng (action `update_profile_signature`).
+     * Soi gương {@link #updateProfileAvatar} (⛔ không tự đặt luật mới): cùng định dạng data-URL
+     * (JPG/PNG/WebP) và cùng giới hạn 2,8 MB; **rỗng/null ⇒ XOÁ** — đúng vế
+     * «Nếu upload ảnh mới ⇒ **xoá/thay ảnh cũ**» của §13.4 (mỗi user giữ **đúng 1** ảnh chữ ký).
+     */
+    public String updateProfileSignature(String userId, String signatureDataUrl) {
+        if (signatureDataUrl != null && !signatureDataUrl.isBlank()
+                && !signatureDataUrl.matches("(?i)^data:image/(png|jpeg|webp);base64,.*")) {
+            throw new ApiError("Chữ ký chỉ hỗ trợ JPG, PNG hoặc WebP.", 400);
+        }
+        if (signatureDataUrl != null && signatureDataUrl.length() > 2_800_000) {
+            throw new ApiError("Ảnh chữ ký vượt quá giới hạn 2 MB.", 400);
+        }
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ApiError("Không tìm thấy tài khoản.", 404));
+        user.changeSignature(signatureDataUrl);
+        userRepository.save(user);
+        auditLogPort.log(userId, "SIGNATURE_CHANGE", "user", userId, null,
+                "{\"signatureUpdated\":" + (signatureDataUrl != null && !signatureDataUrl.isBlank()) + "}", null);
+        return signatureDataUrl == null || signatureDataUrl.isBlank()
+                ? "Đã xóa chữ ký." : "Đã cập nhật chữ ký.";
     }
 
     /** User từ cookie mep_session (token thô) — hoặc empty nếu không hợp lệ. */

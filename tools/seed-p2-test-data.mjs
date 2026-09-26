@@ -675,7 +675,11 @@ const COT_MR = ["id", "request_no", "project_id", "team_id", "source_warehouse_i
 const COT_MRI = ["id", "request_id", "line_no", "material_id", "requested_qty", "stock_allocation_qty", "approved_purchase_qty", "ordered_qty", "received_qty", "issued_qty", "installed_qty", "delivered_qty", "line_status", "created_at", "updated_at", "estimated_unit_price"];
 const COT_PO = ["id", "po_no", "request_id", "project_id", "supplier_id", "receiving_warehouse_id", "buyer_user_id", "ordered_at", "eta", "status", "total_value", "created_at", "updated_at"];
 const COT_POI = ["id", "purchase_order_id", "request_item_id", "line_no", "ordered_qty", "unit_price", "received_qty", "closed_qty", "delivered_qty", "status", "created_at", "updated_at"];
-const COT_GRN = ["id", "receipt_no", "purchase_order_id", "warehouse_id", "received_by", "received_at", "delivery_note_no", "qc_status", "document_status", "posting_status", "bch_confirmation_status", "created_at", "updated_at"];
+// ⚠️ MT2-P14-03c (23/09/2026) — VÁ LỖI CÔNG CỤ SEED (#22): bản cũ ghi `bch_confirmation_status='confirmed'`
+// nhưng ⛔ THIẾU `bch_confirmed_by`/`bch_confirmed_at` ⇒ `probe-task082-realdata` báo HỎNG ĐÚNG
+// («mọi phiếu đã BCH xác nhận đều có TÊN người xác nhận THẬT») và UI rơi vào chữ dự phòng.
+// Mã SẢN PHẨM ghi đủ (`PurchaseStoreAdapter:554`) ⇒ lỗi ở SEED. Nay thêm 2 cột + giá trị người xác nhận THẬT.
+const COT_GRN = ["id", "receipt_no", "purchase_order_id", "warehouse_id", "received_by", "received_at", "delivery_note_no", "qc_status", "document_status", "posting_status", "bch_confirmation_status", "bch_confirmed_by", "bch_confirmed_at", "created_at", "updated_at"];
 const COT_GRI = ["id", "receipt_id", "purchase_order_item_id", "received_qty", "accepted_qty", "rejected_qty", "lot_no", "qc_result", "created_at", "updated_at"];
 
 function sinhCauLenh(kh) {
@@ -729,8 +733,10 @@ function sinhCauLenh(kh) {
   const grnRows = [...kh.keHoachGRN.entries()]
     .sort((a, b) => a[0].localeCompare(b[0]))
     .map(([id, v]) => [
+      // MT2-P14-03c (#22): thêm `bch_confirmed_by` = người dùng THẬT của seed + `bch_confirmed_at` = thời điểm seed
+      // ⇒ khớp đúng thứ tự cột trong `COT_GRN` (bch_confirmation_status → bch_confirmed_by → bch_confirmed_at → created_at → updated_at).
       S(id), S(v.receipt_no), S(v.po_id), S(v.warehouse_id), S(kh.nguoiDung), T(),
-      "NULL", "'accepted'", "'complete'", "'posted'", "'confirmed'", T(), T(),
+      "NULL", "'accepted'", "'complete'", "'posted'", "'confirmed'", S(kh.nguoiDung), T(), T(), T(),
     ]);
   them("goods_receipts", insertNhieu("goods_receipts", COT_GRN, grnRows), grnRows.length);
 

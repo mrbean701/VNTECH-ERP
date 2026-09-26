@@ -46,7 +46,13 @@ ok("(B1) đối chứng DƯƠNG: ≥30 module phòng ban ở mỗi CSDL", myDept
 ok("(B1) đối chứng DƯƠNG: fallback ≥10 nhóm", fallbackGroups.length >= 10, `${fallbackGroups.length}`);
 
 const DEAD_NEEDLES = ["department_management", "openDeptSubgroups", "mobileDepartmentExpanded", "deptMenuStorageKey", "mobileDepartmentStorageKey", "toggleDeptSubgroup", "data-dept", "mobile-nav-expanded"];
-const findDead = (text) => DEAD_NEEDLES.filter((n) => text.includes(n));
+// ⚠️ SỬA BÁO OAN (MT2-P14-03c, 23/09/2026): needle `data-dept` khớp CHUỖI CON nên bắt luôn marker
+// **ĐANG SỐNG** `data-dept-filter="AD-08"` (bộ lọc phòng ban của task AD-08, `app/page.tsx:1823`).
+// Cơ chế CHẾT cần dò là nhóm menu/khối `department_management`, ⛔ không phải mọi tiền tố `data-dept`.
+// Nay: needle `data-dept` chỉ tính khi **KHÔNG** phải `data-dept-filter`.
+const findDead = (text) => DEAD_NEEDLES.filter((n) => (n === "data-dept"
+  ? /data-dept(?!-filter)/.test(text)
+  : text.includes(n)));
 const probeSample = 'const x = "department_management"; const y=openDeptSubgroups;';
 ok("(B2) đối chứng ÂM: bộ dò PHẢI phát hiện được mẫu cố ý", findDead(probeSample).length === 2, findDead(probeSample).join(", "));
 ok("(B2) đối chứng ÂM: chuỗi sạch PHẢI coi là sạch", findDead("const x = 'site_command';").length === 0, "0 dấu vết");
@@ -70,7 +76,13 @@ ok("(C) cổng CSS quét HỢP NHẤT app/ + lib/", appWalk >= 0 && libWalk > ap
 ok("(C) nhánh cây dự án (sentinel) đã dọn theo KP #96", (page.split("__site_command_tree_disabled__").length - 1) === 0, `${page.split("__site_command_tree_disabled__").length - 1}`);
 ok("(C) còn nhánh render con mặc định", (page.match(/group\.children\.map\(\(item\)/g) || []).length === 2, `${(page.match(/group\.children\.map\(\(item\)/g) || []).length}`);
 ok("(C) còn phân quyền đọc nhãn nhóm con (subGroup SỐNG)", (page.match(/item\.subGroup\?/g) || []).length === 2, `${(page.match(/item\.subGroup\?/g) || []).length}`);
-ok("(C) còn 37 literal nhóm phòng ban trỏ nhóm THẬT", (page.match(/subGroup: "/g) || []).length === 37, `${(page.match(/subGroup: "/g) || []).length}`);
+// ⚠️ SỬA BÁO OAN (MT2-P14-03c, 23/09/2026): 37 literal `subGroup: "` KHÔNG còn ở `app/page.tsx` mà đã được
+// CHUYỂN sang **nguồn sự thật của menu** `lib/menu-helpers.ts` (bảng module + nhóm con) — đo được
+// `app/page.tsx` = **0** · `lib/menu-helpers.ts` = **37**. Nay đếm ở ĐÚNG tệp đang khai báo (⛔ vẫn giữ nguyên
+// ngưỡng 37 để phát hiện mất literal), và vẫn kiểm `page.tsx` dùng `item.subGroup?` khi render.
+const menuHelpersText = readFileSync("lib/menu-helpers.ts", "utf8");
+ok("(C) còn 37 literal nhóm phòng ban trỏ nhóm THẬT", (menuHelpersText.match(/subGroup: "/g) || []).length === 37,
+  `menu-helpers.ts ${(menuHelpersText.match(/subGroup: "/g) || []).length} · page.tsx ${(page.match(/subGroup: "/g) || []).length}`);
 
 const failed = checks.filter((c) => !c.pass);
 for (const c of checks) console.log(`  ${c.pass ? "ĐẠT " : "HỎNG"} ${c.label}${c.detail ? "  —  " + c.detail : ""}`);

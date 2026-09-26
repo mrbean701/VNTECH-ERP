@@ -112,17 +112,101 @@ public class SystemSettingsStoreAdapter implements SystemSettingsStore {
         return before;
     }
 
+    /**
+     * MT2-P14-03b — NGỮ CẢNH TRUST ROOT để xác minh license. ⛔ KHÔNG hard-code: đọc từ CSDL như JS đọc
+     * {@code VNTECH_IDENTITY} + {@code TRUST_STATE}. Nguồn: {@code vntech_trust_settings} hàng
+     * {@code TRUST-ROOT} ({@code V3__reference_seed.sql:361}) và {@code vntech_product_identity} (1 hàng).
+     *
+     * <p>⚠️ BÀI HỌC ĐO ĐƯỢC (đã trả giá 1 vòng test): <b>H2 trả NHÃN CỘT VIẾT HOA</b> ({@code TENANTID}) còn
+     * MySQL giữ nguyên camelCase ({@code tenantId}) ⇒ đọc map bằng khoá camelCase thì trên H2 mọi giá trị
+     * RỖNG (hệ quả đo được: xác minh báo «keyId không thuộc Trust Root», «không thuộc tenant/công ty»,
+     * «Unable to decode key») ⇒ PHẢI tra khoá <b>KHÔNG phân biệt hoa/thường</b>.
+     */
+    @Override
+    public Map<String, Object> readTrustIdentity() {
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("tenantId", "");
+        out.put("companyCode", "");
+        out.put("keyId", "");
+        out.put("publicKeyPem", "");
+        out.put("machineFingerprint", "");
+        out.put("productId", "");
+        first("""
+                SELECT tenant_id AS tenantId, company_code AS companyCode, key_id AS keyId,
+                       public_key_pem AS publicKeyPem, machine_fingerprint AS machineFingerprint
+                  FROM vntech_trust_settings WHERE id='TRUST-ROOT'""")
+                .ifPresent((row) -> {
+                    out.put("tenantId", blankToEmpty(field(row, "tenantId")));
+                    out.put("companyCode", blankToEmpty(field(row, "companyCode")));
+                    out.put("keyId", blankToEmpty(field(row, "keyId")));
+                    out.put("publicKeyPem", blankToEmpty(field(row, "publicKeyPem")));
+                    out.put("machineFingerprint", blankToEmpty(field(row, "machineFingerprint")));
+                });
+        first("SELECT id AS productId FROM vntech_product_identity ORDER BY created_at LIMIT 1")
+                .ifPresent((row) -> out.put("productId", blankToEmpty(field(row, "productId"))));
+        return out;
+    }
+
+    /** Tra giá trị theo tên cột KHÔNG phân biệt hoa/thường (H2 trả HOA, MySQL trả camelCase). */
+    private static Object field(Map<String, Object> row, String name) {
+        for (Map.Entry<String, Object> entry : row.entrySet()) {
+            if (entry.getKey() != null && entry.getKey().equalsIgnoreCase(name)) return entry.getValue();
+        }
+        return null;
+    }
+
+    private static String blankToEmpty(Object value) {
+        return value == null ? "" : String.valueOf(value);
+    }
+
+    /**
+     * MT2-P14-03b — ghi license ĐÃ XÁC MINH bằng <b>ĐÚNG 18 cột thật</b> của
+     * {@code vntech_license_installations} (port JS {@code install_license_foundation}).
+     *
+     * <p>⚠️ Dùng <b>UPDATE-then-INSERT</b> thay cho {@code ON DUPLICATE KEY UPDATE} của JS để chạy được
+     * trên <b>CẢ</b> MySQL (production) <b>VÀ</b> H2 (test) — cùng nghiệp vụ: mỗi {@code license_id} giữ 1 hàng.
+     */
     @Override @Transactional
-    public void installLicenseFoundation(String licenseKey, String companyName, String edition, String activatedBy,
-                                         Instant now) {
+    public void installLicenseFoundation(Map<String, Object> installation) {
+        String licenseId = String.valueOf(installation.getOrDefault("licenseId", ""));
+        int updated = jdbcTemplate.update("""
+                UPDATE vntech_license_installations
+                   SET payload_json=?,signature_base64=?,status=?,valid_from=?,valid_until=?,
+                       machine_fingerprint=?,verification_detail_json=?,installed_by=?,last_verified_at=?,
+                       revoked_at=NULL,updated_at=?
+                 WHERE license_id=?""",
+                installation.get("payloadJson"), installation.get("signatureBase64"), installation.get("status"),
+                installation.get("validFrom"), installation.get("validUntil"),
+                installation.get("machineFingerprint"), installation.get("verificationDetailJson"),
+                installation.get("installedBy"), installation.get("now"), installation.get("now"), licenseId);
+        if (updated == 0) {
+            jdbcTemplate.update("""
+                    INSERT INTO vntech_license_installations
+                        (id,license_id,tenant_id,company_code,product_id,key_id,payload_json,signature_base64,
+                         status,valid_from,valid_until,machine_fingerprint,verification_detail_json,installed_by,
+                         installed_at,last_verified_at,revoked_at,updated_at)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NULL,?)""",
+                    installation.get("id"), licenseId, installation.get("tenantId"),
+                    installation.get("companyCode"), installation.get("productId"), installation.get("keyId"),
+                    installation.get("payloadJson"), installation.get("signatureBase64"),
+                    installation.get("status"), installation.get("validFrom"), installation.get("validUntil"),
+                    installation.get("machineFingerprint"), installation.get("verificationDetailJson"),
+                    installation.get("installedBy"), installation.get("now"), installation.get("now"),
+                    installation.get("now"));
+        }
+    }
+
+    /** MT2-P14-03b — nhật ký trust ({@code vntech_trust_audit}) — Development Mode, enforcement tắt. */
+    @Override @Transactional
+    public void recordTrustAudit(String eventType, String actorUserId, String licenseId,
+                                 String machineFingerprint, String detailJson, Instant now) {
         jdbcTemplate.update("""
-                INSERT INTO vntech_license_installations (id,license_key,company_name,edition,status,activated_by,
-                                                          activated_at,created_at)
-                VALUES (?,?,?,?,'active',?,?,?)
-                ON DUPLICATE KEY UPDATE company_name=VALUES(company_name),edition=VALUES(edition),
-                    status='active',activated_by=VALUES(activated_by),activated_at=VALUES(activated_at)""",
-                "LCN" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase(), licenseKey,
-                companyName, edition, activatedBy, now, now);
+                INSERT INTO vntech_trust_audit
+                    (id,event_type,actor_user_id,trust_mode,enforcement_enabled,license_id,machine_fingerprint,
+                     detail_json,occurred_at)
+                VALUES (?,?,?,'development',0,?,?,?,?)""",
+                "TA" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase(), eventType,
+                actorUserId, licenseId, machineFingerprint, detailJson, now);
     }
 
     @Override
@@ -130,18 +214,24 @@ public class SystemSettingsStoreAdapter implements SystemSettingsStore {
         return first("SELECT * FROM vntech_license_installations WHERE id=?", id);
     }
 
+    /**
+     * MT2-P14-03b — yêu cầu chuyển/khôi phục license, port JS {@code request_license_transfer}:
+     * 12 cột thật của {@code vntech_license_transfer_requests} (⚠️ {@code status='requested'} — KHÔNG phải
+     * {@code 'pending'}) và ⛔ <b>KHÔNG</b> đụng {@code vntech_license_installations} (JS không làm vậy).
+     */
     @Override @Transactional
-    public void requestLicenseTransfer(String licenseId, String toCompanyName, String reason, String requestedBy,
-                                       Instant now) {
+    public void requestLicenseTransfer(String licenseId, String sourceFingerprint, String destinationFingerprint,
+                                       String reason, String requestedBy, Instant now) {
         jdbcTemplate.update("""
-                INSERT INTO vntech_license_transfer_requests (id,license_id,to_company_name,reason,status,
-                                                              requested_by,created_at)
-                VALUES (?,?,?,?,'pending',?,?)""",
-                "LTR" + java.util.UUID.randomUUID().toString().substring(0, 8), licenseId, toCompanyName,
+                INSERT INTO vntech_license_transfer_requests
+                    (id,license_id,source_machine_fingerprint,destination_machine_fingerprint,recovery_code_hash,
+                     reason,status,requested_by,requested_at,approved_at,completed_at,detail_json)
+                VALUES (?,?,?,?,NULL,?,'requested',?,?,NULL,NULL,NULL)""",
+                "LTR" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase(),
+                licenseId == null || licenseId.isBlank() ? null : licenseId,
+                sourceFingerprint == null || sourceFingerprint.isBlank() ? null : sourceFingerprint,
+                destinationFingerprint == null || destinationFingerprint.isBlank() ? null : destinationFingerprint,
                 reason, requestedBy, now);
-        jdbcTemplate.update("""
-                UPDATE vntech_license_installations SET status='transfer_requested',updated_at=? WHERE id=?""",
-                now, licenseId);
     }
 
     /**

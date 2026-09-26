@@ -20,14 +20,18 @@ const SHOT_DIR = join(tmpdir(), "vntech-artifacts");
 mkdirSync(SHOT_DIR, { recursive: true });
 
 const EXPECTED_GROUPS = [
-  "CÔNG VIỆC CỦA TÔI", "QUẢN LÝ DỰ ÁN", "MEP", "MUA HÀNG & CUNG ỨNG",
+  // ⚠️ MT2-P14-03c (23/09/2026) — VÁ TÊN NHÓM: nguồn `lib/menu-helpers.ts:101` ghi «NHÓM MENU «CÔNG VIỆC»
+  // TÁCH THÀNH 5 MỤC» ⇒ nhãn hiện hành là **«CÔNG VIỆC»** (bản cũ để «CÔNG VIỆC CỦA TÔI» ⇒ ❌ OAN).
+  "CÔNG VIỆC", "QUẢN LÝ DỰ ÁN", "MEP", "MUA HÀNG & CUNG ỨNG",
   "KHO VẬT TƯ", "TỔ ĐỘI", "TÀI CHÍNH – KẾ TOÁN", "HÀNH CHÍNH – PHÁP CHẾ",
   "BÁO CÁO", "DANH MỤC VẬT TƯ GỐC", "QUẢN TRỊ HỆ THỐNG",
 ];
 // Danh sách tab CỐ ĐỊNH của màn phân quyền (12 tab tại đợt P6).
 // Chỉ khẳng định các tab NÀY PHẢI CÓ MẶT — KHÔNG khẳng định tổng số, để việc thêm tab
 // ở đợt sau không làm probe cũ báo lỗi sai.
-const EXPECTED_TABS = ["Nhân sự", "Tổ chức", "Chức danh / vai trò", "Nhóm quyền nghiệp vụ",
+// ⚠️ MT2-P14-03c (23/09/2026) — VÁ TÊN TAB 1 THEO AD-01: nguyên văn roadmap «Đổi tên **Nhân sự → Tài khoản**»
+// (`app/screens/admin-governance-pure.ts` · `ADMIN_STEP_LABELS[0] = "Tài khoản"`). Bản cũ còn để «Nhân sự» ⇒ ❌ OAN.
+const EXPECTED_TABS = ["Tài khoản", "Tổ chức", "Chức danh / vai trò", "Nhóm quyền nghiệp vụ",
   "Phân quyền phòng ban", "Phân quyền người dùng", "Cấp bậc hệ thống", "Phạm vi dự án & kho",
   "Workflow phê duyệt", "Ngoại lệ cá nhân", "Audit log", "Cấu hình hệ thống"];
 
@@ -117,7 +121,7 @@ check(orphanFree === true, "Không còn nhóm cũ department_management / overvi
 check(labels.includes("MEP"), "Có nhóm MEP tách riêng");
 check(labels.includes("TÀI CHÍNH – KẾ TOÁN"), "Có nhóm Tài chính – Kế toán tách riêng");
 check(labels.includes("HÀNH CHÍNH – PHÁP CHẾ"), "Có nhóm Hành chính – Pháp chế tách riêng");
-check(labels.includes("CÔNG VIỆC CỦA TÔI"), "Có nhóm Công việc của tôi");
+check(labels.includes("CÔNG VIỆC"), "Có nhóm «CÔNG VIỆC» (nguồn: lib/menu-helpers.ts:101)");
 const totalChildren = groups.reduce((s, g) => s + g.children, 0);
 check(totalChildren >= 55, "Tổng chức năng hiển thị đủ (>=55)", `thực tế ${totalChildren}`);
 await shot("sidebar");
@@ -135,9 +139,13 @@ if (!Array.isArray(tabs) || !tabs.length) {
 }
 const tabNames = (tabs || []).map((x) => String(x).replace(/^\d+\s*/, "").trim());
 tabNames.forEach((x, i) => console.log(`     ${i + 1}. ${x}`));
-check(tabNames.length === EXPECTED_TABS.length, `Đúng ${EXPECTED_TABS.length} tab`, `thực tế ${tabNames.length}`);
+// ⚠️ MT2-P14-03c (23/09/2026) — VÁ 2 KỲ VỌNG CŨ (⛔ KHÔNG hạ nhẹ: vẫn đòi ĐỦ mọi tab bắt buộc, chỉ ⛔ không khoá tổng số):
+//  • tổng số tab: bản cũ đòi «ĐÚNG 12» — nhưng MT2-P12-01 đã THÊM tab «Thông báo» (12 → 13) ⇒ khoá tổng số là SAI
+//    (chính chú thích đầu tệp đã ghi «⛔ KHÔNG khẳng định tổng số, để việc thêm tab ở đợt sau không làm probe cũ báo lỗi sai»).
+//  • tab 1: «Nhân sự» → **«Tài khoản»** (AD-01).
+check(tabNames.length >= EXPECTED_TABS.length, `Có ÍT NHẤT ${EXPECTED_TABS.length} tab (⛔ không khoá tổng số)`, `thực tế ${tabNames.length}`);
 for (const want of EXPECTED_TABS) check(tabNames.includes(want), `Có tab "${want}"`);
-check(tabNames[0] === "Nhân sự", 'Tab 1 là "Nhân sự"', tabNames[0] || "(trống)");
+check(tabNames[0] === "Tài khoản", 'Tab 1 là "Tài khoản" (AD-01: Nhân sự → Tài khoản)', tabNames[0] || "(trống)");
 check(tabNames[1] === "Tổ chức", 'Tab 2 là "Tổ chức"', tabNames[1] || "(trống)");
 
 // ---- 3) Mở từng tab, bắt lỗi JS --------------------------------------------

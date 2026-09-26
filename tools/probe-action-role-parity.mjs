@@ -84,23 +84,32 @@ for (let m; (m = reCase.exec(ctrl)); ) {
   });
 }
 
-// ── 3) Java: tập phương thức có gọi rbac.requireRole ────────────────────────────────────────
-const roleMethods = new Set();        // "TenUseCase.method" và cả "method"
+// ── 3) Java: map method bodies and resolve delegated calls ──────────────────────────────────
+const methodBodies = new Map();
 for (const file of walkJava(JAVA_ROOT)) {
   const src = readFileSync(file, "utf8");
-  if (!src.includes("rbac.requireRole")) continue;
   const useCase = file.replace(/\\/g, "/").split("/").pop().replace(".java", "");
-  const reMethod = /\n {4}(?:public|private|protected)[^\n{;]*\([^)]*\)[^\n{;]*\{/g;
+  const reMethod = /\n\s{0,8}(?:public|private|protected)[^\n{;]*\([^)]*\)[^\n{;]*\{/g;
   for (let m; (m = reMethod.exec(src)); ) {
-    const openIdx = m.index + m[0].length - 1;
-    const body = sliceBlock(src, openIdx);
-    if (!body.includes("rbac.requireRole")) continue;
-    const nameMatch = /(\w+)\s*\(/.exec(m[0].replace(/^[\s\S]*?\b(\w+)\s*\(/, "$&"));
-    const decl = m[0];
-    const name = (decl.match(/(\w+)\s*\([^)]*\)\s*\{$/) || [])[1];
-    if (name) { roleMethods.add(name); roleMethods.add(`${useCase}.${name}`); }
-    void nameMatch;
+    const name = (m[0].match(/(\w+)\s*\([^)]*\)\s*\{$/) || [])[1];
+    if (name) methodBodies.set(`${useCase}.${name}`, sliceBlock(src, m.index + m[0].length - 1));
   }
+}
+function hasRoleCheck(key, seen = new Set()) {
+  if (seen.has(key)) return false;
+  seen.add(key);
+  const body = methodBodies.get(key);
+  if (!body) return false;
+  if (body.includes("rbac.requireRole")) return true;
+  for (const call of body.matchAll(/\b(\w+)\s*\(/g)) {
+    if (hasRoleCheck(`${key.split(".")[0]}.${call[1]}`, seen)) return true;
+  }
+  return false;
+}
+const roleMethods = new Set();
+for (const key of methodBodies.keys()) if (hasRoleCheck(key)) {
+  roleMethods.add(key);
+  roleMethods.add(key.split(".")[1]);
 }
 
 // ── 4) Đối chiếu ───────────────────────────────────────────────────────────────────────────

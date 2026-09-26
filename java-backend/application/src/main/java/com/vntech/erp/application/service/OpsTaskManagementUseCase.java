@@ -28,15 +28,102 @@ public final class OpsTaskManagementUseCase {
     private final IdGenerator idGenerator;
     private final RbacService rbac;
     private final AccessScopeService accessScope;
+    private final NotificationManagementUseCase notifications;
+    /** MT2-P4-01/P5-03/P5-04 (§3.2) — phạm vi xem/giao công việc theo CẤP BẬC (SELF/DEPARTMENT/COMPANY). */
+    private final com.vntech.erp.application.rbac.WorkScopeService workScope;
 
-    public OpsTaskManagementUseCase(OpsTaskStore store, IdGenerator idGenerator, RbacService rbac, AccessScopeService accessScope) {
+    public OpsTaskManagementUseCase(OpsTaskStore store, IdGenerator idGenerator, RbacService rbac,
+                                    AccessScopeService accessScope,
+                                    NotificationManagementUseCase notifications,
+                                    com.vntech.erp.application.rbac.WorkScopeService workScope) {
         this.store = store;
         this.idGenerator = idGenerator;
         this.rbac = rbac;
         this.accessScope = accessScope;
+        this.notifications = notifications;
+        this.workScope = workScope;
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════════════════════════════
+    // MT2-P4-01 / P5-03 (§3.2 · đề án ①A user chốt 26/09/2026) — ĐỌC PHẠM VI XEM/GIAO THEO CẤP BẬC
+    // §3.2:41 «Trưởng phòng trở lên → xem công việc của nhân viên thuộc phòng ban mình …»
+    // §3.2:42 «Phó giám đốc trở lên → xem công việc toàn bộ phòng ban · toàn bộ nhân viên công ty ·
+    //           giao việc toàn công ty theo quyền»
+    // ⇒ Trả payload cho UI P5-03 hiển thị «quyền xem/giao theo cấp» — ⛔ CHỈ ĐỌC, ⛔ không mở quyền mới:
+    //    nguồn duy nhất là WorkScopeService (ngưỡng 30/35 ĐO từ `system_level_catalog`).
+    // ══════════════════════════════════════════════════════════════════════════════════════════════════
+    public Map<String, Object> workScope(Principal principal) {
+        AuthUseCase.CurrentUser cu = principalAsCurrent(principal);
+        com.vntech.erp.application.rbac.WorkScopeService.Scope scope =
+                workScope.scopeOf(cu.id(), cu.role());
+        Map<String, Object> out = new LinkedHashMap<>(scope.toMap());
+        out.put("userId", cu.id());
+        out.put("role", cu.role());
+        out.put("levelRankTruongPhong", com.vntech.erp.application.rbac.WorkScopeService.TRUONG_PHONG_MIN_RANK);
+        out.put("levelRankPhoGiamDoc", com.vntech.erp.application.rbac.WorkScopeService.PHO_GIAM_DOC_MIN_RANK);
+        return out;
+    }
+
+    /**
+     * MT2-P4-01/P5-04 (§3.2) — <b>được giao việc cho phòng `departmentCode` hay không</b>.
+     *
+     * <p>Giữ NGUYÊN luật cũ ({@code userIsDepartmentManager}) và <b>chỉ THÊM</b> tầng MT2 §3.2:42
+     * «Phó giám đốc trở lên → giao việc <b>toàn công ty</b> theo quyền». ⛔ KHÔNG nới cho tầng thấp hơn,
+     * ⛔ KHÔNG bỏ kiểm tra quyền module ở tầng controller/RBAC.
+     */
+    private boolean canAssignToDepartment(AuthUseCase.CurrentUser cu, String departmentCode) {
+        if (store.userIsDepartmentManager(cu.id(), departmentCode)) return true;
+        com.vntech.erp.application.rbac.WorkScopeService.Scope scope =
+                workScope.scopeOf(cu.id(), cu.role());
+        return scope.kind() == com.vntech.erp.application.rbac.WorkScopeService.Kind.COMPANY
+                && workScope.canAssignDepartment(scope, departmentCode);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════════════════════════════
+    // MT2-P4-03 (§4.1) — CARD «CHỜ GIÁM ĐỐC DUYỆT»
+    // §4.1:52 «➕ **Phải có card “Chờ Giám đốc duyệt”** — lấy dữ liệu **THỰC** từ workflow/approval engine.»
+    // §4.1:51 «… Kiểm permission/RBAC **ở backend**.» ⇒ quyền = **admin** HOẶC **≥ trưởng phòng** (rank ≥ 30)
+    //   (30 = `system_level_catalog.truong_phong` — ĐO từ CSDL ✔, ⛔ không bịa ✗)
+    // ⛔ CHỈ ĐỌC — ⛔ KHÔNG đụng luồng duyệt (`decideApproval`) ✗ (GOAL §20 WORKFLOW SAFETY ✔)
+    // ══════════════════════════════════════════════════════════════════════════════════════════════════
+
+    /** Mã quyền của bước «Giám đốc» — ĐO từ `approval_stage_catalog` bước 5 = `director,tgd,giam_doc` ✔ */
+    public static final List<String> DIRECTOR_ROLE_CODES = List.of("director", "tgd", "giam_doc");
+    /** Ngưỡng «≥ trưởng phòng» — `system_level_catalog.level_rank` của `truong_phong` (ĐO ✔). */
+    public static final int DIRECTOR_MIN_RANK = 30;
+
+    /**
+     * Card «Chờ Giám đốc duyệt» — **dữ liệu THỰC** từ approval engine (§4.1).
+     * ⚠️ Lọc theo **`allowed_role_codes_snapshot`** (⛔ **KHÔNG** lọc `stage_no` ✗ — bước 5 có 2 snapshot ✗).
+     *
+     * @throws AuthUseCase.ApiError 403 nếu **không** phải admin và **không** đủ cấp (⛔ mặc định TỪ CHỐI ✗)
+     */
+    public Map<String, Object> directorPendingApprovals(Principal principal) {
+        AuthUseCase.CurrentUser cu = principalAsCurrent(principal);
+        Integer rank = store.userLevelRank(cu.id());
+        boolean duQuyen = rbac.isAdmin(cu) || (rank != null && rank >= DIRECTOR_MIN_RANK);
+        if (!duQuyen) {
+            throw new AuthUseCase.ApiError(
+                    "Tài khoản chưa đủ quyền xem vùng phê duyệt (cần quản trị hệ thống hoặc từ Trưởng phòng trở lên).",
+                    403);
+        }
+        List<Map<String, Object>> rows = store.pendingApprovalsForRoleCodes(DIRECTOR_ROLE_CODES);
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("approvals", rows);
+        result.put("total", rows.size());
+        return result;
     }
 
     /** Dựng CurrentUser cho tầng RBAC — roleBase là mã ENGINE do controller truyền xuống. */
+    // ---- notification side effects ----
+    private void notifySafely(String eventKey) {
+        try {
+            notifications.dispatch(eventKey);
+        } catch (RuntimeException ignored) {
+            // Task state and history remain authoritative if user notification configuration is absent/invalid.
+        }
+    }
+
     private AuthUseCase.CurrentUser principalAsCurrent(Principal p) {
         return new AuthUseCase.CurrentUser(p.userId(), "", p.fullName(), p.email(), p.role(),
                 p.roleBase(), p.role(), null, null, null, false);
@@ -295,6 +382,7 @@ public final class OpsTaskManagementUseCase {
         store.updateWorkItemStatus(u, now);
         store.insertWorkItemEvent(idGenerator.next("EVT"), taskId, "STATUS", currentStatus, next,
                 principal.userId(), null, null, reason.isEmpty() ? null : reason, null, now);
+        notifySafely("COMPLETED".equals(next) ? "TASK_COMPLETED" : "TASK_STATUS_CHANGED");
         return Map.of("message", "Đã chuyển " + sv(task, "task_no") + " sang " + next
                 + ". SLA gốc vẫn tính từ assigned_at; thời gian chờ hợp lệ được tách khỏi lỗi công việc.");
     }
@@ -314,6 +402,7 @@ public final class OpsTaskManagementUseCase {
         store.reassignWorkItem(taskId, nextUser, principal.userId(), now);
         store.insertWorkItemEvent(idGenerator.next("EVT"), taskId, "REASSIGNED", sv(task, "status"), "NEW",
                 principal.userId(), sv(task, "assigned_to"), nextUser, reason, null, now);
+        notifySafely("TASK_REASSIGNED");
         return Map.of("message", "Đã chuyển nhiệm vụ cho nhân sự mới; SLA trách nhiệm mới bắt đầu ngay tại thời điểm giao lại và toàn bộ lịch sử được giữ.");
     }
 

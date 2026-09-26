@@ -41,11 +41,18 @@ public interface HrStore {
     // ---- legal documents ----
     Optional<Map<String, Object>> findLegalDocument(String id);
     Optional<Map<String, Object>> findLegalDocumentByDocNo(String docNo);
+    /**
+     * MT2 §10.4 (đề án ②A user chốt 26/09/2026) — thêm {@code correspondenceId}: khoá liên kết
+     * văn bản pháp lý ↔ công văn (mới có ở {@code V31}).
+     * ⛔ KHÔNG đặt FK cứng ở CSDL (dữ liệu cũ có thể trỏ công văn đã dọn); tầng ứng dụng
+     * chịu trách nhiệm chấp nhận rỗng = «chưa gắn công văn».
+     */
     void insertLegalDocument(String id, String docNo, String docType, String title, String issueDate, String issuer,
                              String effectiveDate, String expiryDate, String scope, String attachmentId,
-                             String createdBy, Instant now);
+                             String correspondenceId, String createdBy, Instant now);
     void updateLegalDocument(String id, String docNo, String docType, String title, String issueDate, String issuer,
-                             String effectiveDate, String expiryDate, String scope, String attachmentId, Instant now);
+                             String effectiveDate, String expiryDate, String scope, String attachmentId,
+                             String correspondenceId, Instant now);
     void setLegalDocumentStatus(String id, String status, Instant now);
     void deleteLegalDocument(String id);
 

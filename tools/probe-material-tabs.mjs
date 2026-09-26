@@ -84,10 +84,15 @@ const bar = JSON.parse(await ev(`(()=>{
 })()`));
 console.log("   " + JSON.stringify(bar).slice(0, 260));
 check("Màn danh mục vật tư render", bar.found === true);
-check("Có thanh TAB (3 tab)", (bar.tabs || []).length === 3, (bar.tabs || []).join(" · "));
-check("Tab 1 = Danh mục vật tư", /danh mục vật tư/i.test((bar.tabs || [])[0] || ""), (bar.tabs || [])[0]);
-check("Tab 2 = So sánh/Đối chiếu BOQ", /boq/i.test((bar.tabs || [])[1] || ""), (bar.tabs || [])[1]);
-check("Tab 3 = Soát trùng Alias", /alias/i.test((bar.tabs || [])[2] || ""), (bar.tabs || [])[2]);
+// ⚠️ CẬP NHẬT 23/09/2026 (MT2 §2 + P11-05 SKIPPED): 2 tab «So sánh/Đối chiếu BOQ» và «Soát trùng Alias» thuộc phần
+// **TẠM BỎ QUA** của MASTER TASK 2 (đã ghi SKIPPED, ⛔ không tạo task) ⇒ ⛔ KHÔNG được kỳ vọng chúng tồn tại.
+// Đo trên UI đang chạy: thanh tab hiện là «Danh sách vật tư · Danh mục nhóm con mã vật tư gốc · Mã vật tư gốc».
+check("Có thanh TAB (3 tab theo hiện trạng)", (bar.tabs || []).length === 3, (bar.tabs || []).join(" · "));
+check("Tab 1 = Danh sách vật tư", /danh sách vật tư|danh mục vật tư/i.test((bar.tabs || [])[0] || ""), (bar.tabs || [])[0]);
+check("⛔ KHÔNG còn tab «So sánh/Đối chiếu BOQ» (MT2 §2 — TẠM BỎ QUA)",
+  !(bar.tabs || []).some((t) => /boq/i.test(String(t))), (bar.tabs || []).join(" · "));
+check("⛔ KHÔNG còn tab «Soát trùng Alias» (MT2 §2 — TẠM BỎ QUA)",
+  !(bar.tabs || []).some((t) => /alias/i.test(String(t))), (bar.tabs || []).join(" · "));
 
 // Đo khối nào đang HIỆN (display khác none)
 const visibleIn = async () => JSON.parse(await ev(`(()=>{

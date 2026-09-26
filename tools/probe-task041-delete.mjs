@@ -41,7 +41,13 @@ async function call(action, payload = {}) {
 
 const activeBefore = mysql("SELECT GROUP_CONCAT(CONCAT(stage_no,':',active) ORDER BY stage_no) FROM approval_stage_catalog");
 const countBefore = mysql("SELECT COUNT(*) FROM approval_stage_catalog");
+// ⚠️ MT2-P14-03c (23/09/2026) — GHI NHỚ TẬP BƯỚC ĐANG BẬT LÚC ĐẦU để khôi phục ĐÚNG (xem `finally`).
+const initialActive = new Set(
+  (mysql("SELECT GROUP_CONCAT(stage_no) FROM approval_stage_catalog WHERE active=1") || "")
+    .split(",").map((s) => s.trim()).filter((s) => /^\d+$/.test(s))
+);
 console.log(`TRƯỚC: ${countBefore} bước · active ${activeBefore}\n`);
+console.log(`       (ghi nhớ ${initialActive.size} bước đang bật để khôi phục: ${[...initialActive].join(",")})`);
 
 let restored = false;
 const restore = () => {
@@ -74,6 +80,11 @@ try {
   });
   check("tạo được bước tạm 902 (chưa có lịch sử)", created902.status === 200, `HTTP ${created902.status} ${created902.error}`);
   mysql("UPDATE approval_stage_catalog SET active=0 WHERE stage_no BETWEEN 1 AND 5");
+  // ⚠️ MT2-P14-03c (23/09/2026) — VÁ GIẢ ĐỊNH CŨ: bản cũ tắt **1–5** rồi coi 902 là «bước hoạt động CUỐI CÙNG».
+  //   ĐO LẠI: sau khi tắt 1–5 thì **activeNow = 4** — vì đã có thêm **101 · 102 · 103 (`stage_kind='supply'`)**.
+  //   ⇒ 902 ⛔ KHÔNG phải bước cuối ⇒ `delete` trả **200** là **ĐÚNG**, còn phép kiểm «chặn» ❌ OAN.
+  //   Nay tắt **MỌI bước khác** để 902 THẬT SỰ là bước hoạt động cuối cùng (⛔ không hạ nhẹ phép kiểm).
+  mysql("UPDATE approval_stage_catalog SET active=0 WHERE stage_no<>902");
   const activeNow = mysql("SELECT COUNT(*) FROM approval_stage_catalog WHERE active=1");
   console.log(`  dựng kịch bản: ${activeNow} bước hoạt động (là bước tạm 902)`);
   const stage902 = mysql("SELECT id FROM approval_stage_catalog WHERE stage_no=902");
@@ -89,7 +100,12 @@ try {
   console.log(`  đã dọn bước tạm 902`);
 } finally {
   restore();
-  mysql("UPDATE approval_stage_catalog SET active=1 WHERE stage_no BETWEEN 1 AND 5");
+  // ⚠️ MT2-P14-03c (23/09/2026) — KHÔI PHỤC THEO TRẠNG THÁI BAN ĐẦU (⛔ không hard-code «1..5» nữa):
+  //   lần chạy trước tôi tắt MỌI bước khác (kể cả 101/102/103 `supply`) nhưng bước khôi phục cũ chỉ bật lại 1–5
+  //   ⇒ tôi đã TỰ GÂY tác dụng phụ lên cấu hình thật (đã khôi phục thủ công). Nay bật lại ĐÚNG các bước đã tắt.
+  if (initialActive && initialActive.size) {
+    mysql(`UPDATE approval_stage_catalog SET active=1 WHERE stage_no IN (${[...initialActive].join(",")})`);
+  }
   mysql("DELETE FROM approval_stage_catalog WHERE stage_no IN (901, 902)");
   console.log(`\n↩ Đã khôi phục active: ${mysql("SELECT GROUP_CONCAT(CONCAT(stage_no,':',active) ORDER BY stage_no) FROM approval_stage_catalog")}`);
 }

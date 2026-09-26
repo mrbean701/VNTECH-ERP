@@ -43,10 +43,15 @@ const OLD_HARDCODED = ["engineer", "commander", "admin"];
 //   nvkhdemo  · role kh_nv  → roleBase procurement  ← KHÔNG thuộc danh sách chốt cứng cũ ⇒ trước đây 403
 //   thukydemo · role thuky  → roleBase director     ← KHÔNG thuộc danh sách chốt cứng cũ ⇒ trước đây 403
 //   ksda.demo · role ksda   → roleBase engineer     ← ĐỐI CHỨNG: vẫn tạo được (trước đây cũng được)
+// ⚠️ MT2-P14-03c (23/09/2026) — BỔ SUNG tài khoản theo SỐ ĐO LIVE (⛔ không đoán): đo bằng chính action `login`
+// rồi đọc `data.user` ⇒ ksda.demo=ksda/engineer · nvdademo=da_nv/project · nvkhdemo=kh_nv/procurement ·
+// trdademo=da_truong/project · tkhodemo=thu_kho/warehouse · engineer.demo=ksda/engineer · **thukydemo=401** (mật khẩu lệch theo seed).
 const ACCOUNTS = [
   { username: "nvkhdemo", password: "Vntech@2026", nhan: "Nhân viên Kế hoạch", expectBase: "procurement" },
   { username: "thukydemo", password: "Vntech@2026", nhan: "Thư ký Tổng giám đốc", expectBase: "director" },
   { username: "ksda.demo", password: "Vntech@2026", nhan: "Kỹ sư dự án", expectBase: "engineer" },
+  { username: "trdademo", password: "Vntech@2026", nhan: "Trưởng phòng Dự án", expectBase: "project" },
+  { username: "tkhodemo", password: "Vntech@2026", nhan: "Thủ kho", expectBase: "warehouse" },
 ];
 const ADMIN = { username: "admin", password: "Admin123456@" };
 
@@ -131,12 +136,17 @@ async function main() {
   tieuDe("[1] ĐĂNG NHẬP ≥2 TÀI KHOẢN VAI TRÒ KHÁC NHAU — qua chính action `login` của ứng dụng");
   // ══════════════════════════════════════════════════════════════════════════════════════
   const phien = [];
+  // ⚠️ MT2-P14-03c (23/09/2026): tài khoản demo có thể LỆCH MẬT KHẨU theo môi trường seed
+  // (đo: `thukydemo` trả 401 trong khi **6/7** tài khoản demo khác đăng nhập HTTP 200) ⇒ bản cũ `break` ngay
+  // làm probe DỪNG dù vẫn đủ tài khoản khác. Nay: BỎ QUA tài khoản hỏng, chỉ chặn khi **< 2 phiên** thành công.
+  const hong = [];
   for (const acc of ACCOUNTS) {
     const login = await post("/api/system", "login", { username: acc.username, password: acc.password });
     inRaw(`POST login(${acc.username}) → HTTP ${login.http}`, login.text);
     if (login.http !== 200 || !login.json?.ok || !login.cookie) {
-      blocked = `không đăng nhập được \`${acc.username}\` — HTTP ${login.http} · ${login.text.slice(0, 300)}`;
-      break;
+      hong.push(`${acc.username} (HTTP ${login.http})`);
+      console.log(`         ⚠ BỎ QUA \`${acc.username}\`: đăng nhập không được — HTTP ${login.http} (⛔ không phải lỗi sản phẩm: action login từ chối đúng khi sai mật khẩu)`);
+      continue;
     }
     // Xác nhận phiên là DÒNG USER THẬT trong CSDL (không tin nhãn trong tệp cấu hình).
     const boot = await getBootstrap(login.cookie);
@@ -145,6 +155,12 @@ async function main() {
       `dept=${u.department ?? "-"}`);
     const thuocChotCu = OLD_HARDCODED.includes(String(u.role)) || OLD_HARDCODED.includes(String(u.roleBase));
     phien.push({ ...acc, cookie: login.cookie, role: u.role, roleBase: u.roleBase, userId: u.id, thuocChotCu });
+  }
+  if (phien.length < 2) {
+    blocked = `chỉ đăng nhập được ${phien.length} tài khoản (cần ≥2 để đo luồng phê duyệt theo vai trò)` +
+      (hong.length ? ` · tài khoản hỏng: ${hong.join(", ")}` : "");
+  } else if (hong.length) {
+    console.log(`\n  [GHI NHẬN] có ${hong.length} tài khoản demo không đăng nhập được (${hong.join(", ")}) — ⛔ KHÔNG chặn probe vì đã đủ ≥2 phiên vai trò khác nhau.`);
   }
   if (blocked) {
     console.log(`\n  [BLOCKED] ${blocked}`);

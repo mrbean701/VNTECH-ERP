@@ -101,7 +101,7 @@ const stepInfo = await ev(`(()=>{
   const rows=[...document.querySelectorAll('.menu-layout-group table tbody tr')];
   return rows.map(r=>{const c=[...r.querySelectorAll('td')].map(t=>t.innerText.replace(/\\s+/g,' ').trim());return {buoc:c[0]||'',ten:c[1]||'',cach:c[2]||'',nguoi:c[4]||''}});
 })()`);
-check(Array.isArray(stepInfo) && stepInfo.length >= 5, "Quy trình mặc định có >= 5 bước", `${(stepInfo || []).length} bước`);
+check(Array.isArray(stepInfo) && stepInfo.length === 4, "Quy trình mặc định có đúng 4 bước theo Master Task", `${(stepInfo || []).length} bước`);
 (stepInfo || []).forEach((s) => console.log(`     · ${s.buoc} · ${s.ten} · ${s.cach} · ND: ${s.nguoi}`));
 check((stepInfo || []).every((s) => s.nguoi && !/Chưa chỉ định/.test(s.nguoi)), "Mọi bước đều có người duyệt đích danh");
 await shot("tab-workflow");
@@ -118,8 +118,8 @@ check(stepBlocks >= 1, "Modal có khối cấu hình bước", `${stepBlocks} b�
 const modes = await ev(`(()=>{const s=document.querySelector('.modal select');const all=[...document.querySelectorAll('.modal select')].map(x=>[...x.options].map(o=>o.value));return all;})()`);
 const flat = (modes || []).flat();
 check(flat.includes("single") && flat.includes("any_of") && flat.includes("all_of"), "Có đủ 3 cách xác nhận single/any_of/all_of", flat.join(","));
-const picker = await ev(`document.querySelectorAll('.modal .admin-mini-list button').length`);
-check(picker > 0, "Có bộ chọn người duyệt theo quyền", `${picker} ứng viên`);
+const picker = await ev(`(()=>{const input=[...document.querySelectorAll('.modal input')].find(x=>/tìm người duyệt/i.test(x.closest('label')?.innerText||''));if(!input)return 0;const setter=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set;setter.call(input,'a');input.dispatchEvent(new Event('input',{bubbles:true}));return document.querySelectorAll('.modal .admin-mini-list button').length})()`);
+check(picker > 0, "Có bộ chọn người duyệt theo quyền sau khi tìm kiếm", `${picker} ứng viên`);
 const hasPermBadge = await ev(`/Có quyền duyệt|Chưa có quyền duyệt/.test(document.querySelector('.modal').innerText)`);
 check(hasPermBadge === true, "Ứng viên hiển thị trạng thái quyền duyệt");
 await shot("modal-workflow");

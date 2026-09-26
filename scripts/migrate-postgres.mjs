@@ -148,6 +148,10 @@ function translate(statement) {
     .replaceAll("`", '"')
     .replace(/\bDEFAULT\s+false\b/gi, "DEFAULT 0")
     .replace(/\bDEFAULT\s+true\b/gi, "DEFAULT 1")
+    // MT2 (bản vá #32 — user duyệt ở ⑤.5b A): kiểu SQLite `datetime(3)` / `datetime(6)` phải dịch thành
+    // `timestamp(3)` của PostgreSQL. ⚠️ Đặt TRƯỚC quy tắc `datetime('now')` bên dưới; regex đòi CHỮ SỐ
+    // trong ngoặc nên ⛔ không nuốt nhầm dạng `datetime('now')`.
+    .replace(/\bdatetime\s*\(\s*(\d+)\s*\)/gi, "timestamp($1)")
     .replace(/\bdatetime\(\s*'now'\s*\)/gi, nowSql)
     .replace(/lower\(hex\(randomblob\(12\)\)\)/gi, "substr(md5(random()::text || clock_timestamp()::text),1,24)");
 

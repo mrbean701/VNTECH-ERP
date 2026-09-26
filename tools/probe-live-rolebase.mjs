@@ -31,11 +31,14 @@ async function login(username, password) {
   return { cookie };
 }
 
+// ⚠️ MT2-P14-03c (23/09/2026) — ĐO LẠI: `POST {action:"me"}` trên `/api/system` nay trả **HTTP 403** (nvkhdemo)
+// và **HTTP 400** (admin) ⇒ action này ⛔ không còn tồn tại ở dạng đó; bản cũ vì thế đọc ra role/roleBase RỖNG cho
+// **CẢ 10 tài khoản** (kể cả `admin`) và kết luận oan «còn tài khoản trả roleBase sai».
+// Danh tính phiên nay lấy bằng **GET `/api/system` ⇒ `data.user`** (đo được: kh_nv/procurement · admin/admin ⇒ ĐÚNG).
 async function me(cookie) {
   const res = await fetch(`${BASE}/api/system`, {
-    method: "POST",
-    headers: { "content-type": "application/json", cookie },
-    body: JSON.stringify({ action: "me" }),
+    method: "GET",
+    headers: { cookie },
   });
   const text = await res.text();
   try { return JSON.parse(text); } catch { return { __raw: text.slice(0, 200) }; }

@@ -66,8 +66,13 @@ const mine = (d.workItems || []).filter((r) => /\[PROBE GĐ4\]/.test(String(r.ti
 const justCreated = mine[0];
 check("Nhiệm vụ mới có mã CVCN- (việc cá nhân)", String(justCreated?.taskNo || "").startsWith("CVCN-"), justCreated?.taskNo);
 check("Nhiệm vụ mới có departmentCode = CN", String(justCreated?.departmentCode || "") === "CN", justCreated?.departmentCode);
-check("Nhiệm vụ mới gán cho CHÍNH người tạo", String(justCreated?.assigneeUserId || "") === String(d.user?.id || ""),
-  `${justCreated?.assigneeName} vs ${d.user?.fullName}`);
+// ⚠️ SỬA BÁO OAN (MT2-P14-03c, 23/09/2026): payload THẬT của Java dùng **`assignedTo` / `assignedToName`**
+// (đo trực tiếp trên API đang chạy: `assignedTo = USR_2f435847…` = `data.user.id`, `assignedToName = "Quản trị viên VNTECH"`).
+// Bản cũ đọc `assigneeUserId`/`assigneeName` — 2 khoá ⛔ **không tồn tại** nên báo đỏ oan. Nay nhận cả 2 cách đặt tên.
+const assigneeId = justCreated?.assignedTo ?? justCreated?.assigneeUserId;
+const assigneeName = justCreated?.assignedToName ?? justCreated?.assigneeName;
+check("Nhiệm vụ mới gán cho CHÍNH người tạo", String(assigneeId || "") === String(d.user?.id || ""),
+  `${assigneeName} vs ${d.user?.fullName}`);
 check("Bootstrap trả trường KPI (assignedAt/completedAt)", "assignedAt" in (justCreated || {}) && "completedAt" in (justCreated || {}),
   Object.keys(justCreated || {}).filter((k) => /At$/.test(k)).join(","));
 
@@ -121,21 +126,29 @@ const expand = await ev(`(()=>{
 console.log("   nhóm CÔNG VIỆC: " + expand);
 await sleep(1800);
 
+// ⚠️ CẬP NHẬT 23/09/2026 (MT2 §3.1 + T-01/P5-01): nhóm «CÔNG VIỆC» nay có **5 mục**
+// («Dashboard» · «Cá nhân» · «Phòng ban» · «Giao việc» · «Báo cáo»), ⛔ không còn mục cũ
+// «Nhiệm vụ nhân viên đang làm». Mở màn Công việc bằng mục **«Cá nhân»** (tab 1) và kiểm **5 tab**.
 const opened = await ev(`(()=>{
   const norm=(s)=>String(s||'').replace(/\\s+/g,' ').trim().toLowerCase();
   const sec=document.querySelector('[data-nav-group="my_work"]');
+  if(!sec) return 'NO_GROUP';
   const kids=[...sec.querySelectorAll('.nav-child')];
-  const el=kids.find(e=>norm(e.textContent).includes('nhiệm vụ nhân viên'));
+  const el=kids.find(e=>norm(e.textContent)==='cá nhân') || kids.find(e=>norm(e.textContent).includes('cá nhân'));
   if(!el) return 'NOT_FOUND:'+JSON.stringify(kids.map(x=>x.textContent.trim()));
   el.click(); return 'OK';
 })()`);
-check("Mở được màn Công việc từ menu", opened === "OK", opened);
+check("Mở được màn Công việc từ menu (mục «Cá nhân»)", opened === "OK", opened);
 await sleep(3000);
 
 const ui = JSON.parse(await ev(`(()=>{
   const root=document.querySelector('.work-center');
   if(!root) return JSON.stringify({found:false});
-  const tabs=[...root.querySelectorAll('.project-scope-tabs button')].map(x=>x.textContent.trim());
+  // FIX CHỌN PHẦN TỬ (MT2-P14-03c): selector .project-scope-tabs button bắt luôn nút của dải con BÊN TRONG
+  // tab 1 (Của tôi / Được giao / Do tôi tạo) ⇒ chỉ lấy CON TRỰC TIẾP của dải tab ĐẦU TIÊN. (⛔ không dùng
+  // dấu huyền trong chú thích nằm TRONG template literal của ev().)
+  const strip=root.querySelector('.project-scope-tabs');
+  const tabs=strip?[...strip.children].filter(e=>e.tagName==='BUTTON').map(x=>x.textContent.trim()):[];
   return JSON.stringify({ found:true, tabs,
     hasSelfForm: /tự tạo việc cho bản thân/i.test(root.textContent||''),
     hasKpiWords: /tỉ lệ hoàn thành/i.test(root.textContent||''),
@@ -144,22 +157,28 @@ const ui = JSON.parse(await ev(`(()=>{
 })()`));
 console.log("   " + JSON.stringify(ui).slice(0, 300));
 check("Màn Công việc render (.work-center)", ui.found === true);
-check("Có 3 tab", (ui.tabs || []).length === 3, (ui.tabs || []).join(" · "));
+check("Có ĐÚNG 5 tab theo MT2 §3.1/T-01", (ui.tabs || []).length === 5, (ui.tabs || []).join(" · "));
+check("5 tab đúng NHÃN + THỨ TỰ đã chốt", JSON.stringify(ui.tabs) === JSON.stringify(["Cá nhân","Phòng ban","Giao việc","Dashboard","Báo cáo"]), (ui.tabs || []).join(" · "));
 check("Tab 1 có form tự tạo việc", ui.hasSelfForm === true);
 check("Tab KPI có nội dung tỉ lệ hoàn thành", ui.hasKpiWords === true);
 
-// mở từng tab
+// mở từng tab — ⚠️ CẬP NHẬT 23/09/2026: 5 tab theo MT2 §3.1/T-01 (⛔ không còn 3 tab cũ)
 console.log("\n▸ Mở từng tab");
-for (const [i, label] of ["Việc của tôi", "Phòng ban / tổ đội", "KPI & báo cáo"].entries()) {
-  const r = await ev(`(()=>{const bs=[...document.querySelectorAll('.work-center .project-scope-tabs button')];
+for (const [i, label] of ["Cá nhân", "Phòng ban", "Giao việc", "Dashboard", "Báo cáo"].entries()) {
+  const r = await ev(`(()=>{const strip=document.querySelector('.work-center .project-scope-tabs');
+    const bs=strip?[...strip.children].filter(e=>e.tagName==='BUTTON'):[];
     if(!bs[${i}]) return 'NO_TAB'; bs[${i}].click(); return 'OK';})()`);
   await sleep(1300);
+  // ⚠️ SỬA LỖI CÔNG CỤ (MT2-P14-03c, 23/09/2026): bản cũ gọi thẳng `root.querySelectorAll` khi
+  // `document.querySelector('.work-center')` = **null** ⇒ ném TypeError làm probe CHẾT giữa đường,
+  // ⛔ không in được kết luận. Nay trả `{root:false}` và báo ĐỎ có thông điệp rõ (màn chưa mở / selector đổi).
   const info = JSON.parse(await ev(`(()=>{const root=document.querySelector('.work-center');
-    return JSON.stringify({tables:root.querySelectorAll('.table-wrap table').length,
+    if(!root) return JSON.stringify({root:false});
+    return JSON.stringify({root:true, tables:root.querySelectorAll('.table-wrap table').length,
       rows:root.querySelectorAll('.table-wrap tbody tr').length,
       bars:root.querySelectorAll('.task-bar').length,
       forms:root.querySelectorAll('form').length});})()`));
-  check(`Tab "${label}" mở được`, r === "OK", JSON.stringify(info));
+  check(`Tab "${label}" mở được`, r === "OK" && info.root === true, JSON.stringify(info));
 }
 
 // dọn dữ liệu probe

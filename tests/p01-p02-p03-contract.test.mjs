@@ -125,9 +125,14 @@ test("P-03/b — chiều «Ngày»: PR lọc theo NGÀY TẠO, PO lọc theo NG�
   assert.deepEqual(po.map((r) => r.id), ["PO-2"], "PO: từ 01/03 chỉ còn PO-2 (theo `orderedAt`)");
 });
 
-test("P-03/c — chiều «Trạng thái» khớp CẢ `status` LẪN `supplyStatus` (phiếu đề nghị có 2 trạng thái)", () => {
-  const bySupply = filterPurchasingRows(DATA.requests, { ...EMPTY_FILTERS, status: "awaiting_po" }, DATA).map((r) => r.id);
-  assert.deepEqual(bySupply, ["MR-1"], "chọn `awaiting_po` phải khớp qua `supplyStatus`");
+test("P-03/c — HAI TRỤC TÁCH BẠCH: «Trạng thái» = `status`, «Giai đoạn cung ứng» = `supplyStatus` (MT2 §6.9)", () => {
+  // ⚠️ CẬP NHẤT 23/09/2026 (MT2 §6.9 — vá đúng «KNOWN ISSUE: bảng PR trộn status/stage»): hàm lọc nay
+  // **⛔ KHÔNG trộn 2 trục** (`app/screens/Purchasing.tsx:199-201`: `supplyStatus` so riêng, `status` so riêng)
+  // ⇒ hợp đồng cũ (gửi `status: "awaiting_po"` rồi mong khớp qua `supplyStatus`) là **hành vi TRƯỚC MT2**.
+  const bySupplyAxis = filterPurchasingRows(DATA.requests, { ...EMPTY_FILTERS, supplyStatus: "awaiting_po" }, DATA).map((r) => r.id);
+  assert.deepEqual(bySupplyAxis, ["MR-1"], "«Giai đoạn cung ứng» = `awaiting_po` phải khớp qua `supplyStatus`");
+  const crossed = filterPurchasingRows(DATA.requests, { ...EMPTY_FILTERS, status: "awaiting_po" }, DATA).map((r) => r.id);
+  assert.deepEqual(crossed, [], "⛔ trục «Trạng thái» KHÔNG được khớp chéo sang `supplyStatus` (MT2 §6.9)");
   const byStatus = filterPurchasingRows(DATA.requests, { ...EMPTY_FILTERS, status: "rejected" }, DATA).map((r) => r.id);
   assert.deepEqual(byStatus, ["MR-2"], "chọn `rejected` phải khớp qua `status`");
 });

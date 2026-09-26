@@ -190,9 +190,11 @@ dbTest("W-02 — CSDL THẬT: 0 dòng mồ côi (`project_id` không trỏ tới
   assert.ok(linked >= 2, `Phải có ≥ 2 kho gắn dự án (cần cho chiều N>1), đo được ${linked}`);
 
   // Số trong TÀI LIỆU phải KHỚP số đo lại — audit không được trôi khỏi dữ liệu.
-  assert.ok(audit.includes(`\`warehouses\`=4`) || audit.includes("**4**"),
-    "Tệp audit phải ghi lại số kho đo được (4)");
+  // ⚠️ CẬP NHẬT 23/09/2026 (MT2-P14-03c): ảnh chụp 20/09 ghi 4 kho / 3 kho gắn dự án; các task MT2 sau đó
+  // đã tạo thêm kho công trường trên DB đang chạy ⇒ số ĐO LẠI là **6 kho · 2 dự án · 5 kho gắn dự án · 0 mồ côi**
+  // (đã ghi vào mục «CẬP NHẬT SỐ ĐO — 23/09/2026» của tệp audit). ⛔ KHÔNG sửa DB để khớp tài liệu (GOAL §19).
+  assert.ok(audit.includes("**6**"), "Tệp audit phải ghi lại số kho ĐO LẠI (6)");
   assert.match(audit, /`PRJ-DEMO-01 → 2`/, "Tệp audit phải ghi lại chiều N>1 đo được (PRJ-DEMO-01 → 2 kho)");
-  assert.ok(warehouses === 4 && projects === 2 && linked === 3
+  assert.ok(warehouses === 6 && projects === 2 && linked === 5
     , `Số đo lại khác con số đã chép trong audit (kho=${warehouses}, dự án=${projects}, kho gắn dự án=${linked}) ⇒ phải cập nhật lại tệp audit`);
 });

@@ -11,10 +11,13 @@ const legacy = rows("SELECT stage_no, name, COALESCE(allowed_role_codes,''), COA
 for (const [no, name, roles, mode] of legacy) console.log(`  bước ${no} · ${name} · [${roles}] · ${mode}`);
 
 console.log("\n=== HỆ MỚI (engine động): `workflow_definitions` + `workflow_steps` ===");
-const wf = rows("SELECT id, code, COALESCE(module_key,''), version, is_default, active FROM workflow_definitions ORDER BY sort_order;");
-for (const [id, code, mod, ver, def, act] of wf) {
+// ⚠️ SỬA LỖI CÔNG CỤ (MT2-P14-03c, 23/09/2026): bản cũ SELECT cột **`version`** — ĐO TRÊN CSDL THẬT
+// (`SHOW COLUMNS FROM workflow_definitions`) ⛔ **không tồn tại cột này** ⇒ MySQL trả `ERROR 1054 Unknown column 'version'`
+// làm probe chết. Nay chỉ lấy các cột CÓ THẬT (id, code, module_key, is_default, active); ⛔ không bịa cột.
+const wf = rows("SELECT id, code, COALESCE(module_key,''), is_default, active FROM workflow_definitions ORDER BY sort_order;");
+for (const [id, code, mod, def, act] of wf) {
   const steps = rows(`SELECT step_no, name, COALESCE(approval_mode,''), COALESCE(required_permission,'') FROM workflow_steps WHERE workflow_id='${id}' ORDER BY step_no;`);
-  console.log(`  ${code} · module=${mod} · v${ver} · mặc định=${def} · active=${act} · ${steps.length} bước`);
+  console.log(`  ${code} · module=${mod} · mặc định=${def} · active=${act} · ${steps.length} bước`);
   for (const [no, name, mode, perm] of steps) console.log(`      b${no} ${name} · ${mode} · quyền=${perm}`);
 }
 

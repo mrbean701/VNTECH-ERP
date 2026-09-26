@@ -178,3 +178,23 @@ WH-CENTRAL     KHO-TONG            Kho trung tâm                      central N
 - **`W-04`** (`Dashboard tồn kho` 8 chỉ số) — đường ĐỌC THẬT là `warehouses[]` (`:644`, có `projectId/projectCode`) và
   `inventory[]` (`:651`, JOIN `projects p JOIN warehouses w ON w.project_id=p.id`) ⇒ dashboard **phải** gom số theo
   `projectId` của TỪNG kho, chứ không được giả định mỗi dự án 1 kho (đúng hệ quả của kết luận 1:N ở đây).
+
+---
+
+## 🔄 CẬP NHẬT SỐ ĐO — 23/09/2026 (MT2-P14-03c)
+
+Kết luận **CONFIRMED 1:N** ⛔ **KHÔNG đổi**. Chỉ **số dòng** thay đổi so với ảnh chụp 20/09/2026
+(vì các task MT2 sau đó đã tạo thêm kho công trường trên DB `vntech_erp` đang chạy):
+
+| Chỉ số | Truy vấn | Ảnh chụp 20/09 | **Đo lại 23/09** |
+|---|---|---|---|
+| Tổng số kho | `SELECT COUNT(*) FROM warehouses` | 4 | **6** |
+| Tổng số dự án | `SELECT COUNT(*) FROM projects` | 2 | **2** |
+| Kho CÓ gắn dự án | `... WHERE project_id IS NOT NULL` | 3 | **5** |
+| Kho KHÔNG gắn dự án (Kho Tổng) | `... WHERE project_id IS NULL` | 1 | **1** |
+| Dòng mồ côi | `LEFT JOIN projects … p.id IS NULL` | 0 | **0** |
+| Dự án có ≥ 2 kho (chiều N>1) | `GROUP BY p.id` | `PRJ-DEMO-01 → 2` | vẫn `PRJ-DEMO-01 → 2` |
+
+Lệnh đo lại (đúng cách tệp test đang dùng): `mysql.exe -uvntech -pvntech -N -B vntech_erp -e "…"`.
+⇒ Hợp đồng `tests/w02-project-warehouse-relation.test.mjs` được cập nhật theo **số đo mới (6 · 2 · 5 · 0 mồ côi)**;
+⛔ **KHÔNG** sửa dữ liệu DB để khớp tài liệu (GOAL §19).

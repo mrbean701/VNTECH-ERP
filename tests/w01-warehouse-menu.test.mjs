@@ -134,9 +134,16 @@ test("W-01 — 6 khoá CŨ của nhóm KHO bị ẨN khỏi menu, nhưng khoá v
   assert.match(page, /!legacyWarehouseMenuKeys\.includes\(item\.key\)/,
     "Cây menu chưa ẩn 6 khoá kho cũ");
   // Khoá cũ vẫn phải còn nhánh render THẬT (ẩn menu ≠ xoá chức năng).
-  for (const key of ["inventory", "central_warehouse", "stocktake", "material_norms", "warehouse_receipt", "warehouse_issue"]) {
+  for (const key of ["inventory", "central_warehouse", "stocktake", "material_norms", "warehouse_receipt"]) {
     assert.ok(page.includes(`active === "${key}" && <`), `Khoá cũ «${key}» đã MẤT nhánh render ⇒ chức năng bị xoá`);
   }
+  // ⚠️ CẬP NHẬT 23/09/2026 (MT2-P9-06 §7.6): khoá `warehouse_issue` nay đi qua **2 nhánh có điều kiện `view`**
+  // (màn mới «Cấp phát & hoàn trả» khi `allocateReturnScreenView === "list"`, màn «Xuất» cũ khi khác) ⇒
+  // chuỗi hẹp `active === "warehouse_issue" && <` KHÔNG còn khớp dù chức năng VẪN SỐNG. Khẳng định đúng Ý ĐỊNH.
+  assert.ok(page.includes('active === "warehouse_issue" && allocateReturnScreenView === "list" && <AllocateReturn'),
+    "Khoá cũ «warehouse_issue» đã MẤT nhánh render màn «Cấp phát & hoàn trả» (§7.6)");
+  assert.ok(page.includes('active === "warehouse_issue" && allocateReturnScreenView !== "list" && <WarehouseIssueTeams'),
+    "Khoá cũ «warehouse_issue» đã MẤT nhánh render màn «Xuất kho» cũ");
 });
 
 test("W-01 — cổng quyền THẬT: mỗi mục lọc bằng `modulePermission(data, permissionKey).canView` (KHÔNG hardcode admin)", () => {
@@ -164,8 +171,12 @@ test("W-01 — HUY HIỆU nhóm KHO không mất số: cộng theo CẢ CẶP kh
     "Thiếu phép cộng huy hiệu theo cặp khoá quyền cho nhóm KHO");
   const groupBadgeHits = page.match(/groupKey==="warehouse"\s*\?\s*warehouseMenuChildren\.reduce/g) || [];
   assert.equal(groupBadgeHits.length, 2, "Huy hiệu NHÓM KHO phải cộng theo 5 mục mới ở CẢ desktop lẫn mobile");
-  assert.equal((page.match(/warehouseMenuBadge\(item\.badgeKeys\)/g) || []).length, 4,
-    "Huy hiệu phải tính bằng `warehouseMenuBadge` ở CẢ badge nhóm lẫn mục con (desktop + mobile)");
+  // ⚠️ CẬP NHẬT 23/09/2026: đếm CHÍNH XÁC `= 4` là hợp đồng GIÒN — sau các lượt MT2 (P5-01/P6-08/P9-06) số lần
+  // dùng `warehouseMenuBadge(item.badgeKeys)` là **14** (nhiều nhánh desktop/mobile + nhóm khác dùng chung hàm).
+  // Điều cần bảo đảm là HÀNH VI: có mặt ở badge nhóm và mục con, ⛔ không tụt về 0 ⇒ kiểm ngưỡng ≥ 4.
+  const badgeHits = (page.match(/warehouseMenuBadge\(item\.badgeKeys\)/g) || []).length;
+  assert.ok(badgeHits >= 4,
+    `Huy hiệu phải tính bằng \`warehouseMenuBadge\` ở CẢ badge nhóm lẫn mục con (desktop + mobile) — đo được ${badgeHits}`);
   // Nguồn huy hiệu phải là badgeFor THẬT, không hardcode số.
   assert.match(page, /function badgeFor\(key: ModuleKey\)/, "Thiếu `badgeFor` — huy hiệu phải suy từ dữ liệu");
 });

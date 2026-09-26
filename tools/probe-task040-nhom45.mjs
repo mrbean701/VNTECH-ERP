@@ -6,10 +6,27 @@
 // và ranh giới phân quyền còn nguyên (GOAL §7). Mọi lệnh dưới đây đều dừng TRƯỚC khi ghi.
 //
 // Chạy: node tools/probe-task040-nhom45.mjs <issueItemId> [base]
-const ISSUE_ITEM_ID = process.argv[2] || "";
+// ⚠️ MT2-P14-03c (#29) — TỰ DÒ FIXTURE (⛔ không bắt người chạy tự đi tìm id): bản cũ `process.exit(2)` khi
+// thiếu argv ⇒ probe luôn «không chạy được» trong đợt rà. Nay: nếu thiếu `issueItemId` thì ĐỌC 1 DÒNG THẬT
+// từ `stock_issue_items` (READ-ONLY, ⛔ không ghi) — vẫn ưu tiên argv khi có; nếu DB cũng không có dòng nào
+// thì mới thoát với thông báo rõ (⛔ không tự bịa id, ⛔ không nhận ĐẠT khống).
+let ISSUE_ITEM_ID = process.argv[2] || "";
 const BASE = process.argv[3] || "http://127.0.0.1:18081";
 if (!ISSUE_ITEM_ID) {
-  console.error("Thiếu issueItemId. Lấy một dòng thật:");
+  try {
+    const { execFileSync } = await import("node:child_process");
+    const MYSQL = "C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysql.exe";
+    const out = execFileSync(MYSQL, ["--default-character-set=utf8mb4", "-uvntech", "-pvntech",
+      "-D", "vntech_erp", "--batch", "--raw", "--skip-column-names",
+      "-e", "SELECT id FROM stock_issue_items ORDER BY created_at DESC LIMIT 1"], { encoding: "utf8" });
+    ISSUE_ITEM_ID = String(out).trim().split(/\r?\n/)[0] || "";
+    if (ISSUE_ITEM_ID) console.log(`(tự dò) issueItemId = ${ISSUE_ITEM_ID} — lấy từ stock_issue_items (READ-ONLY)\n`);
+  } catch (err) {
+    ISSUE_ITEM_ID = "";
+  }
+}
+if (!ISSUE_ITEM_ID) {
+  console.error("Thiếu issueItemId VÀ không dò được dòng thật nào trong `stock_issue_items`.");
   console.error("  SELECT id FROM stock_issue_items LIMIT 1;   (mysql -uvntech -pvntech -D vntech_erp)");
   process.exit(2);
 }

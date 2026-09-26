@@ -37,7 +37,7 @@ for (const line of readFileSync(LIVE_TSV, "utf8").split(/\r?\n/)) {
 
 // ---- lược đồ dựng lại từ TỆP MIGRATION (cùng thuật toán, gồm cả CHANGE/RENAME/DROP) ----
 const mig = new Map();
-for (const f of readdirSync(MIGRATION_DIR).filter((n) => /^V\d+__.*\.sql$/.test(n)).sort()) {
+for (const f of readdirSync(MIGRATION_DIR).filter((n) => /^V\d+__.*\.sql$/.test(n)).sort((a, b) => Number(a.match(/^V(\d+)/)[1]) - Number(b.match(/^V(\d+)/)[1]) || a.localeCompare(b))) {
   let sql = readFileSync(join(MIGRATION_DIR, f), "utf8").replace(/--[^\n]*/g, "").replace(/\/\*[\s\S]*?\*\//g, "");
   const ensure = (t) => { const k = t.toLowerCase(); if (!mig.has(k)) mig.set(k, new Set()); return k; };
   for (const m of sql.matchAll(/CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?[`"']?(\w+)[`"']?\s*\(([\s\S]*?)\n\s*\)\s*ENGINE/gi)) {
@@ -47,12 +47,16 @@ for (const f of readdirSync(MIGRATION_DIR).filter((n) => /^V\d+__.*\.sql$/.test(
       if (!c) continue;
       const name = c[1].toLowerCase();
       if (["primary", "unique", "key", "index", "constraint", "foreign", "check", "fulltext", "spatial"].includes(name)) continue;
+      // A table-level COMMENT clause is unquoted; a real `comment` column is backtick-quoted.
+      if (name === "comment" && !line.trim().startsWith("`")) continue;
       mig.get(t).add(name);
     }
   }
   for (const m of sql.matchAll(/ALTER\s+TABLE\s+[`"']?(\w+)[`"']?\s+([\s\S]*?);/gi)) {
     const t = ensure(m[1]);
     const body = m[2];
+      // `comment` is a real column in several domain tables; only the table-level COMMENT clause
+    // (outside a column definition) is ignored by the line-shape parser.
     for (const a of body.matchAll(/ADD\s+(?:COLUMN\s+)?[`"']?(\w+)[`"']?/gi)) mig.get(t).add(a[1].toLowerCase());
     for (const a of body.matchAll(/\bCHANGE\s+(?:COLUMN\s+)?[`"']?(\w+)[`"']?\s+[`"']?(\w+)[`"']?/gi)) {
       mig.get(t).delete(a[1].toLowerCase()); mig.get(t).add(a[2].toLowerCase());

@@ -88,10 +88,14 @@ try {
   // `stage_no` (SAI — cột thật là `stage`) và **đã nuốt stderr** (`2>$null`) nên thấy kết quả rỗng và
   // suýt kết luận "MySQL chưa cấu hình phân công nào". Sự thật: bảng CÓ 5 dòng thật cho PRJ-DEMO-01.
   // Vì vậy bản này KHÔNG tự thêm phân công nữa — chỉ KIỂM TRA điều kiện rồi mới tạo phiếu.
-  const stages = sqlRows("SELECT stage_no FROM approval_stage_catalog WHERE active=1 ORDER BY stage_no").map((r) => r[0]);
+  // ⚠️ MT2-P14-03c (#33) — VÁ TIỀN ĐỀ THEO NGUỒN SỰ THẬT: MT2 §7 (Kho vật tư) ⛔ **KHÔNG** quy định bước duyệt cho chuỗi
+  // xuất/nhập kho (§7.5 = «CRUD · Search · Sort · Filter»; §7.6 = «workflow … sẽ triển khai SAU khi business rule được
+  // xác định ⇒ ⛔ Không tự suy diễn nghiệp vụ»). ⇒ 3 dòng `stage_kind='supply'` (101–103) là **hàng MIRROR/legacy**,
+  // ⛔ không thuộc phạm vi MT2 ⇒ tiền đề «MỌI bước đang hoạt động phải có Owner» là SAI. Nay chỉ kiểm chuỗi phiếu đề nghị.
+  const stages = sqlRows("SELECT stage_no FROM approval_stage_catalog WHERE active=1 AND COALESCE(stage_kind,'approval')='approval' ORDER BY stage_no").map((r) => r[0]);
   const missing = stages.filter((s) => Number(sqlOne(
     `SELECT COUNT(*) FROM approval_project_assignments WHERE project_id=${q(PROJECT_ID)} AND stage=${s} AND active=1`)) === 0);
-  check(`điều kiện nghiệp vụ: ${stages.length} bước đang hoạt động đều có Owner cho PRJ-DEMO-01`,
+  check(`điều kiện nghiệp vụ: ${stages.length} bước chuỗi PHIẾU ĐỀ NGHỊ (stage_kind='approval') đều có Owner cho PRJ-DEMO-01`,
     missing.length === 0, missing.length ? `thiếu bước ${missing.join(",")}` : `bước ${stages.join(",")}`);
   if (missing.length) throw new Error("thiếu phân công — không chạy tiếp để tránh tạo dữ liệu dở dang");
 

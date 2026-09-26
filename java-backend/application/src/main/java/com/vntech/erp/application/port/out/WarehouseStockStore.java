@@ -141,6 +141,24 @@ public interface WarehouseStockStore {
                          long lostTotal, String userId, Instant now);
     void insertOwnershipTransfer(Map<String, Object> ot, Instant now);
 
+    // ---- MT2 §7.4 — TẠO PHIẾU NHẬP (GRN) TỪ **LỆNH ĐIỀU CHUYỂN (STO)** ----
+    // Nguyên văn MT2 §7.4: “Cho phép tạo phiếu nhập từ STO/phiếu xuất kho: nếu phiếu liên quan đã có
+    // kho đi/kho đến ⇒ tự động fill; nếu chưa có ⇒ cho user nhập.” ⇒ nguồn PHIẾU XUẤT đã có (3 hàm trên),
+    // nguồn **STO còn thiếu** ⇒ 3 hàm dưới đây soi gương CHÍNH 3 hàm của phiếu xuất, ⛔ không kiến trúc mới.
+    /** Dòng hàng của STO để dựng {@code goods_receipt_items}: materialId · quantity (= {@code received_qty}
+     *  đã nhận thực tế) · contractId (= {@code destination_contract_id}) — và (nếu tra được) dòng PO
+     *  tương ứng cho {@code purchase_order_item_id} (⛔ không bắt buộc: STO thuần kho có thể không có PO). */
+    List<Map<String, Object>> transferOrderGrnLines(String transferId);
+
+    /** Sinh 1 header {@code goods_receipts} (kho nhận = {@code destination_warehouse_id} của STO,
+     *  {@code receipt_no} riêng dòng **{@code GRN-STO}**) + 1 dòng {@code goods_receipt_items} cho mỗi dòng STO.
+     *  ⛔ KHÔNG sinh vòng duyệt nào (giống ⑤ của phiếu xuất). */
+    void insertTransferOrderGrn(Map<String, Object> header, List<Map<String, Object>> items, Instant now);
+
+    /** Chốt chặn ⛔ KHÔNG sinh GRN lần hai: chỉ nhận STO đang ở trạng thái đã nhận hàng
+     *  ({@code status='received'}) ⇒ ngược lại trả {@code false} (use-case ⇒ 400). */
+    boolean markTransferOrderGrnCreated(String transferId, String receiptId, String userId, Instant now);
+
     // ---- central returns ----
     Optional<Map<String, Object>> findCentralWarehouse();
     Optional<Map<String, Object>> findCentralReturn(String returnId);

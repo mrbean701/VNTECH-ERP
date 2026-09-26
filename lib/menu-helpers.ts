@@ -80,9 +80,13 @@ const modules: { key: ModuleKey; label: string; icon: string; groupKey?: string;
   { key: "requests", label: "Phiếu đề nghị mua hàng", icon: "ĐN", groupKey: "purchasing" },
   { key: "approvals", label: "Workflow", icon: "PD", groupKey: "purchasing" },
   { key: "purchasing", label: "Mua hàng & PO", icon: "PO", groupKey: "purchasing" },
-  { key: "supplier_catalog", label: "Danh mục Nhà cung cấp", icon: "NC", groupKey: "purchasing" },
   { key: "receiving", label: "Kế hoạch giao hàng", icon: "GH", groupKey: "purchasing" },
   { key: "delivered", label: "Đơn hàng đã giao", icon: "DG", groupKey: "purchasing" },
+  // MT2-P8-01 (§6.1) — «Đưa menu NCC XUỐNG CUỐI NHÓM menu tương ứng.»
+  // ⚠️ TRƯỚC: `supplier_catalog` nằm ở vị trí thứ 4/6 (giữa nhóm «MUA HÀNG») ⇒ NAY chuyển xuống CUỐI nhóm.
+  // ✅ GIỮ NGUYÊN `key`/`label`/`icon`/`groupKey` ⇒ `tests/p07-supplier-partner-split-probe.mjs:35`
+  //    (`label:"Danh mục Nhà cung cấp"`, `groupKey:"purchasing"`, `sortOrder:120`) vẫn KHỚP (§26).
+  { key: "supplier_catalog", label: "Danh mục Nhà cung cấp", icon: "NC", groupKey: "purchasing" },
   { key: "warehouse_receipt", label: "Nhập kho", icon: "NK", groupKey: "warehouse" },
   { key: "warehouse_issue", label: "Xuất kho", icon: "XK", groupKey: "warehouse" },
   { key: "inventory", label: "Tồn kho & điều chuyển", icon: "TK", groupKey: "warehouse" },
@@ -102,12 +106,23 @@ const modules: { key: ModuleKey; label: string; icon: string; groupKey?: string;
 // `config` ⇒ lấy nhãn trong code. Bốn khoá `dept_*` cũ bị ẨN KHỎI MENU nhưng VẪN là khoá nghiệp vụ THẬT
 // (quyền · tiêu đề màn · tìm kiếm · thông báo · nhánh render) ⇒ mỗi mục menu chỉ ĐỔI ĐÍCH ĐẾN, không đổi màn.
 // ─────────────────────────────────────────────────────────────────────────────
-type WorkMenuView = "personal" | "department" | "assign" | "kpi" | "reports";
+// MT2-P5-01 (§3.1) — THÊM `"dashboard"` vào union: trước đây mục «Dashboard» của nhóm «Công việc»
+// khai `view: "kpi"` (SAI — trỏ vào tab KPI) nên khi click ⇒ `workCenterViewFor("kpi", "work_dashboard")`
+// KHÔNG khớp nhánh `dept_plan_kpi`/`dept_project_kpi` ⇒ trả `null` ⇒ ⛔ KHÔNG render WorkCenter
+// ⇒ ⛔ KHÔNG hiển thị Dashboard (LỖI CÓ SẴN, phát hiện ở MT2-PHASE-5-AUDIT §7).
+type WorkMenuView = "personal" | "department" | "assign" | "kpi" | "reports" | "dashboard";
+// MT2-P5-02 (§3.1 ②) — «đưa Dashboard lên **ĐẦU menu** nếu vẫn giữ menu»:
+// mục «Dashboard» được ĐƯA LÊN ĐẦU nhóm «Công việc» (trước đây ở vị trí thứ 4).
+// ⚠️ ĐO được: click nhóm CHA chỉ `toggleGroup` (expand/collapse) — ⛔ KHÔNG `setActive` (page.tsx:483)
+//    ⇒ ⛔ KHÔNG thể «vào Dashboard bằng click nhóm cha»; cách đúng §3.1 ② là ĐỂ DASHBOARD ĐẦU MENU ✔
+// ⛔ KHÔNG xoá mục (giữ §3.1 ③ làm phương án khác) ⇒ ⛔ không thể tạo hồi quy (mất lối vào) ✔
 const workMenuItems: { key: string; label: string; groupKey: "my_work"; view: WorkMenuView; permissionKeys: ModuleKey[] }[] = [
+  // MT2-P5-01 — `view: "kpi"` ⇒ **`view: "dashboard"`** (mục này là «Dashboard», KHÔNG phải tab KPI).
+  // ⚠️ `permissionKeys` GIỮ NGUYÊN (`dept_plan_kpi`/`dept_project_kpi`) — §3.1 KHÔNG nói đổi quyền ⇒ ⛔ không tự đổi.
+  { key: "work_dashboard", label: "Dashboard", groupKey: "my_work", view: "dashboard", permissionKeys: ["dept_plan_kpi", "dept_project_kpi"] },
   { key: "work_personal", label: "Cá nhân", groupKey: "my_work", view: "personal", permissionKeys: ["dept_plan_tasks", "dept_project_tasks"] },
   { key: "work_department", label: "Phòng ban", groupKey: "my_work", view: "department", permissionKeys: ["dept_plan_assign", "dept_project_assign"] },
   { key: "work_assign", label: "Giao việc", groupKey: "my_work", view: "assign", permissionKeys: ["dept_plan_assign", "dept_project_assign"] },
-  { key: "work_dashboard", label: "Dashboard", groupKey: "my_work", view: "kpi", permissionKeys: ["dept_plan_kpi", "dept_project_kpi"] },
   { key: "work_reports", label: "Báo cáo", groupKey: "my_work", view: "reports", permissionKeys: ["dept_plan_alerts", "dept_project_alerts"] },
 ];
 // BỐN MỤC CŨ BỊ ẨN KHỎI MENU (`T-01`). Khoá vẫn sống: quyền, tiêu đề, tìm kiếm, thông báo, nhánh render.
@@ -147,6 +162,69 @@ const warehouseMenuItems: { key: string; label: string; groupKey: "warehouse"; m
 ];
 // SÁU MỤC CŨ BỊ ẨN KHỎI MENU (`W-01`). Khoá vẫn sống: quyền, tiêu đề màn, tìm kiếm, nhánh render.
 const legacyWarehouseMenuKeys: ModuleKey[] = ["warehouse_receipt", "warehouse_issue", "inventory", "stocktake", "material_norms", "central_warehouse"];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MT2-P9-06 (§7.6) — NHÓM «KHO VẬT TƯ»: THÊM **MENU ITEM MỚI** «Cấp phát & hoàn trả»
+// (ĐÚNG KHUÔN `P-07`/`W-01`/`T-01`: khai báo trong CODE, ⛔ KHÔNG migration, ⛔ KHÔNG khoá module mới).
+//
+// NGUYÊN VĂN §7.6: `[ Cấp phát ] [ Hoàn trả ]` — mỗi tab danh sách riêng (mã đơn · người tạo ·
+// tổ đội/người nhận · dự án · kho xuất · kho nhập đối với hoàn trả).
+// ⚠️ «Logic nghiệp vụ + workflow + quyền triển khai SAU khi business rule xác định ⇒ hiện tại
+//    CHỈ triển khai cấu trúc UI/list/tab/data foundation. ⛔ Không tự suy diễn nghiệp vụ» (§14).
+//
+// ⚠️ CỔNG QUYỀN: mục mới dùng CHUNG khoá ĐÃ CÓ `warehouse_issue` (`permissionKeys`) — đúng chỉ dẫn
+//    P-07 «nếu hệ thống bắt buộc có khoá module để canView ⇒ trỏ cùng permissionKeys của khoá cũ».
+//    `view: "list"` để `app/page.tsx` phân biệt màn mới với màn «Xuất» (cùng moduleKey) — khuôn
+//    `supplierPartnerViewFor`. KHÔNG khoá module mới · KHÔNG hardcode admin · KHÔNG dòng module_catalog.
+const allocateReturnMenuItems: { key: string; label: string; groupKey: "warehouse"; moduleKey: ModuleKey; view: "list"; permissionKeys: ModuleKey[] }[] = [
+  { key: "warehouse_allocate_return", label: "Cấp phát & hoàn trả", groupKey: "warehouse", moduleKey: "warehouse_issue", view: "list", permissionKeys: ["warehouse_issue"] },
+];
+// ĐÍCH ĐẾN: `view` trả "list" CHỈ khi active = `warehouse_issue` (cổng quyền); điều hướng cũ (không kèm
+// view) trả `null` để GIỮ NGUYÊN hành vi màn «Xuất» (đúng cách `warehouseMenuViewFor`/`supplierPartnerViewFor`).
+function allocateReturnViewFor(view: "list" | null, active: ModuleKey): "list" | null {
+  if (active !== "warehouse_issue") return null;
+  if (view === "list") return view;
+  return null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MT2-P11-01 (§11) — NHÓM «BÁO CÁO»: ⛔ **BỎ CHIA MENU THEO PHÒNG BAN** ⇒ 1 MỤC TỔNG HỢP.
+// NGUYÊN VĂN `docs/dsh/MASTER_TASK_2.md:234`: «Báo cáo & cảnh báo: ⛔ không chia menu theo phòng ban
+// ⇒ hiển thị **thông tin tổng hợp**».
+//
+// ĐO ĐƯỢC TRƯỚC KHI CODE:
+// · Menu ĐƯỢC dựng từ `configuredModules(data)` = `module_catalog` ⇒ khoá `reports_center` (màn tổng hợp đã có
+//   sẵn: `app/page.tsx:575` render `ReportView` với `REPORT_CATALOG`) ⛔ KHÔNG có trong seed `module_catalog`
+//   ⇒ mục đó **không thể** tự hiện trên menu.
+// · Menu hiện CÓ 2 mục trùng nội dung, tách theo phòng ban: `dept_plan_alerts` «… – Phòng Kế hoạch» và
+//   `dept_project_alerts` «… – Phòng Dự án» ⇒ **vi phạm §11**. Cả hai đều render CÙNG một màn
+//   (`workCenterViewFor`: `view==="reports"` → `WorkCenter view="reports"`).
+//
+// ⇒ LÀM THEO ĐÚNG KHUÔN `W-01`/`P-07`/`P9-06`: 1 mục MỚI khai trong CODE (⛔ KHÔNG migration, ⛔ KHÔNG khoá module
+// mới), cổng quyền trỏ CHUNG 2 khoá ĐÃ CÓ (`dept_plan_alerts` + `dept_project_alerts`), đích đến là màn tổng hợp
+// ĐÃ CÓ (`reports_center`). 2 khoá cũ bị ẨN khỏi menu nhưng khoá vẫn sống (quyền · tìm kiếm · nhánh render).
+const reportsSummaryMenuItems: { key: string; label: string; groupKey: "reports"; moduleKey: ModuleKey; permissionKeys: ModuleKey[] }[] = [
+  { key: "reports_summary", label: "Báo cáo & cảnh báo", groupKey: "reports", moduleKey: "reports_center", permissionKeys: ["dept_plan_alerts", "dept_project_alerts"] },
+];
+// HAI MỤC CŨ BỊ ẨN KHỎI MENU (theo §11) — khoá vẫn sống, chỉ gỡ khỏi `children` của nhóm «reports».
+const legacyReportsMenuKeys: ModuleKey[] = ["dept_plan_alerts", "dept_project_alerts"];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MT2-P11-02 (§11) — NHÓM «BÁO CÁO»: ⛔ **BỎ CHIA MENU THEO PHÒNG BAN** cho «KPI & hiệu suất»
+// ⇒ 1 MỤC TỔNG HỢP. NGUYÊN VĂN `docs/dsh/MASTER_TASK_2.md:235`: «KPI & hiệu suất nhân viên: ⛔ không
+// chia menu theo phòng ban ⇒ hiển thị **thông tin tổng hợp**».
+//
+// ĐO ĐƯỢC: `dept_plan_kpi` + `dept_project_kpi` CÙNG map về `WorkCenter view="kpi"`
+// (`app/page.tsx:400` trong `workCenterViewFor`) ⇒ 2 mục, 1 nội dung, lặp theo phòng ban.
+// ⚠️ Khác P11-01: màn đích đến **KHÔNG** phải `reports_center` mà là tab KPI của `WorkCenter`, nên mục mới
+// PHẢI mang `view: "kpi"` + `moduleKey` thuộc 1 trong 2 khoá cũ (điều kiện khớp của `workCenterViewFor`).
+// ⚠️ `dept_plan_kpi` đang được `work_dashboard` dùng làm `permissionKeys` — ⛔ đó là CỔNG QUYỀN, không phải
+// menu ⇒ ẩn khỏi `children` KHÔNG ảnh hưởng mục «Dashboard» của nhóm «Công việc».
+const kpiSummaryMenuItems: { key: string; label: string; groupKey: "reports"; moduleKey: ModuleKey; view: WorkMenuView; permissionKeys: ModuleKey[] }[] = [
+  { key: "kpi_summary", label: "KPI & hiệu suất nhân viên", groupKey: "reports", moduleKey: "dept_plan_kpi", view: "kpi", permissionKeys: ["dept_plan_kpi", "dept_project_kpi"] },
+];
+// HAI MỤC CŨ BỊ ẨN KHỎI MENU (theo §11) — khoá vẫn sống (quyền · tìm kiếm · nhánh render `WorkCenter`).
+const legacyKpiMenuKeys: ModuleKey[] = ["dept_plan_kpi", "dept_project_kpi"];
 
 // PHASE 5 (`W-01`) — ĐÍCH ĐẾN THẬT của 5 mục nhóm KHO: mục «Dashboard tồn kho» mở **TAB** dashboard của màn
 // Tồn kho (`app/screens/Inventory.tsx`) — KHÔNG màn mới, KHÔNG route mới, KHÔNG khoá module mới. Bốn mục kia
@@ -228,14 +306,20 @@ const approvalCenterGroup = { groupKey: "approval_center", name: "PHÊ DUYỆT",
 const independentMenuKeys: ModuleKey[] = ["dashboard", "approvals"];
 
 export {
+  allocateReturnMenuItems,
+  allocateReturnViewFor,
   approvalCenterGroup,
   approvalCenterMenuKey,
   configuredMenuGroups,
   independentMenuKeys,
+  kpiSummaryMenuItems,
+  legacyKpiMenuKeys,
+  legacyReportsMenuKeys,
   legacySupplierPartnerMenuKeys,
   legacyWarehouseMenuKeys,
   legacyWorkMenuKeys,
   modules,
+  reportsSummaryMenuItems,
   supplierPartnerMenuItems,
   supplierPartnerViewFor,
   warehouseMenuItems,

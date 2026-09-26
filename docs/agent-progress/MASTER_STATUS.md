@@ -1,6 +1,35 @@
 # MASTER STATUS — VNTECH ERP V5.3.0
 
 > Tệp này là NGUỒN SỰ THẬT về trạng thái toàn cục. Mọi phiên làm việc mới PHẢI đọc tệp này trước.
+
+---
+
+## ⚠️ CÓ **2** MASTER TASK SONG SONG — ĐỌC KỸ ĐỂ KHÔNG LẪN SỐ
+
+| | **MASTER TASK 1** (mục dưới trong tệp này) | **MASTER TASK 2** (bảng ngay dưới) |
+|---|---|---|
+| Nguồn chức năng | `docs/28_DANH_SACH_110_MUC_MASTER_TASK.md` | **`docs/dsh/MASTER_TASK_2.md`** |
+| Quy trình | `AGENTS.md` | **`docs/dsh/GOAL_MASTER_TASK_2.md`** |
+| Quy mô | 110 mục | **100 task / 14 phase** |
+
+### 📊 MASTER TASK 2 — TRẠNG THÁI (mốc mở đợt **23/09/2026** · cập nhật mới nhất **26/09/2026**)
+* Tiến độ: ✅ **SỐ ĐẾM ĐƯỢC = DONE 79 / 81 = 97,5 %** *(đếm bằng máy trên `MT2_PHASE_TASK_LIST.md`: **79 DONE** · 2 SKIPPED (`P7-05` · `P11-05`, theo MT2 §2/§38) · **0 BLOCKED** · 0 TODO · 0 IN_PROGRESS = 81 dòng)* — ⛔ **ĐÍNH CHÍNH 26/09/2026:** số cũ «DONE 93 / 100 = 93,0 %» và «mẫu số 99» (trong `AUDIT_MT2_GAP.md`) ⛔ **KHÔNG có bảng nào chứng minh**; hai hồ sơ tự mâu thuẫn (99 ↔ 100) ⇒ xem `MT2_CHECKPOINT.md` §10 + §10b · `MT2_FINAL_REPORT.md` §11. · 🎉 **`P14-05` ĐÃ CHỐT** (final audit §52 9 nhóm + báo cáo §53 ở `MT2_FINAL_REPORT.md` §1/§1b) ⇒ **KHÔNG còn mục nào BLOCKED**
+* 🟢 **4 BLOCKED đã GỠ (26/09/2026, sau khi user chốt 5 nhóm quyết định):**
+  * `P4-01` · `P5-03` · `P5-04` (§3.2 **phạm vi theo cấp bậc**) — **đề án ①A**: thêm cấp `pho_giam_doc` (`level_rank` **35**, ĐO từ CSDL) bằng `V30` (Flyway đã áp thật `success=1`, 5 → **6 cấp**) + `WorkScopeService` 3 tầng `SELF/DEPARTMENT/COMPANY` (ngưỡng **30/35** ĐO từ `system_level_catalog`, ⛔ không hard-code ở UI) + API `work_scope` + **test 10 ca âm/dương**. Đã **smoke trên server thật**: `scope=COMPANY · levelRank=50 · canViewCompanyWork=true`.
+  * `P10-05` (§10.4 **VB pháp lý ↔ công văn**) — **đề án ②A**: `V31` thêm `legal_documents.correspondence_id` (Flyway đã áp thật `success=1`) + khai cột ở **CẢ HAI** bản `schema-h2.sql` + port/adapter/use-case/bootstrap + **parity JS** + ô chọn công văn ở màn Văn bản pháp lý + test `P10-05` **4/4**. Đã **smoke thật** (lưu VB kèm công văn ⇒ cột ghi đúng) rồi **dọn dữ liệu tạm**.
+* 🟢 **4 blocker identity (BLK) đã xử lý:** `BLK-06` mã NV (1 tài khoản ⇒ **0/19** thiếu) · `BLK-04` = `P10-05` ✓ · `BLK-05` user thường thấy mã vật tư **đã ngừng** (bỏ lọc `m.active=1` ở payload `materials`, **Java + JS parity**, ⛔ không đụng danh sách tồn kho; **chứng minh bằng USER THƯỜNG** `nvdademo` thấy mã `active=0`) · `BLK-03` **ĐÓNG theo quyết định user** (đã đo thật: `create_project_team` đã vá `site_command` ⇒ test `tm04` **5/5**; `delete_project_team`/`set_project_team_status` còn registry **rỗng** ⇒ CHT **403**, admin đi tiếp — chi tiết ở `MT2-P12-07-IDENTITY-INTEGRITY.md` §6.1).
+* 🎨 **2 THAY ĐỔI GIAO DIỆN (user yêu cầu 26/09, đã đo bằng DOM thật):**
+  * **Modal phiếu** (`RequestDrawer.tsx`): bỏ luật ẩn khối thông tin ở bước chưa duyệt (nay hiện *người duyệt · phòng ban · thời gian*) + dải **trạng thái đơn** + nút **xếp hàng ngang** + **ô bình luận nằm TRÊN nút** (bỏ `window.prompt`).
+  * **Trung tâm phê duyệt — cột «PHIẾU ĐANG XỬ LÝ»**: tiến trình duyệt đổi từ **DỌC → NGANG** dạng `o---o----o` (§4.3 MT2) — **trạng thái TRÊN mốc**, **ai duyệt · phòng ban · thời gian DƯỚI mốc**. Cổng đo mới `tools/probe-approval-horizontal.mjs` (Chrome headless, đọc `getComputedStyle`): `flexDirection: row` · `sameRow: true` · `r1Top = r2Top = 830` · 6 mốc · đường nối dọc cũ **đã tắt** ⇒ **ĐẠT**.
+  * ⚠️ **CẦN USER CHỐT (xung đột đặc tả):** `MASTER_TASK_2.md` §4.3 dòng 73 ghi «⛔ **không** hiển thị thông tin người duyệt ở **step chưa tới**», nhưng yêu cầu 26/09 của user là hiện *đủ* thông tin. ⇒ **Trung tâm phê duyệt giữ theo §4.3** (bước chưa tới chỉ hiện `Đang chờ`), còn **modal phiếu hiện đủ** theo yêu cầu mới. Cần chốt có áp §4.3 cho cả modal hay không.
+* **0 lỗi SẢN PHẨM đang đỏ.** Trong phiên 23/09 phát hiện và **vá 1 LỖI THẬT** — nút «Thu gọn khối» ở màn Phiếu đề nghị **vô tác dụng** (state `collapsed` chỉ đổi nhãn) → sửa `app/screens/RequestDrawer.tsx` + `app/globals.css`, **xác minh LIVE bằng click chuột THẬT qua CDP** (`bodyScroll 1605 → 375`) và **9/9 probe live không hồi quy**. · 26/09: test bắt thêm **2 lỗi THẬT** đã vá — `NPE` khi `department` null trong `WorkScopeService.scopeOf` + cờ `canViewDepartmentWork` sai cho tầng `COMPANY`.
+* Cổng đang xanh (26/09/2026): frontend **579 hợp đồng = 578 PASS · 0 FAIL · 1 skip** · regression **69/69** · `tsc` **0** · Java **134 test** (domain 19 · application 38 · infrastructure 13 · web 64) **0 lỗi** · `lint` 0 error · css-baseline ĐẠT (3654 `!important`) · css-budget ĐẠT (3893/3918) · master-baseline ĐẠT · **fingerprint ĐẠT `VNTECH-FP-38A7A45C22EA6DC3`** (519 tệp) · build + `BUILT ARTIFACT VALIDATION` ĐẠT · `test:release-static` **3 tầng ĐẠT** (manifest **7611 files**, migrations `0000..0224`) · **LIVE 3/3 cổng HTTP 200** (18081/8787/9000) · ảnh chuẩn visual **đã ghi lại 68 ảnh** (đo trước đó lệch **59/68**) — ⛔ ghi rõ: việc soi bằng mắt người là **theo lựa chọn của user** (đã miễn), ⛔ **không** tự coi là đã kiểm bằng mắt.
+* Hồ sơ chi tiết: **`docs/dsh/MT2_EXECUTION_STATE.md`** (trạng thái) · **`docs/dsh/MT2_PHASE_TASK_LIST.md`** (⚠️ **81 dòng task** — không phải 100) · **`docs/dsh/MT2_GATE_SWEEP_23-09.md`** (bằng chứng cổng/probe §H.1→§H.34) · `docs/dsh/AUDIT_MT2_GAP.md` (đối chiếu mục) · **`docs/dsh/MT2_FINAL_REPORT.md`** (báo cáo khung §53) · **`docs/dsh/MT2_CHECKPOINT.md`** (§10b đối soát mẫu số).
+* 🔎 **ĐỢT RÀ PROBE ĐÃ CHỐT** (`MT2_GATE_SWEEP_23-09.md` §H.1 → §H.34 + **§H.18.1 SỔ KIỂM CHỐT**): **109 tệp probe · 109/109 đã có kết quả · 28 lỗi CÔNG CỤ/PROBE đã sửa · 1 lỗi SẢN PHẨM thật đã vá · 0 lỗi SẢN PHẨM đang đỏ**. Mọi ca đỏ đều **đọc mã / đo CSDL / đo live** trước khi phân loại (5 nhóm nguyên nhân: chuẩn hoá UI §22 · thêm tab 12→13 + đổi tên tab/nhóm menu · sai phương pháp đo vì `data.audits` có `LIMIT 100` · tiền đề sai — `approve_stock_issue` giao **kế toán**, phòng KH **đã có** `dept_legal_correspondence` · môi trường/fixture — `thukydemo` 401, dữ liệu tồn dư, seed thiếu cột).
+* ✅ **KIỂM PHỦ SÓNG §50 (chạy lại trong phiên):** **43/43 tiêu đề cấp 2** của `MASTER_TASK_2.md` **đều được tham chiếu bằng chứng · 0 tiêu đề chưa tham chiếu**.
+* ⛔ **NO COMMIT · NO PUSH** (đang hiệu lực cho MT2).
+
+---
 | PHASE 4 — DỰ ÁN | 6 / 6 | **ĐÓNG** — `PR-01` DONE (dải 6 tab + toolbar cân đối) · `PR-05` DONE (tạm đóng theo chỉ đạo) · **`PR-02`/`PR-03`/`PR-04`/`PR-06` DONE 20/09 (TASK-098)**: lọc 4 chiều · 5 tab con chi tiết · `EntityDetailModal` cho Project/User/Warehouse/Team · CRUD BCH theo quyền. Nguồn % tiến độ = **NHẬT KÝ THI CÔNG** (user chốt, nghiệp vụ chưa tồn tại ⇒ khối tiến độ để trống có ghi chú) |
 
 ## MASTER TASK STATUS

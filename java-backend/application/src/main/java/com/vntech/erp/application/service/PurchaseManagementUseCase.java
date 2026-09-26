@@ -24,12 +24,16 @@ public final class PurchaseManagementUseCase {
     private final IdGenerator idGenerator;
     private final RbacService rbac;
     private final AccessScopeService accessScope;
+    private final NotificationManagementUseCase notifications;
 
-    public PurchaseManagementUseCase(PurchaseStore store, IdGenerator idGenerator, RbacService rbac, AccessScopeService accessScope) {
+    public PurchaseManagementUseCase(PurchaseStore store, IdGenerator idGenerator, RbacService rbac,
+                                     AccessScopeService accessScope,
+                                     NotificationManagementUseCase notifications) {
         this.store = store;
         this.idGenerator = idGenerator;
         this.rbac = rbac;
         this.accessScope = accessScope;
+        this.notifications = notifications;
     }
 
     public interface Principal {
@@ -253,6 +257,8 @@ private Map<String, Object> decidePo(Principal principal, Map<String, Object> pa
         store.decidePo(poId, status, approve ? null : reason, principal.userId(),
             buyer, "PO " + sv(po, "poNo") + " đã bị hủy",
             "PO " + sv(po, "poNo") + " đã bị từ chối — hãy tạo lại/xử lý lại. Lý do: " + (reason.isEmpty() ? "(không nêu)" : reason), now);
+        notifySafely(approve ? "PO_APPROVED" : "PO_REJECTED");
+        // Keep both decision outcomes visible through the same configuration-driven engine.
     return Map.of("message", approve
         ? "Đã duyệt PO " + sv(po, "poNo") + "; chuyển sang chờ giao hàng."
         : "Đã từ chối PO " + sv(po, "poNo") + "; PR vẫn mở để xử lý lại.");
@@ -381,6 +387,7 @@ private static final List<String> COMPLETED_PO_STATUSES = List.of(
                 isFullyDelivered ? "awaiting_bch_confirmation" : "partial_delivery", now);
         long sla = store.supplyPoSlaHours();
         store.insertBchConfirmationStep(sv(po, "requestId"), poId, receiptId, now, sla);
+        notifySafely("DELIVERY_WAITING_BCH");
         Map<String, Object> recvOut = new java.util.LinkedHashMap<>();
         recvOut.put("message", receiptNo + " đã ghi nhận giao hàng; đơn chuyển sang chờ BCH kiểm tra ảnh và xác nhận.");
         recvOut.put("receiptId", receiptId);
@@ -447,6 +454,7 @@ private static final List<String> COMPLETED_PO_STATUSES = List.of(
         if ("accepted".equals(sv(receipt, "qcStatus")) && !"posted".equals(sv(receipt, "postingStatus"))) {
             store.postGoodsReceipt(receiptId, sv(receipt, "poNo"), principal.userId(), now);
         }
+        notifySafely(completed ? "DELIVERY_COMPLETED" : "DELIVERY_PARTIAL");
         return Map.of("message", completed
                 ? "BCH đã xác nhận " + sv(receipt, "receiptNo") + "; quy trình PO đã kết thúc"
                   + (hasExceptions ? " nhưng còn cảnh báo thiếu hồ sơ" : " đầy đủ") + "."
@@ -454,6 +462,15 @@ private static final List<String> COMPLETED_PO_STATUSES = List.of(
     }
 
     // ---- helpers ----
+    /** Notification delivery is a side effect; it must not invalidate a saved PO or receipt. */
+    private void notifySafely(String eventKey) {
+        try {
+            notifications.dispatch(eventKey);
+        } catch (RuntimeException ignored) {
+            // Existing audit/history records the authoritative transaction; notification config is user-managed.
+        }
+    }
+
     private static Object ci(Map<String, Object> m, String key) {
         if (m == null) return null;
         Object v = m.get(key);

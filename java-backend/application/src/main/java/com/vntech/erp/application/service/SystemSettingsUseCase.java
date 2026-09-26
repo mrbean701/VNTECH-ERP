@@ -3,6 +3,7 @@ package com.vntech.erp.application.service;
 import com.vntech.erp.application.port.out.IdGenerator;
 import com.vntech.erp.application.port.out.SystemSettingsStore;
 import com.vntech.erp.application.rbac.RbacService;
+import com.vntech.erp.application.trust.LicenseEnvelopeVerifier;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -207,27 +208,155 @@ public final class SystemSettingsUseCase {
     }
 
     // ============ license ============
+    /**
+     * MT2-P14-03b — «Kích hoạt nền tảng bản quyền»: <b>PORT TRUNG THÀNH JS</b> {@code install_license_foundation}
+     * ({@code scripts/system-route.mjs} ~:1998). Hợp đồng cũ của Java ({@code licenseKey/companyName/edition})
+     * ghi vào 6 cột <b>không tồn tại</b> ⇒ action trả lỗi SQL; bản này làm đúng 4 bước của JS:
+     * <ol>
+     *   <li>nhận {@code licenseEnvelope} (đối tượng; ⚠️ chuỗi JSON đã được tầng web parse — chuỗi còn lại ở đây
+     *       nghĩa là JSON hỏng ⇒ ném đúng câu của JS);</li>
+     *   <li>XÁC MINH chữ ký Ed25519 theo Trust Root ({@code vntech_trust_settings} hàng {@code TRUST-ROOT});</li>
+     *   <li>⛔ không hợp lệ ⇒ ghi {@code vntech_trust_audit} {@code LICENSE_REJECTED} + ném
+     *       «License không hợp lệ: &lt;lý do&gt;» (⛔ KHÔNG ghi bảng cài đặt);</li>
+     *   <li>hợp lệ ⇒ ghi {@code vntech_license_installations} (18 cột thật) + audit {@code LICENSE_VERIFIED}
+     *       và trả về ĐÚNG thông điệp Development Mode của JS.</li>
+     * </ol>
+     */
     public Map<String, Object> installLicenseFoundation(Principal principal, Map<String, Object> payload) {
         rbac.requireRole(principalAsCurrent(principal), List.of("admin"));
-        String licenseKey = trim(payload.get("licenseKey"));
-        String companyName = trim(payload.get("companyName"));
-        if (licenseKey.isEmpty() || companyName.isEmpty()) throw Api("Khóa kích hoạt và tên công ty là bắt buộc.");
-        String edition = blankDefault(trim(payload.get("edition")), "standard");
-        store.installLicenseFoundation(licenseKey, companyName, edition, principal.userId(), Instant.now());
-        return Map.of("message", "Đã kích hoạt nền tảng bản quyền cho " + companyName + ".");
+        Object raw = payload.get("licenseEnvelope");
+        if (raw instanceof String) throw Api("Nội dung license không phải JSON hợp lệ.");
+        Map<String, Object> envelope = asMap(raw);
+        Map<String, Object> identity = store.readTrustIdentity();
+        Instant now = Instant.now();
+        LicenseEnvelopeVerifier.Context context = new LicenseEnvelopeVerifier.Context(
+                trim(identity.get("keyId")), trim(identity.get("publicKeyPem")), trim(identity.get("productId")),
+                trim(identity.get("tenantId")), trim(identity.get("companyCode")),
+                trim(identity.get("machineFingerprint")), now);
+        LicenseEnvelopeVerifier.Verification verification =
+                LicenseEnvelopeVerifier.verifyEnvelope(envelope, context);
+        Map<String, Object> claims = verification.claims() == null ? Map.of() : verification.claims();
+        String machineFingerprint = trim(identity.get("machineFingerprint"));
+        if (!verification.valid()) {
+            store.recordTrustAudit("LICENSE_REJECTED", principal.userId(),
+                    trim(claims.get("licenseId")).isEmpty() ? null : trim(claims.get("licenseId")),
+                    machineFingerprint.isEmpty() ? null : machineFingerprint,
+                    jsonObject(Map.of("reasons", verification.reasons())), now);
+            throw Api("License không hợp lệ: " + String.join("; ", verification.reasons()));
+        }
+        Map<String, Object> installation = new LinkedHashMap<>();
+        installation.put("id", idGenerator.next("LIC"));
+        installation.put("licenseId", trim(claims.get("licenseId")));
+        installation.put("tenantId", trim(claims.get("tenantId")));
+        installation.put("companyCode", trim(claims.get("companyCode")));
+        installation.put("productId", trim(claims.get("productId")));
+        installation.put("keyId", trim(envelope.get("keyId")));
+        installation.put("payloadJson", jsonObject(claims));
+        installation.put("signatureBase64", trim(envelope.get("signature")));
+        installation.put("status", "verified_development");
+        installation.put("validFrom", trim(claims.get("notBefore")));
+        installation.put("validUntil", trim(claims.get("expiresAt")));
+        installation.put("machineFingerprint", machineFingerprint.isEmpty() ? null : machineFingerprint);
+        installation.put("verificationDetailJson", jsonObject(Map.of(
+                "signatureVerified", true, "enforcement", false)));
+        installation.put("installedBy", principal.userId());
+        installation.put("now", now);
+        store.installLicenseFoundation(installation);
+        store.recordTrustAudit("LICENSE_VERIFIED", principal.userId(), trim(claims.get("licenseId")),
+                machineFingerprint.isEmpty() ? null : machineFingerprint,
+                jsonObject(Map.of("enforcement", "disabled-by-design", "keyId", trim(envelope.get("keyId")))),
+                now);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("message", "License đã được xác minh và lưu ở Development Mode; "
+                + "hệ thống vẫn chưa bật enforcement.");
+        result.put("verification", verification.toMap());
+        return result;
     }
 
+    /**
+     * MT2-P14-03b — «Yêu cầu chuyển/khôi phục license»: PORT JS {@code request_license_transfer}.
+     * Khác bản cũ: ⛔ không có {@code toCompanyName} (cột không tồn tại) — dùng
+     * {@code destinationMachineFingerprint} (SHA-256 64 hex, giống JS) + {@code reason} <b>bắt buộc</b>;
+     * ⛔ KHÔNG {@code UPDATE} bảng cài đặt (JS không làm vậy).
+     */
     public Map<String, Object> requestLicenseTransfer(Principal principal, Map<String, Object> payload) {
         rbac.requireRole(principalAsCurrent(principal), List.of("admin"));
         String licenseId = trim(payload.get("licenseId"));
-        String toCompanyName = trim(payload.get("toCompanyName"));
+        String destinationMachineFingerprint = trim(payload.get("destinationMachineFingerprint")).toLowerCase(Locale.ROOT);
         String reason = trim(payload.get("reason"));
-        if (licenseId.isEmpty() || toCompanyName.isEmpty())
-            throw Api("Chuyển bản quyền cần mã cài đặt và tên công ty nhận.");
-        store.findLicense(licenseId).orElseThrow(() -> Api("Không tìm thấy bản cài đặt bản quyền."));
-        store.requestLicenseTransfer(licenseId, toCompanyName, reason.isEmpty() ? null : reason,
-                principal.userId(), Instant.now());
-        return Map.of("message", "Đã gửi yêu cầu chuyển bản quyền; VNTECH sẽ xử lý thủ công qua phiếu chuyển.");
+        if (reason.isEmpty()) throw Api("Yêu cầu chuyển/khôi phục license bắt buộc có lý do.");
+        if (!destinationMachineFingerprint.isEmpty()
+                && !destinationMachineFingerprint.matches("^[a-f0-9]{64}$")) {
+            throw Api("Machine fingerprint đích phải là SHA-256 64 ký tự.");
+        }
+        if (!licenseId.isEmpty()) {
+            store.findLicense(licenseId).orElseThrow(() -> Api("Không tìm thấy bản cài đặt bản quyền."));
+        }
+        Instant now = Instant.now();
+        String sourceMachineFingerprint = trim(store.readTrustIdentity().get("machineFingerprint"));
+        store.requestLicenseTransfer(licenseId.isEmpty() ? null : licenseId,
+                sourceMachineFingerprint.isEmpty() ? null : sourceMachineFingerprint,
+                destinationMachineFingerprint.isEmpty() ? null : destinationMachineFingerprint,
+                reason, principal.userId(), now);
+        store.recordTrustAudit("TRANSFER_REQUESTED", principal.userId(),
+                licenseId.isEmpty() ? null : licenseId,
+                sourceMachineFingerprint.isEmpty() ? null : sourceMachineFingerprint,
+                jsonObject(Map.of("destinationMachineFingerprint",
+                        destinationMachineFingerprint.isEmpty() ? "" : destinationMachineFingerprint)), now);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("message", "Đã ghi nhận yêu cầu chuyển/khôi phục. "
+                + "Foundation chưa tự động cấp hoặc thu hồi license.");
+        return result;
+    }
+
+    /**
+     * Serialize JSON TỐI THIỂU cho các cột {@code *_json} — ⛔ không kéo Jackson vào tầng application
+     * (module này chỉ phụ thuộc domain + junit). Chỉ dùng cho object 1 tầng với giá trị
+     * chuỗi / số / boolean / mảng chuỗi — đúng nhu cầu 3 chỗ gọi ở trên.
+     */
+    static String jsonObject(Map<String, Object> values) {
+        StringBuilder out = new StringBuilder("{");
+        boolean first = true;
+        for (Map.Entry<String, Object> entry : values.entrySet()) {
+            if (!first) out.append(',');
+            first = false;
+            out.append(jsonString(entry.getKey())).append(':').append(jsonValue(entry.getValue()));
+        }
+        return out.append('}').toString();
+    }
+
+    private static String jsonValue(Object value) {
+        if (value == null) return "null";
+        if (value instanceof Boolean flag) return flag ? "true" : "false";
+        if (value instanceof Number number) return String.valueOf(number);
+        if (value instanceof List<?> list) {
+            StringBuilder out = new StringBuilder("[");
+            for (int i = 0; i < list.size(); i++) {
+                if (i > 0) out.append(',');
+                out.append(jsonValue(list.get(i)));
+            }
+            return out.append(']').toString();
+        }
+        return jsonString(String.valueOf(value));
+    }
+
+    private static String jsonString(String text) {
+        StringBuilder out = new StringBuilder(text.length() + 2).append('"');
+        for (int i = 0; i < text.length(); i++) {
+            char ch = text.charAt(i);
+            switch (ch) {
+                case '"' -> out.append("\\\"");
+                case '\\' -> out.append("\\\\");
+                case '\n' -> out.append("\\n");
+                case '\r' -> out.append("\\r");
+                case '\t' -> out.append("\\t");
+                default -> {
+                    if (ch < 0x20) out.append(String.format("\\u%04x", (int) ch));
+                    else out.append(ch);
+                }
+            }
+        }
+        return out.append('"').toString();
     }
 
     // ============ email / settings ============

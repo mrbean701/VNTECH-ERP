@@ -47,7 +47,7 @@ const STEP_LABEL: Record<ApprovalStepStatus, string> = {
   approved: "Đã duyệt",
   rejected: "Từ chối / trả lại",
   pending: "Chờ duyệt",
-  waiting: "Chưa tới lượt",
+  waiting: "Đang chờ",
   skipped: "Bỏ qua",
 };
 
@@ -67,12 +67,19 @@ function fmt(v?: string | null): string {
   return d.toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
-export function ApprovalTimeline({ steps, title = "DẢI PHÊ DUYỆT", note, compact }: {
+export function ApprovalTimeline({ steps, title = "DẢI PHÊ DUYỆT", note, compact, layout = "horizontal" }: {
   steps: ApprovalStep[];
   title?: string;
   note?: string;
   /** Chế độ gọn — dùng khi nhúng vào card nhỏ. */
   compact?: boolean;
+  /**
+   * MT2 §4.3 — người dùng yêu cầu dải phê duyệt hiển thị **NGANG**
+   * `bước 1 o----o bước 2 o----o bước 3`, KHÔNG dùng cột dọc.
+   * Mặc định `horizontal`; màn hẹp (<768px) CSS tự chuyển về dọc để không tràn.
+   * Truyền `vertical` nếu một màn cụ thể cần bố cục cũ.
+   */
+  layout?: "horizontal" | "vertical";
 }) {
   const done = steps.filter((s) => s.status === "approved").length;
   const rejected = steps.filter((s) => s.status === "rejected").length;
@@ -85,7 +92,7 @@ export function ApprovalTimeline({ steps, title = "DẢI PHÊ DUYỆT", note, co
           <p>{note || `Đã duyệt ${done}/${steps.length} bước${rejected ? ` · ${rejected} bước bị trả lại` : ""}`}</p>
         </div>
       </div>
-      <ol className={`vt-timeline${compact ? " vt-timeline-compact" : ""}`}>
+      <ol className={`vt-timeline${layout === "horizontal" ? " is-horizontal" : ""}${compact ? " vt-timeline-compact" : ""}`}>
         {steps.map((s) => (
           <li key={s.no} className={`vt-timeline-step is-${s.status}${s.late ? " is-late" : ""}`}>
             <div className="vt-timeline-marker" aria-hidden="true">

@@ -84,7 +84,7 @@ const methodBodies = new Map();      // "TenUseCase.method" → thân phương t
 for (const file of walkJava(JAVA_ROOT)) {
   const src = readFileSync(file, "utf8");
   const useCase = file.replace(/\\/g, "/").split("/").pop().replace(".java", "");
-  const re = /\n {4}(?:public|private|protected)[^\n{;]*\([^)]*\)[^\n{;]*\{/g;
+  const re = /\n\s{0,8}(?:public|private|protected)[^\n{;]*\([^)]*\)[^\n{;]*\{/g;
   for (let m; (m = re.exec(src)); ) {
     const name = (m[0].match(/(\w+)\s*\([^)]*\)\s*\{$/) || [])[1];
     if (!name) continue;
@@ -98,14 +98,20 @@ for (const [action, scope] of [...jsScope].sort()) {
   const jc = javaCases.get(action);
   if (!jc || !jc.calls.length) { noMap.push({ action, scope, reason: jc ? "controller không gọi use-case" : "không có case" }); continue; }
   const hit = jc.calls.filter((c) => {
-    // `c.useCase` là TÊN TRƯỜNG trong controller (vd `requestManagementUseCase`), còn khoá của
-    // methodBodies là tên LỚP (vd `RequestManagementUseCase`). Thử lần lượt: viết hoa chữ đầu,
-    // rồi tới tên phương thức trần.
     const cap = c.useCase.charAt(0).toUpperCase() + c.useCase.slice(1);
-    const body = methodBodies.get(`${c.useCase}.${c.method}`)
-        ?? methodBodies.get(`${cap}.${c.method}`)
-        ?? methodBodies.get(c.method);
-    return body ? SCOPE_MARKERS.test(body) : false;
+    const keys = [`${c.useCase}.${c.method}`, `${cap}.${c.method}`, c.method];
+    return keys.some((key) => {
+      const seen = new Set();
+      const walk = (k) => {
+        if (seen.has(k)) return false;
+        seen.add(k);
+        const body = methodBodies.get(k);
+        if (!body) return false;
+        if (SCOPE_MARKERS.test(body)) return true;
+        return [...body.matchAll(/\b(\w+)\s*\(/g)].some((call) => walk(`${k.split(".")[0]}.${call[1]}`));
+      };
+      return walk(key);
+    });
   });
   // Hoặc chính case của controller đã kiểm phạm vi (thiết kế "check ở web").
   if (jc.scopeInCase) hit.push({ useCase: "(controller)", method: "case-block" });
