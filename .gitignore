@@ -1,0 +1,85 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+
+# vercel
+.vercel
+
+# typescript
+next-env.d.ts
+/dist/
+/.wrangler/
+/.sites-runtime/
+/outputs/
+/work/
+/.local-data/
+/.local-backups/
+/.server-data/
+/.vntech_backups/
+/.vntech_update_state/
+# Ảnh chụp màn hình & hồ sơ chẩn đoán do công cụ sinh ra (không phải mã nguồn)
+/screenshot-*.png
+/.memsearch/
+/.probe-*-profile/
+# Bản sao lưu cơ sở dữ liệu (dump lớn, không đưa vào kho mã)
+/backup/
+
+# Maven / Java
+java-backend/**/target/
+*.log
+
+# Thư mục tạm của tools/verify-java-compile.ps1 (fat JAR đã giải nén + .class biên dịch) — không phải mã nguồn
+/_javac-verify/
+
+# Local Maven repo sao chép vào workspace để mvn ghi được khi sandbox chặn C:\Users\PC\.m2 (411 MB)
+/_m2-repo/
+# maven.config trỏ local repo bằng ĐƯỜNG DẪN TUYỆT ĐỐI đặc thù máy này — đã ghi hướng dẫn ở docs/29
+/java-backend/.mvn/maven.config
+
+
+# Thu muc artifact cua bo cong cu thi giac (khong phai ma nguon)
+/.dsh-vision-toolkit/
+
+# Ban sao luu du lieu THAT lay ra truoc khi probe goi action GHI (chua du lieu nguoi dung that) —
+# giu lai tai cho de doi chieu/khoi phuc nhung KHONG dua vao kho ma.
+tools/_backup-*.sql
+
+# Ket xuat LUOC DO MySQL dang chay (nguon su thuat cua Java) — du lieu dan xuat, tao lai duoc bang
+# mot cau lenh trong tools/probe-java-sql-live.mjs. Khong phai ma nguon.
+tools/_live-schema.tsv
+
+# ── Thêm 26/09/2026 (loại trước khi commit/push lên nhánh dùng chung) ─────────────────────────────
+# .ai/ = TRANG THAI NOI BO cua agent (ke hoach/kanh ban giao), hay doi moi lan chay ⇒ KHONG dua
+# vao kho (da loai khoi MANIFEST_SHA256.txt o ban va #31 vi ly do giong het).
+.ai/
+
+# mt2chk.xml = file RAC nhi phan sinh khi kiem tra ket qua probe, khong phai ma nguon.
+mt2chk.xml

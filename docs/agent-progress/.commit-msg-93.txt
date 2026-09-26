@@ -1,0 +1,13 @@
+So sach sau #92: TASK-049 DONE (port 2 phep kiem Owner cua buoc duyet, kiem chung 10/10) + D5 tro thanh MUC CHAN (luong lap phieu PRJ-DEMO-01 400 do du lieu) + D7 moi (merge_material_master) + 3 bai hoc #24-#26
+
+- TASK-049.md viet lai: bang 4 dieu kien JS (2 da co, 2 moi port), ket qua probe 10/10 theo tung nhanh
+  (sai vai tro / thieu pham vi TREN DU LIEU THAT / nhanh DAT / khoi phuc sach), doi chung duong
+  (tren jar truoc do cung loi goi tra 200 va tao phieu that), muc 3 PHAT HIEN CHAN + SQL sua 1 dong,
+  muc 4 ly do KHONG lam merge_material_master (chuyen D7), muc 5 gioi han + loi cua chinh toi
+  (mysql --batch --raw in NULL thanh chuoi "NULL" lam 2 nhanh bi bo qua oan).
+- MASTER_STATUS: Known Problems #56 (da port + he qua du lieu dang chan), D5 viet lai thanh muc CHAN
+  (co SQL san + 3 lua chon), D7 moi, CURRENT TASK = TASK-056 (cong doi chieu TAP COT), LAST COMPLETED
+  = TASK-049, CURRENT TODO cap nhat, bai hoc #25 (NULL cua mysql CLI) va #26 (mot phep kiem moi co the
+  lam lo du lieu sai dang bi che - KHONG duoc noi phep kiem de moi thu chay troi; moi probe tao phieu
+  that phai tu cap TAM pham vi roi xoa lai).
+- TASK_INDEX: dong TASK-049 day du bang chung.

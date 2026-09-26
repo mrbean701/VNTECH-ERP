@@ -1,0 +1,22 @@
+import { readFile, realpath, writeFile } from "node:fs/promises";
+import { createPrivateKey, sign } from "node:crypto";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { canonicalJson } from "../../lib/trust/canonical-json.mjs";
+import { validateLicensePayload } from "../../lib/trust/license-schema.mjs";
+import { VNTECH_IDENTITY_DATA } from "../../lib/vntech-identity-data.mjs";
+
+const sourceRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+const args = Object.fromEntries(process.argv.slice(2).reduce((rows, item, index, all) => item.startsWith("--") ? [...rows, [item.slice(2), all[index + 1]]] : rows, []));
+if (!args.payload || !args["private-key"] || !args.output) throw new Error("Cần --payload, --private-key và --output.");
+const privateKeyPath = await realpath(resolve(args["private-key"]));
+if (privateKeyPath === sourceRoot || privateKeyPath.startsWith(`${sourceRoot}/`)) throw new Error("Từ chối: private key phải nằm ngoài cây source VNTECH ERP.");
+const payload = JSON.parse(await readFile(resolve(args.payload), "utf8"));
+const errors = validateLicensePayload(payload);
+if (errors.length) throw new Error(errors.join("; "));
+const privateKey = createPrivateKey(await readFile(privateKeyPath));
+if (privateKey.asymmetricKeyType !== "ed25519") throw new Error("Private key phải là Ed25519.");
+const signature = sign(null, Buffer.from(canonicalJson(payload)), privateKey).toString("base64");
+const envelope = { payload, keyId: VNTECH_IDENTITY_DATA.trust.keyId, signature };
+await writeFile(resolve(args.output), `${JSON.stringify(envelope, null, 2)}\n`, { mode: 0o600 });
+console.log(`Đã tạo signed license ${payload.licenseId}; private key không được sao chép vào output.`);

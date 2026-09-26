@@ -1,0 +1,53 @@
+#51 TASK-040 nho 4+5: DÍNH CHINH ten action (loi cua toi) + bang chung kiem chung + cong cu moi
+
+DINH CHINH COMMIT #50: trong thong diep cua #50 toi viet action la `settle_subcontract`. TEN DO SAI -
+toi tu suy tu ten phuong thuc `settleSubcontract`. Ten dung la `settle_team_subcontract`
+(JS scripts/system-route.mjs:1249, Java SystemController:637). Khong sua lich su commit; ghi dinh chinh o day
+va da sua moi cho trong ma/tai lieu.
+
+VI SAO PHAT HIEN DUOC: cong cu moi tools/probe-action-coverage-controller.mjs bao "0 action UI goi ma Java
+thieu nhanh case" - mau thuan voi ket luan "chua duoc trien khai" ma probe truoc do nhan duoc. Su mau thuan do
+moi lo ra loi. Neu chi co mot phep do thi da ket luan sai rang nho 5 la MA CHET.
+
+=== KIEM CHUNG NHOM 4 + 5 (day du, co ghi ro gioi han) ===
+TANG SQL - tools/probe-task040-nhom45.sql, chay trong TRANSACTION roi ROLLBACK:
+  cau CU  UPDATE stock_issue_items SET status='installed'      -> ERROR 1054 Unknown column 'status'
+  cau CU  SET ...,settlement_id=?,settled_at=?                 -> ERROR 1054 Unknown column 'settlement_id'
+  cau MOI cong don 3 roi 4 tren dong that SMII_01f4e94b...     -> 7.0000   (JS cung ra 7)
+  mo phong cach GHI DE cua ban cu tren cung dong              -> 4.0000   (chung minh ban cu MAT phan 3)
+  cau MOI settle_team_subcontract                              -> status = settled
+  sau ROLLBACK                                                 -> 5 dong / 0 dong, installed ve 0.0000 (nguyen trang)
+TANG HTTP - tools/probe-task040-nhom45.mjs : 9/9 DAT, exit 0 (moi nhanh DUNG TRUOC khi ghi)
+  confirm_installation dong khong ton tai / quantity=0 -> 400 "Dong xac nhan lap dat khong hop le."
+  confirm_installation quantity vuot                 -> 400 "So luong xac nhan lap vuot so luong to doi da nhan."
+  settle_team_subcontract ma sai                      -> 400 "Khong co quyen quyet toan hop dong nay."
+  nvdademo (engine role project) goi confirm_installation -> HTTP 403 (GOAL muc 7)
+GIOI HAN (noi ro, khong noi qua): day KHONG phai phep kiem end-to-end. Chung minh duoc SQL dung luoc do +
+dung ngu nghia + cac nhanh chan, KHONG chung minh duong GHI chay het vong. Bam nut voi du lieu that van can
+nguoi dung test thu cong.
+
+MAY CHAY: jar 90.886.009 bytes (14:55:00) - API PID 2872 - Flyway validated 16 migrations - log 0 ERROR
+REGRESSION: 61 test / 59 pass / 2 fail - dung 2 loi cu (TASK-031, TASK-032), KHONG phat sinh loi moi.
+
+=== PHAT HIEN DU LIEU MO COI (moi) ===
+stock_issue_items: 5 dong - join duoc stock_issues: 5 - join duoc teams: CHI 2.
+teams hien co 1 dong (TEAM_8c1fecd9-...) nhung stock_issues tro toi 4 team khac nhau => 3 team khong con ton tai.
+findIssueItem dung JOIN teams (giong y JS) nen cac dong mo coi bi loai => confirm_installation tra
+"Dong xac nhan lap dat khong hop le." MA DUNG, DU LIEU SAI. stock_issue_items KHONG co khoa ngoai nen khong gi chan.
+=> Ghi thanh known issue; KHONG tu xoa/sua du lieu nguoi dung.
+
+=== CONG CU MOI TRONG VONG NAY ===
+tools/probe-action-coverage-controller.mjs - doi chieu ba tap: case "..." trong SystemController (224),
+action === "..." trong JS (174), action("...") trong UI (119).
+  UI goi ma Java THIEU case      : 0
+  JS co ma ma Java THIEU case    : 0
+  Java co case ma JS khong co ma : 50 (38 ten chi muc SQL hop le + 12 action Java-only da biet)
+Cac cong cu cu chi so voi danh muc/thanh ghi RBAC, KHONG so voi chinh cac nhanh case dang phuc vu request -
+nen mot action co the co SQL + co trong thanh ghi ma thieu case => khong bao gio chay.
+tools/show-js-lines.mjs them che do --slice (trich theo KY TU) vi nhieu handler JS nam gon tren mot dong dai.
+
+BUILD: mvn -q -DskipTests package thanh cong - fat jar 90.886.009 bytes.
+
+Tep: ProductionStoreAdapter.java - ProductionStore.java (sua ten action trong chu thich) -
+tools/probe-task040-nhom45.mjs - tools/probe-task040-nhom45.sql - tools/probe-action-coverage-controller.mjs -
+tools/show-js-lines.mjs - docs/agent-progress/{TASK-040.md (muc 20), MASTER_STATUS.md, TASK_INDEX.md}

@@ -1,0 +1,1076 @@
+/* ============================================================================
+   VNTECH ERP — TẦNG CHUẨN HOÁ GIAO DIỆN (GĐ1)
+   ----------------------------------------------------------------------------
+   File này được nạp SAU `globals.css` (xem app/layout.tsx) nên các rule ở đây
+   thắng khi cùng độ ưu tiên. Mục đích: sửa các lỗi hiển thị đã ĐO ĐƯỢC, thay
+   vì tiếp tục vá thêm lớp override rải rác trong globals.css.
+
+   Bằng chứng đo được trước khi sửa (tools/probe-layout-audit.mjs):
+     • `.table-wrap` cuộn được nhưng KHÔNG hiển thị thanh cuộn (768x1024)
+     • 32 phần tử có cỡ chữ < 9px ở cả 3 kích thước màn hình
+     • `.table-wrap` bị định nghĩa lại 26 lần với 9 giá trị max-height khác nhau
+   ========================================================================== */
+
+/* ---------------------------------------------------------------------------
+   0. TOKEN DÙNG CHUNG
+   ---------------------------------------------------------------------------
+   GĐ1: TOÀN BỘ token đã được GOM về `app/styles/tokens.css` — một nguồn sự thật
+   duy nhất. Khối `:root` trước đây ở đây đã được xoá (giá trị KHÔNG đổi).
+
+   tokens.css được nạp TRƯỚC tệp này (xem app/layout.tsx), và đã kiểm chứng rằng
+   không có biến nào bị khai báo trùng giữa các tệp CSS, nên việc chuyển nơi khai
+   báo KHÔNG làm đổi giá trị mà bất kỳ `var(...)` nào nhận được.
+   --------------------------------------------------------------------------- */
+
+/* ---------------------------------------------------------------------------
+   1. THANH CUỘN NHÌN THẤY RÕ TRÊN MỌI VÙNG CUỘN
+   ---------------------------------------------------------------------------
+   Nguyên nhân lỗi: chỉ `.sidebar .tree-nav` được style thanh cuộn; `.table-wrap`
+   chỉ có `scrollbar-color` mà thiếu chiều rộng/độ tương phản nên thanh cuộn
+   chìm vào nền và người dùng tưởng "không kéo được".
+
+   Lưu ý kỹ thuật: trên Chromium/Edge hiện đại, khi ĐÃ khai báo `scrollbar-color`
+   thì các rule `::-webkit-scrollbar` bị BỎ QUA. Vì vậy chọn MỘT cách: dùng
+   thuộc tính chuẩn `scrollbar-color` + `scrollbar-width: auto` (thanh cuộn đủ
+   rộng, có màu) và KHÔNG khai báo ::-webkit-scrollbar ở đây.
+   --------------------------------------------------------------------------- */
+.table-wrap, .boq-table-wrap, .matching-table-wrap, .material-subgroup-table-wrap, .staff-table, .dashboard-chart-scroll, .modal .table-wrap, .drawer .table-wrap, .embedded-account-permissions .table-wrap, .boq-history-panel .table-wrap, .dynamic-fields .table-wrap, .boq-main, .boq-column-panel, .sidebar .tree-nav, .approval-meta-pane, .user-display-panel .column-list {
+  scrollbar-color: var(--vt-scroll-thumb) var(--vt-scroll-track);
+  scrollbar-width: auto;
+  scrollbar-gutter: stable;
+}
+
+/* Vùng cuộn nào thực sự có nội dung tràn thì luôn cho cuộn cả 2 chiều */
+.table-wrap,
+.boq-table-wrap,
+.matching-table-wrap,
+.material-subgroup-table-wrap {
+  overflow: auto;
+}
+
+/* ---------------------------------------------------------------------------
+   2. MỘT ĐỊNH NGHĨA DUY NHẤT CHO .table-wrap
+   ---------------------------------------------------------------------------
+   Ghi đè 26 định nghĩa rải rác (9 giá trị max-height khác nhau). Giữ ngoại lệ
+   cho modal/drawer vì chúng nằm trong khung đã có chiều cao giới hạn.
+   --------------------------------------------------------------------------- */
+.table-wrap {
+  max-height: min(72vh, 820px);
+  border: 1px solid var(--line, #dbe4ee);
+  border-radius: var(--vt-radius);
+  background: var(--surface, #fff);
+}.modal .table-wrap, .drawer .table-wrap {
+  max-height: min(58vh, 640px);
+}
+
+/* Đầu bảng dính khi cuộn dọc — chỉ áp cho vùng cuộn thật */
+.table-wrap > table > thead > tr > th,
+.boq-table-wrap > table > thead > tr > th {
+  position: sticky;
+  top: 0;
+  z-index: 8;
+  background: var(--surface-2, #f8fafc);
+  box-shadow: inset 0 -1px 0 var(--line, #dbe4ee);
+}
+
+/* ---------------------------------------------------------------------------
+   3. SÀN CỠ CHỮ — sửa lỗi "quá nhiều thông tin phải thu nhỏ để nhét vừa"
+   ---------------------------------------------------------------------------
+   Trước đây rất nhiều nhãn dùng 8px/8.5px (đo được 32 phần tử < 9px). Nâng sàn
+   lên 10px, VẪN nhân theo `--user-font-scale` để tôn trọng tuỳ chọn cỡ chữ của
+   người dùng.
+   --------------------------------------------------------------------------- */
+.table-wrap table th,
+.table-wrap table td,
+.baseline-table th,
+.baseline-table td,
+thead th {
+  font-size: calc(var(--vt-font-min) * var(--user-font-scale, 1));
+}
+
+.table-wrap table td small,
+.baseline-table td small,
+.table-wrap table th small {
+  font-size: calc(var(--vt-font-min-xs) * var(--user-font-scale, 1));
+}
+
+.card-head p,
+.card > header p,
+.form-grid label > span,
+.filter-grid label > span,
+.dept-filters input,
+.dept-filters select,
+.admin-mini-list small,
+.menu-drop-empty,
+.table-pagination,
+.boq-pagination,
+.empty p {
+  font-size: calc(var(--vt-font-min) * var(--user-font-scale, 1));
+}
+
+.pill,
+.dept-filters button,
+.export-mini {
+  font-size: calc(var(--vt-font-min) * var(--user-font-scale, 1));
+}
+
+/* Panel "DANH SÁCH NHÂN SỰ" trên dashboard — đo được 8px / 8.3px / 8.7px */
+.dashboard-staff-card header strong,
+.dashboard-staff-card header button,
+.dashboard-staff-info strong,
+.dashboard-staff-info span,
+.dashboard-staff-info small,
+.dashboard-staff-badge,
+.dashboard-staff-empty,
+.dashboard-staff-card footer span,
+.dashboard-staff-card footer small,
+.dashboard-staff-search input {
+  font-size: calc(var(--vt-font-min) * var(--user-font-scale, 1));
+}
+
+/* Bảng danh bạ nhân sự (StaffDirectory) */
+.staff-row small,
+.staff-index,
+.staff-email,
+.staff-department,
+.staff-status,
+.staff-table-head span,
+.staff-summary small,
+.staff-toolbar span,
+.staff-toolbar input,
+.staff-toolbar select,
+.staff-directory-head span,
+.staff-hover dt,
+.staff-hover dd {
+  font-size: calc(var(--vt-font-min) * var(--user-font-scale, 1));
+}
+
+/* ---------------------------------------------------------------------------
+   4. NHỊP DỌC — sửa lỗi "rất nhiều phần đang dính liền vào nhau"
+   --------------------------------------------------------------------------- */
+.stack {
+  display: grid;
+  gap: var(--vt-gap-3);
+}
+
+/* Không để hai khối lớn dính sát nhau mà không có khoảng thở */
+.stack > section + section,
+.stack > .card + .card,
+.stack > .card + section,
+.stack > section + .card {
+  margin-top: 0; /* khoảng cách do `gap` của .stack lo, tránh cộng dồn */
+}
+
+.card {
+  padding: var(--vt-gap-4);
+}
+
+.card-head {
+  margin-bottom: var(--vt-gap-3);
+}
+
+/* Nút và ô nhập cùng hàng thì cao bằng nhau — sửa lỗi "nút không cân xứng" */
+.screen-actions button,
+.row-actions button,
+.dept-filters button,
+.dept-filters input,
+.dept-filters select,
+.filter-grid input,
+.filter-grid select,
+.form-grid input,
+.form-grid select,
+.form-grid textarea {
+  min-height: var(--vt-control-h);
+  font-size: calc(var(--vt-font-min) * var(--user-font-scale, 1));
+}
+
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--vt-gap-1);
+  align-items: center;
+}
+
+/* ---------------------------------------------------------------------------
+   5. RESPONSIVE — 4 điểm ngắt chuẩn
+   ---------------------------------------------------------------------------
+   Hiện có 96 @media rải rác. Khối này bảo đảm các layout lưới chính luôn co
+   được, không tràn ngang và không bị ép chữ nhỏ.
+   --------------------------------------------------------------------------- */
+
+/* Desktop lớn */
+@media (min-width: 1441px) {
+  .kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+/* Laptop */
+@media (max-width: 1440px) {
+  .kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--vt-gap-3); }
+  .two-col, .three-col { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 1024px) {
+  .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .two-col, .three-col { grid-template-columns: 1fr; }
+  .table-wrap { max-height: min(64vh, 640px); }
+}
+
+/* Tablet & điện thoại */
+@media (max-width: 768px) {
+  .kpi-grid { grid-template-columns: 1fr; }
+  .card { padding: var(--vt-gap-3); }
+  .stack { gap: var(--vt-gap-2); }
+
+  /* Bảng rộng: cho cuộn ngang thay vì bóp chữ lại */
+  .table-wrap { max-height: 60vh; }
+  .table-wrap > table { min-width: 720px; width: max-content; }
+
+  /* Nút hành động xếp dọc cho dễ bấm */
+  .screen-actions,
+  .row-actions {
+    flex-wrap: wrap;
+  }
+  .screen-actions button,
+  .dept-filters button {
+    flex: 1 1 auto;
+  }
+}
+
+/* Điện thoại nhỏ */
+@media (max-width: 520px) {
+  .table-wrap > table { min-width: 620px; }
+  .card-head { flex-direction: column; align-items: flex-start; gap: var(--vt-gap-1); }
+}/* ---------------------------------------------------------------------------
+   6. CHẾ ĐỘ TRANG ĐẦY ĐỦ (GĐ2) — phiếu mua hàng thay vì drawer/modal
+   ---------------------------------------------------------------------------
+   Yêu cầu người dùng: "phiếu mua hàng thay vì chỉ hiển thị theo dạng modal thì có
+   thể hiển thị như 1 trang với đầy đủ thông tin".
+
+   Vì sao KHÔNG dùng `position: static`: RequestDrawer được render SAU nội dung
+   chính trong <main>, nên nếu đưa về luồng tài liệu nó sẽ nằm DƯỚI nội dung module
+   chứ không thay thế. Cách đúng: giữ `position: fixed` nhưng phủ TOÀN màn hình và
+   bỏ mọi dấu hiệu "drawer" (bo góc, đổ bóng {
+  background: var(--shell-bg, #f4f7fa) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  display: block !important;
+  padding: 0 !important;
+  z-index: 130 !important;
+}/* Đầu trang dính trên cùng {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 6 !important;
+  min-height: 68px !important;
+  padding: 14px 26px !important;
+  box-shadow: 0 1px 0 var(--line, #dbe4ee) !important;
+}/* Thân trang: bỏ giới hạn chiều cao của drawer {
+  max-height: none !important;
+  overflow-y: auto !important;
+  padding: 20px 26px 48px !important;
+  gap: var(--vt-gap-3) !important;
+  background: transparent !important;
+}
+
+@media (max-width: 1440px) {
+}
+@media (max-width: 1024px) {
+}
+@media (max-width: 768px) {
+}/* ---------------------------------------------------------------------------
+   6b. THU GỌN KHỐI ("dropbox nếu muốn ẩn bớt cho gọn")
+   ---------------------------------------------------------------------------
+   Giữ TIÊU ĐỀ từng khối, ẩn phần thân — người dùng vẫn biết khối nào tồn tại.
+   Không dùng <details> vì các khối nằm trong chuỗi JSX rất dài {
+  width: auto !important;
+  min-width: 0 !important;
+  height: var(--vt-control-h) !important;
+  padding: 0 14px !important;
+  margin-left: auto !important;
+  border-radius: 8px !important;
+  background: transparent !important;
+  border: 1px solid var(--line, #dbe4ee) !important;
+  color: #3c5a7a !important;
+  font-size: calc(10.5px * var(--user-font-scale, 1)) !important;
+  font-weight: 800 !important;
+  white-space: nowrap !important;
+}/* Chỉ ẩn phần THÂN {
+  display: none !important;
+}
+
+/* ---------------------------------------------------------------------------
+   7. MÀN QUẢN LÝ DỰ ÁN (GĐ3) — danh sách + chi tiết dạng tab
+   --------------------------------------------------------------------------- */
+.project-management .table-toolbar {
+  flex-wrap: wrap;
+  gap: var(--vt-gap-2);
+}
+.project-management .table-toolbar .row-actions input {
+  min-width: 220px;
+}
+
+/* Dải tab của trang chi tiết dự án */
+.project-management .project-scope-tabs {
+  margin: var(--vt-gap-3) 0 0;
+  gap: var(--vt-gap-1);
+}
+.project-management .project-scope-tabs button {
+  min-height: var(--vt-control-h);
+  padding: 0 16px;
+  border: 1px solid var(--line, #dbe4ee);
+  border-radius: 8px;
+  background: #fff;
+  color: #35506e;
+  font-size: calc(var(--vt-font-min) * var(--user-font-scale, 1));
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.project-management .project-scope-tabs button:hover {
+  background: #f2f7fc;
+}
+.project-management .project-scope-tabs button.active,
+.project-management .project-scope-tabs button[aria-selected="true"] {
+  background: #1f5fa8;
+  border-color: #1f5fa8;
+  color: #fff;
+}
+
+/* MT2-P14-03c — ĐÃ GỠ 2 quy tắc CHẾT `.project-warehouse-detail h3` + `h3 small` (−10 dòng):
+   grep toàn bộ `app/**, lib/**, tests/**, scripts/**` = **0 lần** dùng lớp này (khối chi tiết kho dự án
+   đã được thay bằng `ProjectWarehousePanel`/`EntityDetailModal`). ⛔ không ảnh hưởng giao diện. */
+.project-warehouse-detail .kpi-grid.small {
+  margin-bottom: var(--vt-gap-3);
+}
+
+/* Nút "← Quay lại danh sách" ở đầu trang chi tiết dự án */
+.project-detail-head .page-back {
+  min-height: var(--vt-control-h);
+  padding: 0 16px;
+  border-radius: 8px;
+  border: 1px solid var(--line, #dbe4ee);
+  background: #eef3f8;
+  color: #24507d;
+  font-size: calc(10.5px * var(--user-font-scale, 1));
+  font-weight: 800;
+  cursor: pointer;
+}
+.project-detail-head .page-back:hover {
+  background: #e2ecf6;
+}
+
+@media (max-width: 768px) {
+  .project-management .table-toolbar .row-actions input { min-width: 0; width: 100%; }
+  .project-management .project-scope-tabs { overflow-x: auto; }
+}
+
+/* ---------------------------------------------------------------------------
+   8. MÀN "CÔNG VIỆC" (GĐ4) — 3 tab, thanh tiến độ, dòng quá hạn
+   --------------------------------------------------------------------------- */
+.work-center .table-toolbar { flex-wrap: wrap; gap: var(--vt-gap-2); }
+.work-center .table-toolbar .row-actions input { min-width: 240px; }
+.work-center .project-scope-tabs { margin: var(--vt-gap-3) 0 0; gap: var(--vt-gap-1); }
+.work-center .project-scope-tabs button {
+  min-height: var(--vt-control-h);
+  padding: 0 16px;
+  border: 1px solid var(--line, #dbe4ee);
+  border-radius: 8px;
+  background: #fff;
+  color: #35506e;
+  font-size: calc(var(--vt-font-min) * var(--user-font-scale, 1));
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.work-center .project-scope-tabs button.active,
+.work-center .project-scope-tabs button[aria-selected="true"] {
+  background: #1f5fa8;
+  border-color: #1f5fa8;
+  color: #fff;
+}
+
+/* Thanh tiến độ dùng chung ở bảng nhiệm vụ và bảng KPI */
+.task-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 130px;
+}
+.task-bar > span {
+  flex: 1 1 auto;
+  height: 8px;
+  border-radius: 999px;
+  background: #e6edf5;
+  overflow: hidden;
+}
+.task-bar > span > i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #2f7fe0, #35b37e);
+  transition: width .2s ease;
+}
+.task-bar > b {
+  flex: 0 0 auto;
+  font-size: calc(10px * var(--user-font-scale, 1));
+  font-weight: 800;
+  color: #25415f;
+  min-width: 34px;
+  text-align: right;
+}
+
+/* Dòng nhiệm vụ quá hạn — nền đỏ nhạt để nhận ra ngay */
+.work-center tr.row-late > td {
+  background: #fff5f5 !important;
+}
+.work-center tr.row-late > td:first-child {
+  box-shadow: inset 3px 0 0 #e04b4b;
+}
+
+@media (max-width: 768px) {
+  .work-center .table-toolbar .row-actions input { min-width: 0; width: 100%; }
+  .work-center .project-scope-tabs { overflow-x: auto; }
+  .task-bar { min-width: 90px; }
+}
+
+/* ---------------------------------------------------------------------------
+   9. MÀN TỔ ĐỘI (GĐ5) — danh sách + chi tiết dạng tab.
+   Dùng CHUNG hình thức với màn Quản lý dự án (GĐ3) để giao diện nhất quán.
+   --------------------------------------------------------------------------- */
+.team-management .table-toolbar { flex-wrap: wrap; gap: var(--vt-gap-2); }
+.team-management .table-toolbar .row-actions input { min-width: 240px; }
+.team-management .project-scope-tabs { margin: var(--vt-gap-3) 0 0; gap: var(--vt-gap-1); }
+.team-management .project-scope-tabs button {
+  min-height: var(--vt-control-h);
+  padding: 0 16px;
+  border: 1px solid var(--line, #dbe4ee);
+  border-radius: 8px;
+  background: #fff;
+  color: #35506e;
+  font-size: calc(var(--vt-font-min) * var(--user-font-scale, 1));
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.team-management .project-scope-tabs button:hover { background: #f2f7fc; }
+.team-management .project-scope-tabs button.active,
+.team-management .project-scope-tabs button[aria-selected="true"] {
+  background: #1f5fa8;
+  border-color: #1f5fa8;
+  color: #fff;
+}
+.team-management .kpi-grid.small { margin-bottom: var(--vt-gap-3); }
+
+@media (max-width: 768px) {
+  .team-management .table-toolbar .row-actions input { min-width: 0; width: 100%; }
+  .team-management .project-scope-tabs { overflow-x: auto; }
+}
+
+/* ---------------------------------------------------------------------------
+   10. DANH MỤC VẬT TƯ DẠNG TAB (mục 5/8)
+   ---------------------------------------------------------------------------
+   Yêu cầu: "không nên để dropbox nữa mà chuyển sang tab".
+   Cách làm: giữ nguyên nội dung 3 khối <details>, chỉ gắn data-tab rồi ẩn/hiện theo
+   tab đang chọn — tránh viết lại các chuỗi JSX rất dài (rủi ro cao, dễ hỏng build).
+   --------------------------------------------------------------------------- */
+.material-catalog-screen details.module-section-collapse[data-tab] { display: none; }
+.material-catalog-screen[data-active-tab="0"] details[data-tab="0"],
+.material-catalog-screen[data-active-tab="1"] details[data-tab="1"],
+.material-catalog-screen[data-active-tab="2"] details[data-tab="2"] { display: block; }
+/* Ở chế độ tab thì không cần dòng tiêu đề "Ẩn / Hiện" của khối thu gọn */
+.material-catalog-screen details[data-tab] > summary { display: none; }
+.material-catalog-screen details[data-tab] { border: 0; background: transparent; }
+.material-catalog-screen .project-scope-tabs { margin: 0; gap: var(--vt-gap-1); }
+.material-catalog-screen .project-scope-tabs button {
+  min-height: var(--vt-control-h);
+  padding: 0 16px;
+  border: 1px solid var(--line, #dbe4ee);
+  border-radius: 8px;
+  background: #fff;
+  color: #35506e;
+  font-size: calc(var(--vt-font-min) * var(--user-font-scale, 1));
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.material-catalog-screen .project-scope-tabs button.active,
+.material-catalog-screen .project-scope-tabs button[aria-selected="true"] {
+  background: #1f5fa8;
+  border-color: #1f5fa8;
+  color: #fff;
+}
+@media (max-width: 768px) {
+  .material-catalog-screen .project-scope-tabs { overflow-x: auto; }
+}
+
+/* ---------------------------------------------------------------------------
+   11. PHÂN QUYỀN PHÒNG BAN (mục 6/8)
+   ---------------------------------------------------------------------------
+   Yêu cầu người dùng: «phần hiển thị hiện tại đang quá tốn diện tích label CHỌN
+   PHÒNG BAN và các nút chức năng ở bên phải đang không cân xứng với nhau — nên sắp
+   xếp thành 1 dòng cho gọn» + «hiển thị theo danh sách phòng ban».
+   → Bỏ dropdown, dựng cột DANH SÁCH PHÒNG BAN bên trái; nút gom về 1 hàng cân đối.
+   --------------------------------------------------------------------------- */
+.dept-perm-layout {
+  display: grid;
+  grid-template-columns: minmax(230px, 300px) minmax(0, 1fr);
+  gap: var(--vt-gap-3);
+  align-items: start;
+}
+.dept-perm-list {
+  border: 1px solid var(--line, #dbe4ee);
+  border-radius: var(--vt-radius);
+  overflow: hidden;
+  background: #fff;
+}
+.dept-perm-list-head {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  padding: 10px 12px; background: #f4f8fc; border-bottom: 1px solid var(--line, #dbe4ee);
+}
+.dept-perm-list-head strong { font-size: calc(10px * var(--user-font-scale, 1)); font-weight: 900; color: #33465f; }
+.dept-perm-list-head span { font-size: calc(9px * var(--user-font-scale, 1)); color: #6b7f97; }
+.dept-perm-list button {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  width: 100%; padding: 9px 12px; border: 0; border-bottom: 1px solid #eef2f7;
+  background: #fff; text-align: left; cursor: pointer;
+}
+.dept-perm-list button:last-child { border-bottom: 0; }
+.dept-perm-list button:hover { background: #f7fbff; }
+.dept-perm-list button.active { background: #eaf3ff; box-shadow: inset 3px 0 0 #1f5fa8; }
+.dept-perm-list button b { display: block; font-size: calc(10px * var(--user-font-scale, 1)); color: #12365f; }
+.dept-perm-list button small { display: block; font-size: calc(9px * var(--user-font-scale, 1)); color: #6b7f97; }
+.dept-perm-list button > span { flex: 0 0 auto; font-size: calc(9px * var(--user-font-scale, 1)); font-weight: 800; color: #1f5fa8; }
+.dept-perm-main { min-width: 0; }
+.dept-perm-context { display: flex; flex-direction: column; gap: 2px; margin-bottom: var(--vt-gap-2); }
+.dept-perm-context strong { font-size: calc(12px * var(--user-font-scale, 1)); color: #12365f; }
+.dept-perm-context span { font-size: calc(10px * var(--user-font-scale, 1)); color: #6b7f97; }
+/* Nút chức năng gom về MỘT HÀNG, cùng chiều cao → hết cảnh lệch nhau */
+.dept-perm-actions {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--vt-gap-1);
+  margin-bottom: var(--vt-gap-2);
+}
+.dept-perm-actions > span { font-size: calc(10px * var(--user-font-scale, 1)); font-weight: 800; color: #42566f; margin-right: 2px; }
+.dept-perm-actions button {
+  min-height: var(--vt-control-h);
+  padding: 0 12px;
+  font-size: calc(10px * var(--user-font-scale, 1));
+  white-space: nowrap;
+}
+@media (max-width: 1024px) {
+  .dept-perm-layout { grid-template-columns: 1fr; }
+}
+
+/* ---------------------------------------------------------------------------
+   12. DANH SÁCH NHÂN SỰ FULL MÀN (mục 7/8)
+   ---------------------------------------------------------------------------
+   Yêu cầu: «danh sách nhân sự đang không hiển thị đúng danh sách mà bị chia đôi màn
+   hình ra rồi, tôi muốn nó phải hiển thị dạng danh sách full màn».
+   → Bảng chiếm toàn bộ chiều ngang + dãy bộ lọc gọn trên một hàng.
+   --------------------------------------------------------------------------- */
+.staff-full { display: flex; flex-direction: column; gap: var(--vt-gap-2); }
+.staff-full-filters {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--vt-gap-1);
+}
+.staff-full-filters input {
+  flex: 1 1 260px; min-width: 0;
+  min-height: var(--vt-control-h); padding: 0 12px;
+  font-size: calc(var(--vt-font-min) * var(--user-font-scale, 1));
+}
+.staff-full-filters select {
+  min-height: var(--vt-control-h); padding: 0 10px;
+  font-size: calc(var(--vt-font-min) * var(--user-font-scale, 1));
+}
+.staff-full-table { width: 100%; }
+.staff-full-table td, .staff-full-table th { white-space: nowrap; }
+.staff-full .table-pagination button { min-width: 32px; min-height: 32px; }
+
+/* Khối "Nhân sự" trong Quản trị hệ thống KHÔNG còn bị chia đôi màn hình */
+.admin-overview-grid { grid-template-columns: minmax(0, 1fr) !important; }
+
+@media (max-width: 768px) {
+  .staff-full-filters select { flex: 1 1 auto; }
+}
+
+/* ---------------------------------------------------------------------------
+   13. BẢNG DANH SÁCH VẬT TƯ ĐẦY ĐỦ (nợ mục 5/8)
+   ---------------------------------------------------------------------------
+   Yêu cầu: tab 1 phải có đầy đủ thông tin GỒM TÊN PHỤ ALIAS, hiện MỌI nút CRUD cho
+   mọi user nhưng nút thiếu quyền thì bị VÔ HIỆU HOÁ, kèm search/sort/filter.
+   --------------------------------------------------------------------------- */
+.material-list-filters {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--vt-gap-1);
+  margin-bottom: var(--vt-gap-2);
+}
+.material-list-filters > input {
+  flex: 1 1 240px; min-width: 0;
+  min-height: var(--vt-control-h); padding: 0 12px;
+  font-size: calc(var(--vt-font-min) * var(--user-font-scale, 1));
+}
+.material-list-filters select {
+  min-height: var(--vt-control-h); padding: 0 10px;
+  font-size: calc(var(--vt-font-min) * var(--user-font-scale, 1));
+}
+.material-list-filters button {
+  min-height: var(--vt-control-h); padding: 0 14px;
+  font-size: calc(var(--vt-font-min) * var(--user-font-scale, 1)); white-space: nowrap;
+}
+.material-list-toggle {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: calc(var(--vt-font-min) * var(--user-font-scale, 1)); font-weight: 700; color: #42566f;
+  white-space: nowrap;
+}
+.material-list-table td, .material-list-table th { white-space: nowrap; }
+/* Nút thiếu quyền: vẫn HIỆN nhưng mờ và không bấm được (đúng yêu cầu) */
+.material-list-table .row-actions button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+  filter: grayscale(1);
+}
+.material-list-note {
+  display: flex; justify-content: space-between; align-items: center; gap: var(--vt-gap-2);
+  margin-top: var(--vt-gap-2);
+  font-size: calc(var(--vt-font-min) * var(--user-font-scale, 1)); color: #6b7f97;
+}
+@media (max-width: 768px) {
+  .material-list-filters select { flex: 1 1 auto; }
+  .material-list-note { flex-direction: column; align-items: flex-start; }
+}
+
+/* ---------------------------------------------------------------------------
+   14. THÀNH PHẦN DÙNG CHUNG (PHASE 1)
+   ---------------------------------------------------------------------------
+   Kiểu dáng cho thư viện app/components/ui: ListToolbar · DataTable ·
+   StatusBadge · PermissionGuard · Timeline (phê duyệt + hoạt động) ·
+   EntityDetailModal.
+
+   Mục tiêu sửa các lỗi người dùng nêu ở §5:
+     • toolbar dồn một phía, có cột trống, nút bị đẩy ra ngoài
+     • modal vượt viewport
+     • bảng vỡ bố cục trên màn hẹp
+   Toàn bộ dùng token thiết kế ở tokens.css, không dùng giá trị cứng mới.
+
+   ⚠ QUY TẮC ĐẶT TÊN (bắt buộc cho mọi thành phần dùng chung thêm sau này):
+   Lớp của thư viện dùng chung PHẢI có tiền tố `vt-` (ví dụ .vt-timeline),
+   không được dùng tên trần như `.timeline`.
+
+   Lý do — lỗi thật đã xảy ra và bị cổng ảnh bắt được (U-08):
+   globals.css:161 đã định nghĩa `.timeline { display:grid;
+   grid-template-columns:repeat(3,1fr); padding:14px }` cho dải phê duyệt
+   3 cột đang chạy. Bản đầu của mục 14 dùng tên trần `.timeline` với
+   `display:flex` ⇒ đè toàn cục, làm lệch bố cục trên MỌI màn (28/28 ảnh).
+   Tiền tố `vt-` khiến xung đột như vậy không thể tái diễn.
+   --------------------------------------------------------------------------- */
+
+/* --- 14.1 ListToolbar — TIÊU ĐỀ + SỐ LƯỢNG ‖ TÌM · LỌC · SẮP XẾP · HÀNH ĐỘNG --- */
+.list-toolbar {
+  display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between;
+  gap: var(--vt-space-4); padding-bottom: var(--vt-space-3);
+  border-bottom: 1px solid var(--vt-c-line);
+  margin-bottom: var(--vt-space-4);
+}
+.list-toolbar-title { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 260px; }
+.list-toolbar-title strong {
+  font-size: calc(var(--vt-fs-sm) * var(--user-font-scale, 1)); font-weight: var(--vt-fw-bold);
+  letter-spacing: .3px; color: var(--vt-c-navy);
+}
+.list-toolbar-title span {
+  font-size: calc(var(--vt-font-min) * var(--user-font-scale, 1)); color: var(--vt-c-muted);
+}
+.list-toolbar-count {
+  font-style: normal; font-weight: var(--vt-fw-semibold);
+  font-size: calc(var(--vt-font-min) * var(--user-font-scale, 1));
+  color: var(--vt-c-accent);
+}
+.list-toolbar-controls {
+  display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--vt-space-3);
+  flex: 1 1 auto; justify-content: flex-end;
+}
+.list-toolbar-field { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.list-toolbar-field > span {
+  font-size: calc(var(--vt-font-min) * var(--user-font-scale, 1));
+  color: var(--vt-c-muted); font-weight: var(--vt-fw-medium);
+}
+.list-toolbar-field input, .list-toolbar-field select {
+  height: var(--vt-control-h); min-width: 140px; max-width: 260px;
+  border: 1px solid var(--vt-c-line); border-radius: var(--vt-radius-md);
+  padding: 0 var(--vt-space-3); background: var(--vt-c-white);
+  font-size: calc(var(--vt-fs-2xs) * var(--user-font-scale, 1));
+}
+.list-toolbar-search input { min-width: 220px; }
+.list-toolbar-actions { flex-wrap: wrap; }
+
+@media (max-width: 1024px) {
+  .list-toolbar-controls { justify-content: flex-start; }
+}
+@media (max-width: 768px) {
+  .list-toolbar { flex-direction: column; align-items: stretch; }
+  .list-toolbar-controls { flex-direction: column; align-items: stretch; }
+  .list-toolbar-field input, .list-toolbar-field select,
+  .list-toolbar-search input { max-width: none; width: 100%; }
+  .list-toolbar-actions { justify-content: flex-start; }
+}
+
+/* --- 14.2 DataTable — sắp xếp, dòng bấm được, trạng thái --- */
+.baseline-table th.dt-sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+.baseline-table th.dt-sortable:hover { color: var(--vt-c-accent); }
+.dt-sort-idle { opacity: .3; font-style: normal; margin-left: 4px; }
+.dt-sort-active { color: var(--vt-c-accent); font-style: normal; margin-left: 4px; font-weight: var(--vt-fw-bold); }
+.baseline-table tr.dt-clickable { cursor: pointer; }
+.baseline-table tr.dt-clickable:hover { background: var(--vt-c-accent-soft); }
+.dt-right { text-align: right; }
+.dt-center { text-align: center; }
+.dt-loading { padding: var(--vt-space-5) 0; }
+.dt-error { margin-bottom: var(--vt-space-3); }
+
+/* --- 14.3 Timeline — dải phê duyệt và dải hoạt động --- */
+.vt-timeline-card .card-head { margin-bottom: var(--vt-space-3); }
+.vt-timeline { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+
+/* --- 14.3b MT2 §4.3 — DẢI PHÊ DUYỆT DẠNG **NGANG**: bước 1 o----o bước 2 o----o bước 3 ---
+   Yêu cầu người dùng (mt2 §4.3): KHÔNG hiển thị workflow dạng cột dọc.
+   Màn hẹp (<768px) tự quay về bố cục DỌC để không tràn layout (§24 responsive). */
+.vt-timeline.is-horizontal {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 0;
+  overflow-x: auto;
+  padding-bottom: var(--vt-space-2);
+}
+.vt-timeline.is-horizontal .vt-timeline-step {
+  flex: 1 1 0;
+  min-width: 190px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--vt-space-2);
+  padding: 0 var(--vt-space-3) 0 0;
+}
+/* Đường nối NGANG giữa hai marker: o----o */
+.vt-timeline.is-horizontal .vt-timeline-step:not(:last-child)::before {
+  left: 30px; right: 0; top: 13px; bottom: auto;
+  width: auto; height: 2px;
+}
+.vt-timeline.is-horizontal .vt-timeline-body { padding-top: var(--vt-space-2); }
+/* USER 26/09/2026: bỏ luật ẩn thông tin của bước CHƯA TỚI LƯỢT.
+   Yêu cầu: mỗi bước phải thấy ĐƯỢC thông tin cơ bản — NGƯỜI DUYỆT · PHÒNG BAN · THỜI GIAN.
+   Bước chưa duyệt hiển thị "—" cho thời gian (đúng thực tế) thay vì ẩn cả khối thông tin. */
+.vt-timeline-step.is-waiting .vt-timeline-meta { opacity: .78; }
+@media (max-width: 768px) {
+  .vt-timeline.is-horizontal { flex-direction: column; overflow-x: visible; }
+  .vt-timeline.is-horizontal .vt-timeline-step {
+    min-width: 0; flex-direction: row; padding: 0 0 var(--vt-space-4) 0;
+  }
+  .vt-timeline.is-horizontal .vt-timeline-step:not(:last-child)::before {
+    left: 13px; right: auto; top: 28px; bottom: 0; width: 2px; height: auto;
+  }
+  .vt-timeline.is-horizontal .vt-timeline-body { padding-top: 0; }
+}
+.vt-timeline-step {
+  position: relative; display: flex; gap: var(--vt-space-4);
+  padding: 0 0 var(--vt-space-4) 0;
+}
+/* Đường nối dọc giữa các bước */
+.vt-timeline-step:not(:last-child)::before {
+  content: ""; position: absolute; left: 13px; top: 28px; bottom: 0;
+  width: 2px; background: var(--vt-c-line-2);
+}
+.vt-timeline-marker {
+  flex: 0 0 auto; width: 28px; height: 28px; border-radius: var(--vt-radius-circle);
+  display: flex; align-items: center; justify-content: center;
+  background: var(--vt-c-surface-3); border: 2px solid var(--vt-c-line);
+  font-size: calc(var(--vt-font-min) * var(--user-font-scale, 1));
+  font-weight: var(--vt-fw-bold); color: var(--vt-c-muted);
+  position: relative; z-index: 1;
+}
+.vt-timeline-step.is-approved .vt-timeline-marker { background: #e7f7ee; border-color: #34a853; color: #1d7a3c; }
+.vt-timeline-step.is-rejected .vt-timeline-marker { background: #fdecec; border-color: var(--vt-c-danger); color: #b3261e; }
+.vt-timeline-step.is-pending .vt-timeline-marker { background: #fff6e5; border-color: #e8a33d; color: #94620a; }
+.vt-timeline-marker-dot { width: 14px; height: 14px; margin-top: 6px; }
+.vt-timeline-marker-dot span {
+  width: 6px; height: 6px; border-radius: var(--vt-radius-circle); background: var(--vt-c-accent);
+}
+.vt-timeline-body { flex: 1 1 auto; min-width: 0; }
+.vt-timeline-head {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--vt-space-3);
+  margin-bottom: var(--vt-space-2);
+}
+.vt-timeline-head strong {
+  font-size: calc(var(--vt-fs-xs) * var(--user-font-scale, 1));
+  font-weight: var(--vt-fw-semibold); color: var(--vt-c-ink);
+}
+.vt-timeline-meta {
+  display: flex; flex-wrap: wrap; gap: var(--vt-space-4);
+  font-size: calc(var(--vt-font-min) * var(--user-font-scale, 1)); color: var(--vt-c-muted);
+}
+.vt-timeline-meta b { font-weight: var(--vt-fw-medium); color: #42566f; }
+.vt-timeline-comment {
+  margin: var(--vt-space-2) 0 0; padding: var(--vt-space-2) var(--vt-space-3);
+  background: var(--vt-c-surface-1); border-left: 3px solid var(--vt-c-line);
+  border-radius: 0 var(--vt-radius-sm) var(--vt-radius-sm) 0;
+  font-size: calc(var(--vt-font-min) * var(--user-font-scale, 1)); color: #42566f;
+}
+.vt-timeline-detail { margin-top: var(--vt-space-2); font-size: calc(var(--vt-font-min) * var(--user-font-scale, 1)); }
+.vt-timeline-note {
+  margin: var(--vt-space-2) 0 0;
+  font-size: calc(var(--vt-font-min) * var(--user-font-scale, 1)); color: var(--vt-c-muted);
+}
+.vt-timeline-empty { list-style: none; }
+.vt-timeline-compact .vt-timeline-meta { gap: var(--vt-space-3); }
+
+/* --- 14.4 USER 26/09/2026 — BẢNG TRẠNG THÁI ĐƠN + THẺ HÀNH ĐỘNG (bình luận TRÊN, nút NGANG HÀNG) ---
+   Yêu cầu người dùng (modal phiếu trong Trung tâm phê duyệt):
+   (a) tiến trình duyệt dạng NGANG o----o----o  → 14.3b ở trên (giữ nguyên)
+   (b) mỗi bước thấy NGƯỜI DUYỆT · PHÒNG BAN · THỜI GIAN  → bỏ luật ẩn meta ở bước waiting
+   (c) hiện TRẠNG THÁI ĐƠN HIỆN TẠI (nhãn + bước đang xử lý + người xử lý)
+   (d) các nút chức năng XẾP THEO HÀNG NGANG
+   (e) ô ĐỀN BÌNH LUẬN nằm TRÊN các nút chức năng
+   ⛔ Trước đây RequestDrawer render thẳng <footer> trong thân modal (⛔ không có class) ⇒ các nút
+      KHÔNG được bố cục ngang; nay dùng .request-action-bar / .request-action-row. */
+.request-status-strip {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--vt-space-2) var(--vt-space-4);
+  padding: var(--vt-space-3) var(--vt-space-4);
+  margin-bottom: var(--vt-space-3);
+  border: 1px solid var(--vt-c-line); border-radius: var(--vt-radius-md);
+  background: var(--vt-c-surface-2, #f7fafc);
+}
+.request-status-strip > span { display: inline-flex; align-items: center; gap: 5px; }
+.request-status-strip b { font-weight: var(--vt-fw-semibold); color: var(--vt-c-muted); }
+.request-status-strip strong { color: var(--vt-c-navy); }
+
+.request-action-bar {
+  position: sticky; bottom: 0; z-index: 2;
+  margin-top: var(--vt-space-4);
+  padding: var(--vt-space-3) 0 0;
+  border-top: 1px solid var(--vt-c-line);
+  background: var(--vt-c-white, #fff);
+}
+/* (e) Ô bình luận nằm TRÊN hàng nút */
+.request-comment { display: grid; gap: 4px; margin-bottom: var(--vt-space-3); }
+.request-comment > label { font-size: var(--vt-fs-2xs); font-weight: var(--vt-fw-semibold); color: var(--vt-c-muted); }
+.request-comment textarea {
+  width: 100%; min-height: 58px; resize: vertical;
+  padding: var(--vt-space-2) var(--vt-space-3);
+  border: 1px solid var(--vt-c-line); border-radius: var(--vt-radius-md);
+  background: var(--vt-c-white, #fff); color: var(--vt-c-navy);
+  font-size: var(--vt-fs-2xs); font-family: inherit;
+}
+/* (d) Các nút chức năng XẾP THEO HÀNG NGANG */
+.request-action-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--vt-space-2); }
+.request-action-row > button { margin: 0; }
+@media (max-width: 650px) {
+  .request-action-row { flex-direction: column; align-items: stretch; }
+  .request-action-row > button { width: 100%; }
+}
+
+/* --- 14.5 USER 26/09/2026 — DẢI PHÊ DUYỆT NGANG `o---o----o----o` Ở CỘT «PHIẾU ĐANG XỬ LÝ» ---
+   Yêu cầu người dùng (Trung tâm phê duyệt, cột giữa):
+   (a) tiến trình phê duyệt theo HÀNG NGANG, mỗi bước là 1 mốc tròn (o) nối bằng đường ngang ⛔ không xếp dọc.
+   (b) TRÊN mỗi mốc = TRẠNG THÁI của bước duyệt.
+   (c) DƯỚI mỗi mốc = AI ĐÃ DUYỆT · PHÒNG BAN · THỜI GIAN DUYỆT.
+   ⛔ Trước đây `.approval-flow-step` là `display:grid` từng bước + đường nối `:after` DỌC
+      (`globals.css:869-870`) ⇒ bước chồng theo cột dọc. Nay khối này gộp DÒNG các mốc + nối NGANG. */
+.approval-flow-steps {
+  display: flex; flex-direction: row; align-items: flex-start;
+  gap: 0; overflow-x: auto; padding: var(--vt-space-2) 0 var(--vt-space-3);
+}
+.approval-flow-steps .approval-flow-step {
+  position: relative; flex: 1 1 0; min-width: 168px;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 0 var(--vt-space-3) 0 0; min-height: 0; text-align: center;
+}
+/* Đường nối NGANG giữa hai mốc: o-----o  (nằm sau mốc, chạy sang mốc kế) */
+.approval-flow-steps .approval-flow-step:not(:last-child)::before {
+  content: ""; position: absolute; top: 21px; left: 50%; right: -50%;
+  height: 2px; background: var(--vt-c-line-2, #dce5f0); z-index: 0;
+}
+/* ⛔ TẮT đường nối DỌC cũ (`globals.css:870` dùng `:after`) — nếu không tắt thì CẢ HAI đường
+   (ngang `::before` + dọc `:after`) cùng vẽ ⇒ dải vừa ngang vừa có gạch dọc lơ lửng. */
+.approval-flow-steps .approval-flow-step:not(:last-child)::after { content: none; display: none; }
+/* (b) TRẠNG THÁI bước — nằm TRÊN mốc */
+.approval-flow-steps .approval-flow-step>em {
+  order: -2; font-style: normal; font-size: calc(var(--vt-font-min) * (var(--user-font-scale, 1)));
+  font-weight: var(--vt-fw-bold); letter-spacing: .03em;
+  color: var(--vt-c-muted, #708298); white-space: nowrap;
+}
+.approval-flow-steps .approval-flow-step.pending>em { color: #1769e0; }
+.approval-flow-steps .approval-flow-step.approved>em { color: #14915a; }
+.approval-flow-steps .approval-flow-step.rejected>em { color: #b3261e; }
+/* Mốc tròn `o` */
+.approval-flow-steps .approval-flow-step>i {
+  order: -1; z-index: 1; margin: 0;
+  width: 30px; height: 30px; display: grid; place-items: center;
+  border-radius: 50%; background: #edf2f7; color: #60758d;
+  font-size: calc(var(--vt-fs-2xs) * (var(--user-font-scale, 1))); font-weight: var(--vt-fw-bold);
+}
+.approval-flow-steps .approval-flow-step.pending>i { background: #1769e0; color: #fff; box-shadow: 0 0 0 4px #eaf2ff; }
+.approval-flow-steps .approval-flow-step.approved>i,
+.approval-flow-steps .approval-flow-step.done>i { background: #e8f7ef; color: #14a05a; }
+/* Tên bước (dưới mốc, trên khối thông tin) */
+.approval-flow-steps .approval-flow-step>div:not(.approval-person):not(.approval-step-decision) {
+  order: 0; display: grid; gap: 2px; justify-items: center;
+}
+.approval-flow-steps .approval-flow-step strong { color: var(--vt-c-navy, #203a5a); }
+.approval-flow-steps .approval-flow-step span { color: var(--vt-c-muted, #708298); }
+/* (c) DƯỚI mốc: AI DUYỆT · PHÒNG BAN · THỜI GIAN DUYỆT */
+.approval-flow-steps .approval-person { order: 1; display: grid; gap: 2px; justify-items: center; }
+.approval-flow-steps .approval-person b {
+  color: var(--vt-c-navy, #203a5a); font-weight: var(--vt-fw-semibold);
+  font-size: calc(var(--vt-font-min) * (var(--user-font-scale, 1)));
+}
+.approval-flow-steps .approval-person small { color: var(--vt-c-muted, #708298); }
+.approval-flow-steps .approval-step-decision { order: 2; display: grid; gap: 2px; justify-items: center; }
+@media (max-width: 900px) {
+  /* Màn hẹp: dải ngang cuộn ngang (không vỡ layout) — vẫn GIỮ dạng o---o như yêu cầu */
+  .approval-flow-steps { padding-bottom: var(--vt-space-3); }
+}
+
+@media (max-width: 768px) {
+  /* Màn hẹp: mỗi mục xếp dọc, bỏ đường nối ngang cho gọn */
+  .vt-timeline-step { gap: var(--vt-space-3); }
+  .vt-timeline-meta { flex-direction: column; gap: 2px; }
+}
+
+
+/* --- 14.4 EntityDetailModal — KHÔNG BAO GIỜ vượt viewport (U-10) --- */
+.entity-detail-modal {
+  display: flex; flex-direction: column;
+  /* Chừa lề trên/dưới để modal không bao giờ chạm mép màn hình */
+  max-height: min(88vh, 1000px);
+  width: min(760px, 94vw);
+  overflow: hidden;                 /* phần cuộn nằm ở .edm-body */
+}
+.entity-detail-modal.edm-wide { width: min(1180px, 96vw); }
+.entity-detail-modal > header { flex: 0 0 auto; }
+.edm-head-actions { display: flex; align-items: center; gap: var(--vt-space-3); }
+.edm-entity-id {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: calc(var(--vt-font-min) * var(--user-font-scale, 1));
+  color: var(--vt-c-muted); background: var(--vt-c-surface-3);
+  padding: 2px var(--vt-space-2); border-radius: var(--vt-radius-sm);
+  max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.edm-tabs {
+  flex: 0 0 auto; display: flex; flex-wrap: wrap; gap: 2px;
+  border-bottom: 1px solid var(--vt-c-line);
+  padding: 0 var(--vt-space-4);
+  overflow-x: auto;
+}
+.edm-tabs button {
+  border: 0; background: transparent; cursor: pointer;
+  padding: var(--vt-space-3) var(--vt-space-4);
+  font-size: calc(var(--vt-fs-2xs) * var(--user-font-scale, 1));
+  font-weight: var(--vt-fw-medium); color: var(--vt-c-muted);
+  border-bottom: 2px solid transparent; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: var(--vt-space-2);
+}
+.edm-tabs button:hover { color: var(--vt-c-accent); }
+.edm-tabs button.is-active { color: var(--vt-c-accent); border-bottom-color: var(--vt-c-accent); font-weight: var(--vt-fw-semibold); }
+.edm-tab-badge {
+  font-size: calc(var(--vt-font-min) * var(--user-font-scale, 1));
+  background: var(--vt-c-surface-3); color: var(--vt-c-muted);
+  border-radius: var(--vt-radius-pill); padding: 0 6px; font-weight: var(--vt-fw-semibold);
+}
+/* Vùng CUỘN duy nhất — đây là chỗ sửa lỗi "modal vượt viewport" */
+.edm-body { flex: 1 1 auto; overflow-y: auto; overflow-x: hidden; padding: var(--vt-space-4); min-height: 120px; }
+.edm-state { padding: var(--vt-space-6) 0; }
+.entity-detail-modal > .modal-footer { flex: 0 0 auto; }
+
+@media (max-width: 768px) {
+  .entity-detail-modal, .entity-detail-modal.edm-wide { width: 100vw; max-height: 100vh; }
+  .edm-tabs { padding: 0 var(--vt-space-3); }
+  .edm-body { padding: var(--vt-space-3); }
+  .edm-entity-id { display: none; }   /* màn hẹp: bỏ mã thực thể để tiêu đề không bị chèn */
+}
+
+/* TASK-075 (§8.3) — Ảnh / hồ sơ vật tư đặc thù: ẢNH XEM ĐƯỢC và KHÔNG TRÀN KHUNG.
+   - .attachment-photos: lưới ảnh xem trước, tự co theo bề rộng khung (auto-fill) nên không đẩy ngang.
+   - ảnh bị chặn cứng chiều cao + object-fit:cover ⇒ ảnh dọc/ngang/ảnh lớn đều nằm trong khung.
+   - tên tệp dài (không có dấu cách) được ngắt bằng overflow-wrap:anywhere ⇒ không tràn cột. */
+
+/* MT2-P2-06 (§10) — SỬA CHỒNG CHÉO font giữa NHÃN “Chọn ảnh / hồ sơ” và Ô CHỌN TỆP.
+   Trước: `.file-upload{display:flex;align-items:center}` + `.file-upload input{flex:1}` ⇒ nhãn và input
+   chen nhau, chữ đè lên nhau. Nay: nhãn xếp DỌC phía trên, input chiếm trọn bề rộng, cho phép wrap. */
+.attachment-pick { display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 1 1 240px; }
+.attachment-pick > span {
+  display: block; font-weight: var(--vt-fw-medium); color: var(--vt-c-muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* MT2-P14-03c — GỘP 3 khối trùng cùng ngữ cảnh thành 1 (cùng độ đặc hiệu, ⛔ không xung đột thuộc tính)
+   để hết «khối trùng» mà GIỮ NGUYÊN hành vi P2-06 (trần bề rộng) + P6-07 (overflow/ellipsis) + font-scale. */
+.attachment-pick > input[type="file"] { width: 100%; min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; font-size: calc(var(--vt-font-min) * var(--user-font-scale, 1)); }
+/* ⚠️ ĐO LẦN 2 (sau khi ép trần bề rộng): `.file-upload` VẪN `scrollWidth 331 > clientWidth 266` vì
+   `input[type=file]` NATIVE mang **nội dung bên trong** (nút «Chọn tệp» + TÊN TỆP DÀI) rộng ~331px và
+   mặc định `overflow: visible` ⇒ nội dung đó ĐÙN RA khỏi hộp, kéo `scrollWidth` của khung cha.
+   ⇒ Phải `overflow: hidden` + `text-overflow: ellipsis` TRÊN CHÍNH Ô INPUT (⛔ không chỉ trên khung cha). */
+.file-upload { flex-wrap: wrap; align-items: flex-end; row-gap: 8px; }
+.file-upload > span { min-width: 0; overflow-wrap: anywhere; }
+/* MT2-P6-07 (§4.5) — ĐO LIVE 25/09/2026: khối «TÀI LIỆU ĐÍNH KÈM» trong hồ sơ chi tiết phê duyệt bị
+   **TRÀN NGANG 77–86px** (`scrollWidth 343 > clientWidth 266`): ô chọn tệp NATIVE có `min-content` ~250px+
+   nên nó ĐẨY rộng khung cha (khung hẹp ~266px) ⇒ phải CHẶN trần bề rộng ở MỌI tầng bao.
+   ⛔ KHÔNG dùng `overflow:hidden` che lỗi ⇒ chỉ ép `min-width:0` + trần 100% + cho phép wrap. */
+.attachment-panel, .approval-files, .real-attachment-panel { min-width: 0; max-width: 100%; }
+.file-upload, .attachment-pick { min-width: 0; max-width: 100%; }
+.attachment-panel { overflow-x: hidden; }
+.attachment-pick > input[type="file"]::file-selector-button { max-width: 55%; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 1100px) {
+  /* Khung hẹp: ô chọn tệp chiếm TRỌN dòng ⇒ ⛔ không chen với nút «TẢI LÊN» */
+  .attachment-pick { flex: 1 1 100%; }
+  .file-upload { align-items: stretch; }
+}
+/* MT2-P6-07 (§4.5) — ĐO LẦN 3 trên BUNDLE MỚI (CSS đã có clamp) ⇒ LỖI THẬT NẰM Ở **GRID CỦA FORM**:
+   CSS cũ có `.file-upload{grid-template-columns:minmax(260px,1fr) auto auto!important;display:grid!important}`
+   ⇒ cột 1 **SÀN CỨNG 260px** + 2 cột `auto` (nút «TẢI LÊN» + chú thích) ⇒ tổng ~331px, mà khung phải
+   «HỒ SƠ CHI TIẾT» chỉ ~266px ⇒ **TRÀN NGANG 77–86px** (số ĐO được: `scrollWidth 343 > clientWidth 266`).
+   ⇒ Ghi đè ĐÚNG CHỖ, độ đặc hiệu cao hơn + `!important`: form về **MỘT CỘT** (ô chọn tệp 1 dòng, nút xuống dòng).
+   ⛔ KHÔNG nới khung/⛔ không `overflow:hidden` che lỗi — chỉ bỏ SÀN 260px gây tràn. */
+.approval-files.real-attachment-panel .file-upload,
+.real-attachment-panel .file-upload {
+  grid-template-columns: minmax(0, 1fr) !important;
+  align-items: stretch !important;
+  min-width: 0;
+}
+/* ⚠️ ĐO LẦN 4 (bundle AA484A04) — SỬA TRÊN CHƯA ĐỦ: `gridTemplateColumns` của KHỐI ĐÍNH KÈM đo được
+   `34px 162.797px 25px` ⇒ form tải tệp bị nhét vào CỘT ĐẦU chỉ **34px** (⇒ ô chọn tệp co còn 26px —
+   ⛔ KHÔNG dùng được, dù «không tràn»). Gốc: KHỐI CHA vẫn là GRID nhiều cột (auto-flow) trong khung hẹp.
+   ⇒ Trong hồ sơ chi tiết phê duyệt, cho KHỐI ĐÍNH KÈM xếp DỌC (block) ⇒ form/ô chọn tệp chiếm TRỌN bề rộng. */
+.approval-files.real-attachment-panel .attachment-panel { display: block !important; }
+.approval-files.real-attachment-panel .attachment-photos { margin-top: 8px; }
+@media (max-width: 640px) {
+  .attachment-pick { flex: 1 1 100%; }
+  .file-upload { align-items: stretch; }
+}
+@media print {
+  /* MT2 §27 — khi in, KHÔNG hiện ô tải tệp */
+  .file-upload, .attachment-pick { display: none !important; }
+}
+
+/* MT2-P2-06b (§27) — LIGHTBOX xem ảnh FULL trong app (thay vì mở tab mới).
+   Đóng bằng nút ✕, click nền, hoặc phím ESC (ESC do component xử lý). */
+.attachment-lightbox {
+  position: fixed; inset: 0; z-index: 9999;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: var(--vt-space-3); padding: var(--vt-space-4);
+  background: rgba(9, 18, 32, 0.86);
+}
+.attachment-lightbox img {
+  max-width: min(96vw, 1600px); max-height: 82vh;
+  object-fit: contain; border-radius: 10px; background: #0f1b2d;
+}
+.attachment-lightbox-bar {
+  display: flex; align-items: center; gap: var(--vt-space-3);
+  color: #e8eef7; font-size: calc(var(--vt-font-min) * var(--user-font-scale, 1));
+  max-width: 96vw; flex-wrap: wrap; justify-content: center;
+}
+.attachment-lightbox-bar b { font-weight: var(--vt-fw-bold); overflow-wrap: anywhere; }
+.attachment-lightbox-bar a, .attachment-lightbox-bar button {
+  color: #cfe0f5; background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 8px;
+  padding: 6px 12px; cursor: pointer; text-decoration: none;
+}
+.attachment-lightbox-bar button:hover, .attachment-lightbox-bar a:hover { background: rgba(255, 255, 255, 0.22); }
+.attachment-photos{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(132px,1fr))!important;gap:9px!important;margin-bottom:9px!important}
+.attachment-photo{display:block!important;min-width:0!important;border:1px solid #e1e8f1!important;border-radius:10px!important;overflow:hidden!important;background:#f9fbfe!important;text-decoration:none!important}
+.attachment-photo img{display:block!important;width:100%!important;height:118px!important;object-fit:cover!important;background:#eef3f9!important}
+.attachment-photo span{display:block!important;max-width:100%!important;padding:6px 8px!important;font-size:11px!important;font-weight:600!important;color:#395679!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+.attachment-thumb{display:block!important;width:42px!important;height:42px!important;object-fit:cover!important;border:1px solid #e1e8f1!important;border-radius:7px!important;background:#eef3f9!important}
+.attachment-row>a{overflow:hidden!important}
+.attachment-row>a>div{min-width:0!important}
+.attachment-row>a>div>strong{display:block!important;max-width:100%!important;overflow-wrap:anywhere!important;word-break:break-word!important}

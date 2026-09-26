@@ -1,0 +1,45 @@
+#52 TASK-040 nho 3b (phan 1): gom canonicalMeCode ve MOT nguon su that - va lech 7/28 dau vao voi JS
+
+BOI CANH: de port `import_material_catalog` (nho 3b) toi phai co `canonicalMeCode` dung nhu JS
+(JS dung no o system-route.mjs:2600 de dat `system=canonicalMeCode(category.code)`). Tra kho thi thay
+ham nay DA CO trong Java (BoqManagementUseCase:943) nhung KHAC JS.
+
+LECH DA DO DUOC (tools/probe-canonical-me-code-drift.mjs, 28 dau vao - 7 LECH)
+  JS  (system-route.mjs:44-54): khop theo TIEN TO  -> raw.startsWith("DIEN") / "CTN" / "HVAC" / "PCCC" / "DNHE" / "ELV"
+  Java(BoqManagementUseCase:943): chi so DUNG BANG (List.contains)
+  Vi du lech: "DIEN LUC" / "Điện lực" / "DIEN123" / "DIEN.TU" / "ELV-1" / "DNHE_2" / "PCCC-01"
+              -> JS ra DUNG he M&E, Java ra KHAC
+  Tac dong that: vat tu nhap vao (danh muc vat tu + BOQ) mang `system` SAI.
+
+DA LAM
+  1. Tep moi o tang DOMAIN: domain/service/MaterialSystemCodes.java
+       - canonicalMeCode(String)   : port nguyen trang JS ke ca cac nhanh startsWith
+       - normalizeMaterialName(String): port JS system-route.mjs:75
+       - internalGroupCode(String) : port JS system-route.mjs:76 (gioi han 48 ky tu, fallback CHUA_PHAN_NHOM)
+     Dat o domain de chi co MOT nguon su that (GOAL muc 5): nhap BOQ va nhap danh muc vat tu phai cung ket qua.
+  2. BoqManagementUseCase.canonicalMeCode -> uy quyen cho helper chung (bo ban chi so dung bang).
+  3. Unit test moi: domain/src/test/.../MaterialSystemCodesTest.java (5 test) - ghi lai CHINH 7 ca tung lech
+     de neu ai bo mat nhanh startsWith thi test do ngay.
+  4. Cong do luong: tools/probe-canonical-me-code-drift.mjs mo phong CA HAI thuat toan doc tu ma nguon va
+     in bang doi chieu. Gioi han ghi ro trong tep: day la so sanh THUAT TOAN, khong phai goi ma Java that.
+
+LOI CUA CHINH TOI BI TEST BAT DUOC (dang ghi lai)
+  Ban dau toi viet `.replaceAll("(?i)đ","d")`. Co `(?i)` cua JAVA chi case-fold ASCII (tru khi bat
+  UNICODE_CASE) nen `Đ` (U+0110) KHONG khop `đ` (U+0111) => "Điện lực" -> "IEN" -> KHAC.
+  Unit test do ngay o MaterialSystemCodesTest.canonicalMeCode_khopDungBang. Da sua thanh thay TUONG MINH
+  `.replace("đ","d").replace("Đ","D")` nhu MaterialMatcherV2 dang lam.
+  Them mot ky vong SAI nua cua toi da sua: toi viet "Ø 20" -> "d20", nhung doc lai JS thi `\b` cua JS cung
+  chi tinh [A-Za-z0-9_] la ky tu chu, ma "Ø" khong thuoc tap do => JS CUNG cho "20". Viec doi "ø" thanh " d "
+  nam o ham KHAC (normalizeMaterialText). Test da sua theo dung hanh vi JS.
+
+KIEM CHUNG
+  mvn -pl domain test -Dtest=MaterialSystemCodesTest : Tests run 5, Failures 0, Errors 0 - BUILD SUCCESS
+  mvn -pl domain test (toan bo module domain)        : Tests run 19, Failures 0, Errors 0 - BUILD SUCCESS
+  mvn -q -DskipTests compile (toan kho)              : exit 0
+
+CON LAI CUA NHOM 3b: port than `import_material_catalog` (tu tao material_categories/material_subcategories
+tu ma trong tep, dat system=canonicalMeCode(category.code), sort_order 999/9999, mo ta nguyen van
+"Tao tu file danh muc vat tu V5.0.0", yeu cau du Ma + Ten + DVT, va thong diep rieng cua JS).
+
+Tep: domain/service/MaterialSystemCodes.java (moi) - domain/test/.../MaterialSystemCodesTest.java (moi) -
+BoqManagementUseCase.java - tools/probe-canonical-me-code-drift.mjs (moi)

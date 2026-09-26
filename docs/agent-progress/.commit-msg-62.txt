@@ -1,0 +1,66 @@
+#62 TASK-043 + TASK-044: truong dong cua DONG phieu - Java chua bao gio GHI va DOC sai cho; bootstrap bo sot 11 truong
+
+=== TASK-043 — HAI LOI NGUOC CHIEU TRONG CUNG MOT TINH NANG ===
+
+(1) DUONG GHI: JS create_request (scripts/system-route.mjs:974) ghi bang `custom_field_values` cho
+TUNG DONG phieu (form_key='request_line', entity_id = id DONG). Java KHONG CO mot cau lenh nao —
+du chinh chu thich cua `RequestStore.insertRequest` da ghi "…+ custom fields…" tu lau.
+
+(2) DUONG DOC: JS (system-route.mjs:563-568) tra bang id DONG roi gan `customFields` len TUNG DONG.
+Java tra bang id PHIEU roi gan len PHIEU => truy van KHONG BAO GIO khop (entity_id that la `MRI_…`)
+=> `requests[].customFields` luon `{}`, con moi dong KHONG co khoa `customFields` ma UI doc
+(app/page.tsx:3543 -> requestLineContext -> savedRequestDocument, dung cho XUAT EXCEL va man chi tiet).
+
+Day la lan thu BAY du an gap lop loi "duong DOC thieu/sai" — va lan nay no nam CUNG MOT TINH NANG voi
+loi GHI, nen phep kiem "ghi xong khong loi HTTP" KHONG THE phat hien.
+
+DA SUA:
+ - RequestManagementUseCase: port `customFieldsObject` (nguyen van JS: chi nhan object, chuoi JSON va
+   mang deu bi coi la rong) + `cleanValue` (= JS `String(value ?? "").trim()`, ke ca `1.0` -> "1"),
+   gom `customFieldRows` voi id `CFV_<uuid>`, truyen xuong store.
+ - RequestStore: them tham so `customFields` + Javadoc noi ro day la cho ban cu thieu.
+ - RequestStoreAdapter: `INSERT INTO custom_field_values … ON DUPLICATE KEY UPDATE
+   value_text=VALUES(value_text),updated_at=VALUES(updated_at)` (upsert dung JS); XOA cau vo nghia
+   `header.forEach((k, v) -> { });`.
+ - BootstrapDataAdapter (doc): tra bang id DONG, gan customFields len TUNG DONG; BO khoa
+   `customFields` cap phieu (JS khong co).
+ - Phu: `routeTag` truoc day LUON NULL (truyen line.get("routeTag") nhung `nl` khong chua khoa nay).
+
+=== TASK-044 — BOOTSTRAP BO SOT 11 TRUONG CUA DONG PHIEU ===
+workPackageCode · boqCode · installationArea · contractLineNo · pendingBchQty · closeReason ·
+remainingQty · rejectedQty · linkedPoCount · linkedReceiptCount · missingDocumentCount
+UI app/page.tsx:3609 hien thi truc tiep => truoc khi sua cac cot nay luon trong/0. Do tren du lieu
+THAT (34 dong thuoc phieu): remainingQty=975 · pendingBchQty=340 · linkedPoCount=12 ·
+linkedReceiptCount=10. Da port du 11 truong (gom 4 truy van con) nguyen van JS.
+
+=== KIEM CHUNG: tools/probe-task043-custom-fields.mjs — 26/26 DAT, exit 0 ===
+ - Probe TAO THAT mot phieu (4 dong) bang dung payload nghiep vu roi TU DON SACH trong `finally`:
+   8 bang nghiep vu tro ve DUNG so dong truoc khi chay; cau hinh truong dong khong bi dung toi.
+ - DO TUONG DUONG DUONG DOC (co DOI CHUNG DUONG): truy van CU (loc theo id PHIEU) tra 0 dong.
+ - GHI: dung 5 gia tri da trim ca khoa lan gia tri; truong rong/null bi bo; khoa trong chuoi JSON va
+   trong mang KHONG duoc luu; entity_id = id DONG; id dung quy uoc CFV_<uuid>; routeTag ghi that.
+ - DOC: bootstrap gan customFields len tung dong; 3 dong khong khai bao van co {} (khong phai undefined);
+   KHONG con customFields o cap phieu.
+ - TASK-044: 34 dong du co 11 khoa; doi chieu tong bootstrap <-> SQL khop tuyet doi
+   (pending 340=340 · remaining 975=975 · PO 12=12 · BCH 10=10 · rejected 0=0).
+ - jar 90.893.269 bytes · API PID 2016 · Flyway validated 16 migrations · log 0 ERROR ·
+   probe-java-sql-live 8 phat hien (toan bo la nhom 6, cho quyet dinh #11) · regression 59/61 (2 loi cu).
+
+=== PHAT HIEN KEM (chua sua, da dang ky vao MASTER_STATUS) ===
+ - Dong mo coi THAT trong material_request_items: MRI_d1f57f9d… tro toi MR_46cee316… KHONG TON TAI
+   (qty 20, line_status='issued', co lien ket PO/BCH that). KHONG tu sua du lieu (cung lop known issue #21).
+ - `delete_request` de lai rac o CA HAI phia: JS va Java xoa dung cung 5 bang nhung deu bo quen
+   `procurement_allocations` + `custom_field_values`. Khong phai loi port — can nguoi dung quyet dinh.
+ - Truong dong cua `request_header`: CA JS LAN JAVA deu KHONG luu (JS chi dung de kiem bat buoc).
+   Tuong tu, form_key='boq': JS doc + xoa nhung KHONG BAO GIO ghi => tinh nang chet o chinh ban JS.
+ - Java THIEU `audit(...)` o toan luong Phieu de nghi (do duoc: audit_logs.entity_type='material_request'
+   = 0 dong) — hang muc rieng, pham vi toan he thong.
+ - Java YEU HON JS 3 phep kiem khi chon Owner cua buoc duyet (vai tro thuoc allowedRoleCodes +
+   user_project_scope); CONFIRMED o muc ma, chua kiem chung luc chay.
+
+=== LOI CUA CHINH TOI O LUOT NAY (2 loi phep do, khong phai loi ma) ===
+ 1. Chay `SELECT … FROM approval_project_assignments` voi cot `stage_no` (cot that la `stage`) VA
+    nuot stderr bang `2>$null` => thay ket qua rong roi SUYT KET LUAN "MySQL chua cau hinh phan cong nao".
+    Su that: bang co 5 dong that voi nguoi that. Nuot stderr la tu che mat.
+ 2. So `customFields` bang `JSON.stringify(a)===JSON.stringify(b)` => phu thuoc THU TU KHOA => bao HONG oan.
+    Da doi sang so sau khi sap xep khoa.

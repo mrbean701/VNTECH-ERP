@@ -1,0 +1,23 @@
+    if (action === "approve_po") {
+        requireRole(user, ["procurement", "accountant", "admin"]);
+        const poId=clean(payload.purchaseOrderId),stamp=new Date().toISOString();
+        const po=await first(`SELECT id,po_no AS poNo,project_id AS projectId,status FROM purchase_orders WHERE id=?`,poId);
+        if(!po||po.status!=="pending_approval")throw new Error("PO không tồn tại hoặc đã xử lý.");
+        if(!(await canAccessProject(user,String(po.projectId),true)))throw new Error("Tài khoản không có quyền duyệt PO tại dự án này.");
+        await env.DB.prepare(`UPDATE purchase_orders SET status='waiting_delivery',decided_by=?,decided_at=?,updated_at=? WHERE id=?`).bind(user.id,stamp,stamp,poId).run();
+        await audit(user.id,"APPROVE","purchase_order",poId,{status:"pending_approval"},{status:"waiting_delivery"},request);
+        return { message: `Đã duyệt PO ${po.poNo}; chuyển sang chờ giao hàng.` };
+    }
+    if (action === "reject_po") {
+        requireRole(user, ["procurement", "accountant", "admin"]);
+        const poId=clean(payload.purchaseOrderId),reason=clean(payload.reason),stamp=new Date().toISOString();
+        const po=await first(`SELECT id,po_no AS poNo,project_id AS projectId,buyer_user_id AS buyerUserId,status FROM purchase_orders WHERE id=?`,poId);
+        if(!po||po.status!=="pending_approval")throw new Error("PO không tồn tại hoặc đã xử lý.");
+        if(!(await canAccessProject(user,String(po.projectId),true)))throw new Error("Tài khoản không có quyền từ chối PO tại dự án này.");
+        await env.DB.batch([
+            env.DB.prepare(`UPDATE purchase_orders SET status='cancelled',decision_reason=?,decided_by=?,decided_at=?,updated_at=? WHERE id=?`).bind(reason,user.id,stamp,stamp,poId),
+            env.DB.prepare(`INSERT INTO task_notifications(id,work_item_id,user_id,channel,title,body,status,read_at,sent_at,last_error,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`).bind(id("NTF"),null,po.buyerUserId,"in_app",`PO ${po.poNo} đã bị hủy`,`PO ${po.poNo} đã bị từ chối — hãy tạo lại/xử lý lại. Lý do: ${reason||"(không nêu)"}`,"sent",null,stamp,null,stamp,stamp)
+        ]);
+        await audit(user.id,"REJECT","purchase_order",poId,{status:"pending_approval"},{status:"cancelled",reason},request);
+        return { message: `Đã từ chối PO ${po.poNo}; PR vẫn mở để xử lý lại.` };
+    }

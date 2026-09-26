@@ -1,0 +1,22 @@
+services:
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    environment:
+      VNTECH_PUBLIC_HOST: ${VNTECH_PUBLIC_HOST}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - type: bind
+        source: ${VNTECH_CADDY_DATA_PATH}
+        target: /data
+      - type: bind
+        source: ${VNTECH_CADDY_CONFIG_PATH}
+        target: /config
+    depends_on:
+      app:
+        condition: service_healthy
+    networks: [vntech-edge]

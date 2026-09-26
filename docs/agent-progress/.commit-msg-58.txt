@@ -1,0 +1,40 @@
+﻿#58 TASK-041 phan 2: delete_approval_stage - Java cu cho XOA buoc da co lich su va xoa buoc cuoi cung
+
+NGUON: ra tiep nhanh delete_approval_stage (JS system-route.mjs:2200-2215) sau khi port 2 action chinh.
+
+=== LO HONG ===
+JS co HAI chot:
+  history = COUNT(*) FROM approvals WHERE stage=stage.stageNo
+    -> "Buoc da co lich su ho so nen khong duoc xoa. Hay dung An de ngung ap dung cho phieu moi."
+  activeCount = COUNT(*) FROM approval_stage_catalog WHERE active=1
+    -> "Khong the xoa buoc hoat dong cuoi cung."
+Ban Java cu chi findApprovalStage + XOA, KHONG co chot nao. Tren duong Java, quan tri vien co the:
+  - xoa buoc DA CO LICH SU (buoc 1 hien co 20 ban ghi pprovals - do luc chay) => lich su duyet tro vao
+    mot buoc khong con ton tai;
+  - xoa BUOC HOAT DONG CUOI CUNG => luong duyet khong con buoc nao.
+Thong diep thanh cong cung lech: Java "Da xoa buoc duyet tuy chinh." vs JS "Da xoa buoc phe duyet chua tung su dung."
+
+=== DA SUA ===
+OpsTaskManagementUseCase.deleteApprovalStage: port du 2 chot + thong diep nguyen van, dung lai dung 2 port method
+da them o phan 1 (countApprovalsByStageNo, countActiveStages) => KHONG phai them phuong thuc moi.
+
+=== KIEM CHUNG LUC CHAY ===
+jar 90.891.257 bytes (16:10:32) - API PID 9096 - log 0 ERROR - regression 59/61 (2 loi cu)
+tools/probe-task041-delete.mjs : 12/12 DAT - exit 0
+  xoa buoc 1 (co 20 ban ghi lich su) -> 400 nguyen van; buoc 1 VAN CON
+  xoa buoc hoat dong CUOI CUNG        -> 400 nguyen van; buoc do VAN CON
+  xoa buoc tam chua tung dung         -> 200 nguyen van "Da xoa buoc phe duyet chua tung su dung."
+  xoa buoc khong ton tai              -> 400 "Khong tim thay buoc phe duyet."
+  trang thai cuoi 1:1,2:1,3:1,4:1,5:1 = trang thai dau; so buoc 5 -> 5
+Doi chieu du lieu: so TUNG TRUONG NGHIEP VU cua ca 5 dong voi ban sao luu tools/_backup-task041.sql
+=> GIONG HET; khong con buoc tam nao (901/902 da don).
+
+=== LOI CUA CHINH TOI (lan thu hai trong TASK-041) ===
+Ban dau probe lay buoc 5 lam "buoc cuoi cung" de kiem chot - nhung buoc 5 CO 20 ban ghi lich su nen chot
+LICH SU chan truoc (dung thu tu JS) va chot CUOI khong toi luot => 9/10 voi 1 muc HONG.
+Da sua kich ban: tao buoc tam 902 (chua co lich su), tat buoc 1-5 de 902 thanh buoc hoat dong cuoi, roi moi
+goi xoa => chot cuoi hien ra dung. BAI HOC: khi mot ham co NHIEU chot theo thu tu, phai dung du lieu de chot
+can kiem KHONG bi chot truoc do che mat.
+
+Tep: OpsTaskManagementUseCase.java - tools/probe-task041-delete.mjs (moi) -
+docs/agent-progress/{TASK-041.md (muc 7), MASTER_STATUS.md}

@@ -1,0 +1,166 @@
+package com.vntech.erp.application.port.out;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+/** Port nhiệm vụ/tổ đội/bước duyệt/MAR — port nguyên trạng create_work_item/team/approval_stage JS. */
+public interface OpsTaskStore {
+
+    boolean userIsDepartmentManager(String userId, String departmentCode);
+    boolean userCanReceiveDepartmentTask(String userId, String departmentCode, String projectId);
+    /**
+     * MT2-P4-01 (§3.2 · đề án ①A user chốt 26/09/2026) — **phòng ban của một người dùng**.
+     *
+     * <p>VÌ SAO CẦN: MT2 §3.2 (dòng 41-42) quy định «**Trưởng phòng trở lên** → xem công việc của
+     * nhân viên **thuộc phòng ban mình**», còn «**Phó giám đốc trở lên** → xem **toàn bộ phòng ban**
+     * · **toàn bộ nhân viên công ty**». Muốn phân biệt 2 tầng đó thì tầng application **phải biết
+     * phòng ban của người đang xem** — trước đây Java ⛔ không có cửa nào để đọc (chỉ có
+     * {@code userIsDepartmentManager(userId, departmentCode)} trả boolean nên ⛔ không suy ra được phòng).
+     *
+     * @return mã phòng (`users.department`, thường là `KH` / `DA` / `CN` …); **rỗng** nếu trống/không thấy.
+     */
+    String userDepartment(String userId);
+    /**
+     * Người nhận việc MẶC ĐỊNH của phòng khi người giao không chọn ai — JS `system-route.mjs:256-259`
+     * ({@code defaultDepartmentAssignee}). Trả {@code null} nếu phòng không có nhân sự phù hợp.
+     * <p><b>TASK-080C:</b> thêm để port đủ nhánh "không truyền assignedTo" của JS; trước đây Java ghi
+     * thẳng {@code assignedTo=""} ⇒ tạo công việc KHÔNG có người nhận (dữ liệu vô nghĩa).
+     */
+    String defaultDepartmentAssignee(String departmentCode, String projectId);
+    /**
+     * Liên hệ của người nhận việc — JS {@code queueTaskNotice} (`system-route.mjs:265-266`) đọc
+     * {@code assignee.id} và {@code assignee.email}.
+     * <p><b>TASK-080C (KP #78):</b> thiếu bước gửi thông báo nên giao việc xong KHÔNG có thông báo,
+     * KHÔNG có email — trong khi thông điệp trả về của action vẫn hứa "đã tạo thông báo cho nhân viên".
+     */
+    Optional<Map<String, Object>> findUserContact(String userId);
+    /** Nền tảng URL của `email_settings` — JS `:266` ({@code cfg?.baseUrl}); rỗng nếu chưa cấu hình. */
+    String emailBaseUrl();
+    /** Thông báo trong ứng dụng cho người nhận việc — JS `:265` (bảng `task_notifications`, status `SENT`). */
+    void insertTaskNotification(Map<String, Object> notice, Instant now);
+    /** Hàng đợi email — JS `:266` (bảng `email_outbox`, event `task_assigned`, status `queued`). */
+    void insertEmailOutbox(Map<String, Object> mail, Instant now);
+    String insertWorkItem(Map<String, Object> task, Instant now);
+    Optional<Map<String, Object>> findWorkItem(String id);
+    void updateWorkItemProgress(String id, int progress, String currentStatus, Instant now);
+    void insertWorkItemEvent(String id, String workItemId, String eventType, String fromStatus, String toStatus,
+                             String actorUserId, String previousAssignee, String newAssignee, String reason,
+                             String detailJson, Instant now);
+    void updateWorkItemStatus(Map<String, Object> update, Instant now);
+    void reassignWorkItem(String id, String nextUser, String assignedBy, Instant now);
+    void markNotificationRead(String notificationId, String userId, Instant now);
+
+    Optional<Map<String, Object>> findProjectTeam(String teamId, String projectId);
+    boolean teamCodeExists(String projectId, String code);
+    void insertProjectTeam(Map<String, Object> team, Instant now);
+    void updateProjectTeam(Map<String, Object> team, Instant now);
+    void setProjectTeamStatus(String teamId, boolean active, Instant now);
+    void deleteProjectTeamSafe(String teamId);
+
+    // ---- kho tổ đội (tạo kèm tổ đội, tương đương JS create_project_team) ----
+    Optional<Map<String, Object>> findActiveProject(String projectId);
+    Optional<Map<String, Object>> findFirstSiteWarehouse(String projectId);
+    boolean teamGlobalCodeExists(String globalCode);
+    boolean teamNameExists(String projectId, String name);
+    void insertProjectTeamWithWarehouse(Map<String, Object> team, String warehouseId, String warehouseCode,
+                                        String warehouseName, String parentSiteWarehouseId, Instant now);
+    /** Đồng bộ trạng thái/ẩn hiện kho tổ đội khi bật/tắt tổ đội (JS set_project_team_status). */
+    Optional<String> findTeamWarehouseId(String teamId);
+    /** true nếu tổ đội đã có phiếu xuất/hoàn trả/đề nghị — chặn xóa vật lý như JS. */
+    boolean teamHasTransactions(String teamId);
+    void setWarehouseStatus(String warehouseId, boolean active, Instant now);
+    void deleteProjectTeamWithWarehouse(String teamId, String warehouseId);
+
+    /** Mã các vai trò đang hoạt động — JS `SELECT code FROM role_catalog WHERE active=1` (system-route.mjs:2144). */
+    List<String> activeRoleCodes();
+    Optional<Map<String, Object>> findApprovalStage(String id);
+    /**
+     * INSERT bước phê duyệt — <b>12 cột</b> như JS `system-route.mjs:2175`.
+     *
+     * <p><b>SỬA LỖI (TASK-041):</b> bản cũ chỉ ghi 6 cột và truyền {@code null} CỨNG cho {@code description};
+     * {@code approval_mode}, {@code sla_hours}, {@code auto_approve_on_submit}, {@code sort_order}
+     * <b>không được ghi</b>. Khoá của map: {@code id, stageNo, name, description, allowedRoleCodes,
+     * approvalMode, slaHours, autoApproveOnSubmit, sortOrder}.
+     */
+    void insertApprovalStage(Map<String, Object> stage, Instant now);
+    /**
+     * UPDATE bước phê duyệt — <b>8 trường</b> như JS `system-route.mjs:2167`.
+     *
+     * <p><b>SỬA LỖI (TASK-041):</b> bảng `approval_stage_catalog` <b>KHÔNG có cột `code`</b>; bản cũ bắt buộc
+     * payload {@code code} (UI không bao giờ gửi) nên action trả HTTP 400 trước khi tới SQL, và chỉ ghi 3 cột
+     * ({@code name}/{@code stage_no}/{@code allowed_role_codes}) ⇒ admin sửa SLA nhưng SLA **không đổi**.
+     */
+    void updateApprovalStage(Map<String, Object> stage, Instant now);
+    void setApprovalStageStatus(String id, boolean active, Instant now);
+    void deleteApprovalStageSafe(String id);
+    /** Xoá cờ tự duyệt ở MỌI bước TRỪ một bước — JS `:2166` (`WHERE id<>?`). */
+    void clearAutoApproveExcept(String keepStageId, Instant now);
+    /** Xoá cờ tự duyệt ở MỌI bước (nhánh THÊM bước mới) — JS `:2173`. */
+    void clearAutoApproveAll(Instant now);
+    /** Đếm bước đang hoạt động có `stage_no` NHỎ HƠN {@code stageNo}, trừ chính nó — JS `:2152`. */
+    long countActiveStagesBefore(String excludeStageId, int stageNo);
+    /** Lịch sử duyệt của một số bước — JS `:2161` (`SELECT COUNT(*) FROM approvals WHERE stage=?`). */
+    long countApprovalsByStageNo(int stageNo);
+    /** Đồng bộ tên bước sang `approvals.department` của hồ sơ ĐANG CHỜ — JS `:2168`. */
+    void propagateStageNameToPendingApprovals(int stageNo, String name, Instant now);
+    /** Số bước đang hoạt động — JS `:2192`. */
+    long countActiveStages();
+    /** Đếm hồ sơ đang chờ ở một bước (join `material_requests`) — JS `:2187`. */
+    long countPendingApprovalsForStageNo(int stageNo);
+
+    // ══════════════════════════════════════════════════════════════════════════════════════════════════
+    // MT2-P4-03 (§4.1) — CARD «CHỜ GIÁM ĐỐC DUYỆT»: liệt kê phiếu ĐANG CHỜ ở bước mà **MÃ QUYỀN**
+    // của bước có chứa vai trò Giám đốc. Hàm MỚI (thuần thêm) — ⛔ KHÔNG đổi 2 hàm `…ForStageNo` ở trên ✗.
+    //
+    // ⚠️ VÌ SAO KHÔNG DÙNG LẠI `countPendingApprovalsForStageNo` (⛔ đã ĐO, không phải suy đoán ✗):
+    //    `approval_stage_catalog` bước 5 có **HAI snapshot KHÁC NHAU** trên `approvals`:
+    //       `director,tgd,giam_doc` = 24 phiếu (ĐÚNG nhóm Giám đốc)
+    //       `da_truong,kh_truong`   =  7 phiếu (⛔ KHÔNG có director)
+    //    ⇒ đếm theo `stage_no = 5` sẽ **GỘP NHẦM 7 phiếu** ⛔ không thuộc Giám đốc ⇒ SAI nghiệp vụ ✗
+    //
+    // ⚠️ CÀI ĐẶT PHẢI: SELECT các dòng `status='pending'` rồi **LỌC MÃ Ở JAVA**:
+    //    tách `allowed_role_codes_snapshot` theo dấu phẩy → `trim()` → so **CHÍNH XÁC** với `roleCodes`.
+    //    ⛔ KHÔNG dùng `LIKE '%director%'` ✗ (khớp nhầm chuỗi con).
+    // ══════════════════════════════════════════════════════════════════════════════════════════════════
+
+    /**
+     * MT2-P4-03 — phiếu ĐANG CHỜ (`status='pending'`) ở bước có **mã quyền** thuộc {@code roleCodes}.
+     * Trả về danh sách để UI dựng card «Chờ Giám đốc duyệt» (⛔ chỉ ĐỌC — không đổi luồng duyệt §20).
+     */
+    List<Map<String, Object>> pendingApprovalsForRoleCodes(List<String> roleCodes);
+
+    /**
+     * MT2-P4-03 — **CẤP BẬC của một user** (`system_level_catalog.level_rank`) để tầng **application**
+     * kiểm được điều kiện «≥ trưởng phòng» (rank ≥ 30) giống MT2-P4-02.
+     *
+     * <p>⚠️ <b>VÌ SAO CẦN HÀM NÀY</b>: MT2-P4-02 đã cài điều kiện «admin OR `level_rank>=30`» **inline trong
+     * `BootstrapDataAdapter`** (tầng **infrastructure**) ⇒ tầng **application ⛔ không gọi lại được** ✗.
+     * Nếu use-case tự viết SQL ⇒ **trùng logic** ✗ (§15). Vì vậy **trích thành hàm PORT dùng chung** ở đây ✔
+     * (⛔ KHÔNG copy SQL sang tầng khác ✗, ⛔ KHÔNG sửa `BootstrapDataAdapter` ✗ — giữ P4-02 nguyên trạng).
+     *
+     * @return `level_rank`; **`null`** nếu user không có / `system_level_code` trống / không tìm thấy
+     *         (⚠️ NULL ⇒ coi như **KHÔNG đủ**, ⛔ không suy diễn thành đủ ✗)
+     */
+    Integer userLevelRank(String userId);
+
+    Optional<Map<String, Object>> findMaterialMarApproval(String projectId, String materialId);
+    void insertMarApproval(String id, String projectId, String materialId, String approvalNo, String status,
+                           String note, String userId, Instant now);
+    void updateMarApproval(String id, String approvalNo, String status, String note, String userId, Instant now);
+    Optional<Map<String, Object>> findActiveMaterial(String materialId);
+
+    // ---- P4: workflow đa luồng (nhiều quy trình · nhiều bước · nhiều người duyệt) ----
+    List<Map<String, Object>> workflowDefinitions();
+    List<Map<String, Object>> workflowSteps();
+    List<Map<String, Object>> workflowStepApprovers();
+    Optional<Map<String, Object>> findWorkflow(String id);
+    Optional<Map<String, Object>> findWorkflowByCode(String code);
+    void upsertWorkflow(Map<String, Object> workflow, Instant now);
+    /** Ghi đè toàn bộ bước + người duyệt của một workflow trong một giao dịch. */
+    void replaceWorkflowSteps(String workflowId, List<Map<String, Object>> steps,
+                              List<Map<String, Object>> approvers, Instant now);
+    void setWorkflowStatus(String id, boolean active, Instant now);
+    void deleteWorkflowSafe(String id);
+}

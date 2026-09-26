@@ -1,0 +1,80 @@
+# VNTECH ERP — Java backend configuration (Spring Boot)
+# Môi trường local dev: MySQL 8.4 + Redis 7 (xem java-backend/docker-compose.yml)
+spring:
+  application:
+    name: vntech-erp-java
+  datasource:
+    url: ${VNTECH_DB_URL:jdbc:mysql://localhost:3306/vntech_erp?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true&useSSL=false}
+    username: ${VNTECH_DB_USER:vntech}
+    password: ${VNTECH_DB_PASSWORD:vntech}
+    hikari:
+      maximum-pool-size: ${VNTECH_DB_POOL_MAX:30}
+  jpa:
+    hibernate:
+      ddl-auto: none            # Schema do Flyway quản lý, tuyệt đối không auto-DDL
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: false
+  data:
+    redis:
+      host: ${VNTECH_REDIS_HOST:localhost}
+      port: ${VNTECH_REDIS_PORT:6379}
+      password: ${VNTECH_REDIS_PASSWORD:}
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 60MB
+    # UTF-8 cho MỌI request/response (JSON, text, form). force=true ghi đè cả khi
+    # client không khai báo charset — tránh hiện tượng tiếng Việt bị hiển thị sai
+    # ở công cụ/trình duyệt không mặc định UTF-8 cho application/json.
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+      force-request: true
+      force-response: true
+  messages:
+    encoding: UTF-8
+  mail:
+    host: ${VNTECH_SMTP_HOST:localhost}
+    port: ${VNTECH_SMTP_PORT:25}
+    username: ${VNTECH_SMTP_USER:}
+    password: ${VNTECH_SMTP_PASSWORD:}
+
+server:
+  port: ${PORT:8787}
+
+# Cấu hình nghiệp vụ riêng của VNTECH (tương đương runtime-env.ts bản JS)
+vntech:
+  storage-dir: ${VNTECH_STORAGE_DIR:./data/storage}
+  backup-dir: ${VNTECH_BACKUP_DIR:./data/backups}
+  # Nội dung tệp đính kèm (thay R2 env.BUCKET của JS) — key giữ nguyên cấu trúc <entityType>/<entityId>/<id>-<safeName>
+  files:
+    root: ${VNTECH_FILES_ROOT:./data/files}
+  cookie-secure: ${VNTECH_COOKIE_SECURE:false}
+  public-url: ${VNTECH_PUBLIC_URL:}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+  health:
+    # Health indicator cho hạ tầng CHƯA cấu hình mặc định TẮT để /actuator/health trả UP.
+    # Bật lại khi có SMTP/Redis thật:
+    #   VNTECH_HEALTH_MAIL=true  VNTECH_HEALTH_REDIS=true
+    # (phát hiện 14/09/2026: health 503 vì Mail localhost:25 + Redis localhost:6379 chưa có)
+    mail:
+      enabled: ${VNTECH_HEALTH_MAIL:false}
+    redis:
+      enabled: ${VNTECH_HEALTH_REDIS:false}
+    db:
+      enabled: true

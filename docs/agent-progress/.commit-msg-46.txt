@@ -1,0 +1,78 @@
+#46 TASK-040: phat hien LOP LOI - 26 cau lenh SQL trong Java ghi COT KHONG TON TAI (HTTP 500 luc chay)
+
+NGUON: TASK-039 cho thay mot LOP loi (Java tham chieu cot/bang khong ton tai => 500 luc chay, trong khi
+bien dich sach va moi cong tinh deu "xanh"). Da viet cong cu bat CA LOP thay vi cho nguoi dung bam
+vao tung chuc nang.
+
+CONG CU MOI: tools/probe-java-sql-schema.mjs
+  1. Doc luoc do MySQL THAT tu db/migration/V*.sql (chinh la 16 migration Flyway ma server dang chay -
+     log khoi dong xac nhan "validated 16 migrations"): 120 bang - 1543 cot.
+  2. Doc THEM luoc do drizzle/ (SQLite - nguon cua JS): 119 bang. VI SAO CAN CA HAI: JS chay SQLite,
+     Java chay MySQL => phai phan biet LOI MA voi LECH LUOC DO giua hai backend.
+  3. Quet 97 tep Java, trich SQL tinh (bo cau lenh dong co %s/${}/ghep chuoi), kiem:
+       INSERT INTO t (c1,c2,...)  -> bang ton tai? MOI cot ton tai?
+       UPDATE t SET c1=?,c2=?     -> bang + MOI cot?
+  4. Phan loai tung phat hien doi chieu CA HAI luoc do.
+
+KET QUA
+  Phan loai:
+     26  LOI MA: cot khong co o CA HAI luoc do
+      0  LECH LUOC DO (co o drizzle, thieu o MySQL)
+      0  BANG KHONG TON TAI
+  => Ca 26 deu la loi ma. Moi cau lenh se nem "Unknown column" => HTTP 500 khi bam dung chuc nang do.
+
+DANH SACH (26 cau lenh, 7 tep)
+  AdminOpsStoreAdapter.java:82        approval_email_recipients  user_email, cc_emails, updated_by
+  MaterialCatalogStoreAdapter.java:269 materials                 is_component, created_by
+  MaterialCatalogStoreAdapter.java:291 material_norms            name, unit_rate, scope_project_id, description
+  MaterialCatalogStoreAdapter.java:301 material_norms            name, unit_rate, description
+  MaterialCatalogStoreAdapter.java:308 material_norms            approved_by, approved_at
+  ProductionStoreAdapter.java:309      team_subcontracts         settlement_id, settled_at
+  SystemSettingsStoreAdapter.java:118  vntech_license_installations  license_key, company_name, edition,
+                                                                   activated_by, activated_at, created_at
+  SystemSettingsStoreAdapter.java:136  vntech_license_transfer_requests  to_company_name, created_at
+  UserAdminStoreAdapter.java:316       system_level_catalog      level_rank
+  WarehouseStockStoreAdapter.java:344  stock_issue_items         status
+
+KIEM CHUNG BO PHAN TICH (khong buoc toi sai) - doi chieu DDL that cua 5 bang, khop 5/5:
+  approval_email_recipients     : id,project_id,stage,emails,active,created_at,updated_at (GIONG HET nhau
+                                  o CA drizzle va Flyway) => Java ghi 3 cot khong co o dau
+  stock_issue_items             : ... installed_qty ... KHONG co status
+  vntech_license_transfer_requests : KHONG co to_company_name / created_at
+  material_norms                : item_name, quantity_per_unit, project_id, notes ...
+                                  KHONG co name/unit_rate/scope_project_id/description/approved_by/approved_at
+  system_level_catalog          : cot that la rank (Java ghi level_rank)
+
+BAN SUA DUNG DA XAC DINH TU NGUON SU THAT JS (scripts/system-route.mjs)
+  approval_email_recipients : JS dung MOT cot `emails` (da gop): INSERT
+      (id,project_id,stage,emails,active,created_at,updated_at) => Java tach doi thanh user_email +
+      cc_emails la SAI, phai gop lai mot cot.
+  material_norms : JS INSERT (id,norm_code,project_id,subcategory_id,item_name,material_id,base_uom,
+      quantity_per_unit,unit,source_component_id,source_type,notes,status,active,created_by,created_at,
+      updated_at); UPDATE SET project_id,subcategory_id,item_name,material_id,base_uom,quantity_per_unit,
+      unit,source_component_id,notes,updated_at; an/hien: SET active=?,status=CASE WHEN ? THEN 'active'
+      ELSE 'inactive' END,updated_at=?
+      => JS KHONG co khai niem approved_by/approved_at: 2 cot do la BIA THEM, khong phai doi ten.
+  stock_issue_items : JS `UPDATE stock_issue_items SET installed_qty=installed_qty+?,updated_at=? WHERE id=?`
+      => Java dang SET status: SAI CA COT LAN NGHIEP VU.
+  system_level_catalog : doi level_rank -> rank.
+
+CON CAN TRA JS TRUOC KHI SUA: materials.is_component/created_by, team_subcontracts.settlement_id/settled_at,
+  vntech_license_installations.*, vntech_license_transfer_requests.to_company_name.
+
+VI SAO CO THE LA TRANG THAI CO SAN TU LAU: cac cot sai (user_email, unit_rate, level_rank,
+  scope_project_id, settlement_id...) khong co o BAT KY luoc do nao => la PORT SAI khi chuyen JS -> Java,
+  khong phai do thay doi luoc do gan day. Chung ton tai am tham vi chua ai bam dung chuc nang do sau cutover.
+
+MUC DO & HUONG SUA: P1 (mot so P0 voi admin) - moi cau lenh la MOT CHUC NANG GHI BI HONG HOAN TOAN.
+  Sua theo tung nhom tep; moi nhom phai: tra SQL tuong ung cua JS -> sua Java theo JS -> bien dich +
+  dong goi + khoi dong lai -> GOI THAT va xac nhan khong con 500 VA doc lai gia tri (dung bai hoc TASK-039:
+  kiem "het 500" la chua du).
+  KHONG sua bang cach them cot vao MySQL de chieu theo port sai - lam vay la mo rong luoc do de hop thuc
+  hoa loi va tao lech voi SQLite/drizzle.
+
+CHUA SUA MA NGUON o vong nay - can tra JS cho tung nhom roi moi sua (xem TASK-040.md muc 8 va 11).
+
+Tep: tools/probe-java-sql-schema.mjs (moi) - docs/agent-progress/{TASK-040.md (moi), TASK_INDEX.md,
+MASTER_STATUS.md}
+Tai lieu: docs/agent-progress/TASK-040.md

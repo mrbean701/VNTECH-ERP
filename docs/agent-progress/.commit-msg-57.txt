@@ -1,0 +1,63 @@
+#57 TASK-041: port save_approval_stage + set_approval_stage_status (hop dong payload, 5 truong, 3 quy tac)
+
+NGUON PHAT HIEN: cong cu tools/probe-write-map-drift.mjs (so BAN DO GHI JS <-> Java) o commit #56.
+
+=== BA TANG LECH DA SUA ===
+1. HOP DONG PAYLOAD
+   UI (app/page.tsx:3832 ApprovalStageModal) gui: stageId, stageNo, sortOrder, name, description, slaHours,
+   approvalMode, autoApproveOnSubmit, allowedRoleCodes. UI KHONG GUI `code`.
+   Java cu BAT BUOC `code` => action LUON tra HTTP 400 truoc khi cham SQL (cung lop loi voi nho 3).
+   Java con TU THEM luat `stageNo < 100` khong co trong JS.
+   => Bo yeu cau `code`, bo luat tu them; validate dung JS: name + it nhat 1 vai tro + moi vai tro phai co
+      trong role_catalog (active=1).
+2. GHI THIEU TRUONG
+   insertApprovalStage cu: 6 cot, truyen `null` CUNG cho description.
+   updateApprovalStage cu: chi name/stage_no/allowed_role_codes.
+   => insert 12 cot; update 8 truong. HAU QUA CU: admin sua SLA cua buoc duyet, he thong bao thanh cong
+      nhung `sla_hours` KHONG DOI - ma SLA la thu worker SLA dung de danh dau qua han.
+3. QUY TAC NGHIEP VU (3 chot + 4 thong diep nguyen van JS)
+   - tu duyet chi cho BUOC DAU cua luong
+   - chan doi `stage_no` khi buoc da co lich su duyet
+   - chan tat buoc dang co ho so cho; KHONG cho tat buoc CUOI CUNG (tu bat lai)
+   Hai chot cuoi chinh la HANG RAO cho rui ro "ho so ket" ma TASK-035 ghi la LIKELY.
+
+PORT: GO 2 phuong thuc TU PHAT MINH (findApprovalStageCatalog, stageCodeExists - chung coi `code` nhu
+`stage_no`, bang khong co cot `code`); THEM 8 phuong thuc theo JS (activeRoleCodes, clearAutoApproveExcept,
+clearAutoApproveAll, countActiveStagesBefore, countApprovalsByStageNo, propagateStageNameToPendingApprovals,
+countActiveStages, countPendingApprovalsForStageNo).
+
+=== KIEM CHUNG LUC CHAY ===
+jar 90.891.156 bytes (16:01:27) - API PID 34524 - Flyway validated 16 migrations - log 0 ERROR
+tools/probe-task041.mjs : 21/21 DAT - exit 0
+  tao buoc tam stageNo=900 bang DUNG payload UI (khong `code`) -> 200 + nguyen van thong diep JS
+  description/approvalMode/sortOrder/slaHours doc lai dung
+  *** SUA SLA 8 -> 33 ROI DOC LAI = 33 ***  (day chinh la loi cu)
+  sua description/approvalMode/sortOrder/2 vai tro -> doc lai dung
+  chot tu duyet o buoc khong phai dau -> 400 nguyen van
+  chot doi stage_no cua buoc 1 (da co 100 ban ghi lich su) -> 400 nguyen van, stage_no GIU NGUYEN 1
+  chot tat buoc 1 (dang co 7 ho so cho) -> 400 nguyen van, buoc 1 VAN HOAT DONG
+  don sach: xoa buoc tam qua API -> ve dung 5 buoc
+tools/probe-task041-last-stage.mjs : 7/7 DAT - exit 0
+  dung kich ban rieng (tam tat buoc 1-4 bang SQL, da sao luu truoc) de buoc 5 thanh buoc hoat dong CUOI CUNG
+  goi API tat buoc 5 -> 400 "He thong phai co it nhat mot buoc phe duyet dang hoat dong."
+  buoc 5 TU BAT LAI (dung nhu JS) => he thong khong bao gio roi vao trang thai khong con buoc duyet
+  script tu khoi phuc trong `finally`: trang thai cuoi = trang thai dau (1:1,2:1,3:1,4:1,5:1)
+Doi chieu du lieu: 4/5 dong approval_stage_catalog GIONG HET ban sao luu (tools/_backup-task041.sql);
+dong 5 CHI KHAC `updated_at` (2026-09-14 11:57:47.971 -> 2026-09-17 16:03:35.640) - dung he qua cua phep kiem
+chot cuoi (ghi active=0 roi tu bat lai). Moi truong nghiep vu nguyen ven; khong con buoc tam stage_no=900.
+npm run test:regression: 61 test / 59 pass / 2 fail - dung 2 loi cu (TASK-031, TASK-032)
+
+=== LOI CUA CHINH TOI ===
+1. Probe dau dung allowedRoleCodes: ["admin"] => bi chan "Vai tro admin khong ton tai hoac dang bi an."
+   KHONG phai loi ma: `admin` la vai tro dung san cua users.role, KHONG co dong trong role_catalog, va UI
+   LOC BO no (app/page.tsx:3833 `item.code !== "admin"`); JS cung kiem voi role_catalog nen JS CUNG tu choi.
+   Da doi sang commander/director.
+2. LAP LAI loi chay `mvn` tu thu muc workspace (`no POM in this directory`) - lan thu HAI trong du an.
+   Da ghi vao MASTER_STATUS known issue #28: moi lenh mvn phai dat workdir = java-backend.
+
+CON LAI (ghi ro, khong tu mo rong): JS co audit(...) o ca hai action, Java chua ghi; phan quyen giu nguyen
+cong module (thuoc nhom quyet dinh TASK-029); `delete_approval_stage` (JS :2200+) CHUA ra.
+
+Tep: OpsTaskStore.java - OpsTaskStoreAdapter.java - OpsTaskManagementUseCase.java -
+tools/probe-task041.mjs (moi) - tools/probe-task041-last-stage.mjs (moi) -
+docs/agent-progress/{TASK-041.md (muc 6), MASTER_STATUS.md, TASK_INDEX.md}

@@ -1,0 +1,12 @@
+So sach sau #96: TASK-058 DONE (workItems 29 cot + 4 nhanh loc phong ban/BCH, 18/18 DAT voi DOI CHUNG DUONG 4/18 do truoc khi va) + Known Problems #58 viet lai (da va) + #59 (8 khoa con thieu cot) + CURRENT TASK = TASK-059
+
+- TASK-058.md (moi): bang so sanh truoc/sau (WHERE, cot, workItemEvents, LIMIT), bang 4 nhanh loc
+  nguyen van JS :715-716, 2 helper JS (departmentForRole :246, departmentCodeForUser :388 +
+  stripDiacritics), bang ket qua probe 18/18 theo tung tai khoan THAT (admin 7/7 · nvkhdemo T1,T5 ·
+  trinhtrench T1,T5,T6 · nvdademo T2 · tkhodemo T3,T4 · thukydemo T7), doi chung duong 4/18 do tren
+  jar truoc khi va, danh sach cong khong hoi quy, va loi cua chinh toi (INSERT 32 cot / 31 gia tri).
+- MASTER_STATUS: Known Problems #58 viet lai thanh DA VA (kem so do truoc/sau) + #59 (8 khoa con thieu
+  cot, gom nhom 3 khoa cung thieu createdBy/createdByName), CURRENT TASK = TASK-059, LAST COMPLETED
+  = TASK-058, dong Infrastructure (PID 3764 job pwsh-102, jar 90.908.028 bytes) + dong kiem chung cuoi
+  luot (co ca probe-task058 18/18 va doi chung duong 4/18).
+- TASK_INDEX: dong TASK-058 day du bang chung.

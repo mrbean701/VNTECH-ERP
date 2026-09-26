@@ -1,0 +1,19 @@
+﻿#60 Sua cong cu canonicalMeCode: no bao "7 LECH" SAU KHI da va => gay hieu nham
+
+VAN DE: 	ools/probe-canonical-me-code-drift.mjs ban dau chi co 2 cot "JS" va "Java", trong do cot "Java" la
+ban **CU** (chi so DUNG BANG, thieu cac nhanh startsWith). Sau khi va Java o #52, cong cu van in
+"28 dau vao - 7 LECH" nhu the Java con loi. Trong luot quet cong cuoi cung, chinh toi doc ket qua do va
+suyt ket luan sai rang ban va #52 khong co tac dung.
+
+DA SUA: tach ro ba cot
+  JS            = nguon su that (scripts/system-route.mjs:44-54)
+  Java HIEN TAI = logic dang co trong domain/service/MaterialSystemCodes.java
+  Java CU       = ban da bi va, dung lam DOI CHUNG DUONG
+Ket qua moi: JS<->Java HIEN TAI = 0 lech  ·  JS<->Java CU = 7 lech (doi chung duong DAT) - exit 0.
+
+GHI RO GIOI HAN trong tep: day la mo phong ba thuat toan doc tu ma nguon (khong goi ma Java that);
+tinh dung cua ban Java hien tai da duoc khoa bang unit test MaterialSystemCodesTest (5 ca, gom dung 7 ca tung lech).
+
+BAI HOC (lan thu BA trong du an gap dang nay): mot cong cu do xong KHONG duoc phep giu ket qua cu khi doi tuong
+do da thay doi. Cong cu phai tu noi ro no dang do PHIEN BAN NAO, va phai co doi chung duong de chung minh
+no khong vo dung.

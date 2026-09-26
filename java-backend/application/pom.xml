@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  VNTECH ERP — Application module
+  Use-cases + ports (interfaces). Phụ thuộc domain. Không phụ thuộc framework/DB.
+  Ports do use-case định nghĩa -> test unit thuần, không cần DB.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.vntech</groupId>
+    <artifactId>vntech-erp</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>vntech-erp-application</artifactId>
+  <name>VNTECH ERP — Application</name>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.vntech</groupId>
+      <artifactId>vntech-erp-domain</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!--
+      MT2-P4-01 (§3.2 · đề án ①A) — TEST SCOPE ONLY.
+      Vì sao cần: `WorkScopeServiceTest` phải giả lập port `OpsTaskStore` (~40 phương thức) để kiểm 3 tầng
+      phạm vi SELF/DEPARTMENT/COMPANY mà KHÔNG cần DB. Module `application` được thiết kế KHÔNG phụ thuộc
+      framework (xem đầu tệp) ⇒ cố ý KHÔNG dùng `spring-boot-starter-test` (sẽ kéo Spring vào module lõi);
+      chỉ dùng ĐÚNG `mockito-core` — thư viện thuần, phạm vi `test`. Version do
+      `spring-boot-starter-parent` 3.5.0 quản lý (BOM) ⇒ KHÔNG ghi version ở đây.
+    -->
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+</project>

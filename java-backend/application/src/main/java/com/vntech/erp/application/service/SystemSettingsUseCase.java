@@ -1,0 +1,468 @@
+package com.vntech.erp.application.service;
+
+import com.vntech.erp.application.port.out.IdGenerator;
+import com.vntech.erp.application.port.out.SystemSettingsStore;
+import com.vntech.erp.application.rbac.RbacService;
+import com.vntech.erp.application.trust.LicenseEnvelopeVerifier;
+
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+
+/**
+ * Use-case settings hệ thống — 9 action cuối catalog: bulk_import_projects/users,
+ * factory_reset_preview/execute, install_license_foundation, request_license_transfer,
+ * retry_email, save_ui_display_settings, save_trust_development_settings.
+ */
+public final class SystemSettingsUseCase {
+
+    private final SystemSettingsStore store;
+    private final IdGenerator idGenerator;
+    private final RbacService rbac;
+
+    public SystemSettingsUseCase(SystemSettingsStore store, IdGenerator idGenerator, RbacService rbac) {
+        this.store = store;
+        this.idGenerator = idGenerator;
+        this.rbac = rbac;
+    }
+
+    public interface Principal {
+        String userId();
+        String role();
+    }
+
+    // ============ bulk_import_projects ============
+    public Map<String, Object> bulkImportProjects(Principal principal, Map<String, Object> payload) {
+        rbac.requireRole(principalAsCurrent(principal), List.of("admin"));
+        List<?> rows = payload.get("rows") instanceof List<?> l ? l : List.of();
+        if (rows.isEmpty()) throw Api("File không có dự án để nhập.");
+        if (rows.size() > 300) throw Api("Mỗi lần import tối đa 300 dự án.");
+        List<Map<String, Object>> normalized = new ArrayList<>();
+        for (int index = 0; index < rows.size(); index++) {
+            Map<String, Object> input = asMap(rows.get(index));
+            int rowNo = (int) Math.round(numberValue(input.get("rowNo")));
+            if (rowNo == 0) rowNo = index + 1;
+            String code = trim(input.get("code")).toUpperCase(Locale.ROOT);
+            String name = trim(input.get("name"));
+            String startDate = normalizeVietnamDate(input.get("startDate"));
+            String plannedEndDate = normalizeVietnamDate(input.get("plannedEndDate"));
+            String statusInput = blankDefault(trim(input.get("status")), "ACTIVE").toUpperCase(Locale.ROOT);
+            if (code.isEmpty()) throw Api("Dòng " + rowNo + " · Cột “Mã dự án”: bắt buộc nhập.");
+            if (!code.matches("[A-Z0-9._-]{2,24}"))
+                throw Api("Dòng " + rowNo + " · Cột “Mã dự án”: chỉ nhận 2–24 ký tự A-Z, số, dấu chấm, gạch dưới hoặc gạch ngang.");
+            if (name.isEmpty()) throw Api("Dòng " + rowNo + " · Cột “Tên dự án”: bắt buộc nhập.");
+            if (startDate != null && !isIsoDate(startDate))
+                throw Api("Dòng " + rowNo + " · Cột “Ngày bắt đầu”: phải là ngày hợp lệ theo định dạng DD/MM/YYYY.");
+            if (plannedEndDate != null && !isIsoDate(plannedEndDate))
+                throw Api("Dòng " + rowNo + " · Cột “Dự kiến kết thúc”: phải là ngày hợp lệ theo định dạng DD/MM/YYYY.");
+            if (startDate != null && plannedEndDate != null && plannedEndDate.compareTo(startDate) < 0)
+                throw Api("Dòng " + rowNo + " · Cột “Dự kiến kết thúc”: không được trước Ngày bắt đầu.");
+            if (!List.of("ACTIVE", "INACTIVE", "ARCHIVED").contains(statusInput))
+                throw Api("Dòng " + rowNo + " · Cột “Trạng thái”: chỉ nhận ACTIVE, INACTIVE hoặc ARCHIVED.");
+            String warehouseCode = blankDefault(trim(input.get("warehouseCode")), "KHO-" + code).toUpperCase(Locale.ROOT);
+            if (!warehouseCode.matches("[A-Z0-9._-]{2,32}"))
+                throw Api("Dòng " + rowNo + " · Cột “Mã kho”: không đúng định dạng.");
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("rowNo", rowNo);
+            row.put("code", code);
+            row.put("name", name);
+            row.put("startDate", startDate);
+            row.put("plannedEndDate", plannedEndDate);
+            row.put("status", "ACTIVE".equals(statusInput) ? "active" : "archived");
+            row.put("warehouseCode", warehouseCode);
+            row.put("warehouseName", blankDefault(trim(input.get("warehouseName")), "Kho công trường " + code));
+            row.put("contractNo", nvl(input.get("contractNo")));
+            row.put("contractName", nvl(input.get("contractName")));
+            normalized.add(row);
+        }
+        // duplicate checks
+        for (Map<String, Object> row : normalized) {
+            boolean dup = normalized.stream().filter(r -> sv(r, "code").equals(sv(row, "code"))).count() > 1;
+            if (dup) throw Api("Dòng " + numI(row, "rowNo") + " · Cột “Mã dự án”: trùng mã " + sv(row, "code") + " trong cùng file.");
+        }
+        for (Map<String, Object> row : normalized) {
+            boolean dup = normalized.stream().filter(r -> sv(r, "warehouseCode").equals(sv(row, "warehouseCode"))).count() > 1;
+            if (dup) throw Api("Dòng " + numI(row, "rowNo") + " · Cột “Mã kho”: trùng mã " + sv(row, "warehouseCode") + " trong cùng file.");
+        }
+        Instant now = Instant.now();
+        int created = 0, updated = 0;
+        for (Map<String, Object> row : normalized) {
+            Map<String, Object> existing = store.findProjectByCodeUpper(sv(row, "code")).orElse(null);
+            Map<String, Object> currentWarehouse = existing != null
+                    ? store.findSiteWarehouseForProject(sv(existing, "id")).orElse(null) : null;
+            Map<String, Object> warehouseOwner = store.findWarehouseOwnerByCodeUpper(sv(row, "warehouseCode")).orElse(null);
+            if (warehouseOwner != null && (currentWarehouse == null
+                    || !sv(warehouseOwner, "id").equals(sv(currentWarehouse, "id"))))
+                throw Api("Dòng " + numI(row, "rowNo") + " · Cột “Mã kho”: " + sv(row, "warehouseCode")
+                        + " đã thuộc kho/dự án khác.");
+            int warehouseActive = "active".equals(sv(row, "status")) ? 1 : 0;
+            if (existing != null) {
+                store.updateProjectBasic(sv(existing, "id"), sv(row, "name"), sv(row, "status"),
+                        sv(row, "contractNo"), sv(row, "contractName"), sv(row, "startDate"), sv(row, "plannedEndDate"), now);
+                if (currentWarehouse != null) {
+                    store.updateWarehouseBasic(sv(currentWarehouse, "id"), sv(row, "warehouseCode"),
+                            sv(row, "warehouseName"), warehouseActive, now);
+                } else {
+                    Map<String, Object> wh = new LinkedHashMap<>();
+                    wh.put("id", idGenerator.next("WH"));
+                    wh.put("code", sv(row, "warehouseCode"));
+                    wh.put("name", sv(row, "warehouseName"));
+                    wh.put("projectId", sv(existing, "id"));
+                    wh.put("keeperUserId", principal.userId());
+                    wh.put("active", warehouseActive);
+                    store.insertDefaultWarehouse(wh, now);
+                }
+                updated++;
+            } else {
+                String projectId = idGenerator.next("PRJ");
+                Map<String, Object> p = new LinkedHashMap<>();
+                p.put("id", projectId);
+                p.put("code", sv(row, "code"));
+                p.put("name", sv(row, "name"));
+                p.put("status", sv(row, "status"));
+                p.put("managerUserId", principal.userId());
+                p.put("startDate", sv(row, "startDate"));
+                p.put("plannedEndDate", sv(row, "plannedEndDate"));
+                p.put("contractNo", sv(row, "contractNo"));
+                p.put("contractName", sv(row, "contractName"));
+                store.insertProjectBasic(p, now);
+                Map<String, Object> wh = new LinkedHashMap<>();
+                wh.put("id", idGenerator.next("WH"));
+                wh.put("code", sv(row, "warehouseCode"));
+                wh.put("name", sv(row, "warehouseName"));
+                wh.put("projectId", projectId);
+                wh.put("keeperUserId", principal.userId());
+                wh.put("active", warehouseActive);
+                store.insertDefaultWarehouse(wh, now);
+                store.insertUserProjectScopeAdmin(principal.userId(), projectId, now);
+                created++;
+            }
+        }
+        return Map.of("message", "Đã nhập " + normalized.size() + " dự án: " + created + " tạo mới, " + updated
+                + " cập nhật; kho site và phân quyền admin tự động.");
+    }
+
+    // ============ bulk_import_users ============
+    public Map<String, Object> bulkImportUsers(Principal principal, Map<String, Object> payload) {
+        rbac.requireRole(principalAsCurrent(principal), List.of("admin"));
+        List<?> rows = payload.get("rows") instanceof List<?> l ? l : List.of();
+        if (rows.isEmpty()) throw Api("File không có tài khoản để nhập.");
+        if (rows.size() > 5000) throw Api("Mỗi lần import tối đa 5.000 tài khoản.");
+        Instant now = Instant.now();
+        int created = 0, updated = 0;
+        List<String> errors = new ArrayList<>();
+        for (int i = 0; i < rows.size(); i++) {
+            Map<String, Object> input = asMap(rows.get(i));
+            int rowNo = i + 1;
+            String email = trim(input.get("email")).toLowerCase(Locale.ROOT);
+            String fullName = trim(input.get("fullName"));
+            String role = blankDefault(trim(input.get("role")), "engineer");
+            String department = trim(input.get("department"));
+            if (email.isEmpty() || fullName.isEmpty()) { errors.add("Dòng " + rowNo + ": thiếu email/họ tên."); continue; }
+            Map<String, Object> existing = store.findUserByEmail(email).orElse(null);
+            Map<String, Object> user = new LinkedHashMap<>();
+            if (existing != null) {
+                user.put("id", sv(existing, "id"));
+                user.put("fullName", fullName);
+                user.put("role", role);
+                user.put("department", nvl(department));
+                user.put("active", input.get("active") == Boolean.FALSE ? 0 : 1);
+                store.updateUserImported(user, now);
+                updated++;
+            } else {
+                user.put("id", idGenerator.next("USR"));
+                user.put("username", blankDefault(trim(input.get("username")), email.split("@")[0]));
+                user.put("email", email);
+                user.put("fullName", fullName);
+                user.put("role", role);
+                user.put("department", nvl(department));
+                user.put("passwordHash", ""); // bắt buộc đặt mật khẩu khi đăng nhập lần đầu
+                user.put("active", input.get("active") == Boolean.FALSE ? 0 : 1);
+                store.insertUserBasic(user, now);
+                created++;
+            }
+        }
+        return Map.of("message", "Đã nhập " + rows.size() + " tài khoản: " + created + " mới, " + updated
+                + " cập nhật" + (errors.isEmpty() ? "." : "; " + errors.size() + " dòng bỏ qua do thiếu dữ liệu."));
+    }
+
+    // ============ factory reset ============
+    public Map<String, Object> factoryResetPreview(Principal principal, Map<String, Object> payload) {
+        rbac.requireRole(principalAsCurrent(principal), List.of("admin"));
+        List<Map<String, Object>> rows = store.factoryResetPreview();
+        return Map.of("message", "Xem trước dữ liệu sẽ bị xóa trước khi reset kiểm thử.",
+                "items", rows, "confirmText", "RESET_ALL");
+    }
+
+    public Map<String, Object> factoryResetExecute(Principal principal, Map<String, Object> payload) {
+        rbac.requireRole(principalAsCurrent(principal), List.of("admin"));
+        String confirmText = trim(payload.get("confirmText"));
+        if (!"RESET_ALL".equals(confirmText)) throw Api("Xác nhận reset chưa đúng. Hãy nhập RESET_ALL.");
+        int before = store.factoryResetExecute(confirmText, principal.userId(), Instant.now());
+        return Map.of("message", "Đã reset dữ liệu nghiệp vụ (giữ master data và cấu hình); " + before
+                + " yêu cầu cũ đã bị xóa.");
+    }
+
+    // ============ license ============
+    /**
+     * MT2-P14-03b — «Kích hoạt nền tảng bản quyền»: <b>PORT TRUNG THÀNH JS</b> {@code install_license_foundation}
+     * ({@code scripts/system-route.mjs} ~:1998). Hợp đồng cũ của Java ({@code licenseKey/companyName/edition})
+     * ghi vào 6 cột <b>không tồn tại</b> ⇒ action trả lỗi SQL; bản này làm đúng 4 bước của JS:
+     * <ol>
+     *   <li>nhận {@code licenseEnvelope} (đối tượng; ⚠️ chuỗi JSON đã được tầng web parse — chuỗi còn lại ở đây
+     *       nghĩa là JSON hỏng ⇒ ném đúng câu của JS);</li>
+     *   <li>XÁC MINH chữ ký Ed25519 theo Trust Root ({@code vntech_trust_settings} hàng {@code TRUST-ROOT});</li>
+     *   <li>⛔ không hợp lệ ⇒ ghi {@code vntech_trust_audit} {@code LICENSE_REJECTED} + ném
+     *       «License không hợp lệ: &lt;lý do&gt;» (⛔ KHÔNG ghi bảng cài đặt);</li>
+     *   <li>hợp lệ ⇒ ghi {@code vntech_license_installations} (18 cột thật) + audit {@code LICENSE_VERIFIED}
+     *       và trả về ĐÚNG thông điệp Development Mode của JS.</li>
+     * </ol>
+     */
+    public Map<String, Object> installLicenseFoundation(Principal principal, Map<String, Object> payload) {
+        rbac.requireRole(principalAsCurrent(principal), List.of("admin"));
+        Object raw = payload.get("licenseEnvelope");
+        if (raw instanceof String) throw Api("Nội dung license không phải JSON hợp lệ.");
+        Map<String, Object> envelope = asMap(raw);
+        Map<String, Object> identity = store.readTrustIdentity();
+        Instant now = Instant.now();
+        LicenseEnvelopeVerifier.Context context = new LicenseEnvelopeVerifier.Context(
+                trim(identity.get("keyId")), trim(identity.get("publicKeyPem")), trim(identity.get("productId")),
+                trim(identity.get("tenantId")), trim(identity.get("companyCode")),
+                trim(identity.get("machineFingerprint")), now);
+        LicenseEnvelopeVerifier.Verification verification =
+                LicenseEnvelopeVerifier.verifyEnvelope(envelope, context);
+        Map<String, Object> claims = verification.claims() == null ? Map.of() : verification.claims();
+        String machineFingerprint = trim(identity.get("machineFingerprint"));
+        if (!verification.valid()) {
+            store.recordTrustAudit("LICENSE_REJECTED", principal.userId(),
+                    trim(claims.get("licenseId")).isEmpty() ? null : trim(claims.get("licenseId")),
+                    machineFingerprint.isEmpty() ? null : machineFingerprint,
+                    jsonObject(Map.of("reasons", verification.reasons())), now);
+            throw Api("License không hợp lệ: " + String.join("; ", verification.reasons()));
+        }
+        Map<String, Object> installation = new LinkedHashMap<>();
+        installation.put("id", idGenerator.next("LIC"));
+        installation.put("licenseId", trim(claims.get("licenseId")));
+        installation.put("tenantId", trim(claims.get("tenantId")));
+        installation.put("companyCode", trim(claims.get("companyCode")));
+        installation.put("productId", trim(claims.get("productId")));
+        installation.put("keyId", trim(envelope.get("keyId")));
+        installation.put("payloadJson", jsonObject(claims));
+        installation.put("signatureBase64", trim(envelope.get("signature")));
+        installation.put("status", "verified_development");
+        installation.put("validFrom", trim(claims.get("notBefore")));
+        installation.put("validUntil", trim(claims.get("expiresAt")));
+        installation.put("machineFingerprint", machineFingerprint.isEmpty() ? null : machineFingerprint);
+        installation.put("verificationDetailJson", jsonObject(Map.of(
+                "signatureVerified", true, "enforcement", false)));
+        installation.put("installedBy", principal.userId());
+        installation.put("now", now);
+        store.installLicenseFoundation(installation);
+        store.recordTrustAudit("LICENSE_VERIFIED", principal.userId(), trim(claims.get("licenseId")),
+                machineFingerprint.isEmpty() ? null : machineFingerprint,
+                jsonObject(Map.of("enforcement", "disabled-by-design", "keyId", trim(envelope.get("keyId")))),
+                now);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("message", "License đã được xác minh và lưu ở Development Mode; "
+                + "hệ thống vẫn chưa bật enforcement.");
+        result.put("verification", verification.toMap());
+        return result;
+    }
+
+    /**
+     * MT2-P14-03b — «Yêu cầu chuyển/khôi phục license»: PORT JS {@code request_license_transfer}.
+     * Khác bản cũ: ⛔ không có {@code toCompanyName} (cột không tồn tại) — dùng
+     * {@code destinationMachineFingerprint} (SHA-256 64 hex, giống JS) + {@code reason} <b>bắt buộc</b>;
+     * ⛔ KHÔNG {@code UPDATE} bảng cài đặt (JS không làm vậy).
+     */
+    public Map<String, Object> requestLicenseTransfer(Principal principal, Map<String, Object> payload) {
+        rbac.requireRole(principalAsCurrent(principal), List.of("admin"));
+        String licenseId = trim(payload.get("licenseId"));
+        String destinationMachineFingerprint = trim(payload.get("destinationMachineFingerprint")).toLowerCase(Locale.ROOT);
+        String reason = trim(payload.get("reason"));
+        if (reason.isEmpty()) throw Api("Yêu cầu chuyển/khôi phục license bắt buộc có lý do.");
+        if (!destinationMachineFingerprint.isEmpty()
+                && !destinationMachineFingerprint.matches("^[a-f0-9]{64}$")) {
+            throw Api("Machine fingerprint đích phải là SHA-256 64 ký tự.");
+        }
+        if (!licenseId.isEmpty()) {
+            store.findLicense(licenseId).orElseThrow(() -> Api("Không tìm thấy bản cài đặt bản quyền."));
+        }
+        Instant now = Instant.now();
+        String sourceMachineFingerprint = trim(store.readTrustIdentity().get("machineFingerprint"));
+        store.requestLicenseTransfer(licenseId.isEmpty() ? null : licenseId,
+                sourceMachineFingerprint.isEmpty() ? null : sourceMachineFingerprint,
+                destinationMachineFingerprint.isEmpty() ? null : destinationMachineFingerprint,
+                reason, principal.userId(), now);
+        store.recordTrustAudit("TRANSFER_REQUESTED", principal.userId(),
+                licenseId.isEmpty() ? null : licenseId,
+                sourceMachineFingerprint.isEmpty() ? null : sourceMachineFingerprint,
+                jsonObject(Map.of("destinationMachineFingerprint",
+                        destinationMachineFingerprint.isEmpty() ? "" : destinationMachineFingerprint)), now);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("message", "Đã ghi nhận yêu cầu chuyển/khôi phục. "
+                + "Foundation chưa tự động cấp hoặc thu hồi license.");
+        return result;
+    }
+
+    /**
+     * Serialize JSON TỐI THIỂU cho các cột {@code *_json} — ⛔ không kéo Jackson vào tầng application
+     * (module này chỉ phụ thuộc domain + junit). Chỉ dùng cho object 1 tầng với giá trị
+     * chuỗi / số / boolean / mảng chuỗi — đúng nhu cầu 3 chỗ gọi ở trên.
+     */
+    static String jsonObject(Map<String, Object> values) {
+        StringBuilder out = new StringBuilder("{");
+        boolean first = true;
+        for (Map.Entry<String, Object> entry : values.entrySet()) {
+            if (!first) out.append(',');
+            first = false;
+            out.append(jsonString(entry.getKey())).append(':').append(jsonValue(entry.getValue()));
+        }
+        return out.append('}').toString();
+    }
+
+    private static String jsonValue(Object value) {
+        if (value == null) return "null";
+        if (value instanceof Boolean flag) return flag ? "true" : "false";
+        if (value instanceof Number number) return String.valueOf(number);
+        if (value instanceof List<?> list) {
+            StringBuilder out = new StringBuilder("[");
+            for (int i = 0; i < list.size(); i++) {
+                if (i > 0) out.append(',');
+                out.append(jsonValue(list.get(i)));
+            }
+            return out.append(']').toString();
+        }
+        return jsonString(String.valueOf(value));
+    }
+
+    private static String jsonString(String text) {
+        StringBuilder out = new StringBuilder(text.length() + 2).append('"');
+        for (int i = 0; i < text.length(); i++) {
+            char ch = text.charAt(i);
+            switch (ch) {
+                case '"' -> out.append("\\\"");
+                case '\\' -> out.append("\\\\");
+                case '\n' -> out.append("\\n");
+                case '\r' -> out.append("\\r");
+                case '\t' -> out.append("\\t");
+                default -> {
+                    if (ch < 0x20) out.append(String.format("\\u%04x", (int) ch));
+                    else out.append(ch);
+                }
+            }
+        }
+        return out.append('"').toString();
+    }
+
+    // ============ email / settings ============
+    /**
+     * Port nguyên trạng JS `retry_email` — scripts/system-route.mjs:1630-1636:
+     * {@code UPDATE email_outbox SET status='queued',next_attempt_at=?,last_error=NULL,updated_at=? WHERE id=?}
+     * rồi trả *"Đã xếp lại email để máy chủ gửi."*
+     *
+     * <p><b>SỬA LỖI (TASK-042):</b> bản cũ gọi {@code store.retryEmailQueue(100, now)} (truy vấn bảng
+     * **không tồn tại** `email_queue` ⇒ HTTP 500) và trả thông điệp theo kiểu ĐẾM — trái hẳn nghiệp vụ JS.
+     */
+    public Map<String, Object> retryEmail(Principal principal, Map<String, Object> payload) {
+        rbac.requireRole(principalAsCurrent(principal), List.of("admin"));
+        store.requeueEmail(trim(payload.get("emailId")), Instant.now());
+        return Map.of("message", "Đã xếp lại email để máy chủ gửi.");
+    }
+
+    public Map<String, Object> saveUiDisplaySettings(Principal principal, Map<String, Object> payload) {
+        rbac.requireRole(principalAsCurrent(principal), List.of("admin"));
+        Map<String, Object> settings = new LinkedHashMap<>();
+        settings.put("theme", blankDefault(trim(payload.get("theme")), "light"));
+        settings.put("primaryColor", nvl(payload.get("primaryColor")));
+        settings.put("language", blankDefault(trim(payload.get("language")), "vi"));
+        settings.put("dateFormat", blankDefault(trim(payload.get("dateFormat")), "DD/MM/YYYY"));
+        settings.put("companyName", nvl(payload.get("companyName")));
+        settings.put("logoUrl", nvl(payload.get("logoUrl")));
+        store.upsertUiDisplaySettings(svJson(settings), principal.userId(), Instant.now());
+        return Map.of("message", "Đã lưu giao diện hiển thị.");
+    }
+
+    /**
+     * save_trust_development_settings — port nguyên trạng JS (scripts/system-route.mjs:1823-1833).
+     *
+     * <p><b>SỬA LỖI (TASK-039):</b> bản cũ nhận payload {developerMode, allowTestData, debugLogging,
+     * apiSandbox} và ghi một khối JSON vào cột `settings_json` KHÔNG tồn tại ⇒ HTTP 500. JS không
+     * làm vậy: nó chỉ đặt lại trust_mode='development', tắt enforcement/attestation và ghi
+     * licenseServerUrl — kèm hai phép kiểm (chặn bật enforcement, bắt buộc HTTPS).
+     */
+    public Map<String, Object> saveTrustDevelopmentSettings(Principal principal, Map<String, Object> payload) {
+        rbac.requireRole(principalAsCurrent(principal), List.of("admin"));
+        // JS 1825: bản W2 khóa ở Development Mode, KHÔNG cho bật Production Enforcement.
+        Object enforcement = payload.get("enforcementEnabled");
+        if (enforcement == Boolean.TRUE
+                || List.of("1", "true", "on").contains(trim(enforcement).toLowerCase())) {
+            throw Api("Bản W2 đang khóa ở Development Mode. Chỉ được bật Production Enforcement "
+                    + "bằng quy trình phát hành riêng sau khi chủ sản phẩm chốt.");
+        }
+        // JS 1826-1827: URL máy chủ license — rỗng thì null, có thì BẮT BUỘC HTTPS.
+        String licenseServerUrl = trim(payload.get("licenseServerUrl"));
+        if (!licenseServerUrl.isEmpty() && !licenseServerUrl.toLowerCase(Locale.ROOT).startsWith("https://")) {
+            throw Api("License Server URL phải dùng HTTPS.");
+        }
+        store.updateTrustDevelopmentSettings(idGenerator.next("TA"),
+                licenseServerUrl.isEmpty() ? null : licenseServerUrl, principal.userId(), Instant.now());
+        // JS 1833: nguyên văn thông điệp trả về.
+        return Map.of("message",
+                "Đã lưu cấu hình nền; License Enforcement và Online Attestation vẫn tắt theo thiết kế.");
+    }
+
+    // ---- helpers ----
+    private static String svJson(Map<String, Object> m) {
+        StringBuilder sb = new StringBuilder("{");
+        boolean first = true;
+        for (Map.Entry<String, Object> e : m.entrySet()) {
+            if (!first) sb.append(",");
+            first = false;
+            sb.append('"').append(e.getKey().replace("\"", "\\\"")).append("\":");
+            Object v = e.getValue();
+            if (v == null) sb.append("null");
+            else if (v instanceof Number || v instanceof Boolean) sb.append(v);
+            else sb.append('"').append(String.valueOf(v).replace("\"", "\\\"")).append('"');
+        }
+        return sb.append('}').toString();
+    }
+
+    private static String normalizeVietnamDate(Object o) {
+        String raw = trim(o);
+        if (raw.isEmpty()) return null;
+        if (raw.matches("\\d{4}-\\d{2}-\\d{2}")) return raw;
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("(\\d{1,2})/(\\d{1,2})/(\\d{4})").matcher(raw);
+        if (m.matches()) {
+            return String.format("%04d-%02d-%02d", Integer.parseInt(m.group(3)),
+                    Integer.parseInt(m.group(2)), Integer.parseInt(m.group(1)));
+        }
+        return raw;
+    }
+
+    private static boolean isIsoDate(String s) {
+        try { LocalDate.parse(s); return true; } catch (Exception e) { return false; }
+    }
+
+    private static int numI(Map<String, Object> row, String key) {
+        return (int) Math.round(numberValue(row.get(key)));
+    }
+    private static double numberValue(Object o) {
+        try { return o == null ? 0 : Double.parseDouble(String.valueOf(o)); }
+        catch (NumberFormatException e) { return 0; }
+    }
+    private static String sv(Map<String, Object> m, String k) { Object v = m.get(k); return v == null ? "" : String.valueOf(v); }
+    private static String trim(Object o) { return o == null ? "" : String.valueOf(o).trim(); }
+    private static String nvl(Object o) { String s = trim(o); return s.isEmpty() ? null : s; }
+    private static String blankDefault(String s, String fallback) { return s.isEmpty() ? fallback : s; }
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> asMap(Object o) { return o instanceof Map ? (Map) o : Map.of(); }
+    private AuthUseCase.CurrentUser principalAsCurrent(Principal p) {
+        return new AuthUseCase.CurrentUser(p.userId(), "", "", null, p.role(), p.role(), p.role(), null, null, null, false);
+    }
+    private static AuthUseCase.ApiError Api(String message) { return new AuthUseCase.ApiError(message, 400); }
+}

@@ -1,0 +1,38 @@
+TASK-056 + TASK-057: cong doi chieu TAP COT SQL JS<->Java (co DOI CHUNG DUONG bang metadata MySQL) + va 4 khoa bootstrap thieu cot ma cong moi phat hien
+
+TASK-056 - CONG MOI tools/probe-column-parity.mjs:
+- Doc cau SQL hai phia (Java `data.put("KEY", ... query(\"\"\"SQL\"\"\"))`, JS `const|let|var KEY =
+  await all(`SQL`)`), TACH TAP TEN COT dau ra roi so => bat lop loi "thieu COT" ma cong theo TEN
+  KHOA khong the bat (da gap 3 lan: constructionDailyLogs thieu 2 cot - transferOrders thieu 7 truong -
+  khoa co khai nhung null theo vai tro).
+- Bo tach cot la suy luan VAN BAN nen cong BAT BUOC co DOI CHUNG DUONG: dung bang TAM tu chinh cau SQL
+  roi `SHOW COLUMNS` de lay metadata THAT cua MySQL (cach `SELECT ... LIMIT 0` KHONG in tieu de trong
+  che do --batch - da thu va bi loai). Neu bo tach lech metadata => cong bao HONG va KHONG cho ket luan.
+- Lan chay dau: doi chung 5/5 DAT => 13 khoa thieu cot. Sau khi va 4 khoa o TASK-057: con 9 khoa,
+  doi chung 4/4 DAT (transferOrders chuyen sang "khong thay SQL noi tuyen" vi da doi thanh bien trung gian).
+
+TASK-057 - VA 4 KHOA (da kiem bang mat cap SQL hai phia truoc khi ket luan):
+- `issues`: them `si.received_by_name AS receivedByName` + `COALESCE(sia.installed_qty,0) AS installedQty`
+  (kem SUM(installed_qty) o truy van con) - JS :615. UI doc o page.tsx:963 (cot "Nguoi nhan") va
+  page.tsx:2219 (cong vao "Da xac nhan lap" => truoc day LUON 0).
+- `returns`: them `mr.returned_by_name AS returnedByName` - JS :619; UI page.tsx:965.
+- `transferOrders`: port du 21 cot cua JS :713 (them sourceProjectId, destinationProjectId, approvedAt,
+  shippedAt, receivedAt, shippedQty, receivedQty) => UI page.tsx:1745 hien "Da xuat"/"Da nhan" LUON 0
+  truoc day; VA them bo loc theo kho cua JS :714 (vai tro kho khong phai admin chi thay phieu dieu
+  chuyen co kho nguon/dich nam trong danh sach kho ho thay - truoc day thay TAT CA).
+- `productIdentity`: alias `id AS productId` nhu JS :666 (truoc tra `id` => `productId` undefined).
+- Chuyen 2 bien `roleBaseClean`/`scopeKind` len dau `load()` vi nay dung cho 3 bo loc (JS:622, :714, :728).
+
+KIEM CHUNG:
+- Cong moi `probe-column-parity.mjs`: 13 -> 9 khoa thieu cot; 4 khoa vua va SACH.
+- Mo rong `tools/probe-task050-bootstrap.mjs` them muc 6: data.issues/data.returns co du cot moi VA
+  GIA TRI KHOP MYSQL THEO TUNG DONG; data.productIdentity.productId == MySQL id.
+  => probe nay **93/93 DAT** (truoc 87/87).
+- `probe-java-sql-live.mjs`: van dung 8 phat hien nhom 6 license, KHONG phat sinh moi cho 4 truy van vua
+  sua; `probe-schema-drift.mjs` 0 lech.
+
+CON LAI (9 khoa, da ghi vao MASTER_STATUS/TASK_INDEX): workItems (thieu 14 cot + KHONG co bo loc
+phong ban cua JS :715 => tra ve TAT CA cong viec cho moi nguoi), taskNotifications (5 cot + ten khoa
+workItemId/taskId), roleCatalog (2), organizationUnits (2), accountingVouchers (2), hrRecords (2),
+officialCorrespondence (2), legalDocuments (2), businessRoleGroupScopes (3) - moi khoa phai doc cap SQL
+hai phia truoc khi ket luan (rieng `organizationUnits.effective_` nghi la hien vat cua bo tach).

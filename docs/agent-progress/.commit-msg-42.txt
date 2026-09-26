@@ -1,0 +1,64 @@
+#42 TASK-036 (GOAL §8/§7): hai cot cau hinh buoc workflow KHONG duoc thi hanh o dau
+
+CAU HOI: hai cot trong workflow_steps tu khai la co vai tro cau hinh quyen -
+  required_permission  COMMENT 'Quyen can co de duoc chon lam nguoi duyet'
+  allow_skip_level     COMMENT 'Cho phep cap bac cao hon duyet vuot cap'
+Co THAT SU duoc thi hanh o dau khong?
+
+BANG CHUNG - QUET TOAN KHO
+
+  1. Trong toan bo ma KHONG PHAI SQL: 0 cho.
+     Quet *.tsx *.ts *.mjs *.js *.sql (tru node_modules/target/dist/.next) cho ca camelCase lan
+     snake_case (requiredPermission | required_permission | allowSkipLevel | allow_skip_level):
+       tong 9 cho - TAT CA deu la SQL:
+         drizzle/0080_...sql:37,38,73
+         V8__workflow_multi.sql:16,46,47,80
+         schema-h2.sql:2245,2246
+     => KHONG mot tep TS/TSX/JS/MJS nao tham chieu hai truong nay => UI KHONG dung.
+
+  2. Trong Java: chi GHI va HIEN THI, khong THI HANH.
+       OpsTaskManagementUseCase.java:441-442   doc tu payload admin -> ghi vao buoc
+       OpsTaskStoreAdapter.java:309            doc de tra ve man quan tri
+       OpsTaskStoreAdapter.java:363,366-367    INSERT/UPDATE khi luu workflow
+       BootstrapDataAdapter.java:569           doc de dua vao payload bootstrap
+       scripts/system-route.mjs                0 cho
+     Duong phe duyet (canApproveRequestStage, decideApproval) KHONG he nhac toi hai cot nay.
+
+  3. Form quan tri cung KHONG gui chung.
+     app/page.tsx:3834 (form cau hinh buoc) chi co o cho slaHours va approvalMode (va ten/mo ta) -
+     khong co o nao cho allowSkipLevel hay requiredPermission. Khop voi viec ca hai ten khong xuat
+     hien lan nao trong UI.
+
+KET LUAN + PHAN LOAI
+  CONFIRMED: hai cot co trong CA HAI DDL (drizzle 0080 + MySQL V8); duoc API admin parse; duoc tra ve
+    trong bootstrap; KHONG UI nao render; KHONG form nao gui; KHONG duoc doc trong bat ky quyet dinh
+    cap quyen nao.
+  CONFIRMED: hom nay KHONG gay hai thuc te (khong ai dat duoc gia tri qua UI).
+  LIKELY: rui ro TUONG LAI - them o nhap (hoac goi API truc tiep) se tao ra han che "IM LANG KHONG
+    TAC DUNG": quan tri vien tuong da gioi han nguoi duyet, thuc te KHONG.
+  MUC DO: THAP (tiem an). Khong phai loi dang hoat dong, khong ro ri quyen (duong phe duyet van duoc
+    kiem bang allowed_role_codes + pool chi dinh + quyen module).
+
+TRA LOI GOAL §8 CHIEU "PERMISSION" CUA BUOC
+  Quyen cua mot buoc workflow KHONG den tu required_permission. Nguon quyen duyet thuc te gom BA thu:
+    1. approval_stage_catalog.allowed_role_codes (so ca role lan baseRole)
+    2. pool chi dinh dich danh = workflow_step_approvers (P4) hop voi owner cua buoc
+       (approval_project_assignments)
+    3. quyen module approvals / requests.canApprove o tang action
+  required_permission va allow_skip_level KHONG nam trong bat ky nguon nao o tren.
+
+CUNG CO BUC TRANH LOP P4 (voi TASK-035) - 4 phep do doc lap hoi tu
+  JS co tham chieu 3 bang P4?           0 (TASK-035)
+  version co hoat dong khong?           Khong - UNIQUE (workflow_id, step_no) (TASK-035)
+  2 cot cau hinh co duoc thi hanh?      Khong (TASK-036)
+  Action quan tri workflow co o JS?     Khong - Java-only (TASK-022b)
+  => P4 = bang du lieu + man quan tri (Java-only) + seed mot lan, CHUA noi vao nghiep vu phia JS va
+     chua co versioning that.
+
+QUYET DINH: KHONG tu sua.
+  Thi hanh hai cot la THAY DOI NGHIEP VU (ai duoc duyet) => GOAL §8 cam tu quyet.
+  Xoa cot la thay doi luoc do => phai co ke hoach migration + danh gia tuong thich nguoc.
+  Da ghi 3 cau hoi cho nguoi dung (TASK-036.md muc 7).
+
+Khong sua ma nguon trong commit nay - chi dieu tra + ghi ho so.
+Tai lieu: docs/agent-progress/TASK-036.md, TASK_INDEX.md, MASTER_STATUS.md

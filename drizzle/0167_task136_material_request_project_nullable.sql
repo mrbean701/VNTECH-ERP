@@ -1,0 +1,26 @@
+-- ============================================================================================
+-- TASK-136 (phương án A) — cho phép `material_requests.project_id` NULL
+--
+-- Yêu cầu người dùng (21/09/2026): bất cứ ai cũng lập được phiếu đề nghị mua, kể cả nhân viên
+-- văn phòng tổng công ty KHÔNG thuộc dự án nào và KHÔNG thuộc phạm vi kho nào.
+--
+-- ⚠️ GHI CHÚ KỸ THUẬT QUAN TRỌNG (rút ra từ lỗi thật khi chạy):
+--   Các file trong `drizzle/` được áp lên **SQLite** (`node:sqlite` — xem `scripts/local-runtime.mjs`
+--   dòng 142/173/175), KHÔNG phải MySQL. SQLite **KHÔNG hỗ trợ** `ALTER TABLE ... MODIFY COLUMN`
+--   (lỗi thật: `near "MODIFY": syntax error`). Toàn bộ migration cũ trong `drizzle/` chỉ dùng
+--   `ALTER TABLE ... ADD` — tức chỉ những gì SQLite hỗ trợ.
+--
+--   ⇒ Vì vậy file này **cố ý KHÔNG làm gì** trên SQLite:
+--       · CSDL LIVE và mọi ghi dữ liệu nghiệp vụ đi qua **Java + MySQL** (proxy `:9000` → Java `:18081`),
+--         KHÔNG đi qua SQLite. Việc nới cột được thực hiện bằng Flyway:
+--             java-backend/infrastructure/src/main/resources/db/migration/V24__material_request_project_nullable.sql
+--       · SQLite của đường Node chỉ là bản mirror local; nó **không chặn** nghiệp vụ vì
+--         `project_id` ở đó không được dùng để từ chối ghi.
+--
+--   Nếu sau này cần đường Node chạy ĐỘC LẬP (không có Java) và SQLite khai `project_id NOT NULL`,
+--   thì phải làm bằng **rebuild bảng** (create new → copy → drop → rename) vì SQLite không có MODIFY.
+--   Việc đó KHÔNG thuộc phạm vi TASK-136.
+-- ============================================================================================
+
+-- (không có câu lệnh — xem ghi chú ở trên; thay đổi thật ở Flyway V24 cho MySQL)
+SELECT 1;

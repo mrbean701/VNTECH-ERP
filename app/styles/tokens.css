@@ -1,0 +1,200 @@
+/* ============================================================================
+   VNTECH ERP — HỆ TOKEN THIẾT KẾ (GĐ1)
+   ----------------------------------------------------------------------------
+   MỘT NGUỒN SỰ THẬT DUY NHẤT cho mọi giá trị thị giác.
+
+   ⚠️  RÀNG BUỘC CỦA GĐ1: KHÔNG ĐỔI MỘT ĐIỂM ẢNH NÀO.
+   Vì vậy tệp này chỉ làm hai việc:
+     (a) GOM các token đang nằm rải rác về một chỗ (giá trị giữ NGUYÊN XI);
+     (b) ĐẶT TÊN cho các giá trị cứng đang lặp lại nhiều lần trong CSS
+         — KHÔNG phát minh giá trị mới, chỉ đặt tên cho cái đang có.
+   Việc THAY thế giá trị cứng bằng `var(--token)` và viết lại tầng CSS là GĐ2.
+
+   Thứ tự nạp (xem app/layout.tsx) — tokens.css ĐỨNG ĐẦU:
+       tokens.css  →  globals.css  →  canonical.css  →  font-floor.css
+
+   Ghi chú: toàn bộ token nằm trong MỘT khối `:root` duy nhất. Khai báo `:root`
+   nhiều lần bị tools/probe-css-budget.mjs tính là "selector định nghĩa trùng",
+   nên gộp một khối vừa đúng chuẩn vừa không làm tăng chỉ số nợ.
+   ========================================================================== */
+:root {
+
+  /* ==========================================================================
+     PHẦN 0 — SÀN CỠ CHỮ 10px (quyết định thiết kế, có lý do ghi rõ)
+     --------------------------------------------------------------------------
+     `--vt-font-min: 10px` LÀ "sàn cỡ chữ" mà kế hoạch docs/22 gọi là
+     `--font-size-min`. Tôi giữ tên `--vt-font-min` vì nó ĐÃ TỒN TẠI với đúng giá
+     trị này — đặt thêm tên thứ hai cho cùng một giá trị sẽ vi phạm nguyên tắc
+     "không phát minh giá trị mới".
+
+     LÝ DO SÀN LÀ 10px:
+       10px là mức nhỏ nhất còn đọc được trên màn hình mật độ cao (>= 96 DPI) mà
+       không phải nheo mắt, đồng thời vẫn đủ chỗ cho các bảng dày đặc thông tin của
+       ERP này. 8px (mức cũ phổ biến nhất trong globals.css — 74 rule) và 8.5px
+       (29 rule) KHÔNG đọc được trên màn hình thường; 9px (91 rule) chỉ đọc được
+       khi phóng to. Mọi cỡ chữ dưới 10px bị coi là NỢ và bị
+       tools/probe-css-budget.mjs đếm để chặn không cho tăng thêm.
+     ====================================================================== */
+  --vt-font-min: 10px;      /* = SÀN CỠ CHỮ. Xem lý do ở trên. */
+  --vt-font-min-xs: 9.5px;  /* ngoại lệ duy nhất được phép, dùng cho nhãn rất ngắn */
+  --vt-font-floor: 10px;    /* token sàn do tools/gen-font-floor.mjs áp dụng */
+
+  /* ==========================================================================
+     PHẦN 1 — MÀU SẮC
+     --------------------------------------------------------------------------
+     Tên token đặt theo VAI TRÒ, giá trị lấy từ tần suất dùng thật trong CSS.
+     Số trong ngoặc = số lần giá trị đó xuất hiện trong globals.css + canonical.css.
+     ====================================================================== */
+  /* Trung tính */
+  --vt-c-white: #fff;              /* (260) trắng tuyệt đối */
+  --vt-c-ink: #111827;             /* (14)  chữ đậm nhất */
+  --vt-c-muted: #64748b;           /* (28)  chữ phụ, nhãn mờ */
+  --vt-c-navy: #17365d;            /* (17)  xanh navy thương hiệu */
+  /* Mặt phẳng (nền) */
+  --vt-c-surface-1: #f8fafc;       /* (31) nền sáng nhất */
+  --vt-c-surface-2: #f8fbff;       /* (13) nền hơi xanh */
+  --vt-c-surface-3: #edf2f7;       /* (11) nền xám nhạt */
+  --vt-c-surface-4: #e7edf5;       /* (10) nền xám xanh */
+  /* Đường viền */
+  --vt-c-line: #dbe4ee;            /* (36) viền chuẩn — giá trị dự phòng của var(--line) */
+  --vt-c-line-2: #dce5ef;          /* (15) viền nhạt hơn */
+  /* Màu nhấn */
+  --vt-c-accent: #1769e8;          /* (11) xanh nhấn chính */
+  --vt-c-blue: #2f80ed;            /* (10) xanh phụ */
+  --vt-c-accent-soft: #eef5ff;     /* (17) nền nhấn rất nhạt */
+  --vt-c-accent-soft-2: #eaf2ff;   /* (14) nền nhấn nhạt thứ hai */
+  /* Trạng thái */
+  --vt-c-danger: #ef4444;          /* (10) lỗi / nguy hiểm */
+
+  /* ==========================================================================
+     PHẦN 2 — CHỮ
+     --------------------------------------------------------------------------
+     Thang cỡ chữ lấy ĐÚNG các mức đang dùng trong sản phẩm.
+     LƯU Ý: sản phẩm nhân mọi cỡ chữ với `var(--user-font-scale)` để tôn trọng tuỳ
+     chọn cỡ chữ của người dùng — token ở đây chỉ là MỨC GỐC.
+     ====================================================================== */
+  --vt-fs-2xs: 11px;   /* (50) nhãn rất nhỏ, đã ở mức sàn an toàn */
+  --vt-fs-xs: 12px;    /* (24 + 15) chữ phụ trong bảng */
+  --vt-fs-sm: 13px;    /* (23)  chữ thân trong bảng */
+  --vt-fs-md: 14px;    /* chữ thân mặc định */
+  --vt-fs-lg: 16px;    /* tiêu đề khối */
+  --vt-fs-xl: 20px;    /* tiêu đề màn hình */
+  --vt-fs-2xl: 24px;
+  --vt-fs-3xl: 32px;   /* số liệu KPI lớn */
+  /* Độ đậm — các mức đang dùng thật, gồm cả mức "lẻ" do lịch sử để lại */
+  --vt-fw-normal: 500;    /* (5) */
+  --vt-fw-medium: 600;    /* (8) */
+  --vt-fw-semibold: 700;  /* (32) */
+  --vt-fw-bold: 800;      /* (82) phổ biến nhất */
+  --vt-fw-heavy: 900;     /* (44) */
+
+  /* ==========================================================================
+     PHẦN 3 — KHOẢNG CÁCH
+     --------------------------------------------------------------------------
+     Gia đình `--vt-gap-*` ĐÃ CÓ SẴN (thang thô, dùng cho bố cục khối).
+     Gia đình `--vt-space-*` bổ sung thang MỊN 4px cho rất nhiều giá trị cứng nhỏ
+     đang lặp lại trong CSS (8px xuất hiện 73 lần, 10px 43 lần, 12px 34 lần...).
+     Hai gia đình cùng tồn tại ở GĐ1; GĐ2 sẽ hợp nhất.
+     ====================================================================== */
+  /* Thang thô có sẵn — giá trị giữ nguyên */
+  --vt-gap-1: 6px;
+  --vt-gap-2: 10px;
+  --vt-gap-3: 16px;
+  --vt-gap-4: 22px;
+  --vt-gap-5: 30px;
+  /* Thang mịn 4px — đặt tên cho các giá trị cứng đang dùng nhiều */
+  --vt-space-1: 4px;   /* (19) */
+  --vt-space-2: 6px;   /* (29) */
+  --vt-space-3: 8px;   /* (73) phổ biến nhất */
+  --vt-space-4: 10px;  /* (43) */
+  --vt-space-5: 12px;  /* (34) */
+  --vt-space-6: 14px;  /* (21) */
+  --vt-space-7: 16px;  /* (19) */
+  --vt-space-8: 18px;  /* (9) */
+
+  /* ==========================================================================
+     PHẦN 4 — BO GÓC
+     --------------------------------------------------------------------------
+     `--vt-radius: 10px` ĐÃ CÓ SẴN — giữ nguyên tên, giá trị không đổi.
+     Các mức còn lại đặt tên cho đúng các giá trị đang dùng.
+     ====================================================================== */
+  --vt-radius-sm: 6px;      /* (31) */
+  --vt-radius-md: 8px;      /* (78) phổ biến nhất */
+  --vt-radius: 10px;        /* (33) — token CÓ SẴN, giá trị giữ nguyên */
+  --vt-radius-xl: 12px;     /* (33) */
+  --vt-radius-pill: 999px;  /* (4)  nút dạng viên thuốc */
+  --vt-radius-circle: 50%;  /* (36) avatar, chấm trạng thái */
+
+  /* ==========================================================================
+     PHẦN 5 — ĐỔ BÓNG
+     --------------------------------------------------------------------------
+     3 mức, lấy theo các bóng đang dùng thật trong CSS.
+     ====================================================================== */
+  --vt-shadow-1: 0 1px 2px rgba(5, 29, 51, .18);    /* bóng nhẹ cho ô nhập, chip */
+  --vt-shadow-2: 0 2px 8px rgba(15, 23, 42, .085);  /* bóng cho thẻ */
+  --vt-shadow-3: 0 8px 24px rgba(10, 22, 38, .92);  /* bóng cho lớp nổi */
+
+  /* ==========================================================================
+     PHẦN 6 — LỚP XẾP CHỒNG (z-index)
+     --------------------------------------------------------------------------
+     GĐ1 chỉ ĐẶT TÊN cho các giá trị đang dùng rời rạc khắp CSS.
+     GĐ1 KHÔNG thay thế chúng (việc đó thuộc GĐ2) để tránh mọi rủi ro thứ tự lớp.
+     ====================================================================== */
+  --vt-z-base: 1;
+  --vt-z-raised: 2;
+  --vt-z-sticky: 8;
+  --vt-z-dropdown: 20;
+  --vt-z-overlay: 80;
+  --vt-z-modal: 100;
+  --vt-z-toast: 120;
+  --vt-z-popover: 300;
+
+  /* ==========================================================================
+     PHẦN 7 — ĐIỂM NGẮT RESPONSIVE
+     --------------------------------------------------------------------------
+     3 mức đầu ĐÃ CÓ SẴN trong canonical.css — gom về đây, giá trị giữ nguyên.
+     ====================================================================== */
+  --vt-break-desktop: 1440px;
+  --vt-break-laptop: 1024px;
+  --vt-break-tablet: 768px;
+  --vt-break-phone: 480px;  /* mức nhỏ nhất — đặt tên cho ngưỡng đang dùng trong @media */
+
+  /* ==========================================================================
+     PHẦN 8 — KÍCH THƯỚC ĐIỀU KHIỂN VÀ THANH CUỘN (đã có sẵn, gom về đây)
+     ====================================================================== */
+  --vt-control-h: 36px;         /* chiều cao nút / ô nhập chuẩn */
+  --vt-scroll-thumb: #90a9c2;   /* núm thanh cuộn */
+  --vt-scroll-thumb-hover: #6d8bab;
+  --vt-scroll-track: #e9eff6;
+}
+
+/* ============================================================================
+   PHẦN 9 — TOKEN CÒN NẰM Ở globals.css (THUỘC PHẠM VI GĐ2, CHƯA GOM)
+   ----------------------------------------------------------------------------
+   Đo được 60 biến CHỈ được khai báo trong globals.css. GĐ1 KHÔNG di chuyển chúng:
+     • globals.css và canonical.css không khai báo trùng biến nào (đã kiểm chứng),
+       nhưng globals.css NẶNG 4.950 khai báo ưu tiên cao và 1.183 khối selector
+       trùng nhau, nên gom biến ra khỏi đó phải làm cùng lúc với việc viết lại
+       tầng CSS (GĐ2).
+     • Chuyển 60 biến này ở GĐ1 sẽ làm thay đổi thứ tự tầng ⇒ có nguy cơ đổi hình
+       thức, vi phạm ràng buộc "không đổi một điểm ảnh".
+
+   Các biến đó gồm 4 nhóm chính:
+     • Bảng màu gốc:   --bg --surface --surface-2 --surface-3 --text --text-strong
+                       --muted --line --blue --blue-soft --green --red --amber
+                       --violet --navy --navy-2
+     • Vỏ ứng dụng:    --shell-bg --shell-card --shell-border --shell-text --shell-muted
+                       --shell-radius --shell-shadow --shell-shadow-float --shell-blue
+     • Sidebar tối:    --vntech-sidebar-dark-bg / -surface / -text / -muted / -line
+                       / -hover / -active / -frame / -soft
+     • Menu & khác:    --vntech-menu-active / -hover / -text / -text-soft
+                       --workflow-bg / -line / -text / -shadow
+                       --approved-bg / -line / -text / -sidebar
+                       --admin-bg / -blue / -green / -line / -orange / -red / -text
+                       / -violet / -shadow / -shadow-hover
+                       --user-font-scale --app-font --material-code-* --material-name-*
+                       --gauge-value --vntech-icon-* --vntech-sidebar-width
+                       --baseline-line --baseline-text --sidebar-text --sidebar-muted
+
+   GĐ2 sẽ gom toàn bộ về tệp này và xoá các khai báo trùng.
+   ========================================================================== */

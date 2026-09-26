@@ -1,0 +1,21 @@
+{
+  "schema": "vntech-product-fingerprint/v3",
+  "legalOwner": "CÔNG TY CỔ PHẦN THƯƠNG MẠI ĐẦU TƯ PHÁT TRIỂN CÔNG NGHỆ VIỆT (VNTECH)",
+  "shortOwner": "VNTECH",
+  "productName": "VNTECH ERP",
+  "productDescription": "Quản trị & Điều hành – Nền tảng quản trị tổng thể nội bộ VNTECH",
+  "productId": "VNTECH-KHO-MEP-001",
+  "version": "5.3.0",
+  "sourceFingerprint": "38a7a45c22ea6dc37e45414612770617cfe1e33841c1bb74e75afb73929aad2a",
+  "sourceFingerprintShort": "VNTECH-FP-38A7A45C22EA6DC3",
+  "brandFingerprint": "784fbc527db01feccd9ebb2288de42312ab89a53ae2540c2178e07953ab31426",
+  "releaseFingerprint": "87fc256c856bb4d42ba2ea143faaaca59597f861bcb6d2c9c01bfdfbe348d324",
+  "releaseBuild": "5.3.0-MASTER-BASELINE-R1.1.1-FINAL-20260908",
+  "packageId": "VNTECH_ERP_V5_3_0_MASTER_BASELINE_R1_1_1",
+  "trustMode": "development",
+  "licenseEnforcement": false,
+  "privateKeyPresent": false,
+  "logoPath": "/vntech-logo.png",
+  "copyright": "© 2026 CÔNG TY CỔ PHẦN THƯƠNG MẠI ĐẦU TƯ PHÁT TRIỂN CÔNG NGHỆ VIỆT (VNTECH). All rights reserved.",
+  "notice": "Source code, database schema, UI/UX, workflow, reports and derivative works are proprietary assets of VNTECH."
+}

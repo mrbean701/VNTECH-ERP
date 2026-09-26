@@ -1,0 +1,1168 @@
+✖ AD-01 — bước 1 của màn Quản trị đổi tên thành «Tài khoản», 12 bước giữ nguyên thứ tự (171.9408ms)
+✔ AD-01 — ĐỐI CHỨNG ÂM: cổng nhãn PHẢI HỎNG nếu ai đổi lại thành «Nhân sự» (23.0787ms)
+✔ AD-01 — UI dùng CHÍNH hằng số đó (một nguồn sự thật), không hard-code lại 12 nhãn (4.3176ms)
+✖ AD-02 — ĐÚNG 13 cột, ĐÚNG nhãn, ĐÚNG thứ tự nguyên văn (155.1036ms)
+✔ AD-02 — ĐỐI CHỨNG ÂM: thiếu «Số quyền» hoặc sai thứ tự ⇒ cổng HỎNG (30.2622ms)
+✖ AD-02 — «chưa có nguồn» ≠ 0 giả: 2 trường không nguồn để `null` + có LÝ DO cụ thể (30.2758ms)
+✔ AD-02 — «Số quyền» ĐẾM THẬT từ `user_module_permissions` (≥1 capability), không hard-code (24.3967ms)
+✔ AD-02 — UI hiện ĐỦ 13 cột và in «chưa có nguồn» cho 2 cột thiếu nguồn (0.5797ms)
+✔ AD-03 — danh sách tài khoản mở User Detail Modal qua CỔNG DÙNG CHUNG `openEntity("user")` (2.5776ms)
+✔ AD-03 — ĐỐI CHỨNG ÂM: đường cũ `open("userProfile")` phải bị cổng BẮT (1.0262ms)
+✔ AD-03 — component `Admin` tự suy cổng `openEntity` và RENDER cổng dùng chung (không prop chết) (4.3178ms)
+✔ AD-03 — cổng chung THẬT SỰ có nhánh `user` trả về `EntityDetailModal` (0.5353ms)
+✔ AD-04 — khoá 1 là TRẠNG THÁI, khoá 2 là MÃ; mặc định của màn là «status» (183.8349ms)
+✔ AD-04 — BỘ CA THẬT: trạng thái trước, trong cùng trạng thái sắp theo mã tăng dần (69.2782ms)
+✔ AD-04 — ĐỐI CHỨNG ÂM: dấu hàm so sánh + bộ so sánh CHỈ-theo-mã phải bị bắt là SAI (19.1846ms)
+✔ AD-04 — UI dùng CHÍNH bộ so sánh đó và mặc định chọn «status» (2.012ms)
+✔ AD-05 — ĐÚNG 2 sub-tab, ĐÚNG nhãn, ĐÚNG thứ tự nguyên văn (181.0729ms)
+✔ AD-05 — ĐỐI CHỨNG ÂM: thiếu «Tổ đội theo dự án» hoặc đảo thứ tự ⇒ cổng HỎNG (6.911ms)
+✔ AD-05 — UI: dải sub-tab dựng từ hằng số, cả 2 khối nội dung đều thật (1.4723ms)
+mysql: [Warning] Using a password on the command line interface can be insecure.
+✔ AD-06 — 2 sub-tab «Chức danh (Position)» và «Vai trò hệ thống (System Role)» đúng thứ tự (177.6697ms)
+✔ AD-06 — UI tách 2 sub-tab THẬT, khối System Role chỉ ĐỌC (không sửa quyền nền kỹ thuật) (1.0772ms)
+✔ AD-06 — AUDIT: kết luận phải ghi CONFIRMED/LIKELY/UNKNOWN + trích dẫn tệp bằng chứng (0.7147ms)
+✔ AD-06 — BẰNG CHỨNG DB: `role_catalog` có `base_role` (System Role) tách khỏi `name` (Position) (82.6253ms)
+✔ AD-07 — (a) ĐƯỜNG KIỂM QUYỀN lúc chạy CHỈ đọc `user_module_permissions` (2.9064ms)
+✔ AD-07 — (b) `department_module_permissions` là MẪU + GIỚI HẠN, không phải cổng kiểm quyền (1.8477ms)
+✔ AD-07 — nút «Sao chép từ phòng ban» là ĐƯỜNG TIÊU THỤ MẪU (đúng mô tả A-15) (10.2936ms)
+✔ AD-07 — TÀI LIỆU giải thích cấu trúc phải tồn tại, có verdict + sơ đồ + bằng chứng (1.6503ms)
+✔ AD-08 — bộ lọc phòng ban: lọc theo MÃ hoặc TÊN, không phân biệt hoa/thường, giữ nguyên khi rỗng (165.1736ms)
+✔ AD-08 — chọn nhiều: bật/tắt từng mục + chọn/bỏ tất cả theo đúng danh sách đang hiển thị (27.5707ms)
+✔ AD-08 — QUYỀN: chỉ admin được xoá; chưa chọn gì thì nút phải TẮT (70.1566ms)
+✖ AD-08 — action xoá THẬT đã tồn tại ở cả controller lẫn bảng RBAC (không bịa tên action) (2.2221ms)
+✔ AD-08 — UI: có ô lọc phòng ban, checkbox chọn từng dòng, nút xoá bị chặn bởi quyền + xác nhận (1.2487ms)
+✔ AD-09 — toolbar màn «Phân quyền người dùng» có ĐỦ 4 phần theo khuôn §5 (14.1259ms)
+✔ AD-09 — ĐỐI CHỨNG ÂM: toolbar thiếu phần ⇒ cổng §5 HỎNG; không còn ô tìm kiếm thứ hai trong card (0.9673ms)
+✔ AD-09 — `ListToolbar` dùng chung có đúng chữ ký 4 phần (nền của U-03) (0.5144ms)
+✔ AD-10 — SỬA UI THẬT: nút xoá cấp bậc phải XÁC NHẬN và CHẶN cấp bậc đang được dùng (3.1858ms)
+✔ AD-10 — KHÔNG thiết kế lại: giữ nguyên bảng thang cấp bậc + 4 chỉ số KPI gốc (0.8032ms)
+✖ AD-10 — BẰNG CHỨNG action xoá tồn tại ở cả 2 tầng (không bịa) (2.0283ms)
+✔ AD-10 — TÀI LIỆU audit: verdict + bằng chứng + phạm vi sửa tối thiểu (1.3768ms)
+✔ AD-11 — TIỀN ĐỀ ĐƯỢC ĐÍNH CHÍNH: bước 8 KHÔNG có 2 sub-tab, chỉ có 1 bảng gộp (2.8235ms)
+✔ AD-11 — CẶP PHẠM VI THẬT nằm trong `UserAccessModal`: dự án (1) và kho (2) kiểm độc lập (1.0738ms)
+✔ AD-11 — TÀI LIỆU audit: verdict + đính chính tiền đề + bằng chứng + hệ quả roadmap (1.8817ms)
+✔ AD-12 — tài liệu tồn tại và ghi ĐÚNG câu chốt «Ngoại lệ cá nhân = ghi đè QUYỀN» (5.5723ms)
+✔ AD-12 — GIỮ NGUYÊN CHỨC NĂNG: cơ chế ghi đè vẫn còn nguyên trong mã (không bị ai sửa) (6.4609ms)
+✔ AD-13 — pure: «User» lấy từ `user_id` → users, «Actor» lấy từ `user_name` đóng băng (185.6138ms)
+✔ AD-13 — UI: bảng nhật ký có 2 CỘT RIÊNG «Tài khoản (User)» và «Người thực hiện (Actor)» (0.9813ms)
+✔ AD-13 — bằng chứng cột THẬT ở cả 2 đường bootstrap (không bịa trường) (8.9392ms)
+✔ AD-14 — 8 trường nguyên văn; NAY 8/8 trường CÓ nguồn (BLOCKED cũ đã mở bằng migration ADDITIVE) (178.4904ms)
+✔ AD-14 — ĐỐI CHỨNG ÂM: gán «kết quả/metadata» vào cột khác KHÔNG được coi là có nguồn (114.0169ms)
+✔ AD-14 — BẰNG CHỨNG: cả 2 đường ghi CÓ cột `result`, KHÔNG đường nào thêm cột `metadata` (7.2094ms)
+✔ AD-14 — HỒ SƠ hiện tại: TASK-107 ghi cột `result` + ánh xạ metadata + quy ước giá trị (0.8641ms)
+✔ AD-14 — 8/8 trường nguyên văn đều CÓ NGUỒN (không còn «chưa có nguồn» cho kết quả/metadata) (231.0973ms)
+✔ AD-14 — ĐỐI CHỨNG ÂM: gán cột khác cho 2 trường này vẫn phải bị cổng BẮT (41.4311ms)
+✔ AD-14 — MỌI câu INSERT `audit_logs` (JS + Java) đều có cột `result` (1.9569ms)
+✔ AD-14 — quy ước giá trị `result` có TÀI LIỆU trong mã + đường JS nhận tham số (không hard-code rỗng) (0.6447ms)
+✔ AD-14 — BOOTSTRAP phải TRẢ `result` cho UI (cả 2 đường đọc) (2.2004ms)
+✔ AD-14 — migration THÊM cột `result` (drizzle + Flyway), KHÔNG xoá gì (1.3114ms)
+✔ AD-14 — UI nhật ký hiển thị «Kết quả» từ `a.result` + «Metadata» ánh xạ before/after (2.4523ms)
+✔ AD-14 — hồ sơ TASK-107 + cột TT roadmap = `**DONE**` (cổng đếm nguyên văn) (1.3352ms)
+✔ AD-15 — màn Cấu hình hệ thống có ĐÚNG 5 khối phụ thuộc đã khai (không bịa thêm) (2.1186ms)
+✔ AD-15 — mỗi khối phụ thuộc dùng action GHI ĐÃ CÓ (chứng minh không cần mở rộng backend) (16.1787ms)
+✔ AD-15 — TÀI LIỆU: verdict + bảng phụ thuộc + phần BACKLOG ghi rõ KHÔNG ảnh hưởng roadmap (1.0356ms)
+✔ AD-16 — 4 trường nguyên văn: 2 trường có action THẬT, 2 trường KHÔNG có action (205.5535ms)
+✔ AD-16 — ĐỐI CHỨNG ÂM: đánh dấu editable mà KHÔNG có action ⇒ cổng phải HỎNG (20.1027ms)
+✔ AD-16 — bằng chứng: chỉ 2 action tự phục vụ tồn tại ở CẢ 2 đường ghi (11.2394ms)
+✔ AD-16 — UI: modal tự phục vụ chỉ nhập trường CÓ action + ghi rõ lý do 2 trường còn lại (1.6831ms)
+✔ AD-16 — TÀI LIỆU BLOCKED: lý do + bằng chứng grep + phần đã làm được (1.0159ms)
+Email dispatcher passed: SMTP authentication → MIME message → sent status.
+✔ D:\13. Duong Trong Thang\Tai lieu\1. Du an chuan hoa quy trinh\VNTECH_ERP_V5_3_0_MASTER_BASELINE_R1_1_1_PROJECT_NAV_FINAL_FP_FIXED_20260908\tests\email-dispatcher.test.mjs (6179.9961ms)
+✔ F-03 — hồ sơ audit + cổng đo sống tồn tại (2.1087ms)
+✔ F-03 — hồ sơ chép NGUYÊN VĂN dòng roadmap của mục (không diễn giải lại) (1.7766ms)
+✖ F-03 — MỌI action trong bảng đều đúng DÒNG ở CẢ HAI đường ghi (JS + Java) (19.4892ms)
+✔ F-03 — MỌI bảng trong bảng số dòng đều có CREATE TABLE ở CẢ 2 chuỗi migration (86.2714ms)
+✔ F-03 — 8 khoá module tài chính nêu trong hồ sơ đều là khoá THẬT của hệ (7.2017ms)
+✔ F-03 — mục là AUDIT: hồ sơ KHÔNG chứa DDL/DML phá hoại và nói rõ DDL chỉ là đề xuất (1.8354ms)
+✔ F-03 — cổng đo sống chỉ ĐỌC MySQL: có ảnh chụp 123 bảng + không có câu lệnh ghi (1.3926ms)
+✔ F-04/F-05 — hai hồ sơ kiến trúc + cổng đo tồn tại (2.4731ms)
+✔ F-04/F-05 — chép NGUYÊN VĂN dòng roadmap, đúng bản chất «kiến trúc / chuẩn bị» (5.0414ms)
+✔ F-04 — tái dùng engine WF-06: hồ sơ phải chỉ đúng cột/dữ liệu engine ĐÃ CÓ (0.8819ms)
+✔ F-04/F-05 — bảng đề xuất KHÔNG trùng bảng đang có, và theo tiền tố `hr_` (8.3399ms)
+✔ F-04/F-05 — DDL đề xuất ADDITIVE thuần: không DROP/TRUNCATE/DELETE/UPDATE, ALTER chỉ ADD (6.5916ms)
+✔ F-04/F-05 — mọi `REFERENCES` trỏ vào bảng đang có HOẶC bảng vừa đề xuất (2.5244ms)
+✔ F-04/F-05 — mặt API đề xuất là action THẬT SỰ MỚI ở cả 3 nơi (21.1911ms)
+✔ F-04/F-05 — hồ sơ nói rõ phạm vi: CHƯA ÁP DỤNG + KHÔNG triển khai nghiệp vụ (1.0238ms)
+✔ F-04/F-05 — cổng đo kiểm va chạm TÊN BẢNG với CSDL sống và chỉ ĐỌC (1.0539ms)
+✔ Mobile menu group expansion persists instead of resetting on each open (4.2963ms)
+✔ Active group auto-opens and active leaf is scrolled into view (3.3954ms)
+✔ Single-child mobile groups navigate directly instead of acting like dead display rows (0.6555ms)
+✔ Project management renders its LIVE child modules (dead workspace tree removed) (3.4194ms)
+✔ Parent/subgroup rows are expand actions and leaf rows are navigation actions (0.3605ms)
+✔ Mobile tap targets remain usable for nested menu levels (2.782ms)
+✔ Project management exposes Production module that was previously orphaned (1.3894ms)
+✔ Material norms is implemented as a real screen with its dedicated component (0.7027ms)
+✔ P-02/a — roadmap dòng `P-02` khai đúng luật sắp xếp (nguồn nguyên văn) (2.752ms)
+✔ P-02/b — mặc định là `created_desc`; danh sách mặc định trả về đúng thứ tự đó (2.2105ms)
+✔ P-02/c — chọn sắp xếp khác thì đổi thứ tự thật (không phải nhãn trang trí) (0.4576ms)
+✔ P-02/d — nhóm «kết thúc» nhận đúng 4 trạng thái thật của 2 bảng (`completed` · `completed_with_exceptions` · `rejected` · `cancelled`) (0.3938ms)
+✔ P-02/e — dòng thiếu `createdAt` không được làm vỡ thứ tự và không bị ném lỗi (4.2646ms)
+✔ P-03/a — 6 chiều lọc: TÊN từng chiều + NGUỒN từng chiều (nguồn: roadmap dòng `P-03`) (1.22ms)
+✔ P-03/b — chiều «Ngày»: PR lọc theo NGÀY TẠO, PO lọc theo NGÀY ĐẶT (2 cột thật khác nhau, ghi rõ trên UI) (0.6011ms)
+✖ P-03/c — chiều «Trạng thái» khớp CẢ `status` LẪN `supplyStatus` (phiếu đề nghị có 2 trạng thái) (2.5688ms)
+✔ P-03/d — danh sách lựa chọn của 3 chiều `select` được suy TỪ DỮ LIỆU (không hard-code tên phòng/NCC/dự án) (0.7836ms)
+✔ P-03/e — bộ lọc ĐỔI THẬT số dòng của cả 2 tab (`buildPurchasingList` đi qua `filterPurchasingRows`) (0.5356ms)
+✔ P-03/f — 2 chiều «Phòng ban» và «Người tạo» là 2 chiều KHÁC NHAU (không gộp chung 1 ô) (0.3329ms)
+✔ P-01/c1 — mã thi hành KHÔNG chứa lệnh phá dữ liệu (đã bóc chú thích + chuỗi mô tả) (1.0497ms)
+✔ P-01/c2 — màn ghi RÕ 2 nguồn tài liệu ngay trong mã: đặc tả CỘT và roadmap 6 CHIỀU (0.2706ms)
+✔ P-01/c3 — chỉ đạo 21/09 được ghi lại trong mã (2 tab, không tab MR, KHÔNG xoá dữ liệu) (0.2622ms)
+✔ P-01/c4 — hợp đồng 2 tab KHÔNG phá các dấu PHASE 2 đang được cổng DOM đo (1.1391ms)
+✔ P-01.1 — màn Mua hàng khai ĐÚNG 2 tab: `PR` rồi `PO`, và KHÔNG có tab `MR` (3.6449ms)
+✔ P-01.2 — nguồn dữ liệu mỗi tab: PR = `data.requests` (bảng `material_requests`), PO = `data.purchaseOrders` (0.7495ms)
+✔ P-01.3 — tab mặc định là `PR`, và tab đang chọn được giữ bằng `useState` (16.1199ms)
+✔ P-01.4 — mỗi tab có ĐỦ CỘT theo `P01-TAB-SPEC.md` mục 2 (đã đo bằng dữ liệu thật) (0.7336ms)
+✔ P-01.5 — dải tab có SỐ ĐẾM cho từng tab (đếm trên chính dữ liệu trong phạm vi đang chọn) (0.6045ms)
+✔ P-01.6 — giữ NGUYÊN các nút hành động hiện có (tạo PO Excel · phát hành PO · mẫu đơn giá · nhập đơn giá) (0.3098ms)
+✔ P-01.7 — mã màn Mua hàng KHÔNG chứa câu lệnh phá dữ liệu nào (DROP/DELETE/TRUNCATE/ALTER/UPDATE/INSERT) (3.3225ms)
+✔ P-01.8 — màn vẫn CHỈ ĐỌC: không thêm lời gọi ghi dữ liệu phía client (`fetch` POST/PUT/DELETE) (0.4066ms)
+✔ P-02.1 — sắp xếp mặc định `created DESC`: bản mới nhất lên đầu (đo bằng hàm thuần) (0.5493ms)
+✔ P-02.2 — Completed/Rejected XUỐNG CUỐI dù `createdAt` mới hơn (0.5325ms)
+✔ P-02.3 — nguồn sắp xếp là `createdAt` (cột `created_at` THẬT của cả 2 bảng) và có nhánh chọn sắp xếp khác (0.3027ms)
+✔ P-03.1 — đúng 6 chiều lọc, tên khớp NGUYÊN VĂN roadmap `docs/25_TODO_ROADMAP.md` dòng `P-03` (1.7113ms)
+✔ P-03.2 — lọc THẬT bằng hàm thuần: 6 chiều tác động đúng trên dữ liệu (1.6983ms)
+✔ P-03.3 — chiều «Phòng ban» của PR lấy từ `staffDirectory` (KHÔNG bịa cột `department` trên phiếu) (0.3817ms)
+✔ P-01.9 — màn ghi RÕ nguồn đặc tả cột + nguồn 6 chiều lọc ngay trên UI (không để người đọc đoán) (0.2471ms)
+✔ P-01.10 — tab PO dùng LẠI dữ liệu `purchaseOrders` + `data-vntech` cũ, KHÔNG tạo bảng mới trùng (0.6353ms)
+✔ P-07 — nhóm «MUA HÀNG» có ĐÚNG 2 mục menu riêng: «Nhà cung cấp» + «Đối tác» (2.2331ms)
+✔ P-07 — nhãn GỘP «Nhà cung cấp / Đối tác» đã BIẾN MẤT khỏi mọi khai báo menu (0.649ms)
+✔ P-07 — khoá MENU mới `dept_plan_partners` KHÔNG phải khoá module (không thêm `ModuleKey`) (0.6868ms)
+✔ P-07 — cổng quyền: CẢ 2 mục trỏ khoá ĐÃ CÓ `dept_plan_suppliers` (KHÔNG khoá mới, KHÔNG hardcode admin) (0.2992ms)
+✔ P-07 — ẩn mục CŨ khỏi cây menu (khoá vẫn sống) + bộ định tuyến `view` cho 2 mục (0.6382ms)
+✖ P-07 — app/page.tsx nối ĐỦ 8 điểm chạm (khuôn `W-01`) cho 2 mục mới (3.9076ms)
+✖ P-07 — màn đích: khoá cũ render `SupplierManager` kèm `view`, và KHÔNG còn rơi vào nhánh chung `dept_plan_*` (1.3743ms)
+✖ P-07 — MỌI khai báo menu KHÁC không đổi so với bản gốc (chỉ 1 nhãn đổi) (2.0644ms)
+✖ P-07 — KHÔNG thêm dòng `module_catalog`/migration: `drizzle/**` không nhắc `dept_plan_partners` (131.4572ms)
+✔ ① NCC → PO: lọc ĐÚNG PO theo `supplierId`, KHÔNG lẫn PO của NCC khác (113.9728ms)
+✔ ①b NCC không có PO ⇒ vẫn có nguồn, danh sách RỖNG + lý do rõ (60.3008ms)
+✔ ② PO → Vật tư: lấy `materialCode`/`materialName` THẬT của dòng PO (58.1393ms)
+✔ ②b Dòng PO thiếu nguồn vật tư ⇒ ĐÚNG chuỗi «chưa có nguồn» + LÝ DO (KHÔNG bịa) (60.6306ms)
+✔ ②c PO không kèm `items` ⇒ trả mảng rỗng + lý do «không kèm `items`» (58.0474ms)
+✔ ③ Chuỗi NCC → PO → Vật tư: đếm đúng PO và dòng vật tư CÓ nguồn (63.8573ms)
+✔ ④ Vật tư → PO: MAT-001 nằm trong PO-1 và PO-3; PO-2 không chứa ⇒ KHÔNG trả về (53.2971ms)
+✔ ④b Cầu nối dự phòng `requestItemId`: dòng PO KHÔNG có `materialId` vẫn truy được qua dòng PR (50.1126ms)
+✔ ④c Vật tư chưa từng đặt ⇒ danh sách RỖNG + lý do, KHÔNG bịa PO (51.4778ms)
+✔ ④d PO → NCC: khớp `supplierId`; payload cũ thiếu `supplierId` ⇒ lùi về TÊN NCC và GHI RÕ (46.4549ms)
+✔ ④e PO có `supplierId` KHÔNG nằm trong danh mục ⇒ «chưa có nguồn» + lý do (42.2824ms)
+✔ ⑤ buildP08NavGraph: đủ 3 tầng + 2 loại cạnh, đếm khớp dữ liệu THẬT (48.9775ms)
+✔ ⑤b Payload THIẾU khoá ⇒ notes nói rõ từng tầng chưa có nguồn, KHÔNG ném lỗi (74.7298ms)
+✔ ⑤c `null`/`undefined` ⇒ graph rỗng, KHÔNG ném lỗi (43.8342ms)
+✔ ⑥ Nhãn nút «NCC → PO» / «PO → Vật tư» / «Vật tư → PO» dùng số THẬT (63.6085ms)
+✔ ⑦ Module là HÀM THUẦN: 0 `import`, 0 DB, 0 `module_catalog`, 0 khoá module mới (1.1069ms)
+✔ ⑦b Không tệp `drizzle/**` nào nhắc tới điều hướng `P-08` (không migration mới) (173.1803ms)
+✔ P1-03b — bài học cũ (d) ĐÃ được đánh dấu CHƯA ĐỦ + nêu quy tắc mới (1.5684ms)
+✔ P1-03b — DỮ KIỆN nền của bài học còn đúng trong repo (0.3494ms)
+✔ P1-03b — có bản sao THỨ HAI của schema H2 được nhắc trong bài học (⛔ không sửa sót) (0.5635ms)
+✔ P11-03 — payload `materials` PHẢI có cột `active` (root cause §12.1) (1.9685ms)
+✔ P11-03 — `adminMaterials` giữ nguyên: có `active` + KHÔNG lọc bản ghi đã ngừng (0.5364ms)
+✔ P11-03 — mapping `adminMaterials` PHẢI fallback về `materials` TẠI NGUỒN (không phải tại chỗ dùng) (0.3588ms)
+✔ P11-03 — component dùng fallback chain + lọc/hiện trạng thái theo `active` (0.537ms)
+✔ P11-03 — màn KHÔNG được tự chế dữ liệu (⛔ NO FAKE DATA) (0.561ms)
+✔ P12-01 — ADMIN_STEP_LABELS phải có bước «Thông báo» (1.8745ms)
+✔ P12-01 — màn Quản trị render khối thông báo với marker nghiệm thu (1.2651ms)
+✔ P12-01 — danh sách có Search · Sort · Filter (§13.1) (9.4432ms)
+✔ P12-01 — nguồn dữ liệu = action `notification_configs` (⛔ không bịa payload) (1.8531ms)
+✔ P12-01 — thao tác trên dòng dùng action ĐÃ CÓ của backend (không bịa action mới) (0.9291ms)
+✔ P12-01 — nhãn người nhận phủ đủ 5 kiểu recipient của §13.2 (2.0437ms)
+✔ P12-02 — modal dùng KHUÔN DÙNG CHUNG (⛔ không dựng modal thứ hai) (1.95ms)
+✔ P12-02 — đủ 8 trường §13.2 (0.4397ms)
+✔ P12-02 — «Thời gian kết thúc» CHỈ hiện với kênh Web (§13.2) (0.2159ms)
+✔ P12-02 — thời gian gửi đúng định dạng backend (ISO-8601 UTC) (0.1947ms)
+✔ P12-02 — đủ 5 kiểu recipient §13.2 + targets đúng cấu trúc (0.4367ms)
+✔ P12-02 — nguồn chọn đối tượng lấy từ DỮ LIỆU THẬT (⛔ không bịa danh sách) (1.3531ms)
+✔ P12-02 — nút Tạo / Sửa trong tab THÔNG BÁO đã nối vào modal (⛔ không còn nút chết) (0.2746ms)
+✔ P12-02 — payload Update dùng `configId` (⛔ không phải `id`) (0.1853ms)
+✔ P12-03 — UI: bảng tài khoản KHÔNG còn cột «Hạn mức» (3.1892ms)
+✔ P12-03 — UI: modal Sửa tài khoản KHÔNG còn ô nhập «Hạn mức phê duyệt» (1.1739ms)
+✔ P12-03 — API: khối `users` của bootstrap KHÔNG còn trả `approvalLimit` (0.4659ms)
+✔ P12-03 — CSDL: ⛔ KHÔNG được drop cột `users.approval_limit` (2.5005ms)
+✔ P12-03 — ghi chú giải thích để sau này không ai thêm lại (0.5755ms)
+✔ P12-03 — ghi chức cũ: Java vẫn ghi `approval_limit` với 0 ⇒ không lỗi NOT NULL (2.6689ms)
+✔ P12-04 — migration V29: ADD COLUMN NULLABLE, ⛔ KHÔNG destructive (2.2143ms)
+✔ P12-04 — 2 schema H2 phải khớp V29 (⛔ không lệch schema khiến test hỏng) (6.4455ms)
+✔ P12-04 — ghi mốc khi login THÀNH CÔNG, ⛔ không ghi khi sai mật khẩu (0.4522ms)
+✔ P12-04 — port + adapter implement đúng 1 UPDATE 1 cột (0.3136ms)
+✔ P12-04 — payload `users` phải chiếu CẢ HAI trường (0.5059ms)
+✔ P12-04 — FE: 2 cột có nguồn THẬT + vẫn hiện khi rỗng (⛔ không bịa ngày) (0.404ms)
+✔ P12-05 — `createUser` phải CHẶN mã nhân viên rỗng (root cause §13.3) (3.5392ms)
+✔ P12-05 — `updateUser` và `createUser` phải CHẶN GIỐNG NHAU (hết lệch không nhất quán) (1.0425ms)
+✔ P12-05 — CSDL đã bảo đảm KHÔNG 2 identity: mã nhân viên UNIQUE + hr_records.user_id UNIQUE (0.5855ms)
+✔ P12-05 — UI: tài khoản thiếu mã phải hiện RÕ «Chưa có mã» (⛔ không để dấu «—» im lặng) (2.2787ms)
+✔ P12-05 — form tạo user phải CÓ ô Mã nhân viên bắt buộc (khớp chặn backend) (1.5209ms)
+✖ P12-05 — ⛔ KHÔNG tự bịa mã cho user đang trống (cần USER quyết định) (1.7079ms)
+✔ P12-06 — backend: `createUser` phải LƯU chữ ký (⛔ thiếu thì ảnh chọn lúc tạo sẽ mất) (2.6659ms)
+✔ P12-06 — backend: chỉ ghi khi payload CÓ khoá `signatureUrl` (⛔ không ghi đè khi client không gửi) (0.9639ms)
+✔ P12-06 — 1 ô chữ ký DÙNG CHUNG cho cả 2 modal (§15 không nhân bản component) (3.1065ms)
+✔ P12-06 — payload: cả tạo lẫn sửa đều gửi `signatureUrl` (0.3928ms)
+✔ P12-06 — đúng 1 ảnh: không danh sách + chọn ảnh mới GHI ĐÈ giá trị cũ (1.1808ms)
+✔ P12-06 — kiểm ảnh REUSE đúng luật khuôn avatar (MIME + 2 MB), ⛔ không phát minh luật mới (0.9493ms)
+✔ P12-07 — cổng kiểm tra phải TUYỆT ĐỐI CHỈ ĐỌC (⛔ không được ghi dữ liệu) (2.2037ms)
+✔ P12-07 — cổng phải kiểm đủ 4 dạng vi phạm định danh của §13.3 (0.3759ms)
+✔ P12-07 — phân biệt LỖI (exit 1) và CẢNH BÁO (exit 0): ⛔ không tự sửa dữ liệu nghiệp vụ (0.3188ms)
+✔ P12-07 — cổng phải xác nhận ràng buộc UNIQUE còn tồn tại (ai xoá index ⇒ cổng phải thấy) (0.6226ms)
+✔ P12-07 — tầng ứng dụng phải chặn tạo user KHÔNG có mã (bổ sung cho P12-05) (0.3392ms)
+✔ P13-01 — payload phải trả «người tạo» (createdBy) — §14 (2.0904ms)
+✔ P13-01 — backend vẫn LỌC theo userID + khoảng thời gian + chưa đọc (§14 'Check notifications by userID → Check active period') (0.4009ms)
+✔ P13-01 — `AppData` PHẢI khai `systemNotifications` (bài học TASK-069: thiếu khoá ⇒ mảng rỗng âm thầm) (0.3159ms)
+✔ P13-01 — modal hiện đúng 3 trường §14: nội dung · người tạo · thời gian phát hành (0.9183ms)
+✔ P13-01 — modal hiện tại đã tích hợp P13-02/P13-03 mà không dựng modal riêng (0.5612ms)
+✔ P13-01 — modal chỉ hiện 1 thông báo theo thứ tự + đóng không làm mất thông báo khác (0.3961ms)
+✔ P13-02 — modal có nút «Không nhắc lại hôm nay» gọi đúng action (2.8834ms)
+✔ P13-02 — ⛔ KHÔNG gửi userId (chống snooze thay người khác / đánh dấu global) (0.8637ms)
+✔ P13-02 — ⛔ KHÔNG tự đặt luật snooze (giữ luật sẵn có +24h của backend) (0.5022ms)
+✔ P13-02 — backend ghi trạng thái theo (config_id, user_id) = userID + notificationID (0.5204ms)
+✔ P13-02 — mọi user đã đăng nhập đều dùng được (PUBLIC_ACTIONS kiểm TRƯỚC registry) (0.8396ms)
+✔ P13-02 — sửa lỗi nút chết của P13-01: modal bọc `<form>` + nút Đóng là submit thật (3.5938ms)
+✔ P13-02 — có trạng thái bận + báo lỗi (⛔ không nuốt lỗi im lặng) (0.4863ms)
+✔ P13-03 — UI có ĐÚNG 2 nút §14.1: đánh dấu đã đọc + đánh dấu tất cả đã đọc (2.4238ms)
+✔ P13-03 — ⛔ KHÔNG gửi userId ở cả 2 nút (trạng thái THEO USER, không global) (0.8817ms)
+✔ P13-03 — ROOT CAUSE: markAllRead phải INSERT nốt dòng CHƯA có state row (0.2977ms)
+✔ P13-03 — bộ lọc INSERT phải KHỚP đúng bộ lọc của `notificationsForUser` (⛔ không lệch) (0.3561ms)
+✔ P13-03 — markRead vẫn bám userId + configId và markAllRead chỉ bám userId (⛔ không đổi hợp đồng) (0.4782ms)
+✔ P13-03 — UI khoá nút khi đang lưu + báo lỗi (⛔ không nuốt lỗi) (0.29ms)
+✔ P2-04 — DataTable dùng sort, aria-sort và click handler cho cột sortable (2.2125ms)
+✔ P2-04 — DataTable có trạng thái loading, error và empty thống nhất (0.3987ms)
+✔ P2-04 — DataTable giữ table-wrap, baseline-table và CSS overflow để không tràn viewport (1.4629ms)
+✔ P2-04 — các điểm mở rộng dùng chung giữ row/table class để không mất định dạng (0.3877ms)
+✔ P2-05 — ProjectDetailTabs dùng một nguồn nhãn 5 tab và truyền cả hai chiều (2.3294ms)
+✔ P2-05 — màn dự án tái dùng ProjectDetailTabs thay vì tạo detail component thứ hai (1.5554ms)
+✔ P2-05 — tab nhân sự/tổ đội/kho/lịch sử có nội dung và nguồn dữ liệu thật (1.1017ms)
+✔ P2-06b — lightbox ảnh chạy trong app, có marker nghiệm thu và đóng bằng ESC (1.8747ms)
+✔ P2-06b — click ảnh KHÔNG mở tab mới: chuyển sang lightbox trong app (0.638ms)
+✔ P2-08 — ProjectDetailTabs không còn modal tự chế cho form tạo công việc (2.5071ms)
+✔ P2-08 — form tạo công việc dùng BaseModal dùng chung (0.4798ms)
+✔ §25 Case 1 — PR chưa duyệt đủ: create_po bị backend chặn (56.5336ms)
+✔ §25 Case 2 — PR duyệt đủ: tạo PO và giữ liên kết nguồn PR (1551.5748ms)
+✔ §25 Case 3 — 3 PO đều nhận đủ: cả 3 PO completed và PR completed (1270.9541ms)
+✔ §25 Case 4 — 2 PO xong, 1 PO dở: PR KHÔNG được completed (1524.8486ms)
+✔ §25 Case 5 — PO 100 nhận 70: PO chưa hoàn tất, còn thiếu 30 (1141.7593ms)
+✔ §25 Case 6 — PO 100 = 60 + 40: PO hoàn tất đúng khi đủ tổng (1233.0184ms)
+✔ §25 Case 7 — PR 100 tách 60 + 40: hợp lệ, không vượt số đã duyệt (1144.6819ms)
+✔ §25 Case 8 — PR 100 tách 60 + 60: PO thứ hai bị từ chối (1148.6075ms)
+﹣ §25 Case 9 — Workflow versioning V1/V2 [GAP-DOCUMENTED] (0.2555ms) # KHOẢNG TRỐNG ĐÃ TÀI LIỆU HOÁ: hệ thống KHÔNG có workflow versioning — cột `version` của `workflow_definitions` đã bị xoá (Flyway V19), `material_requests`/`purchase_orders` không có cột `workflow_id`/`workflow_version`, và `UNIQUE(code)` chặn tạo WF V2. Case này CHỈ viết được sau khi người dùng chốt Q3 (nhóm A3) — xem TASK-104.md.
+✔ §25 Case 9 — bằng chứng khoảng trống: thiếu cột liên kết + CSDL chặn bản thứ hai (88.8625ms)
+ℹ material_requests có workflow_id=false · workflow_version=false
+ℹ purchase_orders có workflow_id=false · workflow_version=false
+ℹ workflow_definitions (lược đồ drizzle) các cột: id,code,name,description,module_key,project_id,is_default,active,version,sort_order,created_by,created_at,updated_at
+ℹ MySQL workflow_definitions có cột version=false · UNIQUE(code)=1 · cột workflow_* trên PR/PO=0
+ℹ DRIFT LƯỢC ĐỒ: drizzle còn khai cột version=true nhưng MySQL thật đã bỏ ⇒ nguồn lược đồ không thống nhất (xem TASK-104.md).
+ℹ KẾT LUẬN: §25 Case 9 BẤT KHẢ THI cho tới khi Q3 được chốt (nhóm A3).
+✔ §25 Case 10 — PO bị huỷ: PR KHÔNG tự hoàn tất (1171.2608ms)
+✔ §25 Case 11 — 3 GRN cho 1 PO: số lượng cộng đúng, không nhân đôi (1198.7929ms)
+✔ §25 Case 12 — nhiều PO từ 1 PR: quan hệ nguồn được giữ ở CẢ HAI chiều (1200.2977ms)
+✔ cổng probe vẫn đọc ô TT ở `cells[length-2]` (nếu đổi, test này phải được xem lại) (2.2646ms)
+✔ roadmap có đúng 110 dòng mục (0.4382ms)
+✔ mọi dòng mục có ĐÚNG 12 ô; ô cuối rỗng ⇒ ô TT là index 10 (= `cells[length-2]`) (10.4384ms)
+✔ ô TT của MỌI dòng thuộc từ vựng cổng phân loại (không dòng nào vào OTHER) (1.4774ms)
+✔ DONE + DOING + FRAME_ONLY + BLOCKED + TODO = 110 (4.6101ms)
+✔ PHASE 2 có đúng 9 dòng P-01…P-09, và ô TT chỉ là `**DONE**`/`DONE` · `**BLOCKED**`/`BLOCKED` · `TODO`/`**TODO**` (1.4209ms)
+✔ lý do/ghi chú PHASE 2 nằm ở cột `Việc` (index 3), KHÔNG nằm ở ô TT (1.4148ms)
+✔ P-01 phải ghi rõ việc đã ROLLBACK trong cột Việc (0.4938ms)
+✔ §23 — luồng suy TỪ catalog: đổi dữ liệu ⇒ đổi luồng (3 bước, 4 bước, 6 bước đều chạy) (4.7808ms)
+✔ §6 — «mỗi tác nhân = 1 người duyệt»: SLA/approval_mode/role đọc NGUYÊN từ catalog (0.5701ms)
+✔ §23 — hàm thuần nhận ĐÚNG hình dạng dữ liệu ENGINE thật trả về (`stageNo`,`allowedRoleCodes`,`slaHours`…) (0.6993ms)
+✔ §23 — `scripts/system-route.mjs` KHÔNG còn literal tên/vai trò của bước 101/102/103 (8.8873ms)
+✔ §23 — engine ĐỌC bước duyệt từ `approval_stage_catalog` (một nguồn), phân loại bằng `stage_kind` (3.2872ms)
+✔ §6 + chỉ đạo (2) — người lập phiếu TRÙNG vai trò duyệt thì BỎ QUA bước đó (không tự duyệt) (1.7757ms)
+✔ §6 + chỉ đạo (2) — engine ghi VẾT người tạo bị miễn và không đặt Owner cho bước bị bỏ qua (2.215ms)
+✔ §6 — migration seed mặc định 4 bước: Thư ký TGĐ → Phòng Dự án → Phòng Kế hoạch → Giám đốc (2.6062ms)
+✔ §24 — phiếu ĐANG CHẠY giữ nguyên luồng: quyết định duyệt đọc SNAPSHOT của chính phiếu (2.3064ms)
+✔ chỉ đạo (3) — TẠO phiếu đề nghị mua hàng KHÔNG còn giới hạn theo vai trò cứng (3.0853ms)
+✔ chỉ đạo (3) — migration cấp quyền TẠO PR cho MỌI user hiện có (INSERT/UPDATE, KHÔNG xoá) (0.9162ms)
+✔ chỉ đạo (3) — user MỚI cũng có quyền tạo PR theo MẪU phòng ban (không cần đổi lược đồ) (1.4283ms)
+✔ UI vùng duyệt PR — chuỗi duyệt lấy từ dữ liệu, KHÔNG còn literal [101,102,103] (4.1581ms)
+✔ JAVA §23 — `approvalStages(true)` phải lọc `stage_kind` và trả `stageKind` (bootstrap + engine) (2.7901ms)
+✔ JAVA chỉ đạo (3) — TẠO phiếu + ĐỐI CHIẾU FILE không còn chốt cứng vai trò (1.5311ms)
+✔ JAVA §6 + chỉ đạo (2) — luật «người tạo không tự duyệt» có thật trong engine Java (1.6424ms)
+✔ §20 — lọc PO con ĐÚNG theo `requestId` (từ `purchase_orders.request_id`); PO mồ côi KHÔNG lọt vào (3.719ms)
+✔ §20 — tiến độ nhận của từng PO con: ordered ↔ received ↔ remaining đọc từ trường THẬT của payload (0.8811ms)
+✔ §20 — nguồn GRN của một PO con dùng ĐÚNG tên trường thật (`purchaseOrderId`), KHÔNG có `goodsReceiptId` (3.5184ms)
+✔ §20 — RequestDrawer VẼ khối PO con: tiêu đề «Đơn mua (PO) sinh từ phiếu này» + mã PO + NCC + trạng thái + tiến độ nhận (0.6501ms)
+✔ §20 — nhánh «Chưa có PO nào» khi PR chưa có PO, và nhánh «chưa có nguồn» + LÝ DO khi thiếu dữ liệu (0.4031ms)
+✔ §20 — cổng nối vào màn chi tiết phiếu: `page.tsx` truyền `purchaseOrders` + `open` xuống RequestDrawer (0.549ms)
+✔ §21.1 — Source PR: PO có `requestId` hiện mã phiếu; PO MỒ CÔI (`request_id = NULL`) hiện RÕ, KHÔNG giấu (4.0321ms)
+✔ §21.2 — Ordered / Received / Remaining tính từ dữ liệu THẬT và có nhánh «chưa có nguồn» + lý do (2.5945ms)
+✔ §21.3 — danh sách GRN của PO: mã · ngày · trạng thái · SỐ DÒNG, và GRN RỖNG DÒNG phải có CẢNH BÁO (1.6708ms)
+✔ §21.4 — Timeline: TÁI DÙNG dải thời gian dùng chung, chỉ dựng từ mốc THẬT của payload (1.2412ms)
+✔ §21 — tầng màn hình: 4 phần theo ĐÚNG thứ tự + cổng mở/đóng và truy vết ngược về PO con của §20 (0.7235ms)
+✔ §21 — màn Mua hàng cũng mở được chi tiết PO (truy vết xuôi PO → GRN → PO của §21) (1.1354ms)
+✔ §21 — tầng hàm thuần: tra PO nguồn từ GRN theo ĐÚNG `purchaseOrderId`, KHÔNG bịa khi thiếu nguồn (4.8079ms)
+✔ §21 — tầng màn hình: chi tiết GRN có khối PO nguồn + nút mở chi tiết PO (0.9633ms)
+✔ §21 — tầng nối dây: `ReceiptDrawer` nhận được `open` và `page.tsx` truyền `open` (1.1832ms)
+✔ §19 — tầng hàm thuần: thời điểm duyệt + bình luận đọc từ payload, THIẾU nguồn thì nói thẳng «chưa có nguồn» (39.8659ms)
+✔ §19 — dải tự viết ở màn Phê duyệt (`app/page.tsx`) có ĐỦ thời điểm duyệt + bình luận (2.253ms)
+✔ §19 — dải dùng chung (`ApprovalTimeline`) ở chi tiết phiếu vẫn đủ 6 thông tin mỗi bước (0.6867ms)
+✔ P2-GATES: đủ 3 tệp cổng đo + module logic thuần (2.5899ms)
+✔ P2-GATES: doQuanHe — tách đúng truy được / mồ côi-null / mồ côi-treo (106.0704ms)
+✔ P2-GATES: doQuanHe — bảng rỗng không được coi là ĐẠT (không có bằng chứng) (0.7963ms)
+✔ P2-GATES: tiLe — % truy vết, chống xanh giả khi mẫu số = 0 (1.0731ms)
+✔ P2-GATES: demMrNhieuPo — đếm đúng số MR có ≥ 2 PO (0.7549ms)
+✔ P2-GATES: dongVuotSoLuong — chỉ bắt dòng ordered > approved, có dung sai số thực (1.8953ms)
+✔ P2-GATES: lechTong — so SUM(poi.ordered_qty) với material_request_items.ordered_qty (0.8862ms)
+✔ P2-GATES: mucDoMoCoi — NULL CHỈ là mồ côi khi cột KHÔNG được phép NULL (0.5617ms)
+✔ P2-GATES: theThamChieu — gộp số liệu 1 quan hệ thành dòng bảng (0.6203ms)
+✔ P2-GATES CHỈ ĐỌC: 3 cổng + module thuần KHÔNG chứa bất kỳ câu lệnh ghi nào (2.3496ms)
+✔ P2-GATES CHỈ ĐỌC: mọi cổng gọi mysql đều dùng cờ -N -B và bọc SET SESSION TRANSACTION READ ONLY (1.8181ms)
+✔ P2-GATES: cả 3 cổng đều nêu ngưỡng ĐẠT/KHÔNG ĐẠT ngay trong tệp (không giấu ngưỡng) (1.8066ms)
+✔ P2-GATES: cả 3 cổng đều báo BLOCKED khi không kết nối được MySQL (không bịa số) (1.4135ms)
+✔ §25 Case 1 — PR chưa duyệt đủ: luồng chưa hoàn tất + engine chặn tạo PO + dữ liệu thật không có PO mồ côi (432.5137ms)
+ℹ PO=28 · truy được về PR đã duyệt=28 (100.0%) · mồ côi=0
+✔ §25 Case 2 — PR duyệt đủ: bàn giao sang bước lập PO + PO giữ liên kết nguồn + dữ liệu thật có PO từ PR đã duyệt (213.2425ms)
+ℹ PO từ PR đã duyệt=28 · MR có PO=27 · MR có ≥2 PO (B1)=1
+✔ §25 Case 3 — 1 PR = 3 PO đều nhận đủ ⇒ cả 3 PO hoàn tất và PR hoàn tất (270.8956ms)
+ℹ Cặp PR→PO kiểm tra=28 · vi phạm bất biến hoàn tất=0
+✔ §25 Case 4 — 2 PO xong + 1 PO dở ⇒ PR CHƯA hoàn tất (không tự nhảy 'completed') (144.7658ms)
+ℹ PR có ≥2 PO=1 · trong đó còn dở=1 · ví dụ: MR_P2SEED_SPLIT[awaiting_po 0/150]
+✔ §25 Case 5 — PO đặt 100 · nhận 70 ⇒ PO CHƯA hoàn tất (còn thiếu 30) (274.2518ms)
+ℹ PO hoàn tất-khi-thiếu=0 · PO đang dở (đối chứng)=21
+✔ §25 Case 6 — PO đặt 100 = chuyến 60 + chuyến 40 ⇒ PO hoàn tất (cộng dồn nhiều chuyến, không nhân đôi) (249.1854ms)
+ℹ PO có ≥2 chuyến giao=8 · nhận đủ nhưng chưa hoàn tất=0
+✔ §25 Case 7 — PR dòng 100 tách 60 + 40 ⇒ HỢP LỆ: chốt phân bổ không chặn + rollup khớp + dữ liệu thật không dòng vượt (341.2943ms)
+ℹ Dòng PR đo được=121 · đặt vượt=0 · lệch rollup=0 · đặt đủ hạn mức=40 (33.1%)
+✔ §25 Case 8 — PR dòng 100 với 60 + 60 ⇒ bị CHẶN NGAY TẠI LƯỢT GỌI (chốt cộng dồn) + lược đồ không chặn oan + dữ liệu thật 0 dòng vượt (286.0156ms)
+ℹ Dòng PR vượt hạn mức=0 · unique(request_item_id)=0 (0 = lược đồ cho phép tách nhiều PO) · dòng PR có hạn mức=63
+✔ §25 Case 9 — Workflow V1/V2: [TÀI LIỆU HOÁ KHOẢNG TRỐNG] versioning CHƯA tồn tại + cơ chế thay thế CÓ THẬT (snapshot trên approvals) + BLOCKED chờ chốt Q3 (950.3977ms)
+ℹ KHOẢNG TRỐNG §7 (BLOCKED — cần người dùng chốt Q3): (1) dựng `workflow_versions` (definition → version) và nối `workflow_steps.workflow_version_id`; (2) thêm `workflow_id` + `workflow_version` (hoặc con trỏ phiên bản) lên `material_requests`/`purchase_orders`; (3) bỏ/đổi `UNIQUE(workflow_definitions.code)` vì đang chặn tạo V2; (4) ghim phiên bản vào phiếu NGAY LÚC TẠO và chỉ đọc bản đã ghim khi duyệt. Hiện trạng: 0 cột workflow_id/version trên PR+PO · 0 bảng *workflow_version* · 4 definition / 10 step · cơ chế thay thế = snapshot trên approvals.
+ℹ KHÔNG khẳng định: (a) «PR001 giữ V1 / PR002 dùng V2» CHƯA từng chạy thật — không có dữ liệu để đo; (b) lược đồ `drizzle/0080` còn khai `version` trong khi MySQL thật đã bỏ ⇒ hai nguồn lược đồ ĐANG LỆCH NHAU.
+✔ §25 Case 10 — PO bị hủy: công thức hoàn tất KHÔNG tự đóng PR + cổng hủy chỉ đụng PO + dữ liệu thật 0 PR đóng khống (516.992ms)
+ℹ PO=28 · PO bị hủy=0 · PO hủy thiếu hồ sơ=0 · PR hoàn tất-khi-còn-PO-hủy=0 · cặp PO→PR=28
+✔ §25 Case 11 — nhiều GRN trên 1 PO: cộng dồn phải gộp ĐỦ chuyến (không bỏ sót, không nhân đôi) + dữ liệu thật khớp từng PO (464.2822ms)
+ℹ PO có ≥2 chuyến=8 (trong miền công thức=7 · còn chờ duyệt=1) · hoàn tất mà thiếu=0 · trạng thái lạ=0 · hoàn tất mà tổng GRN thiếu=0 · đã nhận đủ=3 · dòng vượt tổng chuyến=0 · dòng nhận vượt số đặt=0 · dòng chậm cộng (dữ liệu nền)=9 · ví dụ: PO-PRJ-DEMO-01-2026-0006[pending_approval 3 chuyến (3 đã xác nhận) 0/85] PO-PRJ-DEMO-01-2026-0007[delivered_pending_confirmation 3 chuyến (2 đã xác nhận) 0/85]
+✔ §25 Case 12 — nhiều PO từ 1 PR: giữ đủ quan hệ nguồn hai chiều + mỗi dòng PO trỏ về ĐÚNG PR + dữ liệu thật 0 mồ côi (615.7485ms)
+ℹ PO=28 · truy được về PR=28 (100.0%) · mồ côi=0 · dòng PO lệch phiếu=0 · PR có ≥2 PO=1 · PR tách ≥2 NCC=1
+✔ P3-01 — §15.1 tách RULE thành lớp riêng, không nhúng luật vào service (2.5439ms)
+✔ P3-01 — §15.1 tách RECIPIENT RESOLVER thành lớp riêng (1.0158ms)
+✔ P3-01 — service DUY NHẤT điều phối pipeline, không rải logic notification (1.3412ms)
+✔ P3-05 — §6.4 HỎI đúng nguyên văn trước khi thêm vật tư vào danh mục NCC (2.6766ms)
+✔ P3-05 — ⛔ KHÔNG tự động thêm: chỉ ĐỌC gaps, việc ghi nằm sau thao tác bấm của user (0.6845ms)
+✔ P3-05 — nguồn dữ liệu THẬT: UI gọi `supplier_material_gaps`, backend có action + RBAC (0.4272ms)
+✔ P5-01 — mục «Dashboard» nhóm «Công việc» trỏ ĐÚNG `view: "dashboard"` (⛔ không còn `kpi`) (1.7385ms)
+✔ P5-02 — «Dashboard» đứng ĐẦU nhóm «Công việc» (§3.1 ②) (1.4969ms)
+✔ P5-01 — `dashboard` ánh xạ ĐÚNG tab index của WORK_TABS (ĐO, ⛔ không hard-code mù) (0.6458ms)
+✔ P5-01 — WorkCenter nhận `view` và render tab theo `view` (⛔ không bỏ qua tham số) (0.3214ms)
+✔ P6-01 — card «Chờ Giám đốc duyệt» dùng DỮ LIỆU THẬT từ approval engine (2.211ms)
+✔ P6-01 — §4.1 «⛔ không hiển thị card cho user không đủ quyền»: 403 ⇒ TỰ ẨN (không vỡ màn) (0.5593ms)
+✔ P6-01 — card được render trong khu dashboard của màn Công việc (0.2606ms)
+✔ P6-01 — BACKEND là tầng chặn: vùng duyệt bị `blank` khi thiếu quyền/cấp bậc (1.7394ms)
+✔ P6-01 — action có khoá RBAC ĐẦY ĐỦ (module + capability), ⛔ không để `List.of()` (0.9948ms)
+✔ P6-02 — click dòng hàng đợi CHỈ chuyển khu vực «Phiếu đang xử lý», ⛔ KHÔNG mở modal ngay (3.9491ms)
+✔ P6-02 — khu vực «Phiếu đang xử lý» có nút «Chi tiết» MỞ MODAL (0.3905ms)
+✔ P6-03 — `ApprovalTimeline` MẶC ĐỊNH NGANG (⛔ không phải cột dọc) (2.0489ms)
+✔ P6-03 — CSS xếp NGANG + có ĐƯỜNG NỐI giữa hai marker (o----o) (0.8227ms)
+✔ P6-03 — §24 RESPONSIVE: màn hẹp (<768px) tự về DỌC để ⛔ không tràn layout (0.5582ms)
+✔ P6-03 — bước CHƯA TỚI LƯỢT chỉ hiện «đang chờ» (⛔ ẩn người duyệt/phòng ban) (0.6432ms)
+✔ P6-04 — bước CHƯA TỚI chỉ hiện «Đang chờ», ⛔ KHÔNG hiện người/nhóm duyệt (2.2622ms)
+✔ P6-04 — bước ĐÃ xử lý hiện PHÒNG BAN (cùng người duyệt · thời gian) (0.7167ms)
+✔ P6-05 — UI có cổng QUÁ HẠN + lý do RỖNG (chặn trước, ⛔ không để bấm rồi mới báo lỗi) (2.466ms)
+✔ P6-05 — nhắc ĐÚNG nguyên văn §4.4 và nút DUYỆT bị CHẶN khi thiếu lý do (0.6476ms)
+✔ P6-05 — BACKEND vẫn là tầng quyết định: thông điệp 400 giữ nguyên (0.6311ms)
+✔ P6-06 — hàm đếm CHỈ tính bước CHƯA có quyết định và đã QUÁ `dueAt` (1.5788ms)
+✔ P6-06 — THIẾU NGUỒN ⇒ «chưa có nguồn», ⛔ KHÔNG hiện số 0 GIẢ (0.4436ms)
+✔ P6-06 — BACKEND tổng hợp `total overdue` + theo PHÒNG BAN (nguồn thật) (0.3089ms)
+✔ P6-07 — trong hồ sơ chi tiết phê duyệt, KHỐI ĐÍNH KÈM xếp DỌC (⛔ không bị grid nhiều cột ép form) (1.4371ms)
+✔ P6-07 — form tải tệp về MỘT CỘT, ⛔ bỏ sàn cứng 260px gây tràn (0.6906ms)
+✔ P6-07 — chặn TRẦN bề rộng ở MỌI tầng bao + clamp ô chọn tệp (0.4089ms)
+✔ P6-07 — có CÔNG CỤ ĐO LIVE cho khối đính kèm (⛔ không chỉ test tầng nguồn) (0.6391ms)
+✔ P6-08 — nhóm menu CHỈ CÓ 1 MỤC được render TRỰC TIẾP (⛔ không bung nhóm rồi bấm tiếp) (1.646ms)
+✔ P6-08 — mục trực tiếp KHÔNG còn bọc trong `.nav-tree-group` (⛔ không còn 2 cấp) (0.7228ms)
+✔ P6-08 — có lớp CSS cho mục trực tiếp (dùng chung kiểu với mục Tổng quan điều hành) (0.4626ms)
+✔ TASK-125 ① có `CREATE TABLE partners` trong `drizzle/` (2.6089ms)
+✔ TASK-125 ② migration CHỈ THÊM: 0 câu DROP/ALTER/TRUNCATE/DELETE (1.4673ms)
+✔ TASK-125 ③ 0 khoá `module_catalog` MỚI (không có dòng `dept_plan_partners`) (65.8656ms)
+✔ TASK-125 ④ màn mới tồn tại + menu `dept_plan_partners` render MÀN ĐỐI TÁC (25.2206ms)
+✔ TASK-125 ⑤ KHÔNG bịa dữ liệu khi trống (0.646ms)
+✔ PR-01 — dải tab có ĐÚNG một nguồn nhãn, tab 0 là 'Danh sách dự án' (1.8894ms)
+✔ PR-01 — danh sách KHÔNG còn là chế độ xem tách rời (view được SUY RA từ tab) (0.9263ms)
+✔ PR-01 — MỘT dải tab dùng chung, render ở CẢ nhánh danh sách lẫn nhánh chi tiết (0.7046ms)
+✔ PR-01 — QUYỀN: tab chi tiết chỉ bật khi đã chọn dự án; nút xuất phụ thuộc canExport (0.4329ms)
+✔ PR-01 — toolbar danh sách theo khuôn §5: TIÊU ĐỀ + SỐ LƯỢNG ‖ TÌM · LỌC · SẮP XẾP · HÀNH ĐỘNG (0.2403ms)
+✔ PR-01 — 5 tab chi tiết giữ nguyên hành vi nhưng lệch chỉ số 1..5 (tab 0 là danh sách) (0.5973ms)
+✔ PR-01 — màn Quản lý dự án được truyền quyền module THẬT (QUYỀN=CHECK) (0.3672ms)
+✔ PR-02 — toolbar DANH SÁCH có ĐỦ 4 CHIỀU lọc (Trạng thái · Quản lý dự án · Phòng ban · Ngày) (1.7616ms)
+✔ PR-02 — màn danh sách lọc bằng HÀM THẬT của dự án (không tự viết lại chuỗi if) (0.4271ms)
+✔ PR-02 — CHIỀU 1 · TRẠNG THÁI: `status` lọc thật (1.7289ms)
+✔ PR-02 — CHIỀU 2 · QUẢN LÝ DỰ ÁN: lọc thật theo `user_project_scopes.permission='admin'` (0.4794ms)
+✔ PR-02 — CHIỀU 3 · PHÒNG BAN: lọc thật theo đơn vị của nhân sự tham gia dự án (1.4456ms)
+✔ PR-02 — CHIỀU 4 · NGÀY: lọc thật theo `start_date` và `planned_end_date` (0.5192ms)
+✔ PR-02 — ĐỐI CHỨNG ÂM: bỏ hẳn một chiều khỏi bộ lọc thì ca của chiều đó PHẢI ĐỎ (0.5562ms)
+✔ PR-03 — có ĐÚNG 5 tab con, nhãn khớp NGUYÊN VĂN roadmap (chung · nhân sự · tổ đội · kho · lịch sử) (2.8478ms)
+✔ PR-03 — mỗi tab con có NỘI DUNG + dùng DỮ LIỆU THẬT (không bảng dữ liệu mới) (0.7965ms)
+✔ PR-03 — màn dự án tái dùng component chi tiết (PR-01 GIỮ NGUYÊN dải 6 tab) (0.5001ms)
+✔ PR-03 — % TIẾN ĐỘ: ĐỂ TRỐNG có ghi chú, KHÔNG bịa công thức (0.4108ms)
+✔ PR-04 — màn dự án có ĐÚNG MỘT cổng mở modal thực thể, dùng `EntityDetailModal` dùng chung (U-01) (2.2479ms)
+✔ PR-04 — ProjectManagement quản lý MỘT state thực thể + render Ở CẢ 2 nhánh (danh sách/chi tiết) (0.7728ms)
+✔ PR-04 — 4 loại thực thể trong màn Dự án đều mở modal: Project · User · Warehouse · Team (1.0517ms)
+✔ PR-04 — modal thực thể có ĐỦ 4 loại với tab nội dung thật (không dựng bảng dữ liệu mới) (0.4177ms)
+✔ PR-04 — vùng BAN CHỈ HUY cũng mở modal khi bấm vào User/Project (link entity) (0.4965ms)
+✔ PR-04 — ĐỐI CHỨNG ÂM: bỏ `openEntity` khỏi một chỗ thì phép kiểm tương ứng PHẢI ĐỎ (2.6705ms)
+✔ PR-06 — cổng quyền BCH: ADMIN bấm được MỌI thao tác (3.1096ms)
+✔ PR-06 — người THIẾU quyền bị CHẶN ở mọi thao tác ghi (nhưng vẫn xem được) (0.7036ms)
+✔ PR-06 — màn BCH nối cổng quyền với module THẬT `site_command` và hiện `disabled` khi thiếu quyền (0.483ms)
+✔ PR-06 — THÊM / SỬA / XOÁ chỉ gọi ACTION THẬT đã có trong hệ thống (KHÔNG tạo action mới) (2.7493ms)
+✔ PR-06 — LINK ENTITY: mỗi thành viên BCH bấm vào mở modal; dự án của BCH cũng mở modal (0.4403ms)
+✔ PR-06 — ĐỐI CHỨNG ÂM: cổng quyền chạy trên bản mã đã GỠ kiểm quyền thì PHẢI ĐỎ (3.9606ms)
+✔ Project/BCH navigation is consolidated into one top-level group (11.2066ms)
+✔ Each project domain stays reachable inside the single QUẢN LÝ DỰ ÁN group (12.2491ms)
+✔ Navigation aliases preserve existing purchasing, warehouse and BOQ modules (8.0803ms)
+✔ Project scope is chosen by the LIVE selector — the dead "workspace lock" must not return (10.965ms)
+✔ Desktop and mobile reuse the canonical navigation/UI classes without adding a CSS override layer (3.885ms)
+✔ Q1-A ① — 2 nhánh xuất Excel/CSV giá BOQ KHÔNG còn ghi `String(r.id…)` (nguồn GUID cho người dùng) (3.9337ms)
+✔ Q1-A ② — `boqLineDisplayCode` trả MÃ NGHIỆP VỤ khi dòng BOQ có nguồn (thứ tự ưu tiên đo được) (6.5266ms)
+✔ Q1-A ③ — thiếu MỌI nguồn ⇒ trả ĐÚNG `chưa có nguồn`; KHÔNG BAO GIỜ trả `<PREFIX>_<GUID>` (0.975ms)
+✔ Q1-A ④ — ĐÚNG 2 mảng dòng (XLSX + CSV) lấy cột thứ 2 từ `boqLineDisplayCode(r)`, không còn `id` (2.2157ms)
+✔ Q1-A ⑤ — KHÔNG thêm INSERT/UPDATE/DELETE/DDL (mã hay SQL); hàm thuần không import gì (11.112ms)
+✔ VIỆC ① — `isTechnicalId` nhận diện đúng khoá kỹ thuật có/không tiền tố miền (2.3196ms)
+✔ VIỆC ① — đủ nguồn: trả NHÃN TIẾNG VIỆT + MÃ NGHIỆP VỤ, KHÔNG trả GUID (1.6786ms)
+✔ VIỆC ① — dữ liệu THẬT lệch loại: `entity_type='requests'` nhưng `entity_id='PRJ_…'` ⇒ nhãn theo bản ghi TRA ĐƯỢC (0.4786ms)
+✔ VIỆC ① — thiếu nguồn ⇒ «chưa có nguồn» (KHÔNG bịa, KHÔNG rơi về GUID) (0.4824ms)
+✔ VIỆC ① — app/page.tsx KHÔNG còn in GUID thô ở cột «Mã thực thể» và ở khối chi tiết (3.437ms)
+✔ VIỆC ② — `workflowIdentityView`: mã lấy từ `code` THẬT, phiên bản KHÔNG có nguồn ⇒ «chưa có nguồn» (0.7843ms)
+✔ VIỆC ② — app/page.tsx có hiển thị mã/phiên bản ở dải duyệt + màn Quy trình phê duyệt (1.3402ms)
+✔ renders development preview metadata (2640.2338ms)
+✔ FULL W2 migration chain + canonical Organization/RBAC (13.4371ms)
+✔ Import tài khoản chấp nhận Ban giám đốc canonical (415.3916ms)
+✔ Admin reset mật khẩu: cấp mật khẩu tạm, thu hồi session và bắt buộc đổi trước khi dùng (2256.4125ms)
+✔ Phạm vi nghiệp vụ -> Nhóm quyền -> Chức danh đều tùy biến và đồng bộ (28.6362ms)
+✔ Project lifecycle: một archive VERIFIED dùng xuyên suốt Đóng → Xóa/Purge và BOQ link vòng được dọn sạch (19.9513ms)
+✔ BOQ multi-contract/multi-version không ghi đè hợp đồng khác (38.7242ms)
+✔ BOQ CRUD: sửa, xóa đơn, khôi phục, xóa/khôi phục toàn version và Change History (20.2962ms)
+✔ Material Matching: exact=100%, loại candidate rác, heading/ĐVT trống không vào API matching (9.6413ms)
+✔ M&E canonical dùng chung DIEN/CTN/HVAC/DNHE/PCCC/KHAC (3.0339ms)
+✔ Bulk nhóm con + Trust collapse UI có marker hành vi (7.3743ms)
+✔ ĐNMH preview/enrich + tạo phiếu PostgreSQL-safe theo Contract/BOQ Version (1211.0087ms)
+✔ Project scope toàn hệ thống + RBAC popup + sticky grid + Factory Reset có marker hành vi (23.9647ms)
+✔ Project context đồng bộ ĐNMH + tìm vật tư BOQ + collapse/brand UI REV1 (8.575ms)
+✔ Factory Reset test-gate xóa dữ liệu về fresh-install nhưng giữ canonical migration seed (560.5963ms)
+✔ Release manifest loại backup/update-state khỏi Docker context (0.9292ms)
+✔ BOQ source rows giữ kiểu Row để TypeScript không thu hẹp sai contract (7.1354ms)
+✔ Workflow fixture tuân thủ contract RBAC động: Nhóm quyền có scope và Chức danh có Phòng mặc định (1.1135ms)
+✔ Built UI contract dùng marker ổn định cho rule loại heading khỏi matching (5.6137ms)
+✔ FULL W2 UX/workflow contract: header, drawer rộng, ngày Việt Nam, luồng CHT→Thư ký→DA→TPDA→TPKH (15.0187ms)
+✔ FULL W2 account recovery + project offline archive contract (7.3808ms)
+✔ FULL W2 responsive contract: login PC, mobile tree, collapsed hover flyout (10.8804ms)
+✔ MASTER BASELINE: /api/files has one SSOT and server adapters execute built Worker route (1.3581ms)
+✔ Docker lint guard: project archive route không được dùng explicit any (0.8729ms)
+✔ Docker typecheck guard: project archive ZIP dùng ArrayBuffer tương thích Web API (0.7727ms)
+✔ FULL W2 runtime UI: mobile/header/glass flyout/approval detail/password copy (9.986ms)
+✔ FULL W2 SQL bind arity guard: tạo Task Engine phải có đúng 32 cột, 32 placeholder và 32 giá trị (6.0099ms)
+✔ MASTER BASELINE R1.1.1 CSS dynamic contracts: source-generated classes cannot be deleted (8.3914ms)
+✔ payload nghiệp vụ không được trả về khi người dùng không có quyền (734.7389ms)
+✔ API Admin từ chối người dùng thường dù gọi trực tiếp (414.6617ms)
+✔ ngoại lệ thủ công sống qua thay đổi phòng ban; quyền mặc định cũ bị thay (19.9979ms)
+✔ khóa tài khoản có hiệu lực ngay và mật khẩu không xuất hiện trong bootstrap (15.6711ms)
+✖ T-01 — 5 mục menu ĐÚNG nhãn · ĐÚNG nhóm · ĐÚNG đích đến (tab) · cổng quyền RIÊNG từng mục (3.5522ms)
+✔ T-01 — cổng quyền THẬT: mỗi mục lọc bằng `modulePermission(data, permissionKey).canView` (KHÔNG hardcode admin) (0.7308ms)
+✔ T-01 — «Cá nhân» và «Phòng ban» KHÔNG dùng chung cổng quyền (0.364ms)
+✔ T-01 — 4 mục `dept_*` CŨ bị ẨN khỏi menu, nhưng khoá vẫn sống cho quyền/tiêu đề/điều hướng (0.4599ms)
+✔ T-01 — menu (sidebar + mobile) dựng 5 mục MỚI của nhóm «CÔNG VIỆC», vẫn GIỮ `approvals` làm mục thứ 6 (3.2446ms)
+✖ T-01 — ĐÍCH ĐẾN: 4 mục → `WorkCenter` đúng tab; «Giao việc» → `DepartmentTaskWorkspace` (GIỮ NGUYÊN) (0.7474ms)
+✔ T-01 — WorkCenter TÁI DÙNG `ReportView` + `lib/report-catalog.ts` cho tab «Báo cáo» (KHÔNG viết màn mới) (0.2667ms)
+✔ T-01 — huy hiệu (badge) nhóm «CÔNG VIỆC» KHÔNG mất số việc chưa xong: cộng theo CẢ CẶP khoá quyền (1.1944ms)
+✔ T-01 — giữ nguyên hành vi 3 tab cũ (Việc của tôi → Cá nhân · Phòng ban/tổ đội → Phòng ban · KPI & báo cáo → Báo cáo) (0.4552ms)
+✔ T-05 — HỢP ĐỒNG TÊN TRƯỜNG: dùng `assignedTo`/`assignedToName` + `assignedBy`/`assignedByName` (đã ĐO, không đoán) (2.6331ms)
+✔ T-05 — BA NHÓM tồn tại với nhãn đúng đề bài: của tôi · được giao · do tôi tạo (201.8253ms)
+✔ T-05 — mỗi nhóm có BỘ LỌC RIÊNG và ra KẾT QUẢ KHÁC NHAU (đo bằng fixtures, không đọc chữ) (4.7567ms)
+✔ T-05 — mỗi nhóm có BỘ ĐẾM riêng và bộ đếm khớp tập dòng của chính nhóm đó (15.8528ms)
+✔ T-05 — [đối chứng âm] dòng chỉ có TÊN TRƯỜNG GIẢ (`assigneeUserId`) KHÔNG lọt vào nhóm nào (51.3959ms)
+✔ T-05 — UI tab «Cá nhân» RENDER 3 nhóm kèm bộ đếm (không chỉ khai báo trong mã) (0.3941ms)
+✔ T-06 — HỢP ĐỒNG KHOÁ: chỉ dùng khoá THẬT của payload (`userScopes.userId`, `departmentModulePermissions.organizationCode`) (2.6338ms)
+✔ T-06 — QUẢN TRỊ thấy NHIỀU HƠN user thường (admin = toàn bộ payload, không bị lọc thêm) (301.105ms)
+✔ T-06 — user thường (KH) CHỈ thấy việc của chính mình; KHÔNG thấy việc đồng nghiệp, KHÔNG thấy phòng khác (19.795ms)
+✔ T-06 — TRƯỞNG PHÒNG thấy việc trong PHÒNG MÌNH (không chỉ việc của mình) nhưng vẫn KHÔNG vượt phòng (24.8412ms)
+✔ T-06 — user BCH: theo phạm vi DỰ ÁN được cấp (`userScopes.userId` của chính mình), không lấy scope người khác (36.368ms)
+✔ T-06 — KHÔNG có quyền xem việc phòng ban ⇒ còn lại đúng việc của chính mình (cổng quyền thật) (18.6511ms)
+✔ T-06 — BẤT BIẾN: kết quả LUÔN là tập con của payload (chỉ THU HẸP, không tự sinh dòng, không gọi mạng) (12.5264ms)
+✔ T-06 — UI tab «Phòng ban» dùng phạm vi này và ĐÃ GỠ lỗ hổng nới phạm vi `"CN"` cứng (0.5133ms)
+✔ T-07 — CHIỀU 1 (TRẠNG THÁI): cột Kanban phủ ĐÚNG 12 trạng thái thật, mỗi trạng thái đúng MỘT cột (175.2438ms)
+✔ T-07 — CHIỀU 2 (ƯU TIÊN) tách khỏi CHIỀU 1: đổi ưu tiên KHÔNG đổi cột (41.4196ms)
+✔ T-07 — CHIỀU 3 (PHÂN CÔNG) tách khỏi CHIỀU 1/2: lọc theo người KHÔNG đổi cột, không đổi ưu tiên (135.6045ms)
+✔ T-07 — BA CHIỀU KHÔNG TRỘN: cột là PHÂN HOẠCH của tập dòng (chỉ phụ thuộc `status`) (14.8089ms)
+✔ T-07 — KÉO-THẢ gọi ACTION THẬT, không chỉ đổi giao diện (1.5286ms)
+✔ T-07 — CỔNG AN TOÀN kéo-thả mô phỏng ĐÚNG luật backend (4 nhánh chặn + 1 nhánh cho phép) (10.6227ms)
+✔ T-07 — Board được GẮN vào màn Công việc (import + render), phạm vi theo T-06 (0.9152ms)
+✔ T-07 — HAI nơi suy «trưởng phòng» (T-06 phạm vi ↔ T-07 cổng kéo-thả) PHẢI cho CÙNG kết quả (57.5327ms)
+✔ T-08 — ĐỦ 3 KHỐI: cá nhân · phòng ban · dự án (nguyên văn §11) (154.8366ms)
+✔ T-08 — NGUỒN DỮ LIỆU có thật trong payload (không gọi API mới, không đoán trường) (1.6238ms)
+✔ T-08 — MỌI số tính từ dữ liệu thật: đối chiếu ĐÚNG phép đếm tay trên fixtures (9.5036ms)
+✔ T-08 — ĐỐI CHỨNG ÂM: thiếu nguồn ⇒ «chưa có nguồn», TUYỆT ĐỐI không hiện 0 thay cho «không biết» (37.7578ms)
+✔ T-08 — UI KHÔNG hardcode số: mọi giá trị lấy từ khối tính toán + in rõ NGUỒN (0.6521ms)
+✔ T-08 — GẮN vào tab «Dashboard» của WorkCenter (tab số 3), KHÔNG đổi 5 tab đã chốt ở T-01 (0.4039ms)
+✔ T-09 — CHUỖI 4 CẤP có đủ và đúng thứ tự: Task → Team → Thành viên → Hỗ trợ liên phòng (200.5761ms)
+✔ T-09 — DÙNG TRƯỜNG THẬT: đối chiếu tên trường với bootstrap (không đoán) (1.5502ms)
+✔ T-09 — Task → Team theo `projectId`; việc KHÔNG gắn dự án thì KHÔNG gán bừa tổ đội (7.9182ms)
+✔ T-09 — Team → Thành viên: chỉ người ĐANG hoạt động (đúng cách màn Tổ đội lọc) (14.2868ms)
+✔ T-09 — Hỗ trợ liên phòng: đúng người KHÁC phòng, giữ NGUỒN từng dòng, loại người không rõ phòng (10.5683ms)
+✔ T-09 — THIẾU NGUỒN thì ghi «chưa có nguồn», KHÔNG hiện 0 thay cho «không biết» (6.4122ms)
+✔ T-09 — LIÊN KẾT mở `EntityDetailModal` cho Team và Nhân sự (qua cổng dùng chung) (0.5366ms)
+✖ T-09 — GẮN vào màn Công việc: WorkCenter import + render, KHÔNG đổi 5 tab đã chốt ở T-01 (1.7841ms)
+✔ T-10 — Approval Center TÁCH khỏi nhóm «CÔNG VIỆC» bằng UI (khoá đã có `approvals`, KHÔNG khoá module mới) (7.7151ms)
+✔ T-10 — MÀN của module vẫn ĐỘC LẬP và KHÔNG đụng: `active === "approvals"` render `Approvals` (0.7043ms)
+✔ T-10 — BẰNG CHỨNG «KHÔNG MIGRATION / KHÔNG KHOÁ MODULE MỚI» (đối chứng của điều kiện BLOCKED) (71.4073ms)
+✔ T-10 — KHÔNG phá 5 mục «CÔNG VIỆC» đã chốt ở T-01 (4.0754ms)
+✔ TASK-136 (0) chốt an toàn: chuỗi cũ vẫn tồn tại ở bản đang sửa để phép kiểm có ý nghĩa (2.2541ms)
+✔ TASK-136 (1) Dự án/Hợp đồng/BOQ Version KHÔNG còn bắt buộc trên form (1.5501ms)
+✔ TASK-136 (2) nhãn kho đổi thành đúng chữ “Kho”, giữ nguyên select kho (1.0291ms)
+✔ TASK-136 (3) “Ngày cần vật tư tại công trường” ⇒ “Ngày cần” ở cả 3 nơi hiển thị (1.2057ms)
+✔ TASK-136 (4) gửi phiếu không còn popup xác nhận (1.328ms)
+✔ TASK-136 (5) máy chủ chịu được projectId/contractId/BOQ rỗng (KHÔNG đổi schema) (0.9147ms)
+✔ TASK-137 (0) chốt an toàn: vùng RequestModal phải tồn tại để các phép kiểm có ý nghĩa (2.3228ms)
+✔ TASK-137 (1) ô Dự án LUÔN hiện select và KHÔNG bắt buộc (1.1799ms)
+✔ TASK-137 (2)+(3) Hợp đồng và BOQ Version hiển thị nhưng KHÔNG bắt buộc (0.7046ms)
+✔ TASK-137 (4) mọi ô không bắt buộc có mục “— Tùy chọn (để trống) —”; ô Kho giữ nhãn nghiệp vụ (0.6995ms)
+✔ TASK-137 (5) “Phạm vi / Khu vực thi công” ⇒ “Ghi chú” ở cả form và default cấu hình trường (1.4296ms)
+✔ TASK-137 (+) KHÔNG phá luồng đối chiếu Excel và đường gửi rỗng (1.115ms)
+✔ TM-01 — danh sách khai ĐÚNG 6 cột, ĐÚNG thứ tự nguyên văn (292.9833ms)
+✔ TM-01 — DÙNG TRƯỜNG THẬT: đối chiếu nguồn (không đoán tên trường) (29.2486ms)
+✔ TM-01 — 6 cột có DỮ LIỆU THẬT trên fixtures (chạy khối thuần) (65.8937ms)
+✔ TM-01 — ĐỐI CHỨNG ÂM: VẮNG `teamMembers` ⇒ «chưa có nguồn», KHÔNG hiện 0 giả (5.6587ms)
+✔ TM-01 — UI render đúng 6 cột theo hằng số + nút Chi tiết cho từng dòng (0.4295ms)
+✔ TM-02 — 3 khoá ưu tiên đúng thứ tự nguyên văn: ĐANG HOẠT ĐỘNG → gần nhất ↓ → ngừng (215.3547ms)
+✔ TM-02 — BỘ CA THẬT: sắp xếp lẫn lộn trạng thái + ngày, kiểm từng vị trí (46.3537ms)
+✔ TM-02 — ĐỐI CHỨNG ÂM: thứ tự SAI phải bị bắt (7.4444ms)
+✔ TM-02 — đọc `active` đúng kiểu dữ liệu thật (tinyint 1/0, boolean, chuỗi) (9.0711ms)
+✔ TM-02 — UI dùng CHÍNH thứ tự đó và ghi rõ quy tắc cho người dùng (0.5412ms)
+✔ TM-03 — đúng 6 tab, đúng thứ tự nguyên văn (144.261ms)
+✔ TM-03 — mỗi tab có NGUỒN THẬT + đếm dòng THẬT trên fixtures (79.5318ms)
+✔ TM-03 — ĐỐI CHỨNG ÂM: thiếu nguồn ⇒ `available=false` + «chưa có nguồn», KHÔNG hiện 0 (18.4475ms)
+✔ TM-03 — mọi khoá đọc ra đều ĐÃ CÓ trong bootstrap (không thêm nguồn mới) (0.7227ms)
+✔ TM-03 — UI render đủ 6 tab từ hằng số + tab thiếu nguồn hiện «chưa có nguồn» (0.5558ms)
+✔ TM-04 — ACTION THẬT tồn tại và tự khai `requireRole` trong route (CHỈ ĐỌC) (3.9627ms)
+✖ TM-04 — QUYỀN THẬT: capability + module của 3 action theo registry đang cưỡng chế (4.6829ms)
+✔ TM-04 — ≥2 NGƯỜI DÙNG: ĐỦ quyền tạo/ngừng được, THIẾU quyền bị CHẶN (145.1464ms)
+✔ TM-04 — UI: nút ghi gắn cổng quyền THẬT + truyền `action`/`permission` từ app/page.tsx (1.6777ms)
+✔ TM-04 — GHI RÕ 2 CHỖ GÃY ĐÃ ĐO (không giấu khuyết điểm) (5.1281ms)
+✔ TM-05 — KẾT LUẬN: TƯƠNG THÍCH và TÁI DÙNG 2 action cấp phát THẬT của kho (156.597ms)
+✔ TM-05 — CÙNG SỔ: action xác nhận lắp đặt sửa chính cột `installed_qty` mà tab Cấp phát đọc (33.0471ms)
+✔ TM-05 — tái dùng được vì HAI bảng đều mang `team_id` (khoá nối tổ đội) (10.6629ms)
+✔ TM-05 — QUYỀN: `issue_stock` mở bằng cổng module `teams` + `warehouse_issue` ở CẢ 2 route (0.6429ms)
+✔ TM-05 — ĐỐI CHỨNG ÂM: tổ đội không có phiếu nào ⇒ «chưa có nguồn», KHÔNG hiện 0 (15.7003ms)
+✔ TM-05 — tab «Cấp phát» là tab số 4 (thứ tự nguyên văn của TM-03) và có bảng dữ liệu riêng (27.2119ms)
+✔ TM-06(a) — ĐÍNH CHÍNH TIỀN ĐỀ: roadmap ghi «0 dòng» nhưng CSDL THẬT có 6 dòng / 5 active (1.8127ms)
+✔ TM-06(b) — CÁCH NẠP DỮ LIỆU: CONFIRMED «SQL ngoài sản phẩm», KHÔNG action nào ghi `team_members` (10.1595ms)
+✔ TM-06(c) — ĐỐI CHỨNG ÂM: nếu xuất hiện đường GHI thì kết luận CONFIRMED phải bị bắt (6.0018ms)
+✔ TM-06(d) — BÁO CÁO AUDIT tồn tại và nêu đủ 4 mục bắt buộc (0.9121ms)
+✔ Brand Manifest và Release Fingerprint khớp SSOT (12.3237ms)
+✔ Development Mode cho phép startup khi chưa có license (8.3777ms)
+✔ License Verifier xác minh Ed25519 và ràng buộc tenant/product/machine (10.5426ms)
+✔ Production enforcement chưa thể tự bật trong release W2 (0.6669ms)
+✔ Không có private key hoặc file khóa bí mật trong source (1279.1558ms)
+✔ W-01 — ĐÚNG 5 mục, ĐÚNG nhãn, ĐÚNG nhóm «warehouse», mỗi mục một cổng quyền RIÊNG từ khoá ĐÃ CÓ (3.8708ms)
+✔ W-01 — ĐỐI CHỨNG ÂM: 0 khoá module mới — mọi `permissionKeys` ∈ 6 khoá kho ĐÃ CÓ (0.6715ms)
+✔ W-01 — ĐỐI CHỨNG ÂM: KHÔNG khoá module mới trong `ModuleKey` và KHÔNG `module_catalog` mới (142.3349ms)
+✖ W-01 — 6 khoá CŨ của nhóm KHO bị ẨN khỏi menu, nhưng khoá vẫn SỐNG cho quyền/tiêu đề/nhánh render (4.6606ms)
+✔ W-01 — cổng quyền THẬT: mỗi mục lọc bằng `modulePermission(data, permissionKey).canView` (KHÔNG hardcode admin) (0.5201ms)
+✔ W-01 — menu (desktop + mobile) dựng 5 mục MỚI của nhóm «KHO», và GIỮ nguyên nhóm CÔNG VIỆC (2.3352ms)
+✖ W-01 — HUY HIỆU nhóm KHO không mất số: cộng theo CẢ CẶP khoá quyền như `T-01` (2.0348ms)
+✔ W-01 — ĐÍCH ĐẾN THẬT: 4 mục mở màn CŨ đúng khoá; «Dashboard tồn kho» mở TAB dashboard của `Inventory` (2.2373ms)
+✔ W-02 — kết luận audit là CONFIRMED (1:N) và nêu rõ hai chiều đo được của 1:N (2.1999ms)
+✔ W-02 — tệp audit dẫn ĐÚNG 5 chữ ký bằng chứng (drizzle · Flyway · route · Java · CSDL thật) (0.4171ms)
+✔ W-02 — audit nói thẳng GIỚI HẠN: FK không được MySQL cưỡng chế (drizzle khai báo, baseline chỉ có INDEX) (0.3163ms)
+✔ W-02 — drizzle khai báo FK `warehouses.project_id → projects.id` và cho phép NULL (⇒ 0..N) (0.2633ms)
+✔ W-02 — ĐỐI CHỨNG ÂM: KHÔNG có UNIQUE trên `warehouses.project_id` ở BẤT KỲ migration drizzle nào (25.2651ms)
+✔ W-02 — ĐỐI CHỨNG ÂM: `V1__baseline.sql` có INDEX thường (không UNIQUE) trên project_id và KHÔNG có FK (0.7676ms)
+✔ W-02 — route ĐỌC `warehouses[]` theo project_id và CSDL `LIMIT 1` chứng minh tác giả biết là N kho/dự án (2.4967ms)
+✔ W-02 — CSDL THẬT: `project_id` NULL-able, UNIQUE chỉ trên `code`, INDEX thường trên `project_id`, KHÔNG FK cưỡng chế (147.2756ms)
+✔ W-02 — CSDL THẬT: một dự án có ≥ 2 kho (chiều N>1) VÀ có kho `project_id IS NULL` (chiều N=0) (118.3285ms)
+✖ W-02 — CSDL THẬT: 0 dòng mồ côi (`project_id` không trỏ tới dự án nào) + số dòng khớp tệp audit (199.2515ms)
+✔ W-03 (1) — `create_project` ĐỌC cờ `createWarehouse` và BỌC câu INSERT kho trong `if (createWarehouse !== false)` (6.3013ms)
+✔ W-03 (2) — MẶC ĐỊNH = TẠO KHO: cờ vắng/true ⇒ tạo kho; false/'no'/'0' ⇒ KHÔNG tạo kho (chạy THẬT biểu thức đọc cờ) (2.5399ms)
+✔ W-03 (3) — GIAO DIỆN ProjectModal TRUYỀN cờ xuống action thật + đã BỎ CHẶN nhánh «Không» (1.0332ms)
+✔ W-03 (4) — ĐỐI CHỨNG ÂM: KHÔNG thêm câu DELETE/DROP/TRUNCATE/ALTER nào (quét từ khoá) (6.1681ms)
+✔ W-03 (5) — ĐỐI CHỨNG ÂM: KHÔNG thêm khoá `module_catalog` mới (4.1994ms)
+✖ W-03 — ACTION THẬT đã tồn tại (KHÔNG bịa API mới): `create_project` ghi cả dự án + kho trong 1 batch (3.0487ms)
+✔ W-03 — UI có câu hỏi «Tạo kho dự án?» với ĐÚNG 2 nhánh Có / Không (chỉ khi TẠO MỚI, không hỏi khi Sửa) (0.9264ms)
+✖ W-03 — NHÁNH «KHÔNG» BỊ CHẶN: KHÔNG im lặng tạo kho, KHÔNG tự thêm API — UI nói rõ lý do và khoá nút lưu (0.7826ms)
+✖ W-03 — ĐỐI CHỨNG ÂM: KHÔNG có tham số/action nào bỏ được kho; máy chủ LUÔN tạo kho (nên nhánh Không mới chặn) (0.7986ms)
+✔ W-03 — W-02 là điều kiện tiên quyết: audit kết luận CONFIRMED 1:N ⇒ nhánh «Không» hợp lệ về mô hình (0.4972ms)
+✔ W-04 — ĐỦ 8 CHỈ SỐ, ĐÚNG nguyên văn §19: tổng · khả dụng · giữ chỗ · nhập · xuất · chờ chuyển · sắp hết · giá trị kho (129.0221ms)
+✔ W-04 — MỌI số tính từ payload: đối chiếu ĐÚNG phép đếm tay trên fixtures (5.1175ms)
+✔ W-04 — KHÔNG gọi API mới: khối thuần không có `fetch(`/`action(`/`await` và chỉ đọc khoá CÓ THẬT (1.9606ms)
+✔ W-04 — ĐỐI CHỨNG ÂM «giá trị kho»: thiếu `unit_cost` (payload KHÔNG có `stockMovements`) ⇒ «chưa có nguồn» + lý do (6.6411ms)
+✔ W-04 — UI KHÔNG hardcode: mọi KPI lấy từ khối tính toán, in rõ NGUỒN, và «giá trị kho» HIỆN chữ khi thiếu nguồn (0.6103ms)
+✔ W-04 — GẮN vào màn Tồn kho dưới dạng TAB «Dashboard tồn kho» (không màn mới, không route mới) (0.3129ms)
+✔ BUG-IMPORT-ACCOUNT-004: mapper nhận đủ 48 dòng sau title/subtitle/header/notes (10.8999ms)
+✔ BUG-IMPORT-ACCOUNT-004: lỗi nêu đúng dòng/cột và mật khẩu trống chỉ hợp lệ khi cập nhật (1.5643ms)
+✔ BUG-IMPORT-PROJECT-001: mapper nhận template động và báo chính xác ngày sai (2.8574ms)
+✔ BUG-IMPORT-PROJECT-001: preflight nguyên tử, tạo/cập nhật dự án và kho nhất quán (44.078ms)
+✔ BUG-IMPORT-ACCOUNT-004: preflight nguyên tử, quyền kế thừa/ngoại lệ và update không đổi mật khẩu (378.8547ms)
+✔ BUG/REQ-ROLE-002: vai trò canonical không được trùng tên kể cả vai trò đã ẩn (6.2421ms)
+✔ BUG/REQ-ORG-003: BCH động có cha/dự án/hiệu lực, archive giữ lịch sử (5.2797ms)
+✔ BOQ exact 100% và chỉ material/component được đưa vào matching (8.6794ms)
+✔ BOQ runtime API trả đúng 100% và loại dòng tiêu đề khỏi kết quả (9.5391ms)
+✔ Admin bootstrap trả organization canonical và Trust Development Mode (40.1859ms)
+ℹ tests 570
+ℹ suites 0
+ℹ pass 547
+ℹ fail 22
+ℹ cancelled 0
+ℹ skipped 1
+ℹ todo 0
+ℹ duration_ms 22824.6489
+
+✖ failing tests:
+
+test at tests\ad01-account-rename.test.mjs:33:1
+✖ AD-01 — bước 1 của màn Quản trị đổi tên thành «Tài khoản», 12 bước giữ nguyên thứ tự (171.9408ms)
+  AssertionError [ERR_ASSERTION]: Màn Quản trị phải còn ĐÚNG 12 bước (không thêm/bớt bước)
+  
+  13 !== 12
+  
+      at TestContext.<anonymous> (file:///D:/13.%20Duong%20Trong%20Thang/Tai%20lieu/1.%20Du%20an%20chuan%20hoa%20quy%20trinh/VNTECH_ERP_V5_3_0_MASTER_BASELINE_R1_1_1_PROJECT_NAV_FINAL_FP_FIXED_20260908/tests/ad01-account-rename.test.mjs:35:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.start (node:internal/test_runner/test:1242:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 13,
+    expected: 12,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\ad02-account-columns.test.mjs:35:1
+✖ AD-02 — ĐÚNG 13 cột, ĐÚNG nhãn, ĐÚNG thứ tự nguyên văn (155.1036ms)
+  AssertionError [ERR_ASSERTION]: Phải có ĐÚNG 13 cột
+  
+  12 !== 13
+  
+      at TestContext.<anonymous> (file:///D:/13.%20Duong%20Trong%20Thang/Tai%20lieu/1.%20Du%20an%20chuan%20hoa%20quy%20trinh/VNTECH_ERP_V5_3_0_MASTER_BASELINE_R1_1_1_PROJECT_NAV_FINAL_FP_FIXED_20260908/tests/ad02-account-columns.test.mjs:37:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.start (node:internal/test_runner/test:1242:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 12,
+    expected: 13,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\ad02-account-columns.test.mjs:52:1
+✖ AD-02 — «chưa có nguồn» ≠ 0 giả: 2 trường không nguồn để `null` + có LÝ DO cụ thể (30.2758ms)
+  AssertionError [ERR_ASSERTION]: Chỉ 2 trường được phép không nguồn: đăng nhập cuối + ngày tạo
+  + actual - expected
+  
+  + []
+  - [
+  -   'createdAt',
+  -   'lastLoginAt'
+  - ]
+  
+      at TestContext.<anonymous> (file:///D:/13.%20Duong%20Trong%20Thang/Tai%20lieu/1.%20Du%20an%20chuan%20hoa%20quy%20trinh/VNTECH_ERP_V5_3_0_MASTER_BASELINE_R1_1_1_PROJECT_NAV_FINAL_FP_FIXED_20260908/tests/ad02-account-columns.test.mjs:56:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [],
+    expected: [ 'createdAt', 'lastLoginAt' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests\ad08-dept-filter-bulk-delete.test.mjs:81:1
+✖ AD-08 — action xoá THẬT đã tồn tại ở cả controller lẫn bảng RBAC (không bịa tên action) (2.2221ms)
+  AssertionError [ERR_ASSERTION]: Action phải có trong bảng RBAC (module list rỗng = admin)
+      at TestContext.<anonymous> (file:///D:/13.%20Duong%20Trong%20Thang/Tai%20lieu/1.%20Du%20an%20chuan%20hoa%20quy%20trinh/VNTECH_ERP_V5_3_0_MASTER_BASELINE_R1_1_1_PROJECT_NAV_FINAL_FP_FIXED_20260908/tests/ad08-dept-filter-bulk-delete.test.mjs:84:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'package com.vntech.erp.application.rbac;\n\nimport java.util.List;\nimport java.util.Map;\n\n/**\n * BẢN ĐỒ action -> module/capability (RBAC) — SINH TỰ ĐỘNG từ ACTION_CATALOG.json\n * (nguồn: ACTION_MODULE + ACTION_CAPABILITY của scripts/system-route.mjs).\n * Dùng bởi RbacService.requireActionModule — port nguyên trạng JS.\n */\npublic final class ActionRbacRegistry {\n\n    private ActionRbacRegistry() { }\n\n    private static final Map<String, List<String>> ACTION_MODULES = Map.ofEntries(\n            Map.entry("add_work_item_comment", List.of("dept_plan_tasks", "dept_project_tasks", "dept_plan_assign", "dept_project_assign")),\n            Map.entry("approve_central_return", List.of("central_warehouse")),\n            Map.entry("approve_construction_daily_log", List.of("construction")),\n            // TASK-135 (21/09/2026) — SỬA LỖI ĐO ĐƯỢC: `approve_po` khai MODULE RỖNG ⇒ rơi vào nhánh\n            // «mặc định từ chối» của RbacService.requireActionModule (PHASE 0B) ⇒ 403 «Thao tác chưa\n            // được khai báo quyền…» cho MỌI user không phải admin/C-level, dù họ có quyền `purchasing`.\n            // Bằng chứng LIVE (jar 21/09 11:10, probe `tools/probe-wf-muahang-standard.mjs --apply`):\n            // B6b `nvkhdemo` gọi `approve_po` ⇒ 403, trong khi B6a `create_po` của CÙNG user ⇒ 200.\n            // Tiền lệ ĐÚNG chuẩn cùng module: `create_po` (:54) và `close_po_line` (:48) = `purchasing`.\n            // ⛔ 0 khoá `module_catalog` mới — chỉ dùng khoá SẴN CÓ `purchasing`.\n            Map.entry("approve_po", List.of("purchasing")),\n            Map.entry("approve_production_report", List.of("production")),\n            Map.entry("approve_site_expense_claim", List.of("dept_finance_site_cost")),\n            Map.entry("approve_stock_count", List.of("stocktake")),\n            // TASK-132 (21/09/2026) — action MỚI cho WF-XUATKHO-01 BƯỚC ② (CHT duyệt phiếu xuất).\n            // Cổng MODULE dùng lại module SẴN CÓ `approvals` (+ `canApprove`) — ⛔ 0 khoá `module_catalog`\n            // mới: quyền thật của bước này do cổng VAI TRÒ `requireRole(["commander","admin"])` trong\n            // `StockManagementUseCase.approveStockIssue` quyết định. Đo MySQL: `cha.ht` có\n            // `approvals.can_approve=1` còn `warehouse_issue.can_approve=0` ⇒ nếu khai module\n            // `warehouse_issue` thì chính CHT sẽ bị 403 oan.\n            Map.entry("approve_stock_issue", List.of("approvals")),\n            // TASK-133 (21/09/2026) — 3 action MỚI cho WF-XUATKHO-01 BƯỚC ③④⑤. Cổng MODULE dùng lại các\n            // khoá SẴN CÓ trong `module_catalog` (⛔ 0 khoá mới): ③④ dùng `warehouse_issue` (đúng module\n            // của `issue_stock` — cùng nghiệp vụ xuất kho), ⑤ dùng `receiving` (đúng module của\n            // `receive_goods` — cùng nghiệp vụ TẠO phiếu nhập). Quyền THẬT vẫn do cổng VAI TRÒ\n            // `requireRole(...)` trong `StockManagementUseCase` quyết định (khuôn TASK-132).\n            Map.entry("issue_stock_confirm", List.of("warehouse_issue")),\n            Map.entry("confirm_stock_issue", List.of("warehouse_issue")),\n            Map.entry("create_issue_grn", List.of("receiving")),\n            // MT2 §7.4 — sinh phiếu nhập từ **LỆNH ĐIỀU CHUYỂN (STO)**: DÙNG LẠI khoá module\n            // SẴN CÓ `receiving` (⛔ 0 module mới, ⛔ 0 khoá `module_catalog` mới) — cùng nghiệp vụ TẠO phiếu nhập.\n            Map.entry("create_transfer_grn", List.of("receiving")),\n            // MT2 §13.1 — «Thêm tab Thông báo» trong màn **Quản trị** ⇒ 2 action cấu hình gác bằng module\n            // SẴN CÓ `admin` (⛔ 0 module mới, ⛔ 0 khoá `module_catalog` mới).\n            Map.entry("save_notification_config", List.of("admin")),\n            // MT2-P3-02 §13.1 — CRUD: **Danh sách (R)** và **Xoá (D)** của tab Thông báo (màn Quản trị).\n            Map.entry("notification_configs", List.of("admin")),\n            Map.entry("notification_log", List.of("admin")),\n            Map.entry("delete_notification_config", List.of("admin")),\n            Map.entry("set_notification_config_status", List.of("admin")),\n            // MT2 §14 — «Login → Check notifications by userID»: MỌI user đã đăng nhập phải đánh dấu đọc\n            // được thông báo CỦA CHÍNH MÌNH ⇒ dùng mẫu `List.of()` = KHÔNG gác module (khuôn `bulk_import_projects`).\n            // ⛔ KHÔNG gác bằng module nghiệp vụ nào: nếu gác, user không có module đó sẽ KHÔNG đọc được thông báo.\n            Map.entry("mark_notification_read", List.of()),\n            Map.entry("mark_notification_snooze", List.of()),\n            // MT2 §14 — «Đánh dấu TẤT CẢ đã đọc» NHƯNG chỉ cho CHÍNH user (⛔ không global).\n            Map.entry("mark_notification_all_read", List.of()),\n            Map.entry("approve_team_production", List.of("teams")),\n            Map.entry("approve_transfer_order", List.of("inventory")),\n            Map.entry("bulk_boq_item_action", List.of("boq")),\n            Map.entry("bulk_import_projects", List.of()),\n            Map.entry("bulk_import_users", List.of()),\n            Map.entry("bulk_material_subcategory_action", List.of("material_catalog")),\n            Map.entry("cancel_request", List.of("requests")),\n            Map.entry("change_password", List.of()),\n            Map.entry("check_material_alias_conflicts", List.of("material_catalog")),\n            Map.entry("clear_boq_version", List.of("boq")),\n            Map.entry("close_po_line", List.of("purchasing")),\n            Map.entry("compare_boq_materials", List.of("material_catalog", "boq")),\n            Map.entry("confirm_boq_material_mappings", List.of("material_catalog", "boq")),\n            Map.entry("confirm_delivery", List.of("receiving", "warehouse_receipt")),\n            Map.entry("confirm_installation", List.of("teams")),\n            Map.entry("create_central_return", List.of("central_warehouse")),\n            Map.entry("create_po", List.of("purchasing")),\n            Map.entry("create_project", List.of()),\n            Map.entry("create_project_team", List.of()),\n            Map.entry("create_request", List.of("requests")),\n            Map.entry("create_stock_count", List.of("stocktake")),\n            Map.entry("create_transfer_order", List.of("inventory")),\n            Map.entry("create_user", List.of()),\n            Map.entry("create_work_item", List.of("dept_plan_assign", "dept_project_assign")),\n            Map.entry("decide_approval", List.of("approvals")),\n            Map.entry("delete_accounting_voucher", List.of("dept_finance_documents")),\n            Map.entry("delete_advance_request", List.of("dept_finance_advance")),\n            Map.entry("delete_approval_stage", List.of()),\n            Map.entry("delete_benefit_record", List.of("dept_legal_benefits")),\n            Map.entry("delete_boq_item", List.of("boq")),\n            Map.entry("delete_business_role_group", List.of()),\n            Map.entry("delete_business_scope", List.of()),\n            Map.entry("delete_capital_recovery", List.of("capital_recovery")),\n            Map.entry("delete_cashbook_entry", List.of("dept_finance_cashbank")),\n            Map.entry("delete_construction_daily_log", List.of("construction")),\n            Map.entry("delete_contract_payment", List.of("payments")),\n            Map.entry("delete_correspondence", List.of("dept_legal_correspondence")),\n            Map.entry("delete_form_field_config", List.of()),\n            Map.entry("delete_labor_contract", List.of("dept_legal_labor")),\n            Map.entry("delete_legal_document", List.of("dept_legal_documents")),\n            Map.entry("delete_material", List.of("material_catalog")),\n            Map.entry("delete_material_category", List.of()),\n            Map.entry("delete_material_norm", List.of("material_norms")),\n            Map.entry("delete_material_subcategory", List.of()),\n            Map.entry("delete_menu_group", List.of()),\n            Map.entry("delete_partner", List.of("supplier_catalog")),\n            Map.entry("delete_payment_plan", List.of("dept_finance_payment_plan")),\n            Map.entry("delete_project", List.of()),\n            Map.entry("delete_project_contract", List.of("boq")),\n            Map.entry("delete_project_team", List.of()),\n            Map.entry("delete_request", List.of("requests")),\n            Map.entry("delete_role_catalog", List.of()),\n            Map.entry("delete_seal", List.of("dept_legal_seal")),\n            Map.entry("delete_selected_materials", List.of("material_catalog")),\n            Map.entry("delete_site_expense_claim", List.of("dept_finance_site_cost")),\n            Map.entry("delete_supplier", List.of("supplier_catalog")),\n            Map.entry("delete_unused_materials", List.of("material_catalog")),\n            Map.entry("delete_user", List.of()),\n            Map.entry("delete_user_module_override", List.of()),\n            Map.entry("estimate_material_norms", List.of("material_norms")),\n            Map.entry("factory_reset_execute", List.of("admin")),\n            Map.entry("factory_reset_preview", List.of("admin")),\n            Map.entry("import_contract_payments", List.of("payments")),\n            Map.entry("import_material_catalog", List.of()),\n            Map.entry("install_license_foundation", List.of("admin")),\n            Map.entry("issue_stock", List.of("teams", "warehouse_issue")),\n            Map.entry("login", List.of()),\n            Map.entry("logout", List.of()),\n            Map.entry("mark_task_notification_read", List.of("dept_plan_tasks", "dept_project_tasks")),\n            Map.entry("merge_material_master", List.of("material_catalog")),\n            Map.entry("preview_material_dependencies", List.of("material_catalog")),\n            Map.entry("preview_request_import", List.of("requests")),\n            Map.entry("reassign_work_item", List.of("dept_plan_assign", "dept_project_assign")),\n            Map.entry("receive_central_return", List.of("central_warehouse")),\n            Map.entry("receive_goods", List.of("receiving", "warehouse_receipt")),\n            Map.entry("receive_transfer_order", List.of("inventory")),\n            Map.entry("rec'... 24869 more characters,
+    expected: /Map\.entry\("delete_department_permission", List\.of\(\)\)/,
+    operator: 'match',
+    diff: 'simple'
+  }
+
+test at tests\ad10-system-level-audit.test.mjs:53:1
+✖ AD-10 — BẰNG CHỨNG action xoá tồn tại ở cả 2 tầng (không bịa) (2.0283ms)
+  AssertionError [ERR_ASSERTION]: Phải có trong bảng RBAC (admin)
+      at TestContext.<anonymous> (file:///D:/13.%20Duong%20Trong%20Thang/Tai%20lieu/1.%20Du%20an%20chuan%20hoa%20quy%20trinh/VNTECH_ERP_V5_3_0_MASTER_BASELINE_R1_1_1_PROJECT_NAV_FINAL_FP_FIXED_20260908/tests/ad10-system-level-audit.test.mjs:55:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'package com.vntech.erp.application.rbac;\n\nimport java.util.List;\nimport java.util.Map;\n\n/**\n * BẢN ĐỒ action -> module/capability (RBAC) — SINH TỰ ĐỘNG từ ACTION_CATALOG.json\n * (nguồn: ACTION_MODULE + ACTION_CAPABILITY của scripts/system-route.mjs).\n * Dùng bởi RbacService.requireActionModule — port nguyên trạng JS.\n */\npublic final class ActionRbacRegistry {\n\n    private ActionRbacRegistry() { }\n\n    private static final Map<String, List<String>> ACTION_MODULES = Map.ofEntries(\n            Map.entry("add_work_item_comment", List.of("dept_plan_tasks", "dept_project_tasks", "dept_plan_assign", "dept_project_assign")),\n            Map.entry("approve_central_return", List.of("central_warehouse")),\n            Map.entry("approve_construction_daily_log", List.of("construction")),\n            // TASK-135 (21/09/2026) — SỬA LỖI ĐO ĐƯỢC: `approve_po` khai MODULE RỖNG ⇒ rơi vào nhánh\n            // «mặc định từ chối» của RbacService.requireActionModule (PHASE 0B) ⇒ 403 «Thao tác chưa\n            // được khai báo quyền…» cho MỌI user không phải admin/C-level, dù họ có quyền `purchasing`.\n            // Bằng chứng LIVE (jar 21/09 11:10, probe `tools/probe-wf-muahang-standard.mjs --apply`):\n            // B6b `nvkhdemo` gọi `approve_po` ⇒ 403, trong khi B6a `create_po` của CÙNG user ⇒ 200.\n            // Tiền lệ ĐÚNG chuẩn cùng module: `create_po` (:54) và `close_po_line` (:48) = `purchasing`.\n            // ⛔ 0 khoá `module_catalog` mới — chỉ dùng khoá SẴN CÓ `purchasing`.\n            Map.entry("approve_po", List.of("purchasing")),\n            Map.entry("approve_production_report", List.of("production")),\n            Map.entry("approve_site_expense_claim", List.of("dept_finance_site_cost")),\n            Map.entry("approve_stock_count", List.of("stocktake")),\n            // TASK-132 (21/09/2026) — action MỚI cho WF-XUATKHO-01 BƯỚC ② (CHT duyệt phiếu xuất).\n            // Cổng MODULE dùng lại module SẴN CÓ `approvals` (+ `canApprove`) — ⛔ 0 khoá `module_catalog`\n            // mới: quyền thật của bước này do cổng VAI TRÒ `requireRole(["commander","admin"])` trong\n            // `StockManagementUseCase.approveStockIssue` quyết định. Đo MySQL: `cha.ht` có\n            // `approvals.can_approve=1` còn `warehouse_issue.can_approve=0` ⇒ nếu khai module\n            // `warehouse_issue` thì chính CHT sẽ bị 403 oan.\n            Map.entry("approve_stock_issue", List.of("approvals")),\n            // TASK-133 (21/09/2026) — 3 action MỚI cho WF-XUATKHO-01 BƯỚC ③④⑤. Cổng MODULE dùng lại các\n            // khoá SẴN CÓ trong `module_catalog` (⛔ 0 khoá mới): ③④ dùng `warehouse_issue` (đúng module\n            // của `issue_stock` — cùng nghiệp vụ xuất kho), ⑤ dùng `receiving` (đúng module của\n            // `receive_goods` — cùng nghiệp vụ TẠO phiếu nhập). Quyền THẬT vẫn do cổng VAI TRÒ\n            // `requireRole(...)` trong `StockManagementUseCase` quyết định (khuôn TASK-132).\n            Map.entry("issue_stock_confirm", List.of("warehouse_issue")),\n            Map.entry("confirm_stock_issue", List.of("warehouse_issue")),\n            Map.entry("create_issue_grn", List.of("receiving")),\n            // MT2 §7.4 — sinh phiếu nhập từ **LỆNH ĐIỀU CHUYỂN (STO)**: DÙNG LẠI khoá module\n            // SẴN CÓ `receiving` (⛔ 0 module mới, ⛔ 0 khoá `module_catalog` mới) — cùng nghiệp vụ TẠO phiếu nhập.\n            Map.entry("create_transfer_grn", List.of("receiving")),\n            // MT2 §13.1 — «Thêm tab Thông báo» trong màn **Quản trị** ⇒ 2 action cấu hình gác bằng module\n            // SẴN CÓ `admin` (⛔ 0 module mới, ⛔ 0 khoá `module_catalog` mới).\n            Map.entry("save_notification_config", List.of("admin")),\n            // MT2-P3-02 §13.1 — CRUD: **Danh sách (R)** và **Xoá (D)** của tab Thông báo (màn Quản trị).\n            Map.entry("notification_configs", List.of("admin")),\n            Map.entry("notification_log", List.of("admin")),\n            Map.entry("delete_notification_config", List.of("admin")),\n            Map.entry("set_notification_config_status", List.of("admin")),\n            // MT2 §14 — «Login → Check notifications by userID»: MỌI user đã đăng nhập phải đánh dấu đọc\n            // được thông báo CỦA CHÍNH MÌNH ⇒ dùng mẫu `List.of()` = KHÔNG gác module (khuôn `bulk_import_projects`).\n            // ⛔ KHÔNG gác bằng module nghiệp vụ nào: nếu gác, user không có module đó sẽ KHÔNG đọc được thông báo.\n            Map.entry("mark_notification_read", List.of()),\n            Map.entry("mark_notification_snooze", List.of()),\n            // MT2 §14 — «Đánh dấu TẤT CẢ đã đọc» NHƯNG chỉ cho CHÍNH user (⛔ không global).\n            Map.entry("mark_notification_all_read", List.of()),\n            Map.entry("approve_team_production", List.of("teams")),\n            Map.entry("approve_transfer_order", List.of("inventory")),\n            Map.entry("bulk_boq_item_action", List.of("boq")),\n            Map.entry("bulk_import_projects", List.of()),\n            Map.entry("bulk_import_users", List.of()),\n            Map.entry("bulk_material_subcategory_action", List.of("material_catalog")),\n            Map.entry("cancel_request", List.of("requests")),\n            Map.entry("change_password", List.of()),\n            Map.entry("check_material_alias_conflicts", List.of("material_catalog")),\n            Map.entry("clear_boq_version", List.of("boq")),\n            Map.entry("close_po_line", List.of("purchasing")),\n            Map.entry("compare_boq_materials", List.of("material_catalog", "boq")),\n            Map.entry("confirm_boq_material_mappings", List.of("material_catalog", "boq")),\n            Map.entry("confirm_delivery", List.of("receiving", "warehouse_receipt")),\n            Map.entry("confirm_installation", List.of("teams")),\n            Map.entry("create_central_return", List.of("central_warehouse")),\n            Map.entry("create_po", List.of("purchasing")),\n            Map.entry("create_project", List.of()),\n            Map.entry("create_project_team", List.of()),\n            Map.entry("create_request", List.of("requests")),\n            Map.entry("create_stock_count", List.of("stocktake")),\n            Map.entry("create_transfer_order", List.of("inventory")),\n            Map.entry("create_user", List.of()),\n            Map.entry("create_work_item", List.of("dept_plan_assign", "dept_project_assign")),\n            Map.entry("decide_approval", List.of("approvals")),\n            Map.entry("delete_accounting_voucher", List.of("dept_finance_documents")),\n            Map.entry("delete_advance_request", List.of("dept_finance_advance")),\n            Map.entry("delete_approval_stage", List.of()),\n            Map.entry("delete_benefit_record", List.of("dept_legal_benefits")),\n            Map.entry("delete_boq_item", List.of("boq")),\n            Map.entry("delete_business_role_group", List.of()),\n            Map.entry("delete_business_scope", List.of()),\n            Map.entry("delete_capital_recovery", List.of("capital_recovery")),\n            Map.entry("delete_cashbook_entry", List.of("dept_finance_cashbank")),\n            Map.entry("delete_construction_daily_log", List.of("construction")),\n            Map.entry("delete_contract_payment", List.of("payments")),\n            Map.entry("delete_correspondence", List.of("dept_legal_correspondence")),\n            Map.entry("delete_form_field_config", List.of()),\n            Map.entry("delete_labor_contract", List.of("dept_legal_labor")),\n            Map.entry("delete_legal_document", List.of("dept_legal_documents")),\n            Map.entry("delete_material", List.of("material_catalog")),\n            Map.entry("delete_material_category", List.of()),\n            Map.entry("delete_material_norm", List.of("material_norms")),\n            Map.entry("delete_material_subcategory", List.of()),\n            Map.entry("delete_menu_group", List.of()),\n            Map.entry("delete_partner", List.of("supplier_catalog")),\n            Map.entry("delete_payment_plan", List.of("dept_finance_payment_plan")),\n            Map.entry("delete_project", List.of()),\n            Map.entry("delete_project_contract", List.of("boq")),\n            Map.entry("delete_project_team", List.of()),\n            Map.entry("delete_request", List.of("requests")),\n            Map.entry("delete_role_catalog", List.of()),\n            Map.entry("delete_seal", List.of("dept_legal_seal")),\n            Map.entry("delete_selected_materials", List.of("material_catalog")),\n            Map.entry("delete_site_expense_claim", List.of("dept_finance_site_cost")),\n            Map.entry("delete_supplier", List.of("supplier_catalog")),\n            Map.entry("delete_unused_materials", List.of("material_catalog")),\n            Map.entry("delete_user", List.of()),\n            Map.entry("delete_user_module_override", List.of()),\n            Map.entry("estimate_material_norms", List.of("material_norms")),\n            Map.entry("factory_reset_execute", List.of("admin")),\n            Map.entry("factory_reset_preview", List.of("admin")),\n            Map.entry("import_contract_payments", List.of("payments")),\n            Map.entry("import_material_catalog", List.of()),\n            Map.entry("install_license_foundation", List.of("admin")),\n            Map.entry("issue_stock", List.of("teams", "warehouse_issue")),\n            Map.entry("login", List.of()),\n            Map.entry("logout", List.of()),\n            Map.entry("mark_task_notification_read", List.of("dept_plan_tasks", "dept_project_tasks")),\n            Map.entry("merge_material_master", List.of("material_catalog")),\n            Map.entry("preview_material_dependencies", List.of("material_catalog")),\n            Map.entry("preview_request_import", List.of("requests")),\n            Map.entry("reassign_work_item", List.of("dept_plan_assign", "dept_project_assign")),\n            Map.entry("receive_central_return", List.of("central_warehouse")),\n            Map.entry("receive_goods", List.of("receiving", "warehouse_receipt")),\n            Map.entry("receive_transfer_order", List.of("inventory")),\n            Map.entry("rec'... 24869 more characters,
+    expected: /Map\.entry\("delete_system_level", List\.of\(\)\)/,
+    operator: 'match',
+    diff: 'simple'
+  }
+
+test at tests\f03-tai-chinh-audit-deps.test.mjs:47:1
+✖ F-03 — MỌI action trong bảng đều đúng DÒNG ở CẢ HAI đường ghi (JS + Java) (19.4892ms)
+  AssertionError [ERR_ASSERTION]: hồ sơ F-03 ghi sai vị trí action ⇒ báo cáo audit mất giá trị
+  + actual - expected
+  
+  + [
+  +   'JS :1354 không chứa action === "save_capital_recovery"',
+  +   'JAVA :595 không chứa case "save_capital_recovery"',
+  +   'JS :1365 không chứa action === "delete_capital_recovery"',
+  +   'JAVA :600 không chứa case "delete_capital_recovery"',
+  +   'JS :1368 không chứa action === "save_contract_payment"',
+  +   'JAVA :605 không chứa case "save_contract_payment"',
+  +   'JS :1375 không chứa action === "import_contract_payments"',
+  +   'JAVA :610 không chứa case "import_contract_payments"',
+  +   'JS :1378 không chứa action === "delete_contract_payment"',
+  +   'JAVA :655 không chứa case "delete_contract_payment"',
+  +   'JS :1331 không chứa action === "save_production_report"',
+  +   'JAVA :585 không chứa case "save_production_report"',
+  +   'JS :1338 không chứa action === "approve_production_report"',
+  +   'JAVA :590 không chứa case "approve_production_report"',
+  +   'JS :1390 không chứa action === "save_team_payment"',
+  +   'JAVA :630 không chứa case "save_team_payment"',
+  +   'JS :1393 không chứa action === "settle_team_subcontract"',
+  +   'JAVA :650 không chứa case "settle_team_subcontract"',
+  +   'JS :2136 không chứa action === "save_payment_plan"',
+  +   'JAVA :660 không chứa case "save_payment_plan"',
+  +   'JS :2142 không chứa action === "set_payment_plan_status"',
+  +   'JAVA :665 không chứa case "set_payment_plan_status"',
+  +   'JS :2145 không chứa action === "delete_payment_plan"',
+  +   'JAVA :670 không chứa case "delete_payment_plan"',
+  +   'JS :2148 không chứa action === "save_advance_request"',
+  +   'JAVA :675 không chứa case "save_advance_request"',
+  +   'JS :2154 không chứa action === "settle_advance_request"',
+  +   'JAVA :680 không chứa case "settle_advance_request"',
+  +   'JS :2157 không chứa action === "delete_advance_request"',
+  +   'JAVA :685 không chứa case "delete_advance_request"',
+  +   'JS :2160 không chứa action === "save_site_expense_claim"',
+  +   'JAVA :690 không chứa case "save_site_expense_claim"',
+  +   'JS :2166 không chứa action === "approve_site_expense_claim"',
+  +   'JAVA :695 không chứa case "approve_site_expense_claim"',
+  +   'JS :2169 không chứa action === "delete_site_expense_claim"',
+  +   'JAVA :805 không chứa case "delete_site_expense_claim"',
+  +   'JS :2172 không chứa action === "save_bank_account"',
+  +   'JAVA :700 không chứa case "save_bank_account"',
+  +   'JS :2178 không chứa action === "save_cashbook_entry"',
+  +   'JAVA :705 không chứa case "save_cashbook_entry"',
+  +   'JS :2184 không chứa action === "delete_cashbook_entry"',
+  +   'JAVA :710 không chứa case "delete_cashbook_entry"',
+  +   'JS :2187 không chứa action === "save_accounting_voucher"',
+  +   'JAVA :715 không chứa case "save_accounting_voucher"',
+  +   'JS :2193 không chứa action === "delete_accounting_voucher"',
+  +   'JAVA :720 không chứa case "delete_accounting_voucher"'
+  + ]
+  - []
+  
+      at TestContext.<anonymous> (file:///D:/13.%20Duong%20Trong%20Thang/Tai%20lieu/1.%20Du%20an%20chuan%20hoa%20quy%20trinh/VNTECH_ERP_V5_3_0_MASTER_BASELINE_R1_1_1_PROJECT_NAV_FINAL_FP_FIXED_20260908/tests/f03-tai-chinh-audit-deps.test.mjs:61:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [ 'JS :1354 không chứa action === "save_capital_recovery"', 'JAVA :595 không chứa case "save_capital_recovery"', 'JS :1365 không chứa action === "delete_capital_recovery"', 'JAVA :600 không chứa case "delete_capital_recovery"', 'JS :1368 không chứa action === "save_contract_payment"', 'JAVA :605 không chứa case "save_contract_payment"', 'JS :1375 không chứa action === "import_contract_payments"', 'JAVA :610 không chứa case "import_contract_payments"', 'JS :1378 không chứa action === "delete_contract_payment"', 'JAVA :655 không chứa case "delete_contract_payment"', 'JS :1331 không chứa action === "save_production_report"', 'JAVA :585 không chứa case "save_production_report"', 'JS :1338 không chứa action === "approve_production_report"', 'JAVA :590 không chứa case "approve_production_report"', 'JS :1390 không chứa action === "save_team_payment"', 'JAVA :630 không chứa case "save_team_payment"', 'JS :1393 không chứa action === "settle_team_subcontract"', 'JAVA :650 không chứa case "settle_team_subcontract"', 'JS :2136 không chứa action === "save_payment_plan"', 'JAVA :660 không chứa case "save_payment_plan"', 'JS :2142 không chứa action === "set_payment_plan_status"', 'JAVA :665 không chứa case "set_payment_plan_status"', 'JS :2145 không chứa action === "delete_payment_plan"', 'JAVA :670 không chứa case "delete_payment_plan"', 'JS :2148 không chứa action === "save_advance_request"', 'JAVA :675 không chứa case "save_advance_request"', 'JS :2154 không chứa action === "settle_advance_request"', 'JAVA :680 không chứa case "settle_advance_request"', 'JS :2157 không chứa action === "delete_advance_request"', 'JAVA :685 không chứa case "delete_advance_request"', 'JS :2160 không chứa action === "save_site_expense_claim"', 'JAVA :690 không chứa case "save_site_expense_claim"', 'JS :2166 không chứa action === "approve_site_expense_claim"', 'JAVA :695 không chứa case "approve_site_expense_claim"', 'JS :2169 không chứa action === "delete_site_expense_claim"', 'JAVA :805 không chứa case "delete_site_expense_claim"', 'JS :2172 không chứa action === "save_bank_account"', 'JAVA :700 không chứa case "save_bank_account"', 'JS :2178 không chứa action === "save_cashbook_entry"', 'JAVA :705 không chứa case "save_cashbook_entry"', 'JS :2184 không chứa action === "delete_cashbook_entry"', 'JAVA :710 không chứa case "delete_cashbook_entry"', 'JS :2187 không chứa action === "save_accounting_voucher"', 'JAVA :715 không chứa case "save_accounting_voucher"', 'JS :2193 không chứa action === "delete_accounting_voucher"', 'JAVA :720 không chứa case "delete_accounting_voucher"' ],
+    expected: [],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests\p01-p02-p03-contract.test.mjs:128:1
+✖ P-03/c — chiều «Trạng thái» khớp CẢ `status` LẪN `supplyStatus` (phiếu đề nghị có 2 trạng thái) (2.5688ms)
+  AssertionError [ERR_ASSERTION]: chọn `awaiting_po` phải khớp qua `supplyStatus`
+  + actual - expected
+  
+  + []
+  - [
+  -   'MR-1'
+  - ]
+  
+      at TestContext.<anonymous> (file:///D:/13.%20Duong%20Trong%20Thang/Tai%20lieu/1.%20Du%20an%20chuan%20hoa%20quy%20trinh/VNTECH_ERP_V5_3_0_MASTER_BASELINE_R1_1_1_PROJECT_NAV_FINAL_FP_FIXED_20260908/tests/p01-p02-p03-contract.test.mjs:130:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [],
+    expected: [ 'MR-1' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at tests\p07-supplier-partner-split.test.mjs:145:1
+✖ P-07 — app/page.tsx nối ĐỦ 8 điểm chạm (khuôn `W-01`) cho 2 mục mới (3.9076ms)
+  AssertionError [ERR_ASSERTION]: `activateModule` chưa nhận type `view` mới
+      at TestContext.<anonymous> (file:///D:/13.%20Duong%20Trong%20Thang/Tai%20lieu/1.%20Du%20an%20chuan%20hoa%20quy%20trinh/VNTECH_ERP_V5_3_0_MASTER_BASELINE_R1_1_1_PROJECT_NAV_FINAL_FP_FIXED_20260908/tests/p07-supplier-partner-split.test.mjs:155:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: '/* Template preflight markers: Mẫu Excel Phiếu đề nghị | Mẫu Excel BOQ/HĐ | Mẫu Excel Danh mục */\r\n"use client";\r\n\r\n// VNTECH PROPRIETARY SOURCE | Owner: CÔNG TY CỔ PHẦN THƯƠNG MẠI ĐẦU TƯ PHÁT TRIỂN CÔNG NGHỆ VIỆT (VNTECH) | Product: VNTECH-KHO-MEP-001 | Fingerprint: SSOT\r\n\r\nimport { Component, FormEvent, Fragment, ReactNode, useCallback, useEffect, useMemo, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, type ChangeEvent } from "react";\r\nimport { downloadMaterialTemplate, downloadMaterialTemplateCsv, parseMaterialFile, parseSpreadsheetRows, type ImportMaterial } from "@/lib/material-import";\r\nimport { downloadRequestPdf, downloadRequestXlsx, downloadSupplyPdf, downloadSupplyXlsx, type RequestExportDocument, type SupplyExportDocument } from "@/lib/request-export";\r\nimport { downloadBoqCsv, downloadBoqPdf, downloadBoqPriceTemplateXlsx, downloadBoqTemplateCsv, downloadBoqTemplateXlsx, downloadBoqXlsx, pdfFromJpegs } from "@/lib/boq-export";\r\nimport { downloadMaterialCatalogXlsx } from "@/lib/material-catalog-export";\r\nimport { VNTECH_BRAND } from "@/lib/vntech-brand";\r\nimport { configuredFormFields, fieldConfig, mergedFormFields, type FormFieldConfig } from "@/lib/form-fields";\r\nimport { downloadBlob, downloadCsv, downloadPublicTemplate, downloadSimpleXlsx, type TableCell } from "@/lib/tabular-export";\r\nimport { mapProjectBulkSheet, mapUserBulkSheet, PROJECT_BULK_HEADERS, USER_BULK_HEADERS } from "@/lib/admin-bulk-import";\r\n// PHASE 1 — THƯ VIỆN THÀNH PHẦN DÙNG CHUNG (app/components/ui).\r\n// Một nguồn duy nhất cho các khuôn lặp lại: thanh công cụ danh sách, bảng dữ liệu, nhãn\r\n// trạng thái, chặn theo quyền, dải phê duyệt/hoạt động, và khung chi tiết thực thể.\r\n// Xem docs/24 §4 và docs/25 PHASE 1.\r\nimport {\r\n  ActivityTimeline, ApprovalTimeline, DataTable, EntityDetailModal,\r\n  ListToolbar, PermissionGuard, StatusBadge,\r\n  type ApprovalStep,\r\n} from "@/app/components/ui";\r\nimport { ADMIN_HELP_TEXT, APPROVAL_MODE_LABELS, APPROVAL_MODE_SHORT, APPROVAL_STAGE_LABELS, BOQ_SYSTEM_CODES, CODE39, DEPT_MODULE_GROUP, PERM_CAPS, PROJECT_STATUS_LABELS, UI_NOW_MS, WORK_CLOSED, WORK_STATUS_LABELS, canvasJpegBytesForDownload, defaultMenuGroups, durationText, format, initials, joinCodes, materialCatalogTemplateRows, normalizeBoqHeader, normalizeMasterHeader, normalizePaymentDate, projectPeriod, roleNames, sanitizeUiText, taskStatusLabel, truthyCatalog } from "@/lib/ui-shared";\r\nimport type { ModuleKey, Row } from "@/lib/ui-shared";\r\nimport { CardHead, Empty, Kpi, NavIcon, date, money } from "@/lib/ui-shared";\r\nimport type { AppData } from "@/lib/ui-shared";\r\nimport { SealScreen } from "@/app/screens/SealScreen";\r\nimport { ReportView } from "@/app/screens/ReportView";\r\nimport { REPORT_CATALOG, findEntry, sourceRows } from "@/lib/report-catalog";\r\nimport { CorrespondenceScreen } from "@/app/screens/CorrespondenceScreen";\r\nimport { BenefitsScreen } from "@/app/screens/BenefitsScreen";\r\nimport { LaborScreen } from "@/app/screens/LaborScreen";\r\nimport { SiteCostScreen } from "@/app/screens/SiteCostScreen";\r\nimport { CashbankScreen } from "@/app/screens/CashbankScreen";\r\nimport { HrScreen } from "@/app/screens/HrScreen";\r\nimport { DocumentsScreen } from "@/app/screens/DocumentsScreen";\r\nimport { ConstructionScreen } from "@/app/screens/ConstructionScreen";\r\nimport { LegalDocsScreen } from "@/app/screens/LegalDocsScreen";\r\nimport { TeamDirectory } from "@/app/screens/TeamDirectory";\r\nimport { UI_TODAY } from "@/lib/ui-shared";\r\nimport { Receiving } from "@/app/screens/Receiving";\r\nimport { AttachmentPanel, code39Svg, deliveredExportRows, downloadDeliveredPdf, downloadTabularPdf, exportDeliveredCsv, exportDeliveredXlsx, exportInventoryXlsx, inventoryExportRows, printInventoryBarcodes, printInventoryLedger, printTabularReport } from "@/lib/ui-shared";\r\nimport { Delivered } from "@/app/screens/Delivered";\r\nimport { Inventory } from "@/app/screens/Inventory";\r\nimport { DEFAULT_PO_ETA, boqControlQty, boqSystemName, downloadBlankPoPlanningTemplate, downloadPaymentsPdf, downloadPoPlanningTemplate, exportPaymentsCsv, exportPaymentsXlsx, mapBoqPriceRows, mapPaymentRows, moneyBillion, normalizeBoqSystemCode, paymentExportRows, poRemainingItems } from "@/lib/ui-shared";\r\nimport { Purchasing } from "@/app/screens/Purchasing";\r\nimport { Payments } from "@/app/screens/Payments";\r\nimport { isAdminUser, modulePermission, roleBase } from "@/lib/permissions";\r\nimport { ProjectTeams } from "@/app/screens/ProjectTeams";\r\n// PHASE 4 (`PR-02`/`PR-03`/`PR-04`/`PR-06`) — các module của màn QUẢN LÝ DỰ ÁN:\r\n//   • `project-filters`            → bộ lọc 4 chiều (Trạng thái · Quản lý dự án · Phòng ban · Ngày) + hàm suy ngữ cảnh;\r\n//   • `ProjectDetailTabs`          → 5 tab con chi tiết dự án (chung · nhân sự · tổ đội · kho · lịch sử);\r\n//   • `ProjectEntityModal`         → MỘT cổng mở `EntityDetailModal` cho Project/User/Warehouse/Team;\r\n//   • `project-bch-permissions`    → cổng quyền của Ban chỉ huy (đọc đúng 6 capability hiện có).\r\nimport { PROJECT_DETAIL_SUB_TABS, ProjectDetailTabs } from "@/app/screens/ProjectDetailTabs";\r\nimport { ProjectEntityModal } from "@/app/screens/ProjectEntityModal";\r\nimport type { ProjectEntityKind } from "@/app/screens/ProjectEntityModal";\r\nimport { PROJECT_FILTER_DEFAULTS, projectFilterChoices, projectFilterContext, projectManagerName, projectMatchesFilters } from "@/app/screens/project-filters";\r\nimport { bchGates } from "@/app/screens/project-bch-permissions";\r\nimport { MaterialListTable } from "@/app/screens/MaterialListTable";\r\nimport { SupplierManager } from "@/app/screens/SupplierManager";\r\n// TASK-125 (21/09/2026): «Đối tác» là BẢNG RIÊNG ⇒ mục menu `dept_plan_partners` (view "partner") mở MÀN RIÊNG,\r\n// KHÔNG còn dùng chung `SupplierManager view="partner"`. Khoá quyền vẫn là khoá CŨ `dept_plan_suppliers`.\r\nimport { PartnerManager } from "@/app/screens/PartnerManager";\r\nimport { BaseModal, FileUpload } from "@/lib/ui-blocks";\r\nimport { statusLabel } from "@/lib/labels";\r\nimport { reportExport, reportRows } from "@/lib/report-rows";\r\nimport { Requests } from "@/app/screens/Requests";\r\nimport { Stocktake } from "@/app/screens/Stocktake";\r\nimport { approvalChainStages, approvalTiming, sortStageNo, stageAllowedForUser, stageKindOf, supplyChainStages, workflowTiming } from "@/lib/approval-helpers";\r\n// PHASE 2 (§19) — «thời điểm duyệt + bình luận» của dải duyệt: hàm THUẦN dùng chung (`lib/p2-approval-timeline.ts`)\r\n// để dải tự viết ở màn Phê duyệt có đủ 6 thông tin §19 và KHÔNG bịa khi payload thiếu nguồn.\r\nimport { approvalDecisionAtView, approvalDecisionCommentView } from "@/lib/p2-approval-timeline";\r\n// TASK-126 · VIỆC ① (`Q1=A`) — nhật ký kiểm toán HIỂN THỊ mã/tên nghiệp vụ thay GUID (`audit_logs.entity_id` giữ nguyên trong CSDL).\r\nimport { auditLogDisplay } from "@/lib/audit-log-display";\r\n// TASK-126 · VIỆC ② (`Q3=B`) — HIỂN THỊ mã định danh + phiên bản của luồng phê duyệt (thiếu nguồn ⇒ «chưa có nguồn», không bịa).\r\nimport { workflowIdentityView } from "@/lib/workflow-display";\r\nimport { SupplyExportButtons, poSupplyDocument, receiptSupplyDocument } from "@/lib/supply-docs";\r\nimport { allocateReturnMenuItems, allocateReturnViewFor, approvalCenterGroup, approvalCenterMenuKey, configuredMenuGroups, independentMenuKeys, kpiSummaryMenuItems, legacyKpiMenuKeys, legacyReportsMenuKeys, legacySupplierPartnerMenuKeys, legacyWarehouseMenuKeys, legacyWorkMenuKeys, modules, reportsSummaryMenuItems, supplierPartnerMenuItems, supplierPartnerViewFor, warehouseMenuItems, warehouseMenuViewFor, workMenuItems } from "@/lib/menu-helpers";\r\nimport type { SupplierPartnerMenuView, WarehouseMenuView, WorkMenuView } from "@/lib/menu-helpers";\r\nimport { requestLineContext } from "@/lib/request-context";\r\nimport { isBoqTemplateInstructionRow, normalizeBoqRowRole, normalizeBoqType } from "@/lib/boq-normalize";\r\nimport { daysFromToday } from "@/lib/date-helpers";\r\nimport { decide, savedRequestDocument } from "@/lib/request-actions";\r\nimport { configuredModules, workflowApproverCandidates } from "@/lib/workflow-helpers";\r\nimport { ReceiptDrawer } from "@/app/screens/ReceiptDrawer";\r\n// MT2-P9-06 (§7.6) — MÀN «CẤP PHÁT & HOÀN TRẢ VẬT TƯ»: 2 tab danh sách (Cấp phát / Hoàn trả) — nền tảng UI/list/tab/data, ⛔ không tự suy diễn nghiệp vụ (§14).\r\nimport { AllocateReturn } from "@/app/screens/AllocateReturn";\r\n// PHASE 2 (§21) — MÀN CHI TIẾT PO (Source PR · Ordered/Received/Remaining · danh sách GRN · Timeline).\r\nimport { PurchaseOrderDrawer } from "@/app/screens/PurchaseOrderDrawer";\r\nimport { RequestDrawer } from "@/app/screens/RequestDrawer";\r\nimport { WorkflowModal } from "@/app/screens/WorkflowModal";\r\nimport { TaskTable, WorkCenter, isTaskLate, workRate } from "@/app/screens/WorkCenter";\r\nimport { BoqControl, BoqExportButtons, boqAssessment, boqCellValue, boqExportRows, boqVariationQty, mapBoqRows, useResizableColumnWidths, withBoqGroupContext } from "@/app/screens/BoqControl";\r\n// PHASE 7 (AD-*) — LÕI THUẦN CỦA MÀN QUẢN TRỊ HỆ THỐNG: nhãn 12 bước (AD-01), 13 cột tài khoản (AD-02),\r\n// trạng thái «chưa có nguồn» cho 2 trường thiếu nguồn, sắp xếp mặc định (AD-04), 2 cặp sub-tab (AD-05/AD-06),\r\n// lọc + chọn nhiều + xoá quyền phòng ban (AD-08), cột User/Actor của nhật ký (AD-13), danh mục trường tự\r\n// phục vụ (AD-16). Mọi quy tắc ở đây đều có test hợp đồng tương ứng `tests/adNN-*.test.mjs`.\r\nimport { ACCOUNT_COLUMNS, ACCOUNT_DEFAULT_SORT, ACCOUNT_SORT_NOTE, ACCOUNT_UNSOURCED_REASON, ADMIN_STEP_LABELS, AUDIT_ACTOR_COLUMN_SOURCE, AUDIT_RESULT_VALUES, AUDIT_USER_COLUMN_SOURCE, ORG_SUB_TABS, POSITION_SUB_TABS, SELF_EDIT_FIELDS, UNSOURCED_TEXT, accountRows, accountSortCompare, auditActorOf, auditResultLabel, auditUserOf, bulkDeleteDepartmentPermissionsEnabled, filterDepartments, selectedPermissionRows, toggleSelection } from "@/app/screens/admin-governance-pure";\r\n\r\nconst VNTECH_UI_CONTRACT_ID = VNTECH_BRAND.release.uiContractId;\r\nconst VNTECH_UI_BUILD_MARKER = VNTECH_BRAND.release.uiBuildMarker;\r\nconst VNTECH_FUNCTIONAL_UI_MARKER = VN'... 589611 more characters,
+    expected: /function activateModule\(next:ModuleKey, view:WorkMenuView\|WarehouseMenuView\|SupplierPartnerMenuView\|null=null\)\{/,
+    operator: 'match',
+    diff: 'simple'
+  }
+
+test at tests\p07-supplier-partner-split.test.mjs:166:1
+✖ P-07 — màn đích: khoá cũ render `SupplierManager` kèm `view`, và KHÔNG còn rơi vào nhánh chung `dept_plan_*` (1.3743ms)
+  AssertionError [ERR_ASSERTION]: Chưa render `SupplierManager` cho khoá cũ kèm `view`
+      at TestContext.<anonymous> (file:///D:/13.%20Duong%20Trong%20Thang/Tai%20lieu/1.%20Du%20an%20chuan%20hoa%20quy%20trinh/VNTECH_ERP_V5_3_0_MASTER_BASELINE_R1_1_1_PROJECT_NAV_FINAL_FP_FIXED_20260908/tests/p07-supplier-partner-split.test.mjs:167:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: '/* Template preflight markers: Mẫu Excel Phiếu đề nghị | Mẫu Excel BOQ/HĐ | Mẫu Excel Danh mục */\r\n"use client";\r\n\r\n// VNTECH PROPRIETARY SOURCE | Owner: CÔNG TY CỔ PHẦN THƯƠNG MẠI ĐẦU TƯ PHÁT TRIỂN CÔNG NGHỆ VIỆT (VNTECH) | Product: VNTECH-KHO-MEP-001 | Fingerprint: SSOT\r\n\r\nimport { Component, FormEvent, Fragment, ReactNode, useCallback, useEffect, useMemo, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, type ChangeEvent } from "react";\r\nimport { downloadMaterialTemplate, downloadMaterialTemplateCsv, parseMaterialFile, parseSpreadsheetRows, type ImportMaterial } from "@/lib/material-import";\r\nimport { downloadRequestPdf, downloadRequestXlsx, downloadSupplyPdf, downloadSupplyXlsx, type RequestExportDocument, type SupplyExportDocument } from "@/lib/request-export";\r\nimport { downloadBoqCsv, downloadBoqPdf, downloadBoqPriceTemplateXlsx, downloadBoqTemplateCsv, downloadBoqTemplateXlsx, downloadBoqXlsx, pdfFromJpegs } from "@/lib/boq-export";\r\nimport { downloadMaterialCatalogXlsx } from "@/lib/material-catalog-export";\r\nimport { VNTECH_BRAND } from "@/lib/vntech-brand";\r\nimport { configuredFormFields, fieldConfig, mergedFormFields, type FormFieldConfig } from "@/lib/form-fields";\r\nimport { downloadBlob, downloadCsv, downloadPublicTemplate, downloadSimpleXlsx, type TableCell } from "@/lib/tabular-export";\r\nimport { mapProjectBulkSheet, mapUserBulkSheet, PROJECT_BULK_HEADERS, USER_BULK_HEADERS } from "@/lib/admin-bulk-import";\r\n// PHASE 1 — THƯ VIỆN THÀNH PHẦN DÙNG CHUNG (app/components/ui).\r\n// Một nguồn duy nhất cho các khuôn lặp lại: thanh công cụ danh sách, bảng dữ liệu, nhãn\r\n// trạng thái, chặn theo quyền, dải phê duyệt/hoạt động, và khung chi tiết thực thể.\r\n// Xem docs/24 §4 và docs/25 PHASE 1.\r\nimport {\r\n  ActivityTimeline, ApprovalTimeline, DataTable, EntityDetailModal,\r\n  ListToolbar, PermissionGuard, StatusBadge,\r\n  type ApprovalStep,\r\n} from "@/app/components/ui";\r\nimport { ADMIN_HELP_TEXT, APPROVAL_MODE_LABELS, APPROVAL_MODE_SHORT, APPROVAL_STAGE_LABELS, BOQ_SYSTEM_CODES, CODE39, DEPT_MODULE_GROUP, PERM_CAPS, PROJECT_STATUS_LABELS, UI_NOW_MS, WORK_CLOSED, WORK_STATUS_LABELS, canvasJpegBytesForDownload, defaultMenuGroups, durationText, format, initials, joinCodes, materialCatalogTemplateRows, normalizeBoqHeader, normalizeMasterHeader, normalizePaymentDate, projectPeriod, roleNames, sanitizeUiText, taskStatusLabel, truthyCatalog } from "@/lib/ui-shared";\r\nimport type { ModuleKey, Row } from "@/lib/ui-shared";\r\nimport { CardHead, Empty, Kpi, NavIcon, date, money } from "@/lib/ui-shared";\r\nimport type { AppData } from "@/lib/ui-shared";\r\nimport { SealScreen } from "@/app/screens/SealScreen";\r\nimport { ReportView } from "@/app/screens/ReportView";\r\nimport { REPORT_CATALOG, findEntry, sourceRows } from "@/lib/report-catalog";\r\nimport { CorrespondenceScreen } from "@/app/screens/CorrespondenceScreen";\r\nimport { BenefitsScreen } from "@/app/screens/BenefitsScreen";\r\nimport { LaborScreen } from "@/app/screens/LaborScreen";\r\nimport { SiteCostScreen } from "@/app/screens/SiteCostScreen";\r\nimport { CashbankScreen } from "@/app/screens/CashbankScreen";\r\nimport { HrScreen } from "@/app/screens/HrScreen";\r\nimport { DocumentsScreen } from "@/app/screens/DocumentsScreen";\r\nimport { ConstructionScreen } from "@/app/screens/ConstructionScreen";\r\nimport { LegalDocsScreen } from "@/app/screens/LegalDocsScreen";\r\nimport { TeamDirectory } from "@/app/screens/TeamDirectory";\r\nimport { UI_TODAY } from "@/lib/ui-shared";\r\nimport { Receiving } from "@/app/screens/Receiving";\r\nimport { AttachmentPanel, code39Svg, deliveredExportRows, downloadDeliveredPdf, downloadTabularPdf, exportDeliveredCsv, exportDeliveredXlsx, exportInventoryXlsx, inventoryExportRows, printInventoryBarcodes, printInventoryLedger, printTabularReport } from "@/lib/ui-shared";\r\nimport { Delivered } from "@/app/screens/Delivered";\r\nimport { Inventory } from "@/app/screens/Inventory";\r\nimport { DEFAULT_PO_ETA, boqControlQty, boqSystemName, downloadBlankPoPlanningTemplate, downloadPaymentsPdf, downloadPoPlanningTemplate, exportPaymentsCsv, exportPaymentsXlsx, mapBoqPriceRows, mapPaymentRows, moneyBillion, normalizeBoqSystemCode, paymentExportRows, poRemainingItems } from "@/lib/ui-shared";\r\nimport { Purchasing } from "@/app/screens/Purchasing";\r\nimport { Payments } from "@/app/screens/Payments";\r\nimport { isAdminUser, modulePermission, roleBase } from "@/lib/permissions";\r\nimport { ProjectTeams } from "@/app/screens/ProjectTeams";\r\n// PHASE 4 (`PR-02`/`PR-03`/`PR-04`/`PR-06`) — các module của màn QUẢN LÝ DỰ ÁN:\r\n//   • `project-filters`            → bộ lọc 4 chiều (Trạng thái · Quản lý dự án · Phòng ban · Ngày) + hàm suy ngữ cảnh;\r\n//   • `ProjectDetailTabs`          → 5 tab con chi tiết dự án (chung · nhân sự · tổ đội · kho · lịch sử);\r\n//   • `ProjectEntityModal`         → MỘT cổng mở `EntityDetailModal` cho Project/User/Warehouse/Team;\r\n//   • `project-bch-permissions`    → cổng quyền của Ban chỉ huy (đọc đúng 6 capability hiện có).\r\nimport { PROJECT_DETAIL_SUB_TABS, ProjectDetailTabs } from "@/app/screens/ProjectDetailTabs";\r\nimport { ProjectEntityModal } from "@/app/screens/ProjectEntityModal";\r\nimport type { ProjectEntityKind } from "@/app/screens/ProjectEntityModal";\r\nimport { PROJECT_FILTER_DEFAULTS, projectFilterChoices, projectFilterContext, projectManagerName, projectMatchesFilters } from "@/app/screens/project-filters";\r\nimport { bchGates } from "@/app/screens/project-bch-permissions";\r\nimport { MaterialListTable } from "@/app/screens/MaterialListTable";\r\nimport { SupplierManager } from "@/app/screens/SupplierManager";\r\n// TASK-125 (21/09/2026): «Đối tác» là BẢNG RIÊNG ⇒ mục menu `dept_plan_partners` (view "partner") mở MÀN RIÊNG,\r\n// KHÔNG còn dùng chung `SupplierManager view="partner"`. Khoá quyền vẫn là khoá CŨ `dept_plan_suppliers`.\r\nimport { PartnerManager } from "@/app/screens/PartnerManager";\r\nimport { BaseModal, FileUpload } from "@/lib/ui-blocks";\r\nimport { statusLabel } from "@/lib/labels";\r\nimport { reportExport, reportRows } from "@/lib/report-rows";\r\nimport { Requests } from "@/app/screens/Requests";\r\nimport { Stocktake } from "@/app/screens/Stocktake";\r\nimport { approvalChainStages, approvalTiming, sortStageNo, stageAllowedForUser, stageKindOf, supplyChainStages, workflowTiming } from "@/lib/approval-helpers";\r\n// PHASE 2 (§19) — «thời điểm duyệt + bình luận» của dải duyệt: hàm THUẦN dùng chung (`lib/p2-approval-timeline.ts`)\r\n// để dải tự viết ở màn Phê duyệt có đủ 6 thông tin §19 và KHÔNG bịa khi payload thiếu nguồn.\r\nimport { approvalDecisionAtView, approvalDecisionCommentView } from "@/lib/p2-approval-timeline";\r\n// TASK-126 · VIỆC ① (`Q1=A`) — nhật ký kiểm toán HIỂN THỊ mã/tên nghiệp vụ thay GUID (`audit_logs.entity_id` giữ nguyên trong CSDL).\r\nimport { auditLogDisplay } from "@/lib/audit-log-display";\r\n// TASK-126 · VIỆC ② (`Q3=B`) — HIỂN THỊ mã định danh + phiên bản của luồng phê duyệt (thiếu nguồn ⇒ «chưa có nguồn», không bịa).\r\nimport { workflowIdentityView } from "@/lib/workflow-display";\r\nimport { SupplyExportButtons, poSupplyDocument, receiptSupplyDocument } from "@/lib/supply-docs";\r\nimport { allocateReturnMenuItems, allocateReturnViewFor, approvalCenterGroup, approvalCenterMenuKey, configuredMenuGroups, independentMenuKeys, kpiSummaryMenuItems, legacyKpiMenuKeys, legacyReportsMenuKeys, legacySupplierPartnerMenuKeys, legacyWarehouseMenuKeys, legacyWorkMenuKeys, modules, reportsSummaryMenuItems, supplierPartnerMenuItems, supplierPartnerViewFor, warehouseMenuItems, warehouseMenuViewFor, workMenuItems } from "@/lib/menu-helpers";\r\nimport type { SupplierPartnerMenuView, WarehouseMenuView, WorkMenuView } from "@/lib/menu-helpers";\r\nimport { requestLineContext } from "@/lib/request-context";\r\nimport { isBoqTemplateInstructionRow, normalizeBoqRowRole, normalizeBoqType } from "@/lib/boq-normalize";\r\nimport { daysFromToday } from "@/lib/date-helpers";\r\nimport { decide, savedRequestDocument } from "@/lib/request-actions";\r\nimport { configuredModules, workflowApproverCandidates } from "@/lib/workflow-helpers";\r\nimport { ReceiptDrawer } from "@/app/screens/ReceiptDrawer";\r\n// MT2-P9-06 (§7.6) — MÀN «CẤP PHÁT & HOÀN TRẢ VẬT TƯ»: 2 tab danh sách (Cấp phát / Hoàn trả) — nền tảng UI/list/tab/data, ⛔ không tự suy diễn nghiệp vụ (§14).\r\nimport { AllocateReturn } from "@/app/screens/AllocateReturn";\r\n// PHASE 2 (§21) — MÀN CHI TIẾT PO (Source PR · Ordered/Received/Remaining · danh sách GRN · Timeline).\r\nimport { PurchaseOrderDrawer } from "@/app/screens/PurchaseOrderDrawer";\r\nimport { RequestDrawer } from "@/app/screens/RequestDrawer";\r\nimport { WorkflowModal } from "@/app/screens/WorkflowModal";\r\nimport { TaskTable, WorkCenter, isTaskLate, workRate } from "@/app/screens/WorkCenter";\r\nimport { BoqControl, BoqExportButtons, boqAssessment, boqCellValue, boqExportRows, boqVariationQty, mapBoqRows, useResizableColumnWidths, withBoqGroupContext } from "@/app/screens/BoqControl";\r\n// PHASE 7 (AD-*) — LÕI THUẦN CỦA MÀN QUẢN TRỊ HỆ THỐNG: nhãn 12 bước (AD-01), 13 cột tài khoản (AD-02),\r\n// trạng thái «chưa có nguồn» cho 2 trường thiếu nguồn, sắp xếp mặc định (AD-04), 2 cặp sub-tab (AD-05/AD-06),\r\n// lọc + chọn nhiều + xoá quyền phòng ban (AD-08), cột User/Actor của nhật ký (AD-13), danh mục trường tự\r\n// phục vụ (AD-16). Mọi quy tắc ở đây đều có test hợp đồng tương ứng `tests/adNN-*.test.mjs`.\r\nimport { ACCOUNT_COLUMNS, ACCOUNT_DEFAULT_SORT, ACCOUNT_SORT_NOTE, ACCOUNT_UNSOURCED_REASON, ADMIN_STEP_LABELS, AUDIT_ACTOR_COLUMN_SOURCE, AUDIT_RESULT_VALUES, AUDIT_USER_COLUMN_SOURCE, ORG_SUB_TABS, POSITION_SUB_TABS, SELF_EDIT_FIELDS, UNSOURCED_TEXT, accountRows, accountSortCompare, auditActorOf, auditResultLabel, auditUserOf, bulkDeleteDepartmentPermissionsEnabled, filterDepartments, selectedPermissionRows, toggleSelection } from "@/app/screens/admin-governance-pure";\r\n\r\nconst VNTECH_UI_CONTRACT_ID = VNTECH_BRAND.release.uiContractId;\r\nconst VNTECH_UI_BUILD_MARKER = VNTECH_BRAND.release.uiBuildMarker;\r\nconst VNTECH_FUNCTIONAL_UI_MARKER = VN'... 589611 more characters,
+    expected: /active === "dept_plan_suppliers" && <SupplierManager data=\{data\} action=\{action\} view=\{supplierPartnerScreenView\}[^>]*\/>/,
+    operator: 'match',
+    diff: 'simple'
+  }
+
+test at tests\p07-supplier-partner-split.test.mjs:178:1
+✖ P-07 — MỌI khai báo menu KHÁC không đổi so với bản gốc (chỉ 1 nhãn đổi) (2.0644ms)
+  AssertionError [ERR_ASSERTION]: Thứ tự mục menu của khối `modules` đã bị đổi
+  
+  false !== true
+  
+      at TestContext.<anonymous> (file:///D:/13.%20Duong%20Trong%20Thang/Tai%20lieu/1.%20Du%20an%20chuan%20hoa%20quy%20trinh/VNTECH_ERP_V5_3_0_MASTER_BASELINE_R1_1_1_PROJECT_NAV_FINAL_FP_FIXED_20260908/tests/p07-supplier-partner-split.test.mjs:181:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\p07-supplier-partner-split.test.mjs:192:1
+✖ P-07 — KHÔNG thêm dòng `module_catalog`/migration: `drizzle/**` không nhắc `dept_plan_partners` (131.4572ms)
+  AssertionError [ERR_ASSERTION]: Thay đổi trong `drizzle/` là NGOÀI PHẠM VI `P-07`:
+  ?? drizzle/0171_phase_gd_mt2_p2_02_timeline_horizontal_20260921_identity.sql
+  ?? drizzle/0172_phase_gd_mt2_p2_06_attachment_multi_20260921_identity.sql
+  ?? drizzle/0173_phase_gd_mt2_p2_06_attachment_multi_fix_20260921_identity.sql
+  ?? drizzle/0174_phase_gd_mt2_p2_06b_image_lightbox_20260921_identity.sql
+  ?? drizzle/0175_phase_gd_mt2_p3_08_pr_table_tach_truc_status_identity.sql
+  ?? drizzle/0176_phase_gd_mt2_p5_01_dashboard_menu_identity.sql
+  ?? drizzle/0177_phase_gd_mt2_p5_01_02_work_dashboard_menu_identity.sql
+  ?? drizzle/0178_phase_gd_mt2_p6_01_card_cho_giam_doc_duyet_identity.sql
+  ?? drizzle/0179_phase_gd_mt2_p6_06_card_qua_han_sla_identity.sql
+  ?? drizzle/0180_phase_gd_mt2_p7_04_workitems_identity.sql
+  ?? drizzle/0181_phase_gd_mt2_p8_02_doi_ten_ncc_identity.sql
+  ?? drizzle/0182_phase_gd_mt2_p8_01_menu_ncc_cuoi_nhom_identity.sql
+  ?? drizzle/0183_phase_gd_mt2_p8_04_modal_ncc_identity.sql
+  ?? drizzle/0184_phase_gd_mt2_p8_04_listtoolbar_ncc_identity.sql
+  ?? drizzle/0185_phase_gd_mt2_p8_05_modal_chi_tiet_ncc_identity.sql
+  ?? drizzle/0186_phase_gd_mt2_p8_06_gap_vat_tu_ncc_identity.sql
+  ?? drizzle/0187_phase_gd_mt2_p8_07_sort_toolbar_pr_identity.sql
+  ?? drizzle/0188_phase_gd_mt2_p8_08_card_thieu_vat_tu_identity.sql
+  ?? drizzle/0189_phase_gd_mt2_p8_11_card_giao_hang_modal_identity.sql
+  ?? drizzle/0190_phase_gd_mt2_p8_12_modal_chi_tiet_don_giao_hang_identity.sql
+  ?? drizzle/0191_phase_gd_mt2_p9_01_card_kho_identity.sql
+  ?? drizzle/0192_phase_gd_mt2_p9_03_sort_filter_kho_identity.sql
+  ?? drizzle/0193_phase_gd_mt2_p9_04_nguon_phieu_nhap_identity.sql
+  ?? drizzle/0194_phase_gd_mt2_p9_05_danh_sach_phieu_xuat_identity.sql
+  ?? drizzle/0195_phase_gd_mt2_p9_06_cap_phat_hoan_tra_identity.sql
+  ?? drizzle/0196_phase_gd_mt2_p10_01_to_doi_filter_du_an_identity.sql
+  ?? drizzle/0197_phase_gd_mt2_p10_02_ho_so_nhan_su_3_tab_identity.sql
+  ?? drizzle/0198_phase_gd_mt2_p10_04_cong_van_tao_sua_anh_identity.sql
+  ?? drizzle/0199_phase_gd_mt2_p11_01_bao_cao_tong_hop_identity.sql
+  ?? drizzle/0200_phase_gd_mt2_p11_01_bao_cao_tong_hop_identity.sql
+  ?? drizzle/0201_phase_gd_mt2_p11_02_kpi_tong_hop_identity.sql
+  ?? drizzle/0202_phase_gd_mt2_p11_03_sua_root_cause_danh_sach_vat__identity.sql
+  ?? drizzle/0203_phase_gd_mt2_p11_04_tach_3_tab_vat_tu_identity.sql
+  ?? drizzle/0204_phase_gd_mt2_p12_01_tab_thong_bao_identity.sql
+  ?? drizzle/0205_phase_gd_mt2_p12_02_modal_thong_bao_identity.sql
+  ?? drizzle/0206_phase_gd_mt2_p12_03_bo_truong_han_muc_identity.sql
+  ?? drizzle/0207_phase_gd_mt2_p12_04_last_login_created_at_identity.sql
+  ?? drizzle/0208_phase_gd_mt2_p12_05_identity_model_identity.sql
+  ?? drizzle/0209_phase_gd_mt2_p12_06_chu_ky_user_identity.sql
+  ?? drizzle/0210_phase_gd_mt2_p13_01_modal_thong_bao_he_thong_identity.sql
+  ?? drizzle/0211_phase_gd_mt2_p13_02_khong_nhac_lai_hom_nay_identity.sql
+  ?? drizzle/0212_phase_gd_mt2_p13_03_danh_dau_da_doc_identity.sql
+  ?? drizzle/0213_phase_gd_mt2_p6_07_attachment_layout_identity.sql
+  ?? drizzle/0214_phase_gd_mt2_p6_07_attachment_overflow_fix_identity.sql
+  ?? drizzle/0215_phase_gd_mt2_p6_07_attachment_input_clamp_identity.sql
+  ?? drizzle/0216_phase_gd_mt2_p6_07_attachment_grid_single_column_identity.sql
+  ?? drizzle/0217_phase_gd_mt2_p6_07_attachment_panel_block_identity.sql
+  ?? drizzle/0218_phase_gd_mt2_p6_08_menu_single_item_identity.sql
+  + actual - expected
+  
+  + '?? drizzle/0171_phase_gd_mt2_p2_02_timeline_horizontal_20260921_identity.sql\n' +
+  +   '?? drizzle/0172_phase_gd_mt2_p2_06_attachment_multi_20260921_identity.sql\n' +
+  +   '?? drizzle/0173_phase_gd_mt2_p2_06_attachment_multi_fix_20260921_identity.sql\n' +
+  +   '?? drizzle/0174_phase_gd_mt2_p2_06b_image_lightbox_20260921_identity.sql\n' +
+  +   '?? drizzle/0175_phase_gd_mt2_p3_08_pr_table_tach_truc_status_identity.sql\n' +
+  +   '?? drizzle/0176_phase_gd_mt2_p5_01_dashboard_menu_identity.sql\n' +
+  +   '?? drizzle/0177_phase_gd_mt2_p5_01_02_work_dashboard_menu_identity.sql\n' +
+  +   '?? drizzle/0178_phase_gd_mt2_p6_01_card_cho_giam_doc_duyet_identity.sql\n' +
+  +   '?? drizzle/0179_phase_gd_mt2_p6_06_card_qua_han_sla_identity.sql\n' +
+  +   '?? drizzle/0180_phase_gd_mt2_p7_04_workitems_identity.sql\n' +
+  +   '?? drizzle/0181_phase_gd_mt2_p8_02_doi_ten_ncc_identity.sql\n' +
+  +   '?? drizzle/0182_phase_gd_mt2_p8_01_menu_ncc_cuoi_nhom_identity.sql\n' +
+  +   '?? drizzle/0183_phase_gd_mt2_p8_04_modal_ncc_identity.sql\n' +
+  +   '?? drizzle/0184_phase_gd_mt2_p8_04_listtoolbar_ncc_identity.sql\n' +
+  +   '?? drizzle/0185_phase_gd_mt2_p8_05_modal_chi_tiet_ncc_identity.sql\n' +
+  +   '?? drizzle/0186_phase_gd_mt2_p8_06_gap_vat_tu_ncc_identity.sql\n' +
+  +   '?? drizzle/0187_phase_gd_mt2_p8_07_sort_toolbar_pr_identity.sql\n' +
+  +   '?? drizzle/0188_phase_gd_mt2_p8_08_card_thieu_vat_tu_identity.sql\n' +
+  +   '?? drizzle/0189_phase_gd_mt2_p8_11_card_giao_hang_modal_identity.sql\n' +
+  +   '?? drizzle/0190_phase_gd_mt2_p8_12_modal_chi_tiet_don_giao_hang_identity.sql\n' +
+  +   '?? drizzle/0191_phase_gd_mt2_p9_01_card_kho_identity.sql\n' +
+  +   '?? drizzle/0192_phase_gd_mt2_p9_03_sort_filter_kho_identity.sql\n' +
+  +   '?? drizzle/0193_phase_gd_mt2_p9_04_nguon_phieu_nhap_identity.sql\n' +
+  +   '?? drizzle/0194_phase_gd_mt2_p9_05_danh_sach_phieu_xuat_identity.sql\n' +
+  +   '?? drizzle/0195_phase_gd_mt2_p9_06_cap_phat_hoan_tra_identity.sql\n' +
+  +   '?? drizzle/0196_phase_gd_mt2_p10_01_to_doi_filter_du_an_identity.sql\n' +
+  +   '?? drizzle/0197_phase_gd_mt2_p10_02_ho_so_nhan_su_3_tab_identity.sql\n' +
+  +   '?? drizzle/0198_phase_gd_mt2_p10_04_cong_van_tao_sua_anh_identity.sql\n' +
+  +   '?? drizzle/0199_phase_gd_mt2_p11_01_bao_cao_tong_hop_identity.sql\n' +
+  +   '?? drizzle/0200_phase_gd_mt2_p11_01_bao_cao_tong_hop_identity.sql\n' +
+  +   '?? drizzle/0201_phase_gd_mt2_p11_02_kpi_tong_hop_identity.sql\n' +
+  +   '?? drizzle/0202_phase_gd_mt2_p11_03_sua_root_cause_danh_sach_vat__identity.sql\n' +
+  +   '?? drizzle/0203_phase_gd_mt2_p11_04_tach_3_tab_vat_tu_identity.sql\n' +
+  +   '?? drizzle/0204_phase_gd_mt2_p12_01_tab_thong_bao_identity.sql\n' +
+  +   '?? drizzle/0205_phase_gd_mt2_p12_02_modal_thong_bao_identity.sql\n' +
+  +   '?? drizzle/0206_phase_gd_mt2_p12_03_bo_truong_han_muc_identity.sql\n' +
+  +   '?? drizzle/0207_phase_gd_mt2_p12_04_last_login_created_at_identity.sql\n' +
+  +   '?? drizzle/0208_phase_gd_mt2_p12_05_identity_model_identity.sql\n' +
+  +   '?? drizzle/0209_phase_gd_mt2_p12_06_chu_ky_user_identity.sql\n' +
+  +   '?? drizzle/0210_phase_gd_mt2_p13_01_modal_thong_bao_he_thong_identity.sql\n' +
+  +   '?? drizzle/0211_phase_gd_mt2_p13_02_khong_nhac_lai_hom_nay_identity.sql\n' +
+  +   '?? drizzle/0212_phase_gd_mt2_p13_03_danh_dau_da_doc_identity.sql\n' +
+  +   '?? drizzle/0213_phase_gd_mt2_p6_07_attachment_layout_identity.sql\n' +
+  +   '?? drizzle/0214_phase_gd_mt2_p6_07_attachment_overflow_fix_identity.sql\n' +
+  +   '?? drizzle/0215_phase_gd_mt2_p6_07_attachment_input_clamp_identity.sql\n' +
+  +   '?? drizzle/0216_phase_gd_mt2_p6_07_attachment_grid_single_column_identity.sql\n' +
+  +   '?? drizzle/0217_phase_gd_mt2_p6_07_attachment_panel_block_identity.sql\n' +
+  +   '?? drizzle/0218_phase_gd_mt2_p6_08_menu_single_item_identity.sql'
+  - ''
+  
+      at TestContext.<anonymous> (file:///D:/13.%20Duong%20Trong%20Thang/Tai%20lieu/1.%20Du%20an%20chuan%20hoa%20quy%20trinh/VNTECH_ERP_V5_3_0_MASTER_BASELINE_R1_1_1_PROJECT_NAV_FINAL_FP_FIXED_20260908/tests/p07-supplier-partner-split.test.mjs:209:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: '?? drizzle/0171_phase_gd_mt2_p2_02_timeline_horizontal_20260921_identity.sql\n?? drizzle/0172_phase_gd_mt2_p2_06_attachment_multi_20260921_identity.sql\n?? drizzle/0173_phase_gd_mt2_p2_06_attachment_multi_fix_20260921_identity.sql\n?? drizzle/0174_phase_gd_mt2_p2_06b_image_lightbox_20260921_identity.sql\n?? drizzle/0175_phase_gd_mt2_p3_08_pr_table_tach_truc_status_identity.sql\n?? drizzle/0176_phase_gd_mt2_p5_01_dashboard_menu_identity.sql\n?? drizzle/0177_phase_gd_mt2_p5_01_02_work_dashboard_menu_identity.sql\n?? drizzle/0178_phase_gd_mt2_p6_01_card_cho_giam_doc_duyet_identity.sql\n?? drizzle/0179_phase_gd_mt2_p6_06_card_qua_han_sla_identity.sql\n?? drizzle/0180_phase_gd_mt2_p7_04_workitems_identity.sql\n?? drizzle/0181_phase_gd_mt2_p8_02_doi_ten_ncc_identity.sql\n?? drizzle/0182_phase_gd_mt2_p8_01_menu_ncc_cuoi_nhom_identity.sql\n?? drizzle/0183_phase_gd_mt2_p8_04_modal_ncc_identity.sql\n?? drizzle/0184_phase_gd_mt2_p8_04_listtoolbar_ncc_identity.sql\n?? drizzle/0185_phase_gd_mt2_p8_05_modal_chi_tiet_ncc_identity.sql\n?? drizzle/0186_phase_gd_mt2_p8_06_gap_vat_tu_ncc_identity.sql\n?? drizzle/0187_phase_gd_mt2_p8_07_sort_toolbar_pr_identity.sql\n?? drizzle/0188_phase_gd_mt2_p8_08_card_thieu_vat_tu_identity.sql\n?? drizzle/0189_phase_gd_mt2_p8_11_card_giao_hang_modal_identity.sql\n?? drizzle/0190_phase_gd_mt2_p8_12_modal_chi_tiet_don_giao_hang_identity.sql\n?? drizzle/0191_phase_gd_mt2_p9_01_card_kho_identity.sql\n?? drizzle/0192_phase_gd_mt2_p9_03_sort_filter_kho_identity.sql\n?? drizzle/0193_phase_gd_mt2_p9_04_nguon_phieu_nhap_identity.sql\n?? drizzle/0194_phase_gd_mt2_p9_05_danh_sach_phieu_xuat_identity.sql\n?? drizzle/0195_phase_gd_mt2_p9_06_cap_phat_hoan_tra_identity.sql\n?? drizzle/0196_phase_gd_mt2_p10_01_to_doi_filter_du_an_identity.sql\n?? drizzle/0197_phase_gd_mt2_p10_02_ho_so_nhan_su_3_tab_identity.sql\n?? drizzle/0198_phase_gd_mt2_p10_04_cong_van_tao_sua_anh_identity.sql\n?? drizzle/0199_phase_gd_mt2_p11_01_bao_cao_tong_hop_identity.sql\n?? drizzle/0200_phase_gd_mt2_p11_01_bao_cao_tong_hop_identity.sql\n?? drizzle/0201_phase_gd_mt2_p11_02_kpi_tong_hop_identity.sql\n?? drizzle/0202_phase_gd_mt2_p11_03_sua_root_cause_danh_sach_vat__identity.sql\n?? drizzle/0203_phase_gd_mt2_p11_04_tach_3_tab_vat_tu_identity.sql\n?? drizzle/0204_phase_gd_mt2_p12_01_tab_thong_bao_identity.sql\n?? drizzle/0205_phase_gd_mt2_p12_02_modal_thong_bao_identity.sql\n?? drizzle/0206_phase_gd_mt2_p12_03_bo_truong_han_muc_identity.sql\n?? drizzle/0207_phase_gd_mt2_p12_04_last_login_created_at_identity.sql\n?? drizzle/0208_phase_gd_mt2_p12_05_identity_model_identity.sql\n?? drizzle/0209_phase_gd_mt2_p12_06_chu_ky_user_identity.sql\n?? drizzle/0210_phase_gd_mt2_p13_01_modal_thong_bao_he_thong_identity.sql\n?? drizzle/0211_phase_gd_mt2_p13_02_khong_nhac_lai_hom_nay_identity.sql\n?? drizzle/0212_phase_gd_mt2_p13_03_danh_dau_da_doc_identity.sql\n?? drizzle/0213_phase_gd_mt2_p6_07_attachment_layout_identity.sql\n?? drizzle/0214_phase_gd_mt2_p6_07_attachment_overflow_fix_identity.sql\n?? drizzle/0215_phase_gd_mt2_p6_07_attachment_input_clamp_identity.sql\n?? drizzle/0216_phase_gd_mt2_p6_07_attachment_grid_single_column_identity.sql\n?? drizzle/0217_phase_gd_mt2_p6_07_attachment_panel_block_identity.sql\n?? drizzle/0218_phase_gd_mt2_p6_08_menu_single_item_identity.sql',
+    expected: '',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\p12-05-user-identity-model.test.mjs:75:1
+✖ P12-05 — ⛔ KHÔNG tự bịa mã cho user đang trống (cần USER quyết định) (1.7079ms)
+  Error: ENOENT: no such file or directory, open 'D:\13. Duong Trong Thang\Tai lieu\1. Du an chuan hoa quy trinh\VNTECH_ERP_V5_3_0_MASTER_BASELINE_R1_1_1_PROJECT_NAV_FINAL_FP_FIXED_20260908\tools\_ProbeIdentity.java'
+      at readFileSync (node:fs:484:20)
+      at read (file:///D:/13.%20Duong%20Trong%20Thang/Tai%20lieu/1.%20Du%20an%20chuan%20hoa%20quy%20trinh/VNTECH_ERP_V5_3_0_MASTER_BASELINE_R1_1_1_PROJECT_NAV_FINAL_FP_FIXED_20260908/tests/p12-05-user-identity-model.test.mjs:19:21)
+      at TestContext.<anonymous> (file:///D:/13.%20Duong%20Trong%20Thang/Tai%20lieu/1.%20Du%20an%20chuan%20hoa%20quy%20trinh/VNTECH_ERP_V5_3_0_MASTER_BASELINE_R1_1_1_PROJECT_NAV_FINAL_FP_FIXED_20260908/tests/p12-05-user-identity-model.test.mjs:77:17)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    errno: -4058,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: 'D:\\13. Duong Trong Thang\\Tai lieu\\1. Du an chuan hoa quy trinh\\VNTECH_ERP_V5_3_0_MASTER_BASELINE_R1_1_1_PROJECT_NAV_FINAL_FP_FIXED_20260908\\tools\\_ProbeIdentity.java'
+  }
+
+test at tests\t01-work-menu.test.mjs:53:1
+✖ T-01 — 5 mục menu ĐÚNG nhãn · ĐÚNG nhóm · ĐÚNG đích đến (tab) · cổng quyền RIÊNG từng mục (3.5522ms)
+  AssertionError [ERR_ASSERTION]: Thiếu/sai mục menu: key: "work_dashboard", label: "Dashboard", groupKey: "my_work", view: "kpi", permissionKeys: ["dept_plan_kpi", "dept_project_kpi"]
+      at TestContext.<anonymous> (file:///D:/13.%20Duong%20Trong%20Thang/Tai%20lieu/1.%20Du%20an%20chuan%20hoa%20quy%20trinh/VNTECH_ERP_V5_3_0_MASTER_BASELINE_R1_1_1_PROJECT_NAV_FINAL_FP_FIXED_20260908/tests/t01-work-menu.test.mjs:57:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.start (node:internal/test_runner/test:1242:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests\t01-work-menu.test.mjs:91:1
+✖ T-01 — ĐÍCH ĐẾN: 4 mục → `WorkCenter` đúng tab; «Giao việc» → `DepartmentTaskWorkspace` (GIỮ NGUYÊN) (0.7474ms)
+  AssertionError [ERR_ASSERTION]: Thiếu bảng ánh xạ view → tab trong WorkCenter
+      at TestContext.<anonymous> (file:///D:/13.%20Duong%20Trong%20Thang/Tai%20lieu/1.%20Du%20an%20chuan%20hoa%20quy%20trinh/VNTECH_ERP_V5_3_0_MASTER_BASELINE_R1_1_1_PROJECT_NAV_FINAL_FP_FIXED_20260908/tests/t01-work-menu.test.mjs:94:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests\t09-task-team-member.test.mjs:157:1
+✖ T-09 — GẮN vào màn Công việc: WorkCenter import + render, KHÔNG đổi 5 tab đã chốt ở T-01 (1.7841ms)
+  AssertionError [ERR_ASSERTION]: Không được đổi ánh xạ view → tab
+      at TestContext.<anonymous> (file:///D:/13.%20Duong%20Trong%20Thang/Tai%20lieu/1.%20Du%20an%20chuan%20hoa%20quy%20trinh/VNTECH_ERP_V5_3_0_MASTER_BASELINE_R1_1_1_PROJECT_NAV_FINAL_FP_FIXED_20260908/tests/t09-task-team-member.test.mjs:163:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: '// PHASE 1 (U-11) — MODULE DÙNG CHUNG TÁCH KHỎI `app/page.tsx`.\r\n//\r\n// Vì sao tách: `app/page.tsx` là MỘT tệp khổng lồ (hơn 4.000 dòng, hơn 250 khai báo top-level).\r\n// Thứ tự cắt ĐÚNG (đã ghi ở `docs/agent-progress/U14-U11-KHAO-SAT.md` mục 2): tách HELPER DÙNG CHUNG trước\r\n// (gỡ chặn IMPORT VÒNG), rồi mới tách từng màn.\r\n//\r\n// ⚠️ ĐIỀU KIỆN AN TOÀN (do `tools/tach-lat-cat-page.mjs` tự kiểm TRƯỚC KHI GHI): mọi tên mà các khối ở đây\r\n// tham chiếu phải thuộc (a) khối cùng nằm trong tệp này, (b) tên có sẵn của JS, (c) tên đến từ `import` của\r\n// `page.tsx` — công cụ SINH LẠI import đó ở đây, hoặc (d) kiểu của React ⇒ `import type … from "react"`.\r\n// Không còn tên nào khác ⇒ KHÔNG thể tạo import vòng.\r\n//\r\n// PHASE 3 (`T-01`) — MÀN CÔNG VIỆC: 5 TAB ĐÚNG THỨ TỰ CỦA NHÓM MENU «CÔNG VIỆC»\r\n//   Cá nhân (0) · Phòng ban (1) · Giao việc (2) · Dashboard (3) · Báo cáo (4)\r\n// Giữ NGUYÊN hành vi 3 tab cũ: `Việc của tôi` → Cá nhân · `Phòng ban / tổ đội` → Phòng ban · `KPI & báo cáo` → Báo cáo.\r\n// Tab «Báo cáo» TÁI DÙNG `ReportView` + `lib/report-catalog.ts` (nguồn `workItems`) — KHÔNG viết màn mới.\r\n// Mục menu «Giao việc» KHÔNG mở màn này: nó mở `DepartmentTaskWorkspace` (xem nhánh render trong `app/page.tsx`).\r\n//\r\n// PHASE 3 (`T-05`) — tab «Cá nhân»: BA NHÓM RIÊNG (của tôi · được giao · do tôi tạo), mỗi nhóm một bộ lọc + bộ đếm.\r\n// PHASE 3 (`T-06`) — tab «Phòng ban»: CHỈ việc trong PHẠM VI ĐƯỢC PHÉP (thu hẹp trong payload, không mở rộng quyền).\r\n// PHASE 3 (`T-07`) — Board Kanban 3 chiều (Ưu tiên · Trạng thái · Phân công) tách ra `WorkKanban.tsx`, gắn ở đây.\r\n\r\nimport { DataTable, ListToolbar, PermissionGuard, StatusBadge } from "@/app/components/ui";\r\nimport { ReportView } from "@/app/screens/ReportView";\r\nimport { WorkDashboard } from "@/app/screens/WorkDashboard";\r\nimport { WorkHierarchy } from "@/app/screens/WorkHierarchy";\r\nimport { WorkKanban, kanbanManagerDepartments } from "@/app/screens/WorkKanban";\r\nimport { daysFromToday } from "@/lib/date-helpers";\r\nimport type { WorkMenuView } from "@/lib/menu-helpers";\r\nimport { isAdminUser, modulePermission, roleBase } from "@/lib/permissions";\r\nimport { REPORT_CATALOG, findEntry, sourceRows } from "@/lib/report-catalog";\r\nimport { CardHead, Kpi, UI_TODAY, WORK_CLOSED, WORK_STATUS_LABELS, date } from "@/lib/ui-shared";\r\nimport type { AppData, Row } from "@/lib/ui-shared";\r\nimport { useEffect, useState } from "react";\r\n\r\n// ══════════════════════════════════════════════════════════════════════════════════════════════════\r\n// MT2-P6-01 (§4.1) — CARD «Chờ Giám đốc duyệt»: dữ liệu **THỰC** từ approval engine.\r\n// Dùng API `director_pending_approvals` (MT2-P4-03) — backend **tự chặn 403** theo CẤP BẬC.\r\n// §4.1: «⛔ Không hiển thị card cho user không đủ quyền» ⇒ **403 ⇒ ẨN card** (⛔ không vỡ màn khi lỗi).\r\n// ⛔ KHÔNG đụng khối thuần `T06` của tệp này, ⛔ KHÔNG đụng `WorkDashboard` (có test riêng `t08`).\r\n// ══════════════════════════════════════════════════════════════════════════════════════════════════\r\nfunction DirectorPendingCard() {\r\n  const [state, setState] = useState<{ loading: boolean; total: number | null; hidden: boolean }>(\r\n    { loading: true, total: null, hidden: false });\r\n  useEffect(() => {\r\n    let alive = true;\r\n    (async () => {\r\n      try {\r\n        const response = await fetch("/api/system", {\r\n          method: "POST",\r\n          headers: { "Content-Type": "application/json" },\r\n          body: JSON.stringify({ action: "director_pending_approvals" }),\r\n        });\r\n        // ⚠️ `fetch` ⛔ KHÔNG throw khi 403 ⇒ PHẢI tự kiểm (`response.ok` là chưa đủ).\r\n        if (response.status === 403) { if (alive) setState({ loading: false, total: null, hidden: true }); return; }\r\n        const result = await response.json();\r\n        if (!response.ok) { if (alive) setState({ loading: false, total: null, hidden: true }); return; }\r\n        if (alive) setState({ loading: false, total: Number(result.total || 0), hidden: false });\r\n      } catch {\r\n        if (alive) setState({ loading: false, total: null, hidden: true });   // lỗi mạng ⇒ ẩn, KHÔNG vỡ màn\r\n      }\r\n    })();\r\n    return () => { alive = false; };\r\n  }, []);\r\n  if (state.hidden) return null;\r\n  return <Kpi icon="GD" label="Chờ Giám đốc duyệt" value={state.loading ? "…" : String(state.total ?? 0)} note="Phiếu đang chờ ở bước Giám đốc" tone="amber"/>;\r\n}\r\n\r\n// ══════════════════════════════════════════════════════════════════════════════════════════════════\r\n// MT2-P6-06 (§4.4) — ĐẾM ĐƠN QUÁ HẠN SLA. TÍNH từ dữ liệu **ĐANG CÓ** trong payload:\r\n// `requests[].approvals[]` mang đúng 2 trường §4.4 yêu cầu lưu (`status` + `due_at`/`dueAt`).\r\n// ⛔ KHÔNG gọi API mới · ⛔ KHÔNG thêm migration · ⛔ KHÔNG BỊA SỐ:\r\n// thiếu nguồn ⇒ trả `null` để UI ghi rõ «chưa có nguồn» (⛔ KHÔNG hiện 0) — theo chuẩn `WorkDashboard.tsx:6`.\r\n// ══════════════════════════════════════════════════════════════════════════════════════════════════\r\nfunction overdueApprovalCount(data: AppData): number | null {\r\n  const rows: Row[] = Array.isArray(data.requests) ? (data.requests as Row[]) : [];\r\n  const steps: Row[] = rows.flatMap((r: Row) => (Array.isArray(r.approvals) ? (r.approvals as Row[]) : []));\r\n  if (steps.length === 0) return null;                       // ⛔ chưa có nguồn ⇒ KHÔNG hiện 0\r\n  const now = Date.now();\r\n  return steps.filter((a: Row) => String(a.status) === "pending"\r\n    && Boolean(a.dueAt) && Date.parse(String(a.dueAt)) < now).length;\r\n}\r\n\r\n// PHASE 3 (`T-01`) — 5 TAB NHÓM «CÔNG VIỆC», ĐÚNG thứ tự đã chốt (5 mục menu ⇄ 5 tab).\r\nconst WORK_TABS = ["Cá nhân", "Phòng ban", "Giao việc", "Dashboard", "Báo cáo"];\r\n// MT2-P5-01 (§3.1) — thêm khoá `dashboard` (tab «Dashboard»). Số 3 ĐO từ `WORK_TABS` ở trên:\r\n// «Cá nhân»=0 · «Phòng ban»=1 · «Giao việc»=2 · **«Dashboard»=3** · «Báo cáo»=4 ⇒ `dashboard: 3` ✔\r\n// ⚠️ GIỮ `kpi: 3` (cùng index) vì `WorkMenuView` vẫn còn `"kpi"` — dùng chung đúng tab Dashboard.\r\nconst WORK_TAB_OF_VIEW: Record<WorkMenuView, number> = { personal: 0, department: 1, assign: 2, kpi: 3, dashboard: 3, reports: 4 };\r\n// Báo cáo CÔNG VIỆC dùng LẠI catalog chung (`R-05a/b/c`, nguồn `workItems`) — không khai định nghĩa mới.\r\nconst WORK_REPORT_CATALOG = REPORT_CATALOG.filter((entry) => entry.source === "workItems");\r\n\r\n// -------------------------------------------------------------------------------------------------\r\n// T05-PURE-BEGIN\r\n// ── T-05 · BA NHÓM VIỆC CÁ NHÂN (khối thuần — test t05 TRÍCH RA và CHẠY, không chỉ đọc chữ) ──────\r\n//\r\n// HỢP ĐỒNG TÊN TRƯỜNG (ĐÃ ĐO bằng payload thật + SQL bootstrap, KHÔNG suy đoán) — `scripts/system-route.mjs`:\r\n//   `wi.assigned_to AS assignedTo`   · `ua.full_name AS assignedToName`   ⇒ NGƯỜI THỰC HIỆN\r\n//   `wi.assigned_by AS assignedBy`   · `ub.full_name AS assignedByName`   ⇒ NGƯỜI GIAO VIỆC\r\n// Bảng `work_items` (drizzle 0031 + Flyway V1) KHÔNG có cột "người tạo" riêng ⇒ «DO TÔI TẠO» = tôi là người GIAO\r\n// (`assignedBy`). Hai tên `assigneeUserId`/`assigneeName` KHÔNG tồn tại trong payload (xem\r\n// `tools/probe-work-item-field-contract.mjs` — cổng đã biến lỗi im lặng này thành bất biến).\r\nconst PERSONAL_GROUPS = [\r\n  { key: "mine", label: "Của tôi", note: "Mọi việc đang mang tên tôi — gồm cả việc tôi tự tạo" },\r\n  { key: "assigned", label: "Được giao", note: "Người khác giao cho tôi (người giao khác tôi)" },\r\n  { key: "created", label: "Do tôi tạo", note: "Việc tôi giao/tạo (cho người khác hoặc cho chính tôi)" },\r\n];\r\n\r\nfunction personalWorkGroups(rows: Row[], myId: string) {\r\n  const mine = rows.filter((row) => String(row.assignedTo) === myId);\r\n  const assigned = mine.filter((row) => String(row.assignedBy) !== myId);\r\n  const created = rows.filter((row) => String(row.assignedBy) === myId);\r\n  return [\r\n    { ...PERSONAL_GROUPS[0], rows: mine, count: mine.length },\r\n    { ...PERSONAL_GROUPS[1], rows: assigned, count: assigned.length },\r\n    { ...PERSONAL_GROUPS[2], rows: created, count: created.length },\r\n  ];\r\n}\r\n// T05-PURE-END\r\n\r\n// -------------------------------------------------------------------------------------------------\r\n// T06-PURE-BEGIN\r\n// ── T-06 · PHẠM VI VIỆC PHÒNG BAN ĐƯỢC PHÉP (khối thuần — test t06 TRÍCH RA và CHẠY) ─────────────\r\n//\r\n// Khoá THẬT của payload (đo tại TASK-097, không đoán):\r\n//   • `workItems[]`    : assignedTo · assignedToName · departmentCode · projectId · status · priority\r\n//   • `userScopes[]`   : userId · projectId · permission  (nguồn `user_project_scopes`; RỖNG với người không phải admin)\r\n//   • `modulePermissions[]`            : moduleKey · canView  ⇒ cấp quyền theo NGƯỜI\r\n//   • `departmentModulePermissions[]`  : organizationCode · moduleKey · canView ⇒ cấp quyền theo PHÒNG\r\n// Luật dưới đây MÔ PHỎNG nhánh SQL của bootstrap (`scripts/system-route.mjs` — `workItemWhere`) nên chỉ có thể\r\n// THU HẸP trong chính payload mà máy chủ đã lọc: KHÔNG tự sinh dòng, KHÔNG nới phạm vi.\r\nconst WORK_DEPT_MODULE_KEYS = ["dept_plan_tasks", "dept_project_tasks", "dept_plan_assign", "dept_project_assign"];\r\n\r\nfunction workScopeOf(data: AppData) {\r\n  const me: Row = data.user || {};\r\n  const role = String(me.role || "");\r\n  const base = String(me.roleBase || me.role || "");\r\n  const myId = String(me.id || "");\r\n  const isAdmin = role === "admin" || base === "admin";\r\n  const deptCodes = [...new Set([String(me.organizationCode || ""), String(me.department || "")].filter(Boolean))];\r\n  const projectIds = [...new Set((data.userScopes || [])\r\n    .filter((scope) => String(scope.userId) === myId)\r\n    .map((scope) => String(scope.projectId || "")).filter(Boolean))];\r\n  const byUser = (data.modulePermissions || []).some((row) => WORK_DEPT_MODULE_KEYS.includes(String(row.moduleKey || "")) && Boolean(row.canView));\r\n  const byDept = (data.departmentModulePermissions || []).some((row) => WORK_DEPT_MODULE_KEYS.includes(String(row.moduleKey || ""))\r\n    && Boolean(row.canView) && deptCodes.includes(String(row.organizationCode || "")));\r\n  return {\r\n    myId, role, base, deptCodes, projectIds, isAdmin,\r\n    // ⚠️ TRÙNG LUẬT có chủ ý với `kanbanMana'... 20987 more characters,
+    expected: /const WORK_TAB_OF_VIEW: Record<WorkMenuView, number> = \{ personal: 0, department: 1, assign: 2, kpi: 3, reports: 4 \};/,
+    operator: 'match',
+    diff: 'simple'
+  }
+
+test at tests\tm04-team-crud.test.mjs:62:1
+✖ TM-04 — QUYỀN THẬT: capability + module của 3 action theo registry đang cưỡng chế (4.6829ms)
+  AssertionError [ERR_ASSERTION]: create_project_team phải gắn module «site_command»
+      at TestContext.<anonymous> (file:///D:/13.%20Duong%20Trong%20Thang/Tai%20lieu/1.%20Du%20an%20chuan%20hoa%20quy%20trinh/VNTECH_ERP_V5_3_0_MASTER_BASELINE_R1_1_1_PROJECT_NAV_FINAL_FP_FIXED_20260908/tests/tm04-team-crud.test.mjs:64:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests\w01-warehouse-menu.test.mjs:125:1
+✖ W-01 — 6 khoá CŨ của nhóm KHO bị ẨN khỏi menu, nhưng khoá vẫn SỐNG cho quyền/tiêu đề/nhánh render (4.6606ms)
+  AssertionError [ERR_ASSERTION]: Khoá cũ «warehouse_issue» đã MẤT nhánh render ⇒ chức năng bị xoá
+      at TestContext.<anonymous> (file:///D:/13.%20Duong%20Trong%20Thang/Tai%20lieu/1.%20Du%20an%20chuan%20hoa%20quy%20trinh/VNTECH_ERP_V5_3_0_MASTER_BASELINE_R1_1_1_PROJECT_NAV_FINAL_FP_FIXED_20260908/tests/w01-warehouse-menu.test.mjs:138:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests\w01-warehouse-menu.test.mjs:160:1
+✖ W-01 — HUY HIỆU nhóm KHO không mất số: cộng theo CẢ CẶP khoá quyền như `T-01` (2.0348ms)
+  AssertionError [ERR_ASSERTION]: Huy hiệu phải tính bằng `warehouseMenuBadge` ở CẢ badge nhóm lẫn mục con (desktop + mobile)
+  
+  14 !== 4
+  
+      at TestContext.<anonymous> (file:///D:/13.%20Duong%20Trong%20Thang/Tai%20lieu/1.%20Du%20an%20chuan%20hoa%20quy%20trinh/VNTECH_ERP_V5_3_0_MASTER_BASELINE_R1_1_1_PROJECT_NAV_FINAL_FP_FIXED_20260908/tests/w01-warehouse-menu.test.mjs:167:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 14,
+    expected: 4,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\w02-project-warehouse-relation.test.mjs:48:30
+✖ W-02 — CSDL THẬT: 0 dòng mồ côi (`project_id` không trỏ tới dự án nào) + số dòng khớp tệp audit (199.2515ms)
+  AssertionError [ERR_ASSERTION]: Số đo lại khác con số đã chép trong audit (kho=6, dự án=2, kho gắn dự án=5) ⇒ phải cập nhật lại tệp audit
+      at TestContext.<anonymous> (file:///D:/13.%20Duong%20Trong%20Thang/Tai%20lieu/1.%20Du%20an%20chuan%20hoa%20quy%20trinh/VNTECH_ERP_V5_3_0_MASTER_BASELINE_R1_1_1_PROJECT_NAV_FINAL_FP_FIXED_20260908/tests/w02-project-warehouse-relation.test.mjs:196:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests\w03-project-warehouse.test.mjs:48:1
+✖ W-03 — ACTION THẬT đã tồn tại (KHÔNG bịa API mới): `create_project` ghi cả dự án + kho trong 1 batch (3.0487ms)
+  AssertionError [ERR_ASSERTION]: Ba câu ghi phải nằm trong MỘT batch (nguyên tử)
+      at TestContext.<anonymous> (file:///D:/13.%20Duong%20Trong%20Thang/Tai%20lieu/1.%20Du%20an%20chuan%20hoa%20quy%20trinh/VNTECH_ERP_V5_3_0_MASTER_BASELINE_R1_1_1_PROJECT_NAV_FINAL_FP_FIXED_20260908/tests/w03-project-warehouse.test.mjs:56:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.start (node:internal/test_runner/test:1242:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'if (action === "create_project") {\r\n        requireRole(user, ["admin"]);\r\n        const code = clean(payload.code).toUpperCase();\r\n        const name = clean(payload.name);\r\n        if (!/^[A-Z0-9._-]{2,24}$/.test(code) || !name)\r\n            throw new Error("Mã dự án gồm 2–24 ký tự A-Z, số, dấu chấm/gạch; tên dự án là bắt buộc.");\r\n        const projectId = id("PRJ");\r\n        const warehouseId = id("WH");\r\n        const warehouseCode = clean(payload.warehouseCode).toUpperCase() || `KHO-${code}`;\r\n        const warehouseName = clean(payload.warehouseName) || `Kho công trường ${code}`;\r\n        // W-03 — «Tạo kho dự án? → Có thì tạo kho»: cờ `createWarehouse` MẶC ĐỊNH `true` (mọi nơi gọi cũ\r\n        // KHÔNG truyền cờ vẫn tạo kho như trước — tương thích ngược tuyệt đối). Chỉ tắt khi truyền tường minh\r\n        // `false` / `0` / `"0"` / `"false"` / `"no"` (UI hỏi Có/Không và gửi boolean).\r\n        const rawCreateWarehouse = payload.createWarehouse;\r\n        const createWarehouse = rawCreateWarehouse === undefined || rawCreateWarehouse === null || rawCreateWarehouse === ""\r\n            ? true\r\n            : ![false, 0, "0", "false", "no"].includes(typeof rawCreateWarehouse === "string" ? rawCreateWarehouse.trim().toLowerCase() : rawCreateWarehouse);\r\n        const statements = [\r\n            env.DB.prepare(`INSERT INTO projects (id,code,name,status,manager_user_id,start_date,planned_end_date,contract_no,contract_name,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)`).bind(projectId, code, name, "active", user.id, clean(payload.startDate) || null, clean(payload.plannedEndDate) || null, clean(payload.contractNo) || null, clean(payload.contractName) || null, stamp, stamp),\r\n        ];\r\n        if (createWarehouse !== false) {\r\n            statements.push(env.DB.prepare(`INSERT INTO warehouses (id,code,name,type,project_id,parent_warehouse_id,keeper_user_id,active,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)`).bind(warehouseId, warehouseCode, warehouseName, "site", projectId, "WH-CENTRAL", user.id, 1, stamp, stamp));\r\n        }\r\n        statements.push(env.DB.prepare(`INSERT OR IGNORE INTO user_project_scopes (id,user_id,project_id,permission,created_at,updated_at) VALUES (?,?,?,?,?,?)`).bind(id("SCOPE"), user.id, projectId, "admin", stamp, stamp));\r\n        await env.DB.batch(statements);\r\n        await audit(user.id, "CREATE", "project", projectId, null, { code, name, warehouseCode, warehouseName, createWarehouse }, request);\r\n        return { message: createWarehouse !== false ? `Đã tạo dự án ${code} và kho công trường riêng.` : `Đã tạo dự án ${code} (không tạo kho công trường theo lựa chọn «Không»).` };\r\n    }\r\n    ',
+    expected: /env\.DB\.batch\(\[/,
+    operator: 'match',
+    diff: 'simple'
+  }
+
+test at tests\w03-project-warehouse.test.mjs:76:1
+✖ W-03 — NHÁNH «KHÔNG» BỊ CHẶN: KHÔNG im lặng tạo kho, KHÔNG tự thêm API — UI nói rõ lý do và khoá nút lưu (0.7826ms)
+  AssertionError [ERR_ASSERTION]: Thiếu cờ `warehouseBlocked` cho nhánh «Không»
+      at TestContext.<anonymous> (file:///D:/13.%20Duong%20Trong%20Thang/Tai%20lieu/1.%20Du%20an%20chuan%20hoa%20quy%20trinh/VNTECH_ERP_V5_3_0_MASTER_BASELINE_R1_1_1_PROJECT_NAV_FINAL_FP_FIXED_20260908/tests/w03-project-warehouse.test.mjs:79:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'function ProjectModal({ data, row, close, submit }: { data: AppData; row: Row | null; close: () => void; submit: (name: string, payload: Row) => Promise<boolean> }) {\r\n  const editing = Boolean(row?.id); const warehouse = row?.id ? data.warehouses.find((item) => item.projectId === row.id && item.type === "site") : null;\r\n  // Chỉ hỏi khi TẠO MỚI (sửa dự án đã có kho thì không hỏi lại để tránh sinh kho thứ hai ngoài ý muốn).\r\n  const [createWarehouse, setCreateWarehouse] = useState("yes");\r\n  // `W-03`: chọn «Không» ⇒ bỏ trống 2 ô kho (không gửi `warehouseCode`/`warehouseName`); máy chủ bỏ câu INSERT kho.\r\n  const skipWarehouse = !editing && createWarehouse === "no";\r\n  async function send(event: FormEvent<HTMLFormElement>) {\r\n    event.preventDefault();\r\n    const payload = Object.fromEntries(new FormData(event.currentTarget));\r\n    // Nối câu trả lời Có/Không xuống action THẬT `create_project` dạng boolean — đặt SAU `...payload` để THẮNG\r\n    // giá trị chuỗi "yes"/"no" của ô radio trong FormData. Khi SỬA dự án thì KHÔNG gửi cờ (giữ nguyên hành vi cũ).\r\n    const body = editing ? { ...payload, projectId: row?.id } : { ...payload, projectId: row?.id, createWarehouse: createWarehouse === "yes" };\r\n    if (await submit(editing ? "update_project" : "create_project", body)) close();\r\n  }\r\n  return <BaseModal title={editing ? `Sửa dự án ${row?.code}` : "Thêm dự án"} note="Mã dự án, tên dự án, hợp đồng và tên/mã kho đều do Quản trị viên tự cấu hình." close={close}><form onSubmit={send}><div className="modal-body">\r\n    {!editing && <section className="permission-section" data-project-warehouse-question="create"><h3>Tạo kho dự án?</h3>\r\n      <p>Quan hệ Dự án : Kho là <b>1:N</b> (<b>W-02</b> đã xác nhận bằng CSDL thật) và <code>warehouses.project_id</code> cho phép NULL ⇒ về mô hình, dự án KHÔNG có kho là hợp lệ.</p>\r\n      <div className="permission-grid">\r\n        <label><span><b>Có</b> · tạo kèm kho công trường <small>Action thật `create_project` tạo dự án + kho `site` trong cùng một batch</small></span>\r\n          <input type="radio" name="createWarehouse" value="yes" checked={createWarehouse === "yes"} onChange={() => setCreateWarehouse("yes")} /></label>\r\n        <label><span><b>Không</b> · chỉ tạo dự án <small>Dự án tạo ra KHÔNG có kho công trường (máy chủ bỏ câu <code>INSERT INTO warehouses</code>)</small></span>\r\n          <input type="radio" name="createWarehouse" value="no" checked={createWarehouse === "no"} onChange={() => setCreateWarehouse("no")} /></label>\r\n      </div>\r\n      {skipWarehouse && <div className="inline-alert" data-project-warehouse-skipped="true">\r\n        <b>Đã chọn «Không»:</b> dự án sẽ được tạo <b>không kèm kho công trường</b>. Hai ô Mã/Tên kho bên dưới được bỏ trống.\r\n        Vẫn có thể bổ sung kho cho dự án sau này bằng chức năng <b>Sửa dự án</b>.\r\n      </div>}\r\n    </section>}\r\n    <div className="form-grid">\r\n      <label><span>Mã dự án *</span><input name="code" required defaultValue={row?.code || ""} placeholder="DA06" /></label>\r\n      <label><span>Tên dự án *</span><input name="name" required defaultValue={row?.name || ""} /></label>\r\n      <label><span>Mã kho công trường{skipWarehouse ? " (bỏ trống vì không tạo kho)" : " *"}</span><input name="warehouseCode" required={!skipWarehouse} disabled={skipWarehouse} defaultValue={warehouse?.code || (row?.code ? `KHO-${row.code}` : "")} placeholder="KHO-DA06" /></label>\r\n      <label><span>Tên kho công trường{skipWarehouse ? " (bỏ trống vì không tạo kho)" : " *"}</span><input name="warehouseName" required={!skipWarehouse} disabled={skipWarehouse} defaultValue={warehouse?.name || (row?.code ? `Kho công trường ${row.code}` : "")} placeholder="Kho công trường dự án..." /></label>\r\n      <label><span>Số Hợp đồng</span><input name="contractNo" defaultValue={row?.contractNo || ""} placeholder="HĐ-..." /></label>\r\n      <label><span>Tên / Gói hợp đồng</span><input name="contractName" defaultValue={row?.contractName || ""} /></label>\r\n      <label><span>Ngày bắt đầu</span><input type="date" name="startDate" defaultValue={row?.startDate || ""} /></label>\r\n      <label><span>Dự kiến kết thúc</span><input type="date" name="plannedEndDate" defaultValue={row?.plannedEndDate || ""} /></label>\r\n    </div>\r\n    <div className="inline-alert">Dự án và kho được quản lý độc lập. Đổi tên/mã kho tại đây không làm gộp tồn kho với dự án khác.</div></div>\r\n    <ModalFooter close={close} label={editing ? "Lưu dự án & kho →" : skipWarehouse ? "Tạo dự án (không kèm kho) →" : "Tạo dự án & kho riêng →"} /></form></BaseModal>;\r\n}\r\n',
+    expected: /const warehouseBlocked = !editing && createWarehouse === "no";/,
+    operator: 'match',
+    diff: 'simple'
+  }
+
+test at tests\w03-project-warehouse.test.mjs:95:1
+✖ W-03 — ĐỐI CHỨNG ÂM: KHÔNG có tham số/action nào bỏ được kho; máy chủ LUÔN tạo kho (nên nhánh Không mới chặn) (0.7986ms)
+  AssertionError [ERR_ASSERTION]: Nếu `create_project` BẮT ĐẦU đọc cờ bỏ kho thì nhánh «Không» đã thi hành được ⇒ phải gỡ cảnh báo BLOCKED và cập nhật tài liệu
+      at TestContext.<anonymous> (file:///D:/13.%20Duong%20Trong%20Thang/Tai%20lieu/1.%20Du%20an%20chuan%20hoa%20quy%20trinh/VNTECH_ERP_V5_3_0_MASTER_BASELINE_R1_1_1_PROJECT_NAV_FINAL_FP_FIXED_20260908/tests/w03-project-warehouse.test.mjs:98:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'if (action === "create_project") {\r\n        requireRole(user, ["admin"]);\r\n        const code = clean(payload.code).toUpperCase();\r\n        const name = clean(payload.name);\r\n        if (!/^[A-Z0-9._-]{2,24}$/.test(code) || !name)\r\n            throw new Error("Mã dự án gồm 2–24 ký tự A-Z, số, dấu chấm/gạch; tên dự án là bắt buộc.");\r\n        const projectId = id("PRJ");\r\n        const warehouseId = id("WH");\r\n        const warehouseCode = clean(payload.warehouseCode).toUpperCase() || `KHO-${code}`;\r\n        const warehouseName = clean(payload.warehouseName) || `Kho công trường ${code}`;\r\n        // W-03 — «Tạo kho dự án? → Có thì tạo kho»: cờ `createWarehouse` MẶC ĐỊNH `true` (mọi nơi gọi cũ\r\n        // KHÔNG truyền cờ vẫn tạo kho như trước — tương thích ngược tuyệt đối). Chỉ tắt khi truyền tường minh\r\n        // `false` / `0` / `"0"` / `"false"` / `"no"` (UI hỏi Có/Không và gửi boolean).\r\n        const rawCreateWarehouse = payload.createWarehouse;\r\n        const createWarehouse = rawCreateWarehouse === undefined || rawCreateWarehouse === null || rawCreateWarehouse === ""\r\n            ? true\r\n            : ![false, 0, "0", "false", "no"].includes(typeof rawCreateWarehouse === "string" ? rawCreateWarehouse.trim().toLowerCase() : rawCreateWarehouse);\r\n        const statements = [\r\n            env.DB.prepare(`INSERT INTO projects (id,code,name,status,manager_user_id,start_date,planned_end_date,contract_no,contract_name,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)`).bind(projectId, code, name, "active", user.id, clean(payload.startDate) || null, clean(payload.plannedEndDate) || null, clean(payload.contractNo) || null, clean(payload.contractName) || null, stamp, stamp),\r\n        ];\r\n        if (createWarehouse !== false) {\r\n            statements.push(env.DB.prepare(`INSERT INTO warehouses (id,code,name,type,project_id,parent_warehouse_id,keeper_user_id,active,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)`).bind(warehouseId, warehouseCode, warehouseName, "site", projectId, "WH-CENTRAL", user.id, 1, stamp, stamp));\r\n        }\r\n        statements.push(env.DB.prepare(`INSERT OR IGNORE INTO user_project_scopes (id,user_id,project_id,permission,created_at,updated_at) VALUES (?,?,?,?,?,?)`).bind(id("SCOPE"), user.id, projectId, "admin", stamp, stamp));\r\n        await env.DB.batch(statements);\r\n        await audit(user.id, "CREATE", "project", projectId, null, { code, name, warehouseCode, warehouseName, createWarehouse }, request);\r\n        return { message: createWarehouse !== false ? `Đã tạo dự án ${code} và kho công trường riêng.` : `Đã tạo dự án ${code} (không tạo kho công trường theo lựa chọn «Không»).` };\r\n    }\r\n    ',
+    expected: /createWarehouse/,
+    operator: 'doesNotMatch',
+    diff: 'simple'
+  }

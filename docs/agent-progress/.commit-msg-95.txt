@@ -1,0 +1,17 @@
+So sach sau #94: TASK-056 (cong doi chieu TAP COT, co doi chung duong 4/4) + TASK-057 (va 4 khoa thieu cot: issues/returns/transferOrders/productIdentity; probe bootstrap 93/93) + Known Problems #57/#58 + bai hoc #27 + CURRENT TASK = TASK-058
+
+- TASK-056.md (moi): vi sao can cong (3 ca lien tiep o muc COT ma cong theo TEN KHOA khong bat duoc),
+  cach lam (doc SQL hai phia, tach danh sach SELECT muc ngoai cung, mask literal, lay AS alias hoac
+  dinh danh cuoi), DOI CHUNG DUONG BAT BUOC bang bang tam + SHOW COLUMNS (vi `SELECT ... LIMIT 0`
+  khong in tieu de o che do --batch), ket qua 13 khoa -> con 9, danh sach 9 khoa, va gioi han
+  (chi so khoa trung ten; 30 so duoc / 49 bo qua; data.put nhieu nhanh thi hop cot lai).
+- TASK-057.md (moi): bang 4 khoa da va voi nguon JS va ANH HUONG UI do duoc tung dong
+  (page.tsx:963 "Nguoi nhan", :965 "Nguoi tra", :1745 "Da xuat"/"Da nhan" luon 0, :2219 "Da xac nhan
+  lap" luon 0, :2238 loc theo du an sai), bo loc theo kho :714, ket qua probe 93/93 (doi chieu GIA TRI
+  theo TUNG DONG voi MySQL), gioi han cua transferOrders (bang rong nen chi cong tinh kiem duoc).
+- MASTER_STATUS: Known Problems #57 (lop loi thieu cot: 13 -> da va 4 -> con 9) va #58 (workItems:
+  KHONG co menh de loc phong ban/BCH cua JS :715-717 => tra toan bo cong viec cho moi tai khoan +
+  thieu 14 cot => UI trong), CURRENT TASK = TASK-058, LAST COMPLETED = TASK-056/057, CURRENT TODO
+  cap nhat, bai hoc #27 (cong tap cot + bat buoc doi chung duong cho bo tach van ban), PID/jar moi
+  va dong kiem chung cuoi luot.
+- TASK_INDEX: 2 dong TASK-056/057 day du bang chung.

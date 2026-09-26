@@ -1,0 +1,39 @@
+#61 TASK-042 retry_email: SQL truy van BANG KHONG TON TAI (email_queue) => HTTP 500; mo rong cong soi bang trong FROM/JOIN
+
+VAN DE (bang chung lay tu log Java dang chay, khong suy doan):
+SystemSettingsStoreAdapter.retryEmailQueue chay
+  SELECT COUNT(*) FROM email_queue WHERE status IN ('pending','failed')
+nhung luoc do DANG CHAY khong co bang `email_queue` - bang that la `email_outbox`
+=> MySQL "Table '...email_queue' doesn't exist" => HTTP 500.
+
+DA SUA theo dung nguon su that JS (scripts/system-route.mjs):
+ - JS KHONG quet hang loat ma xep lai THEO TEN EMAIL. Doi hop dong port:
+     retryEmailQueue(int, Instant)  ->  requeueEmail(String emailId, Instant now)
+     UPDATE email_outbox SET status='queued', next_attempt_at=?, last_error=NULL, updated_at=? WHERE id=?
+ - SystemSettingsUseCase.retryEmail tra NGUYEN VAN "Da xep lai email de may chu gui."
+
+LOP LOI MOI DUOC DAT TEN: cong cu cu chi soi COT => KHONG THE bat duoc loi BANG khong ton tai.
+Da mo rong tools/probe-java-sql-live.mjs de soi ca bang xuat hien trong FROM/JOIN.
+Canh bao ve chinh cong cu: ban dau no bao 6 bang khong ton tai, nhung 5 la DUONG TINH GIA
+(b, r, owned, ids, descendants deu la TEN CTE). Phai sua cong cu 3 lan (ban 1 chi bat CTE dau tien;
+ban 2 van sot dang "WITH RECURSIVE descendants(id) AS (") roi moi con dung 1 phat hien that.
+Neu tin ban dau thi da di sua 5 cau SQL DANG DUNG.
+
+KIEM CHUNG:
+ - tools/probe-task042-retry-email.mjs: 9/9 exit 0 (tu dung 1 hang tam EMAIL_ZZP42 trong email_outbox,
+   goi action => 200, DOC LAI thay status='queued' / last_error=NULL / next_attempt_at da dat,
+   sau do tu don sach).
+ - tools/probe-retry-email.mjs: probe dau tien, ghi lai bang chung HTTP truoc khi sua.
+ - jar 90.891.800 bytes · API PID 11404 · log 0 ERROR · regression 59/61 (2 loi cu)
+ - Cong luoc do song: 8 phat hien - TAT CA thuoc nhom 6 (vntech_license_*, cho nguoi dung chot cau hoi #11)
+
+PHAT HIEN KEM (chua xu ly, da ghi vao MASTER_STATUS):
+ (a) Java KHONG co co che gui email nao => email_outbox KHONG BAO GIO duoc INSERT (xep lai mot email
+     khong ton tai la vo nghia cho toi khi port bo gui).
+ (b) 3 bang khac can ra: custom_field_values (Java CHI doc/xoa, KHONG BAO GIO ghi => gia tri truong
+     dong bi mat), material_code_history, project_archives.purge_audit_id.
+ (c) users.avatar_url la DUONG TINH GIA - Java ghi qua JPA (AuthUseCase.updateProfileAvatar ->
+     userRepository.save) nen KHONG co van ban SQL de soi => gioi han cua cong cu: chi soi SQL tho.
+
+CONG CU MOI: tools/probe-write-map-triage.mjs phan loai 17 bang lech ban do GHI theo tieu chi
+"action ghi co case o Java hay khong" => 9 bang THIEU PORT THAT, 0 bang chua port.

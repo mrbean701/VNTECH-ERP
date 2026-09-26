@@ -1,0 +1,70 @@
+#43 TASK-037: ra cong quyen 12 action Java-only (GOAL §7) + chung minh DU LIEU cho ban va §8.1
+
+PHAN 1 - TASK-037: RA CONG QUYEN 12 ACTION JAVA-ONLY
+
+Cau hoi: RbacService.requireActionModule co nhanh MAC DINH TU CHOI khi action khai module = [].
+8 trong 12 action Java-only co module rong => bi tu choi voi moi nguoi tru admin.
+Viec tu choi do CHINH DANG (von da chi admin dung) hay dang CHAN OAN chuc nang that?
+
+Bang chung (tools/audit-java-only-actions.mjs, exit 0):
+  action                            module                             controller
+  create_self_work_item             [dept_plan_tasks,dept_project_tasks] chi can dang nhap
+  delete_department_permission      []                                 requireRequireAdmin
+  delete_system_level               []                                 requireRequireAdmin
+  delete_workflow                   [admin]                            chi can dang nhap
+  rebuild_department_permissions    []                                 requireRequireAdmin
+  save_department_permission        []                                 requireRequireAdmin
+  save_system_level                 []                                 requireRequireAdmin
+  save_workflow                     [admin]                            chi can dang nhap
+  set_system_level_status           []                                 requireRequireAdmin
+  set_user_system_level             []                                 requireRequireAdmin
+  set_workflow_status               [admin]                            chi can dang nhap
+  system_level_impact               []                                 requireRequireAdmin
+
+  Action Java-only                        : 12
+  Co module rong (mac dinh tu choi)        : 8
+  Rui ro (rong module + KHONG chan admin)  : 0
+
+=> KET LUAN PHAN 1: ca 8/8 action module=[] DEU da duoc controller chan bang requireRequireAdmin
+   => nhanh mac-dinh-tu-choi KHONG chan oan chuc nang nao. Phan loai CONFIRMED, 0 rui ro.
+
+KET LUAN PHAN 2 - MOT CONG MONG MANH
+  3 action quan tri workflow (save_workflow, set_workflow_status, delete_workflow) KHONG duoc chan
+  bang vai tro. Chung chi can DANG NHAP, cong that la quyen module "admin".
+  Do du lieu that (tools/probe-module-permission-data.mjs, muc moi):
+      So dong quyen cho module 'admin': 0
+      Trong do canUse = 1            : 0
+      Tai khoan KHONG phai admin ma co canUse=1: 0
+  => Hom nay DUNG: chi admin vao duoc (bang nhanh isAdmin trong requireActionModule) vi KHONG AI co
+     module "admin".
+  NHUNG co che khac han cac action quan tri con lai (dung requireRequireAdmin = chan theo vai tro).
+  Neu ve sau co ai duoc cap quyen module "admin" (qua man Phan quyen nguoi dung, hoac co che cap mac
+  dinh theo phong ban) thi tai khoan do QUAN TRI DUOC WORKFLOW ma khong phai admin.
+  Hom nay khong gay hai; muc do THAP-TRUNG BINH (tiem an).
+  => CHO NGUOI DUNG QUYET (A) them chan vai tro admin cho nhat quan hay (B) giu nguyen vi day la
+     quyen module - dung thiet ke. KHONG tu sua (quyet dinh ve mo hinh phan quyen, GOAL §7 + §3).
+
+PHAN 2 - CHUNG MINH O MUC DU LIEU CHO BAN VA §8.1 (TASK-033)
+
+Cong anh KHONG kiem duoc khoi phe duyet (drawer dong trong anh chuan) va ban dung UI dang bi chan
+(TASK-034), nen da bu bang phep kiem chung minh DAU VAO cua phep anh xa:
+  tools/check-approval-dept-mapping.mjs
+Ket qua tren du lieu that:
+  Phieu: 17 · staffDirectory: 12
+  Buoc DA co nguoi quyet dinh : 50
+    -> tra duoc phong ban       : 50
+    -> approverUserId rong      : 0
+    -> khong co trong danh ba   : 0
+    -> co trong danh ba nhung department TRONG: 0
+  => toan bo 50 buoc da quyet deu tra duoc phong ban KHAC RONG => ban va §8.1 se HIEN THI "Phong ban: ..."
+
+LOI CONG CU TU PHAT HIEN VA SUA: lan chay dau in ra ket luan DAT nhung MA THOAT KHAC 0 - Node tren
+Windows sap voi "Assertion failed: !(handle->flags & UV_HANDLE_CLOSING), src\win\async.c" khi
+process.exit() duoc goi luc handle fetch con dang dong. Mot cong "dat ma bao loi" rat de dan toi ket
+luan sai, nen da doi sang process.exitCode (de Node tu thoat em). Chay lai: exit 0.
+
+Khong sua ma nguon trong commit nay.
+Tep: tools/audit-java-only-actions.mjs (moi) · tools/check-approval-dept-mapping.mjs (moi) ·
+tools/probe-module-permission-data.mjs (them muc module 'admin') ·
+docs/agent-progress/{TASK-037.md (moi), TASK-033.md (muc 7b), TASK_INDEX.md, MASTER_STATUS.md}
+Tai lieu: docs/agent-progress/TASK-037.md

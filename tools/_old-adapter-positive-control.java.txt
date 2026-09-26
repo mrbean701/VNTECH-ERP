@@ -1,0 +1,15 @@
+// ĐỐI CHỨNG DƯƠNG cho tools/probe-increment-drift.mjs — KHÔNG phải mã nguồn, chỉ để chứng minh công cụ
+// thật sự bắt được lỗi đã biết. Hai câu lệnh dưới đây là NGUYÊN VĂN bản cũ trong
+// java-backend/infrastructure/.../WarehouseStockStoreAdapter.java (đã sửa ở TASK-040 nhóm 4):
+//   dòng 175 (cũ): UPDATE stock_issue_items SET installed_qty=?,updated_at=? WHERE id=?      <- GHI ĐÈ
+//   dòng 344 (cũ): UPDATE stock_issue_items SET status='installed',updated_at=? WHERE id=?   <- cột không tồn tại
+// Kỳ vọng khi quét tệp này: công cụ BÁO ứng viên `stock_issue_items.installed_qty`.
+package com.vntech.erp.infrastructure.persistence;
+
+import java.time.Instant;
+
+class PositiveControlOldAdapter {
+    void updateIssueItemInstalled(String issueItemId, double installedQty, Instant now) {
+        jdbcTemplate.update("UPDATE stock_issue_items SET installed_qty=?,updated_at=? WHERE id=?", installedQty, now, issueItemId);
+    }
+}

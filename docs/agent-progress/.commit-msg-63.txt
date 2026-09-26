@@ -1,0 +1,56 @@
+#63 TASK-045: save_material - Java XOA HE M&E (system='KHAC') moi lan admin luu + khong ghi material_code_history
+
+=== PHAT HIEN ===
+Ra `material_code_history` (muc "Ra tiep"): cong BAN DO GHI bao JS ghi / Java ghi 0, va grep toan kho
+Java KHONG CO mot dong ma nao nhac bang nay (chi co DDL + tai lieu + schema H2).
+
+Doc tiep `MaterialCatalogManagementUseCase.saveMaterial` thi lo LOI NANG HON ca loi dang tim:
+    m.put("system", blankDefault(trim(payload.get("system")), "KHAC").toUpperCase(...));
+Nhung UI (app/page.tsx:3769 - MaterialModal) gui {code,unit,name,brand,minStock,specification,aliasText,
+codeChangeReason,categoryId,subcategoryId} va KHONG BAO GIO gui `system`; JS thi tinh
+`system = canonicalMeCode(category.code)` (system-route.mjs:2631).
+=> MOI LAN admin luu mot ma vat tu, Java ghi system='KHAC' va XOA he M&E that. API tra 200, khong log.
+Day la loi "port sai NGUON DU LIEU" (Important Decision #9), khong phai loi cu phap.
+
+=== BANG CHUNG LUC CHAY TRUOC KHI VA (probe = doi chung duong) ===
+tools/probe-task045-save-material.mjs dung mot ma TAM (MAT_ZZP045, nhom DIEN, system='DIEN') roi goi
+save_material bang DUNG payload UI:
+  - system             : DIEN -> KHAC        (XOA he M&E)
+  - min_stock          : 0 (UI gui 7)        (truong bi bo im lang)
+  - thieu DVT          : 409 "Du lieu vi pham rang buoc..." (Java ghi unit=NULL) thay vi 400 nguyen van JS
+  - categoryId khong ton tai : 200 + ghi tham chieu rac
+  - doi ma goc thieu ly do   : 200 va MA DOI THAT (luat JS khong duoc thi hanh)
+  - material_code_history    : 0 dong (mat dau vet doi ma)
+=> 6/14 DAT.
+
+=== DA SUA (phan 1) ===
+MaterialCatalogManagementUseCase.saveMaterial: port JS :2607-2643
+  - doi du 4 truong: "Ma vat tu, ten vat tu, DVT va he M&E la bat buoc."
+  - findCategory => "He M&E khong ton tai."
+  - nhom con mac dinh CHUA_PHAN_NHOM (TU TAO neu thieu) + kiem "Nhom con khong thuoc he M&E da chon."
+  - system = canonicalMeCode(category.code)   <-- sua loi xoa he M&E
+  - ghi minStock; doi ma goc => BUOC co ly do + ghi lich su
+MaterialCatalogStore: them insertCodeHistory(...)
+MaterialCatalogStoreAdapter: INSERT/UPDATE materials them cot min_stock; them insertCodeHistory;
+  mergeMaterialMaster chuyen lich su sang ma dich (JS :2670)
+
+LOI CUA CHINH TOI BI PROBE BAT NGAY: `findSubcategory` dung `SELECT *` nen khoa tra ve la TEN COT THAT
+`category_id` (khong phai `categoryId`) => ban dau chan oan payload dung cua UI (400 "Nhom con khong thuoc
+he M&E da chon."). Da sua: doc CA HAI dang khoa.
+
+=== KIEM CHUNG: 14/14 DAT exit 0 (truoc khi va: 6/14) ===
+jar 90.894.035 bytes (17/10:59) · API PID 19364 · Flyway validated 16 migrations · log 0 ERROR ·
+regression 59/61 (2 loi cu) · cong luoc do 8 phat hien (toan bo nhom 6, cho quyet dinh #11).
+Probe tu don sach: materials/material_aliases/material_code_history ve dung 14/19/14.
+
+=== PHAT HIEN KEM (chua sua, da dang ky) ===
+- DU LIEU materials.system LECH 5/14 ma: DIEN-DAY-CAD-001 (KHAC / nhom DIEN) va CTN-ONG-NHUA-001
+  (KHAC / nhom CTN) khop co che loi vua chung minh (nguon ghi cu the KHONG xac dinh duoc vi
+  save_material khong co audit); 3 ma khac (002->DIEN, VAN->HVAC, ONG-LUON->CTN, 16/09 12:01)
+  nghi la du lieu mau hoan vi. KHONG TU SUA DU LIEU.
+  Sau khi va: admin mo va LUU lai ma trong man Danh muc => system tu suy dung tu nhom.
+- save_material PHAN 2 chua port: rebuild alias theo aliasText (JS xoa het roi tao lai), luat trung ten
+  goc/alias (3 thong diep), Java tu tao alias bang chinh ten goc (JS khong), thieu audit(...),
+  van ban thong diep thanh cong khac JS.
+- merge_material_master: JS XOA ma nguon (DELETE FROM materials), Java chi active=0 + doi ma thanh
+  <code>_X => can nguoi dung quyet dinh hanh vi dung.

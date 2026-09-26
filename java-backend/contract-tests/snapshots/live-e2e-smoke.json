@@ -1,0 +1,198 @@
+{
+  "name": "live-e2e-smoke",
+  "baseUrl": "http://127.0.0.1:18080",
+  "recordedAt": "2026-09-11T01:02:36.902Z",
+  "steps": [
+    {
+      "step": "pre-setup GET",
+      "status": 200,
+      "response": {
+        "setupRequired": true,
+        "ok": true
+      }
+    },
+    {
+      "step": "setup",
+      "status": 201,
+      "response": {
+        "ok": true
+      }
+    },
+    {
+      "step": "login",
+      "status": 200,
+      "response": {
+        "mustChangePassword": false,
+        "ok": true
+      }
+    },
+    {
+      "step": "bootstrap",
+      "status": 200,
+      "response": {
+        "ok": true,
+        "authenticated": true,
+        "data": {
+          "projects": [],
+          "requests": [],
+          "teams": [],
+          "warehouses": [
+            {
+              "id": "WH-CENTRAL",
+              "code": "KHO-TONG",
+              "name": "Kho trung tâm",
+              "type": "central",
+              "projectid": null,
+              "parentwarehouseid": null
+            }
+          ],
+          "transferWarehouses": [
+            {
+              "id": "WH-CENTRAL",
+              "code": "KHO-TONG",
+              "name": "Kho trung tâm",
+              "type": "central",
+              "projectid": null,
+              "projectcode": null,
+              "projectname": null
+            }
+          ],
+          "materialCategories": [],
+          "materialSubcategories": [],
+          "materials": [],
+          "suppliers": [],
+          "adminSuppliers": [],
+          "inventory": [],
+          "purchaseOrders": [],
+          "receipts": [],
+          "issues": [],
+          "returns": [],
+          "stockCounts": [],
+          "transferOrders": [],
+          "boqItems": [],
+          "projectContracts": [],
+          "boqVersions": [],
+          "boqSourceItems": [],
+          "boqMappingCandidates": [],
+          "contractStockLedger": [],
+          "contractStockBalances": [],
+          "settings": {
+            "companyname": "CTY",
+            "stage1department": "BCH / Chỉ huy trưởng",
+            "stage2department": "Phòng Dự án",
+            "stage3department": "KH-MH / Tài chính",
+            "approvalslahours": 24,
+            "stage1slahours": 8,
+            "stage2slahours": 8,
+            "stage3slahours": 8,
+            "poslahours": 24,
+            "bchconfirmationslahours": 8,
+            "slowmovingdays": 60,
+            "negativestockblocked": 1
+          },
+          "approvalStageCatalog": [],
+          "roleCatalog": [],
+          "organizationUnits": [],
+          "menuGroups": [],
+          "moduleCatalog": [],
+          "modulePermissions": [],
+          "staffDirectory": [
+            {
+              "id": "USR_2d3bb315-5f33-4279-98b6-4f5d82b24497",
+              "employeecode": "ADMIN-001",
+              "fullname": "ADMIN",
+              "email": null,
+              "role": "admin",
+              "rolename": "admin",
+              "department": "Công ty VNTECH",
+              "organizationunitid": null,
+              "organizationcode": null,
+              "organizationname": "Công ty VNTECH",
+              "avatarurl": null
+            }
+          ],
+          "users": [
+            {
+              "id": "USR_2d3bb315-5f33-4279-98b6-4f5d82b24497",
+              "employeecode": "ADMIN-001",
+              "fullname": "ADMIN",
+              "username": "admin",
+              "email": null,
+              "role": "admin",
+              "rolename": "admin",
+              "rolebase": "admin",
+              "warehousescopekind": null,
+              "department": "Công ty VNTECH",
+              "organizationunitid": null,
+              "organizationcode": null,
+              "organizationname": "Công ty VNTECH",
+              "avatarurl": null,
+              "approvallimit": 999999999999,
+              "mustchangepassword": false,
+              "active": true
+            }
+          ],
+          "adminProjects": [],
+          "userScopes": [],
+          "activeSessions": [
+            {
+              "id": "SES_bcf9ca0b-9843-4090-8aa1-e1c45706219a",
+              "userid": "USR_2d3bb315-5f33-4279-98b6-4f5d82b24497",
+              "username": "ADMIN",
+              "ipaddress": "127.0.0.1",
+              "useragent": "node",
+              "createdat": "2026-09-11T01:02:38.009425Z",
+              "expiresat": "2026-09-12T01:02:38.009425Z"
+            },
+            {
+              "id": "SES_e65b63de-3ea4-47a3-87c8-de5e8fc477d4",
+              "userid": "USR_2d3bb315-5f33-4279-98b6-4f5d82b24497",
+              "username": "ADMIN",
+              "ipaddress": null,
+              "useragent": null,
+              "createdat": "2026-09-11T01:02:37.311553Z",
+              "expiresat": "2026-09-12T01:02:37.311553Z"
+            }
+          ],
+          "audits": [],
+          "businessRoleEngineProfiles": [],
+          "businessRoleGroups": [],
+          "businessScopes": [],
+          "contractPayments": [],
+          "productionReports": [],
+          "capitalRecoveryRecords": [],
+          "teamSubcontracts": [],
+          "teamProductionRecords": [],
+          "teamPayments": [],
+          "paymentPlans": [],
+          "advanceRequests": [],
+          "siteExpenseClaims": [],
+          "bankAccounts": [],
+          "cashbookEntries": [],
+          "accountingVouchers": [],
+          "hrRecords": [],
+          "laborContracts": [],
+          "officialCorrespondence": [],
+          "legalDocuments": [],
+          "sealManagement": [],
+          "benefitRecords": [],
+          "materialNorms": [],
+          "workItems": [],
+          "taskNotifications": [],
+          "constructionDailyLogs": [],
+          "setup": false,
+          "user": {
+            "id": "USR_2d3bb315-5f33-4279-98b6-4f5d82b24497",
+            "fullName": "ADMIN",
+            "username": "admin",
+            "role": "admin",
+            "roleBase": "admin",
+            "roleName": "admin",
+            "department": "Công ty VNTECH",
+            "avatarUrl": null
+          }
+        }
+      }
+    }
+  ]
+}

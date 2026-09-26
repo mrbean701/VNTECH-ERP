@@ -1,0 +1,56 @@
+#59 TASK-041 phan 3: save_material_subcategory - hop dong payload, 3 cot bi bo, dong bo vat tu con, duong DOC thu SAU
+
+NGUON: cong cu tools/probe-write-map-drift.mjs bao `material_subcategories`: JS ghi adjustment_note /
+review_status / scope_examples ma Java KHONG ghi. Truy nguyen thi lo ra BON van de:
+
+1. HOP DONG PAYLOAD: Java BAT BUOC `code` nhung form UI (app/page.tsx:3758 MaterialSubcategoryModal) chi co
+   categoryId/name/sortOrder/description => action LUON HTTP 400 ("Nhom con vat tu can nhom cha, ma va ten.").
+   JS tu sinh ma bang internalGroupCode(name).
+2. BA COT BI BO: scope_examples / review_status / adjustment_note (JS system-route.mjs:2512,2516).
+   Cach suy gia tri cua JS: scopeExamples = payload.scopeExamples || payload.description || null;
+   reviewStatus = hop le ? payload.reviewStatus : (sua ? "approved" : "proposed"); adjustmentNote = ... || null.
+   Hau qua: nhom con SUA xong le ra review_status='approved' nhung mai giu gia tri cu => cot "Trang thai"
+   hien sai nhan va bo dem `proposed` sai.
+3. KHONG DONG BO VAT TU CON khi nhom con doi nhom cha (JS :2513
+   UPDATE materials SET category_id=?, system=canonicalMeCode(category.code) WHERE subcategory_id=?).
+   Hau qua NANG NHAT: vat tu tro nhom cha CU => materials.category_id MAU THUAN voi
+   material_subcategories.category_id.
+4. DUONG DOC THU SAU: bootstrap Java thieu adjustment_note; rieng adminMaterialSubcategories thieu 5 truong
+   (scope_examples, review_status, adjustment_note, categoryCode, categoryName) so voi JS :695.
+   UI doc row.scopeExamples / row.reviewStatus / row.adjustmentNote (app/page.tsx:2280,2302,2308).
+
+DA SUA
+  MaterialCatalogStore (port): insertSubcategory/updateSubcategory mang them 3 tham so; THEM
+    updateMaterialsForSubcategory.
+  MaterialCatalogStoreAdapter: INSERT 12 cot, UPDATE 9 truong, + cau dong bo vat tu con.
+    Nhanh NHAP DANH MUC VAT TU truyen null cho 3 tham so - DUNG nhu JS :2593.
+  MaterialCatalogManagementUseCase.saveMaterialSubcategory: bo yeu cau code (tu sinh bang internalGroupCode),
+    them 3 cot voi dung cach suy gia tri JS, thong diep "Da luu nhom vat tu {name}."
+  BootstrapDataAdapter: materialSubcategories them adjustment_note; adminMaterialSubcategories them 5 truong
+    + sap xep theo active nhu JS :695.
+
+KIEM CHUNG LUC CHAY
+  jar 90.891.898 bytes (16:18:22) - API PID 19860 - log 0 ERROR - regression 59/61 (2 loi cu)
+  tools/probe-task041-subcat.mjs : 19/19 DAT - exit 0
+    tao bang DUNG payload UI (khong `code`) -> 200 nguyen van; ma tu sinh = NHOM_TAM_P3
+    scope_examples khi TAO lay mac dinh tu description; review_status = 'proposed'
+    *** review_status khi SUA = 'approved' *** (ban cu khong bao gio ghi); scope_examples theo description MOI
+    sua KHONG lot sang nhanh INSERT (van 1 dong trong nhom cha)
+    chuyen nhom con sang he M&E khac -> vat tu con di theo (CAT_ZZP3_A -> CAT_ZZP3_B), system tinh lai
+    bootstrap co scopeExamples/reviewStatus/adjustmentNote VA categoryCode/categoryName
+    2 nhanh chan tra DUNG nguyen van JS
+    don sach: 14/8/6 -> 14/8/6
+
+=== LOI CUA CHINH TOI (hai loi trong cung mot probe) ===
+1. CHARSET MySQL CLI: lan chay dau tra dong tam bang WHERE name='Nhom tam P3', nhung CLI mac dinh dung cp850
+   nen chuoi TIENG VIET bi hong => khong tim thay dong => script TAO THEM 3 DONG RAC thay vi sua
+   (material_subcategories 8 -> 11). Da sua: them --default-character-set=utf8mb4 va tra bang KHOA ASCII (code),
+   don theo nhom cha; da don sach ve 14/8/6 truoc khi chay lai.
+2. Set-Content cua PowerShell ghi ANSI: dung no de sua tep probe co tieng Viet => tep thanh UTF-8 KHONG HOP LE,
+   cong cu read bao loi. Phai viet lai toan bo bang cong cu ghi UTF-8. Bai hoc nay DA CO trong bo nho du an ma
+   toi van lap lai => da ghi vao known issue #28.
+Hai loi nay KHONG anh huong ket luan (chay lai sach 19/19, du lieu nguyen trang) nhung deu la loi cua PHEP DO.
+
+Tep: MaterialCatalogStore.java - MaterialCatalogStoreAdapter.java - MaterialCatalogManagementUseCase.java -
+BootstrapDataAdapter.java - tools/probe-task041-subcat.mjs (moi) -
+docs/agent-progress/{TASK-041.md (muc 8), MASTER_STATUS.md}

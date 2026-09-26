@@ -1,0 +1,53 @@
+ghi_chu
+=== role_catalog TRUOC KHI SEED (TASK-080B) ===
+code	name	base_role	default_organization_unit_id
+accountant	Tài chính Kế toán	accountant	NULL
+cht	Chỉ huy trưởng	commander	NULL
+commander	Chỉ huy trưởng	commander	NULL
+da_nv	Nhân viên Phòng Dự án	project	NULL
+da_truong	Trưởng phòng Dự án	project	NULL
+director	Ban giám đốc	director	NULL
+engineer	Kỹ sư	engineer	NULL
+kh_nv	Nhân viên Phòng Kế hoạch	procurement	NULL
+kh_truong	Trưởng phòng Kế hoạch	procurement	NULL
+ksda	Kỹ sư dự án	engineer	NULL
+procurement	Phòng Kế hoạch	procurement	NULL
+project	Phòng Dự án	project	NULL
+team	Tổ đội	team	NULL
+thu_kho	Thủ kho dự án	warehouse	NULL
+thuky	Thư ký Tổng giám đốc / Trưởng phòng Hành chính Pháp chế	director	NULL
+warehouse	Thủ kho	warehouse	NULL
+ghi_chu
+=== goods_receipts: trang thai xac nhan BCH TRUOC KHI SEED ===
+id	receipt_no	bch_confirmation_status	bch_confirmed_by	bch_confirmed_at	bch_comment
+GRN_aa6ae52d-f8d6-4e93-81a6-9e2e391cdd2a	GRN-PRJ-DEMO-01-2026-0005	confirmed	USR_2f435847-8a39-44fe-b620-6e52186526e0	2026-09-14 15:57:25.294	BCH xác nhận giao hàng – seed demo
+GRN_b975897a-5f98-4d4c-9b6f-9008e24bf166	GRN-PRJ-DEMO-01-2026-0006	pending	NULL	NULL	NULL
+GRN_bad529ab-c05b-4e09-99bc-fd1f42b0049a	GRN-PRJ-DEMO-01-2026-0007	pending	NULL	NULL	NULL
+GRN_f69d128c-99d0-4800-88a0-6e3327b9f979	GRN-PRJ-DEMO-01-2026-0008	pending	NULL	NULL	NULL
+GRN_28032b7d-b721-477e-8cfc-85f415027545	GRN-PRJ-DEMO-01-2026-0009	pending	NULL	NULL	NULL
+GRN_04bd4bcd-6ea7-4b23-863f-5c5e68bec67a	GRN-PRJ-DEMO-01-2026-0020	confirmed	NULL	NULL	NULL
+GRN_1792713f-faaf-4986-b8c3-9c32714cea28	GRN-PRJ-DEMO-01-2026-0021	confirmed	NULL	NULL	NULL
+GRN_5f49f040-1ec3-4811-bccb-ecc454d2eb32	GRN-PRJ-DEMO-01-2026-0022	confirmed	NULL	NULL	NULL
+GRN_8bdbf298-0a8e-4f1d-affa-96b7591858bb	GRN-PRJ-DEMO-01-2026-0023	confirmed	NULL	NULL	NULL
+GRN_a31182b4-c297-49ba-a80a-3838dbc0b4ca	GRN-PRJ-DEMO-01-2026-0024	confirmed	NULL	NULL	NULL
+GRN_a5d4ab42-fc7d-4144-81d9-ee663f82a901	GRN-PRJ-DEMO-01-2026-0025	confirmed	NULL	NULL	NULL
+GRN_bb2fec65-1af4-4054-a9f2-7bbe5669f671	GRN-PRJ-DEMO-01-2026-0026	confirmed	NULL	NULL	NULL
+GRN_bd1fe0bb-ff90-4fe4-beb2-759e06562f59	GRN-PRJ-DEMO-01-2026-0027	confirmed	NULL	NULL	NULL
+GRN_e5f9763c-cacf-4e4e-8dec-0f077a619aee	GRN-PRJ-DEMO-01-2026-0028	confirmed	NULL	NULL	NULL
+GRN_e9fdbca0-d4d3-4340-8567-bdbab4596c6a	GRN-PRJ-DEMO-01-2026-0029	confirmed	NULL	NULL	NULL
+GRN_b1cbfe5f-1171-4885-8c04-75b3885cd260	GRN-SC161459-2026-0001	confirmed	USR_2f435847-8a39-44fe-b620-6e52186526e0	2026-09-14 15:06:03.371	Smoke SC: BCH xác nhận
+ghi_chu
+=== users: id that de doi chieu ===
+id	username	full_name	role	department	organization_unit_id
+USR_2f435847-8a39-44fe-b620-6e52186526e0	admin	Quản trị viên VNTECH	admin	Công ty VNTECH	NULL
+USR_911a47b2-3f2a-4a81-9ca3-891dd492b18b	cha.ht	Chỉ huy trưởng A	cht	Ban chỉ huy công trường	ORG_7b07ef03-5ac2-479b-93bb-53125c660afa
+USR_38e49f49-9d2a-40e9-8109-4bdf346ea62c	engineer.demo	Kỹ sư hiện trường (lập phiếu)	ksda	Phòng Dự án	ORG-DA
+USR_4a1c4fd5-dd0f-4ca6-80ff-feda3f3ed881	ksda.demo	Kỹ sư dự án (đề nghị mua)	ksda	Phòng Dự án	ORG-DA
+USR_8f44eaed-4466-4a7d-a0a8-b5e1bd04e0e7	kttdemo	Kế toán trưởng H	accountant	Phòng Tài chính – Kế toán	ORG_f60f9161-c7ab-49d6-bb1b-415d78ebd5e5
+USR_76575c08-4d16-49fc-8cd8-bde8ae204003	nvdademo	Nhân viên Dự án E	da_nv	Phòng Dự án	ORG-DA
+USR_8869ca60-7c6a-4e7f-bebd-0547f38bcdb8	nvkhdemo	Nhân viên Kế hoạch F	kh_nv	Phòng Kế hoạch	ORG_1ef47315-b38f-43de-9d9e-0624a7afb11d
+USR_a5b738ea-13ca-466d-b5a7-493195e2ea04	testuser86661	Người dùng kiểm chứng	ksda	Phòng Kế hoạch	ORG_1ef47315-b38f-43de-9d9e-0624a7afb11d
+USR_8011a197-261a-4288-91d6-1d62a233cedb	thukydemo	Thư ký TGĐ D	thuky	Tổng công ty VNTECH	ORG_7585cbab-03b0-4ff9-8168-0f5c38cebe15
+USR_8984cf69-c2d7-4162-bb4f-03ab51427e1e	tkhodemo	Thủ kho G	thu_kho	Ban chỉ huy công trường	ORG_7b07ef03-5ac2-479b-93bb-53125c660afa
+USR_c51d95b2-8f98-4f01-9daa-0b64d0037b7d	trdademo	Trưởng phòng Dự án C	da_truong	Phòng Dự án	ORG-DA
+USR_a5cd3bc6-f7b4-468f-af3b-103170fc0b2c	trinhtrench	Trưởng phòng Kế hoạch B	kh_truong	Phòng Kế hoạch	ORG_1ef47315-b38f-43de-9d9e-0624a7afb11d

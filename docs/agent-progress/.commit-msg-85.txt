@@ -1,0 +1,42 @@
+TASK-050 + 051 + 052 + 053: port 4 khoa bootstrap thieu VA ca khoi bo loc quyen (phat hien lon hon dac ta) - lop loi #4 tinyint(1) tra ve Boolean khien modulePermissions cua admin luon rong - data.user thieu co bat buoc doi mat khau - constructionDailyLogs thieu 2 cot
+
+TASK-050 (chinh) - 4 truy van DOC cua JS duoc port nguyen trang vao BootstrapDataAdapter:
+- centralReturns (JS system-route.mjs:620) kem items long + so tep dinh kem
+- centralInventory (:621) CTE movements -> balances tren kho WH-CENTRAL + aliasText
+- companyAvailability (:712) CTE on_hand - reserved theo tung kho
+- constructionDailyLogItems (:659) theo du an
+Phat hien LON HON dac ta: Java KHONG CO khoi xoa-trang-theo-module cua JS (:728-737, 7 nhom
+module + nhom chi-admin) va KHONG CO bo loc theo VAI TRO kho-site (:622) => da port ca hai.
+Kem nhanh thu ba cua JS :684 (isCompanyLeadership -> moi module tru admin, permissionSource
+"company_leadership") vi bo loc lay chinh danh sach do lam dau vao; do truoc khi va cho thay
+neu thieu nhanh nay thi tai khoan Ban giam doc (thukydemo) bi xoa trang oan (0/5 nhom con du lieu).
+
+TASK-052 - LOP LOI #4: cot tinyint(1) cua MySQL duoc JDBC tra ve Boolean, khong phai Number.
+Hai nhanh dung modulePermissions kiem "activeVal instanceof Number" => LUON SAI =>
+modulePermissions cua admin LUON RONG (0 dong) du JS tra du 61 dong (da do: MODULE_KEYS JS = 61
+= module_catalog WHERE active=1, 0 lech hai chieu; JSON "active": true). Loi co tu truoc, bi tang
+UI che (app/page.tsx:548 tra toan quyen cho admin truoc khi doc danh sach). Va bang helper
+isActiveOne theo dung quy uoc 5 use-case khac trong kho (AdminSystemUseCase:527,
+ProjectContractUseCase:101, PurchaseManagementUseCase:405, RequestManagementUseCase:598,
+UserManagementUseCase:596). Sau va: admin 61 dong, thukydemo 60 dong.
+
+TASK-051 - data.user thieu 2 truong so voi JS (:181/:189 tra 10 truong, Java chi 8):
+warehouseScopeKind + mustChangePassword. app/page.tsx:565 doc co nay de mo modal "forcePassword"
+va do la CUA DUY NHAT (grep toan app/ = 1 dong) => truoc khi va, co che bat buoc doi mat khau
+chet hoan toan o loi Java. Muc anh huong do duoc tren du lieu hien tai: 0 tai khoan
+(SELECT COUNT(*) WHERE must_change_password=1 = 0) => loi TIEM AN, ghi trung thuc.
+
+TASK-053 - constructionDailyLogs thieu 2 COT (itemCount, completedQty) so voi JS :658 (27 cot
+vs 21 cot) => cot "Khoi luong" cua Nhat ky thi cong luon 0 (app/page.tsx:2548). 4 cot con thieu
+(cancelledBy/cancelledAt/createdBy/createdByName) KHONG duoc UI doc => khong dua vao diff.
+
+Cung luot: isAdmin cua bootstrap nay dung nhu JS (roleBase==='admin' || role==='admin',
+system-route.mjs:210); BootstrapDataPort.Context mang them roleCode/roleBase/warehouseScopeKind.
+
+Cong moi tools/probe-task050-bootstrap.mjs: 87/87 DAT - doi chieu so dong voi truy van MySQL
+DOC LAP (khong dung lai du lieu trong response), shape cot voi alias chep nguyen van tu JS,
+3 tai khoan that (tkhodemo/thukydemo/nvdademo) voi doi chung duong, va 10 phep do KHONG thuc
+hien duoc vi du lieu rong duoc in ro la "bo qua" (khong tinh DAT).
+Bang chung khac: cong tinh probe-bootstrap-keys.mjs con DUNG 1 khoa (user = duong tinh gia);
+test:regression 59/61 (khong doi); probe-schema-drift 0 lech; probe-java-sql-live khong phat
+sinh muc moi; jar 90.903.412 bytes.

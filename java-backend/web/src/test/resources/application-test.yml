@@ -1,0 +1,30 @@
+# Test profile â€” H2 in-memory á»Ÿ MySQL compatibility mode.
+# Schema Ä‘áº§y Ä‘á»§ (114 báº£ng) sinh tá»« V1__baseline.sql => java-backend/tools/generate-h2-test-schema.mjs
+# LUU Y (TASK-115): dong cu "JPA ddl-auto tao users/sessions truoc" KHONG con dung — xem khoi [TASK-115] duoi day.
+# báº£ng seed (company_settings/email_settings/warehouses) náº±m trong schema-h2.sql.
+# [TASK-115] `ddl-auto: none` cho profile test: lược đồ H2 lấy TỪ `schema-h2.sql` (bản sao MySQL V1 +
+# các migration sau V1) — ĐÚNG như production (`application.yml` cũng `ddl-auto: none`). Trước đây
+# `create-drop` để Hibernate DROP/tạo lại `users`/`sessions`/`projects` theo entity nên MẤT những cột
+# CÓ trong MySQL mà entity không khai báo (`users.password_reset_at`/`password_reset_by`)
+# => `UserAdminStoreAdapter` ném BadSqlGrammarException "Column u.password_reset_at not found".
+spring:
+  datasource:
+    url: jdbc:h2:mem:vntech;MODE=MySQL;DATABASE_TO_LOWER=TRUE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+  flyway:
+    enabled: false
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema-h2.sql
+      continue-on-error: true
+
+vntech:
+  cookie-secure: false
+

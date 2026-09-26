@@ -1,0 +1,52 @@
+VNTECH ERP V5.3.0 — MASTER BASELINE CLEANUP R1.1.1 FILE DIFF
+Compared against R1 CANDIDATE clean-extract.
+
+Added: 4
+Removed: 0
+Changed: 35
+
+[ADDED]
+- drizzle/0048_master_baseline_identity_refresh.sql
+- drizzle/0049_master_baseline_identity_refresh_r1_1_1.sql
+- lib/trust/source-fingerprint.mjs
+- scripts/css-baseline-audit.mjs
+
+[REMOVED]
+- none
+
+[CHANGED]
+- .env.example
+- Dockerfile
+- MASTER_BASELINE_CLEANUP_REPORT.md
+- MASTER_BASELINE_CLEANUP_VALIDATION.md
+- MIGRATION_UPGRADE_ROLLBACK.md
+- README.md
+- VNTECH_ERP_FULL_CONSOLIDATION_CHANGE_REPORT.md
+- VNTECH_FINGERPRINT.json
+- VNTECH_FULL_W2_ID.txt
+- VNTECH_PACKAGE_ID.txt
+- VNTECH_PRODUCT_IDENTITY.txt
+- app/globals.css
+- app/layout.tsx
+- app/page.tsx
+- db/schema.ts
+- deploy/docker-compose.yml
+- lib/material-catalog-export.ts
+- lib/request-export.ts
+- lib/vntech-identity-data.mjs
+- package.json
+- scripts/build-cross-platform.mjs
+- scripts/email-dispatcher.mjs
+- scripts/local-runtime.mjs
+- scripts/local-self-test.mjs
+- scripts/local-server.mjs
+- scripts/master-baseline-gate.mjs
+- scripts/migrate-postgres.mjs
+- scripts/preflight-runtime-image.mjs
+- scripts/preflight-source.mjs
+- scripts/system-route.mjs
+- scripts/universal-installer.mjs
+- scripts/verify-full-release.mjs
+- scripts/verify-vntech-fingerprint.mjs
+- tests/runtime-admin-boq-regression.test.mjs
+- worker/index.ts

@@ -1,0 +1,25 @@
+#64 Tai lieu: vong ra CUOI ban do GHI - phan loai 3 cot con lai (TASK-046) + dong bo MASTER_STATUS/TASK_INDEX
+
+Khong sua ma trong commit nay (chi tai lieu) — ghi lai KET QUA PHAN LOAI de phien sau khoi ra lai.
+
+Sau #62 (custom_field_values) va #63 (material_code_history), cong BAN DO GHI chi con 7 bang lech:
+  boq_price_import_items · boq_versions · email_outbox · project_archives · users · vntech_license_* (x2)
+Trong do 2 bang la DUONG TINH GIA da biet (users.avatar_url - Java ghi qua JPA; vntech_license_* - nhom 6
+cho quyet dinh #11) va email_outbox thuoc hang muc "Java KHONG CO co che gui email".
+
+TASK-046 - ba cot con lai, da ra toi noi:
+  (1) project_archives.purge_audit_id — CONFIRMED: JS system-route.mjs:2451-2452 ghi 1 dong audit_logs
+      (PURGE_AFTER_OFFLINE_ARCHIVE) roi UPDATE project_archives SET purge_audit_id=<auditId>;
+      Java ProjectAdminStoreAdapter:242 dung o "UPDATE project_archives SET status='purged',purged_at=?"
+      => THIEU CA HAI CAU => purge du an khong co vet audit lien ket.
+      Java CO cong AuditLogPort.log(...) (9 noi goi) => sua duoc, khong phai "chua co co che".
+  (2) boq_price_import_items.changed — CONFIRMED: JS :2827 tinh isChanged cho tung dong nhap gia va ghi
+      cot `changed`; Java BoqStoreAdapter:706 chi ghi
+      (id,batch_id,boq_item_id,old_unit_price,new_unit_price,created_at)
+      => mat co "dong co doi gia" khi xem lich su nhap gia.
+  (3) boq_versions.approved_at — LIKELY DUONG TINH GIA: JS :2805 bind thang `null` cho cot nay trong
+      INSERT INTO boq_versions (...) => cong cu dem gia tri NULL la "co ghi".
+      PHAI xac nhan khong con cho nao ghi gia tri that truoc khi ket luan.
+
+Trang thai phien: 3 commit ma nguon trong phien nay (#61 TASK-042, #62 TASK-043+044, #63 TASK-045) —
+moi commit deu co probe chay that + regression 59/61 + log 0 ERROR. CHUA PUSH (theo quyet dinh nguoi dung).

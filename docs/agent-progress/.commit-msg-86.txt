@@ -1,0 +1,25 @@
+So sach sau #85: MASTER_STATUS (CURRENT TASK = TASK-048, LAST COMPLETED = 050/051/052/053, PID/jar moi, Known Problems #49-#52, D5, muc BOOTSTRAP, 5 bai hoc moi) + TASK_INDEX (4 dong day du bang chung) + 3 ho so TASK-051/052/053 moi + dinh chinh TASK-050
+
+Dong bo so sach theo dung quy trinh 17 buoc cua GOAL muc 10/13:
+- MASTER_STATUS: Moc trang thai (CURRENT TASK = TASK-048 vi co 1 phep kiem DO san trong repo;
+  NEXT TASK = cong doi chieu tap COT + probe HTTP theo vai tro), System State (PID 25608 job
+  pwsh-96, jar 90.903.412 bytes 18:35), Known Problems #49 (da va - lop loi #4) #50
+  (engineRoleProfiles null cho MOI tai khoan vi put sau khi get, dong 726 <-> 826; kem lop loi
+  moi "khoa co khai nhung null/rong theo vai tro" ma cong theo TEN khoa khong bat duoc) #51
+  (5 dong user_project_scopes mo coi + trieu chung that: thukydemo khong thay du an nao)
+  #52 (transferOrders thieu 7 truong + thieu loc theo kho :714), quyet dinh D5, muc BOOTSTRAP
+  cap nhat ket qua that, CURRENT TODO (4 muc [x] + 4 muc [!] moi), 5 bai hoc 16-20.
+- TASK_INDEX: 4 dong TASK-050/051/052/053 voi bang chung do luong day du.
+- Ho so moi: TASK-051.md (co bat buoc doi mat khau - 0 tai khoan anh huong nen la loi tiem an),
+  TASK-052.md (lop loi #4: tinyint(1) -> Boolean; vi sao UI che; vi sao phai va cung luot voi
+  TASK-050), TASK-053.md (2 cot thieu cua constructionDailyLogs).
+- TASK-050.md: dinh chinh MUC ANH HUONG cho dung do luong (khong man hinh nao crash vi UI chuan
+  hoa 3 khoa ve [] va dung (data.constructionDailyLogItems||[]); tren du lieu hien tai chi
+  companyAvailability 4 dong va constructionDailyLogItems 2 dong bi che that; centralInventory/
+  centralReturns rong san trong DB nen truoc-sau khong khac) + 6 phat hien kem.
+
+Bai hoc moi dang chu y nhat: (17) dung port mot BO LOC QUYEN dua tren du lieu ma chinh ban port
+dang thieu - hai loi o hai lop khac nhau cong don thanh loi nang hon tung loi; (19) cong theo
+TEN khoa khong bat duoc 3 dang vua lo (thieu COT, khoa null theo vai tro, thieu bo loc quyen);
+(20) probe phai tu buoc minh "khong the ket luan" va ky vong phai tinh tu nguon doc lap - kem
+loi cua chinh toi o luot nay (sentinel *LEADERSHIP* lam phep kiem DAT vi ly do sai).

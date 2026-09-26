@@ -1,0 +1,55 @@
+#36 TASK-030: 43 ca chan tang module la DUNG DU LIEU, khong phai loi ma
+
+KET LUAN: hanh vi dung theo du lieu, KHONG phai sai lech ma nguon Java.
+
+Cong cu: tools/probe-module-permission-data.mjs - doc chinh payload bootstrap (GET /api/system)
+ma giao dien tai ve, nen khong can mo rong sandbox de goi mysql, va dung duong chay that.
+Payload nay da chua san noi dung cac bang quyen: allModulePermissions, moduleCatalog,
+staffDirectory, userWarehouseScopes, departmentModulePermissions.
+
+DU LIEU DO DUOC
+  - user_module_permissions : 484 dong (day du phai la 61 module x 12 nguoi dung = 732)
+  - user_warehouse_scopes   : 0 dong
+  - department_module_permissions : 51 dong
+  So dong theo nguoi dung (vi du): kh_nv 30, kh_truong 30, cht 18, thu_kho 18,
+  da_nv 17, da_truong 17, thuky 15, accountant 9.
+
+DOI CHIEU MODULE JS YEU CAU VOI DU LIEU
+  stocktake        4 action -> 0 dong quyen trong toan he thong
+  inventory        3 action -> 0 dong
+  teams            3 action -> 0 dong
+  warehouse_issue  1 action -> 0 dong
+  boq              1 action -> 0 dong
+  purchasing       2 action -> co dong (nhung da_nv co use=0)
+  requests         2 action -> co dong (use=1 cho ksda/da_nv/da_truong)
+  receiving        1 action -> co dong
+  warehouse_receipt 1 action -> co dong
+
+5/9 module ma JS yeu cau co ZERO dong quyen trong toan he thong. JS canUseModule doc CHI tu
+user_module_permissions (department_module_permissions la bang rieng, canUseModule KHONG dung),
+nen JS cung chan y het Java cho cac action can 5 module do.
+=> 43 ca chan tang module la HANH VI DUNG theo du lieu. Day la lo hong DU LIEU/CAU HINH,
+   khong phai loi ma nguon.
+
+KIEM CHUNG CHEO (khop voi TASK-027): tai khoan "Ky su du an (de nghi mua)/ksda" CO
+requests view=1 use=1 create=1 - dung nhu do duoc o TASK-027: sau khi va loi roleBase(),
+create_request VUOT QUA tang module va chi dung o tang pham vi. Hai phep do doc lap khop nhau.
+
+Ghi nhan trung thuc: con so "484 quyen" tung xuat hien trong probe-live-stack truoc day -
+nay da truy duoc y nghia chinh xac: do la SO DONG cua user_module_permissions, khong phai
+"so quyen da cau hinh day du".
+
+HE QUA (khong thuoc TASK-030): nap du user_module_permissions la thao tac DU LIEU/CAU HINH cua
+quan tri vien, khong phai sua ma. Can nguoi dung quyet dinh:
+  (a) chay lai co che cap quyen mac dinh theo phong ban (JS replaceDepartmentDefaults),
+  (b) cau hinh thu cong qua man "Phan quyen nguoi dung",
+  (c) giu nguyen (chi admin dung duoc cac nghiep vu kho/doi thi cong).
+KHONG tu y sua du lieu - day la du lieu nghiep vu that.
+
+LIEN QUAN TASK-029: 6 trong so cac action bi chan (save_team_subcontract, save_team_production,
+approve_team_production, save_team_payment, settle_team_subcontract, create_project_team) thuoc
+nhom Java CHAT HON JS: JS khong kiem module nao cho chung, con Java bat buoc module teams /
+site_command. Vi teams co 0 dong, Java thuc te CHI ADMIN lam duoc, trong khi JS cho phep theo
+vai tro. Day la tac dong nghiep vu dinh luong duoc cua TASK-029.
+
+Tài liệu: docs/agent-progress/TASK-030.md, TASK_INDEX.md, MASTER_STATUS.md

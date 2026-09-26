@@ -1,0 +1,24 @@
+TASK-060: mo rong phep anh xa cua cong doi chieu TAP COT - tu 29 len 65 khoa duoc so (bo qua 49 -> 13), lo ra 18 khoa thieu cot
+
+SUA CONG (tools/probe-column-parity.mjs):
+1. Doc bien JS theo CAU LENH khai bao thay vi doi `= await all(` ngay sau dau `=`: ban cu BO SOT
+   dang rat pho bien `const X = <dieu kien> ? await all(`SQL`) : []` va dang 2 nhanh
+   `isAdmin ? await all(A) : await all(B)` (vi du `constructionDailyLogs`, `adminProjects`,
+   `paymentPlans`, `emailRecipients`, `moduleCatalog`, `warehouses`) => day la ly do cong chi so duoc 29/78.
+   Nay: quet toi het cau lenh (`;` muc ngoai cung, bo qua chuoi/backtick) roi gom MOI khoi SQL.
+2. Them ANH XA KHOA KET QUA -> BIEN: parse chinh object literal `const result={...}` (JS :727) de biet
+   `khoa` nao lay tu `bien` nao (`projects: visibleProjects`, `requests: enrichedRequests`...), roi tra SQL
+   theo TEN BIEN. Truoc day chi so cac khoa ma JS dat ten bien TRUNG ten khoa.
+
+KET QUA: **da so 65 khoa** (truoc 29) · bo qua 13 khoa (truoc 49) · doi chung duong voi metadata MySQL
+van **4/4 DAT** · **18 khoa thieu cot** (muc moi, xem duoi).
+
+18 KHOA THIEU COT (moi khoa phai doc cap SQL hai phia truoc khi va - da kiem bang mat 2/2 ca:
+`boqSourceItems` (JS tra CA `bsi.id AS sourceItemId` VA `bsi.id` + 7 cot khac), `teamSettlements`
+(JS JOIN teams/team_subcontracts tra teamName/contractNo/approvedProductionValue/adjustmentValue/note)):
+boqItems (17 cot) · boqSourceItems (9) · teamSettlements (5) · boqChangeHistory (4) ·
+stockReconciliations (4) · constructionDailyLogs (4: cancelledBy/cancelledAt/createdBy/createdByName) ·
+siteExpenseClaims (3) · contractStockLedger (2) · workflowAssignments (2: ownerEmail/ownerRole) ·
+contractPayments (2) · capitalRecoveryRecords (2) · paymentPlans (2) · advanceRequests (2) ·
+contractStockBalances (1) · modulePermissions (1: permissionExpiresAt) · boqImportBatches (1: active) ·
+users (1: passwordResetAt) · teamPayments (1: productionRecordId).

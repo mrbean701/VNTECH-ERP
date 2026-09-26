@@ -1,0 +1,363 @@
+{
+  "name": "live-chain-v53f",
+  "baseUrl": "http://127.0.0.1:18080",
+  "recordedAt": "2026-09-11T01:35:41.493Z",
+  "steps": [
+    {
+      "step": "pre-setup GET",
+      "status": 200,
+      "response": {
+        "setupRequired": true,
+        "ok": true
+      }
+    },
+    {
+      "step": "setup",
+      "status": 201,
+      "response": {
+        "ok": true
+      }
+    },
+    {
+      "step": "login",
+      "status": 200,
+      "response": {
+        "mustChangePassword": false,
+        "ok": true
+      }
+    },
+    {
+      "step": "create_project",
+      "status": 200,
+      "response": {
+        "message": "Đã tạo dự án LIVE1 và kho công trường riêng.",
+        "ok": true
+      }
+    },
+    {
+      "step": "save_material",
+      "status": 200,
+      "response": {
+        "ok": true,
+        "message": "Đã tạo vật tư M-LIVE."
+      }
+    },
+    {
+      "step": "save_material_category",
+      "status": 200,
+      "response": {
+        "ok": true,
+        "message": "Đã tạo nhóm vật tư NL."
+      }
+    },
+    {
+      "step": "save_email_settings",
+      "status": 200,
+      "response": {
+        "ok": true,
+        "message": "Đã lưu cấu hình email & gửi thông báo duyệt theo dự án và bước duyệt."
+      }
+    },
+    {
+      "step": "factory_reset_preview",
+      "status": 200,
+      "response": {
+        "ok": true,
+        "message": "Xem trước dữ liệu sẽ bị xóa trước khi reset kiểm thử.",
+        "confirmText": "RESET_ALL",
+        "items": [
+          {
+            "tablename": "material_requests",
+            "rowcount": 0
+          },
+          {
+            "tablename": "stock_movements",
+            "rowcount": 0
+          },
+          {
+            "tablename": "purchase_orders",
+            "rowcount": 0
+          },
+          {
+            "tablename": "goods_receipts",
+            "rowcount": 0
+          },
+          {
+            "tablename": "capital_recovery_records",
+            "rowcount": 0
+          },
+          {
+            "tablename": "users (ngoài admin)",
+            "rowcount": 0
+          }
+        ]
+      }
+    },
+    {
+      "step": "bootstrap",
+      "status": 200,
+      "response": {
+        "ok": true,
+        "authenticated": true,
+        "data": {
+          "projects": [
+            {
+              "id": "PRJ_4f2ee10a-b553-4d26-807c-2774d7b7d71a",
+              "code": "LIVE1",
+              "name": "Dự án Live",
+              "status": "active",
+              "contractno": null,
+              "contractname": null,
+              "startdate": "2026-09-01",
+              "plannedenddate": null
+            }
+          ],
+          "requests": [],
+          "teams": [],
+          "warehouses": [
+            {
+              "id": "WH_e25c0d2a-746a-4b3f-8d1a-76f047a8847f",
+              "code": "KHO-LIVE1",
+              "name": "Kho công trường LIVE1",
+              "type": "site",
+              "projectid": "PRJ_4f2ee10a-b553-4d26-807c-2774d7b7d71a",
+              "parentwarehouseid": "WH-CENTRAL"
+            },
+            {
+              "id": "WH-CENTRAL",
+              "code": "KHO-TONG",
+              "name": "Kho trung tâm",
+              "type": "central",
+              "projectid": null,
+              "parentwarehouseid": null
+            }
+          ],
+          "transferWarehouses": [
+            {
+              "id": "WH-CENTRAL",
+              "code": "KHO-TONG",
+              "name": "Kho trung tâm",
+              "type": "central",
+              "projectid": null,
+              "projectcode": null,
+              "projectname": null
+            },
+            {
+              "id": "WH_e25c0d2a-746a-4b3f-8d1a-76f047a8847f",
+              "code": "KHO-LIVE1",
+              "name": "Kho công trường LIVE1",
+              "type": "site",
+              "projectid": "PRJ_4f2ee10a-b553-4d26-807c-2774d7b7d71a",
+              "projectcode": "LIVE1",
+              "projectname": "Dự án Live"
+            }
+          ],
+          "materialCategories": [
+            {
+              "id": "MCAT_6bfe89c0-c619-4d17-a797-7491d5b7d09b",
+              "code": "NL",
+              "name": "Nguyên liệu",
+              "description": null,
+              "sortorder": 0,
+              "active": 1
+            }
+          ],
+          "materialSubcategories": [],
+          "materials": [
+            {
+              "id": "MAT_cef9a198-3df4-443f-9dbd-16f09b04c561",
+              "code": "M-LIVE",
+              "name": "Vật tư Live",
+              "system": "DIEN",
+              "categoryid": null,
+              "categorycode": null,
+              "categoryname": null,
+              "subcategoryid": null,
+              "subcategorycode": null,
+              "subcategoryname": null,
+              "specification": null,
+              "brand": null,
+              "unit": "cái",
+              "standardprice": 10000,
+              "minstock": 0,
+              "requirescocq": 0,
+              "requiresmar": 0,
+              "aliases": [
+                "Vật tư Live"
+              ],
+              "aliasText": "Vật tư Live"
+            }
+          ],
+          "suppliers": [],
+          "adminSuppliers": [],
+          "inventory": [
+            {
+              "projectid": "PRJ_4f2ee10a-b553-4d26-807c-2774d7b7d71a",
+              "projectcode": "LIVE1",
+              "projectname": "Dự án Live",
+              "warehouseid": "WH_e25c0d2a-746a-4b3f-8d1a-76f047a8847f",
+              "warehousecode": "KHO-LIVE1",
+              "warehousename": "Kho công trường LIVE1",
+              "type": "site",
+              "materialid": "MAT_cef9a198-3df4-443f-9dbd-16f09b04c561",
+              "materialcode": "M-LIVE",
+              "materialname": "Vật tư Live",
+              "unit": "cái",
+              "minstock": 0,
+              "balance": 0,
+              "reserved": 0,
+              "available": 0
+            }
+          ],
+          "purchaseOrders": [],
+          "receipts": [],
+          "issues": [],
+          "returns": [],
+          "stockCounts": [],
+          "transferOrders": [],
+          "boqItems": [],
+          "projectContracts": [],
+          "boqVersions": [],
+          "boqSourceItems": [],
+          "boqMappingCandidates": [],
+          "contractStockLedger": [],
+          "contractStockBalances": [],
+          "settings": {
+            "companyname": "CTY",
+            "stage1department": "BCH / Chỉ huy trưởng",
+            "stage2department": "Phòng Dự án",
+            "stage3department": "KH-MH / Tài chính",
+            "approvalslahours": 24,
+            "stage1slahours": 8,
+            "stage2slahours": 8,
+            "stage3slahours": 8,
+            "poslahours": 1,
+            "bchconfirmationslahours": 1,
+            "slowmovingdays": 60,
+            "negativestockblocked": 1
+          },
+          "approvalStageCatalog": [],
+          "roleCatalog": [],
+          "organizationUnits": [],
+          "menuGroups": [],
+          "moduleCatalog": [],
+          "modulePermissions": [],
+          "staffDirectory": [
+            {
+              "id": "USR_7f22328f-6f8f-4a65-ab85-3d339c740a2a",
+              "employeecode": "ADMIN-001",
+              "fullname": "ADMIN",
+              "email": null,
+              "role": "admin",
+              "rolename": "admin",
+              "department": "Công ty VNTECH",
+              "organizationunitid": null,
+              "organizationcode": null,
+              "organizationname": "Công ty VNTECH",
+              "avatarurl": null
+            }
+          ],
+          "users": [
+            {
+              "id": "USR_7f22328f-6f8f-4a65-ab85-3d339c740a2a",
+              "employeecode": "ADMIN-001",
+              "fullname": "ADMIN",
+              "username": "admin",
+              "email": null,
+              "role": "admin",
+              "rolename": "admin",
+              "rolebase": "admin",
+              "warehousescopekind": null,
+              "department": "Công ty VNTECH",
+              "organizationunitid": null,
+              "organizationcode": null,
+              "organizationname": "Công ty VNTECH",
+              "avatarurl": null,
+              "approvallimit": 999999999999,
+              "mustchangepassword": false,
+              "active": true
+            }
+          ],
+          "adminProjects": [
+            {
+              "id": "PRJ_4f2ee10a-b553-4d26-807c-2774d7b7d71a",
+              "code": "LIVE1",
+              "name": "Dự án Live",
+              "status": "active",
+              "contractno": null,
+              "contractname": null,
+              "startdate": "2026-09-01",
+              "plannedenddate": null
+            }
+          ],
+          "userScopes": [
+            {
+              "userid": "USR_7f22328f-6f8f-4a65-ab85-3d339c740a2a",
+              "projectid": "PRJ_4f2ee10a-b553-4d26-807c-2774d7b7d71a",
+              "permission": "admin",
+              "projectcode": "LIVE1",
+              "projectname": "Dự án Live"
+            }
+          ],
+          "activeSessions": [
+            {
+              "id": "SES_3f7c7c60-9a32-4888-b2fb-2d43442f2037",
+              "userid": "USR_7f22328f-6f8f-4a65-ab85-3d339c740a2a",
+              "username": "ADMIN",
+              "ipaddress": "127.0.0.1",
+              "useragent": "node",
+              "createdat": "2026-09-11T01:35:42.421716Z",
+              "expiresat": "2026-09-12T01:35:42.421716Z"
+            },
+            {
+              "id": "SES_1c211319-d78e-458e-9039-dc3987588a64",
+              "userid": "USR_7f22328f-6f8f-4a65-ab85-3d339c740a2a",
+              "username": "ADMIN",
+              "ipaddress": null,
+              "useragent": null,
+              "createdat": "2026-09-11T01:35:41.873788Z",
+              "expiresat": "2026-09-12T01:35:41.873788Z"
+            }
+          ],
+          "audits": [],
+          "businessRoleEngineProfiles": [],
+          "businessRoleGroups": [],
+          "businessScopes": [],
+          "contractPayments": [],
+          "productionReports": [],
+          "capitalRecoveryRecords": [],
+          "teamSubcontracts": [],
+          "teamProductionRecords": [],
+          "teamPayments": [],
+          "paymentPlans": [],
+          "advanceRequests": [],
+          "siteExpenseClaims": [],
+          "bankAccounts": [],
+          "cashbookEntries": [],
+          "accountingVouchers": [],
+          "hrRecords": [],
+          "laborContracts": [],
+          "officialCorrespondence": [],
+          "legalDocuments": [],
+          "sealManagement": [],
+          "benefitRecords": [],
+          "materialNorms": [],
+          "workItems": [],
+          "taskNotifications": [],
+          "constructionDailyLogs": [],
+          "setup": false,
+          "user": {
+            "id": "USR_7f22328f-6f8f-4a65-ab85-3d339c740a2a",
+            "fullName": "ADMIN",
+            "username": "admin",
+            "role": "admin",
+            "roleBase": "admin",
+            "roleName": "admin",
+            "department": "Công ty VNTECH",
+            "avatarUrl": null
+          }
+        }
+      }
+    }
+  ]
+}

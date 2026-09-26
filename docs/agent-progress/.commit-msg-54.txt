@@ -1,0 +1,61 @@
+#54 TASK-040 nho 3b phan 2: port import_material_catalog + va duong DOC thu NAM (adminMaterials thieu 5 truong)
+
+=== LOI CHINH: UI gui categoryCode, Java doc categoryId ===
+UI (app/page.tsx:1909-1921 mapMaterialCatalogRows) gui moi dong:
+  categoryCode, categoryName, subcategoryCode, subcategoryName, code, name, unit, specification,
+  brand, standardPrice, minStock, requiresCocq, requiresMar
+Ban Java cu doc row.get("categoryId")/row.get("subcategoryId") - hai khoa UI KHONG BAO GIO GUI
+=> moi vat tu nhap vao deu MAT NHOM (category_id/subcategory_id = NULL); va `system` lay tu khoa "system"
+cung khong duoc gui => LUON roi ve "KHAC".
+
+=== DA PORT DUNG JS (system-route.mjs:2550-2606) ===
+  yeu cau du Ma + Ten + DVT, thong diep "Dong N: can du Ma vat tu, Ten vat tu va DVT."
+  "File danh muc vat tu khong co dong du lieu." / "Moi lan nhap toi da 5.000 ma vat tu."
+  system = canonicalMeCode(category.code)  -> dung MaterialSystemCodes dung chung (xem #52)
+  nhom moi: sort_order=999, mo ta "Tao tu file danh muc vat tu V5.0.0"
+  nhom con moi: sort_order=999; rieng CHUA_PHAN_NHOM la 9999 + mo ta "Nhom mac dinh"
+  doi ten nhom: UPDATE ... SET name=?,active=1,updated_at=? WHERE id=?  (2 port method MOI
+    renameCategoryActive / renameSubcategoryActive)
+  thong diep: "Da nhap/cap nhat N ma vat tu[; tao moi X he M&E va Y nhom con]."
+Vi sao them 2 port method moi thay vi dung updateCategory/updateSubcategory co san: hai ham cu GHI DE ca
+code/description/sort_order va KHONG bat active=1, trong khi JS chi dat name + active=1.
+Vi sao upsert van dung du luon sinh id moi: JS dung ON CONFLICT(code); adapter dung ON DUPLICATE KEY UPDATE
+tren bang co materials_code_uidx(code) => ma da ton tai thi MySQL cap nhat CHINH DONG CU (id moi bi bo qua).
+
+=== LOI DUONG DOC THU NAM: adminMaterials thieu 5 truong ===
+Probe bao 2 muc HONG (brand, minStock = undefined) DU DB DA GHI DUNG (brand='brand probe', min_stock=7 -
+kiem bang MySQL). Truy nguyen: truy van adminMaterials cua Java chi tra 10 truong, THIEU specification,
+brand, minStock, requiresCocq va ca categoryCode/categoryName/subcategoryCode/subcategoryName so voi
+JS system-route.mjs:696 => man Quan tri danh muc vat tu HIEN THI THIEU hang / ton toi thieu / quy cach
+du du lieu co that. Da sua khop JS: LEFT JOIN nhom, giu ca ban ghi da an, sap theo active roi thu tu nhom,
+kem aliases (truy van `materials` khong-admin von da day du).
+Day la LAN THU NAM gap dang "ghi duoc ma doc khong ra" (truoc: scope_key='GLOBAL', khoa emailRecipients,
+source_type cua dinh muc, settings_json). MOI LAN deu bi bat boi phep kiem "ghi xong DOC LAI",
+khong lan nao bi bat boi "het 500" hay "bien dich sach".
+
+=== LOI CUA CHINH TOI (lan thu hai trong nho 3b) ===
+1. Ban dau toi dat categoryCode = "ZZPROBE040 DIEN LUC" roi ky vong system='DIEN'. SAI: canonicalMeCode bo
+   het ky tu khong phai chu-so nen ma thanh "ZZPROBE040DIENLUC", KHONG bat dau bang "DIEN" => tra 'KHAC'
+   la DUNG (JS cung vay). Da doi thanh "DIENLUC-ZZPROBE040" de kiem dung nhanh TIEN TO vua va o #52 -> DIEN.
+2. Mot lenh mvn cua toi chay sai thu muc (workspace thay vi java-backend) => "no POM in this directory".
+
+KIEM CHUNG LUC CHAY
+  jar 90.888.912 bytes (15:48:23) - API PID 37180 - Flyway validated 16 migrations - log 0 ERROR
+  tools/probe-task040-nhom3b.mjs : 17/17 DAT - exit 0
+    nhom + nhom con TU TAO tu ma trong tep; system=DIEN; category_id/subcategory_id DA GAN
+    brand + min_stock doc lai duoc sau khi va duong doc
+    nhap lai cung ma -> 1 dong, khong trung, thong diep khong con phan "tao moi"
+    2 nhanh chan tra DUNG NGUYEN VAN thong diep JS
+  MySQL sau khi nhap: brand='brand probe', min_stock=7, standard_price=0, requires_cocq=0, requires_mar=0,
+    nhom DIENLUC-ZZPROBE040 sort_order=999 active=1
+  Don dep: materials=14 categories=6 subcategories=8 - NGUYEN TRANG
+  npm run test:regression: 61 test / 59 pass / 2 fail - dung 2 loi cu (TASK-031, TASK-032)
+
+GHI CHU CON LAI CUA NHOM 3b (ghi ro, khong tu mo rong)
+  JS co ghi audit(...) cho lan nhap nay; ban Java CHUA ghi audit (ban cu cung chua) - khoang trong da ghi nhan.
+  Phan quyen: JS requireRole(["admin"]); Java de cong module cua ActionRbacRegistry quyet dinh => GIU NGUYEN
+  co che hien co, khong tu doi (thuoc nhom quyet dinh TASK-029).
+  existingIdByCode nay khong con noi dung - de lai cho lan don dep sau.
+
+Tep: MaterialCatalogStore.java - MaterialCatalogStoreAdapter.java - MaterialCatalogManagementUseCase.java -
+BootstrapDataAdapter.java - tools/probe-task040-nhom3b.mjs (moi) - docs/agent-progress/TASK-040.md (muc 21)

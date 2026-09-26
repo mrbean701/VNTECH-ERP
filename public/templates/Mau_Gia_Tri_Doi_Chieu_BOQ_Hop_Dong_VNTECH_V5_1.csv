@@ -1,0 +1,8 @@
+sep=;
+"Thứ tự nguồn";"Mã dòng BOQ";"STT theo hợp đồng";"Mã hệ";"Mã vật tư (nội bộ)";"Mã vật tư theo Hợp đồng";"Tên vật tư";"Đơn vị";"Khối lượng BOQ/HĐ";"Khối lượng làm cơ sở giá trị";"Đơn giá hợp đồng / phát sinh";"Thành tiền hợp đồng / phát sinh";"Ghi chú"
+"1";"BOQ-MAU-001";"1";"DIEN";"VT-DIEN-001";"VT-HD-001";"Cáp điện Cu/XLPE/PVC 4x50 mm²";"m";"100";"100";"125000";"12500000";"Trong HĐ"
+"2";"BOQ-MAU-002";"2";"CTN";"VT-CTN-001";"VT-HD-002";"Ống uPVC D110 PN8";"m";"200";"200";"85000";"17000000";"Trong HĐ"
+"3";"BOQ-MAU-003";"3";"HVAC";"VT-HVAC-001";"VT-HD-003";"Ống gió tôn mạ kẽm";"m²";"50";"50";"320000";"16000000";"Trong HĐ"
+"4";"BOQ-MAU-004";"4";"ELV";"VT-ELV-001";"VT-HD-004";"Cáp mạng Cat6";"m";"500";"500";"14000";"7000000";"Trong HĐ"
+"5";"BOQ-MAU-005";"5";"PCCC";"VT-PCCC-001";"VT-HD-005";"Đầu báo khói";"cái";"20";"20";"450000";"9000000";"Trong HĐ"
+"6";"BOQ-MAU-006";"PS-01";"CTN";"VT-CTN-PS01";"";"Phát sinh ngoài HĐ đã duyệt – Cút uPVC D110";"cái";"0";"10";"65000";"650000";"Phát sinh ngoài HĐ – chỉ cộng khi đã duyệt"

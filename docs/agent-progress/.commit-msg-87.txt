@@ -1,0 +1,39 @@
+TASK-048: port 5/6 moc NHAT KY KIEM TOAN cua luong Phieu de nghi (CREATE/EDIT_RETURNED/RESUBMIT/DELETE_RETURNED/CANCEL) + cong moi 18/18 + SUA 2 CONG DO SAI (probe-task043 chua bao gio chay phep kiem audit; probe-audit-coverage tra sai ten lop nen con so 152 la HIEN VAT)
+
+MA NGUON:
+- RequestManagementUseCase: them AuditLogPort + 5 loi goi auditLog.log nguyen van hop dong JS
+  (:980 CREATE, :994 EDIT_RETURNED, :1019 RESUBMIT, :1030 DELETE_RETURNED, :1062 CANCEL).
+  Giu dung THU TU cua JS: DELETE_RETURNED ghi audit TRUOC khi xoa (JS 1030 audit -> 1031 batch DELETE).
+  Tranh 2 bay da ghi o bai hoc #13: EDIT_RETURNED.after.priority dung gia tri THO cua payload
+  (khong phai "normal" da mac dinh hoa truyen xuong UPDATE) va RESUBMIT.after.comment dung
+  clean(payload.comment) THO (khong phai bien comment da mac dinh hoa "CHT GUI LAI: ...").
+- ApplicationBeansConfig: noi AuditLogPort vao requestManagementUseCase.
+
+KIEM CHUNG LUC CHAY - cong moi tools/probe-task048-audit-requests.mjs 18/18 DAT:
+lai DUNG luong nghiep vu (phieu A: tao -> tu choi -> sua -> gui lai -> tu choi -> huy;
+phieu B: tao -> tu choi -> xoa), kiem chuoi audit dung thu tu CREATE -> EDIT_RETURNED ->
+RESUBMIT -> CANCEL, kiem DELETE_RETURNED song sot sau khi phieu bi xoa, kiem before_json/after_json
+theo nguyen van JS; doi chung duong truoc khi va: entity_type='material_request' = 0 dong.
+DON SACH co kiem chung: moi bang nghiep vu tro ve dung so dong ban dau (17/35/100/0/0/91/0);
+audit_logs la bang append-only nen duoc giu lai lam bang chung.
+Cong cu probe-task043-custom-fields.mjs: 27/27 DAT.
+
+SUA 2 CONG DO SAI (phat hien trong luot nay):
+1. probe-task043-custom-fields.mjs: phep kiem TASK-048 goi q1() - ham KHONG ton tai => probe NEM LOI
+   nen phep kiem CHUA BAO GIO CHAY, ma dong "19/20 DAT" khien toi tuong no da chay va HONG. Nay goi q().
+2. probe-audit-coverage.mjs: lay ten BIEN camelCase trong SystemController roi tra vao bang khoa theo
+   ten LOP PascalCase => khong bao gio khop => "CA HAI DEU GHI" luon 0 va "khe ho" luon bang DUNG so
+   action JS co audit (152) - mot HANG SO, khong phai phep do. Da sua + them DOI CHUNG DUONG
+   (186/186 nhanh case tra duoc lop). So DUNG: khe ho 128 action (khong phai 152), ca hai deu ghi 24 action.
+
+TACH TASK-054: moc thu 6 APPROVE_PARTIAL (JS :1101) KHONG the chi them mot loi goi audit - nhanh
+all_roles cua JS (:1087-1103) co 3 hanh vi Java chua port (nhanh ADMIN dien vai tro con thieu;
+tinh `missing` + CAP NHAT COMMENT TIEN DO + RETURN SOM khong chuyen buoc; roi moi audit). Java HIEN
+CHUYEN BUOC ngay khi mot vai tro xac nhan => vo hieu rang buoc "moi vai tro phai xac nhan".
+Them audit ma khong port hanh vi se tao DAU VET SAI. Ho so day du o docs/agent-progress/TASK-054.md.
+
+LOI CUA CHINH TOI TRONG LUOT NAY (ghi day du trong TASK-048.md muc 4): cau SQL don dep trong finally
+bi gop nhieu cau va sai ten cot (procurement_allocations khong co request_id - cot that la
+request_item_id) => mysql dung tai cau 5, 6 cau sau khong chay, du lieu probe con nam lai (da don tay
+co kiem chung + sua probe thanh moi cau mot lan chay, gom loi); va LAI nuot stderr nen lan chay
+DAT-het van thoat ma 1 ma khong thay ly do (mot dong thong tin doc cot khong ton tai - bai hoc #15).

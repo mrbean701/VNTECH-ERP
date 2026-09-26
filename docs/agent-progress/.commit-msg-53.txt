@@ -1,0 +1,13 @@
+#53 TASK-040 nho 3b phan 1: cap nhat bo nho du an (MASTER_STATUS + TASK_INDEX)
+
+- MASTER_STATUS.md: CURRENT/LAST/NEXT TASK (nho 3b phan 1 DONE o #52), System State (jar 90.887.539 bytes,
+  API PID 19532/job pwsh-66), known problems #25 (canonicalMeCode lech 7/28 - DA VA) va #26 (bay `(?i)` cua Java
+  lam khong khop `Đ`), CURRENT TODO (tach nho 3b thanh phan 1 xong / phan 2 con lai).
+- TASK_INDEX.md: dong moi "TASK-040 nhom 3b (phan 1)" = DONE voi day du bang chung va hai loi cua chinh toi
+  duoc unit test bat (bay `(?i)` + ky vong sai ve "Ø 20").
+
+Khong doi ma nguon trong commit nay. Jar da build lai va API dang chay ban moi:
+  mvn -q -DskipTests package -> 90.887.539 bytes (15:07:51)
+  /actuator/health 200 - PID 19532
+  probe-java-sql-live: 8 phat hien (khong doi, tat ca la nhom 6 - cho quyet dinh)
+  probe-task040-nhom3: 25/25 DAT

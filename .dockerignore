@@ -1,0 +1,17 @@
+node_modules
+.local-data
+.local-backups
+.server-data
+server-data
+.git
+.sites-runtime
+dist
+*.zip
+*.sqlite
+*.db
+*.log
+.env
+deploy/.active-profile.json
+
+.vntech_backups
+.vntech_update_state

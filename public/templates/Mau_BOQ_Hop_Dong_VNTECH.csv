@@ -1,0 +1,5 @@
+﻿sep=;
+"STT theo hợp đồng";"Mã vật tư (nội bộ)";"Mã hệ";"Nhóm con (tùy chọn)";"Phân loại trong / ngoài hợp đồng";"Mã vật tư theo Hợp đồng";"Mã vật tư được phê duyệt";"Tên vật tư";"Đơn vị";"Khối lượng BOQ/HĐ";"Khối lượng bóc lại";"Lũy kế khối lượng vật tư đã nhập về dự án";"Thừa thiếu so với BOQ/HĐ";"Thừa thiếu so với bóc lại";"Xuất kho tổ đội";"Tồn kho";"Ghi chú"
+"";"";"DIEN";"BUSWAY";"Trong HĐ";"";"";"BUSWAY";"";"";"";"";"";"";"";"";""
+"62";"VTNB-EE-001";"DIEN";"BUSWAY";"Trong HĐ";"VT-HĐ-001";"VT-PD-001";"Thanh dẫn điện Nhôm (Feeder) 2500A";"10m";"39.4";"38.7";"";"";"";"";"";""
+"4";"VTNB-EE-011";"DIEN";"Cáp điện trạm biến áp";"Trong HĐ";"VT-HĐ-011";"VT-PD-011";"Đầu cốt đồng M300";"10 đầu cốt";"1.8";"1.8";"";"";"";"";"";""

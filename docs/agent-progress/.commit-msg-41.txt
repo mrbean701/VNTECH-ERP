@@ -1,0 +1,48 @@
+#41 TASK-022b: DONG - KHONG can sua ACTION_CATALOG (tien de cua task la SAI)
+
+TIEN DE BAN DAU (ghi trong MASTER_STATUS): ACTION_CATALOG thieu 12 action chi co o Java => can bo sung.
+Ket qua dieu tra: TIEN DE SAI. Da chung minh bang bang chung, khong suy doan.
+
+GIA THUYET RUI RO TOI KIEM TRUOC (va no KHONG dung)
+  Toi nghi neu co bo sinh tu dong ghi lai ActionRbacRegistry.java tu danh muc (174 muc) thi chay lai
+  se am tham xoa 12 muc => 12 action roi vao nhanh MAC DINH TU CHOI cua requireActionModule.
+  Ket qua: KHONG co duong rui ro do.
+    - Khong tep/script nao GHI ACTION_CATALOG.json (khong writeFileSync nao tro vao no)
+    - tools/patch-rbac-registry.mjs chi REPLACE List.of() -> List.of(module...), KHONG BAO GIO xoa muc
+
+DO TROI DAT THAT (tools/probe-catalog-drift.mjs)
+  ACTION_CATALOG.json (kiem ke)        174 muc
+  ActionRbacRegistry.java (THI HANH)   186 muc
+  Ban thi hanh co / danh muc thieu  : 12
+  Danh muc co / ban thi hanh thieu  : 0
+
+VI SAO BO SUNG VAO DANH MUC LA SAI - 3 LY DO CO BANG CHUNG
+  4.1 Danh muc co HOP DONG la sinh tu nguon JS, va DANG dung hop dong.
+      node tools/probe-action-parity.mjs -> exit 0:
+        So muc trong catalog : 174
+        Co o JS nhung KHONG co trong catalog : 0
+        Co trong catalog nhung KHONG co o JS : 0
+        => Catalog KHOP HOAN TOAN voi nguon JS.
+        Action cua JS ma Java THIEU : 0 (khong thieu action nao)
+  4.2 Them 12 muc se TAO SAI LECH GIA va PHA MOT CONG DANG XANH: bo kiem so TEN action giua danh muc
+      va JS, nen muc "co trong catalog nhung khong co o JS" se doi tu 0 thanh 12 => cong parity dang
+      xanh chuyen do vi mot thay doi tai lieu sai ngu nghia.
+  4.3 Chung KHONG bi bo sot ve thi hanh: ca 12 muc da khai day du module + capability trong
+      ActionRbacRegistry.java - chinh la nguon ma RbacService.requireActionModule dung de chan.
+
+PHAT HIEN PHU - CUNG CO TASK-035
+  Trong 12 muc Java-only co save_workflow / set_workflow_status / delete_workflow (module admin).
+  Dieu nay khop hoan toan voi TASK-035: scripts/system-route.mjs co 0 tham chieu toi ba bang workflow
+  P4 => tinh nang quan tri workflow la JAVA-ONLY. Hai phep do doc lap xac nhan nhau.
+
+GIA TRI DE LAI - CONG KIEM THUONG TRUC
+  tools/probe-catalog-drift.mjs nay la CONG, khong chi la bao cao:
+    DAT  khi danh muc khong chua ten nao ngoai JS VA phan du cua ban thi hanh nam trong tap 12
+         Java-only DA BIET
+    HONG khi co ten CHUA BIET xuat hien o bat ky chieu nao => buoc ra lai thay vi bo qua
+  Chay hien tai: 0 ten la, 12/12 da biet, 0 chua biet -> exit 0.
+
+KHONG sua ACTION_CATALOG.json (co y).
+Tep: tools/probe-catalog-drift.mjs (moi), docs/agent-progress/{TASK-022b.md (moi), TASK_INDEX.md,
+MASTER_STATUS.md}
+Tai lieu: docs/agent-progress/TASK-022b.md

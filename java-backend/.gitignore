@@ -1,0 +1,24 @@
+# Java backend — build artifacts
+target/
+**/target/
+*.class
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+
+# Local data
+data/
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env secrets (không commit)
+.env
+*.local.yml
