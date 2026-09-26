@@ -8,6 +8,8 @@ Trung tâm phê duyệt:
 - Phiếu đang xử lý: quy trình phê duyệt đang hiển thị theo dạng cột từ trên xuống không đúng như yêu cầu của tôi về cách thức hiển thị hãy sửa lại theo ý tưởng ví dụ: bước 1 o----o bước 2 o----o bước 3 o----o ....
 dứoi mỗi bước sẽ hiển thị ai đã duyệt (tên người duyệt, phòng ban, thời gian duyệt), bước duyệt tiếp theo sẽ không hiển thị thông tin người duyệt và phòng ban mà chỉ hiển thị đang chờ (hoặc pending). Cho hiển thị nút duyệt kể cả khi SLA quá hạn, nhưng bắt buộc phải điền vào lý do (lý do để đơn hàng quá hạn) và có cơ chế tính số lượng đơn hàng quá hạn để xây dựng logic xử lý đơn hàng quá hạn trong tương lai.
 - Hồ sơ chi tiết, phần tài liệu đính kèm : chữ và ô chọn tệp tải lên đang bị lỗi font chữ chồng chéo lên nhau.
+- Menu Trung tâm phê duyệt chỉ có 1 item nên không cần thiết phải hiển thị menuitem -> click vào là hiển thị ra màn trung tâm phê duyệt luôn.
+
 
 Quản lý dự án:
 - quản lý dự án: danh sách dự án phần hiển thị các nút chức năng search sort filter đang hiển thị theo 1 cột dọc lệch sang bên phải trong khi đó phần bên trái chỉ hiển thị label nhìn rất mất cân đối tôi muốn phân bố lại các nút chức năng nằm ngang bên trên là label "DANH SÁCH DỰ ÁN".
@@ -59,7 +61,7 @@ Quản trị hệ thống:
 - Thêm tab thông báo: trong tab này sẽ cấu hình thông báo cho tất cả các user thông qua thông email hoặc notification của phần mềm. Trong tab này sẽ hiển thị các thông tin về danh sách thông báo, có các nút chức năng CRUD search sort fillter. Nút tạo thông báo: có thể chọn loại hình thông báo(thông báo web hoặc qua email), tên thông báo, mã thông báo, nội dung thông báo, người nhận thông báo (có thể chọn từng user hoặc nhiều user, thông báo theo phòng ban, dự án hoặc toàn bộ user), thời gian thông báo (hẹn giờ gửi thông báo) , thời gian kết thúc thông báo (đối với web).
 - Tài khoản: bỏ trường hạn mức đi, tôi không hiểu trường này để làm gì, audit đăng nhập cuối và ngày tạo đang không hiển thị được, 1 số user không có mã. Nên có thêm thông tin về ID user fit với thông tin hiển thị trong danh sách nhân sự (menu hồ sơ nhân sự). Thêm chức năng thêm chữ ký trong modal chỉnh sửa hoặc thêm user, cho phép tải ảnh lên (chỉ được tải 1 ảnh, xóa ảnh cũ nếu như tải ảnh mới lên).
 
-Notification(web): thiết kế logic thông báo hệ thống, kho user đăng nhập vào phần mềm sẽ hiển thị ra thông báo của hệ thống dạng modal có nút không nhắc lại hôm nay. Modal hiển thị nội dung thông báo, người tạo thông báo, thời gian phát hành thông báo. Check theo userID để hiển thị thông báo sao cho phù hợp.
+Notification(web): thiết kế logic thông báo hệ thống, kho user đăng nhập vào phần mềm sẽ hiển thị ra thông báo của hệ thống dạng modal có nút không nhắc lại hôm nay. Modal hiển thị nội dung thông báo, người tạo thông báo, thời gian phát hành thông báo. Check theo userID để hiển thị thông báo sao cho phù hợp. Thêm nút đánh dấu là đã đọc đối với từng thông báo, thêm nút đánh dấu tất cả đã đọc.
 
 Notifaction(email): thông báo các thông tin liên quan đến các đơn - phiếu có liên quan đến user. Nhắc đến bước duyệt của user, nhắc công việc liên quan đến user.... Hãy đề xuất thêm các thông báo từ các chức năng hiện có của hệ thống
 
