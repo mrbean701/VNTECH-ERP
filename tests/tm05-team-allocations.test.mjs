@@ -111,12 +111,16 @@ test("TM-05 — ĐỐI CHỨNG ÂM: tổ đội không có phiếu nào ⇒ «ch
   assert.deepEqual(other.find((source) => source.key === "issues").rows.map((row) => row.issueNo), ["PX-02"]);
 });
 
-test("TM-05 — tab «Cấp phát» là tab số 4 (thứ tự nguyên văn của TM-03) và có bảng dữ liệu riêng", () => {
+// 📌 CẬP NHẬT 26/09/2026 theo MASTER TASK 3 §G: tab «Cấp phát» ĐÃ GỘP vào tab «Lịch sử»
+//   («Lịch sử — Tổng hợp tất cả đơn/phiếu liên quan, có Search · Sort · Filter theo loại»).
+// ⛔ NGHIỆP VỤ CẤP PHÁT KHÔNG BỊ MẤT: tab 4 vẫn khai nguồn `stock_issues` + `material_returns`,
+//   và UI vẫn render bảng cấp phát/hoàn trả bên trong tab đó.
+test("TM-05 — cấp phát/hoàn trả nay NẰM TRONG tab số 4 «Lịch sử» (MT3 §G) và vẫn khai nguồn thật", () => {
   const { teamDetailTabs } = loadPure();
   const tabs = teamDetailTabs(DATA, TEAM);
-  assert.equal(tabs[4].label, "Cấp phát");
-  assert.match(tabs[4].source, /stock_issues\.team_id/);
-  assert.match(tabs[4].source, /material_returns\.team_id/);
+  assert.equal(tabs[4].label, "Lịch sử", "tab 4 nay là «Lịch sử» tổng hợp theo MT3 §G");
+  assert.match(tabs[4].source, /stock_issues\.team_id/, "nguồn cấp phát VẪN phải được khai trong tab Lịch sử");
+  assert.match(tabs[4].source, /material_returns\.team_id/, "nguồn hoàn trả VẪN phải được khai trong tab Lịch sử");
   assert.equal(tabs[4].count, 2);
   assert.match(screen, /TÁI DÙNG logic cấp phát kho/, "UI phải nói rõ đây là TÁI DÙNG logic cấp phát kho");
   assert.match(screen, /allocations\.map\(\(source\) =>/, "UI phải render bảng cấp phát từ nguồn tái dùng");

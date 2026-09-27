@@ -14,6 +14,10 @@ import { isAdminUser } from "@/lib/permissions";
 import { CardHead } from "@/lib/ui-shared";
 import type { AppData, Row } from "@/lib/ui-shared";
 import { useState } from "react";
+// MT3 §IV.7 + ma trận #6 — XUẤT dùng ĐÚNG thư viện dùng chung (§14), ⛔ không tự viết lại logic CSV/Blob.
+//   ⚠️ TRƯỚC ĐÂY màn này KHÔNG có nút xuất thật: các nút CRUD chỉ mượn **lớp CSS `export-mini`**
+//   (đúng cảnh báo của ma trận §A: «nhiều nút KHÔNG PHẢI export nhưng dùng chung class»).
+import { downloadCsv } from "@/lib/tabular-export";
 // =============================================================================
 // NỢ MỤC 5/8 — BẢNG DANH SÁCH VẬT TƯ ĐẦY ĐỦ (tab 1 của Danh mục vật tư gốc)
 // Yêu cầu: «Tab đầu tiên sẽ hiển thị danh sách vật tư (sắp xếp theo id), có đầy đủ các
@@ -69,6 +73,21 @@ function MaterialListTable({ data, open, permission }: { data: AppData; open: (n
       <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} aria-label="Sắp xếp vật tư"><option value="code">Sắp xếp: Mã vật tư</option><option value="name">Sắp xếp: Tên</option><option value="system">Sắp xếp: Hệ</option></select>
       <label className="material-list-toggle"><input type="checkbox" checked={showAlias} onChange={(e) => setShowAlias(e.target.checked)}/> Hiện tên phụ</label>
       <PermissionGuard allow={canCreate}><button type="button" className="primary" disabled={!canCreate} title={canCreate ? "Thêm vật tư" : "Bạn không có quyền tạo vật tư"} onClick={() => open("materialMaster")}>＋ Thêm vật tư</button></PermissionGuard>
+      {/* MT3 ma trận #6 — nút XUẤT THẬT (dùng `lib/tabular-export`), xuất đúng các dòng ĐANG hiển thị
+          sau lọc + sắp xếp. ⛔ KHÔNG phải nút «trang trí»: có `onClick` gọi hàm xuất thật. */}
+      <button type="button" className="secondary" data-vntech="material-export-csv"
+        title="Xuất danh sách vật tư đang hiển thị ra CSV (UTF-8, có BOM — mở đúng tiếng Việt trong Excel)"
+        onClick={() => downloadCsv(
+          ["Mã vật tư", "Tên chuẩn", ...(showAlias ? ["Tên phụ (alias)"] : []), "Hệ M&E", "Nhóm"],
+          rows.map((m) => [
+            String(m.code ?? ""),
+            String(m.name ?? ""),
+            ...(showAlias ? [aliasOf(m.id).join(" · ")] : []),
+            String(m.categoryName ?? ""),
+            String(m.subcategoryName ?? ""),
+          ]),
+          "danh-sach-vat-tu",
+        )}>⤓ Xuất CSV</button>
     </div>
     <DataTable
       rows={rows}

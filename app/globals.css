@@ -1231,7 +1231,10 @@ table{font-size:calc(13px * var(--user-font-scale))!important}th{font-size:calc(
 .development-screen-notice b{background:#ef4444;color:#fff;border-radius:999px;padding:5px 10px;font-size:calc(11px * var(--user-font-scale));letter-spacing:.045em;white-space:nowrap;box-shadow:0 2px 5px rgba(239,68,68,.16)}
 .development-screen-notice span{font-size:calc(12px * var(--user-font-scale));font-weight:650;color:#a85408}
 .topbar{display:grid!important;grid-template-columns:minmax(280px,430px) minmax(420px,1fr) auto auto;gap:14px;align-items:center;justify-content:stretch!important;min-height:74px}
-.global-project-scope-chip{display:inline-flex;align-items:center;min-height:38px;padding:0 12px;border-radius:8px;background:#edf4ff;border:1px solid #d4e3fa;color:#215ea9;font-size:calc(11px * var(--user-font-scale));font-weight:800;white-space:nowrap}
+/* MT3 §IV.5 — ⛔ ĐÃ GỠ luật CSS CHẾT của «chip chọn dự án toàn cục»: khối «Chọn dự án» đầu trang đã được
+   bỏ theo yêu cầu (chuyển thành BỘ LỌC trong `ListToolbar`) nên ⛔ không còn JSX nào dùng lớp đó.
+   ⚠️ GHI CHÚ: ⛔ KHÔNG viết lại tên lớp trong chú thích — cổng `verify:css-baseline` quét CẢ chú thích,
+   viết tên lớp ra đây sẽ khiến nó bị coi là «dead CSS class» trở lại (đã từng mắc đúng lỗi này). */
 .notify-button{width:40px;height:40px;display:grid!important;place-items:center!important;padding:0!important}.notify-button .nav-glyph{width:27px;height:27px;min-width:27px;border:0!important;background:transparent!important;box-shadow:none!important}.notify-button b{min-width:18px!important;height:18px!important;font-size:calc(9px * var(--user-font-scale))!important;right:-3px;top:-4px}
 .header-user-avatar{overflow:hidden!important;padding:0!important}.header-user-avatar img{width:100%;height:100%;object-fit:cover;display:block}
 .account-settings{display:grid;gap:18px;padding:18px}.account-avatar-settings{display:grid;grid-template-columns:92px 1fr;gap:18px;align-items:center;padding:14px;border:1px solid #e1e8f1;border-radius:12px;background:#fbfdff}.account-avatar-preview{width:84px;height:84px;border-radius:50%;overflow:hidden;display:grid;place-items:center;background:#eaf2ff;color:#2466c9;font-weight:900;font-size:calc(24px * var(--user-font-scale));border:3px solid #fff;box-shadow:0 0 0 1px #dbe5f0}.account-avatar-preview img{width:100%;height:100%;object-fit:cover}.account-avatar-settings p,.account-password-form p{color:#66758c;font-size:calc(11px * var(--user-font-scale))}.account-password-form{display:grid;gap:10px;padding:14px;border:1px solid #e1e8f1;border-radius:12px}.account-password-form label{display:grid;gap:5px}.account-password-form input{height:40px}
@@ -2429,7 +2432,7 @@ html[data-theme="dark"] .app-shell.vntech-full-ui .vntech-app-header .global-sea
   .app-shell.vntech-full-ui .row-actions>label{width:auto!important;min-width:0!important;min-height:32px!important;height:32px!important;padding:0 9px!important;border-radius:7px!important;font-size:10.5px!important;line-height:1!important;font-weight:800!important;white-space:nowrap!important}
 .app-shell.vntech-full-ui .requests-screen .screen-actions{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:6px!important}
 .app-shell.vntech-full-ui .requests-screen .screen-actions>button{width:100%!important;justify-content:center!important;font-size:10px!important;padding:0 6px!important}
-.app-shell.vntech-full-ui .global-project-scope-chip{min-height:34px!important;padding:7px 10px!important;font-size:11px!important}
+/* MT3 §IV.5 — ⛔ ĐÃ GỠ luật ghi đè CSS CHẾT của «chip chọn dự án toàn cục» (cùng lý do như trên). */
 .app-shell.vntech-full-ui .kpi small,
   .app-shell.vntech-full-ui .kpi label{font-size:10px!important}
 .app-shell.vntech-full-ui .kpi strong{font-size:21px!important}
@@ -2460,6 +2463,7 @@ html[data-theme="dark"] .app-shell.vntech-full-ui .vntech-app-header .global-sea
 .mobile-nav-panel .mobile-nav-children>button>em{justify-self:end!important;font-style:normal!important;font-size:15px!important;line-height:1!important;color:#7b8da5!important}
 .mobile-nav-panel [data-nav-action="navigate"]:active{transform:translateY(1px)!important}
 .mobile-nav-panel .mobile-nav-collapse{display:flex!important;align-items:center!important;justify-content:center!important;gap:6px!important;flex:0 0 34px!important;width:132px!important;min-height:34px!important;height:34px!important;margin:6px 12px 8px!important;padding:0 10px!important;border:1px solid #cfdae7!important;border-radius:8px!important;background:#f8fbff!important;color:#17365f!important;font-size:10px!important;font-weight:850!important}
+@media (min-width: 1024px){.mobile-nav-panel .mobile-nav-collapse{display:none!important}}
 .mobile-nav-panel .mobile-display-settings{display:grid!important;grid-template-columns:1fr 1fr!important;gap:6px!important;flex:0 0 auto!important;padding:7px 10px!important;border-top:1px solid #e1e8f0!important;background:#fbfdff!important}
 .mobile-nav-panel .mobile-display-settings>button{min-height:34px!important;padding:5px 7px!important;border:1px solid #d6e0eb!important;border-radius:8px!important;background:#fff!important;color:#17365f!important}
 .mobile-nav-panel .mobile-display-settings span{font-size:8px!important}.mobile-nav-panel .mobile-display-settings b{font-size:9px!important}

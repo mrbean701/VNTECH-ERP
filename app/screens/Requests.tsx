@@ -9,12 +9,15 @@
 // `page.tsx` — công cụ SINH LẠI import đó ở đây, hoặc (d) kiểu của React ⇒ `import type … from "react"`.
 // Không còn tên nào khác ⇒ KHÔNG thể tạo import vòng.
 
-import { DataTable, ListToolbar, StatusBadge } from "@/app/components/ui";
+import { DataTable, ListToolbar, PermissionGuard, StatusBadge } from "@/app/components/ui";
 import { statusLabel } from "@/lib/labels";
 import { Empty, Kpi, UI_NOW_MS, date, format } from "@/lib/ui-shared";
 import type { Row } from "@/lib/ui-shared";
 import { useState } from "react";
-function Requests({ rows, projects, project, onProject, open, inventory, exportRows, onPickShortage }: { rows: Row[]; projects: Row[]; project:string; onProject:(value:string)=>void; open: (name: string, row?: Row) => void; inventory: Row[]; exportRows: () => void; /** MT2-P8-08 (§6.7) — TỰ FILL: mở form «Lập phiếu đề nghị» với vật tư thiếu đã điền sẵn. ⚠️ TÙY CHỌN ⇒ nơi gọi cũ vẫn hợp lệ. */ onPickShortage?: (row: Row) => void }) {
+function Requests({ rows, projects, project, onProject, open, inventory, exportRows, onPickShortage, permission }: { rows: Row[]; projects: Row[]; project:string; onProject:(value:string)=>void; open: (name: string, row?: Row) => void; inventory: Row[]; exportRows: () => void; /** MT2-P8-08 (§6.7) — TỰ FILL: mở form «Lập phiếu đề nghị» với vật tư thiếu đã điền sẵn. ⚠️ TÙY CHỌN ⇒ nơi gọi cũ vẫn hợp lệ. */ onPickShortage?: (row: Row) => void; /** MT3 ma trận #9 — capability của môn `requests`. ⛔ UI KHÔNG thay thế backend (`ActionRbacRegistry:89/343` `create_request→canCreate` + `RbacService` vẫn là cổng chặn thật). */ permission?: Row }) {
+  // MT3 ma trận #9 — ⛔ ĐỌC THẲNG capability từ `permission`, ⛔ KHÔNG tự đoán quyền (đúng khuôn `MaterialListTable`).
+  const canCreate=Boolean(permission?.canCreate);
+  const canExport=Boolean(permission?.canExport);
   const [status,setStatus]=useState("ALL"); const [query,setQuery]=useState(""); const [fromDate,setFromDate]=useState(""); const [selectedId,setSelectedId]=useState<string>("");
   // MT2-P8-07 (§6.6) — [Sort] của toolbar PR. ⚠️ PHẢI SẮP XẾP THẬT (⛔ không chỉ hiện nút).
   const [sortKey,setSortKey]=useState("requestedAt");
@@ -51,15 +54,33 @@ function Requests({ rows, projects, project, onProject, open, inventory, exportR
         { value: "requestNo", label: "Số phiếu" },
         { value: "status", label: "Trạng thái" },
       ] }}
-      extra={<label className="list-toolbar-field"><span>Từ ngày</span><input type="date" value={fromDate} onChange={(event)=>setFromDate(event.target.value)}/></label>}
+      extra={<>
+        {/* MT3 §IV.5 — «Dự án» chuyển vào TOOLBAR (⛔ bỏ khối chọn dự án rời ở đầu trang). */}
+        <label className="list-toolbar-field"><span>Dự án</span>
+          <select value={project} onChange={(event)=>onProject(event.target.value)}>
+            <option value="ALL">Tất cả dự án</option>
+            {(projects||[]).map((row)=> <option key={String(row.id)} value={String(row.id)}>{String(row.code||row.name||row.id)}</option>)}
+          </select>
+        </label>
+        <label className="list-toolbar-field"><span>Từ ngày</span><input type="date" value={fromDate} onChange={(event)=>setFromDate(event.target.value)}/></label>
+      </>}
       actions={<>
-        <button className="primary" onClick={()=>open("request")}>＋ Lập phiếu đề nghị</button>
-        <button className="secondary" onClick={()=>open("request")}>⇧ Nhập Excel</button>
-        <button className="secondary" onClick={exportRows}>⇩ Xuất Excel</button>
-        <button className="secondary" disabled={!selected} onClick={()=>selected&&open("detail",selected)}>◉ Xem chi tiết</button>
+        <PermissionGuard allow={canCreate}>
+          <button className="primary" disabled={!canCreate} title={canCreate ? "Lập phiếu đề nghị mua hàng" : "Bạn không có quyền tạo phiếu đề nghị"} onClick={()=>open("request")}>＋ Lập phiếu đề nghị</button>
+        </PermissionGuard>
+        <PermissionGuard allow={canCreate}>
+          <button className="secondary" disabled={!canCreate} title={canCreate ? "Nhập phiếu đề nghị từ tệp Excel" : "Bạn không có quyền nhập phiếu đề nghị"} onClick={()=>open("request")}>⇧ Nhập Excel</button>
+        </PermissionGuard>
+        <PermissionGuard allow={canExport}>
+          <button className="secondary" disabled={!canExport} title={canExport ? "Xuất danh sách phiếu ra Excel" : "Bạn không có quyền xuất dữ liệu"} onClick={exportRows}>⇩ Xuất Excel</button>
+        </PermissionGuard>
+        {/* MT3 §E — ⛔ ĐÃ BỎ nút «Xem chi tiết» khỏi thanh công cụ: chi tiết mở TỪ TỪNG DÒNG
+            (cột «Hành động»: ◉ xem · ✎ sửa) — đúng yêu cầu «Chi tiết được mở từ từng dòng/hành động
+            của phiếu» + §IV.4 (thanh công cụ chỉ chứa Tạo · Xóa · Tìm · Sắp xếp · Lọc · Xuất Excel). */}
       </>}
     />
-    <div className="global-project-scope-chip">Dự án: {project==="ALL"?"Tất cả":projects.find(row=>row.id===project)?.code||project}</div>
+    {/* MT3 §IV.5 — ⛔ ĐÃ BỎ dải chip «Dự án: …» rời ở đầu trang; lựa chọn dự án
+        nay nằm trong TOOLBAR CRUD (bộ lọc «Dự án»). Phạm vi dự án và quyền truy cập GIỮ NGUYÊN. */}
     <div className="kpi-grid"><Kpi icon="MR" label="Đề nghị mua" value={format.format(proposed.length)} note="Nhu cầu đang mở"/><Kpi icon="PD" label="Chờ phê duyệt" value={format.format(pending.length)} note="Theo workflow đã cấu hình" tone="violet"/><Kpi icon="DH" label="Đang đặt hàng" value={format.format(ordering.length)} note="Đã duyệt / đang lập PO" tone="amber"/><Kpi icon="DG" label="Đã giao" value={format.format(delivered.length)} note="Có số lượng thực nhận" tone="green"/></div>
     {/* MT2-P8-08 (§6.7) — CARD dashboard «VẬT TƯ ĐANG THIẾU» (⛔ ĐÃ BỎ dòng `inline-alert`
         «Vật tư đang thiếu tồn trong phạm vi» đúng nguyên văn yêu cầu). ⚠️ `Kpi` ⛔ không có `onClick`

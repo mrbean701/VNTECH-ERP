@@ -174,7 +174,10 @@ test("W-04 — UI KHÔNG hardcode: mọi KPI lấy từ khối tính toán, in r
 test("W-04 — GẮN vào màn Tồn kho dưới dạng TAB «Dashboard tồn kho» (không màn mới, không route mới)", () => {
   assert.match(inventory, /import \{ WarehouseDashboard \} from "@\/app\/screens\/WarehouseDashboard";/, "Inventory chưa import khối dashboard");
   assert.match(inventory, /<WarehouseDashboard\b/, "Inventory chưa render khối dashboard");
-  assert.match(inventory, /const WAREHOUSE_TABS = \["Tồn kho", "Dashboard tồn kho"\]/, "Thiếu dải 2 tab «Tồn kho / Dashboard tồn kho»");
+  // 📌 CẬP NHẬT 26/09/2026 (MT3 §F): màn Kho nay có **4 tab cấp cao**; «Dashboard tồn kho» là
+  // bản mới của tab «Tồn kho» (§F) ⇒ mục menu `view==="dashboard"` mở thẳng tab số 2.
+  // ⛔ Các khẳng định cũ (import/render WarehouseDashboard · prop `view` · nội dung Tồn kho) GIỮ NGUYÊN.
+  assert.match(inventory, /const WAREHOUSE_TABS = \["Kho", "Nhập kho & Xuất kho", "Tồn kho", "Cấp phát & hoàn trả"\]/, "Thiếu dải 4 tab cấp cao theo MT3 §F");
   assert.match(inventory, /view\?: WarehouseMenuView/, "Inventory chưa nhận prop `view` từ mục menu");
   assert.match(inventory, /view === "dashboard"/, "Inventory chưa mở tab dashboard theo `view` của mục menu");
   // Màn Tồn kho hiện tại phải được GIỮ NGUYÊN trong tab «Tồn kho».

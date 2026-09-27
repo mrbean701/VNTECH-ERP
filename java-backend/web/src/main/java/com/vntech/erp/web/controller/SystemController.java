@@ -1093,6 +1093,17 @@ public class SystemController {
                     resp.putAll(result);
                     return ResponseEntity.ok(resp);
                 }
+                // MT3 §B.3 — «YÊU CẦU BỔ SUNG»: trả phiếu về cho người lập kèm lý do BẮT BUỘC.
+                // Cùng khuôn với `decide_approval` ⇒ cùng tầng, cùng kiểu Principal, cùng RBAC.
+                // ⛔ KHÔNG hard-code quyền ở đây: cổng quyền nằm ở `ActionRbacRegistry` + `canApproveRequestStage`.
+                case "request_supplement" -> {
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                    Map<String, Object> result = requestManagementUseCase.requestSupplement(asReqPrincipal(cu), payload);
+                    Map<String, Object> resp = new LinkedHashMap<>();
+                    resp.put("ok", true);
+                    resp.putAll(result);
+                    return ResponseEntity.ok(resp);
+                }
                 case "create_po" -> {
                     AuthUseCase.CurrentUser cu = requireCurrentUser(request);
                     Map<String, Object> result = purchaseManagementUseCase.createPo(asPurchasePrincipal(cu), payload);
@@ -1263,7 +1274,26 @@ case "reject_po" -> {
                 // MT2 §13.1/§13.2 — CẤU HÌNH THÔNG BÁO (tab Thông báo · màn Quản trị): module `admin`.
                 //    ⛔ KHÔNG đụng `task_notifications` (hàng đợi in-app của luồng CÔNG VIỆC).
                 case "save_notification_config" -> {
-                    requireCurrentUser(request);
+                    // MT3 §I — ⛔ BACKEND PHẢI KIỂM «người tạo thông báo có quyền gửi tới PHẠM VI đã chọn».
+                    // TRƯỚC ĐÂY: `requireCurrentUser(request)` được gọi nhưng **VỨT BỎ kết quả** ⇒ ⛔ KHÔNG
+                    // kiểm được gì ⇒ ai vào được màn quản trị là gửi được tới BẤT KỲ phạm vi nào (kể cả `all`).
+                    // NAY: lấy `cu` ra và kiểm **từng dự án** trong `targets` bằng ĐÚNG hàm đang dùng ở dòng 303
+                    // (`accessScopeService.requireProjectAccess`) — ⛔ KHÔNG phát minh luật mới.
+                    // ⚠️ CHỈ áp cho `recipientMode = "project"` (luật dự án đã có sẵn).
+                    // ⛔ `department` / `all` CHƯA kiểm vì **chưa có luật** (cần user chốt cấp quyền) —
+                    //    ghi rõ ở `docs/agent-progress/TASK-MT3-BE-09.md`, ⛔ KHÔNG tự chọn.
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                    if ("project".equals(trim(payload.get("recipientMode")))
+                            && payload.get("targets") instanceof java.util.List<?> targets) {
+                        for (Object target : targets) {
+                            String targetId = target instanceof java.util.Map<?, ?> row
+                                    ? trim(row.get("targetId")) : "";
+                            if (!targetId.isEmpty()) {
+                                accessScopeService.requireProjectAccess(cu.id(), cu.role(), targetId, true,
+                                        "Không có quyền gửi thông báo tới dự án này.");
+                            }
+                        }
+                    }
                     return ResponseEntity.ok(jsonResult(notificationManagementUseCase.saveConfig(payload)));
                 }
                 case "set_notification_config_status" -> {
@@ -1341,6 +1371,13 @@ case "reject_po" -> {
             }
             case "director_pending_approvals" -> {
                 AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                // MT3-A1 (quyết định user 27/09/2026 — nguyên văn: «Nếu như quá SLA mà không có ai duyệt
+                //   mặc định bị hệ thống từ chối. Từ chối khi quá SLA.»):
+                //   TRƯỚC khi trả danh sách chờ duyệt ⇒ QUÉT + TỰ TỪ CHỐI các bước đã quá SLA 72 giờ.
+                //   ⚠️ Chạy ở đây (⛔ KHÔNG dựng job nền) ⇒ không thêm hạ tầng mới; hàm IDEMPOTENT
+                //      (tầng store chỉ tác động bước còn `status='pending'`) nên gọi lặp là vô hại.
+                //   ⚠️ Đây là hành vi của HỆ THỐNG ⇒ ⛔ không kiểm quyền người gọi cho riêng bước quét.
+                requestManagementUseCase.sweepOverdueApprovals();
                 return ResponseEntity.ok(jsonResult(
                         opsTaskManagementUseCase.directorPendingApprovals(asOpsTaskPrincipal(cu))));
             }

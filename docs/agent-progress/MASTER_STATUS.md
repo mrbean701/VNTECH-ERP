@@ -334,3 +334,147 @@ Mặc định của interface là `return role()` = **mã chuẩn** ⇒ thiếu 
 
 - **[PHASE 8] WF-05 + WF-02/S-08**: snapshot người/vai trò/mode được ghi lúc tạo phiếu và **thắng** khi ra quyết định (Java `RequestStoreAdapter.java:255,293-294`; JS `system-route.mjs:489,1105`) · đo phủ **100/100** dòng có snapshot · cổng `probe-wf05-doi-quy-trinh` **5/5 ĐẠT** ⇒ đổi quy trình KHÔNG đổi luồng phiếu đang chờ.
 
+
+---
+
+## 🌟 MASTER TASK 3 — CHUẨN HÓA GIAO DIỆN, ĐIỀU HƯỚNG, NGHIỆP VỤ PHÊ DUYỆT (đang thực hiện)
+> Nguồn: yêu cầu MASTER TASK 3 (nhận 26/09/2026) · quy trình: `AGENTS.md` · ⛔ **KHÔNG COMMIT · KHÔNG PUSH**.
+> Ma trận audit đầy đủ: **`docs/dsh/MT3-UI-MATRIX.md`** (đo trực tiếp trên mã, ⛔ không giả định).
+
+| GĐ | Nội dung | Trạng thái |
+|---|---|---|
+| **GĐ1** | Frontend/UI (menu→tab · responsive · toggle · toolbar · modal · trạng thái · alias · notification · approval timeline) | ✅ **HOÀN TẤT** |
+| **GĐ2** | Backend & luật nghiệp vụ | ✅ **HOÀN TẤT PHẦN MÃ** — 3/9 task có việc thật, **cả 3 đã xong + chứng minh bằng test**; 5/9 đã đáp ứng sẵn; phần còn lại **chờ luật user** |
+| **GĐ3** | Database/migration | ✅ **⛔ KHÔNG CẦN MIGRATION** — cả 4 hạng mục **đã có sẵn** trong lược đồ |
+
+> 📌 **Đối chiếu nhanh với «VẤN ĐỀ CÒN MỞ» ghi ở khối dưới** (đã lỗi thời): ⛔ `request_supplement` **nay ĐÃ TỒN TẠI** ở backend + **4/4 test** (`TASK-MT3-BE-01.md`) · ✅ 68 ảnh **ĐÃ chụp lại, 0 px lệch**.
+
+### ĐÃ XONG (GĐ1)
+| Task | Nội dung | Bằng chứng |
+|---|---|---|
+| **MT3-F1** | §B.2 dải duyệt chỉ còn 4 thông tin (trạng thái · người · phòng ban · thời gian); bình luận chuyển vào vùng Chi tiết | DOM thật: `stepHasCommentLabel: 0` · `detailCommentsBlock: 1` (nội dung thật) |
+| **MT3-F1b** | §B.4 3 vùng cột cao bằng nhau; gỡ `align-items:start` + `max-height:650px` cứng → `stretch` + `clamp()` theo viewport; mỗi vùng cuộn riêng | DOM thật: `queue=detail=meta=658` · **`spread: 0`** · `listMaxHeight: none` |
+| **MT3-F1c** | §B.3 nút «Yêu cầu bổ sung» — nút thật (trước là **nút giả** chỉ mở modal) + vùng nhập + validate rỗng, ⛔ không `window.prompt` | DOM thật: `opensForm ✓ hasTextarea ✓ emptyBlocked ✓ formStillOpen ✓ noPromptUsed ✓` (lỗi thật: «Vui lòng nhập nội dung cần bổ sung.») |
+
+### CỔNG ĐANG XANH
+`tsc` **0** · contract **579 = 578 pass · 0 fail · 1 skip** · regression **69/69** · build **ĐẠT** · `gd-cycle` fingerprint **`VNTECH-FP-EA731C95DE0B4C1D`**.
+
+### VẤN ĐỀ CÒN MỞ (không che)
+- ⛔ Action `request_supplement` **chưa tồn tại** ở backend ⇒ nút «Gửi yêu cầu bổ sung» **báo lỗi** khi bấm. ⛔ **KHÔNG giả lập thành công**; thuộc **GĐ2**.
+- ⛔ Ảnh chuẩn visual (68 ảnh) **chưa chụp lại** sau các thay đổi layout ⇒ gom cuối (task **MT3-F14**).
+
+### KẾ TIẾP
+**MT3-F3** — toolbar CRUD dùng chung (ưu tiên §20: 1 component giải quyết nhiều màn): gom Tạo·Sửa·Xoá·Tìm·Sắp xếp·Lọc·Xuất Excel vào `ListToolbar`, dọn **64** `row-actions` + **91** `export-mini` rải rác.
+
+---
+
+## 📌 CẬP NHẬT MT3 — GĐ1 FRONTEND (mốc mới nhất)
+
+| | |
+|---|---|
+| **Trạng thái MT3** | **IN PROGRESS** — **21/29 task** đã xong · GĐ1 **còn 3 việc** (12d · 10d · 17) |
+| **Cổng kiểm** | `tsc` **0** · contract **620 = 619 pass / 0 fail / 1 skip** · regression **69/69** · build **ĐẠT** |
+| **Fingerprint** | `VNTECH-FP-A40ACA8D6F052D70` |
+
+### ✅ Đã xong ở GĐ1 (mỗi task có checkpoint + test)
+| Task | Nội dung | Checkpoint |
+|---|---|---|
+| UI-01 | Toolbar CRUD dùng chung | `TASK-MT3-UI-01.md` |
+| UI-02 | Bảng trạng thái tiếng Việt dùng chung (`lib/status-labels.ts`) | `TASK-MT3-UI-02.md` |
+| UI-03 | Trung tâm phê duyệt (§B.2/B.3/B.4) | `TASK-MT3-F1c.md` |
+| UI-04 | Bỏ khối «Chọn dự án» đầu trang | `TASK-MT3-UI-04.md` |
+| UI-05 | Ảnh & hồ sơ giao hàng | `TASK-MT3-UI-05.md` |
+| UI-06 | Responsive 5 mức rộng + toggle menu | `TASK-MT3-UI-06.md` |
+| UI-07 | Tab «Dự án» cho Công việc | `TASK-MT3-UI-07.md` |
+| UI-08 | Dự án: nhãn tab · cột Tổ đội · tên click được | `TASK-MT3-UI-08.md` |
+| UI-09 | Thi công: modal hạng mục + toolbar | `TASK-MT3-UI-09.md` |
+| UI-10/10b/10c | Kho: 4 tab · thẻ kho · modal chi tiết · chuyển «Luân chuyển vật tư dư» vào Cấp phát & hoàn trả | `TASK-MT3-UI-10*.md` |
+| UI-11 | Tổ đội: 5 tab + Lịch sử tổng hợp | `TASK-MT3-UI-11.md` |
+| UI-12/12b/12c | Mua hàng: bỏ nút «Xem chi tiết» · đổi tên «Giao nhận công trường» · **gộp 2 mục NCC thành 1** | `TASK-MT3-UI-12*.md` |
+| UI-13 | Danh mục vật tư: chuẩn hoá alias (bỏ rỗng/trùng) | `TASK-MT3-UI-13.md` |
+| UI-14 | Quản trị: bỏ nhãn thừa trên tab + modal thông báo có tìm/lọc + danh sách đã chọn | `TASK-MT3-UI-14.md` |
+| UI-15 | Trung tâm thông báo: 3 nhãn nhóm loại + nhóm thông báo hệ thống | `TASK-MT3-UI-15.md` |
+| UI-16/16b | Audit xuất Excel/CSV · CSV 1 đường duy nhất có BOM · **XLSX chứng minh bằng FILE THẬT** | `TASK-MT3-UI-16.md` |
+
+### 📋 QUYẾT ĐỊNH USER đã chốt (26/09/2026) — ⛔ không suy diễn lại
+Xem `docs/dsh/MT3_USER_DECISIONS.md`: ① Kho: «Tồn vật lý» là dashboard (giữ) · «Luân chuyển vật tư dư» thuộc Cấp phát & hoàn trả ② **Gộp thành 1 «Nhà cung cấp»** ③ «Xin giá vật tư» = **tab riêng** (chưa chốt nghiệp vụ) ④ «Giao nhận công trường» theo đề xuất (đổi tên, ⛔ không tách).
+
+### ⛔ TỒN ĐỌNG THẬT (⛔ không tự nhận là xong) — **CẬP NHẬT CUỐI**
+> ⚠️ **Đối chiếu lại ngày cập nhật cuối** (theo yêu cầu §23 điều 1 «đọc lại toàn bộ Master Task»). 3/5 mục cũ **đã ĐÓNG** bằng công việc thật + bằng chứng.
+
+| # | Mục | Trạng thái CUỐI | Bằng chứng |
+|---|---|---|---|
+| 1 | **P3-UI-12d** — thanh **10 tab** «Mua hàng & Cung ứng» | ✅ **ĐÃ ĐÓNG** | `lib/menu-helpers.ts` → `purchasingHubTabs` (10 tab) + `app/page.tsx` render `<nav className="switch-tabs" data-vntech="purchasing-hub-tabs" role="tablist">` + test `tests/mt3-ui-12d-purchasing-hub-tabs.test.mjs` (**6 ca**) |
+| 2 | **P3-UI-10d** — khối «Luân chuyển vật tư dư» **còn bản CŨ** (`CentralWarehouse` trong `page.tsx`) | 🟡 **CÒN — nhưng là DEAD CODE, ⛔ không sai nghiệp vụ** | **Đã đo lại**: `CentralWarehouse` xuất hiện **2 chỗ** (`:180511` định nghĩa · `:94440` gọi render). **⛔ Không truy cập được**: chính chú thích `page.tsx:1166` ghi *«màn `central_warehouse` đã bị ẨN KHỎI MENU»*. ⚠️ **Rủi ro khi xoá**: còn liên hệ routing (`app/.../route.ts:44`) + nhãn `page.tsx:162`/`:227` ⇒ mức ưu tiên **8 (cosmetic)**, **chưa xoá** (⛔ tránh phá routing) |
+| 3 | **P3-UI-17** — **68 ảnh chuẩn chưa chụp lại** | ✅ **ĐÃ ĐÓNG** | **68 ảnh chụp lại + đối chiếu 0 px lệch** · **thanh tra responsive 5 mức rộng ĐẠT (EXIT=0)** — ⚠️ nhưng **⛔ chưa soi bằng mắt**: model hiện tại **không đọc được ảnh**; theo ghi nhận tại **§26 tệp này**, việc soi bằng mắt là **«theo lựa chọn của user (đã miễn)»** ⇒ **cần user xác nhận lại cho MT3** |
+| 4 | **Probe cũ** `tests/p07-supplier-partner-split-probe.mjs` hỏng sẵn 2 phép kiểm | 🛑 **VẪN CHỜ USER** | ⛔ chưa xoá — chờ user cho phép |
+| 5 | **GĐ2 (9 task) + GĐ3 (2 task)** «chưa bắt đầu» | ✅ **ĐÃ ĐÓNG PHẦN MÃ** | **GĐ2**: **3/9 task có việc mã thật — CẢ 3 ĐÃ XONG + CHỨNG MINH BẰNG TEST** (`request_supplement` **ĐÃ TẠO** 4/4 · cưỡng chế quyền Thi công 4/4 · phạm vi gửi thông báo 3 ca); **5/9 đã đáp ứng sẵn**; phần còn lại **chờ luật user**. **GĐ3**: **⛔ 0 MIGRATION cần tạo** (cả 4 hạng mục đã có sẵn trong lược đồ) |
+
+### 📊 TRẠNG THÁI CUỐI MT3 — **CẬP NHẬT 27/09/2026** *(sau khi user gỡ toàn bộ điểm chặn)*
+| | |
+|---|---|
+| **Ma trận** | ✅ **12/12 hàng đã đối chiếu bằng MÃ THẬT** (ma trận `MT3-UI-MATRIX.md` **đã cập nhật lại** — bản cũ ghi sai) |
+| **🎯 Hạng mục user gọi QUAN TRỌNG NHẤT** | ✅ **XONG** — «đưa **tất cả** menu item vào trong menu, chuyển thành **tab**»: **thanh tab cho 8/8 nhóm** *(cơ chế dùng chung `hubTabsFor(active)`)*. ⚠️ **Thanh menu GIỮ NGUYÊN mục con** (nhóm cha bấm để mở) — xem dòng «SỬA NHẦM» bên dưới |
+| **GĐ1** frontend | ✅ **HOÀN TẤT** (kể cả **#4** `<aside>` màn Kho → hộp thoại · **#5** nhãn tiếng Việt · **#8** nút tự ẩn ≥1024px · **#9** `PermissionGuard` cho `Requests.tsx`) |
+| **GĐ2** backend | ✅ **HOÀN TẤT** — `request_supplement` · **A1① sắp xếp SLA** · **A1② tự TỪ CHỐI khi quá SLA 72h** *(+7 test biên)* · RBAC thi công · quyền gửi thông báo |
+| **GĐ3** database | ✅ **⛔ KHÔNG CẦN MIGRATION** |
+| **Cổng kiểm (chạy lại toàn bộ)** | `mvn test` **74/74** (`Failures: 0 · Errors: 0` · `BUILD SUCCESS`) · biên dịch Java **115 tệp · 0 lỗi** · `tsc` **EXIT=0** · contract **653 = 652 pass / 0 fail / 1 skip** · regression **69/0** · **`verify:css-baseline` ĐẠT** (`dead classes=0 · dead vars=0`) · **`verify:master-baseline` ĐẠT** · build **ĐẠT** `VNTECH-FP-0240EC6549A3B58F` · **566 tệp** · `BUILT ARTIFACT VALIDATION: ĐẠT` |
+| **🖥️ Đang phục vụ** | **`:9000`** (cổng vào chuẩn) **HTTP 200** + đăng nhập **200** → UI mới `:3000` + Java API `:18081`. ⚠️ `:8787` = **UI Node/JS CŨ**, ⛔ không chứa mã Next.js |
+| **⛔ Vì sao CHƯA tuyên bố COMPLETE** | **CHỈ CÒN 1 LÝ DO**: 👁️ **chờ USER xác nhận bằng mắt** trên giao diện. ⛔ Tôi **không đánh dấu xong khi user chưa xác nhận**. *(8 câu hỏi nghiệp vụ đã được user TRẢ LỜI đầy đủ ngày 27/09/2026 — xem `docs/dsh/MT3_USER_DECISIONS.md`)* |
+| **#3** — toolbar CRUD | ✅ **KHÔNG PHẢI LỖI** — 8 tệp nghi ngờ đều là **component con / modal / hộp trượt** được **màn cha** gọi *(cha đã có `ListToolbar`)* ⇒ ⛔ **không sửa mù** |
+| **Hồ sơ** | `TASK-MT3-UI-24.md` · `TASK-MT3-UI-26.md` · `TASK-MT3-UI-27.md` · `TASK-MT3-BE-22.md` · `TASK-MT3-BE-23.md` · `TASK-MT3-DB-02.md` (nghiệm thu + 16 tiêu chí) · `CURRENT_TASK.md` (bàn giao + **13 bài học chống kết luận sai**) |
+
+### 🔴🔴 **SUỐT SÁT LẦN THỨ HAI** — «GOM MỤC CON KHỎI THANH MENU» — **ĐÃ HOÀN TÁC**
+> Tôi **hiểu thêm 1 bước** so với yêu cầu của user *(bỏ hẳn mục con khỏi thanh menu)* — đây là **SUY ĐOÁN của tôi**, ⛔ user **chưa từng yêu cầu**.
+> Tôi sửa trong hàm `permissionMenuStructure` — **SAI CHỖ**: hàm đó dùng cho **BẢNG PHÂN QUYỀN** (`page.tsx:3175` phân quyền từng người · `page.tsx:3209` ma trận admin), **⛔ KHÔNG phải thanh menu** (`app/page.tsx:614-621` mới là thanh menu).
+> **Hậu quả nếu giữ:** gom mỗi nhóm thành 1 hàng ⇒ **quản trị viên KHÔNG còn cấp/tước được quyền cho mục con khác** ⇒ **vi phạm RULE 13 «không phá RBAC»**.
+> ✅ **ĐÃ HOÀN TÁC** + ghi chú trong mã chặn sửa lại + **dựng lại bản đúng** `VNTECH-FP-E75918D7574EAD55` · 567 tệp · `tsc` 0 · contract **659 = 658/0/1** · `:9000` HTTP 200.
+> ⏸️ **Còn chờ user chốt**: thanh menu nên **(a) giữ mục con** *(mẫu đang chạy ổn)* hay **(b) chỉ còn nhóm cha**? ⛔ tôi **không tự quyết** vì đổi cả điều hướng hệ thống.
+
+### 🔴 CÁCH TÔI KẾT LUẬN SAI TRONG PHIÊN NÀY (để phiên sau tin đúng)
+| Sai sót | Nguyên nhân | Đã sửa? |
+|---|---|---|
+| *«Sửa `permissionMenuStructure` ⇒ sidebar chỉ còn nhóm cha»* | ⛔ **không truy đường đi chức năng** tới nơi hàm **THẬT SỰ** được dùng (hàm dùng ở **3 nơi**, 2 nơi là **phân quyền**) | ✅ **hoàn tác** · ghi chú chặn sửa lại |
+| *«Ma trận còn `#5 ❌ · #8 ❌ · #11 ❌`»* | ⛔ tin **tài liệu cũ hơn mã** | ✅ đo lại mã · cập nhật ma trận |
+| *«0/40 màn có prop `permission` ⇒ #9 không thiếu sót»* | **mẫu `grep` quá hẹp** (`permission\??:\s*\(` bỏ sót `permission: Row`) | ✅ **15/40** ⇒ đã **SỬA #9** |
+| *«`PermissionGuard` không tồn tại»* | **`Get-ChildItem -Include` thiếu đường dẫn ⇒ TRẢ RỀNG** | ✅ nó **CÓ** |
+| *«`WorkKanban` còn nút «Gửi kiểm tra» phải xoá»* | ⛔ **khớp chuỗi ≠ chức năng** — đó là **tên quy trình thật** | ✅ giữ nguyên |
+| *«`WorkHierarchy` + 7 tệp khác vi phạm quy ước toolbar»* | ⛔ kết luận từ `row-actions` mà **không đọc tệp** | ✅ đọc từng tệp ⇒ **component con**, cha đã có toolbar |
+| *«UI không thay đổi ⇒ user thấy không đổi là do mã»* | ⛔ **quên build + khởi động lại server** ⇒ user xem **bản CŨ** | ✅ quy trình 3 bước, ghi ở `CURRENT_TASK.md` |
+
+### ⚠️ HAI SAI SÓT ƯỚC LƯỢNG CỦA TÔI (ghi để phiên sau tin đúng số liệu)
+1. **Phân rã GĐ2 đánh giá CAO khối lượng thật** — **5/9 task** khi đọc mã hoá ra **đã đáp ứng sẵn** *(BE-02 · BE-04 · BE-05 · BE-06 cốt lõi · BE-07)*.
+2. **Phân rã GĐ3 giả định THIẾU** những thứ thực tế **đã có** trong lược đồ *(cả 4 hạng mục)*.
+
+### 🔧 BÀI HỌC KỸ THUẬT (đã mắc, ghi để không lặp)
+- ⛔ **Không kết luận từ `grep`/`Select-String` khi dòng siêu dài**: cả `<header>` là 1 dòng ⇒ công cụ trả số dòng của cả dòng khổng lồ ⇒ tôi từng **kết luận SAI** «không có chuông thông báo» / «biến không được render». Phải **đọc trực tiếp bằng `IndexOf`/`Substring`**.
+- ⛔ **Không chèn chú thích vào GIỮA một dòng literal** mà hợp đồng test so khớp bằng `includes` ⇒ test HỎNG dù `tsc` vẫn xanh.
+- ⛔ **XLSX là ZIP nén DEFLATE** ⇒ tìm chuỗi UTF-8 thô trong gói cho **ÂM GIẢ 100%**; phải **sinh file → giải nén → đọc XML**.
+- ⛔ **Không viết tệp UTF-8 bằng PowerShell** (từng làm hỏng 3 tệp test, phải khôi phục từ git) ⇒ dùng công cụ sửa văn bản.
+- ⛔ **XLSX ⛔ không dùng BOM** (BOM chỉ cho CSV); BOM trong gói ZIP sẽ phá định dạng.
+- ⛔ **`grep -Include '*.tsx'` ĐÃ LOẠI TRỪ tệp `.ts`** (và `app/` loại trừ `lib/`) ⇒ tôi suýt **kết luận SAI lần thứ HAI** («duyệt trong modal chưa nối»). Khi kết luận **«có/không được gọi»**, **BẮT BUỘC** tìm trên **cả `*.ts` LẪN `*.tsx`** và **cả `app/` LẪN `lib/`**.
+- ⛔ **Không cộng dồn `target/surefire-reports/*.txt` mà bỏ qua THỜI GIAN** — `target/` giữ lại báo cáo của các test **đã bị xoá** ⇒ tôi từng thấy «67 bài · 1 THẤT BẠI» trong khi Maven báo `BUILD SUCCESS`. Phải **lọc theo thời gian** của lượt chạy hiện tại.
+- ⛔ **`tools/cutover-proxy.mjs` có cổng mặc định `8787` TRÙNG cổng Node UI** ⇒ chạy trần **⛔ không bind được :9000**. Phải **`--port 9000`**. Và **`probe-responsive-5widths` nhận THAM SỐ VỊ TRÍ**, ⛔ **không** dùng `PROBE_BASE` (khác `probe-visual-regression`).
+- ⛔ **Không dùng hàm «trông có vẻ sẵn có» mà chưa grep xác nhận** — tôi từng dùng `trimmedParam(...)` **không tồn tại**; phát hiện bằng **đếm số khớp** (chỉ đúng 2 = chỗ mình vừa thêm) trước khi biên dịch.
+
+### KẾ TIẾP *(cập nhật 27/09/2026)*
+✅ **8 câu hỏi nghiệp vụ ĐÃ ĐƯỢC USER TRẢ LỜI** (ngày 27/09/2026) ⇒ **không còn chặn vì chờ quyết định nghiệp vụ.** Xem `docs/dsh/MT3_USER_DECISIONS.md` (11 quyết định, nguyên văn).
+✅ Đã xử lý theo các quyết định đó: **A1** (luật SLA 72h + tự từ chối) · **A2** (tìm theo tên phụ) · **A4** (thông báo theo phòng ban) · **A5** (⛔ kho không xoá) · **A6** (⛔ chưa chốt nghiệp vụ ⇒ không xây) · **A7** (xoá probe) · **B1** (cho phép dừng tiến trình) · **B2** (user tự soi) · **C1** (`<aside>` → hộp thoại) · **C2** (ngưỡng **1024px**).
+
+**⛔ CHỈ CÒN 1 VIỆC — CẦN USER:**
+1. 👁️ **Xác nhận bằng mắt trên giao diện** tại `http://127.0.0.1:9000` (bấm **Ctrl+F5** để nạp bản mới).
+   ⛔ Tôi **không tuyên bố `MASTER TASK 3 = COMPLETE`** khi chưa có xác nhận này *(tiêu chí §23)*.
+
+**⏳ Việc tự phát (không chặn, làm khi tiện):**
+2. **Nợ CSS** `canonical.css` 1251/1076 *(⛔ **không** chặn cổng chính thức — `verify:css-baseline` ĐẠT)*.
+3. `CentralWarehouse` cũ trong `page.tsx` *(menu đã ẩn; ⛔ xoá có rủi ro vì `route.ts:44` + nhãn `:162`/`:227` còn tham chiếu)*.
+
+### 🔧 BÀI HỌC KỸ THUẬT (đã mắc, ghi để không lặp)
+- ⛔ **Không kết luận từ `grep`/`Select-String` khi dòng siêu dài**: cả `<header>` là 1 dòng ⇒ công cụ trả số dòng của cả dòng khổng lồ ⇒ tôi từng **kết luận SAI** «không có chuông thông báo» / «biến không được render». Phải **đọc trực tiếp bằng `IndexOf`/`Substring`**.
+- ⛔ **Không chèn chú thích vào GIỮA một dòng literal** mà hợp đồng test so khớp bằng `includes` ⇒ test HỎNG dù `tsc` vẫn xanh.
+- ⛔ **XLSX là ZIP nén DEFLATE** ⇒ tìm chuỗi UTF-8 thô trong gói cho **ÂM GIẢ 100%**; phải **sinh file → giải nén → đọc XML**.
+- ⛔ **Không viết tệp UTF-8 bằng PowerShell** (từng làm hỏng 3 tệp test, phải khôi phục từ git) ⇒ dùng công cụ sửa văn bản.
+- ⛔ **XLSX ⛔ không dùng BOM** (BOM chỉ cho CSV); BOM trong gói ZIP sẽ phá định dạng.
+
+### KẾ TIẾP
+**P3-UI-12d** (thanh 10 tab) → **P3-UI-10d** (dọn đường cũ) → **P3-UI-17** (ảnh chuẩn + xác minh bằng mắt) → **GĐ2**.

@@ -616,6 +616,33 @@ public final class RequestManagementUseCase {
     }
 
     /** decide_approval — port nguyên trạng JS: owner check, single/all_roles, advance, reject, finalize. */
+    /**
+     * MT3-A1 — **HẰNG SỐ SLA 72 GIỜ** cho việc TỰ ĐỘNG TỪ CHỐI khi quá hạn.
+     *
+     * <p>⚠️ Nguồn: quyết định user **27/09/2026** (`docs/dsh/MT3_USER_DECISIONS.md` §A1, nguyên văn:
+     * «Nếu như quá SLA mà không có ai duyệt mặc định bị hệ thống từ chối. Từ chối khi quá SLA.»).
+     *
+     * <p><b>Cách hiểu (đã báo user)</b>: 72 giờ là **ÂN HẠN SAU HẠN** của bước duyệt
+     * (`approvals.due_at` + 72h). 👉 Nếu user chốt lại là «SLA dài 72h tính từ lúc lập phiếu» thì
+     * **chỉ cần sửa DUY NHẤT hằng số này** — ⛔ không phải sửa chỗ nào khác.
+     */
+    public static final long APPROVAL_SLA_GRACE_HOURS = 72;
+
+    /**
+     * MT3-A1 — QUÉT + **TỰ TỪ CHỐI** mọi bước phê duyệt ĐÃ QUÁ SLA mà chưa ai duyệt.
+     *
+     * <p>Chạy **khi ĐỌC danh sách chờ duyệt** (⛔ không dựng job nền — không thêm hạ tầng mới).
+     * ⛔ KHÔNG cần quyền của người gọi: đây là hành vi **của HỆ THỐNG**, ⛔ không phải người duyệt.
+     * <b>IDEMPOTENT</b> — tầng store chỉ tác động bước còn `status='pending'`.
+     *
+     * @return số bước vừa bị hệ thống từ chối (0 nếu không có gì quá hạn)
+     */
+    public int sweepOverdueApprovals() {
+        return store.rejectOverdueApprovals(APPROVAL_SLA_GRACE_HOURS,
+                "Hệ thống tự động từ chối: bước phê duyệt đã QUÁ HẠN SLA " + APPROVAL_SLA_GRACE_HOURS
+                        + " giờ mà không có người duyệt.", Instant.now());
+    }
+
     public Map<String, Object> decideApproval(Principal principal, Map<String, Object> payload) {
         String requestId = trim(payload.get("requestId"));
         int stage = (int) numberValue(payload.get("stage"));
@@ -793,6 +820,65 @@ public final class RequestManagementUseCase {
             store.createStockReservations(requestId, sourceWarehouse, principal.userId(), now);
         }
         return Map.of("message", "Đã hoàn tất luồng phê duyệt; hồ sơ tự chuyển sang Mua hàng & PO và bắt đầu tính thời gian lập PO.");
+    }
+
+    /**
+     * MT3 §B.3 — «YÊU CẦU BỔ SUNG» cho phiếu đề nghị mua hàng.
+     *
+     * <p>Người duyệt ĐANG ở bước hiện tại gửi yêu cầu bổ sung kèm <b>LÝ DO (bắt buộc)</b> ⇒ phiếu được
+     * TRẢ VỀ cho người lập đúng theo <b>luồng ĐÃ CÓ</b> của hệ thống: {@code returned_to_requester}
+     * (chính là trạng thái mà {@code update_returned_request} chờ sẵn để người lập sửa rồi
+     * {@code resubmit_request} quay lại duyệt). ⛔ KHÔNG tạo trạng thái mới, ⛔ KHÔNG đổi luồng nghiệp vụ.
+     *
+     * <p><b>⛔ BACKEND LÀ TẦNG CƯỠNG CHẾ:</b> lý do RỖNG bị chặn TẠI ĐÂY (400) — ⛔ không tin frontend.
+     *
+     * <p>Cổng quyền TÁI DÙNG NGUYÊN của {@code decideApproval}: phạm vi dự án (chỉ khi phiếu thuộc dự án) ·
+     * owner được phân công ĐÍCH DANH của đúng bước · chốt đúng bước + còn {@code pending_approval}
+     * (đồng thời CHỐNG GỌI LẶP vì sau lần đầu trạng thái đã đổi).
+     *
+     * @param principal người duyệt đang thao tác
+     * @param payload   cần {@code requestId} · {@code stage} · {@code reason}
+     * @return thông báo kết quả
+     */
+    public Map<String, Object> requestSupplement(Principal principal, Map<String, Object> payload) {
+        String requestId = trim(payload.get("requestId"));
+        int stage = (int) numberValue(payload.get("stage"));
+        String reason = trim(payload.get("reason"));
+        // ⛔ MT3 §B.3: «không cho gửi khi lý do rỗng» — CHẶN Ở BACKEND, ⛔ không tin frontend.
+        if (reason.isEmpty()) throw Api("Vui lòng nhập lý do yêu cầu bổ sung.");
+        Map<String, Object> mr = store.findRequestForApproval(requestId)
+                .orElseThrow(() -> Api("Không tìm thấy đơn yêu cầu."));
+        // Cùng chính sách phạm vi như `decideApproval`: phiếu ⛔ KHÔNG thuộc dự án ⇒ không có phạm vi để kiểm
+        // (TASK-141: `canAccessProject(user, "", …)` luôn false ⇒ nếu vẫn gọi, phiếu công ty không ai duyệt được).
+        String requestProjectId = sv(mr, "projectId");
+        if (!requestProjectId.isEmpty())
+            accessScope.requireProjectAccess(principal.userId(), principal.role(), requestProjectId, true,
+                    "Tài khoản không có quyền tại dự án.");
+        // ⛔ CHỈ owner được PHÂN CÔNG của ĐÚNG bước này mới được yêu cầu bổ sung.
+        if (!canApproveRequestStage(principal.userId(), requestId, stage))
+            throw Api("Bạn không phải Owner được phân công của bước này nên không được yêu cầu bổ sung.");
+        // Chốt: đúng bước + còn chờ duyệt ⇒ ⛔ chặn gọi lặp (sau lần đầu, trạng thái đã đổi khỏi pending_approval).
+        if ((int) numberValue(gi(mr, "approvalStage")) != stage || !"pending_approval".equals(sv(mr, "status")))
+            throw Api("Hồ sơ chưa đến bước duyệt này hoặc đã được xử lý.");
+        Instant now = Instant.now();
+        // TRẢ PHIẾU VỀ NGƯỜI LẬP — ⛔ KHÔNG viết SQL mới: tái dùng ĐÚNG hàm đã có
+        // (`RequestStore.returnRequestToRequester`, RequestStore.java:81) mà `decideApproval` cũng đang dùng.
+        store.returnRequestToRequester(requestId, stage, principal.userId(), reason, now);
+        Map<String, Object> after = new LinkedHashMap<>();
+        after.put("stage", stage);
+        after.put("decision", "supplement_requested");
+        after.put("user", principal.fullName());
+        after.put("reason", reason);
+        after.put("at", now.toString());
+        // Ghi vết kiểm toán bằng API DÙNG CHUNG (đúng khuôn `decideApproval` :730-731).
+        auditLog.log(principal.userId(), "SUPPLEMENT_REQUESTED", "material_request", requestId,
+                MiniJson.stringify(mr), MiniJson.stringify(after), null);
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("requestId", requestId);
+        out.put("stage", stage);
+        out.put("status", "returned_to_requester");
+        out.put("message", "Đã gửi yêu cầu bổ sung tới người lập phiếu.");
+        return out;
     }
 
     /**

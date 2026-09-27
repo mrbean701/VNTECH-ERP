@@ -565,11 +565,17 @@ public class OpsTaskStoreAdapter implements OpsTaskStore {
         }
         if (wanted.isEmpty()) return List.of();
 
+        // MT3-A1 (quyết định user 27/09/2026 — nguyên văn: «ưu tiên hiển thị các đơn mới nhất, nếu có đơn
+        //   sắp đạt SLA 72 thì ưu tiên hiển thị trước»):
+        //   • `due_at ASC`  → đơn **sắp đạt/đã quá hạn SLA** lên TRƯỚC (dùng ĐÚNG cột hạn đã có,
+        //                     ⛔ KHÔNG bịa thêm ngưỡng «sắp đạt» nào).
+        //   • `created_at DESC` → cùng hạn thì **đơn MỚI NHẤT** lên trước (trước đây là `id` — ⛔ không có ý nghĩa nghiệp vụ).
+        //   ⛔ KHÔNG lọc bỏ đơn quá hạn ở đây: việc TỪ CHỐI khi quá SLA là bước riêng (xem `TASK-MT3-BE-23.md`).
         List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
                 SELECT id,stage,department,entity_type AS "entityType",entity_id AS "entityId",
                        request_id AS "requestId",due_at AS "dueAt",approver_user_id AS "approverUserId",
                        allowed_role_codes_snapshot AS "allowedRoleCodesSnapshot"
-                FROM approvals WHERE status='pending' ORDER BY due_at,id""");
+                FROM approvals WHERE status='pending' ORDER BY due_at ASC, created_at DESC""");
 
         List<Map<String, Object>> out = new java.util.ArrayList<>();
         for (Map<String, Object> row : rows) {
