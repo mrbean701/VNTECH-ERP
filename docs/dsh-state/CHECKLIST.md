@@ -2012,3 +2012,131 @@ BUILD VNTECH-FP-C520B5D37E655CBE · mvn EXIT=0 · 3 cong dich OK
 ✅ css-comment-guard · ✅ tsc EXIT=0 · ✅ css-baseline DAT (15 lines · dead=0)
 ❌ contract 4 (pr01) · ❌ regression 3 (pr03) — von da do san, KHONG TANG
 ⛔ 0 commit truoc khi day len remote
+
+---
+
+# MOC 104 (LAN CUOI 29/09) — SUA THAT & DAY CODE LEN GITHUB · 128c021
+
+## 🎯 NGUYEN NHAN THAT (da DO, khong doan)
+```
+API tra  moduleCatalog.active  voi kieu  BOOLEAN true
+Code loc String(row.active ?? 1) === "1"
+=> String(true) === "true"  !=  "1"   => LOAI MAT 14/14 dong `admin_tab_NN`
+=> nhom «Quan tri he thong` BIEN MAT khoi ma tran phan quyen.
+```
+ⓘ Em do 2 lan de chot kieu du lieu: `active = [True] kieu = Boolean` · loc `==="1"` giu **0/14** · loc `===true` giu **14/14**.
+
+## ✅ DA SUA
+| # | Viec |
+|---|---|
+| 1 | Ham `isModuleActive(row)`: nhan `true` / `"true"` / `1` / `"1"` / rong |
+| 2 | `permissionMenuStructure`: gom module con lai theo `groupKey` + TU TAO NHOM |
+| 3 | Dat nhom `system_admin` len **DAU** danh sach (truoc o vi tri 12/12) |
+| 4 | CSS `table-layout:fixed`: cot nhan 34% · 6 cot quyen 11% · `overflow-x:visible` |
+
+## 🧪 CHUNG MINH 2 TANG
+```
+1) SCRIPT tren du lieu API THAT: `adminTabRows` 0 -> **14/14** · co nhom `system_admin` · vi tri 1
+2) CHUP ANH TRINH DUYET THAT (Edge headless + CDP, khong dung Playwright):
+   shot-matrix-final2.png => nhom «QUAN TRI HE THONG` dau ma tran, du dong
+   Tab 01 Tai khoan · 02 To chuc · 03 Chuc danh/vai tro · 04 Nhom quyen nghiep vu
+   · 05 Phan quyen phong ban · 06 Phan quyen nguoi dung · 07 Cap bac hang · 08 Phan vi dia an & kho
+   · 8 COT QUYEN DEU THAY (het cuon ngang)
+   shot-menu.png => nut noi «BAO LOI / GOP Y» o goc phai man hinh PC
+```
+
+## 🚀 DA DAY LEN GITHUB
+```
+origin/unity-p2-full-20260920  ->  128c021   (7fdf71d..128c021)
+origin/unity                   ->  128c021   (151db2e..128c021)
+13 conflict khi merge da giai quyet:
+  · GIUA CUA EM : app/page.tsx · app/globals.css · file dinh danh san xuat · tsconfig.tsbuildinfo
+  · LAY REMOTE  : docs/agent-progress/*.md · lib/menu-helpers.ts
+```
+
+## 🌐 TUNNEL DANG MO
+```
+Cong cu : cloudflared 2026.9.1 (Cloudflare Quick Tunnel) · tram hkg12 · QUIC
+URL     : https://degrees-tcp-clicking-cardiovascular.trycloudflare.com
+DIEM RA : http://127.0.0.1:9000   · log: tunnel.log
+KIEM    : dang nhap admin HTTP 200 · trang chu HTTP 200 (7.456 bytes) — QUA TUNNEL THAT
+⛔ CANH BAO: tunnel CONG KHAI, KHONG co mat khau o lop tunnel ⇒ chi dung de user xem thu,
+   DUNG NGAY khi xem xong. KHONG gui link cho nguoi la.
+```
+
+## 📊 5 CONG
+```
+BUILD VNTECH-FP-AEEA3FC18A13777A · mvn EXIT=0 · 3 cong dich OK
+✅ css-comment-guard · ✅ tsc EXIT=0 · ✅ css-baseline DAT (15 lines · dead=0)
+❌ contract 4 (pr01) · ❌ regression 3 (pr03) — von da do san, KHONG TANG
+```
+
+---
+
+# D-033 — API BOOLEAN vs CHUOI: LUON CHUAN HOA KHI LOC (29/09/2026)
+```
+⛔ Loi nguy hiem: loc `String(row.active) === "1"` trong khi API tra BOOLEAN `true`
+   => String(true) = "true" khac "1" => LOI MAT 100% du lieu ma KHONG BAO LOI,
+      KHONG BAO 500, KHONG co bao cao nao — chi thay bang mat.
+⇒ TRUOC KHI LOC 1 TRUONG DU LIEU tu API: KIEM TRA KIEU THAT bang script tren
+   DU LIEU THAT (khong doan), roi viet ham chuan hoa chap nhan ca boolean va chuoi.
+⇒ Cau hoi tu kiem: "neu bo loc nay, con bao nhieu dong?"
+
+---
+
+# MOC 105 — EP MA TRAN VE 100% KHUNG (HET CAT COT TEN) · BUILD VNTECH-FP-B52B52B4BAA5FF31
+
+## 🎯 NGUYEN NHAN
+```
+`PermissionMatrix` (MOC 58-5) tai dung class `.resizable-data-table`
+ma class do dat `width:max-content` ⇒ BANG RONG HON KHUNG CHUA
+⇒ cuon ngang ⇒ COT TEN BI CAT O MEP TRAI.
+ⓘ Rule cua MOC 104 khong an vi dung selector khac.
+```
+
+## ✅ DA SUA (rule moi, dat TRUOC marker `VNTECH_MASTER_BASELINE_CSS_R1_1_1_END`)
+```
+.permission-matrix-wrap .resizable-data-table{width:100%;min-width:0;max-width:100%;table-layout:fixed}
+  · cot dau 32% + `white-space:normal` + `overflow-wrap:anywhere` (tu xuong dong)
+  · 6 cot quyen con lai 11.3% · canh giua
+  · `.permission-matrix-wrap{max-width:100%;overflow-x:hidden}` · an `.column-resize-handle`
+```
+
+## 🧪 CHUNG MINH BANG DO DOM (Edge headless, khong doan)
+```
+ChonBang = 1.055 px · KhungChua = 1.072 px · Tran = -17 px (bang VUA KHIT khung)
+scrollWidth > clientWidth = FALSE   ⇒ HET CUON NGANG
+Hang dau tien = "QUAN TRI HE THONG"  ⇒ nhom o DAU
+shot-matrix-final3.png: 8 cot quyen deu thay · du 14 dong Tab 01..14
+```
+
+---
+
+# ⛔ 23 FAIL MOI — THUOC NHANH REMOTE, NGOAI PHAM VI 3 VIEC USER GIAO (29/09/2026)
+
+## 🔎 TRUY NGUON DA DO
+```
+Commit merge `128c021` ke ve **14 file test `mt3-*`** tu nhanh remote (`7fdf71d` — MT3)
+⇒ so test 579 → 662; FAIL 4 → 27 (23 FAIL moi).
+Da chay 5 file mt3 dau:
+  · mt3-be-05-material-alias-search  FAIL=7  (modal tao MR/PR da dung helper dung chung)
+  · mt3-ui-04-no-project-block       FAIL=7  (bo khoi «Duan» roi o dau trang)
+  · mt3-ui-01 / 02 / 05                     FAIL=0
+⇒ 2/5 file FAIL, tong 14 FAIL chi trong 5 file dau.
+⛔ KHONG lien quan CSS / ma tran / MOC 96-105.
+```
+
+## ⛔ CHUA XAC MINH DUOC 100%
+```
+Da thu `git worktree add` tai commit TRUOC merge (`ffe20f9`) de chay gate doi chieu
+⇒ BI WINDOWS CHAN (duong dan qua dai / MAX_PATH), ca voi `subst W:`.
+⇒ CHI KET LUAN DUOC: 23 FAIL den tu bo test MT3 cua nhanh remote,
+   CHUA CHUNG MINH duoc chung co do merge cua em hay van do san tren nhanh remote.
+```
+
+## 📌 QUYET DINH
+```
+⛔ KHONG tu sua: 23 FAIL la viec MT3, KHAC han 3 yeu cau user da giao (MOC 103-105).
+⇒ Ghi nhan o day va cho USER QUYET.
+=> Neu user do la khac pham vi, phai chay lai gate o commit truoc merge bang cach
+   COPY thu muc `tests` cu sang mot thu muc ngan gon (tranh MAX_PATH).

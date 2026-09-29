@@ -11,4 +11,11 @@
 .error-report-fab:hover{background:#1e40af!important}
 .error-report-fab span{font-size:15px!important;line-height:1!important}
 @media(max-width:650px){.error-report-fab{right:10px!important;bottom:10px!important;padding:9px 12px!important}}
+/* MOC 105 (user 29/09) - PermissionMatrix dung `.resizable-data-table` co `width:max-content`
+   => bang rong hon khung => CUON NGANG => cot ten bi cat o mep trai. Ep ve 100% + cho phep xuong dong. */
+.permission-matrix-wrap .resizable-data-table{width:100%!important;min-width:0!important;max-width:100%!important;table-layout:fixed!important}
+.permission-matrix-wrap .resizable-data-table th:first-child,.permission-matrix-wrap .resizable-data-table td:first-child{width:32%!important;white-space:normal!important;overflow-wrap:anywhere!important;word-break:break-word!important;padding-left:10px!important;padding-right:16px!important}
+.permission-matrix-wrap .resizable-data-table th:not(:first-child),.permission-matrix-wrap .resizable-data-table td:not(:first-child){width:11.3%!important;text-align:center!important}
+.permission-matrix-wrap{max-width:100%!important;overflow-x:hidden!important}
+.permission-matrix-wrap .column-resize-handle{display:none!important}
 /* VNTECH_MASTER_BASELINE_CSS_R1_1_1_END */
