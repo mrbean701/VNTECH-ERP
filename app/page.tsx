@@ -244,6 +244,17 @@ function AdminModuleGuide({moduleKey}:{moduleKey:ModuleKey}){const text=moduleAd
 
 function roleLabel(data: AppData, code: string) { return data.roleCatalog?.find((row) => row.code === code)?.name || roleNames[code] || code; }
 function engineRoleLabel(data: AppData, engineKey: string) { const profile=data.engineRoleProfiles?.find((row) => row.engineKey === engineKey);return profile?`${profile.companyCode} · ${profile.displayName}`:roleNames[engineKey]||engineKey; }
+/**
+ * MỐC 104 (user 29/09) — API tra `active` cho moduleCatalog la **BOOLEAN true**
+ * (khong phai chuoi "1") ⇒ `String(row.active) === "1"` loai MAT 14/14 dong `admin_tab_NN`.
+ * ⛔ đây la ham chuan hoa: nhan ca true / "1" / 1 / "true".
+ */
+function isModuleActive(row: Row): boolean {
+  const v: unknown = (row as Row)?.active;
+  if (v === undefined || v === null || v === "") return true;
+  return v === true || v === 1 || String(v) === "1" || String(v).toLowerCase() === "true";
+}
+
 function permissionMenuStructure(data: AppData) {
   // USER 29/09/2026 (MỐC 53) — BỔ SUNG 14 khoá quyền `admin_tab_NN` vào ma trận phân quyền.
   // ⛔ LÝ DO: `configuredModules(data)` lặp mảng MENU `modules`; các khoá `admin_tab_NN` có
@@ -251,14 +262,16 @@ function permissionMenuStructure(data: AppData) {
   //    KHÔNG BAO GIỜ đi qua `configuredModules` ⇒ ma trận mất 14 tab này (user báo "hôm qua
   //    đã làm rồi, nay lại rollback"). ⇒ gom thẳng từ `data.moduleCatalog`.
   const adminTabRows = (data.moduleCatalog || [])
-    .filter((row) => /^admin_tab_\d{2}$/.test(String(row.moduleKey)) && String(row.active ?? 1) === "1")
+    .filter((row) => /^admin_tab_\d{2}$/.test(String(row.moduleKey)) && isModuleActive(row))
     .map((row) => ({ key: String(row.moduleKey) as ModuleKey, label: String(row.label || row.moduleKey), icon: "QT", groupKey: "system_admin", group: "Quản trị hệ thống", active: true, sortOrder: 900 + Number(String(row.moduleKey).slice(-2)) }))
     .sort((a, b) => a.key.localeCompare(b.key));
   const groupRows=configuredMenuGroups(data);
   const moduleRows=[...configuredModules(data).filter((item)=>item.key!=="admin"), ...adminTabRows];
   const result:{kind:"group"|"subgroup"|"module";key:string;label:string;module?:ReturnType<typeof configuredModules>[number]}[]=[];
   const seen=new Set<string>();
-  for(const group of groupRows){
+  // MOC 104 (user 29/09): dat nhom «Quan tri he thong» len DAU de nguoi dung thay ngay.
+  const orderedGroups=[...groupRows].sort((a,b)=>{const x=String(a.groupKey||""),y=String(b.groupKey||"");return x==="system_admin"?-1:y==="system_admin"?1:0;});
+  for(const group of orderedGroups){
     const groupKey=String(group.groupKey||"");
     const children=moduleRows.filter((item)=>String(item.groupKey||"")===groupKey);
     if(!children.length)continue;
