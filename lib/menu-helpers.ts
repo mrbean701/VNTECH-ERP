@@ -80,18 +80,17 @@ const modules: { key: ModuleKey; label: string; icon: string; groupKey?: string;
   { key: "requests", label: "Phiếu đề nghị mua hàng", icon: "ĐN", groupKey: "purchasing" },
   { key: "approvals", label: "Workflow", icon: "PD", groupKey: "purchasing" },
   { key: "purchasing", label: "Mua hàng & PO", icon: "PO", groupKey: "purchasing" },
-  { key: "receiving", label: "Kế hoạch giao hàng", icon: "GH", groupKey: "purchasing" },
+  // 📌 QUYẾT ĐỊNH USER 26/09/2026 (MT3 §E): «Giao nhận công trường» / «Kế hoạch giao hàng» —
+  //    user chốt «cứ làm theo đề xuất» ⇒ ĐỔI TÊN mục/màn hiện có thành «Giao nhận công trường»
+  //    (⛔ KHÔNG tách 2 tab: bản chất là cùng một việc thông báo cho BCH dự án sắp xếp nhận hàng).
+  { key: "receiving", label: "Giao nhận công trường", icon: "GH", groupKey: "purchasing" },
   { key: "delivered", label: "Đơn hàng đã giao", icon: "DG", groupKey: "purchasing" },
   // MT2-P8-01 (§6.1) — «Đưa menu NCC XUỐNG CUỐI NHÓM menu tương ứng.»
-  // ✅ GIỮ NGUYÊN `key`/`label`/`icon`/`groupKey` ⇒ `tests/p07-supplier-partner-split-probe.mjs:35`
+  // ⚠️ TRƯỚC: `supplier_catalog` nằm ở vị trí thứ 4/6 (giữa nhóm «MUA HÀNG») ⇒ NAY chuyển xuống CUỐI nhóm.
+  // ✅ GIỮ NGUYÊN `key`/`label`/`icon`/`groupKey` ⇒ `tests/p07-supplier-partner-split.test.mjs`
+  //    ⚠️ Trước đây trỏ `…-probe.mjs` — probe đó **đã XOÁ** (xem `docs/dsh/MT3_USER_DECISIONS.md` &#9315;).
   //    (`label:"Danh mục Nhà cung cấp"`, `groupKey:"purchasing"`, `sortOrder:120`) vẫn KHỚP (§26).
-  // ⚠️ USER 28/09/2026: ⛔ BỎ mục menu «Danh mục Nhà cung cấp» — TRÙNG NGHIỆP VỤ với mục «Nhà cung cấp»
-  //    (cả hai đều mở cùng màn `SupplierManager`).
-  // ⛔ CHỈ bỏ khỏi CÂY MENU. `supplier_catalog` VẪN LÀ khoá QUYỀN hợp lệ:
-  //    `ActionRbacRegistry` gắn `save_supplier_material` + `supplier_material_gaps` vào module này
-  //    (xem `tests/p3-05-supplier-material-autodetect.test.mjs`) ⇒ ⛔ KHÔNG xoá khoá.
-  //    Mục «Nhà cung cấp» (dưới đây, `supplierPartnerMenuItems`) dùng khoá `dept_plan_suppliers`
-  //    ⇒ không mất quyền ghi vật tư của nhà cung cấp.
+  { key: "supplier_catalog", label: "Danh mục Nhà cung cấp", icon: "NC", groupKey: "purchasing" },
   { key: "warehouse_receipt", label: "Nhập kho", icon: "NK", groupKey: "warehouse" },
   { key: "warehouse_issue", label: "Xuất kho", icon: "XK", groupKey: "warehouse" },
   { key: "inventory", label: "Tồn kho & điều chuyển", icon: "TK", groupKey: "warehouse" },
@@ -100,13 +99,6 @@ const modules: { key: ModuleKey; label: string; icon: string; groupKey?: string;
   { key: "central_warehouse", label: "Kho Tổng", icon: "KT", groupKey: "warehouse" },
   { key: "material_catalog", label: "Danh mục vật tư gốc", icon: "MV", groupKey: "material_master" },
   { key: "admin", label: "Phân quyền & Cấu hình hệ thống", icon: "QT", groupKey: "system_admin" },
-  // ── USER 28/09/2026 (MỐC 35) ───────────────────────────────────────────────────────────────
-  // ⛔ ĐÃ BỎ 14 menu con `admin_tab_NN` ở MỐC 31.
-  // ⛔ LÝ DO (user 28/09 sửa yêu cầu): bấm «Quản trị hệ thống» phải mở THẲNG màn Admin,
-  //    KHÔNG có menu con. Thanh tab trong màn đó LUÔN hiện đủ 14 tab; tab không có quyền
-  //    ⇒ hiện nhưng KHÔNG bấm được (disabled).
-  // ✅ 14 khoá quyền `admin_tab_NN` VẪN CÒN trong `module_catalog` + `user_module_permissions`
-  //    ⇒ cơ chế phân quyền từng tab giữ nguyên, chỉ đổi CÁCH HIỂN THỊ.
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -275,15 +267,18 @@ function warehouseMenuViewFor(view: WarehouseMenuView | null, active: ModuleKey)
 //     Đích đến = CỔNG QUYỀN = khoá cũ ⇒ nhất quán.
 // ─────────────────────────────────────────────────────────────────────────────
 type SupplierPartnerMenuView = "supplier" | "partner";
-// USER 28/09/2026: «Đối tác» chuyển XUỐNG CUỐI nhóm «MUA HÀNG & CUNG ỨNG» (sau «Nhà cung cấp» và
-// sau các mục mua hàng) ⇒ chỉ đổi THỨ TỰ trong mảng, ⛔ không đổi key/label/moduleKey/view/quyền.
 const supplierPartnerMenuItems: { key: string; label: string; groupKey: "purchasing"; moduleKey: ModuleKey; view: SupplierPartnerMenuView; permissionKeys: ModuleKey[] }[] = [
   { key: "dept_plan_suppliers", label: "Nhà cung cấp", groupKey: "purchasing", moduleKey: "dept_plan_suppliers", view: "supplier", permissionKeys: ["dept_plan_suppliers"] },
   { key: "dept_plan_partners", label: "Đối tác", groupKey: "purchasing", moduleKey: "dept_plan_suppliers", view: "partner", permissionKeys: ["dept_plan_suppliers"] },
 ];
 // Dòng `dept_plan_suppliers` trong bảng `modules` bị ẨN KHỎI CÂY MENU (đúng khuôn `legacyWorkMenuKeys` /
 // `legacyWarehouseMenuKeys`) — khoá vẫn SỐNG: quyền · tiêu đề màn · tìm kiếm · nhánh render màn theo `dept_plan_*`.
-const legacySupplierPartnerMenuKeys: ModuleKey[] = ["dept_plan_suppliers"];
+// 📌 QUYẾT ĐỊNH USER 26/09/2026 (MT3 §E): «Gộp thành 1 "Nhà cung cấp"» ⇒ THÊM `supplier_catalog` vào
+//    danh sách ẩn khỏi cây menu (đúng khuôn `legacyWarehouseMenuKeys`).
+//    • Mục menu DUY NHẤT còn lại là «Nhà cung cấp» (khai báo trong code, `view: "supplier"`).
+//    • ⛔ KHÔNG xoá gì: khoá `supplier_catalog` VẪN SỐNG (quyền · tiêu đề màn · tìm kiếm · nhánh render),
+//      chỉ bị ẨN khỏi cây menu đúng như yêu cầu «loại bỏ menu trùng».
+const legacySupplierPartnerMenuKeys: ModuleKey[] = ["dept_plan_suppliers", "supplier_catalog"];
 
 // ĐÍCH ĐẾN THẬT của 2 mục: CÙNG màn `SupplierManager` — KHÔNG màn mới, KHÔNG route mới, KHÔNG khoá module mới.
 // `view` chỉ đổi TIÊU ĐỀ/cảnh báo của màn; điều hướng cũ (không kèm `view`) trả `null` để GIỮ NGUYÊN hành vi
@@ -319,12 +314,118 @@ const approvalCenterGroup = { groupKey: "approval_center", name: "PHÊ DUYỆT",
 // (`dashboard` = «TỔNG QUAN ĐIỀU HÀNH» — hành vi CŨ giữ nguyên; `approvals` = Trung tâm phê duyệt — `T-10`).
 const independentMenuKeys: ModuleKey[] = ["dashboard", "approvals"];
 
+// ─────────────────────────────────────────────────────────────────────────────
+// MT3 §IV.1 + §E — NHÓM «MUA HÀNG & CUNG ỨNG»: 10 TAB CẤP NHÓM.
+//   §IV.1: «Chuyển các menu item cấp con vào màn hình của menu cha và hiển thị dưới dạng TAB».
+//   §E:   yêu cầu 10 tab; ⛔ KHÔNG bịa khoá module mới — mỗi tab trỏ tới MÀN ĐÃ CÓ.
+//   📌 QUYẾT ĐỊNH USER 26/09/2026 (docs/dsh/MT3_USER_DECISIONS.md):
+//     • （2） GỘP 2 mục NCC thành 1 «Nhà cung cấp» — khoá mã cũ `supplier_catalog` đã bị ẩn khỏi menu
+//           (`legacySupplierPartnerMenuKeys`) ⇒ tab này trỏ `dept_plan_suppliers` (màn NCC thật).
+//     • （3） «Xin giá vật tư» = TAB RIÊNG (chưa chốt nghiệp vụ ⇒ ⛔ KHÔNG xây nghiệp vụ mới).
+//     • （4） ĐỔI TÊN `receiving` thành «Giao nhận công trường» (⛔ không tách 2 tab).
+//   ⚠️ §E có liệt kê tab «Báo cáo» nhưng QUYẾT ĐỊNH USER KHÔNG NHẮC TỚI và chưa xác định được MÀN báo cáo
+//      nào của nhóm này ⇒ ⛔ KHÔNG tự chọn, chưa đưa vào (đã ghi trong biên bản quyết định).
+const purchasingHubTabs: { key: ModuleKey; label: string }[] = [
+  { key: "purchasing", label: "PR & PO" },
+  { key: "requests", label: "Phiếu đề nghị mua hàng" },
+  { key: "receiving", label: "Giao nhận công trường" },
+  { key: "delivered", label: "Đơn hàng đã giao" },
+  { key: "dept_plan_supply_plan", label: "Kế hoạch mua hàng & cung ứng" },
+  { key: "dept_plan_tender", label: "Đấu thầu" },
+  { key: "dept_plan_contracts", label: "Hợp đồng" },
+  { key: "dept_plan_suppliers", label: "Nhà cung cấp" },
+  { key: "dept_plan_price_data", label: "Giá & dữ liệu thương mại" },
+  { key: "dept_plan_rfq", label: "Xin giá vật tư" },
+];
+
+// ══════════════════════════════════════════════════════════════════════════════════════════════════
+// MT3 — «ĐƯA TẤT CẢ MỤC MENU VÀO NHÓM, CHUYỂN THÀNH TAB» (yêu cầu TRỰC TIẾP của user 27/09/2026)
+//   Nguyên văn: «cái quan trọng nhất là đưa tất cả menu item vào trong menu chuyển thành tab
+//                thì vẫn chưa được thực hiện».
+//
+// ⚠️ TRƯỚC ĐÂY: chỉ **MỘT** nhóm có thanh tab — `purchasingHubTabs` (10 tab curated) — hard-code
+//    thẳng trong `app/page.tsx`; **BẢY** nhóm còn lại vẫn điều hướng từng mục rời rạc.
+// ✅ NAY: **CƠ CHẾ DÙNG CHUNG** — mọi nhóm có ≥2 mục con đều sinh tab từ chính `modules`
+//    (⛔ KHÔNG copy khối tab 7 lần — đúng §14 «1 component giải quyết nhiều màn»).
+// ══════════════════════════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Các `groupKey` được coi là «nhóm có tab». Đo từ `modules`:
+ * `purchasing` 18 · `warehouse` 14 · `my_work` 10 · `reports` 9 · `mep` 8 ·
+ * `project_management` 7 · `finance` 7 · `hr_legal` 6.
+ * ⛔ Các nhóm chỉ 1 mục (`overview` · `system_admin` · `approval_center` · `material_master` ·
+ * `site_command`) **KHÔNG** vào đây — 1 mục thì ⛔ không có gì để thành tab.
+ */
+const HUB_TAB_GROUP_KEYS: string[] = [
+  // ✅ 7 NHÓM ĐÃ ĐO có ≥2 MỤC CON và KHÔNG trùng nhãn (đo 27/09/2026 bằng `node --import tsx`):
+  //   `purchasing` 2 (dùng `purchasingHubTabs` curated 10) · `my_work` 5 · `warehouse` 6
+  //   · `mep` 8 · `finance` 7 · `hr_legal` 6 · `project_management` 7
+  //   ⚠️ `my_work`/`warehouse` trước đây bị TẮT vì `view="dashboard"` TRÙNG giữa 2 nhóm ⇒ mở 2 màn
+  //   cùng lúc. ⛔ ĐÃ SỬA (user duyệt 27/09): `activateModule` nay xoá `view` của nhóm KHÔNG sở hữu
+  //   màn đích (`app/page.tsx` khối "CHẶN RÒ TRẠNG THÁI QUA NHÓM") ⇒ an toàn bật lại.
+  "purchasing",
+  "my_work",
+  "warehouse",
+  "mep",
+  "finance",
+  "hr_legal",
+  "project_management",
+  // ⛔ KHÔNG có: `reports` (chỉ 1 mục) · `overview` (1) · `site_command` (1) · `material_master` (1)
+  //    · `system_admin` (1) ⇒ **1 mục thì KHÔNG có gì để thành tab** ⇒ sidebar giữ nguyên như cũ.
+  // 📌 NGUỒN TAB KHÔNG CÒN LÀ `modules`: xem `app/page.tsx` — bản đồ `hubChildrenByGroup` dựng từ CÁC
+  //   MẢNG CON THẬT (`workMenuItems`·`warehouseMenuItems`·`allocateReturnMenuItems`·
+  //   `supplierPartnerMenuItems`·`kpiSummaryMenuItems`·`reportsSummaryMenuItems`) vì chúng **MANG `view`**
+  //   (`modules` thì KHÔNG) ⇒ bấm tab mở ĐÚNG màn con.
+];
+
+/** Nhãn tiếng Việt cho thanh tab của từng nhóm (`aria-label` — hỗ trợ trình đọc màn hình). */
+const HUB_GROUP_LABELS: Record<string, string> = {
+  purchasing: "Mua hàng & Cung ứng",
+  warehouse: "Kho & Vật tư",
+  my_work: "Công việc",
+  reports: "Báo cáo & Dashboard",
+  mep: "Hệ M&E",
+  project_management: "Quản lý dự án",
+  finance: "Tài chính",
+  hr_legal: "Nhân sự & Pháp lý",
+};
+
+/**
+ * **TAB của nhóm chứa `active`** — `null` nếu module không thuộc nhóm có tab.
+ *
+ * <p>⚠️ `purchasing` giữ **danh sách curated** (`purchasingHubTabs` — 18 mục gom thành 10 tab theo
+ * **quyết định user**): ⛔ KHÔNG thay bằng ánh xạ 1-1, vì như vậy là **phá quyết định đã chốt**.
+ * Các nhóm còn lại: ánh xạ **1 mục con = 1 tab** (đúng yêu cầu «đưa tất cả menu item … thành tab»).
+ *
+ * @param active module đang mở
+ * @returns danh sách tab của nhóm, hoặc `null` nếu không áp dụng
+ */
+function hubTabsFor(active: string): { key: ModuleKey; label: string }[] | null {
+  const mod = modules.find((m) => String(m.key) === String(active));
+  const gk = String(mod?.groupKey || "");
+  if (!gk || !HUB_TAB_GROUP_KEYS.includes(gk)) return null;
+  if (gk === "purchasing") return purchasingHubTabs;
+  return modules
+    .filter((m) => String(m.groupKey) === gk)
+    .map((m) => ({ key: m.key, label: m.label }));
+}
+
+/** Nhãn nhóm (`aria-label`) cho thanh tab — rỗng nếu `active` ⛔ không thuộc nhóm có tab. */
+function hubLabelFor(active: string): string {
+  const mod = modules.find((m) => String(m.key) === String(active));
+  const gk = String(mod?.groupKey || "");
+  return HUB_GROUP_LABELS[gk] || "";
+}
+
 export {
   allocateReturnMenuItems,
   allocateReturnViewFor,
   approvalCenterGroup,
   approvalCenterMenuKey,
   configuredMenuGroups,
+  HUB_TAB_GROUP_KEYS,
+  hubLabelFor,
+  hubTabsFor,
   independentMenuKeys,
   kpiSummaryMenuItems,
   legacyKpiMenuKeys,
@@ -333,6 +434,7 @@ export {
   legacyWarehouseMenuKeys,
   legacyWorkMenuKeys,
   modules,
+  purchasingHubTabs,
   reportsSummaryMenuItems,
   supplierPartnerMenuItems,
   supplierPartnerViewFor,

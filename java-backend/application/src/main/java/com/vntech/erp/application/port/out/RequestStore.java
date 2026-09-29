@@ -80,6 +80,22 @@ public interface RequestStore {
     void createStockReservations(String requestId, String warehouseId, String userId, Instant now);
     void returnRequestToRequester(String requestId, int stage, String userId, String comment, Instant now);
 
+    /**
+     * MT3-A1 — **TỰ ĐỘNG TỪ CHỐI khi QUÁ SLA** (quyết định user 27/09/2026, nguyên văn:
+     * «Nếu như quá SLA mà không có ai duyệt mặc định bị hệ thống từ chối. Từ chối khi quá SLA.»)
+     *
+     * <p>Tìm mọi bước phê duyệt còn `status='pending'` mà **đã quá hạn** `due_at` cộng thêm
+     * {@code graceHours} giờ, rồi TỪ CHỐI đúng theo **cùng đường** mà người duyệt từ chối:
+     * {@link #updateApprovalDecision} (→ `approvals.status='rejected'`) +
+     * {@link #returnRequestToRequester} (→ phiếu về người lập, `approval_stage=0`).
+     *
+     * <p><b>IDEMPOTENT</b>: chỉ tác động bản ghi còn `status='pending'` ⇒ gọi lặp ⛔ **không từ chối hai lần**.
+     * <b>⛔ KHÔNG suy diễn</b>: bước có `due_at` NULL bị BỎ QUA (không có hạn thì không có «quá hạn»).
+     *
+     * @return số bước đã bị từ chối trong lần gọi này (0 nếu không có gì quá hạn)
+     */
+    int rejectOverdueApprovals(long graceHours, String reason, Instant now);
+
     // ---- P4: người duyệt theo workflow đa luồng ----
     /** Người duyệt đích danh của một bước trong quy trình đang áp dụng cho dự án. */
     List<String> stageApproverUserIds(String projectId, int stageNo);

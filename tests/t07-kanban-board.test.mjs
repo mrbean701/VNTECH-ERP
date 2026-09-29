@@ -153,7 +153,8 @@ test("T-07 — Board được GẮN vào màn Công việc (import + render), ph
   assert.match(workCenter, /scopeNote=\{/, "Board chưa nhận ghi chú phạm vi (T-06)");
   assert.match(workCenter, /managerDepartments=\{kanbanManagerDepartments\(/, "Chưa truyền phòng mà người dùng là trưởng phòng");
   // Board phải là một PHẦN của màn Công việc, không mở màn/menu mới (T-01 đã chốt 5 mục menu).
-  assert.equal((workCenter.match(/const WORK_TABS = \["Cá nhân", "Phòng ban", "Giao việc", "Dashboard", "Báo cáo"\];/g) || []).length, 1, "Board không được đổi dải 5 tab đã chốt ở T-01");
+  // 📌 CẬP NHẬT 26/09/2026 (MT3 §A.2): dải tab nay 6 tab (thêm «Dự án» ở index 1) — ⛔ Board KHÔNG được đổi.
+  assert.equal((workCenter.match(/const WORK_TABS = \["Cá nhân", "Dự án", "Phòng ban", "Giao việc", "Dashboard", "Báo cáo"\];/g) || []).length, 1, "Board không được đổi dải 6 tab (MT3 §A.2)");
 });
 
 test("T-07 — HAI nơi suy «trưởng phòng» (T-06 phạm vi ↔ T-07 cổng kéo-thả) PHẢI cho CÙNG kết quả", () => {

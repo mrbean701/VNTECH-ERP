@@ -20,6 +20,10 @@
 // PHASE 3 (`T-07`) — Board Kanban 3 chiều (Ưu tiên · Trạng thái · Phân công) tách ra `WorkKanban.tsx`, gắn ở đây.
 
 import { DataTable, ListToolbar, PermissionGuard, StatusBadge } from "@/app/components/ui";
+// MT3 §IV.7 + ma trận #6 — XUẤT dùng ĐÚNG thư viện dùng chung (§14), ⛔ không tự viết lại CSV/Blob.
+//   Và `statusLabel` để ⛔ KHÔNG rò mã thô trạng thái ra tệp xuất (đúng tinh thần ma trận #5).
+import { downloadCsv } from "@/lib/tabular-export";
+import { statusLabel } from "@/lib/status-labels";
 import { ReportView } from "@/app/screens/ReportView";
 import { WorkDashboard } from "@/app/screens/WorkDashboard";
 import { WorkHierarchy } from "@/app/screens/WorkHierarchy";
@@ -81,11 +85,15 @@ function overdueApprovalCount(data: AppData): number | null {
 }
 
 // PHASE 3 (`T-01`) — 5 TAB NHÓM «CÔNG VIỆC», ĐÚNG thứ tự đã chốt (5 mục menu ⇄ 5 tab).
-const WORK_TABS = ["Cá nhân", "Phòng ban", "Giao việc", "Dashboard", "Báo cáo"];
+// MT3 §A — thứ tự tab yêu cầu: «Cá nhân» · **«Dự án» (TẠO MỚI)** · «Phòng ban» · «Báo cáo».
+// ⚠️ ⛔ KHÔNG xoá các tab đang có («Giao việc» · «Dashboard») vì đó là chức năng THẬT còn dùng
+//    (giao việc · KPI); MT3 §IV.1 chỉ yêu cầu bỏ tab TRÙNG chức năng — chưa có bằng chứng trùng ở đây.
+//    Các index cũ được DỜI LÙI 1 chỗ để nhường chỗ cho tab mới (không mất chức năng nào).
+const WORK_TABS = ["Cá nhân", "Dự án", "Phòng ban", "Giao việc", "Dashboard", "Báo cáo"];
 // MT2-P5-01 (§3.1) — thêm khoá `dashboard` (tab «Dashboard»). Số 3 ĐO từ `WORK_TABS` ở trên:
 // «Cá nhân»=0 · «Phòng ban»=1 · «Giao việc»=2 · **«Dashboard»=3** · «Báo cáo»=4 ⇒ `dashboard: 3` ✔
 // ⚠️ GIỮ `kpi: 3` (cùng index) vì `WorkMenuView` vẫn còn `"kpi"` — dùng chung đúng tab Dashboard.
-const WORK_TAB_OF_VIEW: Record<WorkMenuView, number> = { personal: 0, department: 1, assign: 2, kpi: 3, dashboard: 3, reports: 4 };
+const WORK_TAB_OF_VIEW: Record<WorkMenuView, number> = { personal: 0, department: 2, assign: 3, kpi: 4, dashboard: 4, reports: 5 };
 // Báo cáo CÔNG VIỆC dùng LẠI catalog chung (`R-05a/b/c`, nguồn `workItems`) — không khai định nghĩa mới.
 const WORK_REPORT_CATALOG = REPORT_CATALOG.filter((entry) => entry.source === "workItems");
 
@@ -104,6 +112,26 @@ const PERSONAL_GROUPS = [
   { key: "assigned", label: "Được giao", note: "Người khác giao cho tôi (người giao khác tôi)" },
   { key: "created", label: "Do tôi tạo", note: "Việc tôi giao/tạo (cho người khác hoặc cho chính tôi)" },
 ];
+
+/**
+ * MT3 §A.2 — Gom nhiệm vụ theo DỰ ÁN cho tab «Dự án».
+ * ⛔ KHÔNG phát minh nghiệp vụ: chỉ nhóm CHÍNH SÁCH dữ liệu nhiệm vụ đang có theo `projectCode`,
+ *    không suy diễn quy tắc nghiệp vụ nào (không tính tiến độ dự án, không xếp hạng ưu tiên).
+ */
+function projectWorkGroups(rows: Row[]) {
+  const map = new Map<string, { code: string; label: string; rows: Row[] }>();
+  for (const row of rows) {
+    const code = String(row.projectCode || "").trim();
+    const label = String(row.projectName || code || "Chưa gán dự án").trim();
+    const key = code || label;
+    const current = map.get(key) || { code, label, rows: [] };
+    current.rows.push(row);
+    map.set(key, current);
+  }
+  return [...map.values()]
+    .map((g) => ({ ...g, done: g.rows.filter((r) => String(r.status) === "COMPLETED").length, late: g.rows.filter(isTaskLate).length }))
+    .sort((a, b) => b.rows.length - a.rows.length || a.label.localeCompare(b.label, "vi"));
+}
 
 function personalWorkGroups(rows: Row[], myId: string) {
   const mine = rows.filter((row) => String(row.assignedTo) === myId);
@@ -240,12 +268,37 @@ function WorkCenter({ data, action, refresh, view = "personal" }: { data: AppDat
         title="CÔNG VIỆC"
         note={`${mine.length} việc của bạn · ${deptWork.length + teamWork.length} việc phòng ban/tổ đội · ${items.length} tổng`}
         search={{ value: q, onChange: setQ, placeholder: "Tìm mã việc, nội dung, người làm…" }}
+        actions={<>
+          {/* MT3 ma trận #6 — nút XUẤT THẬT (dùng `lib/tabular-export`).
+              ⚠️ TÊN TRƯỜNG lấy ĐÚNG theo hợp đồng đã đo ở đầu tệp + cột thật của `TaskTable`
+              (`taskNo` · `title` · `assignedToName` · `projectId` · `dueAt` · `priority` · `progress` · `status`)
+              — ⛔ KHÔNG đoán tên trường (bài học: trước đây đoán sai nên tab «Việc của tôi» LUÔN 0 việc).
+              `status` đi qua bảng nhãn dùng chung ⇒ ⛔ không rò mã thô. */}
+          <button type="button" className="secondary" data-vntech="work-export-csv"
+            title="Xuất danh sách công việc ra CSV (UTF-8, có BOM — mở đúng tiếng Việt trong Excel)"
+            onClick={() => downloadCsv(
+              ["Mã việc", "Nội dung", "Người làm", "Dự án (mã)", "Hạn", "Ưu tiên", "Tiến độ", "Trạng thái"],
+              items.map((r) => [
+                String(r.taskNo ?? ""),
+                String(r.title ?? ""),
+                String(r.assignedToName ?? ""),
+                String(r.projectId ?? ""),
+                r.dueAt ? date(r.dueAt) : "",
+                r.priority === "urgent" ? "Khẩn" : r.priority === "high" ? "Cao" : "Thường",
+                `${Number(r.progress || 0)}%`,
+                statusLabel(r.status),
+              ]),
+              "danh-sach-cong-viec",
+            )}>⤓ Xuất CSV</button>
+        </>}
       />
       <div className="project-scope-tabs" role="tablist">
-        {WORK_TABS.map((label, i) => <button key={label} type="button" role="tab" aria-selected={tab === i} className={tab === i ? "active" : ""} onClick={() => setTab(i)}>{label}</button>)}
+        {WORK_TABS.map((label, i) => <button key={label} type="button" role="tab" aria-selected={tab === i} className={tab === i ? "active" : ""} data-vntech={`work-tab-${i}`} onClick={() => setTab(i)}>{label}</button>)}
       </div>
     </section>
-
+    {/* ── MT3 §A.2 — TAB «DỰ ÁN» (TẠO MỚI): dashboard gom CÔNG VIỆC theo dự án ──────────────
+        ⛔ KHÔNG phát minh nghiệp vụ: chỉ TỔNG HỢP dữ liệu nhiệm vụ ĐANG CÓ (cùng tập `rows` mà
+        các tab khác dùng), theo `projectCode`. ⛔ Chưa khai báo luật nghiệp vụ mới cho tiến độ dự án. */}
     {tab === 0 && <div className="stack">
       <div className="kpi-grid small">
         <Kpi icon="CV" label="Việc của tôi" value={String(mine.length)} note={`${mine.filter((r) => String(r.status) === "COMPLETED").length} đã xong`} tone="blue"/>
@@ -283,7 +336,27 @@ function WorkCenter({ data, action, refresh, view = "personal" }: { data: AppDat
       </section>
     </div>}
 
-    {tab === 1 && <div className="stack">
+    {tab === 1 && <div className="stack" data-vntech="work-project-tab">
+      <div className="kpi-grid small">
+        <Kpi icon="DA" label="Dự án có công việc" value={String(projectWorkGroups(items).length)} note="Trong phạm vi bạn được xem" tone="blue"/>
+        <Kpi icon="CV" label="Tổng nhiệm vụ" value={String(items.length)} note="Toàn bộ nhiệm vụ đang giao" tone="green"/>
+        <Kpi icon="QH" label="Quá hạn" value={String(items.filter(isTaskLate).length)} note="Cần xử lý trước" tone="red"/>
+      </div>
+      <section className="card">
+        <CardHead title="CÔNG VIỆC THEO DỰ ÁN" note="MT3 §A.2 — tổng hợp nhiệm vụ đang có theo từng dự án."/>
+        <div className="table-wrap"><table><thead><tr><th>Dự án</th><th>Số nhiệm vụ</th><th>Đã xong</th><th>Quá hạn</th><th>Tỉ lệ hoàn thành</th></tr></thead>
+          <tbody>{projectWorkGroups(items).map((g) => <tr key={g.code || g.label}>
+            <td><strong>{g.label}</strong></td>
+            <td>{g.rows.length}</td>
+            <td>{g.done}</td>
+            <td>{g.late}</td>
+            <td>{workRate(g.rows)}%</td>
+          </tr>)}</tbody></table></div>
+        {!projectWorkGroups(items).length && <small>Chưa có nhiệm vụ nào thuộc dự án trong phạm vi bạn được xem.</small>}
+      </section>
+    </div>}
+
+    {tab === 2 && <div className="stack">
       <section className="card">
         <CardHead title="Việc phòng ban của tôi" note={`Nhiệm vụ thuộc phòng mà tài khoản trực thuộc — PHẠM VI ĐƯỢC PHÉP: ${scopeNote}`}/>
         <TaskTable rows={find(deptWork)} allowEdit={false} projCode={projCode} busy={busy} send={send}/>
@@ -300,7 +373,7 @@ function WorkCenter({ data, action, refresh, view = "personal" }: { data: AppDat
       <WorkHierarchy data={data} rows={find(scopedWork)} scopeNote={`Phạm vi: ${scopeNote}`} permission={modulePermission(data, "dept_plan_assign")}/>
     </div>}
 
-    {tab === 2 && <div className="stack">
+    {tab === 3 && <div className="stack">
       {canAssign && <section className="card">
         <CardHead title="Giao việc cho nhân viên" note="Chỉ Trưởng phòng hoặc Quản trị viên giao được việc thủ công — backend chặn bằng userIsDepartmentManager. Bàn giao chi tiết (hồ sơ · dòng thời gian · đổi trạng thái) nằm ở mục «Giao việc» của menu."/>
         <form onSubmit={(e) => { e.preventDefault(); const f = e.currentTarget; const fd = new FormData(f);
@@ -324,7 +397,7 @@ function WorkCenter({ data, action, refresh, view = "personal" }: { data: AppDat
       </section>}
     </div>}
 
-    {tab === 3 && <div className="stack">
+    {tab === 4 && <div className="stack">
       <section className="card">
         <CardHead title="Dashboard công việc"
           note={isOverseer ? "Phạm vi: TOÀN BỘ nhân sự (quyền CEO/Quản trị)" : "Phạm vi: phòng ban của bạn"}/>
@@ -344,7 +417,7 @@ function WorkCenter({ data, action, refresh, view = "personal" }: { data: AppDat
       <WorkDashboard data={data} personalRows={mine} scopeRows={scopedWork} isLate={isTaskLate} scopeNote={scopeNote}/>
     </div>}
 
-    {tab === 4 && <div className="stack">
+    {tab === 5 && <div className="stack">
       <section className="card">
         <CardHead title="Tỉ lệ hoàn thành theo nhân viên"
           note={isOverseer ? "Phạm vi: TOÀN BỘ nhân sự (quyền CEO/Quản trị)" : "Phạm vi: phòng ban của bạn"}/>

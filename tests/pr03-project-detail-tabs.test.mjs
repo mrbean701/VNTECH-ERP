@@ -23,11 +23,13 @@ const detailStart = pm.indexOf("// =========================== CHI TIẾT");
 assert.ok(detailStart > 0, "Không tách được nhánh CHI TIẾT của màn dự án");
 const detailBranch = pm.slice(detailStart);
 
-test("PR-03 — có ĐÚNG 5 tab con, nhãn khớp NGUYÊN VĂN roadmap (chung · nhân sự · tổ đội · kho · lịch sử)", () => {
+// 📌 CẬP NHẬT 26/09/2026 (MT3 §C): «Đổi "Chung" thành "Thông tin dự án"».
+// ⛔ KHOÁ NỘI BỘ `section === "chung"` GIỮ NGUYÊN (đó là khoá kỹ thuật, không phải nhãn hiển thị).
+test("PR-03 — có ĐÚNG 5 tab con, nhãn khớp MT3 §C (thông tin dự án · nhân sự · tổ đội · kho · lịch sử)", () => {
   const match = detailSource.match(/PROJECT_DETAIL_SUB_TABS\s*=\s*\[([^\]]*)\]/);
   assert.ok(match, "Không tìm thấy hằng số `PROJECT_DETAIL_SUB_TABS`");
   const labels = match[1].split(",").map((item) => item.trim().replace(/^"|"$/g, "")).filter(Boolean).map((item) => item.toLocaleLowerCase("vi"));
-  assert.deepEqual(labels, ["chung", "nhân sự", "tổ đội", "kho", "lịch sử"], `Nhãn tab con không khớp roadmap: ${JSON.stringify(labels)}`);
+  assert.deepEqual(labels, ["thông tin dự án", "nhân sự", "tổ đội", "kho", "lịch sử"], `Nhãn tab con không khớp MT3 §C: ${JSON.stringify(labels)}`);
 });
 
 test("PR-03 — mỗi tab con có NỘI DUNG + dùng DỮ LIỆU THẬT (không bảng dữ liệu mới)", () => {

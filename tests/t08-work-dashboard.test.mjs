@@ -128,16 +128,18 @@ test("T-08 — UI KHÔNG hardcode số: mọi giá trị lấy từ khối tính
   assert.match(component, /className="task-bar"/, "Thiếu biểu đồ thanh đơn giản");
 });
 
-test("T-08 — GẮN vào tab «Dashboard» của WorkCenter (tab số 3), KHÔNG đổi 5 tab đã chốt ở T-01", () => {
+// 📌 CẬP NHẬT 26/09/2026 (MT3 §A.2): thêm tab «Dự án» ở index 1 ⇒ «Dashboard» dời từ tab 3 → tab 4.
+// ⛔ Khối dashboard VẪN phải nằm trong tab «Dashboard», KHÔNG được tách sang tab mới.
+test("T-08 — GẮN vào tab «Dashboard» của WorkCenter (nay là tab số 4 sau MT3 §A.2), dải tab 6 mục", () => {
   assert.match(workCenter, /import \{ WorkDashboard \} from "@\/app\/screens\/WorkDashboard";/, "WorkCenter chưa import khối dashboard");
   assert.match(workCenter, /<WorkDashboard\b/, "WorkCenter chưa render khối dashboard");
   assert.match(workCenter, /personalRows=\{mine\}/, "Khối «Cá nhân» phải nhận ĐÚNG tập việc của tôi");
   assert.match(workCenter, /scopeRows=\{scopedWork\}/, "Khối phòng ban/dự án phải nhận tập việc trong PHẠM VI ĐƯỢC PHÉP (T-06)");
   assert.match(workCenter, /isLate=\{isTaskLate\}/, "Khối dashboard phải dùng CÙNG luật quá hạn của màn Công việc");
-  // Phải nằm TRONG tab 3 (Dashboard) — không tạo tab/màn mới.
-  const i3 = workCenter.indexOf("{tab === 3 &&");
-  const i4 = workCenter.indexOf("{tab === 4 &&");
-  assert.ok(i3 > 0 && i4 > i3, "Mất nhánh tab 3/tab 4");
-  assert.ok(workCenter.slice(i3, i4).includes("<WorkDashboard"), "Khối dashboard phải nằm trong tab «Dashboard» (tab 3)");
-  assert.equal((workCenter.match(/const WORK_TABS = \["Cá nhân", "Phòng ban", "Giao việc", "Dashboard", "Báo cáo"\];/g) || []).length, 1, "Không được đổi dải 5 tab đã chốt ở T-01");
+  // Phải nằm TRONG tab «Dashboard» (nay là số 4) — không tạo tab/màn mới.
+  const i3 = workCenter.indexOf("{tab === 4 &&");
+  const i4 = workCenter.indexOf("{tab === 5 &&");
+  assert.ok(i3 > 0 && i4 > i3, "Mất nhánh tab «Dashboard»/«Báo cáo»");
+  assert.ok(workCenter.slice(i3, i4).includes("<WorkDashboard"), "Khối dashboard phải nằm trong tab «Dashboard»");
+  assert.equal((workCenter.match(/const WORK_TABS = \["Cá nhân", "Dự án", "Phòng ban", "Giao việc", "Dashboard", "Báo cáo"\];/g) || []).length, 1, "Không được đổi dải 6 tab (MT3 §A.2)");
 });

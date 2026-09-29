@@ -40,25 +40,30 @@ const DATA = {
   teamSettlements: [],
 };
 
-test("TM-03 — đúng 6 tab, đúng thứ tự nguyên văn", () => {
+// 📌 CẬP NHẬT 26/09/2026 theo MASTER TASK 3 §G: đúng 5 tab
+//   «Thông tin · Nhân sự · Dự án · Kho · Lịch sử».
+// ⛔ Tab «Cấp phát» ĐÃ GỘP vào «Lịch sử» (vì §G: «Lịch sử — Tổng hợp tất cả đơn/phiếu liên quan…
+//   có Search · Sort · Filter theo loại») ⇒ ⛔ KHÔNG mất chức năng cấp phát/hoàn trả.
+// ⛔ Mọi khẳng định khác (nguồn thật, đếm dòng, đối chứng âm, render UI) được GIỮ NGUYÊN.
+test("TM-03 — đúng 5 tab theo MT3 §G, đúng thứ tự nguyên văn", () => {
   const { TEAM_TABS } = loadPure();
-  assert.deepEqual(TEAM_TABS, ["Thông tin", "Nhân sự", "Dự án", "Kho", "Cấp phát", "Lịch sử"],
-    "6 tab phải khớp nguyên văn «thông tin · nhân sự · dự án · kho · cấp phát · lịch sử»");
-  // Màn CŨ chỉ có 3 tab (Tổng quan / Thành viên / Đơn từ) ⇒ phải là 6, không phải 3 hay 7.
-  assert.equal(TEAM_TABS.length, 6);
+  assert.deepEqual(TEAM_TABS, ["Thông tin", "Nhân sự", "Dự án", "Kho", "Lịch sử"],
+    "5 tab phải khớp nguyên văn «thông tin · nhân sự · dự án · kho · lịch sử» (MT3 §G)");
+  assert.equal(TEAM_TABS.length, 5);
 });
 
 test("TM-03 — mỗi tab có NGUỒN THẬT + đếm dòng THẬT trên fixtures", () => {
   const { teamDetailTabs } = loadPure();
   const tabs = teamDetailTabs(DATA, TEAM);
-  assert.equal(tabs.length, 6);
-  assert.deepEqual(tabs.map((tab) => tab.label), ["Thông tin", "Nhân sự", "Dự án", "Kho", "Cấp phát", "Lịch sử"]);
+  assert.equal(tabs.length, 5);
+  assert.deepEqual(tabs.map((tab) => tab.label), ["Thông tin", "Nhân sự", "Dự án", "Kho", "Lịch sử"]);
   const byLabel = Object.fromEntries(tabs.map((tab) => [tab.label, tab]));
   assert.equal(byLabel["Thông tin"].available, true);
   assert.equal(byLabel["Nhân sự"].count, 1, "Nhân sự = số dòng team_members của ĐÚNG tổ đội này");
   assert.equal(byLabel["Dự án"].count, 1, "Dự án = tổ đội thuộc 1 dự án");
   assert.equal(byLabel["Kho"].count, 1, "Kho = teams.warehouse_id tra được trong warehouses[]");
-  assert.equal(byLabel["Cấp phát"].count, 2, "Cấp phát = 1 phiếu xuất + 1 phiếu hoàn mang team_id");
+  // ⛔ Tab «Lịch sử» nay TỔNG HỢP cả cấp phát lẫn hoàn trả ⇒ count = 2 (1 xuất + 1 hoàn trả).
+  assert.equal(byLabel["Lịch sử"].count, 2, "Lịch sử = tổng hợp 1 phiếu xuất + 1 phiếu hoàn mang team_id");
   for (const tab of tabs) {
     assert.match(tab.source, /teams|team_members|projects|warehouses|inventory|stock_issues|material_returns|audit_logs/,
       `Tab «${tab.label}» chưa khai NGUỒN THẬT (đang là: ${tab.source})`);
@@ -86,18 +91,20 @@ test("TM-03 — ĐỐI CHỨNG ÂM: thiếu nguồn ⇒ `available=false` + «ch
   assert.equal(kho.available, false, "không có dòng inventory nào cho kho ⇒ `available=false`");
   assert.match(kho.noSourceReason, new RegExp(NO_SOURCE_TEXT));
 
-  // (c) `audits` rỗng ⇒ tab Lịch sử KHÔNG có nguồn (và lý do phải nêu khoá audits chỉ admin nhận).
+  // (c) MT3 §G — tab «Lịch sử» nay TỔNG HỢP nhiều nguồn (cấp phát + hoàn trả + audit)
+  //     ⇒ «available» chỉ FALSE khi TẤT CẢ các nguồn đều rỗng (ở fixture này luôn có 1 cấp phát + 1 hoàn trả).
   const noAudit = teamDetailTabs({ ...DATA, audits: [] }, TEAM);
   const lichSu = noAudit.find((tab) => tab.label === "Lịch sử");
-  assert.equal(lichSu.available, false);
-  assert.match(lichSu.noSourceReason, /admin/i, "lý do phải nêu rõ audits[] chỉ admin nhận");
-  // Đối chứng DƯƠNG: có dòng audit của ĐÚNG tổ đội ⇒ `available=true`.
+  assert.equal(lichSu.available, true, "Lịch sử vẫn CÓ nguồn (cấp phát/hoàn trả) dù audits[] rỗng");
+  assert.ok(lichSu.source.includes("audit_logs"), "nguồn của tab Lịch sử vẫn phải nêu rõ audit_logs");
+  // Đối chứng DƯƠNG: có dòng audit của ĐÚNG tổ đội ⇒ số dòng TĂNG thêm 1 (cộng dồn, không thay thế).
   const withAudit = teamDetailTabs({ ...DATA, audits: [{ id: "A1", entityType: "team", entityId: "T1", action: "CREATE", occurredAt: "2026-09-14", userName: "admin" }] }, TEAM);
   assert.equal(withAudit.find((tab) => tab.label === "Lịch sử").available, true);
-  assert.equal(withAudit.find((tab) => tab.label === "Lịch sử").count, 1);
+  assert.equal(withAudit.find((tab) => tab.label === "Lịch sử").count, lichSu.count + 1,
+    "thêm 1 dòng audit của đúng tổ đội này ⇒ count tổng hợp tăng đúng 1");
   // …nhưng audit của tổ đội KHÁC thì KHÔNG được tính.
   const otherAudit = teamDetailTabs({ ...DATA, audits: [{ id: "A2", entityType: "team", entityId: "T9", action: "CREATE", occurredAt: "2026-09-14" }] }, TEAM);
-  assert.equal(otherAudit.find((tab) => tab.label === "Lịch sử").count, 0, "audit của tổ đội khác không được tính vào tổ đội này");
+  assert.equal(otherAudit.find((tab) => tab.label === "Lịch sử").count, lichSu.count, "audit của tổ đội khác không được tính vào tổ đội này");
 });
 
 test("TM-03 — mọi khoá đọc ra đều ĐÃ CÓ trong bootstrap (không thêm nguồn mới)", () => {
@@ -109,14 +116,18 @@ test("TM-03 — mọi khoá đọc ra đều ĐÃ CÓ trong bootstrap (không th
   assert.match(route, /FROM audit_logs al LEFT JOIN users u ON u\.id=al\.user_id/, "Nguồn `audits[]` phải nằm trong bootstrap (chỉ admin)");
 });
 
-test("TM-03 — UI render đủ 6 tab từ hằng số + tab thiếu nguồn hiện «chưa có nguồn»", () => {
+test("TM-03 — UI render đủ 5 tab từ hằng số (MT3 §G) + tab thiếu nguồn hiện «chưa có nguồn»", () => {
   assert.match(screen, /tabs\.map\(\(item, index\) => <button key=\{item\.label\}/, "Dải tab phải render từ mảng tab của khối thuần");
-  assert.match(screen, /tab === 0 &&|tab === 1 &&|tab === 2 &&|tab === 3 &&|tab === 4 &&|tab === 5 &&/, "Thiếu nhánh render của một trong 6 tab");
-  for (const index of [0, 1, 2, 3, 4, 5]) {
+  for (const index of [0, 1, 2, 3, 4]) {
     assert.ok(screen.includes(`{tab === ${index} &&`), `Thiếu nhánh render tab chỉ số ${index}`);
   }
-  assert.match(screen, /tab === 4 && <div className="stack">/, "Tab 4 phải là «Cấp phát» (thứ tự nguyên văn)");
-  assert.match(screen, /tab === 5 && <div className="stack">/, "Tab 5 phải là «Lịch sử» (thứ tự nguyên văn)");
+  // ⛔ Tab 5 («Cấp phát») đã GỘP vào tab 4 «Lịch sử» theo MT3 §G ⇒ nay đúng 5 nhánh 0..4.
+  assert.equal(screen.includes("{tab === 5 &&"), false, "⛔ sau MT3 §G chỉ còn 5 tab (0..4) — không được còn nhánh tab 5");
+  assert.match(screen, /tab === 4 && <div className="stack">/, "Tab 4 phải là «Lịch sử» tổng hợp (thứ tự nguyên văn MT3 §G)");
+  // ⛔ Tab «Lịch sử» phải CÓ phần tổng hợp có Tìm · Sắp xếp · Lọc theo loại, mặc định mới nhất.
+  assert.match(screen, /data-vntech="team-history-aggregate"/, "Tab Lịch sử phải có khối TỔNG HỢP chứng từ");
+  assert.match(screen, /setHistSort|histSort/, "Phải có điều khiển SẮP XẾP cho lịch sử");
+  assert.match(screen, /setHistType|histType/, "Phải có bộ LỌC THEO LOẠI chứng từ");
   assert.match(screen, /tabs\[1\]\.noSourceReason/, "UI phải in LÝ DO thiếu nguồn của tab Nhân sự");
   assert.match(screen, /item\.available && item\.count \? ` \(\$\{item\.count\}\)` : ""/, "Số trên tab chỉ hiện khi tab CÓ nguồn");
 });

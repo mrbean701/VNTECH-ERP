@@ -29,7 +29,8 @@ import { projectManagerName } from "@/app/screens/project-filters";
 import { BaseModal } from "@/lib/ui-blocks";
 
 /** Nhãn 5 tab con — nguyên văn roadmap: chung · nhân sự · tổ đội · kho · lịch sử. */
-export const PROJECT_DETAIL_SUB_TABS = ["Chung", "Nhân sự", "Tổ đội", "Kho", "Lịch sử"];
+// MT3 §C — tab đầu đổi từ «Chung» thành **«Thông tin dự án»** (nhãn rõ nghĩa, khớp tên modal).
+export const PROJECT_DETAIL_SUB_TABS = ["Thông tin dự án", "Nhân sự", "Tổ đội", "Kho", "Lịch sử"];
 /** Khoá kỹ thuật tương ứng (dùng cho `section`). */
 export const PROJECT_DETAIL_SUB_TAB_KEYS = ["chung", "nhansu", "todoi", "kho", "lichsu"];
 
@@ -124,6 +125,8 @@ function WorkItemCreateCard({ project, createWorkItem }: { project: Row; createW
 
 function ProjectDetailTabs({ data, project, section, onSection, openEntity, createWorkItem, permission }: ProjectDetailTabsProps) {
   const pid = String(project.id);
+  // MT3 §C — cột «Tổ đội»: khi 1 nhân sự thuộc NHIỀU tổ đội, bấm «Chi tiết» mở danh sách các tổ đội đó.
+  const [openTeamsFor, setOpenTeamsFor] = useState<string>("");
   const userScopes: Row[] = data.userScopes || [];
   const directory: Row[] = data.staffDirectory || [];
   const scopes = userScopes.filter((row) => String(row.projectId) === pid);
@@ -183,18 +186,20 @@ function ProjectDetailTabs({ data, project, section, onSection, openEntity, crea
 
     {section === "chung" && <div className="stack">
       <section className="card">
-        <CardHead title="Thông tin chung dự án" note="Nguồn: bảng projects (mã · tên · trạng thái · hợp đồng · mốc thời gian) + quan hệ thật từ user_project_scopes" />
+        <CardHead title="Thông tin dự án" note="Nguồn: bảng projects (mã · tên · trạng thái · hợp đồng · mốc thời gian) + quan hệ thật từ user_project_scopes. ⛔ MT3 §C: cột «Nguồn dữ liệu» đã bỏ khỏi bảng (là cột kỹ thuật), thông tin nguồn được ghi tại đây." />
         <div className="table-wrap"><table className="baseline-table">
-          <thead><tr><th>Hạng mục</th><th>Giá trị</th><th>Nguồn dữ liệu</th></tr></thead>
+          {/* MT3 §C — BỎ cột «Nguồn dữ liệu» (cột kỹ thuật, không phải thông tin người dùng cần).
+              ⛔ Thông tin nguồn vẫn được GHI trong ghi chú `CardHead` bên dưới để không mất dấu vết. */}
+          <thead><tr><th>Hạng mục</th><th>Giá trị</th></tr></thead>
           <tbody>
-            <tr><td>Mã · tên dự án</td><td><strong>{project.code}</strong> · {project.name}</td><td>projects.code · projects.name</td></tr>
-            <tr><td>Trạng thái</td><td><StatusBadge value={PROJECT_STATUS_LABELS[String(project.status || "active")] || String(project.status || "—")}/></td><td>projects.status</td></tr>
-            <tr><td>Hợp đồng</td><td>{project.contractNo || "Chưa gắn hợp đồng"}{project.contractName ? ` · ${project.contractName}` : ""}</td><td>projects.contract_no · contract_name</td></tr>
-            <tr><td>Ngày bắt đầu</td><td>{date(project.startDate)}</td><td>projects.start_date</td></tr>
-            <tr><td>Kết thúc dự kiến</td><td>{date(project.plannedEndDate)}</td><td>projects.planned_end_date</td></tr>
-            <tr><td>Chậm tiến độ (theo mốc kế hoạch)</td><td>{late > 0 ? `${late} ngày` : "Đúng hạn"}</td><td>So mốc planned_end_date với ngày hiện tại — KHÔNG phải % tiến độ</td></tr>
-            <tr><td>Người quản lý dự án</td><td>{projectManagerName(pid, userScopes, directory)}</td><td>user_project_scopes.permission = &quot;admin&quot; (bootstrap chưa trả projects.manager_user_id)</td></tr>
-            <tr><td>Phòng ban tham gia</td><td>{unitNames.join(" · ") || "Chưa có nhân sự tham gia"}</td><td>users.organization_unit_id của nhân sự trong user_project_scopes</td></tr>
+            <tr><td>Mã · tên dự án</td><td><strong>{project.code}</strong> · {project.name}</td></tr>
+            <tr><td>Trạng thái</td><td><StatusBadge value={PROJECT_STATUS_LABELS[String(project.status || "active")] || String(project.status || "—")}/></td></tr>
+            <tr><td>Hợp đồng</td><td>{project.contractNo || "Chưa gắn hợp đồng"}{project.contractName ? ` · ${project.contractName}` : ""}</td></tr>
+            <tr><td>Ngày bắt đầu</td><td>{date(project.startDate)}</td></tr>
+            <tr><td>Kết thúc dự kiến</td><td>{date(project.plannedEndDate)}</td></tr>
+            <tr><td>Chậm tiến độ (theo mốc kế hoạch)</td><td>{late > 0 ? `${late} ngày` : "Đúng hạn"}</td></tr>
+            <tr><td>Người quản lý dự án</td><td>{projectManagerName(pid, userScopes, directory)}</td></tr>
+            <tr><td>Phòng ban tham gia</td><td>{unitNames.join(" · ") || "Chưa có nhân sự tham gia"}</td></tr>
           </tbody>
         </table></div>
         <div className="row-actions list-toolbar-actions">
@@ -232,16 +237,36 @@ function ProjectDetailTabs({ data, project, section, onSection, openEntity, crea
         emptyText="Dự án chưa gán nhân sự nào."
         onRowClick={(u) => openEntity("user", u)}
         columns={[
-          { key: "c1", header: "Họ tên", render: (u) => <><strong>{u.fullName}</strong><small>{u.email || u.username || "—"}</small></> },
-          { key: "c2", header: "Mã NV", render: (u) => <>{u.employeeCode || "—"}</> },
+          { key: "c1", header: "Họ tên", render: (u) => <><button type="button" className="link-cell" onClick={(event) => { event.stopPropagation(); openEntity("user", u); }}><strong>{u.fullName}</strong></button><small>{u.email || u.username || "—"}</small></> },          { key: "c2", header: "Mã NV", render: (u) => <>{u.employeeCode || "—"}</> },
           { key: "c3", header: "Chức vụ", render: (u) => <>{u.roleName || u.role || "—"}</> },
           { key: "c4", header: "Phòng ban", render: (u) => <>{u.organizationName || u.department || "—"}</> },
           { key: "c5", header: "Ngày tham gia", render: (u) => <>{u._scope?.joinedAt ? date(u._scope.joinedAt) : <span className="muted">Chưa ghi nhận</span>}</> },
           { key: "c6", header: "Quyền trong dự án", render: (u) => <>{u._scope?.permission || "—"}</> },
           { key: "c7", header: "Trạng thái", render: (u) => <StatusBadge value={u.active === false ? "Đã khoá" : "Đang hoạt động"}/> },
+          // MT3 §C — CỘT «TỔ ĐỘI»: chưa thuộc tổ đội → `N/A`; thuộc 1 → tên tổ đội;
+          // thuộc NHIỀU → nút «Chi tiết» mở danh sách các tổ đội user đang tham gia.
+          { key: "c9", header: "Tổ đội", render: (u) => {
+            const mine = (data.teamMembers || []).filter((m: Row) => String(m.userId) === String(u.id) && Number(m.active ?? 1) === 1);
+            if (!mine.length) return <span className="muted">N/A</span>;
+            const names = mine.map((m: Row) => (data.teams || []).find((t: Row) => String(t.id) === String(m.teamId))).filter(Boolean);
+            if (names.length <= 1) return <><strong>{names[0] ? String(names[0].name || names[0].code || names[0].id) : "—"}</strong></>;
+            return <button type="button" className="export-mini" onClick={(event) => { event.stopPropagation(); setOpenTeamsFor(String(u.id)); }}>Chi tiết ({names.length})</button>;
+          } },
           { key: "c8", header: "", render: (u) => <button type="button" className="export-mini" onClick={(event) => { event.stopPropagation(); openEntity("user", u); }}>Hồ sơ ›</button> },
         ]}
       />
+      {/* MT3 §C — danh sách TỔ ĐỘI của 1 nhân sự khi họ thuộc NHIỀU tổ đội (bấm «Chi tiết» ở cột «Tổ đội»). */}
+      {openTeamsFor && <div className="team-inline-list" data-vntech="project-member-teams">
+        <strong>Các tổ đội của nhân sự đang chọn:</strong>
+        <ul>{(data.teamMembers || []).filter((m: Row) => String(m.userId) === openTeamsFor && Number(m.active ?? 1) === 1).map((m: Row) => {
+          const team = (data.teams || []).find((t: Row) => String(t.id) === String(m.teamId));
+          return <li key={String(m.id || `${m.teamId}-${m.userId}`)}>
+            <button type="button" className="link-cell" onClick={() => team && openEntity("team", team)}>{team ? String(team.name || team.code || team.id) : "Tổ đội đã xoá"}</button>
+            {m.roleInTeam ? <small> · vai trò: {String(m.roleInTeam)}</small> : null}
+          </li>;
+        })}</ul>
+        <button type="button" className="secondary" onClick={() => setOpenTeamsFor("")}>Đóng danh sách</button>
+      </div>}
     </section>}
 
     {section === "todoi" && <section className="card">

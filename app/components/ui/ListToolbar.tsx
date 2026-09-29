@@ -41,7 +41,7 @@ export type ToolbarFilter = {
 
 export function ListToolbar({
   title, note, count, total, unit = "",
-  search, filters, sort, actions, extra,
+  search, filters, sort, actions, extra, secondaryActions,
 }: {
   /** Tiêu đề danh sách — nên viết HOA theo quy ước hiện có của hệ thống.
    *  Nhận `ReactNode` để dùng được cả nhãn ĐỘNG (vd `BƯỚC {index + 1}`) — mọi chỗ gọi cũ
@@ -58,9 +58,19 @@ export function ListToolbar({
   search?: { value: string; onChange: (v: string) => void; placeholder?: string };
   filters?: ToolbarFilter[];
   sort?: { value: string; onChange: (v: string) => void; options: Option[] };
+  /**
+   * MT3 §IV.4 — NHÓM HÀNH ĐỘNG CHÍNH, hiển thị **BÊN TRÁI** theo thứ tự chuẩn:
+   * `Tạo mới → Sửa → Xóa/ngừng sử dụng`.
+   * ⛔ Không chuyển nhóm này thành cột dọc ở màn hẹp (MT3 §IV.2).
+   */
   actions?: ReactNode;
-  /** Nội dung tuỳ ý chèn vào vùng điều khiển (ví dụ ô bật/tắt cột). */
+  /** Nội dung tuỳ ý chen vào vùng điều khiển (vd ô bật/tắt cột, chọn phạm vi). */
   extra?: ReactNode;
+  /**
+   * MT3 §IV.4 — NHÓM HÀNH ĐỘNG PHỤ hiển thị **BÊN PHẢI** sau bộ lọc:
+   * `Xuất Excel · các thao tác phụ`. Tách riêng để giữ đúng thứ tự chuẩn khi toolbar đầy đủ.
+   */
+  secondaryActions?: ReactNode;
 }) {
   return (
     <div className="table-toolbar list-toolbar">
@@ -76,6 +86,9 @@ export function ListToolbar({
         )}
       </div>
 
+      {/* MT3 §IV.4 — hành động CHÍNH (Tạo · Sửa · Xóa) đứng TRƯỜC bộ điều khiển. */}
+      {actions && <div className="row-actions list-toolbar-primary">{actions}</div>}
+
       <div className="list-toolbar-controls">
         {search && (
           <label className="list-toolbar-field list-toolbar-search">
@@ -89,15 +102,7 @@ export function ListToolbar({
           </label>
         )}
 
-        {(filters || []).map((f) => (
-          <label className="list-toolbar-field" key={f.key}>
-            <span>{f.label}</span>
-            <select value={f.value} onChange={(e) => f.onChange(e.target.value)}>
-              {f.options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
-          </label>
-        ))}
-
+        {/* MT3 §IV.4 — thứ tự: Tìm kiếm → Sắp xếp → Bộ lọc → Chọn phạm vi. */}
         {sort && (
           <label className="list-toolbar-field list-toolbar-sort">
             <span>Sắp xếp</span>
@@ -107,9 +112,19 @@ export function ListToolbar({
           </label>
         )}
 
+        {(filters || []).map((f) => (
+          <label className="list-toolbar-field" key={f.key}>
+            <span>{f.label}</span>
+            <select value={f.value} onChange={(e) => f.onChange(e.target.value)}>
+              {f.options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </label>
+        ))}
+
         {extra}
 
-        {actions && <div className="row-actions list-toolbar-actions">{actions}</div>}
+        {/* MT3 §IV.4 — hành động PHỤ (Xuất Excel · thao tác phụ) ở CUỐI. */}
+        {secondaryActions && <div className="row-actions list-toolbar-secondary">{secondaryActions}</div>}
       </div>
     </div>
   );

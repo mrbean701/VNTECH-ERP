@@ -45,7 +45,10 @@ function SupplierManager({data,action,view,open,loadGaps}:{data:AppData;action:(
   const chain = detail ? supplierToPurchaseOrderChain(p08, detail) : null;
   // MT2-P8-02 (§6.1) — ĐỔI TÊN: «Danh mục Nhà cung cấp dùng cho PO» ⇒ «Danh mục Nhà cung cấp».
   // ⚠️ §6.1 nguyên văn: «Đổi "Danh mục nhà cung cấp dùng cho PO" ⇒ "Danh mục nhà cung cấp".»
-  // ✅ ĐÃ KHỚP SẴN: `lib/menu-helpers.ts:83` + `app/page.tsx:152` + `tests/p07-supplier-partner-split-probe.mjs:35`.
+  // ✅ ĐÃ KHỚP SẴN: `lib/menu-helpers.ts:83` + `app/page.tsx:152` + `tests/p07-supplier-partner-split.test.mjs`.
+  //    ⚠️ Trước đây câu này trỏ `tests/p07-supplier-partner-split-probe.mjs` — probe đó **đã XOÁ**
+  //    (hỏng sẵn 2 phép kiểm vì đòi `view="partner"` cho một mục menu đã GỘP theo quyết định user #②
+  //    «Gộp thành 1 "Nhà cung cấp"» — xem `docs/dsh/MT3_USER_DECISIONS.md`). Nay trỏ tệp test **đang ĐẠT**.
   const headTitle=partnerView?"Đối tác":"Danh mục Nhà cung cấp";
   const headNote=partnerView?"CHƯA CÓ NGUỒN DỮ LIỆU ĐỐI TÁC RIÊNG: hệ thống hiện chỉ có danh mục nhà cung cấp (bảng suppliers). Danh sách dưới đây là NHÀ CUNG CẤP — không phải đối tác.":"Mã NCC được dùng trong mẫu Excel lập PO. Ẩn NCC không xóa PO/lịch sử cũ.";
   const rows=data.adminSuppliers?.length?data.adminSuppliers:data.suppliers; const canDeleteSupplier=isAdminUser(data.user)||String(data.user.role)==="kh_truong"||roleBase(data.user)==="kh_truong";

@@ -101,6 +101,9 @@ public final class ActionRbacRegistry {
             Map.entry("create_user", List.of()),
             Map.entry("create_work_item", List.of("dept_plan_assign", "dept_project_assign")),
             Map.entry("decide_approval", List.of("approvals")),
+            // MT3 §B.3 — «yêu cầu bổ sung» là HÀNH ĐỘNG CỦA NGƯỜI DUYỆT ⇒ cùng cổng module với `decide_approval`
+            // (⛔ 0 module mới, ⛔ không hard-code admin). Cổng owner-đúng-bước kiểm ở use-case.
+            Map.entry("request_supplement", List.of("approvals")),
             Map.entry("delete_accounting_voucher", List.of("dept_finance_documents")),
             Map.entry("delete_advance_request", List.of("dept_finance_advance")),
             Map.entry("delete_approval_stage", List.of()),
@@ -362,6 +365,8 @@ public final class ActionRbacRegistry {
             Map.entry("create_user", "canUse"),
             Map.entry("create_work_item", "canCreate"),
             Map.entry("decide_approval", "canApprove"),
+            // MT3 §B.3 — quyền cần để «yêu cầu bổ sung» = quyền DUYỆT (`canApprove`), y như `decide_approval`.
+            Map.entry("request_supplement", "canApprove"),
             Map.entry("delete_accounting_voucher", "canEdit"),
             Map.entry("delete_advance_request", "canEdit"),
             Map.entry("delete_approval_stage", "canUse"),

@@ -6,7 +6,8 @@ const projectDetail = readFileSync(new URL("../app/screens/ProjectDetailTabs.tsx
 const page = readFileSync(new URL("../app/page.tsx", import.meta.url), "utf8");
 
 test("P2-05 — ProjectDetailTabs dùng một nguồn nhãn 5 tab và truyền cả hai chiều", () => {
-  assert.match(projectDetail, /PROJECT_DETAIL_SUB_TABS = \["Chung", "Nhân sự", "Tổ đội", "Kho", "Lịch sử"\]/);
+  // 📌 CẬP NHẬT 26/09/2026 (MT3 §C): nhãn tab đầu đổi «Chung» → «Thông tin dự án».
+  assert.match(projectDetail, /PROJECT_DETAIL_SUB_TABS = \["Thông tin dự án", "Nhân sự", "Tổ đội", "Kho", "Lịch sử"\]/);
   assert.match(projectDetail, /role="tablist"/);
   assert.match(projectDetail, /role="tab" aria-selected=/);
   assert.match(projectDetail, /onClick=\{\(\) => onSection\(PROJECT_DETAIL_SUB_TAB_KEYS\[index\]\)\}/);
