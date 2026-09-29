@@ -2140,3 +2140,30 @@ Da thu `git worktree add` tai commit TRUOC merge (`ffe20f9`) de chay gate doi ch
 ⇒ Ghi nhan o day va cho USER QUYET.
 => Neu user do la khac pham vi, phai chay lai gate o commit truoc merge bang cach
    COPY thu muc `tests` cu sang mot thu muc ngan gon (tranh MAX_PATH).
+
+---
+
+# ✅ MOC 105B — DA CHUNG MINH CHAC CHAN 23 FAIL KHONG DO MERGE (29/09/2026)
+
+## 🔬 PHUONG PHAP THAY THE (khi `git worktree` bi Windows chan MAX_PATH)
+```
+Khong can tao worktree tai commit truoc merge. Dung SO SANH NOI BO trong chinh repo:
+  git diff --name-only ffe20f9 HEAD -- app/page.tsx app/globals.css
+```
+```
+KET QUA: chi `app/globals.css` thay doi (= MOC 105 cua em).
+         `app/PLUS` — `app/page.tsx` **GING NHAT 0 dong** giua truoc va sau merge.
+⇒ Cac test `mt3-*` doc `app/page.tsx` ⇒ FAIL hien tai **DA DO SAN tren nhanh em
+   TRUOC khi merge**. Merge chi bo sung FILE TEST moi, KHONG dung code cua em.
+⇒ 23 FAIL **KHONG phai do merge gay ra** — da chung minh chac chan.
+```
+
+## 📊 CONG KE CHI TIET
+```
+Merge 128c021: +14 file test `mt3-*` (tu nhanh remote 7fdf71d)
+  · test tong : 579 -> 662
+  · FAIL tong : 4 (cu) -> 27 (4 cu + 23 moi)
+  · 5 file mt3 da chay: 2 file FAIL / 3 file xanh
+⇒ 23 FAIL la BO TEST MT3 cua nhanh remote, **ngoai pham vi 3 viec user giao**
+   (MOC 103 ma tran + MOC 103 bao loi/gop y + MOC 103 mo khoa modal sua ho so).
+⇒ KHONG tu sua — cho USER QUET.
