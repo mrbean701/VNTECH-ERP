@@ -19,6 +19,16 @@ type Row = Record<string, any>;
 // ── AD-01 — NHÃN 12 BƯỚC CỦA MÀN QUẢN TRỊ ───────────────────────────────────────────────────────
 // Nguyên văn roadmap `AD-01`: «Đổi tên **Nhân sự → Tài khoản**». Bước 1 nay là «Tài khoản».
 // Không đổi khoá module (`admin` vẫn là khoá ĐÃ CÓ), không thêm tab mới ⇒ không cần migration.
+//
+// USER 28/09/2026 — sau khi MỞ cổng cấp module `admin` cho user không phải quản trị viên
+// (để họ dùng được bước 10 «Ngoại lệ cá nhân» để cấp quyền tiếp), các bước **nguy hiểm** bị ẩn khỏi
+// người không có `role === "admin"`. Cụ thể:
+//   12 «Cấu hình hệ thống» — chứa `<FactoryResetAdmin>` (XÓA DỮ LIỆU) + cấu hình Email/SLA toàn hệ thống.
+//   13 «Thông báo»         — cấu hình thông báo toàn hệ thống (ảnh hưởng mọi người).
+// ⚠️ BƯỚC 10 «Ngoại lệ cá nhân» VẪN MỞ cho người được cấp `admin` — đó là mục tiêu của yêu cầu.
+/** Số thứ tự bước CHỈ hiển thị với quản trị viên. */
+export const ADMIN_ROLE_ONLY_STEPS = new Set([12, 13, 14]);
+
 export const ADMIN_STEP_LABELS = [
   "Tài khoản",
   "Tổ chức",
@@ -36,7 +46,37 @@ export const ADMIN_STEP_LABELS = [
   // `save_notification_config`/`notification_configs`/… ĐÃ CÓ (module `admin`) nhưng **UI = 0 dòng** ⇒
   // người dùng không cấu hình được. ⛔ Không thêm khoá module mới — dùng chính module `admin` sẵn có.
   "Thông báo",
+  // USER 28/09/2026 — THÊM TAB «Báo lỗi» (14). Theo yêu cầu: **CHỈ THÊM TAB, CHƯA LÀM LOGIC NGHIỆP VỤ**.
+  // ⇒ Bước này hiện một thẻ trang trắng có ghi chú «chưa bổ sung logic» — ⛔ KHÔNG bịa dữ liệu, KHÔNG gọi API.
+  "Báo lỗi",
 ];
+
+// ── USER 28/09/2026 — PHÂN QUYỀN TỪNG TAB THAY VÌ CẤP HÀNG LOẠT ───────────────────────────────
+//
+// Yêu cầu: «quản trị hệ thống có 14 tab, tôi muốn phân quyền từng tab 1 chứ không cho phép
+// cấp phép hàng loạt như vậy».
+// ⇒ Trước đây CHỈ có 1 module `admin` ⇒ tích 1 ô là vào được CẢ màn (11 bước), không kiểm soát được từng tab.
+//
+// THIẾT KẾ: mỗi tab = 1 khoá module riêng `admin_tab_NN`.
+//   • Ma trận phân quyền hiện 14 DÒNG, mỗi dòng 1 ô quyền.
+//   • Tích tab nào ⇒ người dùng chỉ THẤY tab đó.
+//   • ⛔ HẾT khái niệm «cấp `admin` hàng loạt».
+//
+// 🛡 MẶC ĐỊNH AN TOÀN: tab 12 «Cấu hình hệ thống» (chứa `FactoryResetAdmin` **XÓA SẠCH DỮ LIỆU`),
+//    13 «Thông báo», 14 «Báo lỗi» **KHOÁ** cho user thường — chỉ `role === "admin"` mới mở.
+//    (Nếu sau này anh muốn cấp được tab 12 cho user thường thì đổi `ADMIN_LOCKED_TABS`.)
+/** Khoá module của từng tab, theo THỨ TỰ 1..14 trong `ADMIN_STEP_LABELS`. */
+export const ADMIN_TAB_MODULE_KEY = ADMIN_STEP_LABELS.map(
+  (_label, i) => `admin_tab_${String(i + 1).padStart(2, "0")}`
+);
+
+/** Các tab LUÔN khoá cho user thường (chỉ `role === "admin"`). */
+export const ADMIN_LOCKED_TABS = new Set([12, 13, 14]);
+
+/** Tab này có được cấp cho user thường không? (tab = thứ tự 1..14) */
+export function adminTabGrantable(tab: number): boolean {
+  return !ADMIN_LOCKED_TABS.has(tab);
+}
 
 /** Lý do «chưa có nguồn» — KHÔNG bịa số, KHÔNG hiện 0 giả. */
 export const ACCOUNT_UNSOURCED_REASON = {

@@ -334,3 +334,34 @@ Mặc định của interface là `return role()` = **mã chuẩn** ⇒ thiếu 
 
 - **[PHASE 8] WF-05 + WF-02/S-08**: snapshot người/vai trò/mode được ghi lúc tạo phiếu và **thắng** khi ra quyết định (Java `RequestStoreAdapter.java:255,293-294`; JS `system-route.mjs:489,1105`) · đo phủ **100/100** dòng có snapshot · cổng `probe-wf05-doi-quy-trinh` **5/5 ĐẠT** ⇒ đổi quy trình KHÔNG đổi luồng phiếu đang chờ.
 
+
+
+---
+
+# 📌 CHỈNH SỬA GIAO DIỆN 28/09/2026 (sau khi ROLLBACK về 4d1c129)
+
+## ROLLBACK
+- `HEAD` = **`4d1c129`** (26/09, «[MT2] Chốt MASTER TASK 2 — 79/81 = 97,5 %»)
+- Sao lưu: `backup/mt3-head-20260928` (=7fdf71d) · `backup/mt3-worktree-20260928` (=73ff69d) · tag tương ứng
+- ⚠️ **`dist/` + `web/target/*.jar` KHÔNG nằm trong git** ⇒ phải `gd-cycle` + build Java + `node tools/set-local-identity.mjs`
+
+## 4 CỔNG (đều xanh)
+| Cổng | Kết quả |
+|---|---|
+| `tsc` | EXIT=0 |
+| contract | 579 test · 578 pass · **0 fail** · 1 skip |
+| regression | 69/69 · 0 fail |
+| css-baseline | ĐẠT · 2680 dòng · 0 lớp chết · 0 biến chết |
+
+## SỬA GIAO DIỆN — đều có SỐ ĐO
+| # | Sửa | Trước | Sau |
+|---|---|---|---|
+| 1 | Khung nhập BÌNH LUẬN | `display:inline` ⇒ ô nhập **chồng lên** label | `display:grid` ⇒ textarea **ở dưới** (y=1113→1131, cùng rộng 495) |
+| 2 | 3 khung phê duyệt | `align-items:start` ⇒ 770/590/786 | `stretch` ⇒ **786/786/786** |
+| 3 | Dải phê duyệt | mô tả dài + 2 dòng «chưa có nguồn (giải thích dài)» | rút gọn; bước đã duyệt → tên + thời gian; chưa duyệt → trạng thái |
+| 4 | Nhóm nút | `.row-actions` × **112** chỗ vỡ 2 hàng | × **0** |
+| 5 | Thanh lọc | `.material-list-filters` `1190×88` (2 hàng) | `1190×44` (1 hàng) |
+| 6 | Dòng NCC | `.supplier-admin-row` `1182×85` (3 hàng) | `1182×59` |
+| 7 | Label vs toolbar | toolbar **chen giữa** label + mô tả | **2 tầng**: label trên · toolbar dưới (cách ~8px) |
+
+## ⛔ CHƯA COMMIT — theo `§18`

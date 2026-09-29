@@ -89,23 +89,26 @@ public class HrStoreAdapter implements HrStore {
     @Transactional
     public void insertLaborContract(String id, String contractNo, String userId, String contractType,
                                     String startDate, String endDate, String signingDate, double salary,
-                                    String note, String createdBy, Instant now) {
+                                    String note, String imageUrl, String createdBy, Instant now) {
         jdbcTemplate.update("""
                 INSERT INTO labor_contracts (id,contract_no,user_id,contract_type,start_date,end_date,signing_date,
-                                             salary,status,note,created_by,created_at,updated_at)
-                VALUES (?,?,?,?,?,?,?,?,'active',?,?,?,?)""",
-                id, contractNo, userId, contractType, startDate, endDate, signingDate, salary, note,
+                                             salary,status,note,image_url,created_by,created_at,updated_at)
+                VALUES (?,?,?,?,?,?,?,?,'active',?,?,?,?,?)""",
+                id, contractNo, userId, contractType, startDate, endDate, signingDate, salary, note, imageUrl,
                 createdBy, now, now);
     }
 
     @Override
     @Transactional
     public void updateLaborContract(String id, String userId, String contractType, String startDate, String endDate,
-                                    String signingDate, double salary, String note, Instant now) {
+                                    String signingDate, double salary, String note, String imageUrl, boolean imageChanged, Instant now) {
         jdbcTemplate.update("""
                 UPDATE labor_contracts SET user_id=?,contract_type=?,start_date=?,end_date=?,signing_date=?,
-                       salary=?,note=?,updated_at=? WHERE id=?""",
-                userId, contractType, startDate, endDate, signingDate, salary, note, now, id);
+                       salary=?,note=?,image_url=?,
+                       image_updated_at=IF(?,CURRENT_TIMESTAMP,image_updated_at),
+                       updated_at=? WHERE id=?""",
+                userId, contractType, startDate, endDate, signingDate, salary, note, imageUrl,
+                imageChanged, now, id);
     }
 
     @Override

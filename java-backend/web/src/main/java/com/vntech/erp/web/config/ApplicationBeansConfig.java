@@ -122,6 +122,15 @@ public class ApplicationBeansConfig {
         return new com.vntech.erp.application.service.NotificationManagementUseCase(notificationStore, idGenerator);
     }
 
+    // USER 29/09/2026 (MỐC 42) — chức năng BÁO LỖI (tab 14 «Báo lỗi»).
+    // ⛔ Cùng lý do bean ở trên: module `application` KHÔNG dùng stereotype annotation ⇒
+    //    phải đăng ký `@Bean` ở đây, nếu không Spring không inject được vào `SystemController`.
+    @Bean
+    public com.vntech.erp.application.service.ErrorReportUseCase errorReportUseCase(
+            com.vntech.erp.application.port.out.ErrorReportStore errorReportStore) {
+        return new com.vntech.erp.application.service.ErrorReportUseCase(errorReportStore);
+    }
+
     @Bean
     public RequestManagementUseCase requestManagementUseCase(RequestStore requestStore,
                                                              IdGenerator idGenerator,

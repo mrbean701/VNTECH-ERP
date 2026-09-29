@@ -880,8 +880,14 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
             // ══════════════════════════════════════════════════════════════════════════════
             List<Map<String, Object>> perms = new ArrayList<>();
             for (Map<String, Object> mod : moduleCatalog) {
-                if (isActiveOne(mod.get("active"))
-                        && !"admin".equals(String.valueOf(mod.get("moduleKey")))) {
+                // USER 28/09/2026 (MỐC 28/29) — BỎ mệnh đề `&& !"admin".equals(moduleKey)`.
+                // LÝ DO: đây là chỗ KHỚI ĐẦU việc loại module `admin` khỏi quyền hiệu lực ⇒
+                //   người được cấp quyền quản trị hệ thống KHÔNG vào được menu ⇒ màn không mở.
+                //   Đã kiểm chứng thực nghiệm: CSDL có `admin`=1 nhưng bootstrap không có.
+                // ⛔ AN TOÀN GIỮ NGUYÊN: việc ẩn 3 tab nguy hiểm (12 Cấu hình hệ thống chứa
+                //   FactoryReset XÓA SẠCH DỮ LIỆU · 13 Thông báo · 14 Báo lỗi) KHÔNG nằm ở đây
+                //   mà nằm ở `ADMIN_ROLE_ONLY_STEPS` / `ADMIN_LOCKED_TABS` (tầng UI).
+                if (isActiveOne(mod.get("active"))) {
                     Map<String, Object> perm = new LinkedHashMap<>();
                     perm.put("userId", ctx.userId());
                     perm.put("moduleKey", mod.get("moduleKey"));
@@ -1459,7 +1465,8 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                 SELECT lc.id,lc.contract_no AS contractNo,lc.user_id AS userId,u.full_name AS fullName,
                        u.employee_code AS employeeCode,lc.contract_type AS contractType,
                        lc.start_date AS startDate,lc.end_date AS endDate,lc.signing_date AS signingDate,
-                       lc.salary,lc.status,lc.note
+                       lc.salary,lc.status,lc.note,
+                        lc.image_url AS imageUrl,lc.image_updated_at AS imageUpdatedAt
                 FROM labor_contracts lc LEFT JOIN users u ON u.id=lc.user_id
                 ORDER BY lc.start_date DESC"""));
         data.put("officialCorrespondence", query("""

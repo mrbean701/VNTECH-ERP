@@ -208,8 +208,15 @@ public class UserAdminStoreAdapter implements UserAdminStore {
 
     @Override
     public List<String> listActiveModuleKeys() {
+        // USER 28/09/2026 — bỏ mệnh đề `AND module_key<>'admin'`.
+        // LÝ DO: đây là nơi KHỚI ĐẦU của việc bỏ chặn cấp quyền Quản trị hệ thống cho user khác.
+        //   Nếu còn mệnh đề này ⇒ `admin` không bao giờ xuất hiện trong vòng lặp cấp quyền
+        //   ⇒ lệnh cấp vẫn trả `ok:true` nhưng KHÔNG ghi gì ⇒ SAI LỆCH im lặng, rất khó phát hiện.
+        // ⚠️ AN TOÀN (không nới ở đây, giữ nguyên): bước 12 «Cấu hình hệ thống» (FactoryResetAdmin XÓA
+        //    DỮ LIỆU), 13 «Thông báo», 14 «Báo lỗi» vẫn CHỈ hiện với `role === "admin"`
+        //    — `ADMIN_ROLE_ONLY_STEPS` trong app/screens/admin-governance-pure.ts.
         return jdbcTemplate.queryForList(
-                "SELECT module_key FROM module_catalog WHERE active=1 AND module_key<>'admin' ORDER BY sort_order,module_key",
+                "SELECT module_key FROM module_catalog WHERE active=1 ORDER BY sort_order,module_key",
                 String.class);
     }
 

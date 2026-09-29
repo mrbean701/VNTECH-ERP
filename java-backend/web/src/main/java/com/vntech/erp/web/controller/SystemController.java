@@ -69,7 +69,7 @@ public class SystemController {
     private final StockManagementUseCase stockManagementUseCase;
     private final SystemSettingsUseCase systemSettingsUseCase;
     // MT2 §15.1 — NOTIFICATION ENGINE (Service · Rule · Resolver · Log). Bean ở `ApplicationBeansConfig`.
-    private final com.vntech.erp.application.service.NotificationManagementUseCase notificationManagementUseCase;
+    private final com.vntech.erp.application.service.NotificationManagementUseCase notificationManagementUseCase;  private final com.vntech.erp.application.service.ErrorReportUseCase errorReportUseCase; // USER 29/09/2026 (MỐC 42) BÁO LỖI tab 14
     private final com.vntech.erp.infrastructure.excel.ExcelTemplateService excelTemplateService;
     /**
      * PHASE 0B (S-02) — kiểm quyền ở tầng action.
@@ -106,7 +106,7 @@ public class SystemController {
                             SystemSettingsUseCase systemSettingsUseCase,
                             com.vntech.erp.infrastructure.excel.ExcelTemplateService excelTemplateService,
                             com.vntech.erp.application.rbac.RbacService rbacService,
-                            com.vntech.erp.application.service.NotificationManagementUseCase notificationManagementUseCase) {
+                            com.vntech.erp.application.service.NotificationManagementUseCase notificationManagementUseCase, com.vntech.erp.application.service.ErrorReportUseCase errorReportUseCase) { // MỐC 42
         this.authUseCase = authUseCase;
         this.sessionCookieFactory = sessionCookieFactory;
         this.bootstrapUseCase = bootstrapUseCase;
@@ -127,7 +127,7 @@ public class SystemController {
         this.partnerManagementUseCase = partnerManagementUseCase;
         this.stockManagementUseCase = stockManagementUseCase;
         this.systemSettingsUseCase = systemSettingsUseCase;
-        this.notificationManagementUseCase = notificationManagementUseCase;
+        this.notificationManagementUseCase = notificationManagementUseCase; this.errorReportUseCase = errorReportUseCase; // MỐC 42
         this.excelTemplateService = excelTemplateService;
         this.rbacService = rbacService;
         this.accessScopeService = accessScopeService;
@@ -1271,6 +1271,9 @@ case "reject_po" -> {
                     return ResponseEntity.ok(jsonResult(notificationManagementUseCase.setConfigActive(payload)));
                 }
                 // MT2-P3-02 §13.1 — **DANH SÁCH** cấu hình thông báo (chữ R của CRUD · tab Quản trị).
+                // USER 29/09/2026 (MỐC 42) — 3 action BÁO LỖI đặt CUỐI switch
+                // (xem cuối file) để ⛔ KHÔNG dịch số dòng các `case` mà hồ sơ F-03 gắn cứng.
+                // MT2-P3-02 §13.1 — **DANH SÁCH** cấu hình thông báo (chữ R của CRUD · tab Quản trị).
                 //   Search/Sort/Filter do UI lo trên danh sách này ✔.
                 case "notification_configs" -> {
                     requireCurrentUser(request);
@@ -1383,6 +1386,13 @@ case "reject_po" -> {
                     String m = partnerManagementUseCase.deletePartner(asPartnerPrincipal(cu), payload);
                     return ResponseEntity.ok(json(Map.of("ok", true, "message", m)));
                 }
+                // USER 29/09/2026 (MỐC 42) — BÁO LỖI (tab 14). Đặt CUỐI switch, SAU mọi `case`
+                // mà hồ sơ `F-03-TAI-CHINH-AUDIT-PHU-THUOC.md` gắn số dòng ⇒ ⛔ không dịch dòng.
+                // ⛔ `save_error_report` KHÔNG gắc module ⇒ MỌI user đã đăng nhập đều gửi được
+                //    (nút báo lỗi nằm cạnh nút đổi màu nền). Hai action kia gắn `admin`.
+                case "save_error_report" -> { requireCurrentUser(request); return ResponseEntity.ok(jsonResult(errorReportUseCase.save(payload))); }
+                case "error_reports" -> { requireCurrentUser(request); return ResponseEntity.ok(jsonResult(java.util.Map.of("reports", errorReportUseCase.list(payload)))); }
+                case "mark_error_report_resolved" -> { requireCurrentUser(request); return ResponseEntity.ok(jsonResult(errorReportUseCase.resolve(payload))); }
                 default -> {
                     return ResponseEntity.status(400).body(json(Map.of("ok", false,
                             "error", "Action '" + action + "' chưa được triển khai trên backend Java (Strangler Fig).")));

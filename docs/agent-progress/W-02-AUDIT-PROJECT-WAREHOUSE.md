@@ -198,3 +198,27 @@ Kết luận **CONFIRMED 1:N** ⛔ **KHÔNG đổi**. Chỉ **số dòng** thay 
 Lệnh đo lại (đúng cách tệp test đang dùng): `mysql.exe -uvntech -pvntech -N -B vntech_erp -e "…"`.
 ⇒ Hợp đồng `tests/w02-project-warehouse-relation.test.mjs` được cập nhật theo **số đo mới (6 · 2 · 5 · 0 mồ côi)**;
 ⛔ **KHÔNG** sửa dữ liệu DB để khớp tài liệu (GOAL §19).
+
+---
+
+## 🔄 CẬP NHẬT SỐ ĐO — 28/09/2026 (TH-005 · thêm nút 「＋ Tạo dự án」)
+
+Kết luận **CONFIRMED 1:N** ⛔ **KHÔNG đổi**. Chỉ **số dòng** thay đổi: dự án mới `DA06`
+(Dự án A06) được tạo kèm kho công trường `KHO-DA06` theo đúng luồng `create_project` +
+cờ `createWarehouse` (xem `app/page.tsx` L2758-2769 «Tạo kho dự án?»).
+
+| Chỉ số | Truy vấn | Đo 23/09 | **Đo lại 28/09** |
+|---|---|---|---|
+| Tổng số kho | `SELECT COUNT(*) FROM warehouses` | 6 | **7** |
+| Tổng số dự án | `SELECT COUNT(*) FROM projects` | 2 | **3** |
+| Kho CÓ gắn dự án | `... WHERE project_id IS NOT NULL` | 5 | **6** |
+| Kho KHÔNG gắn dự án (Kho Tổng) | `... WHERE project_id IS NULL` | 1 | **1** |
+| Dòng mồ côi | `LEFT JOIN projects … p.id IS NULL` | 0 | **0** ✅ |
+| Dự án có ≥ 2 kho (chiều N>1) | `GROUP BY p.id` | `PRJ-DEMO-01 → 2` | **`PRJ-DEMO-01 → 4`** |
+
+Phân bố kho theo dự án (đo 28/09/2026): `PRJ-DEMO-01 → 4` · `DA-MAU-01 → 1` · `DA06 → 1` ·
+`KHO-TONG` (loại `central`, `project_id IS NULL`) → không thuộc dự án nào.
+
+Lệnh đo lại: `node tools/mt3-measure-w02.mjs` (đọc MySQL thật, **không** ghi).
+⇒ Hợp đồng `tests/w02-project-warehouse-relation.test.mjs` cập nhật theo **số đo mới (7 · 3 · 6 · 0 mồ côi)**;
+⛔ **KHÔNG** sửa dữ liệu DB để khớp tài liệu (GOAL §19).

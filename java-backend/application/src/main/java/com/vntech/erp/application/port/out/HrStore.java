@@ -19,10 +19,10 @@ public interface HrStore {
     Optional<Map<String, Object>> findLaborContract(String id);
     String nextLaborContractNo();
     void insertLaborContract(String id, String contractNo, String userId, String contractType, String startDate,
-                             String endDate, String signingDate, double salary, String note, String createdBy,
-                             Instant now);
+                             String endDate, String signingDate, double salary, String note, String imageUrl,
+                             String createdBy, Instant now);
     void updateLaborContract(String id, String userId, String contractType, String startDate, String endDate,
-                             String signingDate, double salary, String note, Instant now);
+                             String signingDate, double salary, String note, String imageUrl, boolean imageChanged, Instant now);
     void setLaborContractStatus(String id, String status, Instant now);
     void deleteLaborContract(String id);
 

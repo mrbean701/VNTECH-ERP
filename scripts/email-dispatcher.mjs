@@ -152,10 +152,14 @@ export async function dispatchEmailOutbox(database, emailSecret) {
   dispatching = true;
   try {
     const settings = await dbFirst(database, `SELECT * FROM email_settings WHERE id='EMAIL'`);
+    const stamp = new Date().toISOString();
+    // MỐC 50 — PHỤC HỒI email kẹt ở trạng thái `sending` (tiến trình chết giữa chừng).
+    // ⛔ TRƯỚC ĐÂY câu này nằm SAU lệnh `return` của `enabled=0` ⇒ tắt email là email kẹt
+    //    `sending` **mãi không bao giờ được gửi lại**. Phục hồi KHÔNG liên quan gì tới
+    //    `enabled` ⇒ đưa LÊN TRƯỚC nhánh bật/tắt.
+    await database.prepare(`UPDATE email_outbox SET status='queued',updated_at=? WHERE status='sending' AND updated_at<?`).bind(stamp, new Date(Date.now() - 5 * 60000).toISOString()).run();
     if (!settings || !Number(settings.enabled) || !settings.smtp_host || !settings.sender_email) return;
     settings.password = await decryptPassword(settings.password, emailSecret);
-    const stamp = new Date().toISOString();
-    await database.prepare(`UPDATE email_outbox SET status='queued',updated_at=? WHERE status='sending' AND updated_at<?`).bind(stamp, new Date(Date.now() - 5 * 60000).toISOString()).run();
     await queueOverdueReminders(database, settings);
     const messages = await dbAll(database, `SELECT * FROM email_outbox WHERE status IN ('queued','failed') AND attempt_count<3 AND (next_attempt_at IS NULL OR next_attempt_at<=?) ORDER BY queued_at LIMIT 10`, stamp);
     for (const message of messages) {

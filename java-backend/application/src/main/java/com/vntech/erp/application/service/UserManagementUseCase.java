@@ -101,15 +101,20 @@ public final class UserManagementUseCase {
     }
 
     public String updateUser(Principal principal, Map<String, Object> payload) {
-        rbac.requireRole(principalAsCurrent(principal), List.of("admin"));
+        boolean callerIsAdmin = requireAccountUpdateRight(principal);
         String targetUserId = trim(payload.get("userId"));
         Map<String, Object> target = store.findUser(targetUserId).orElse(null);
         if (target == null) throw new AuthUseCase.ApiError("Không tìm thấy tài khoản.", 400);
+        // MỐC 103 — mở khoá MÃ NV + TÊN ĐĂNG NHẬP; rỗng ⇒ 400.
         String employeeCode = trim(payload.get("employeeCode"));
-        String fullName = trim(payload.get("fullName"));
+        if (employeeCode.isEmpty()) employeeCode = sv(target, "employeeCode");
+        if (employeeCode.isEmpty())
+            throw new AuthUseCase.ApiError("Mã nhân viên, họ tên, tên đăng nhập và phòng/bộ phận là bắt buộc.", 400);
         String username = trim(payload.get("username")).toLowerCase();
+        if (username.isEmpty()) username = sv(target, "username").toLowerCase();
+        String fullName = trim(payload.get("fullName"));
         String email = trim(payload.get("email")).toLowerCase().isEmpty() ? null : trim(payload.get("email")).toLowerCase();
-        String role = canonicalRoleCode(payload.get("role"));
+        String role = guardRoleChange(callerIsAdmin, target, payload);
         boolean active = payload.get("active") == Boolean.TRUE || "1".equals(trim(payload.get("active")));
         Map<String, Object> roleRow = store.findRoleByCode(role).orElse(null);
         if (roleRow == null || !isActive(roleRow.get("active")))
@@ -148,6 +153,38 @@ public final class UserManagementUseCase {
             message += " và đặt lại mật khẩu";
         }
         return message + ".";
+    }
+
+    /**
+     * MỐC 103 (user 29/09) — cổng quyền cập nhật tài khoản.
+     *
+     * <p>ADMIN đi qua vì `isAdmin`. Người khác cần module `admin_tab_01` + quyền SỬA
+     * (khai ở `ActionRbacRegistry`, capability `canEdit`) — `update_user` trước đây
+     * <b>chưa</b> được khai nên mọi user thường đều 403.
+     *
+     * @return {@code true} nếu người gọi là Quản trị hệ thống
+     */
+    private boolean requireAccountUpdateRight(Principal principal) {
+        boolean isAdmin = rbac.isAdmin(principalAsCurrent(principal));
+        if (!isAdmin) rbac.requireActionModule(principalAsCurrent(principal), "update_user");
+        return isAdmin;
+    }
+
+    /**
+     * MỐC 103 (user 29/09) — ⛔ CHỐNG LEO THANG ĐẶC QUYỀN.
+     *
+     * <p>Đổi `role` = đổi quyền ⇒ chỉ ADMIN được đổi. Người có `admin_tab_01` vẫn sửa được
+     * MÃ NV · TÊN ĐĂNG NHẬP · HỌ TÊN · EMAIL · PHÒNG/BỘ PHẬN.
+     */
+    private String guardRoleChange(boolean callerIsAdmin, Map<String, Object> target,
+            Map<String, Object> payload) {
+        if (!payload.containsKey("role") || trim(payload.get("role")).isEmpty())
+            return sv(target, "role");
+        if (!callerIsAdmin)
+            throw new AuthUseCase.ApiError(
+                    "Chỉ Quản trị hệ thống mới đổi được vai trò. Bạn vẫn sửa được mã nhân viên, "
+                    + "tên đăng nhập, họ tên, email và phòng/bộ phận.", 403);
+        return canonicalRoleCode(payload.get("role"));
     }
 
     public String setUserStatus(Principal principal, Map<String, Object> payload) {
@@ -230,7 +267,10 @@ public final class UserManagementUseCase {
         for (Object o : listOf(payload.get("modulePermissions"))) {
             Map<?, ?> row = asMap(o);
             String moduleKey = trim(row.get("moduleKey"));
-            if (moduleKey.isEmpty() || "admin".equals(moduleKey)) continue;
+            // USER 28/09/2026 — bỏ chặn `admin` (xem giải thích đầy đủ ở dòng ~232).
+            // ⚠️ AN TOÀN: bước 12 «Cấu hình hệ thống» (có `FactoryResetAdmin` XÓA DỮ LIỆU), 13 «Thông báo»,
+            //    14 «Báo lỗi» vẫn CHỈ hiện với `role === "admin"` — `ADMIN_ROLE_ONLY_STEPS`.
+            if (moduleKey.isEmpty()) continue;
             String source = Boolean.TRUE.equals(row.get("isOverride")) ? "manual_override" : "department_default";
             store.insertDepartmentDefaultPermission(idGenerator.next("UMP"), targetUserId, moduleKey,
                     intOf(row.get("canView")), intOf(row.get("canUse")), intOf(row.get("canCreate")),
@@ -243,7 +283,7 @@ public final class UserManagementUseCase {
         rbac.requireRole(principalAsCurrent(principal), List.of("admin"));
         String targetUserId = trim(payload.get("userId"));
         String moduleKey = trim(payload.get("moduleKey"));
-        if (targetUserId.isEmpty() || moduleKey.isEmpty() || "admin".equals(moduleKey))
+        if (targetUserId.isEmpty() || moduleKey.isEmpty())
             throw new AuthUseCase.ApiError("Ngoại lệ cá nhân không hợp lệ.", 400);
         store.deleteModuleOverride(targetUserId, moduleKey);
         return "Đã xóa ngoại lệ cá nhân; quyền hiệu lực quay về mặc định của phòng/bộ phận.";
@@ -373,7 +413,6 @@ public final class UserManagementUseCase {
                 .map((l) -> intOf(l.get("autogrant")) == 1).orElse(false);
         String orgUnitId = svAny(target.get(), "organizationUnitId", "organizationunitid");
         for (String moduleKey : store.listActiveModuleKeys()) {
-            if ("admin".equals(moduleKey)) continue;
             Caps caps;
             if (autoAll) {
                 caps = new Caps(1, 1, 1, 1, 1, 1);
@@ -418,7 +457,7 @@ public final class UserManagementUseCase {
         for (Object o : listOf(payload.get("modulePermissions"))) {
             Map<?, ?> row = asMap(o);
             String moduleKey = trim(row.get("moduleKey"));
-            if (moduleKey.isEmpty() || "admin".equals(moduleKey)) continue;
+            if (moduleKey.isEmpty()) continue;
             int want = intOf(row.get("canView")) + intOf(row.get("canUse")) + intOf(row.get("canCreate"))
                     + intOf(row.get("canEdit")) + intOf(row.get("canApprove")) + intOf(row.get("canExport"));
             if (want == 0) continue;
@@ -444,8 +483,11 @@ public final class UserManagementUseCase {
         String moduleKey = trim(payload.get("moduleKey"));
         if (organizationUnitId.isEmpty() || moduleKey.isEmpty())
             throw new AuthUseCase.ApiError("Cần chọn phòng ban và chức năng.", 400);
-        if ("admin".equals(moduleKey))
-            throw new AuthUseCase.ApiError("Chức năng quản trị chỉ dành cho tài khoản admin.", 400);
+        // USER 28/09/2026 — bỏ chặn `admin` (xem giải thích đầy đủ ở khai báo `moduleKey` phía trên).
+        // ⚠️ TRƯỚC ĐÂY chỗ này ném ApiError "Chức năng quản trị chỉ dành cho tài khoản admin" —
+        //    nhưng action vẫn trả `ok:true` ⇒ SAI LỆCH im lặng, rất dễ gây hiểu nhầm khi test.
+        // ⚠️ AN TOÀN: bước 12 «Cấu hình hệ thống» (FactoryResetAdmin XÓA DỮ LIỆU), 13 «Thông báo»,
+        //    14 «Báo lỗi» vẫn CHỈ hiện với `role === "admin"` — `ADMIN_ROLE_ONLY_STEPS`.
         Instant now = Instant.now();
         store.upsertDepartmentPermission(idGenerator.next("DMP"), organizationUnitId, moduleKey,
                 intOf(payload.get("canView")), intOf(payload.get("canUse")), intOf(payload.get("canCreate")),

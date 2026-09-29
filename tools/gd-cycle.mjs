@@ -76,6 +76,20 @@ if (existsSync(ld)) {
   console.log(`      (.local-data tạm chuyển -> ${stash})`);
 }
 try {
+  // USER 28/09/2026 — CỔNG CHẶN CSS: ghi chú `//` trong CSS đã làm `CssSyntaxError` ⇒ BUILD FAIL
+  // đúng 3 LẦN trong phiên. Bắt TRƯỚC khi build để lỗi rõ ràng ngay, ⛔ không phải truy tìm.
+  // ⇒ Chạy `node tools/css-comment-guard.mjs --fix` để sửa tự động.
+  try {
+    const g = execFileSync(process.execPath, [join(root, "tools", "css-comment-guard.mjs"), "--fix"],
+      { cwd: root, encoding: "utf8" });
+    if (/sua \d+ dong/.test(g)) console.log("[CSS GUARD] " + g.trim().split("\n").join("\n              "));
+  } catch (guardErr) {
+    const out = String(guardErr.stdout || "") + String(guardErr.stderr || "");
+    console.error("[CSS GUARD] ✖ DỪNG TRƯỚC KHI BUILD — CSS có ghi chú `//` (CSS chỉ có `/* */`):");
+    console.error(out.trim().split("\n").map((l) => "              " + l).join("\n"));
+    console.error("              ➜ sửa:  node tools/css-comment-guard.mjs --fix");
+    throw guardErr;
+  }
   console.log("[3/3] build-cross-platform...");
   const b = execFileSync(process.execPath, [join(root, "scripts", "build-cross-platform.mjs")], {
     cwd: root, encoding: "utf8", maxBuffer: 64 * 1024 * 1024,

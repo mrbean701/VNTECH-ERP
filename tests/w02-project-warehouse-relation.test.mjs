@@ -193,8 +193,12 @@ dbTest("W-02 — CSDL THẬT: 0 dòng mồ côi (`project_id` không trỏ tới
   // ⚠️ CẬP NHẬT 23/09/2026 (MT2-P14-03c): ảnh chụp 20/09 ghi 4 kho / 3 kho gắn dự án; các task MT2 sau đó
   // đã tạo thêm kho công trường trên DB đang chạy ⇒ số ĐO LẠI là **6 kho · 2 dự án · 5 kho gắn dự án · 0 mồ côi**
   // (đã ghi vào mục «CẬP NHẬT SỐ ĐO — 23/09/2026» của tệp audit). ⛔ KHÔNG sửa DB để khớp tài liệu (GOAL §19).
-  assert.ok(audit.includes("**6**"), "Tệp audit phải ghi lại số kho ĐO LẠI (6)");
-  assert.match(audit, /`PRJ-DEMO-01 → 2`/, "Tệp audit phải ghi lại chiều N>1 đo được (PRJ-DEMO-01 → 2 kho)");
-  assert.ok(warehouses === 6 && projects === 2 && linked === 5
+  // ⚠️ CẬP NHẬT 28/09/2026 (TH-005): dự án mới `DA06` được tạo kèm kho công trường `KHO-DA06` theo luồng
+  // `create_project` + cờ `createWarehouse` ⇒ số ĐO LẠI là **7 kho · 3 dự án · 6 kho gắn dự án · 0 mồ côi**,
+  // và `PRJ-DEMO-01` nay có **4** kho. Đã ghi thêm mục «CẬP NHẬT SỐ ĐO — 28/09/2026» vào tệp audit.
+  // 📌 Đo lại bằng `node tools/mt3-measure-w02.mjs` (đọc MySQL thật, không ghi).
+  assert.ok(audit.includes("**7**"), "Tệp audit phải ghi lại số kho ĐO LẠI (7)");
+  assert.match(audit, /`PRJ-DEMO-01 → 4`/, "Tệp audit phải ghi lại chiều N>1 đo được (PRJ-DEMO-01 → 4 kho)");
+  assert.ok(warehouses === 7 && projects === 3 && linked === 6
     , `Số đo lại khác con số đã chép trong audit (kho=${warehouses}, dự án=${projects}, kho gắn dự án=${linked}) ⇒ phải cập nhật lại tệp audit`);
 });

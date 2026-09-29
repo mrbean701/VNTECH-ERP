@@ -83,10 +83,15 @@ const modules: { key: ModuleKey; label: string; icon: string; groupKey?: string;
   { key: "receiving", label: "Kế hoạch giao hàng", icon: "GH", groupKey: "purchasing" },
   { key: "delivered", label: "Đơn hàng đã giao", icon: "DG", groupKey: "purchasing" },
   // MT2-P8-01 (§6.1) — «Đưa menu NCC XUỐNG CUỐI NHÓM menu tương ứng.»
-  // ⚠️ TRƯỚC: `supplier_catalog` nằm ở vị trí thứ 4/6 (giữa nhóm «MUA HÀNG») ⇒ NAY chuyển xuống CUỐI nhóm.
   // ✅ GIỮ NGUYÊN `key`/`label`/`icon`/`groupKey` ⇒ `tests/p07-supplier-partner-split-probe.mjs:35`
   //    (`label:"Danh mục Nhà cung cấp"`, `groupKey:"purchasing"`, `sortOrder:120`) vẫn KHỚP (§26).
-  { key: "supplier_catalog", label: "Danh mục Nhà cung cấp", icon: "NC", groupKey: "purchasing" },
+  // ⚠️ USER 28/09/2026: ⛔ BỎ mục menu «Danh mục Nhà cung cấp» — TRÙNG NGHIỆP VỤ với mục «Nhà cung cấp»
+  //    (cả hai đều mở cùng màn `SupplierManager`).
+  // ⛔ CHỈ bỏ khỏi CÂY MENU. `supplier_catalog` VẪN LÀ khoá QUYỀN hợp lệ:
+  //    `ActionRbacRegistry` gắn `save_supplier_material` + `supplier_material_gaps` vào module này
+  //    (xem `tests/p3-05-supplier-material-autodetect.test.mjs`) ⇒ ⛔ KHÔNG xoá khoá.
+  //    Mục «Nhà cung cấp» (dưới đây, `supplierPartnerMenuItems`) dùng khoá `dept_plan_suppliers`
+  //    ⇒ không mất quyền ghi vật tư của nhà cung cấp.
   { key: "warehouse_receipt", label: "Nhập kho", icon: "NK", groupKey: "warehouse" },
   { key: "warehouse_issue", label: "Xuất kho", icon: "XK", groupKey: "warehouse" },
   { key: "inventory", label: "Tồn kho & điều chuyển", icon: "TK", groupKey: "warehouse" },
@@ -95,6 +100,13 @@ const modules: { key: ModuleKey; label: string; icon: string; groupKey?: string;
   { key: "central_warehouse", label: "Kho Tổng", icon: "KT", groupKey: "warehouse" },
   { key: "material_catalog", label: "Danh mục vật tư gốc", icon: "MV", groupKey: "material_master" },
   { key: "admin", label: "Phân quyền & Cấu hình hệ thống", icon: "QT", groupKey: "system_admin" },
+  // ── USER 28/09/2026 (MỐC 35) ───────────────────────────────────────────────────────────────
+  // ⛔ ĐÃ BỎ 14 menu con `admin_tab_NN` ở MỐC 31.
+  // ⛔ LÝ DO (user 28/09 sửa yêu cầu): bấm «Quản trị hệ thống» phải mở THẲNG màn Admin,
+  //    KHÔNG có menu con. Thanh tab trong màn đó LUÔN hiện đủ 14 tab; tab không có quyền
+  //    ⇒ hiện nhưng KHÔNG bấm được (disabled).
+  // ✅ 14 khoá quyền `admin_tab_NN` VẪN CÒN trong `module_catalog` + `user_module_permissions`
+  //    ⇒ cơ chế phân quyền từng tab giữ nguyên, chỉ đổi CÁCH HIỂN THỊ.
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -263,6 +275,8 @@ function warehouseMenuViewFor(view: WarehouseMenuView | null, active: ModuleKey)
 //     Đích đến = CỔNG QUYỀN = khoá cũ ⇒ nhất quán.
 // ─────────────────────────────────────────────────────────────────────────────
 type SupplierPartnerMenuView = "supplier" | "partner";
+// USER 28/09/2026: «Đối tác» chuyển XUỐNG CUỐI nhóm «MUA HÀNG & CUNG ỨNG» (sau «Nhà cung cấp» và
+// sau các mục mua hàng) ⇒ chỉ đổi THỨ TỰ trong mảng, ⛔ không đổi key/label/moduleKey/view/quyền.
 const supplierPartnerMenuItems: { key: string; label: string; groupKey: "purchasing"; moduleKey: ModuleKey; view: SupplierPartnerMenuView; permissionKeys: ModuleKey[] }[] = [
   { key: "dept_plan_suppliers", label: "Nhà cung cấp", groupKey: "purchasing", moduleKey: "dept_plan_suppliers", view: "supplier", permissionKeys: ["dept_plan_suppliers"] },
   { key: "dept_plan_partners", label: "Đối tác", groupKey: "purchasing", moduleKey: "dept_plan_suppliers", view: "partner", permissionKeys: ["dept_plan_suppliers"] },

@@ -51,7 +51,7 @@ test("PR-03 — màn dự án tái dùng component chi tiết (PR-01 GIỮ NGUY�
   for (const index of [1, 2, 3, 4]) {
     assert.match(detailBranch, new RegExp(`\\{tab === ${index} &&[^\\n]*<ProjectDetailTabs`), `Nhánh chi tiết chỉ số ${index} chưa render \`ProjectDetailTabs\``);
   }
-  assert.match(detailBranch, /\{tab === 5 && <SiteCommandScreen/, "Tab BCH (chỉ số 5) phải giữ nguyên như PR-01");
+  assert.match(detailBranch, /\{tab === 4 && <SiteCommandScreen/, "Tab BCH dịch từ chỉ số 5 sang 4 sau khi bỏ tab Tổng quan");
 });
 
 test("PR-03 — % TIẾN ĐỘ: ĐỂ TRỐNG có ghi chú, KHÔNG bịa công thức", () => {
