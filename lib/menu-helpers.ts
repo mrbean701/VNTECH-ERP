@@ -69,6 +69,8 @@ const modules: { key: ModuleKey; label: string; icon: string; groupKey?: string;
   { key: "dept_legal_documents", label: "Văn bản pháp lý", icon: "PL", groupKey: "hr_legal", subGroup: "Hành chính Pháp chế" },
   { key: "dept_legal_seal", label: "Con dấu / Ủy quyền", icon: "CD", groupKey: "hr_legal", subGroup: "Hành chính Pháp chế" },
   { key: "dept_legal_benefits", label: "Bảo hiểm & Chế độ", icon: "BH", groupKey: "hr_legal", subGroup: "Hành chính Pháp chế" },
+  // MỐC 103 (user 29/09) — MENU «REVIEW HĐ».
+  { key: "dept_legal_contract_review", label: "Review HĐ", icon: "RV", groupKey: "hr_legal", subGroup: "Hành chính Pháp chế" },
   { key: "site_command", label: "Quản lý dự án", icon: "BC", groupKey: "site_command" },
   { key: "project_progress", label: "Tiến độ & sản lượng dự án", icon: "TD", groupKey: "project_management" },
   { key: "construction", label: "Thi công", icon: "TC", groupKey: "project_management" },

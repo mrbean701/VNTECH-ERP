@@ -89,26 +89,30 @@ public class HrStoreAdapter implements HrStore {
     @Transactional
     public void insertLaborContract(String id, String contractNo, String userId, String contractType,
                                     String startDate, String endDate, String signingDate, double salary,
-                                    String note, String imageUrl, String createdBy, Instant now) {
+                                    String note, String imageUrl, String createdBy, Instant now,
+                                    String jobRank, String grade, Integer renewalRound) {
         jdbcTemplate.update("""
                 INSERT INTO labor_contracts (id,contract_no,user_id,contract_type,start_date,end_date,signing_date,
-                                             salary,status,note,image_url,created_by,created_at,updated_at)
-                VALUES (?,?,?,?,?,?,?,?,'active',?,?,?,?,?)""",
+                                             salary,status,note,image_url,created_by,created_at,updated_at,
+                                             job_rank,grade,renewal_round)
+                VALUES (?,?,?,?,?,?,?,?,'active',?,?,?,?,?,?,?,?)""",
                 id, contractNo, userId, contractType, startDate, endDate, signingDate, salary, note, imageUrl,
-                createdBy, now, now);
+                createdBy, now, now, jobRank, grade, renewalRound);
     }
 
     @Override
     @Transactional
     public void updateLaborContract(String id, String userId, String contractType, String startDate, String endDate,
-                                    String signingDate, double salary, String note, String imageUrl, boolean imageChanged, Instant now) {
+                                    String signingDate, double salary, String note, String imageUrl, boolean imageChanged, Instant now,
+                                    String jobRank, String grade, Integer renewalRound) {
         jdbcTemplate.update("""
                 UPDATE labor_contracts SET user_id=?,contract_type=?,start_date=?,end_date=?,signing_date=?,
                        salary=?,note=?,image_url=?,
                        image_updated_at=IF(?,CURRENT_TIMESTAMP,image_updated_at),
+                       job_rank=?,grade=?,renewal_round=?,
                        updated_at=? WHERE id=?""",
                 userId, contractType, startDate, endDate, signingDate, salary, note, imageUrl,
-                imageChanged, now, id);
+                imageChanged, jobRank, grade, renewalRound, now, id);
     }
 
     @Override

@@ -95,6 +95,10 @@ function LaborScreen({data,project,action,permission}:{data:AppData;project:stri
       <label className="span-2"><span>Nhân sự *</span><select name="userId" required defaultValue=""><option value="">— Chọn nhân sự —</option>{data.staffDirectory.map((u)=><option key={u.id} value={u.id}>{u.fullName} · {u.roleName||u.role||""}</option>)}</select></label>
       <label className="span-2"><span>Loại HĐ *</span><select name="contractType" required defaultValue=""><option value="">— Chọn loại —</option>{types.map(([code,label])=><option key={code} value={label}>{label}</option>)}</select></label>
       <label><span>Ngày ký</span><input name="signingDate" type="date"/></label>
+      {/* MỐC 102 (user 29/09) — NGẠCH · BẬC · GIA HẠN HĐ lần N. */}
+      <label><span>Ngạch</span><input name="jobRank" list="labor-job-rank" placeholder="Ngạch (vd: chuyên gia)"/><datalist id="labor-job-rank"><option value="Công chức"/><option value="Chuyên viên"/><option value="Chuyên gia"/><option value="Nhà nghiên cứu"/></datalist></label>
+      <label><span>Bậc</span><input name="grade" list="labor-grade" placeholder="Bậc (vd: bậc 1)"/><datalist id="labor-grade"><option value="Bậc 1"/><option value="Bậc 2"/><option value="Bậc 3"/><option value="Bậc 4"/></datalist></label>
+      <label><span>Gia hạn lần</span><select name="renewalRound" defaultValue=""><option value="">— Không gia hạn —</option>{[0,1,2,3,4,5].map((n)=><option key={n} value={n}>{n===0?"Hợp đồng gốc":`Gia hạn lần ${n}`}</option>)}</select></label>
       <label><span>Từ ngày</span><input name="startDate" type="date"/></label>
       <label><span>Đến ngày</span><input name="endDate" type="date"/></label>
       <label><span>Mức lương</span><input name="salary" type="number" min="0" step="1" placeholder="Mức lương"/></label>
@@ -110,6 +114,9 @@ function LaborScreen({data,project,action,permission}:{data:AppData;project:stri
       <div className="table-wrap"><table><tbody>{fieldRows([
         ["Số hợp đồng",detail.contractNo],["Nhân sự",detail.fullName],["Loại hợp đồng",detail.contractType],
         ["Ngày ký",detail.signingDate],["Từ ngày",detail.startDate],["Đến ngày",detail.endDate],
+        // MỐC 102 — NGẠCH · BẬC · GIA HẠN lẦN N.
+        ["Ngạch",detail.jobRank],["Bậc",detail.grade],
+        ["Gia hạn",detail.renewalRound===null||detail.renewalRound===undefined?"—":(Number(detail.renewalRound)===0?"Hợp đồng gốc":`Lần ${detail.renewalRound}`)],
         ["Mức lương",detail.salary!=null&&detail.salary!==""?money(detail.salary):null],
         ["Trạng thái",detail.status==="active"?"Đang hiệu lực":detail.status==="ended"?"Kết thúc":"Tạm ngừng"],
         ["Ghi chú",detail.note],
@@ -131,6 +138,10 @@ function LaborScreen({data,project,action,permission}:{data:AppData;project:stri
       <label className="span-2"><span>Nhân sự *</span><select name="userId" required defaultValue={String(detail.userId||"")}><option value="">— Chọn nhân sự —</option>{data.staffDirectory.map((u)=><option key={u.id} value={u.id}>{u.fullName} · {u.roleName||u.role||""}</option>)}</select></label>
       <label className="span-2"><span>Loại HĐ *</span><select name="contractType" required defaultValue={String(detail.contractType||"")}><option value="">— Chọn loại —</option>{types.map(([code,label])=><option key={code} value={label}>{label}</option>)}</select></label>
       <label><span>Ngày ký</span><input name="signingDate" type="date" defaultValue={String(detail.signingDate||"").slice(0,10)}/></label>
+      {/* MỐC 102 (user 29/09) — NGẠCH · BẬC · GIA HẠN HĐ lần N (MỐC 102). */}
+      <label><span>Ngạch</span><input name="jobRank" list="labor-job-rank-e" defaultValue={String(detail.jobRank||"")} placeholder="Ngạch (vd: chuyên gia)"/><datalist id="labor-job-rank-e"><option value="Công chức"/><option value="Chuyên viên"/><option value="Chuyên gia"/><option value="Nhà nghiên cứu"/></datalist></label>
+      <label><span>Bậc</span><input name="grade" list="labor-grade-e" defaultValue={String(detail.grade||"")} placeholder="Bậc (vd: bậc 1)"/><datalist id="labor-grade-e"><option value="Bậc 1"/><option value="Bậc 2"/><option value="Bậc 3"/><option value="Bậc 4"/></datalist></label>
+      <label><span>Gia hạn lần</span><select name="renewalRound" defaultValue={detail.renewalRound===null||detail.renewalRound===undefined?"":String(detail.renewalRound)}><option value="">— Không gia hạn —</option>{[0,1,2,3,4,5].map((n)=><option key={n} value={n}>{n===0?"Hợp đồng gốc":`Gia hạn lần ${n}`}</option>)}</select></label>
       <label><span>Từ ngày</span><input name="startDate" type="date" defaultValue={String(detail.startDate||"").slice(0,10)}/></label>
       <label><span>Đến ngày</span><input name="endDate" type="date" defaultValue={String(detail.endDate||"").slice(0,10)}/></label>
       <label><span>Mức lương</span><input name="salary" type="number" min="0" step="1" defaultValue={String(detail.salary??"")}/></label>

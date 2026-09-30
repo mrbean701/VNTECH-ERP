@@ -5,6 +5,7 @@ import com.vntech.erp.application.service.AdminSystemUseCase;
 import com.vntech.erp.application.service.AuthUseCase;
 import com.vntech.erp.application.service.BoqManagementUseCase;
 import com.vntech.erp.application.service.FinanceManagementUseCase;
+import com.vntech.erp.application.service.ContractReviewUseCase;
 import com.vntech.erp.application.service.HrManagementUseCase;
 import com.vntech.erp.application.service.BootstrapUseCase;
 import com.vntech.erp.application.service.ProjectContractUseCase;
@@ -54,6 +55,8 @@ public class SystemController {
     private final FinanceManagementUseCase financeManagementUseCase;
     private final MaterialCatalogManagementUseCase materialCatalogManagementUseCase;
     private final HrManagementUseCase hrManagementUseCase;
+    /** MỐC 103 — MENU «REVIEW HĐ». */
+    private final ContractReviewUseCase contractReviewUseCase;
     private final ProjectManagementUseCase projectManagementUseCase;
     private final ProjectContractUseCase projectContractUseCase;
     private final ProductionManagementUseCase productionManagementUseCase;
@@ -90,6 +93,7 @@ public class SystemController {
                             FinanceManagementUseCase financeManagementUseCase,
                             MaterialCatalogManagementUseCase materialCatalogManagementUseCase,
                             HrManagementUseCase hrManagementUseCase,
+                            ContractReviewUseCase contractReviewUseCase,
                             ProjectManagementUseCase projectManagementUseCase,
                             ProjectContractUseCase projectContractUseCase,
                             com.vntech.erp.application.rbac.AccessScopeService accessScopeService,
@@ -114,6 +118,7 @@ public class SystemController {
         this.financeManagementUseCase = financeManagementUseCase;
         this.materialCatalogManagementUseCase = materialCatalogManagementUseCase;
         this.hrManagementUseCase = hrManagementUseCase;
+        this.contractReviewUseCase = contractReviewUseCase;
         this.projectManagementUseCase = projectManagementUseCase;
         this.projectContractUseCase = projectContractUseCase;
         this.productionManagementUseCase = productionManagementUseCase;
@@ -749,6 +754,32 @@ public class SystemController {
                     AuthUseCase.CurrentUser cu = requireCurrentUser(request);
                     Map<String, Object> result = hrManagementUseCase.saveLaborContract(asHrPrincipal(cu), payload);
                     return ResponseEntity.ok(jsonResult(result));
+                }
+                // MỐC 103 (user 29/09) — MENU «REVIEW HĐ».
+                case "list_contract_review" -> {
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                    return ResponseEntity.ok(jsonResult(
+                            contractReviewUseCase.list(asHrPrincipal(cu))));
+                }
+                case "save_contract_review" -> {
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                    return ResponseEntity.ok(jsonResult(
+                            contractReviewUseCase.save(asHrPrincipal(cu), payload)));
+                }
+                case "open_contract_review" -> {
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                    return ResponseEntity.ok(jsonResult(
+                            contractReviewUseCase.open(asHrPrincipal(cu), payload)));
+                }
+                case "log_contract_review" -> {
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                    return ResponseEntity.ok(jsonResult(
+                            contractReviewUseCase.logReview(asHrPrincipal(cu), payload)));
+                }
+                case "delete_contract_review" -> {
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                    return ResponseEntity.ok(jsonResult(
+                            contractReviewUseCase.delete(asHrPrincipal(cu), payload)));
                 }
                 case "set_labor_contract_status" -> {
                     AuthUseCase.CurrentUser cu = requireCurrentUser(request);

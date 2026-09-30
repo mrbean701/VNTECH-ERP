@@ -18,4 +18,18 @@
 .permission-matrix-wrap .resizable-data-table th:not(:first-child),.permission-matrix-wrap .resizable-data-table td:not(:first-child){width:11.3%!important;text-align:center!important}
 .permission-matrix-wrap{max-width:100%!important;overflow-x:hidden!important}
 .permission-matrix-wrap .column-resize-handle{display:none!important}
+/* MOC 106 (user 29/09) - TAB TRONG CUNG MOT MODAL PHAI DONG NHAT kich thuoc, chieu rong, chieu cao,
+   cach canh chinh; KHONG de kich thuoc tab thay doi theo do dai noi dung/tieu de.
+   flex:0 0 auto + width co dinh (set inline) + panel cao co dinh. */
+.review-modal{display:flex;flex-direction:column;gap:0}
+.review-modal .user-admin-tabs{display:flex;flex-wrap:nowrap;gap:8px;align-items:stretch;margin-bottom:0}
+.review-modal .user-admin-tabs>button{flex:0 0 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:inline-flex;align-items:center;justify-content:center;text-align:center;box-sizing:border-box}
+.review-tab-panel{box-sizing:border-box;width:100%;height:320px;min-height:320px;max-height:320px;overflow:auto;border:1px solid var(--line,#e2e8f0);border-top:none;padding:16px;display:flex;flex-direction:column;gap:0}
+.review-tab-panel .table-wrap{flex:1 1 auto;min-height:0;overflow:auto}
+.review-tab-panel dl.kv{display:grid;grid-template-columns:200px 1fr;gap:10px 16px;margin:0;align-content:start}
+.review-tab-panel dl.kv dt{color:#64748b;font-size:12px}
+.review-tab-panel dl.kv dd{margin:0;font-size:13px}
+.review-modal-actions{display:flex;gap:8px;align-items:center;margin-top:12px}
+.review-modal-actions input{flex:1 1 auto;min-width:0}
+@media(max-width:760px){.review-tab-panel dl.kv{grid-template-columns:1fr}.review-modal .user-admin-tabs{flex-wrap:wrap}.review-tab-panel{height:260px;min-height:260px;max-height:260px}}
 /* VNTECH_MASTER_BASELINE_CSS_R1_1_1_END */

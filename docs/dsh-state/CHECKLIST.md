@@ -2167,3 +2167,155 @@ Merge 128c021: +14 file test `mt3-*` (tu nhanh remote 7fdf71d)
 ⇒ 23 FAIL la BO TEST MT3 cua nhanh remote, **ngoai pham vi 3 viec user giao**
    (MOC 103 ma tran + MOC 103 bao loi/gop y + MOC 103 mo khoa modal sua ho so).
 ⇒ KHONG tu sua — cho USER QUET.
+
+---
+
+# MOC 102 (user 29/09) — HOP DONG LAO DONG: NGACH · BAC · GIA HAN LAN N · BUILD VNTECH-FP-A723FE71B40A6E11
+
+## 🗄️ CSDL (migration `drizzle/0314_hop_dong_lao_dong_ngach_bac_gia_han_lan.sql`)
+```
+⛔ LẦN ĐẦU dùng cột tên `rank` ⇒ **ERROR 1064** vì `RANK` là TỪ KHOÁ DỰ TRÙNG MySQL 8.0.
+✅ Đổi tên thành `job_rank` — giữ nguyên nghĩa «ngạch», tránh xung đột từ khoá.
+ALTER labor_contracts ADD job_rank VARCHAR(64) NULL;   -- NGẠCH
+                      ADD grade    VARCHAR(64) NULL;   -- BẬC
+                      ADD renewal_round INT      NULL;  -- GIA HẠN LẦN N (0=gốc,1=lần1,2=lần2…)
+UPDATE labor_contracts SET renewal_round=0 WHERE renewal_round IS NULL;
+```
+
+## ⚙️ BACKEND (4 file)
+| File | Thay đổi |
+|---|---|
+| `port/out/HrStore.java` | `insertLaborContract` / `updateLaborContract` thêm `jobRank, grade, Integer renewalRound` |
+| `persistence/HrStoreAdapter.java` | `INSERT` + `UPDATE` thêm 3 cột |
+| `service/HrManagementUseCase.java` | đọc payload · hàm `renewalRound()` chuẩn hoá (rỗng→null, sai kiểu/sai dấu→**400**) |
+| `persistence/BootstrapDataAdapter.java` | SELECT thêm `lc.job_rank AS jobRank, lc.grade, lc.renewal_round AS renewalRound` |
+
+## 🎨 UI (`app/screens/LaborScreen.tsx`)
+```
+· modal TẠO  : + Ngạch (datalist) · + Bậc (datalist) · + Gia hạn lần (select 0..5)
+· modal SỬA  : 3 ô có defaultValue từ hợp đồng đang sửa
+· modal CHI TIẾT: + 3 dòng Ngạch / Bậc / Gia hạn
+```
+
+## 🧪 CHỨNG MINH 2 TẦNG
+```
+ẢNH `shot-labor-m102.png` (Edge headless, bấm menu «Hợp đồng lao động» thật):
+  "Ngạch" · "Bậc" · "Gia hạn lần" — CÓ ĐỦ trong modal «Lập hợp đồng lao động».
+API + CSDL THẬT (:9000 → MySQL):
+  POST save_labor_contract (jobRank=Chuyen gia, grade=Bac 3, renewalRound=2) ⇒ HTTP 200
+  CSDL đọc lại: HĐLĐ-00003 | ngạch=Chuyen gia | bậc=Bac 3 | gia_han=2
+  HĐ cũ 00002 : ngạch=NULL | bậc=NULL | gia_han=0  ⇒ KHÔNG hỏng
+  renewalRound="lan mot" ⇒ HTTP 400 (không nuốt im lặng)
+```
+
+## ⚠️ 3 LẦN EM ĐO SAI (tự ghi nhận)
+```
+1. Bộ lọc `/nh chnh/i` không khớp dấu `–` ⇒ vào nhầm «Danh mục vật tư gốc» (71 dòng)
+2. Đoán nhóm index 8 ⇒ vào nhầm «Báo cáo» (2 dòng)
+3. Lọc `/Tạo/` nhưng nút thật là 「＋ Lập HĐ」 (`LaborScreen.tsx:89`) ⇒ `TOOLBAR: []`
+⇒ Cả 3 do ĐOÁN thay vì ĐỌC markup. Đọc file là ra ngay.
+```
+
+## 🧹 DỌN SẠCH
+```
+DELETE labor_contracts WHERE note LIKE '%PROBE_MOC102%'
+⇒ labor=2 · ảnh rỗng=2 · round0=2  ✔ trở về đúng dữ liệu gốc.
+```
+
+## 📊 5 CỔNG
+```
+BUILD VNTECH-FP-A723FE71B40A6E11 · 674 tests · 646 pass · 27 FAIL (nguyên như baseline)
+✅ css-comment-guard · ✅ tsc EXIT=0 · ✅ css-baseline ĐẠT
+❌ contract 27 (23 test mồ côi MT3 + 4 cũ) · ❌ regression 3
+```
+
+## ⏳ CÒN CHỜ USER QUYẾT
+```
+⛔ «Gia hạn HĐ: lần 1, lần 2, lần 3…» — 1 TRƯỜNG SỐ ĐẾM LẦN (đang chạy) hay
+   MỖI LẦN GIA HẠN LÀ 1 BẢN GHI RIÊNG (cần thêm bảng `labor_contract_renewals`)?
+⛔ 4 file `tests/mt3-*` mồ côi — giữ hay xoá.
+⛔ 4 việc cũ: MỐC 48 · Tab «Tổng quan» · bypass D-022 · SMTP
+
+---
+
+# MOC 103 (user 29/09) - MENU «REVIEW HĐ» — STATUS: PARTIAL (CODE ĐỦ, CHƯA BUILD/TEST)
+
+## ✅ ĐÃ HOÀN THÀNH
+```
+🗄️ CSDL  `drizzle/0315_review_hop_dong.sql`
+   · contract_reviews      (id, contract_id/no/type/name, sender_name, receiver_name,
+                            received_date, review_date, viewed 0/1, last_reviewer_*, note)
+   · contract_review_logs  (reviewed_at, duration_seconds, status, reviewer_name, comment)
+   · CẢ HAI khai `COLLATE=utf8mb4_unicode_ci` (nếu không ⇒ ERROR 1267 ⇒ hỏng TOÀN BỘ giao diện)
+   · Seed 2 hợp đồng lao động hiện có (viewed=0)
+⚙️ JAVA (compile OK)
+   · application/port/out/ContractReviewStore.java
+   · application/service/ContractReviewUseCase.java  (list/save/open/logReview/delete)
+   · infrastructure/persistence/ContractReviewStoreAdapter.java
+   · web/config/ApplicationBeansConfig.java  (khai bean)
+   · web/controller/SystemController.java  (5 action contract_review)
+   · application/rbac/ActionRbacRegistry.java
+       manage_contract_review → List.of("dept_legal_contract_review") + "canEdit"
+   · infrastructure/persistence/BootstrapDataAdapter.java (nạp contractReviews + logs gắn sẵn)
+🎨 UI
+   · app/screens/ContractReviewScreen.tsx  (toolbar ngang MỐC 105 + modal 2 tab)
+   · app/globals.css  (MỐC 106: tab rộng cố định, panel cao cố định 320px, responsive)
+   · app/page.tsx  (import + route `dept_legal_contract_review`)
+🗄️ MENU: module_catalog += dept_legal_contract_review «Review HĐ» (group hr_legal, sort 60, active 1)
+```
+⛔ TÊN CỘT THẬT của `module_catalog`: `module_key, label, icon, group_name, group_key, active,
+   sort_order, system_locked, created_at, updated_at` — **KHÔNG có** `name`/`description`/`can_create`,
+   và `created_at`/`updated_at` NOT NULL ⇒ INSERT thiếu 2 cột này sẽ ERROR 1364.
+
+## ⛔ CÒN THIẾU (PARTIAL — KHÔNG ĐƯỢC BÁO «XONG»)
+```
+⬜ Build UI            (thiếu tools/gd-cycle.mjs)
+⬜ 5 cổng kiểm nghiệm  (thiếu tools/verify-all.mjs)
+⬜ Test API thật       (list/open/log_contract_review)
+⬜ Chụp ảnh màn + modal
+⬜ Dọn dữ liệu thử
+```
+
+---
+
+# 🔧 ĐÍNH CHÍNH: BÁO ĐỘNG GIẢ «WORKSPACE MẤT `.git` VÀ `tools/`» (29/09/2026)
+
+## ⛔ MỤC CŨ GHI SAI — ĐÃ GỠ
+
+Trước đây mục này ghi «workspace mất `.git`, mất `tools/`, package.json scripts RỖNG» và đề nghị
+user chọn ① clone lại ② cho phép `git init` ③ tự khôi phục. **TOÀN BỘ MỤC ĐÓ LÀ SAI.**
+
+## ✅ SỰ THẬT (đo lại bằng ĐƯỜNG DẪN TUYỆT ĐỐI)
+
+```
+NGUYÊN NHÂN: lệnh `pwsh` chạy với THƯ MỤC LÀM VIỆC LỆCH.
+            Tồn tại `subst` cũ từ MỐC 105:
+              V:\ => …\VNTECH_ERP_V5_3_0_…\java-backend
+              W:\ => …\VNTECH_ERP_V5_3_0_…
+            ⇒ các lệnh Test-Path đo NHẦM một thư mục rỗng, KHÔNG phải dự án.
+
+ĐO LẠI BẰNG ĐƯỜNG DẪN TUYỆT ĐỐI ⇒ MỌI THỨ ĐỀU CÒN:
+  .git                        ✅  nhánh unity-p2-full-20260920
+  package.json                ✅
+  app/ · docs/ · java-backend/ · drizzle/ · node_modules/ · dist/   ✅
+  tools/gd-cycle.mjs          ✅
+  tools/verify-all.mjs        ✅
+  tools/set-local-identity.mjs ✅
+⇒ KHÔNG MẤT GÌ. KHÔNG cần clone lại. KHÔNG cần `git init`.
+```
+
+## 🧠 BÀI HỌC BẮT BUỘC (đã ghi vào memory)
+
+```
+1. Mỗi vòng PHẢI in `Get-Location` và kiểm `.git` / `package.json` / `tools/gd-cycle.mjs`
+   bằng ĐƯỜNG DẪN TUYỆT ĐỐI (`Join-Path $W …`), KHÔNG dựa vào `workdir` hay `subst`.
+2. KHÔNG BAO GIỜ kết luận «mất dữ liệu / mất repo / cần clone» chỉ từ MỘT lệnh đo —
+   phải đo lại lần 2 bằng đường dẫn tuyệt đối.
+3. `subst V:` / `subst W:` cũ đã hỏng ⇒ phải `subst W: /D` trước khi dùng lại.
+```
+
+## 📌 15 FILE TỪNG BỊ GHI «CHƯA COMMIT» — ĐÃ COMMIT ĐỦ
+
+Toàn bộ 15 file trong danh sách cũ (2 migration + 7 file Java + 3 file app + page.tsx + globals.css)
+**đã được commit trong commit MỐC 102+103** — xem mục «MỐC 102 · MỐC 103» phía trên.
+Danh sách cũ ở đây chỉ là hệ quả của phép đo sai, KHÔNG phải việc còn tồn.

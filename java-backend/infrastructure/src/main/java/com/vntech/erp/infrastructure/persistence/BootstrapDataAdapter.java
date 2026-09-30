@@ -1466,9 +1466,36 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                        u.employee_code AS employeeCode,lc.contract_type AS contractType,
                        lc.start_date AS startDate,lc.end_date AS endDate,lc.signing_date AS signingDate,
                        lc.salary,lc.status,lc.note,
+                        lc.job_rank AS jobRank,lc.grade,lc.renewal_round AS renewalRound,
                         lc.image_url AS imageUrl,lc.image_updated_at AS imageUpdatedAt
                 FROM labor_contracts lc LEFT JOIN users u ON u.id=lc.user_id
                 ORDER BY lc.start_date DESC"""));
+        // MỐC 103 (user 29/09) — MENU «REVIEW HĐ»: danh sách + lịch sử review gắn sẵn.
+        List<Map<String, Object>> reviewRows = query("""
+                SELECT r.id,r.contract_id AS contractId,r.contract_no AS contractNo,
+                       r.contract_type AS contractType,r.contract_name AS contractName,
+                       r.sender_name AS senderName,r.receiver_name AS receiverName,
+                       r.received_date AS receivedDate,r.review_date AS reviewDate,
+                       (r.viewed = 1) AS viewed,r.last_reviewer_name AS lastReviewerName,
+                       r.note,r.created_at AS createdAt,r.updated_at AS updatedAt
+                FROM contract_reviews r
+                ORDER BY (r.viewed = 1), IFNULL(r.received_date,'') DESC, IFNULL(r.created_at,'') DESC""");
+        List<Map<String, Object>> reviewLogs = query("""
+                SELECT l.id,l.review_id AS reviewId,l.contract_id AS contractId,
+                       l.reviewed_at AS reviewedAt,l.duration_seconds AS durationSeconds,
+                       l.status,l.reviewer_name AS reviewerName,l.comment,
+                       l.created_at AS createdAt
+                FROM contract_review_logs l
+                ORDER BY IFNULL(l.reviewed_at,'') DESC, IFNULL(l.created_at,'') DESC""");
+        for (Map<String, Object> r : reviewRows) {
+            List<Map<String, Object>> mine = new ArrayList<>();
+            for (Map<String, Object> l : reviewLogs) {
+                if (String.valueOf(r.get("id")).equals(String.valueOf(l.get("reviewId")))) mine.add(l);
+            }
+            r.put("logs", mine);
+            r.put("logCount", mine.size());
+        }
+        data.put("contractReviews", reviewRows);
         data.put("officialCorrespondence", query("""
                 SELECT c.id,c.doc_no AS docNo,c.direction,c.doc_type AS docType,c.issue_date AS issueDate,
                        c.sender_name AS senderName,c.receiver_name AS receiverName,c.summary,

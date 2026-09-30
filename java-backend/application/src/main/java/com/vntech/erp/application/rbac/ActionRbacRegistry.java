@@ -207,6 +207,9 @@ public final class ActionRbacRegistry {
             //    (fail-closed), còn `admin` đi qua nhánh `isAdmin` ở trên.
 
             Map.entry("save_labor_contract", List.of("dept_legal_labor")),
+            // MỐC 103 (user 29/09) — MENU «REVIEW HĐ».
+            // ⛔ KHÔNG dùng `List.of()` — `requireActionModule` coi map rỗng là TỪ CHỐI (403).
+            Map.entry("manage_contract_review", List.of("dept_legal_contract_review")),
             Map.entry("save_legal_document", List.of("dept_legal_documents")),
             Map.entry("save_mar_approval", List.of("boq", "purchasing")),
             Map.entry("save_material", List.of("material_catalog")),
@@ -463,6 +466,8 @@ public final class ActionRbacRegistry {
             Map.entry("save_form_field_config", "canUse"),
             Map.entry("save_hr_record", "canCreate"),
             Map.entry("save_labor_contract", "canCreate"),
+            // MỐC 103 (user 29/09) — MENU «REVIEW HĐ» (xem + ghi nhận review).
+            Map.entry("manage_contract_review", "canEdit"),
             Map.entry("save_legal_document", "canCreate"),
             Map.entry("save_mar_approval", "canApprove"),
             Map.entry("save_material", "canEdit"),
