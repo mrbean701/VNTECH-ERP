@@ -2,7 +2,6 @@ package com.vntech.erp.application.service;
 
 import com.vntech.erp.application.port.out.ContractReviewStore;
 import com.vntech.erp.application.port.out.IdGenerator;
-import com.vntech.erp.application.port.out.ContractReviewStore;
 import com.vntech.erp.application.rbac.RbacService;
 import com.vntech.erp.application.service.HrManagementUseCase.Principal;
 

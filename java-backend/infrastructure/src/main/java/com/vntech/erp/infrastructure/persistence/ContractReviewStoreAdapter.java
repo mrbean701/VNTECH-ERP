@@ -122,22 +122,29 @@ public class ContractReviewStoreAdapter implements ContractReviewStore {
     public void addLog(String id, String reviewId, String contractId, String reviewedAt,
                        Integer durationSeconds, String status, String reviewerId, String reviewerName,
                        String comment, Instant now) {
+        // MỐC 103b — `reviewer_name` PHẢI là TÊN NGƯỜI, không phải mã tài khoản.
+        //   `Principal` (HrManagementUseCase.Principal) chỉ có `userId()` + `role()`, không có tên
+        //   hiển thị ⇒ tra `users.full_name` ngay trong câu lệnh. Không tra được (tài khoản đã xoá)
+        //   thì giữ giá trị truyền vào để không mất dấu vết.
         jdbcTemplate.update("""
                 INSERT INTO contract_review_logs (id,review_id,contract_id,reviewed_at,duration_seconds,
                         status,reviewer_id,reviewer_name,comment,created_at)
-                VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                SELECT ?,?,?,?,?,?,?,IFNULL((SELECT full_name FROM users WHERE id=?),?),?,?""",
                 id, reviewId, contractId, reviewedAt, durationSeconds, status, reviewerId,
-                reviewerName, comment, now.toString());
+                reviewerId, reviewerName, comment, now.toString());
     }
 
     @Override
     @Transactional
     public void markViewed(String reviewId, String reviewerId, String reviewerName,
                            String reviewedAt, Integer durationSeconds, Instant now) {
+        // MỐC 103b — `last_reviewer_name` cũng phải là TÊN NGƯỜI (xem chú thích ở `addLog`).
         jdbcTemplate.update("""
                 UPDATE contract_reviews SET viewed=1,review_date=COALESCE(NULLIF(?,''),review_date),
-                       last_reviewer_id=?,last_reviewer_name=?,updated_at=? WHERE id=?""",
+                       last_reviewer_id=?,
+                       last_reviewer_name=IFNULL((SELECT full_name FROM users WHERE id=?),?),
+                       updated_at=? WHERE id=?""",
                 reviewedAt == null ? "" : reviewedAt.substring(0, Math.min(10, reviewedAt.length())),
-                reviewerId, reviewerName, now.toString(), reviewId);
+                reviewerId, reviewerId, reviewerName, now.toString(), reviewId);
     }
 }
