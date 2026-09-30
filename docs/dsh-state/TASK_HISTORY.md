@@ -223,3 +223,29 @@ User chọn ①/② → sửa `page.tsx:542` → `node tools/gd-cycle.mjs` → `
 
 **BUILD VNTECH-FP-B01C5D788932F083** · ⛔ 0 commit · CSDL sach · 3 cong dich + login OK
 ⇒ HET phan viec doc lap trong phien 29/09. Con 5 muc cho USER QUYET (xem CURRENT_STATE.md).
+
+---
+
+# NHAT KY BO SUNG — MOC 102 + MOC 103 (29/09/2026) · COMMIT `acb28ae`
+
+| Moc | Task | Status | Files | DB | API | Test |
+|---|---|---|---|---|---|---|
+| 102 | 🗂️ HĐ lao động: ngạch · bậc · gia hạn lần N | **DONE** | `drizzle/0314_hop_dong_lao_dong_ngach_bac_gia_han_lan.sql` · `HrStore.java` · `HrManagementUseCase.java` · `HrStoreAdapter.java` · `BootstrapDataAdapter.java` · `app/screens/LaborScreen.tsx` | `labor_contracts` += 3 cột | `save_labor_contract` | API thật HTTP 200 ⇒ `ngạch=Chuyen gia · bậc=Bac 3 · gia_han=2`; HĐ cũ giữ NULL/NULL/0; sai kiểu ⇒ 400 |
+| 103 | 📑 Menu «Review HĐ» | **PARTIAL** | `ContractReviewStore.java` · `ContractReviewUseCase.java` · `ContractReviewStoreAdapter.java` · `SystemController.java` · `ApplicationBeansConfig.java` · `ActionRbacRegistry.java` · `BootstrapDataAdapter.java` · `app/screens/ContractReviewScreen.tsx` · `app/page.tsx` · `lib/ui-shared.tsx` · `lib/menu-helpers.ts` · `app/globals.css` · `drizzle/0315_review_hop_dong.sql` | `module_catalog` += `dept_legal_contract_review` · `contract_reviews` + `contract_review_logs` | 5 action `contract_review` | Build `VNTECH-FP-72751DBE6DEBEED8` ĐẠT · tsc EXIT=0 · css-baseline ĐẠT · contract 674/645/**28 FAIL** · regression 69/66/**3 FAIL** · ⬜ CHƯA test API thật · ⬜ CHƯA chụp ảnh |
+| DOC | 🧹 Đính chính báo động giả «mất workspace» | DONE | `docs/dsh-state/CHECKLIST.md` | — | — | Gỡ mục SAI «WORKSPACE MẤT .git VÀ tools/» (do đo nhầm thư mục lệch bởi `subst W:` cũ), thay bằng mục đính chính + 3 bài học |
+
+**BUILD VNTECH-FP-72751DBE6DEBEED8** · COMMIT `acb28ae` (30 file) · 2 CỔNG ĐỎ (28 + 3 FAIL,
+trong đó 16 test MT3-* mồ côi + 3 test PR-01/PR-03 mâu thuẫn — KHÔNG phải hồi quy)
+· CSDL sạch
+
+**PUSH + MERGE**
+```
+✅ git push origin unity-p2-full-20260920      b08de4f..acb28ae
+✅ git push origin acb28ae:unity               b08de4f..acb28ae   (fast-forward)
+⇒ origin/unity-p2-full-20260920 = acb28ae · origin/unity = acb28ae
+```
+⚠️ Lần push đầu: `fatal: unable to access … Could not resolve host: github.com` (DNS tạm hỏng)
+⇒ kiểm `Resolve-DnsName github.com` rồi thử lại ⇒ THÀNH CÔNG.
+
+**NEXT**: test API thật MỐC 103 (`list/open/log_contract_review`) · chụp ảnh màn + modal 2 tab
+· dọn dữ liệu thử · rồi MỐC 104 «Cơ sở vật chất & VVP» · MỐC 105 UI chung.

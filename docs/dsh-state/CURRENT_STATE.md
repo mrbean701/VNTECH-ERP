@@ -1,4 +1,4 @@
-﻿# CURRENT STATE â€” VNTECH ERP V5.3.0 (MASTER BASELINE R1.1.1)
+# CURRENT STATE â€” VNTECH ERP V5.3.0 (MASTER BASELINE R1.1.1)
 
 > Cáº­p nháº­t: 28/09/2026 Â· nhÃ¡nh `unity-p2-full-20260920`
 > ÄÃ¢y lÃ  nguá»“n sá»± tháº­t cho phiÃªn má»›i. Äá»c 4 tá»‡p trong `/docs/dsh-state/` rá»“i tiáº¿p tá»¥c.
@@ -208,4 +208,62 @@ SUA: `canEditAccount` = `role === "admin"` (bo ve `admin_tab_01`) · khoa 4 o
 ```
 ① MOC 48 · ② Tab «Tong quan» · ③ bypass D-022 · ④ SMTP
 ⑤ (tuỳ chọn) mat khau 1 tai khoan thuong → de chay 4 action HR bang user THAT
+```
+
+---
+
+# CAP NHAT 29/09/2026 — MOC 102 + MOC 103 DA COMMIT + PUSH + MERGE VAO `unity`
+
+## 📦 GIT
+```
+acb28ae  feat: MOC 102 (ngach/bac/gia han HD lao dong) + MOC 103 (menu Review HD)
+         · 30 file (18 sửa + 12 mới) · nguồn b08de4f
+✅ origin/unity-p2-full-20260920 = acb28ae
+✅ origin/unity                  = acb28ae
+   (fast-forward  b08de4f..acb28ae — KHÔNG phá lịch sử, KHÔNG dùng --force)
+```
+
+## ✅ MỐC 102 — HỢP ĐỒNG LAO ĐỘNG: NGẠCH · BẬC · GIA HẠN LẦN — DONE
+```
+🗄️ drizzle/0314_hop_dong_lao_dong_ngach_bac_gia_han_lan.sql
+⚙️ HrStore + HrManagementUseCase (renewalRound + 3 trường) + HrStoreAdapter
+    + BootstrapDataAdapter
+🎨 app/screens/LaborScreen.tsx (3 ô nhập mới)
+🧪 ĐO THẬT: API HTTP 200 ⇒ CSDL ngạch=Chuyen gia · bậc=Bac 3 · gia_han=2
+   · HĐ cũ giữ NULL/NULL/0 (không phá dữ liệu)
+   · sai kiểu dữ liệu ⇒ 400
+```
+
+## 🟡 MỐC 103 — MENU «REVIEW HĐ» — PARTIAL (code + build + cổng XONG, THIẾU test API thật)
+```
+✅ CSDL       module_catalog += dept_legal_contract_review (hr_legal, sort 60, active 1)
+              contract_reviews + contract_review_logs (drizzle/0315_review_hop_dong.sql)
+✅ JAVA       ContractReviewStore / ContractReviewUseCase / ContractReviewStoreAdapter (MỚI)
+              ApplicationBeansConfig + SystemController (tiêm + route)
+              ActionRbacRegistry: manage_contract_review → dept_legal_contract_review + canEdit
+              BootstrapDataAdapter: nạp contractReviews + contractReviewLogs
+✅ UI         app/screens/ContractReviewScreen.tsx (225 dòng)
+              app/page.tsx (import + route) · lib/ui-shared.tsx · lib/menu-helpers.ts
+              app/globals.css (MỐC 106: .review-modal / .review-tab-panel cao 320px)
+✅ BUILD      SHORT = VNTECH-FP-72751DBE6DEBEED8 · BUILT ARTIFACT VALIDATION: ĐẠT
+✅ 5 CỔNG     css-comment-guard OK · tsc EXIT=0 · css-baseline ĐẠT
+              contract 674/645/28 FAIL · regression 69/66/3 FAIL
+⬜ CÒN        test API thật (list/open/log_contract_review) · ảnh màn + modal 2 tab
+              · dọn dữ liệu thử
+```
+
+## 📊 28 FAIL CONTRACT — PHÂN LOẠI (KHÔNG PHẢI HỒI QUY)
+```
+16 test MT3-UI-*  : MỒ CÔI — commit MT3 7fdf71d đã bị rollback bởi 151db2e,
+                    chỉ còn 14 file tests/mt3-* sống sót
+ 3 test PR-01/PR-03: MÂU THUẪN NHAU ở màn «Chi tiết Dự án»
+                    (PR-01 đòi 4 tab, PR-03 đòi GIỮ 6 tab)
+ 9 test còn lại    : F-03 · MR/PR chung · datalist alias · MT3-UI-04/12d/13/14 · #9 · §19
+```
+
+## 🧹 ĐÍNH CHÍNH TÀI LIỆU
+```
+⛔ Mục «SỰ CỐ: WORKSPACE MẤT .git VÀ tools/» trong CHECKLIST.md đã bị GỠ —
+   đó là BÁO ĐỘNG GIẢ do đo nhầm thư mục làm việc lệch bởi `subst W:` cũ.
+✅ Thay bằng mục ĐÍNH CHÍNH + 3 bài học bắt buộc về cách đo hạ tầng.
 ```

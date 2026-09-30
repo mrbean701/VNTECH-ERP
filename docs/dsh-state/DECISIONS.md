@@ -1100,3 +1100,81 @@ Content-Type `application/json` **KHONG khai charset** ⇒ Spring doc body sai
 ⛔ KHI API tra 400 RONG ⇒ nghi ngay van de ENCODING, CHUA phai logic.
 ⛔ Doc log Java DE BIET loi thuoc thread nao (request hay scheduler).
 ⛔ Test phai doi CHUNG 1 bien: neu 4 bien deu 400 ⇒ bien do khong phai nguyen nhan.
+```
+
+---
+
+# D-034 — DO HẠ TẦNG PHẢI BẰNG ĐƯỜNG DẪN TUYỆT ĐỐI (29/09/2026)
+
+## ⛔ SU CO THAT DA XAY RA
+```
+Tu vong 148 den 161 (11 vong), MOI lenh `pwsh` deu tra ve workspace RONG:
+  Test-Path .git = False · package.json scripts = RONG · dist/ khong ton tai
+  tools/ chi con 3 file · muc=1 file=1
+⇒ Em da BAO SAI voi user rang «mat toan bo ma nguon», «can clone lai»,
+  «can cho phep git init», va da GHI THONG TIN SAI do vao CHECKLIST.md
+  + 1 entry `critical` vao memory.
+```
+
+## ✅ NGUYEN NHAN GOC
+```
+Lenh `pwsh` chay voi THU MUC LAM VIEC LECH.
+Ton tai `subst` CU tu MOC 105:
+   V:\ => …\VNTECH_ERP_V5_3_0_…\java-backend
+   W:\ => …\VNTECH_ERP_V5_3_0_…
+⇒ Cac lenh Test-Path do NHAM mot thu muc RONG, KHONG phai du an.
+
+DO LAI BANG DUONG DAN TUYET DOI ⇒ MOI THU DEU CON:
+   .git ✅ · package.json ✅ · app/ ✅ · docs/ ✅ · java-backend/ ✅
+   drizzle/ ✅ · node_modules/ ✅ · dist/ ✅ · tools/gd-cycle.mjs ✅
+   tools/verify-all.mjs ✅ · tools/set-local-identity.mjs ✅
+⇒ KHONG MAT GI. KHONG can clone lai. KHONG can `git init`.
+```
+
+## 📌 QUY TAC BAT BUOC (da ghi vao memory)
+```
+1. Moi vong PHAI in `Get-Location` va kiem `.git` / `package.json` / `tools/gd-cycle.mjs`
+   bang DUONG DAN TUYET DOI (`Join-Path $W ...`) — KHONG dua vao `workdir` hay `subst`.
+2. KHONG BAO GIO ket luan «mat du lieu / mat repo / can clone» chi tu MOT lenh do —
+   phai do lai lan 2 bang duong dan tuyet doi.
+3. `subst V:` / `subst W:` cu da hong ⇒ phai `subst W: /D` truoc khi dung lai.
+4. Khi phat hien tai lieu da ghi SAI ⇒ PHAI GO/SỬA NGAY, khong de ton tai
+   (goal §15: khong de documentation mo ta sai implementation).
+```
+
+---
+
+# D-035 — MERGE NHÁNH: ĐO QUAN HỆ TRƯỚC, ƯU TIÊN FAST-FORWARD (29/09/2026)
+
+## BOI CANH
+```
+User yeu cau: «push va merge vao unity».
+Truoc khi merge: origin/unity = b08de4f · nhanh lam viec = acb28ae
+```
+
+## QUYET DINH
+```
+BUOC 1 — DO quan he 2 nhanh TRUOC khi merge:
+   git rev-list --count origin/unity..acb28ae   → 1  (can them)
+   git rev-list --count acb28ae..origin/unity   → 0  (unity KHONG co gi ma minh thieu)
+   git merge-base --is-ancestor origin/unity acb28ae  → True
+BUOC 2 — Ket luan: FAST-FORWARD duoc ⇒ push thang, KHONG tao merge commit gia,
+         KHONG dung `--force` / `--force-with-lease`.
+   git push origin acb28ae:unity
+BUOC 3 — XAC MINH lai bang `git fetch origin` + `git log --oneline -1` ca 2 nhanh.
+```
+
+## 📌 QUY TAC
+```
+⛔ CHI dung `--force-with-lease` khi 2 nhanh THUC SU PHAN KY (so commit > 0 ca 2 chieu).
+⛔ `Could not resolve host: github.com` la loi DNS TAM THOI, KHONG phai mat quyen push
+   ⇒ kiem `Resolve-DnsName github.com` roi THU LAI, dung ket luan «khong push duoc».
+⛔ Truoc `git add`: XOA file rac tam (`fix.mjs`, `_ct.txt`, log trung gian).
+   KHONG dung `git add -A` mu — anh chung cu (`shot-*.png`) giu NGOAI commit.
+```
+
+## KET QUA
+```
+✅ origin/unity-p2-full-20260920 = acb28ae
+✅ origin/unity                  = acb28ae
+```

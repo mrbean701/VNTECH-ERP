@@ -2267,13 +2267,38 @@ BUILD VNTECH-FP-A723FE71B40A6E11 · 674 tests · 646 pass · 27 FAIL (nguyên nh
    sort_order, system_locked, created_at, updated_at` — **KHÔNG có** `name`/`description`/`can_create`,
    và `created_at`/`updated_at` NOT NULL ⇒ INSERT thiếu 2 cột này sẽ ERROR 1364.
 
+## ✅ ĐÃ CHẠY ĐƯỢC (cập nhật 29/09/2026 — sau khi sửa 9 lỗi TS)
+```
+✅ Build UI            SHORT = VNTECH-FP-72751DBE6DEBEED8 · BUILT ARTIFACT VALIDATION: ĐẠT
+✅ 5 cổng              node tools/verify-all.mjs
+                       · css-comment-guard  OK
+                       · tsc --noEmit       EXIT=0
+                       · contract           674 tests · 645 pass · 28 FAIL
+                       · regression          69 tests ·  66 pass ·  3 FAIL
+                       · css-baseline       ĐẠT (36 lines · 371351 bytes · 3815 !important)
+```
+
 ## ⛔ CÒN THIẾU (PARTIAL — KHÔNG ĐƯỢC BÁO «XONG»)
 ```
-⬜ Build UI            (thiếu tools/gd-cycle.mjs)
-⬜ 5 cổng kiểm nghiệm  (thiếu tools/verify-all.mjs)
-⬜ Test API thật       (list/open/log_contract_review)
-⬜ Chụp ảnh màn + modal
+⬜ Test API thật       (list/open/log_contract_review) — CHƯA chạy
+⬜ Chụp ảnh màn + modal 2 tab — CHƯA chụp
 ⬜ Dọn dữ liệu thử
+⬜ 28 FAIL contract  = 16 test MT3-* MỒ CÔI + 3 test PR-01/PR-03 MÂU THUẪN (xem mục riêng)
+⬜ 3  FAIL regression
+```
+
+## 📌 9 LỖI TYPESCRIPT ĐÃ SỬA (để `tsc` về 0)
+```
+1. lib/ui-shared.tsx:21   ModuleKey thiếu "dept_legal_contract_review"      (TS2367 ở app/page.tsx:688)
+2. lib/ui-shared.tsx:58   thiếu icon  → "checkdoc"
+3. lib/ui-shared.tsx:73   thiếu màu   → "purple"
+4. app/page.tsx:153+219   thiếu nhãn + mô tả menu
+5. lib/menu-helpers.ts:72 khai menu con nhóm hr_legal
+6. lib/ui-blocks.tsx:17   BaseModal KHÔNG có `onClose` — chữ ký thật là { title, note, close, children }
+7. ContractReviewScreen   `data` phải là AppData (KHÔNG phải Row)
+8. ContractReviewScreen   `action` phải là (name: string, payload: Row) => Promise<boolean>
+                          ⛔ KHÔNG để `payload?` optional ⇒ TS2322
+9. lib/ui-shared.tsx:197  AppData thiếu field `contractReviews: Row[]`
 ```
 
 ---
@@ -2319,3 +2344,71 @@ NGUYÊN NHÂN: lệnh `pwsh` chạy với THƯ MỤC LÀM VIỆC LỆCH.
 Toàn bộ 15 file trong danh sách cũ (2 migration + 7 file Java + 3 file app + page.tsx + globals.css)
 **đã được commit trong commit MỐC 102+103** — xem mục «MỐC 102 · MỐC 103» phía trên.
 Danh sách cũ ở đây chỉ là hệ quả của phép đo sai, KHÔNG phải việc còn tồn.
+
+---
+
+# 📦 COMMIT + PUSH + MERGE VÀO `unity` (29/09/2026 — user yêu cầu «push và merge vào unity»)
+
+## COMMIT
+```
+acb28ae  feat: MOC 102 (ngach/bac/gia han HD lao dong) + MOC 103 (menu Review HD)
+         author  : DSH Agent <dsh@vntech.local>
+         so file : 30 file (18 sửa + 12 mới)
+         nguồn   : b08de4f
+```
+
+## 30 FILE TRONG COMMIT
+```
+📄 MỚI (12)
+   app/screens/ContractReviewScreen.tsx
+   drizzle/0314_hop_dong_lao_dong_ngach_bac_gia_han_lan.sql
+   drizzle/0315_review_hop_dong.sql
+   drizzle/0320_phase_gd_moc_102_hop_dong_lao_dong_ngach_bac_gia__identity.sql
+   drizzle/0321_phase_gd_moc_103_review_h_moc_106_tab_ong_nhat_identity.sql
+   drizzle/0322_phase_gd_moc_103_review_hd_moc_106_tab_dong_nhat_identity.sql
+   drizzle/0323_phase_gd_moc_103_review_hd_them_modulekey_menu_co_identity.sql
+   drizzle/0324_phase_gd_moc_103_review_hd_sua_import_appdata_identity.sql
+   java-backend/application/.../port/out/ContractReviewStore.java
+   java-backend/application/.../service/ContractReviewUseCase.java
+   java-backend/infrastructure/.../persistence/ContractReviewStoreAdapter.java
+✏️ SỬA (18)
+   app/page.tsx · app/globals.css · app/screens/LaborScreen.tsx
+   lib/ui-shared.tsx · lib/menu-helpers.ts · lib/vntech-identity-data.mjs
+   java-backend/application/.../port/out/HrStore.java
+   java-backend/application/.../service/HrManagementUseCase.java
+   java-backend/application/.../rbac/ActionRbacRegistry.java
+   java-backend/infrastructure/.../persistence/HrStoreAdapter.java
+   java-backend/infrastructure/.../persistence/BootstrapDataAdapter.java
+   java-backend/web/.../config/ApplicationBeansConfig.java
+   java-backend/web/.../controller/SystemController.java
+   docs/dsh-state/CHECKLIST.md
+   VNTECH_FINGERPRINT.json · VNTECH_FULL_W2_ID.txt · VNTECH_PACKAGE_ID.txt
+   VNTECH_PRODUCT_IDENTITY.txt · tsconfig.tsbuildinfo
+```
+
+## PUSH + MERGE
+```
+1. git push origin unity-p2-full-20260920
+   lần 1: fatal: unable to access … Could not resolve host: github.com   (DNS tạm hỏng)
+   lần 2: ✅ b08de4f..acb28ae  unity-p2-full-20260920 -> unity-p2-full-20260920
+2. Kiểm tra quan hệ 2 nhánh TRƯỚC khi merge:
+   · origin/unity -> acb28ae : 1 commit cần thêm
+   · acb28ae -> origin/unity : 0 commit   (unity KHÔNG có gì mà nhánh kia thiếu)
+   · git merge-base --is-ancestor origin/unity acb28ae = True  ⇒ FAST-FORWARD được
+3. ✅ git push origin acb28ae:unity   ⇒ b08de4f..acb28ae  acb28ae -> unity
+4. XÁC MINH SAU CÙNG (git fetch origin rồi git log):
+   · origin/unity-p2-full-20260920 = acb28ae
+   · origin/unity                  = acb28ae
+   ⇒ HAI NHÁNH TRÙNG NHAU, KHÔNG PHÁ LỊCH SỬ (không dùng --force).
+```
+
+## 📌 BÀI HỌC
+```
+· TRƯỚC khi merge phải đo `git rev-list --count A..B` và `B..A` — nếu B..A = 0 thì
+  FAST-FORWARD, KHÔNG cần --force, KHÔNG phá lịch sử. Chỉ dùng --force-with-lease khi
+  thật sự phân kỳ.
+· `Could not resolve host: github.com` là lỗi DNS TẠM THỜI — kiểm `Resolve-DnsName`
+  rồi thử lại, KHÔNG kết luận «mất quyền push».
+· File rác tạm (`fix.mjs`, `_ct.txt`) phải XOÁ trước khi `git add`; ảnh chứng cứ
+  (`shot-labor-m102.png`) giữ ngoài commit, KHÔNG `git add -A` mù.
+```
