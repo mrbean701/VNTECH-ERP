@@ -1781,3 +1781,22 @@ container với bản kia không?» — câu trả lời là cách sửa rẻ v�
 **Thứ tự chuẩn khi USER đưa ảnh màn hình:** đọc ảnh → đo lại bằng công cụ (ở đây là trích rule
 CSS) → xác định khác biệt nằm ở cấu trúc hay ở style → sửa theo đúng tầng đó. Suy đoán từ
 màu sắc trong ảnh đã từng dẫn tới chẩn đoán sai (xem D-053).
+
+## D-057 — KIỂM TRA KÝ TỰ HỎNG BẰNG NODE, ĐỪNG TIN POWERSHELL (01/10/2026)
+
+Khi commit `docs/36_KIEM_THU_ALPHA_THEO_BO_PHAN_CHUYEN_MON.md`, lệnh PowerShell
+`[regex]::Matches($t,[char]0xFFFD)` báo **2 ký tự hỏng** ở dòng 69 (trong `chứng từ`).
+Nếu tin ngay và sửa, tài liệu của user sẽ bị hỏng thật.
+
+Đọc lại bằng Node cho kết quả **ngược lại**:
+- `toString("utf8")` → **0** FFFD
+- `chứng từ` = `U+0063 U+0068 U+1EE9 U+006E U+0067 U+0020 U+0074 U+1EEB` — nguyên vẹn.
+
+⇒ **FFFD trong PowerShell là artefact của bộ giải mã console, không phải hư hỏng trong file.**
+
+**Bài học (mở rộng D-050):** công cụ đo sai sẽ dẫn tới "sửa" sai và làm hỏng tài liệu thật.
+Trước khi sửa một tệp người dùng đã tạo, **phải xác nhận bằng hai đường độc lập** — ở đây là
+Node đọc raw buffer. Không bao giờ chạy lệnh sửa hàng loạt chỉ vì một công cụ báo lỗi.
+
+Cùng nguyên tắc với D-053 (suy đoán từ màu trong ảnh) và với lần quét scanner mà lỗi bị nuốt:
+**đo sai rồi hành động còn tệ hơn không hành động.**

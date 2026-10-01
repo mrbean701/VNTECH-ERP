@@ -3721,3 +3721,17 @@ ESLint có quét vì nằm trong repo. Đã xoá cùng 112 mục file tạm ⇒ 
 - [x] Ghi `D-056` + cập nhật 4 tài liệu dsh-state
 
 ⛔ Không tạo migration mới. **Không commit, không push.**
+
+## COMMIT + PUSH + MERGE VAO NHANH `unity` (01/10/2026) — **DONE**
+- [x] Rà `git status`: 43 sửa · 7 thêm mới · 5 xoá — **không có tệp rác**
+- [x] Quét secret trong diff: 1 khoảng khớp, xác minh là credential **dev** đã ghi sẵn trong 5 tệp test cũ ⇒ an toàn
+- [x] Chia thành **6 commit** theo nhóm mạch lạc thay vì 1 commit tổm
+- [x] Loại `tsconfig.tsbuildinfo` khỏi chỉ mục theo dõi + thêm `*.tsbuildinfo` vào `.gitignore`
+      (cache build chặn `git checkout`: *"Your local changes would be overwritten"*)
+- [x] Push `unity-p2-full-20260920`
+- [x] Kiểm tra quan hệ nhánh **trước khi merge**: merge-base == `origin/unity` ⇒ **fast-forward thuần**
+- [x] `git merge --ff-only` vào `unity` (exit 0) rồi push `unity`
+- [x] Cả 4 nhánh cùng ở `4d8d7b0`; working tree sạch; `verify:fingerprint` **ĐẠT**
+- [x] Tài liệu `docs/36_...` (472 dòng) bị bỏ sót — quét lại và commit
+- [x] ⭐ `docs/36_...` báo 2 ký tự hỏng do **artefact PowerShell**; xác nhận Node cho **0**
+      ⇒ **KHÔNG sửa**, tránh hỏng thật tài liệu của user. Ghi `D-057`.
