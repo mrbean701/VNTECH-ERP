@@ -58,7 +58,7 @@ Day la SUA HOP DONG THEO YEU CAU, KHONG phai sua de «lam xanh test».
 **Khuyen nghi:** ③ hoac ①. Phuong an ② la THEM NGHIEP VU MOI, nam ngoai pham vi request hien tai.
 
 **Ghi chu:** quyet dinh nay **KHONG chan** 3 nut kia ⇒ trien khai 3 nut truoc, hoi phan Kho sau.
-`OUT-OF-SCOPE`: neu chon ② thì ghi vao \`CHECKLIST.md\` lam viec rieng.
+\`OUT-OF-SCOPE\`: neu chon ② thì ghi vao \`CHECKLIST.md\` lam viec rieng.
 
 ---
 
