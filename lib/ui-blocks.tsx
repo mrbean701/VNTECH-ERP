@@ -14,7 +14,12 @@ import { ReactNode } from "react";
 const FileUpload = AttachmentPanel;
 
 
-function BaseModal({ title, note, close, children }: { title: string; note: string; close: () => void; children: ReactNode }) { return <div className="overlay modal-overlay" onMouseDown={(event) => event.target === event.currentTarget && close()}><section className="modal"><header><div><h2>{title}</h2><p>{note}</p></div><button type="button" onClick={close}>×</button></header>{children}</section></div>; }
+// MỐC 120 — USER 01/10/2026: «Xóa dòng note ghi mốc 39 ở modal sửa tài khoản».
+// `note` trước đây BẮT BUỘC (`note: string`) và luôn render `<p>{note}</p>` ⇒ chỉ cần bỏ
+// thuộc tính là TypeScript lỗi, còn truyền `note=""` lại để lại một `<p>` rỗng ăn margin.
+// ⇒ Cho `note` thành tuỳ chọn và chỉ render khi có nội dung. 46 nơi gọi `BaseModal` (34 chỗ
+// truyền `note`) không bị ảnh hưởng vì tương thích ngược.
+function BaseModal({ title, note, close, children }: { title: string; note?: string; close: () => void; children: ReactNode }) { return <div className="overlay modal-overlay" onMouseDown={(event) => event.target === event.currentTarget && close()}><section className="modal"><header><div><h2>{title}</h2>{note&&<p>{note}</p>}</div><button type="button" onClick={close}>×</button></header>{children}</section></div>; }
 
 export {
   BaseModal,

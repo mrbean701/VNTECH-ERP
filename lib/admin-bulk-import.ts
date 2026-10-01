@@ -133,7 +133,40 @@ const PROJECT_ALIASES = {
 
 type AliasMap = Record<string, readonly string[]>;
 
-function findHeader(rows: string[][], aliases: AliasMap, requiredKeys: string[]) {
+// MỐC 114 (USER 01/10/2026) — «phần nào có tiếng Việt phải viết có dấu».
+// `USER_ALIASES` / `PROJECT_ALIASES` CỐ TÌNH viết KHÔNG dấu vì chúng là KHOÁ khớp, đối chiếu
+// sau `normalize("NFD")` bỏ dấu — sửa có dấu ở đó sẽ hỏng luôn việc dò tiêu đề.
+// Nhưng thông báo lỗi lại đưa THẲNG giá trị alias ra cho người dùng đọc ⇒ lỗi hiện ra là
+// «File phải có các cột: Ho va ten, Ten dang nhap».
+// ⇒ Tách 2 lớp: khoá khớp (không dấu) + nhãn hiển thị (CÓ dấu, bảng dưới).
+const USER_LABELS: Record<string, string> = {
+  employeeCode: "Mã nhân viên",
+  fullName: "Họ và tên",
+  username: "Tên đăng nhập",
+  password: "Mật khẩu",
+  email: "Email công ty",
+  department: "Phòng / Bộ phận",
+  role: "Mã chức danh",
+  projectCodes: "Mã dự án",
+  warehouseCodes: "Mã kho",
+  grantSpec: "Ngoại lệ quyền cấp thêm",
+  revokeSpec: "Ngoại lệ quyền thu hồi",
+  status: "Trạng thái",
+};
+
+const PROJECT_LABELS: Record<string, string> = {
+  code: "Mã dự án",
+  name: "Tên dự án",
+  warehouseCode: "Mã kho",
+  warehouseName: "Tên kho",
+  contractNo: "Số hợp đồng",
+  contractName: "Tên gọi hợp đồng",
+  startDate: "Ngày bắt đầu",
+  plannedEndDate: "Dự kiến kết thúc",
+  status: "Trạng thái",
+};
+
+function findHeader(rows: string[][], aliases: AliasMap, requiredKeys: string[], displayLabels: Record<string, string> = {}) {
   let best = { index: -1, indexes: {} as Record<string, number>, score: -1 };
   rows.forEach((row, rowIndex) => {
     const headers = row.map(normalized);
@@ -146,6 +179,9 @@ function findHeader(rows: string[][], aliases: AliasMap, requiredKeys: string[])
   });
   if (best.index < 0) {
     const requiredLabels = requiredKeys.map((key) => {
+      // Ưu tiên nhãn CÓ DẤU trong `displayLabels`; chỉ lùi về alias khi chưa có nhãn.
+      const known = displayLabels[key];
+      if (known) return known;
       const alias = aliases[key]?.[0] ?? key;
       return alias.replace(/\b\w/g, (letter) => letter.toUpperCase());
     });
@@ -183,7 +219,7 @@ function canonicalSet(values?: Iterable<string>) {
 }
 
 export function mapUserBulkSheet(rows: string[][], options: UserMapOptions = {}) {
-  const { index: headerIndex, indexes } = findHeader(rows, USER_ALIASES, ["fullName", "username", "role"]);
+  const { index: headerIndex, indexes } = findHeader(rows, USER_ALIASES, ["fullName", "username", "role"], USER_LABELS);
   const existingUsernames = canonicalSet(options.existingUsernames);
   const roleCodes = canonicalSet(options.roleCodes);
   const organizationCodes = canonicalSet(options.organizationCodes);
@@ -251,7 +287,7 @@ export function mapUserBulkSheet(rows: string[][], options: UserMapOptions = {})
 }
 
 export function mapProjectBulkSheet(rows: string[][]) {
-  const { index: headerIndex, indexes } = findHeader(rows, PROJECT_ALIASES, ["code", "name"]);
+  const { index: headerIndex, indexes } = findHeader(rows, PROJECT_ALIASES, ["code", "name"], PROJECT_LABELS);
   const imported: ProjectBulkRow[] = [];
   const errors: string[] = [];
   const seenCodes = new Map<string, number>();

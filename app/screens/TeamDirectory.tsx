@@ -455,13 +455,18 @@ function TeamDirectory({ data, action, permission }: TeamDirectoryProps) {
           <Kpi icon="TT" label="Trạng thái" value={Number(detail.active ?? 1) === 0 ? TEAM_STOPPED_LABEL : TEAM_ACTIVE_LABEL} note={Number(detail.active ?? 1) === 0 ? "Không còn nhận việc" : "Đang nhận cấp phát vật tư"} tone={Number(detail.active ?? 1) === 0 ? "red" : "green"} />
         </div>
         <section className="card">
-          <CardHead title="Thông tin tổ đội" note="Mọi dòng ghi rõ NGUỒN THẬT (bảng.cột) — không suy diễn" />
-          <div className="table-wrap"><table className="baseline-table"><thead><tr><th>Hạng mục</th><th>Giá trị</th><th>Nguồn</th></tr></thead><tbody>
-            <tr><td>Mã tổ đội</td><td><strong className="code">{detail.code}</strong></td><td><small>teams.code</small></td></tr>
-            <tr><td>Tên tổ đội</td><td>{detail.name}</td><td><small>teams.name</small></td></tr>
-            <tr><td>Hạng mục</td><td>{detail.trade || "—"}</td><td><small>teams.trade</small></td></tr>
-            <tr><td>Tổ trưởng</td><td>{leader?.fullName || <span className="muted">{NO_SOURCE_TEXT}<small> · teams.leader_user_id = {String(detail.leaderUserId || "NULL")} không tra được trong staffDirectory/users</small></span>}</td><td><small>teams.leader_user_id → users.full_name</small></td></tr>
-            <tr><td>Trạng thái</td><td><StatusBadge value={Number(detail.active ?? 1) === 0 ? TEAM_STOPPED_LABEL : TEAM_ACTIVE_LABEL} /></td><td><small>teams.active</small></td></tr>
+          {/* MỐC 116 (user 01/10) — BỎ CỘT «NGUỒN». Cột này in tên cột DB thô
+              (`teams.code`, `teams.trade`, `teams.leader_user_id → users.full_name`) — thứ CHỈ ĐỂ
+              DEV TEST, không phải thông tin nghiệp vụ ⇒ không hiện cho người dùng.
+              ⛔ KHÔNG đụng vào `teamDetailTabs()[].source`: đó là DỮ LIỆU, `tests/tm03-team-detail-tabs.test.mjs`
+              dòng 55-69 kiểm từng tab phải khai NGUỒN THẬT. Chỉ gỡ phần RENDER. */}
+          <CardHead title="Thông tin tổ đội" note="Thông tin lấy trực tiếp từ hồ sơ tổ đội đang được chọn." />
+          <div className="table-wrap"><table className="baseline-table"><thead><tr><th>Hạng mục</th><th>Giá trị</th></tr></thead><tbody>
+            <tr><td>Mã tổ đội</td><td><strong className="code">{detail.code}</strong></td></tr>
+            <tr><td>Tên tổ đội</td><td>{detail.name}</td></tr>
+            <tr><td>Hạng mục</td><td>{detail.trade || "—"}</td></tr>
+            <tr><td>Tổ trưởng</td><td>{leader?.fullName || <span className="muted">{NO_SOURCE_TEXT}</span>}</td></tr>
+            <tr><td>Trạng thái</td><td><StatusBadge value={Number(detail.active ?? 1) === 0 ? TEAM_STOPPED_LABEL : TEAM_ACTIVE_LABEL} /></td></tr>
           </tbody></table></div>
         </section>
         <section className="card">

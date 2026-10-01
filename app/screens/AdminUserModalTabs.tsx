@@ -36,7 +36,10 @@ export function AdminUserModalTabs({ data, active, onChange }: {
   const canAccess = isAdmin || hasAdminTab(data, USER_TAB_06);
 
   return (
-    <div className="project-scope-tabs" role="tablist" aria-label="user-admin-tabs" data-vntech="user-admin-tabs">
+    // MỐC 115 — thêm `user-admin-tabs`: dải thẻ NÀY nằm trong modal nên không thuộc scope
+    // `.project-management`/`.work-center`/`.team-management` của `project-scope-tabs`, chỉ nhận
+    // rule chung `[role="tablist"]` (`flex: 0 0 auto`) ⇒ 2 thẻ co theo độ dài chữ, lệch nhau rõ.
+    <div className="project-scope-tabs user-admin-tabs" role="tablist" aria-label="user-admin-tabs" data-vntech="user-admin-tabs">
       <button
         type="button"
         role="tab"

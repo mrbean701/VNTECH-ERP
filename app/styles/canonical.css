@@ -1127,15 +1127,53 @@ thead th {
   overflow-x: auto;
 }
 .edm-tabs button {
+  /* MỐC 115 — user 01/10: «chỉnh kích thước các tab sao cho cân đối và bằng nhau … nhưng vẫn
+     phải hiển thị đầy đủ thông tin».
+     Trước đây nút KHÔNG có width ⇒ mỗi tab co theo độ dài nhãn ⇒ «Dự án tham gia» (13 ký tự)
+     rộng hơn hẳn «Kho» (3 ký tự), nhìn lệch.
+     `flex: 1 1 auto` (KHÔNG phải `1 1 0`): basis `auto` vẫn giữ độ rộng tự nhiên nên flex-wrap
+     còn xuống hàng được khi màn hẹp, còn phần dư của hàng được chia ĐỀU cho các tab ⇒ bằng nhau. */
+  flex: 1 1 auto;
+  min-width: 0;
+  justify-content: center;
   border: 0; background: transparent; cursor: pointer;
-  padding: var(--vt-space-3) var(--vt-space-4);
+  padding: var(--vt-space-3) var(--vt-space-2);
   font-size: calc(var(--vt-fs-2xs) * var(--user-font-scale, 1));
   font-weight: var(--vt-fw-medium); color: var(--vt-c-muted);
-  border-bottom: 2px solid transparent; white-space: nowrap;
+  border-bottom: 2px solid transparent; white-space: normal;
+  text-align: center; line-height: 1.25; overflow-wrap: anywhere;
   display: inline-flex; align-items: center; gap: var(--vt-space-2);
 }
 .edm-tabs button:hover { color: var(--vt-c-accent); }
 .edm-tabs button.is-active { color: var(--vt-c-accent); border-bottom-color: var(--vt-c-accent); font-weight: var(--vt-fw-semibold); }
+/* Nhãn được bọc riêng nên có thể xuống dòng mà badge vẫn nằm giữa theo chiều dọc. */
+.edm-tab-label { min-width: 0; }
+
+/* MỐC 115 — dải 2 thẻ của modal *Sửa tài khoản* / *Phân quyền* (`AdminUserModalTabs`). ⛔ **ĐÃ HIỆU CHÍNH Ở MỐC 119b** (dải thẻ không còn giãn hết bề ngang).
+   Nhãn lệch dài quá đổi (13 vs 30 ký tự) nên phải chia đều hàng, không cắt chữ. */
+/* MỐC 119b — user 01/10/2026 (nguyên văn): «Thiết kế các tab trong modal giống như modal hồ sơ
+   nhân sự chi tiết của menu hồ sơ nhân sự các tab của modal có thể sắp xếp thành 1 dải ngang giống
+   như tabbar trong modal nhìn rất đẹp.»
+   ⛔ SỬA LẠI quyết định MỐC 115 cho riêng dải thẻ này: MỐC 115 cho `flex: 1 1 auto` + `white-space: normal`
+      nên 2 thẻ giãn hết bề ngang thành hai khối to (thẻ «Phân quyền công việc / Chức năng» chiếm ~2/3
+      bề ngang modal) — đúng cái anh gọi là xấu.
+   ✅ Nay về `flex: 0 0 auto` + `white-space: nowrap`: thẻ ôm sát nhãn, xếp thành MỘT dải ngang — y hệt
+      dải 5 thẻ của modal «Hồ sơ nhân sự chi tiết» (`app/page.tsx` `USER_PROFILE_TABS`, cùng class
+      `project-scope-tabs`) ⇒ KHÔNG phát minh giao diện mới, chỉ cho nó đồng nhất với tham chiếu.
+   ⛔ KHÔNG đụng `.edm-tabs` (dải thẻ modal chi tiết dự án): `flex: 1 1 auto` chia đều ở đó là CỐ Ý
+      theo yêu cầu MỐC 115 khác — giữ nguyên.
+   ✅ `overflow-x: auto` + `text-overflow: ellipsis` ⇒ màn hẹp vẫn cuộn ngang, không đẩy khung (MT3 §IV). */
+.user-admin-tabs { display: flex; flex-wrap: nowrap; gap: 4px; align-items: stretch; overflow-x: auto; }
+.user-admin-tabs > button {
+  flex: 0 0 auto;
+  max-width: 100%;
+  justify-content: center;
+  text-align: center;
+  white-space: nowrap;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .edm-tab-badge {
   font-size: calc(var(--vt-font-min) * var(--user-font-scale, 1));
   background: var(--vt-c-surface-3); color: var(--vt-c-muted);
@@ -1249,3 +1287,31 @@ thead th {
 .attachment-row>a{overflow:hidden!important}
 .attachment-row>a>div{min-width:0!important}
 .attachment-row>a>div>strong{display:block!important;max-width:100%!important;overflow-wrap:anywhere!important;word-break:break-word!important}
+
+/* MỐC 120 — USER 01/10/2026 (nguyên văn):
+     1) «Xóa dòng note ghi mốc 39 ở modal sửa tài khoản»
+     2) «tab Phân quyền công việc / chức năng không cuộn được cả tab mà chỉ cuộn được mỗi
+        ma trận phân quyền nên rất khó xem được hết nội dung.»
+     3) «tab phân quyền công việc / chức năng của modal sửa tài khoản dùng chung với modal
+        phân quyền của tab 6. phân quyền người dùng, hay sửa lại giao diện cho 2 tab này giống
+        nhau hoặc có thể kế thừa - dùng chung giao diện.»
+
+   Nguyên nhân (1)-(3) KHÔNG nằm ở component: cả hai modal đã dùng chung
+   `PermissionAccessPanel` từ MỐC 117. Chúng lệch nhau vì CẤU TRÚC JSX:
+     · `UserAccessModal` (tab 6) bọc panel trong `<div className="modal-body">`;
+     · `UserEditModal`  (thẻ «Phân quyền công việc / chức năng») đặt panel NGOÀI nó.
+   ⇒ panel ngoài `modal-body` mất padding `18px 20px!important`, mất vùng cuộn của modal,
+     và mất luôn `.drawer-section h3, .modal-body h3 { color:#183451!important; font-weight:730!important }`
+     ⇒ tiêu đề hiện NHẠT, không đậm, sát mép trái (đúng như ảnh USER gửi).
+   Đã sửa cấu trúc trong `app/page.tsx` (MỐC 120). Block dưới đây chỉ xử lý (2). */
+
+/* (2) Nới `.table-wrap` của ma trận: `.modal .table-wrap` bị ép `max-height:min(58vh,640px)`
+   ⇒ lồng hai vùng cuộn (cuộn trong bảng + cuộn modal), rất khó xem hết. Ở đây bỏ giới hạn
+   chiều cao để `.modal-body` CUỘN TOÀN BỘ thẻ. Nhờ vậy tiêu đề cột vẫn dính khi cuộn vì
+   `.table-wrap > table > thead > tr > th { position:sticky; top:0 }` bám theo vùng cuộn
+   gần nhất, nay là `.modal-body`. Class `.embedded-permission-body` chỉ do
+   `PermissionAccessPanel` dùng ⇒ không ảnh hưởng bảng nào khác. */
+.embedded-permission-body .table-wrap {
+  max-height: none;
+  overflow: visible;
+}

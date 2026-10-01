@@ -38,11 +38,23 @@ export function normalizePermissionCaps(
 
 export type PermissionEntry = { kind: "group" | "subgroup" | "module"; key: string; label: string; module?: Row };
 
-export default function PermissionMatrix({ entries, state, onToggle, expiryFor, capabilities = PERMISSION_CAPABILITIES }: {
+/** MỐC 112 — `<input type="date">` cần đúng `YYYY-MM-DD`, còn DB trả `2026-12-31T00:00:00Z`. */
+function toDateInputValue(raw: unknown): string {
+  if (!raw) return "";
+  const s = String(raw);
+  return /^\d{4}-\d{2}-\d{2}/.test(s) ? s.slice(0, 10) : "";
+}
+
+export default function PermissionMatrix({ entries, state, onToggle, expiryFor, expiryEditable, capabilities = PERMISSION_CAPABILITIES }: {
   entries: PermissionEntry[];
   state: PermissionState;
   onToggle: (moduleKey: string, cap: PermissionCapability, value: boolean) => void;
   expiryFor?: (moduleKey: string) => unknown;
+  // MỐC 112 — cột «Hết hạn» trước đây CHỈ ĐỌC (một `<span>`), trong khi cả `UserEditModal`
+  // lẫn `UserAccessModal` đều đọc `form.get(`expires-${key}`)` ⇒ LUÔN ra `null` ⇒ không bao
+  // giờ có gì để lưu. Bật cờ này để render ô nhập mang `name` (điều khiển bằng `FormData`,
+  // khỏi cần useState — đúng cách các ô khác trong modal hoạt động).
+  expiryEditable?: boolean;
   capabilities?: PermissionCapability[];
 }) {
   return <div className="table-wrap permission-matrix-wrap" data-vntech="permission-matrix">
@@ -85,7 +97,15 @@ export default function PermissionMatrix({ entries, state, onToggle, expiryFor, 
                 />
               </td>
             ))}
-            <td>{expiryFor ? <span className="muted">{String(expiryFor(moduleKey) ?? "—")}</span> : null}</td>
+            <td>{expiryEditable
+              ? <input
+                  type="date"
+                  name={`expires-${moduleKey}`}
+                  aria-label={`Hết hạn · ${entry.label}`}
+                  title="Để trống = không hạn."
+                  defaultValue={toDateInputValue(expiryFor?.(moduleKey))}
+                />
+              : expiryFor ? <span className="muted">{String(expiryFor(moduleKey) ?? "—")}</span> : null}</td>
           </tr>;
         })}
       </tbody>

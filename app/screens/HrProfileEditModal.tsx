@@ -31,7 +31,7 @@ export default function HrProfileEditModal({ data, row, close, submit }: {
 
   const userId = String(row.userId ?? row.id);
   const fullName = String(row.fullName ?? hr.fullName ?? "");
-  // MỐC 58-1 — sửa TẤT CẢ thông tin. Trường tài khoản (mã NV · t��n đăng nhập · phòng ban)
+  // MỐC 58-1 — sửa TẤT CẢ thông tin. Trường tài khoản (mã NV · tên đăng nhập · phòng ban)
   // ⛔ MỐC 101 — BUG-02 (S1): CHỈ ROLE `admin` mới gọi được `update_user`.
   //   `UserManagementUseCase.java:104` → `rbac.requireRole(..., List.of("admin"))`.
   //   ⛔ Trước đây mở khoá cho `admin_tab_01` ⇒ người có Tab 01 nhưng không phải admin
@@ -40,10 +40,10 @@ export default function HrProfileEditModal({ data, row, close, submit }: {
   //   ✅ Sửa: khoá đúng theo hợp đồng backend = chỉ `role === "admin"`.
   //      (Quyền `admin_tab_01` là quyền SỬA TÀI KHOẢN, cần `save_user_access` — xem MỐC 48.)
   const isAdminRole = String((data.user as Row | undefined)?.role ?? "") === "admin";
-  // MOC 103 (user 29/09) — mo khoa TOAN BO modal Sua ho so.
-  // Backend `update_user` da khai `admin_tab_01` (ActionRbacRegistry, canEdit) nen nguoi co quyen
-  // Tab 01 VAN SUA DUOC ma NV / ten dang nhap / ho ten / email / phong-ban.
-  // ⛔ Chi ADMIN doi duoc VAI TRO (backend chan de chong leo thang dac quyen — xem UserManagementUseCase:114).
+  // MỐC 103 (user 29/09) — mở khóa TOÀN BỘ modal Sửa hồ sơ.
+  // Backend `update_user` đã khai `admin_tab_01` (ActionRbacRegistry, canEdit) nên người có quyền
+  // Tab 01 VẪN SỬA ĐƯỢC mã NV / tên đăng nhập / họ tên / email / phòng-ban.
+  // ⛔ Chỉ ADMIN đổi được VAI TRÒ (backend chặn để chống leo thang đặc quyền — xem UserManagementUseCase:114).
   const canEditAccount = true;
 
   async function save(event: FormEvent<HTMLFormElement>) {

@@ -19,8 +19,21 @@ function modulePermission(data: AppData, key: ModuleKey) {
 }
 
 function roleBase(user: Row) { return String(user.roleBase || user.role || ""); }
+
+/** MỐC 118 — một quyền BẤT KỲ (không nhất thiết phải là `canView`) đã được cấp hay chưa. */
+function hasAnyCapability(perm: {
+  canView?: boolean; canUse?: boolean; canCreate?: boolean; canEdit?: boolean; canApprove?: boolean; canExport?: boolean;
+}) {
+  return Boolean(perm.canView || perm.canUse || perm.canCreate || perm.canEdit || perm.canApprove || perm.canExport);
+}
+
+/** Khoá nhóm menu chứa toàn bộ màn Quản trị hệ thống (khớp `menu_group_catalog.group_key`). */
+const SYSTEM_ADMIN_GROUP_KEY = "system_admin";
+
 export {
+  hasAnyCapability,
   isAdminUser,
   modulePermission,
   roleBase,
+  SYSTEM_ADMIN_GROUP_KEY,
 };

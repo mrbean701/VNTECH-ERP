@@ -28,6 +28,21 @@ const REPORT_PANEL = read("app/screens/ErrorReportAdminPanel.tsx");
 const USER_USECASE = read("java-backend/application/src/main/java/com/vntech/erp/application/service/UserManagementUseCase.java");
 const REPORT_USECASE = read("java-backend/application/src/main/java/com/vntech/erp/application/service/ErrorReportUseCase.java");
 const REGISTRY = read("java-backend/application/src/main/java/com/vntech/erp/application/rbac/ActionRbacRegistry.java");
+const CONTROLLER = read("java-backend/web/src/main/java/com/vntech/erp/web/controller/SystemController.java");
+
+// ⛔ MỐC 109 — bỏ dòng chú thích `//` của Java TRƯỚC khi kiểm, nếu không thì chính
+//    chú thích giải thích lỗi cũ (có nhắc `requireRequireAdmin`) sẽ làm phép kiểm đỏ oan.
+const stripJavaComments = (src) => src.replace(/^[ \t]*\/\/.*$/gm, "");
+
+// ⛔ Cắt ĐÚNG MỘT nhánh `case` — dùng mốc `case "` kế tiếp, KHÔNG dùng độ dài cố định:
+//    `case "update_user"` chỉ cách `case "set_user_status"` vài dòng, cắt 600 ký tự sẽ
+//    tràn sang nhánh sau (nhánh đó dùng `requireRequireAdmin` hợp lệ) ⇒ đỏ OAN.
+const caseBlock = (code, name) => {
+  const a = code.indexOf(`case "${name}" ->`);
+  if (a < 0) return "";
+  const b = code.indexOf('case "', a + 10);
+  return code.slice(a, b < 0 ? a + 800 : b);
+};
 
 // ⛔ SCHEMA THẬT của `hr_records` — nguồn sự thật cho BUG-01.
 //    Khi đổi schema phải cập nhật lại danh sách này.
@@ -144,4 +159,100 @@ test("MỐC 103 — backend phân 2 mục và cho phép nhóm chức năng rỗn
     "⛔ backend không được bắt buộc moduleKey");
   assert.match(REPORT_USECASE, /if \(moduleKey\.isEmpty\(\)\) moduleKey = null;/,
     "moduleKey rỗng phải được đổi thành null");
+});
+
+// ============================ MỐC 109 (30/09/2026) ============================
+// ⛔ LỖI THẬT ĐO ĐƯỢC: `case "update_user"` trong SystemController gọi
+//    `requireRequireAdmin(request)` — cổng chốt cứng `"admin".equals(cu.role())`.
+//    Hệ quả: người có `admin_tab_01` + `canEdit` (đúng như MỐC 103 đã khai ở registry
+//    và ở `UserManagementUseCase.requireAccountUpdateRight`) VẪN luôn nhận 403
+//    «Tài khoản không có quyền thực hiện nghiệp vụ này.» ⇒ toàn bộ MỐC 103 thành CODE CHẾT.
+//    Đo thật: probe `sec_probe_017830` (role `ksda`) + `admin_tab_01` can_edit=1 ⇒ 403.
+//    Bản sửa bỏ cổng admin-only ở controller và DỰA VÀO cổng quyền chung ở đầu `post()`
+//    (PHASE 0B) — vì vậy phép kiểm thứ hai dưới đây canh chính cổng chung đó.
+
+test("MỐC 109 — `case \"update_user\"` KHÔNG được chốt cứng role admin ở controller", () => {
+  const code = stripJavaComments(CONTROLLER);
+  const block = caseBlock(code, "update_user");
+  assert.ok(block, "phải tìm thấy nhánh `case \"update_user\"` trong SystemController");
+  assert.doesNotMatch(block, /requireRequireAdmin\(/,
+    "⛔ MỐC 109 tái phát: `update_user` lại chốt cứng ROLE admin ở controller "
+    + "⇒ người có `admin_tab_01` + `canEdit` kêu 403 dù registry đã cho phép");
+  assert.match(block, /requireCurrentUser\(request/,
+    "`update_user` phải lấy người gọi bằng `requireCurrentUser` (quyền do cổng chung ở post() gác)");
+});
+
+test("MỐC 109 — cổng quyền CHUNG ở đầu `post()` vẫn gác mọi action (nền tảng của bản sửa)", () => {
+  const code = stripJavaComments(CONTROLLER);
+  assert.match(code, /rbacService\.requireActionModule\(requireCurrentUser\(request\), action\)/,
+    "⛔ Nền tảng của MỐC 109: `post()` PHẢI gác `rbacService.requireActionModule(..., action)` "
+    + "cho MỌI action không công khai. Nếu cổng này mất thì việc bỏ `requireRequireAdmin` "
+    + "ở `update_user` sẽ mở toang thao tác cho mọi tài khoản đã đăng nhập");
+  assert.match(code, /RbacService\.PUBLIC_ACTIONS\.contains\(action\)/,
+    "cổng chung phải miễn đúng danh sách PUBLIC_ACTIONS (allowlist đóng)");
+});
+
+test("MỐC 109 — `guardRoleChange` chỉ chặn khi vai trò THẬT SỰ ĐỔI", () => {
+  // ⛔ LỖI THẬT ĐO ĐƯỢC (lớp thứ hai): modal sửa tài khoản LUÔN gửi kèm ô `role`.
+  //    guardRoleChange chặn MỌI payload CÓ `role` ⇒ người có `admin_tab_01` + `canEdit`
+  //    gửi lên `role` Y HỆT vai trò hiện tại vẫn nhận 403 «Chỉ Quản trị hệ thống…».
+  //    Đo thật: probe `sec_probe_017830` gửi `role='ksda'` (đúng vai trò đang có) ⇒ 403.
+  const guard = between(USER_USECASE, "private String guardRoleChange(", "", 1700);
+  assert.ok(guard, "phải có hàm `guardRoleChange`");
+  assert.match(guard, /String current = sv\(target, "role"\)/,
+    "phải đọc vai trò HIỆN TẠI của tài khoản đích để so sánh");
+  assert.match(guard, /equalsIgnoreCase\(trim\(current\)\)/,
+    "⛔ MỐC 109 tái phát: `guardRoleChange` chặn MỌI payload có `role` "
+    + "⇒ người có `admin_tab_01` KHÔNG BAO GIỜ sửa được tài khoản vì form luôn gửi kèm `role`");
+});
+
+// ============================ MỐC 110 (30/09/2026) ============================
+// ⛔ LỖI THẬT ĐO ĐƯỢC: nút «Báo lỗi / Góp ý» (yêu cầu của user 29/09) KHÔNG dùng được bởi
+//    bất kỳ tài khoản nào không phải admin. Registry khai
+//    `Map.entry("save_error_report", List.of())` — nghĩa CŨ của map rỗng là «không gác»,
+//    nhưng PHASE 0B (S-03) đã đổi thành MẶC ĐỊNH TỪ CHỐI (`RbacService.requireActionModule`).
+//    Đo thật: probe `sec_probe_017830` ⇒ HTTP 403 «Thao tác chưa được khai báo quyền trong hệ thống.»;
+//             admin ⇒ HTTP 200 `{"reportCode":"ER202610010757-0ECC"}`.
+//    Ý định thiết kế đã ghi ở `app/screens/ErrorReportModal.tsx:14`: «MọI user đã đăng nhập đều
+//    gửi được — action `save_error_report` KHÔNG gắc module».
+//    Số liệu từng ghi trong `RbacService` («41 admin + 5 công khai = 46») ĐÃ SAI: đo được
+//    65 khai rỗng = 38 admin + 8 công khai + **19 MỒ CÔI** (rỗng + không public + không admin).
+
+const RBAC_JAVA = read("java-backend/application/src/main/java/com/vntech/erp/application/rbac/RbacService.java");
+
+test("MỐC 110 — `save_error_report` phải gửi được bởi MỌI user đã đăng nhập", () => {
+  const rbac = stripJavaComments(RBAC_JAVA);
+  const pub = between(rbac, "PUBLIC_ACTIONS = java.util.Set.of(", ");", 1200);
+  assert.ok(pub, "phải tìm thấy danh sách PUBLIC_ACTIONS");
+  assert.match(pub, /"save_error_report"/,
+    "⛔ MỐC 110 tái phát: `save_error_report` KHÔNG nằm trong PUBLIC_ACTIONS ⇒ registry khai "
+    + "`List.of()` mà map rỗng = 403 ⇒ MỌI user không phải admin bấm «Báo lỗi / Góp ý» đều 403");
+  // PUBLIC ≠ ẨN DANH: nhánh dispatch phải còn requireCurrentUser.
+  assert.match(stripJavaComments(CONTROLLER),
+    /case "save_error_report" -> \{ requireCurrentUser\(request\);/,
+    "⛔ Vào PUBLIC_ACTIONS chỉ để BỎ CỔNG MODULE — nhánh dispatch PHẢI giữ `requireCurrentUser(request)` "
+    + "để vẫn bắt buộc đăng nhập");
+});
+
+test("MỐC 110 — đếm action MỒ CÔI QUYỀN (rỗng + không public + không admin-gated)", () => {
+  const rbac = stripJavaComments(RBAC_JAVA);
+  const reg = stripJavaComments(REGISTRY);
+  const ctrl = stripJavaComments(CONTROLLER);
+  const pubBlock = between(rbac, "PUBLIC_ACTIONS = java.util.Set.of(", ");", 1200);
+  const pub = new Set([...pubBlock.matchAll(/"([a-z0-9_]+)"/g)].map((m) => m[1]));
+  const empty = [...reg.matchAll(/Map\.entry\("([a-z0-9_]+)",\s*List\.of\(\)\)/g)].map((m) => m[1]);
+  const cases = [...ctrl.matchAll(/case "([a-z0-9_]+)" ->/g)];
+  const adminGated = new Set();
+  for (let i = 0; i < cases.length; i++) {
+    const a = cases[i].index;
+    const b = i + 1 < cases.length ? cases[i + 1].index : Math.min(a + 2000, ctrl.length);
+    if (ctrl.slice(a, b).includes("requireRequireAdmin(")) adminGated.add(cases[i][1]);
+  }
+  const orphans = empty.filter((a) => !pub.has(a) && !adminGated.has(a));
+  assert.ok(!orphans.includes("save_error_report"),
+    `⛔ MỐC 110 tái phát: \`save_error_report\` mồ côi quyền ⇒ user thường KHÔNG gửi được báo lỗi. `
+    + `Mồ côi hiện tại: ${orphans.join(", ")}`);
+  assert.ok(orphans.length <= 18,
+    `⛔ Số action MỒ CÔI QUYỀN tăng lên ${orphans.length} (đo 19, đã sửa 1 ⇒ phải ≤ 18). `
+    + `Mồ côi: ${orphans.join(", ")}`);
 });

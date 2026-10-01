@@ -89,7 +89,7 @@ function WorkItemCreateCard({ project, createWorkItem }: { project: Row; createW
   }
   function downloadWorkTemplate() {
     downloadSimpleXlsx({
-      sheetName: "Cong viec",
+      sheetName: "Công việc",
       title: "MẪU NHẬP CÔNG VIỆC / NHIỆM VỤ DỰ ÁN",
       subtitle: `Dự án ${String(project.code || "")} — điền rồi import lại để tạo hàng loạt (cùng bộ cột với form tạo).`,
       headers: ["Tiêu đề", "Mô tả", "Nhóm việc", "Người phụ trách (tên đăng nhập)", "Hạn (YYYY-MM-DD)", "Ưu tiên", "Kết quả cần đạt"],
