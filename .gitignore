@@ -83,3 +83,6 @@ tools/_live-schema.tsv
 
 # mt2chk.xml = file RAC nhi phan sinh khi kiem tra ket qua probe, khong phai ma nguon.
 mt2chk.xml
+
+# Cache bien dich cua TypeScript - file sinh ra may, KHONG dua vao kho ma.
+*.tsbuildinfo
