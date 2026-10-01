@@ -226,21 +226,37 @@ public class UserAdminStoreAdapter implements UserAdminStore {
         jdbcTemplate.update("DELETE FROM user_module_permissions WHERE user_id=? AND permission_source='department_default'", userId);
     }
 
+    // MỐC 112 — `permission_source` + `permission_expires_at` do use-case quyết định, không hard-code.
+    // ⚠️ Sửa kèm BẮT BUỘC: `ON DUPLICATE KEY UPDATE` trước đây KHÔNG cập nhật `permission_expires_at`
+    //    ⇒ dù có truyền xuống, hạn dùng cũ vẫn treo vĩnh viễn ở dòng đã tồn tại.
     @Override
     @Transactional
     public void insertDepartmentDefaultPermission(String permissionId, String userId, String moduleKey,
                                                   int canView, int canUse, int canCreate, int canEdit,
-                                                  int canApprove, int canExport, Instant now) {
+                                                  int canApprove, int canExport,
+                                                  String permissionSource, Instant permissionExpiresAt, Instant now) {
         jdbcTemplate.update("""
                 INSERT INTO user_module_permissions (id,user_id,module_key,can_view,can_use,can_create,can_edit,
                                                      can_approve,can_export,permission_expires_at,permission_source,
                                                      created_at,updated_at)
-                VALUES (?,?,?,?,?,?,?,?,?,NULL,?,?,?) ON DUPLICATE KEY UPDATE
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE
                        can_view=VALUES(can_view),can_use=VALUES(can_use),can_create=VALUES(can_create),
                        can_edit=VALUES(can_edit),can_approve=VALUES(can_approve),can_export=VALUES(can_export),
+                       permission_expires_at=VALUES(permission_expires_at),
                        permission_source=VALUES(permission_source),updated_at=VALUES(updated_at)""",
                 permissionId, userId, moduleKey, canView, canUse, canCreate, canEdit, canApprove, canExport,
-                "department_default", now, now);
+                permissionExpiresAt,
+                (permissionSource == null || permissionSource.isBlank()) ? "department_default" : permissionSource,
+                now, now);
+    }
+
+    // MỐC 112 — mở transaction bao quanh một khối ghi bất kỳ của use-case.
+    // Các lệnh bên trong đều là phương thức port khác của chính adapter này, đều `@Transactional`
+    // với propagation REQUIRED mặc định ⇒ chúng THAM GIA transaction đang mở, không tự commit.
+    @Override
+    @Transactional
+    public void runAtomically(Runnable work) {
+        work.run();
     }
 
     private Optional<Map<String, Object>> first(String sql, Object... args) {

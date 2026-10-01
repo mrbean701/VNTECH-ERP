@@ -53,9 +53,19 @@ public interface UserAdminStore {
     List<String> listActiveModuleKeys();
     List<String> activeUserIds();
     void deleteDepartmentDefaultPermissions(String userId);
+    // MỐC 112 — thêm `permissionSource` + `permissionExpiresAt`.
+    // TRƯỚC đây adapter hard-code `'department_default'` và `NULL` ⇒ cột «Hết hạn» LUÔN trống
+    // dù UI có ô nhập, và `deleteModuleOverride` (lọc `permission_source='manual_override'`)
+    // không bao giờ xoá được gì ⇒ nút «Xóa ngoại lệ cá nhân» là nút chết.
     void insertDepartmentDefaultPermission(String permissionId, String userId, String moduleKey,
                                            int canView, int canUse, int canCreate, int canEdit,
-                                           int canApprove, int canExport, Instant now);
+                                           int canApprove, int canExport,
+                                           String permissionSource, Instant permissionExpiresAt, Instant now);
+    // MỐC 112 — chạy một khối ghi trong MỘT transaction (adapter đánh dấu @Transactional).
+    // Dùng để `clearUserScopes()` + vòng chèn lại của `saveUserAccess` là NGUYÊN TỬ: trước đó mỗi
+    // lệnh là một transaction riêng ⇒ xoá xong rồi insert lỗi giữa chừng là mất trắng.
+    // KHÔNG thêm @Transactional vào use-case: module `application` cố ý không phụ thuộc Spring.
+    void runAtomically(Runnable work);
     void deleteSessionsByUser(String userId);
 
     // ---- P5: phân quyền phòng ban + cấp bậc hệ thống ----

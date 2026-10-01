@@ -108,7 +108,11 @@ public class HrStoreAdapter implements HrStore {
         jdbcTemplate.update("""
                 UPDATE labor_contracts SET user_id=?,contract_type=?,start_date=?,end_date=?,signing_date=?,
                        salary=?,note=?,image_url=?,
-                       image_updated_at=IF(?,CURRENT_TIMESTAMP,image_updated_at),
+                       -- MỐC 113 — đổi `IF(?,CURRENT_TIMESTAMP,image_updated_at)` sang `CASE WHEN`.
+                       --   `IF()` là hàm RIÊNG của MySQL; H2 (kể cả MODE=MySQL) **không có** ⇒ đo được:
+                       --   `Syntax error … expected "DEFAULT, INTERSECTS (, NOT, EXISTS, UNIQUE"` (42001-232).
+                       --   `CASE WHEN` là SQL chuẩn, chạy được trên CẢ HAI nên không phải hy sinh production.
+                       image_updated_at=CASE WHEN ?=TRUE THEN CURRENT_TIMESTAMP ELSE image_updated_at END,
                        job_rank=?,grade=?,renewal_round=?,
                        updated_at=? WHERE id=?""",
                 userId, contractType, startDate, endDate, signingDate, salary, note, imageUrl,

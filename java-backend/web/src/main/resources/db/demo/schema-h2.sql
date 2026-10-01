@@ -839,6 +839,14 @@ CREATE TABLE IF NOT EXISTS `labor_contracts` (
   `created_by` TEXT NOT NULL,
   `created_at` TIMESTAMP(3) NOT NULL,
   `updated_at` TIMESTAMP(3) NOT NULL,
+  -- MỐC 113 — 5 cột này tồn tại ở MySQL production nhưng THIẾU trong H2, khiến 5 test Java
+  -- đỏ với `Column "lc.job_rank" not found`. Nguồn: drizzle/0314 (job_rank/grade/renewal_round)
+  -- + MỐC 58-3 (image_url/image_updated_at). Thứ tự và kiểu khai báo phải khớp information_schema.
+  `image_url` TEXT NULL,
+  `image_updated_at` TIMESTAMP NULL,
+  `job_rank` VARCHAR(64) NULL,
+  `grade` VARCHAR(64) NULL,
+  `renewal_round` INT NULL,
   PRIMARY KEY (`id`),
   UNIQUE (`contract_no`)
 ) ;

@@ -377,7 +377,18 @@ public class SystemController {
                     return ResponseEntity.ok(json(Map.of("ok", true, "message", message)));
                 }
                 case "update_user" -> {
-                    AuthUseCase.CurrentUser cu = requireRequireAdmin(request);
+                    // MỐC 109 (30/09/2026) — ⛔ TRƯỚC ĐÂY dùng `requireRequireAdmin(request)` (admin-only)
+                    // ⇒ mọi tài khoản KHÔNG phải admin LUÔN nhận 403 «Tài khoản không có quyền thực hiện
+                    // nghiệp vụ này.», DÙ đã được cấp `admin_tab_01` + `canEdit`. Hệ quả: thay đổi của
+                    // MỐC 103 ở `ActionRbacRegistry` (`update_user` → `admin_tab_01`, capability `canEdit`)
+                    // và ở `UserManagementUseCase.requireAccountUpdateRight` trở thành CODE CHẾT —
+                    // frontend mở khoá modal sửa tài khoản nhưng backend luôn chặn ở cổng này.
+                    // ĐO THẬT: probe `sec_probe_017830` (role `ksda`) có `admin_tab_01`
+                    // can_view/can_use/can_edit=1 vẫn nhận 403.
+                    // NAY: cổng quyền DUY NHẤT là `rbacService.requireActionModule(...)` ở ĐẦU `post()`
+                    // (xem dòng 228-231) — đã chạy TRƯỚC switch và fail-closed cho `update_user`.
+                    // Quyền ĐỔI VAI TRÒ vẫn admin-only nhờ `UserManagementUseCase.guardRoleChange`.
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request, false);
                     String message = userManagementUseCase.updateUser(asUserPrincipal(cu), payload);
                     return ResponseEntity.ok(json(Map.of("ok", true, "message", message)));
                 }
