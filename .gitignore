@@ -91,3 +91,16 @@ mt2chk.xml
 # ⚠️ Đây là tệp tạm do Office tạo, ⛔ KHÔNG phải nội dung thật — ⛔ không commit.
 # ⭐ Thêm vào khi phát hiện 2 tệp khoá lọt vào danh sách chưa commit (BAO-CAO-TUAN + BAN-GIAO).
 ~$*
+
+# ── Thêm 06/10/2026 — RÁC SINH RA KHI CHẠY, ⛔ KHÔNG PHẢI MÃ NGUỒN ────────────────────────────────
+# ⭐ tmp-proxy.err = log SỐNG của proxy :9000. ⚠️ Tiến trình proxy GIỮ TỆP MỞ ⇒ ⛔ không xoá được
+#    trong lúc chạy. (`tmp-proxy.log` đã bị bỏ qua sẵn bởi `*.log` ở trên.)
+# ⭐ Cách chạy proxy (⚠️ phải ĐỦ CỜ, thiếu ⇒ EADDRINUSE vì mặc định là 8787/8788):
+#    node tools/cutover-proxy.mjs --port 9000 --ui-port 8787 --api-port 18081
+tmp-proxy.err
+tmp-proxy.log
+
+# ⭐ <tên>~RF<hex>.TMP = bản sao lưu tạm của trình soạn thảo khi ghi đè tệp (v.d. app/page.tsx~RF15e094c7.TMP).
+#    ⛔ Không phải mã nguồn ⇒ ⛔ không commit. ⚠️ Tệp .TMP này từng lọt vào danh sách chưa commit.
+*~RF*.TMP
+*.TMP
