@@ -28,9 +28,21 @@ export default function ErrorReportModal({ data, close, submit }: {
   const [error, setError] = useState("");
 
   // ⛔ LOẠI TRỪ module `admin` + module không có quyền xem + module đã ẩn.
+  // ⛔⛔ VÁ 06/10/2026 (GO-LIVE · BUG-20261006-002 — MỨC CAO) — **DROPDOWN RỖNG HOÀN TOÀN**.
+  //   📍 TRIỆU CHỨNG (user báo): «mục chọn nhóm chức năng trong modal báo lỗi ⛔ không hiển thị gì cả»
+  //   🔎 ĐO ĐƯỢC: `GET /api/system` (⭐ ĐÚNG cách UI gọi — ⛔ KHÔNG phải `POST {action:'bootstrap'}`)
+  //      ⇒ `data.moduleCatalog` **CÓ dữ liệu thật**, ví dụ:
+  //        `{"moduleKey":"admin_tab_01","label":"Quản trị hệ thống - Tab 01. Tài khoản",
+  //          "active":true,"sortOrder":1,"systemLocked":true}`
+  //   ⛔ NGUYÊN NHÂN GỐC: bộ lọc cũ so `String(m.active ?? 1) === "1"` ⚠️ nhưng dữ liệu trả
+  //      **`active` KIỂU BOOLEAN `true`** ⇒ `String(true)` = **`"true"`** ≠ `"1"` ⇒ ⭐ **LỌC SẠCH
+  //      TOÀN BỘ module** ⇒ ⭐ **dropdown rỗng** ✓
+  //   ✅ SỬA: chấp nhận **CẢ HAI kiểu** — `true` (boolean) **và** `"1"`/`1` — ⭐ ⛔ không đổi
+  //      hành vi cũ (⭐ module có `active="1"` vẫn qua như trước) ✓
+  const dangHoatDong = (v: unknown) => v === true || String(v ?? 1) === "1" || String(v) === "true";
   const moduleOptions = useMemo(
     () => (data.moduleCatalog ?? [])
-      .filter((m: Row) => String(m.active ?? 1) === "1")
+      .filter((m: Row) => dangHoatDong(m.active))
       .filter((m: Row) => String(m.moduleKey) !== "admin")
       .map((m: Row) => ({ key: String(m.moduleKey), label: String(m.label ?? m.moduleKey) })),
     [data.moduleCatalog],

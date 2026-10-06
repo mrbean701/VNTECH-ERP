@@ -2613,6 +2613,16 @@ function Admin({ data, open, action }: { data: AppData; open: (name: string, row
   }
   // AD-01 — nhãn 12 bước lấy từ MỘT nguồn sự thật (`ADMIN_STEP_LABELS`); bước 1 nay là «Tài khoản».
   const steps=ADMIN_STEP_LABELS;
+  // ⛔⛔ VÁ 06/10/2026 (GO-LIVE · BUG-B của BUG-20261006-001) — **KHÔNG CÓ QUYỀN THÌ ⛔ KHÔNG CLICK ĐƯỢC**.
+  //   📍 YÊU CẦU USER (nguyên văn): «BUG-B nếu không có quyền thì không click vào xem được» ✓
+  //   🔎 ĐO ĐƯỢC: action `error_reports` gắn module **`admin`** (`ActionRbacRegistry:61`) + `canView` (:352)
+  //      ⇒ tài khoản ⛔ không có module `admin` nhận **HTTP 403** ⚠️ nhưng nút bước 14 VẪN HIỆN + VẪN BẤM ĐƯỢC
+  //      ⇒ ⭐ bấm vào thấy bảng trống ⇒ **hiểu sai là «không có dữ liệu»** ✓
+  //   ✅ SỬA: dùng **helper CÓ SẴN CỦA NHÀ** `hasAdminTab(data,"admin")` (⭐ đã import sẵn ở đầu tệp)
+  //      — ⭐ nó kiểm `allModulePermissions` của **CHÍNH user hiện tại** với `canView === 1` ✓
+  //   ⚠️ VÌ SAO **KHOÁ** mà ⛔ không **ẨN**: ⭐ giữ nguyên **số thứ tự** các bước
+  //      (⭐ lọc mảng sẽ làm `index` lệch ⇒ ⛔ sai luôn các bước sau) ✓
+  const coQuyenBaoLoi = hasAdminTab(data, "admin");
   return <div className="stack admin-approved-screen baseline-screen">
     <ListToolbar
       title="PHÂN QUYỀN NGƯỜI DÙNG"
@@ -2627,7 +2637,15 @@ function Admin({ data, open, action }: { data: AppData; open: (name: string, row
         <button className="primary" onClick={()=>open("user")}>＋ Thêm người dùng</button>
       </>}
     />
-    <div className="permission-steps">{steps.map((label,index)=><button type="button" key={label} className={step===index+1?"active":""} onClick={()=>setStep(index+1)}>{index+1}&nbsp; {label}</button>)}</div>
+    <div className="permission-steps">{steps.map((label,index)=>{
+      // ⭐ BUG-B — bước 14 «Báo lỗi» CHỈ dành cho người có quyền module `admin` (xem chú thích ở `coQuyenBaoLoi`).
+      const laBuocBaoLoi = index + 1 === 14;
+      const duocXem = !laBuocBaoLoi || coQuyenBaoLoi;
+      return <button type="button" key={label} className={step===index+1?"active":""}
+        disabled={!duocXem}
+        title={duocXem ? undefined : "Chỉ tài khoản được cấp quyền xem báo lỗi mới mở được bước này"}
+        onClick={()=>{ if(duocXem) setStep(index+1); }}>{index+1}&nbsp; {label}</button>;
+    })}</div>
     {showHelp&&<div className="overlay" onMouseDown={e=>e.target===e.currentTarget&&setShowHelp(false)}><div className="modal permission-help-modal"><header><div><strong>Hướng dẫn phân quyền chuẩn</strong><p>Thiết lập theo đúng thứ tự để tránh quyền chồng chéo.</p></div><button onClick={()=>setShowHelp(false)}>×</button></header><div className="modal-body"><ol className="permission-help-list"><li><b>Nhân sự:</b> tạo tài khoản và chọn chức danh; bấm vào một dòng để xem hồ sơ chi tiết.</li><li><b>Tổ chức:</b> khai báo phòng ban, Ban chỉ huy và tổ đội theo dự án.</li><li><b>Chức danh:</b> mỗi chức danh chỉ tồn tại một bản canonical, không trùng tên.</li><li><b>Nhóm quyền:</b> gom quyền theo nghiệp vụ, không dùng quyền nền kỹ thuật ở UI chính.</li><li><b>Phạm vi:</b> giới hạn dự án và kho; backend chặn truy cập ngoài scope.</li><li><b>Workflow:</b> cấu hình bước duyệt, vai trò, AND/OR và SLA.</li><li><b>Ngoại lệ:</b> chỉ cấp cá nhân khi thật sự cần và phải có thời hạn/audit.</li></ol></div><footer className="modal-footer"><button className="primary" onClick={()=>setShowHelp(false)}>Đã hiểu</button></footer></div></div>}
     {step===1&&<div className="stack"><section className="card admin-overview-card">{bulkUserMessage&&<div className="inline-alert" style={{whiteSpace:"pre-line"}}>{bulkUserMessage}</div>}<ListToolbar
       title="DANH SÁCH TÀI KHOẢN"
@@ -2646,7 +2664,21 @@ function Admin({ data, open, action }: { data: AppData; open: (name: string, row
     {step===10&&<PersonalExceptionManager data={data} open={open} action={action}/>} 
     {step===11&&<AuditLogManager data={data}/>}
     {step===12&&<TrustLockAdmin data={data} action={action}/>}     {step===12&&<div className="stack admin-system-config"><section className="card admin-config-intro"><CardHead title="CẤU HÌNH HỆ THỐNG" note="Tập trung các tác vụ quản trị thêm/bớt/đổi tên/ẩn hiện/sắp xếp/căn chỉnh dùng chung toàn hệ thống."/><div className="admin-config-cards"><button onClick={()=>document.getElementById("config-fields")?.scrollIntoView({behavior:"smooth"})}><NavIcon name="boq"/><strong>BOQ / HĐ & Lũy kế</strong><span>Cột, Import/Export, thứ tự, cho sửa</span></button><button onClick={()=>document.getElementById("config-fields")?.scrollIntoView({behavior:"smooth"})}><NavIcon name="requests"/><strong>Phiếu đề nghị</strong><span>Đầu phiếu & dòng vật tư</span></button><button onClick={()=>document.getElementById("config-display")?.scrollIntoView({behavior:"smooth"})}><NavIcon name="admin"/><strong>Tùy chỉnh giao diện</strong><span>Font, màu, mật độ</span></button><button onClick={()=>open("email")}><NavIcon name="dept_plan_alerts"/><strong>Email & SLA</strong><span>SMTP, người nhận, thời hạn</span></button></div></section><div id="config-fields"><FormFieldConfigManager data={data} action={action}/></div><div id="config-display"><UiDisplaySettingsManager data={data} action={action}/></div><FactoryResetAdmin data={data}/><section className="card"><CardHead title="Nhật ký cấu hình hệ thống" note="Theo dõi các thay đổi gần nhất; không ghi nội dung mật khẩu."/><div className="table-wrap"><table><thead><tr><th>Thời gian</th><th>Người thực hiện</th><th>Hạng mục</th><th>Hành động</th></tr></thead><tbody>{data.audits.slice(0,30).map(row=><tr key={row.id}><td>{date(row.occurredAt)}</td><td>{row.userName||"Hệ thống"}</td><td>{row.entityType}</td><td>{row.action}</td></tr>)}</tbody></table></div></section></div>}
-    {step===14&&<ErrorReportAdminPanel data={data} submit={action} />}
+    {/* ⛔⛔ VÁ 06/10/2026 (GO-LIVE · BUG-20261006-001 — MỨC CAO) — **DÙNG SAI HÀM ⇒ LUÔN RỖNG**.
+        📍 TRIỆU CHỨNG (user báo, ⭐ đúng với MỌI tài khoản kể cả `admin`):
+           «không thấy hiển thị danh sách báo lỗi kể cả đối với tài khoản admin»
+        🔎 ĐO ĐƯỢC: ⭐ gọi THẬT `error_reports` bằng `admin` ⇒ **HTTP 200 · trả về ĐỦ 16 report** ✓
+           ⇒ ⭐ **API ĐÚNG** — lỗi nằm ở **tầng UI** ✓
+        ⛔ NGUYÊN NHÂN GỐC: `ErrorReportAdminPanel` đọc `res?.reports` từ `submit(...)`
+           ⚠️ nhưng **`action()` ⛔ KHÔNG trả payload — nó trả `undefined` khi thành công**
+           (⭐ CHÍNH NHÀ đã ghi cảnh báo này ở `page.tsx:318-319` khi làm `loadSupplierMaterialGaps`)
+           ⇒ ⭐ `res` LUÔN `undefined` ⇒ ⭐ `res?.reports ?? []` = **mảng rỗng** ⇒ ⛔ **bảng luôn trống** ✓
+        ✅ SỬA: truyền **`requestApi`** — ⭐ hàm **CÓ trả `result`** và **cùng chữ ký** `(action, payload)`
+           ⇒ ⭐ đổi **1 chỗ**, ⛔ không sửa gì trong component ✓ (⭐ `mark_error_report_resolved`
+           ở component vẫn chạy đúng vì nó ⛔ không dùng giá trị trả về) ✓
+        ⚠️ LƯU Ý: bản vá trước (thêm `.catch()` + `loadError`) vẫn CẦN GIỮ — ⭐ nó sửa việc
+           **nuốt lỗi 403 im lặng**, ⚠️ còn lỗi này là **đọc sai hàm** ⇒ **hai lỗi khác nhau** ✓ */}
+    {step===14&&<ErrorReportAdminPanel data={data} submit={requestApi} />}
     {step===13&&<section className="card notification-config-admin" data-vntech="notification-config-tab"><ListToolbar
       title="CẤU HÌNH THÔNG BÁO"
       note="Cấu hình thông báo qua Web hoặc Email. Người nhận: 1 user · nhiều user · phòng ban · dự án · toàn bộ user. Tạo/Sửa dùng modal ở task P12-02."

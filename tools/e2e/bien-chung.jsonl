@@ -6433,3 +6433,14 @@
 {"ts":"2026-10-06T02:41:27.684Z","loai":"upload","entityType":"central_return","entityId":"CRET_b6dac1c5-9f92-4a3d-ab40-3d5058973b0b","tenTep":"e2e-kiem-dem.png","status":201,"ok":true,"user":"admin"}
 {"ts":"2026-10-06T02:41:27.767Z","loai":"action","action":"receive_central_return","ok":false,"status":400,"loi":"Số liệu Transit vật lý/Contract không đủ; dừng nhận để tránh sai tồn.","nhan":"nhận KT-RET-PRJ-2026-0012","user":"admin"}
 {"ts":"2026-10-06T02:41:27.868Z","loai":"action","action":"receive_transfer_order","ok":true,"status":200,"loi":null,"nhan":"nhận TRF_05c53c78-44dd-4082-b4b9-12c7c64927cd","user":"admin"}
+{"ts":"2026-10-06T04:26:37.125Z","loai":"login","username":"admin","status":200}
+{"ts":"2026-10-06T04:26:37.171Z","loai":"upload","entityType":"central_return","entityId":"CRET_353fad35-962a-40b2-a668-3c41f4728c62","tenTep":"e2e-kiem-dem.png","status":201,"ok":true,"user":"admin"}
+{"ts":"2026-10-06T04:26:37.324Z","loai":"action","action":"receive_central_return","ok":true,"status":200,"loi":null,"nhan":"nhận KT-RET-PRJ-2026-0007","user":"admin"}
+{"ts":"2026-10-06T04:26:37.369Z","loai":"upload","entityType":"central_return","entityId":"CRET_ed56987b-b988-444e-a988-0b3fc48942b6","tenTep":"e2e-kiem-dem.png","status":201,"ok":true,"user":"admin"}
+{"ts":"2026-10-06T04:26:37.484Z","loai":"action","action":"receive_central_return","ok":true,"status":200,"loi":null,"nhan":"nhận KT-RET-PRJ-2026-0008","user":"admin"}
+{"ts":"2026-10-06T04:26:37.526Z","loai":"upload","entityType":"central_return","entityId":"CRET_6f3e1066-4b89-48cf-9f5b-2a2dad3372ac","tenTep":"e2e-kiem-dem.png","status":201,"ok":true,"user":"admin"}
+{"ts":"2026-10-06T04:26:37.639Z","loai":"action","action":"receive_central_return","ok":true,"status":200,"loi":null,"nhan":"nhận KT-RET-PRJ-2026-0009","user":"admin"}
+{"ts":"2026-10-06T04:26:37.691Z","loai":"upload","entityType":"central_return","entityId":"CRET_64f79a2d-4f4d-4dac-a45a-afd28080a0d4","tenTep":"e2e-kiem-dem.png","status":201,"ok":true,"user":"admin"}
+{"ts":"2026-10-06T04:26:37.777Z","loai":"action","action":"receive_central_return","ok":true,"status":200,"loi":null,"nhan":"nhận KT-RET-PRJ-2026-0010","user":"admin"}
+{"ts":"2026-10-06T04:26:37.832Z","loai":"upload","entityType":"central_return","entityId":"CRET_b6dac1c5-9f92-4a3d-ab40-3d5058973b0b","tenTep":"e2e-kiem-dem.png","status":201,"ok":true,"user":"admin"}
+{"ts":"2026-10-06T04:26:37.938Z","loai":"action","action":"receive_central_return","ok":true,"status":200,"loi":null,"nhan":"nhận KT-RET-PRJ-2026-0012","user":"admin"}

@@ -35,7 +35,12 @@ export default function ErrorReportAdminPanel({ data, submit }: {
   //   ⇒ ⭐ SỬA: **bắt lỗi + HIỆN THÔNG BÁO RÕ** — ⛔ không để trạng thái rỗng gây hiểu sai ✓
   const [loadError, setLoadError] = useState("");
 
-  const modules = (data.moduleCatalog ?? []).filter((m: Row) => String(m.active ?? 1) === "1");
+  // ⭐ VÁ 06/10/2026 (BUG-20261006-002) — CÙNG LỖI như `ErrorReportModal`:
+  //   bộ lọc cũ so `String(m.active ?? 1) === "1"` ⚠️ nhưng bootstrap trả **`active` BOOLEAN `true`**
+  //   ⇒ ⭐ `String(true)` = `"true"` ≠ `"1"` ⇒ lọc sạch ⇒ ⭐ tên nhóm chức năng hiện ra «—» ✓
+  //   ✅ Chấp nhận CẢ HAI kiểu (⭐ `true` boolean và `"1"`/`1`) ✓
+  const dangHoatDong = (v: unknown) => v === true || String(v ?? 1) === "1" || String(v) === "true";
+  const modules = (data.moduleCatalog ?? []).filter((m: Row) => dangHoatDong(m.active));
   const label = (key: string) => String(modules.find((m: Row) => String(m.moduleKey) === key)?.label ?? key ?? "—");
 
   async function fetchReports() {
