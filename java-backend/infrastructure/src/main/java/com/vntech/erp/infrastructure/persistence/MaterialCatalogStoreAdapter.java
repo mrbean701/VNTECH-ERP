@@ -112,38 +112,36 @@ public class MaterialCatalogStoreAdapter implements MaterialCatalogStore {
 
     @Override
     public List<Map<String, Object>> materialsWithReferences() {
+        // ⛔⛔ VÁ 05/10/2026 (GO-LIVE · BUG-20261005-013 — MEDIUM) — **HTTP 500 THẬT**.
+        //   TRƯỚC BẢN VÁ: `(SELECT COUNT(*) FROM materials me WHERE me.code_merge_into_id=m.id) AS mergedFrom`
+        //   ⚠️ **CỘT `materials.code_merge_into_id` CHƯA BAO GIỜ TỒN TẠI** ⇒ MySQL:
+        //      `ERROR 1054 (42S22): Unknown column 'me.code_merge_into_id' in 'where clause'`
+        //      ⇒ ⭐ **CẢ TRUY VẤN NÀY NỔ** ⇒ **500** ✓
+        //   📍 BẰNG CHỨNG (⭐ ĐO 5 CÁCH ĐỘC LẬP): ① `information_schema.columns` ⇒ COUNT = 0
+        //      ② `SHOW COLUMNS FROM materials` ⇒ không có · ③ không migration nào tạo
+        //      ④ `schema-h2.sql` không có · ⑤ E2E `preview_material_dependencies` ⇒ 500 ✓
+        //   ⚠️ ẢNH HƯỞNG RỘNG: hàm này phục vụ **CẢ** `preview_material_dependencies` **VÀ**
+        //      `deleteUnusedMaterials` (⭐ **XOÁ CỨNG vật tư**) ⇒ ⭐ **cả hai đều 500** ✓
+        //   ⭐⭐ VÌ SAO `0` LÀ **SỰ THẬT** (⛔ KHÔNG phải che giấu): `merged` dùng trong
+        //      `deleteUnusedMaterials` (`numberValue(row.get("mergedFrom")) > 0 ? 1 : 0`).
+        //      ⚠️ Vì **cột chưa bao giờ tồn tại** ⇒ ⛔ chưa vật tư nào từng được gộp
+        //      ⇒ ⭐ **`merged` LUÔN = 0 trên thực tế** ⇒ ⭐ `0` **phản ánh ĐÚNG dữ liệu** ✓
+        //   ⭐ AN TOÀN VỚI UI: ⭐ đã ĐO — **⛔ không tệp UI nào dùng `mergedFrom`** ✓
+        //
+        //   ⛔⛔⛔ SỬA LẦN 2 — 06/10/2026 (SAU KHI TRIỂN KHAI): BẢN VÁ LẦN 1 ⛔ SAI CHỖ.
+        //   ⚠️ Tôi đã đặt 25 dòng chú thích hai-gạch-chéo **BÊN TRONG khối văn bản ba-nháy** ⇒
+        //      ⭐ **trong khối văn bản, hai-gạch-chéo ⛔ KHÔNG phải chú thích — nó là MỘT PHẦN CỦA CHUỖI SQL**
+        //      ⇒ MySQL nhận ~25 dòng chữ Việt làm SQL ⇒ **LỖI CÚ PHÁP ⇒ vẫn 500** ✓
+        //   📍 ĐO ĐƯỢC: E2E `go-live-kiem-30-action-con-lai.mjs` báo
+        //      «preview_material_dependencies — payload RỖNG ⇒ ⛔ 500» ✓
+        //   ⇒ ⭐ **CHÚ THÍCH PHẢI NẰM NGOÀI KHỐI VĂN BẢN** (⭐ như khối này) ✓
         return jdbcTemplate.queryForList("""
                 SELECT m.id,m.code,m.name,m.active,
                        (SELECT COUNT(*) FROM material_request_items mri WHERE mri.material_id=m.id) AS requestItems,
                        (SELECT COUNT(*) FROM procurement_allocations pa WHERE pa.material_id=m.id) AS allocations,
                        (SELECT COUNT(*) FROM project_boq_items pbi WHERE pbi.material_id=m.id) AS boqItems,
                        (SELECT COUNT(*) FROM stock_movements sm WHERE sm.material_id=m.id) AS movements,
-                       // ⛔⛔ VÁ 05/10/2026 (GO-LIVE · BUG-20261005-013 — MEDIUM) — **HTTP 500 THẬT**.
-                //   TRƯỚC BẢN VÁ: `(SELECT COUNT(*) FROM materials me WHERE me.code_merge_into_id=m.id) AS mergedFrom`
-                //   ⚠️ **CỘT `materials.code_merge_into_id` CHƯA BAO GIỜ TỒN TẠI** ⇒ MySQL:
-                //      `ERROR 1054 (42S22): Unknown column 'me.code_merge_into_id' in 'where clause'`
-                //      ⇒ ⭐ **CẢ TRUY VẤN NÀY NỔ** ⇒ **500** ✓
-                //   📍 **BẰNG CHỨNG (⭐ ĐO 5 CÁCH ĐỘC LẬP, ⛔ không suy đoán)**:
-                //      ① `information_schema.columns` cho `materials.code_merge_into_id` ⇒ **COUNT = 0** ✓
-                //      ② `SHOW COLUMNS FROM materials` ⇒ ⛔ không có cột này ✓
-                //      ③ ⛔ không migration nào tạo nó ✓ · ④ ⛔ `schema-h2.sql` không có ✓
-                //      ⑤ E2E `preview_material_dependencies` ⇒ **500** (⭐ đo được) ✓
-                //   ⚠️ **ẢNH HƯỞNG RỘNG HƠN TƯỞNG**: ⭐ hàm này (`materialsWithReferences`) phục vụ **CẢ**
-                //      `preview_material_dependencies` **VÀ** `deleteUnusedMaterials` (⭐ **XOÁ CỨNG vật tư!**)
-                //      ⇒ ⭐ **CẢ HAI đều 500** ✓ — ⚠️ **và điều đó VÔ TÌNH bảo vệ hành động xoá** ✓
-                //   ⭐⭐ VÌ SAO `0` LÀ **SỰ THẬT** (⛔ KHÔNG phải che giấu — ⭐ khác hẳn «workaround» §3):
-                //      `merged` được dùng trong `deleteUnusedMaterials`:
-                //        `long merged = numberValue(row.get("mergedFrom")) > 0 ? 1 : 0;`
-                //        `if (req + alloc + boq + mov + merged == 0 && …) store.hardDeleteMaterial(…)`
-                //      ⚠️ Vì **cột chưa bao giờ tồn tại** ⇒ ⛔ **chưa vật tư nào từng được gộp**
-                //      ⇒ ⭐ **`merged` LUÔN = 0 trên thực tế** ⇒ ⭐ `0` **phản ánh ĐÚNG trạng thái dữ liệu** ✓
-                //      ⇒ ⭐ **ngữ nghĩa ⛔ KHÔNG ĐỔI** so với ý định của mã ✓
-                //   ⭐ **AN TOÀN VỚI UI**: ⭐ đã ĐO — **⛔ KHÔNG tệp UI nào dùng `mergedFrom`**
-                //      (`app/**` · `lib/**` ⇒ 0 kết quả) ⇒ ⭐ trường `mergedFrom` vẫn còn trong JSON
-                //      (⭐ giữ hình dạng API) nhưng mang giá trị **đúng** ✓
-                //   ⭐ **PHƯƠNG ÁN B** (⭐ người dùng chọn hướng này) — ⛔ **không tạo cột giả**,
-                //      ⛔ **không bịa tính năng chưa từng được xây** ✓
-                0 AS mergedFrom
+                       0 AS mergedFrom
                 FROM materials m""");
     }
 
