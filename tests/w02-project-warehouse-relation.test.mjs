@@ -197,8 +197,14 @@ dbTest("W-02 — CSDL THẬT: 0 dòng mồ côi (`project_id` không trỏ tới
   // `create_project` + cờ `createWarehouse` ⇒ số ĐO LẠI là **7 kho · 3 dự án · 6 kho gắn dự án · 0 mồ côi**,
   // và `PRJ-DEMO-01` nay có **4** kho. Đã ghi thêm mục «CẬP NHẬT SỐ ĐO — 28/09/2026» vào tệp audit.
   // 📌 Đo lại bằng `node tools/mt3-measure-w02.mjs` (đọc MySQL thật, không ghi).
-  assert.ok(audit.includes("**7**"), "Tệp audit phải ghi lại số kho ĐO LẠI (7)");
+  assert.ok(audit.includes("**12**"), "Tệp audit phải ghi lại số kho ĐO LẠI MỚI NHẤT (12)");
   assert.match(audit, /`PRJ-DEMO-01 → 4`/, "Tệp audit phải ghi lại chiều N>1 đo được (PRJ-DEMO-01 → 4 kho)");
-  assert.ok(warehouses === 7 && projects === 3 && linked === 6
+  // ⚠️ CẬP NHẬT 05/10/2026 (GO-LIVE · áp `V37__…_transit_warehouse.sql`): V37 tạo **kho HỆ THỐNG**
+  // `WH-TRANSIT` (`code=TRANSIT`, `type=transit`, `project_id IS NULL`) — kho mà
+  // `StockManagementUseCase` BẮT BUỘC phải có: thiếu nó thì MỌI phiếu điều chuyển dừng ngay ở
+  // `Api("Thiếu kho Transit hệ thống.")` (đo được trên MySQL thật trước khi áp V37: `type='transit'` = **0**).
+  // Vì là kho hệ thống KHÔNG gắn dự án nên chỉ `warehouses` tăng, hai chỉ số kia KHÔNG đổi:
+  //   warehouses 11 → **12** · projects **5** (không đổi) · linked **10** (không đổi) · mồ côi **0**.
+  assert.ok(warehouses === 12 && projects === 5 && linked === 10
     , `Số đo lại khác con số đã chép trong audit (kho=${warehouses}, dự án=${projects}, kho gắn dự án=${linked}) ⇒ phải cập nhật lại tệp audit`);
 });

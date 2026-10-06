@@ -20,19 +20,57 @@ export default function ErrorReportAdminPanel({ data, submit }: {
   const [openId, setOpenId] = useState<string>("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  // ⛔⛔ VÁ 06/10/2026 (GO-LIVE · BUG-20261006-001 — **CAO**) — **NUỐT LỖI IM LẶNG**.
+  //   📍 TRIỆU CHỨNG USER BÁO: «phần báo lỗi chưa hiển thị được danh sách báo lỗi của user gửi lên»
+  //   🔎 TRUY VẾT 6 TẦNG (UI → API → BACKEND → DATABASE → PERMISSION → WORKFLOW):
+  //     ✅ DATABASE: bảng `error_reports` có **16 dòng** — ⭐ dữ liệu CÓ ✓
+  //     ✅ BACKEND/API: gọi `error_reports` bằng `admin` ⇒ **HTTP 200 · trả về ĐỦ 16 report** ✓
+  //     ⛔ PERMISSION: `error_reports` gắn module **`admin`** (`ActionRbacRegistry:61`)
+  //        ⇒ tài khoản ⛔ không có module `admin` nhận **HTTP 403**
+  //        «Tài khoản chưa được quản trị viên cấp đúng quyền cho thao tác này.» ✓
+  //     ⛔ **UI = NGUYÊN NHÂN GỐC**: `void fetchReports().then(...)` ⚠️ **KHÔNG có `.catch()`**
+  //        ⇒ ⭐ lỗi **403 bị NUỐT IM LẶNG** ⇒ `reports` ở lại `[]`
+  //        ⇒ ⭐ hiện **«Chưa có báo lỗi nào.»** ⚠️ **GÂY HIỂU SAI HOÀN TOÀN**:
+  //        người dùng tưởng **«không có dữ liệu»** trong khi thực chất là **«không có quyền xem»** ✓
+  //   ⇒ ⭐ SỬA: **bắt lỗi + HIỆN THÔNG BÁO RÕ** — ⛔ không để trạng thái rỗng gây hiểu sai ✓
+  const [loadError, setLoadError] = useState("");
 
   const modules = (data.moduleCatalog ?? []).filter((m: Row) => String(m.active ?? 1) === "1");
   const label = (key: string) => String(modules.find((m: Row) => String(m.moduleKey) === key)?.label ?? key ?? "—");
 
-  async function load() {
+  async function fetchReports() {
     const res = (await submit("error_reports", {})) as { reports?: Row[] } | undefined;
     // ⛔ Backend đã ORDER BY created_at DESC ⇒ mới nhất trước. Vẫn sắp lại ở UI cho chắc.
-    const rows = (res?.reports ?? []).slice().sort((a: Row, b: Row) =>
+    return (res?.reports ?? []).slice().sort((a: Row, b: Row) =>
       String(b.createdAt ?? "").localeCompare(String(a.createdAt ?? "")));
-    setReports(rows);
   }
 
-  useEffect(() => { void load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+  async function load() {
+    // ⭐ VÁ BUG-20261006-001: bắt lỗi ⇒ ⛔ KHÔNG để danh sách rỗng gây hiểu sai là «không có dữ liệu».
+    try {
+      setLoadError("");
+      setReports(await fetchReports());
+    } catch (e) {
+      setReports([]);
+      setLoadError(e instanceof Error ? e.message : "Không tải được danh sách báo lỗi.");
+    }
+  }
+
+  // 📌 VÒNG 197 — setState trong effect nằm trong `.then()`, kèm chống `active`
+  //   để không setState sau khi đã đóng. `fetchReports` tách riêng để `load()` dùng lại được
+  //   mà không phải nhân đôi logic sắp xếp (trước để fix set-state-in-effect cho `npm test`).
+  // ⭐ VÁ BUG-20261006-001: thêm `.catch()` — ⚠️ trước đây lỗi **403 bị nuốt im lặng**.
+  useEffect(() => {
+    let active = true;
+    void fetchReports()
+      .then((rows) => { if (active) { setReports(rows); setLoadError(""); } })
+      .catch((e: unknown) => {
+        if (!active) return;
+        setReports([]);
+        setLoadError(e instanceof Error ? e.message : "Không tải được danh sách báo lỗi.");
+      });
+    return () => { active = false; };
+  }, []);
 
   async function toggle(r: Row) {
     if (busy) return;
@@ -60,8 +98,17 @@ export default function ErrorReportAdminPanel({ data, submit }: {
           <button type="button" className="secondary" onClick={() => void load()}>↻ Tải lại</button>
         </header>
         {message && <div className="inline-alert">{message}</div>}
-        {!reports.length && <p className="admin-empty">Chưa có báo lỗi nào.</p>}
-        {!!reports.length && (
+        {/* ⭐ VÁ BUG-20261006-001 — hiện LỖI RÕ RÀNG thay vì «Chưa có báo lỗi nào» gây hiểu sai.
+            ⛔ Trước đây lỗi 403 (thiếu quyền) bị nuốt im lặng ⇒ người dùng tưởng «không có dữ liệu». */}
+        {loadError && (
+          <div className="inline-alert">
+            <p><b>Không tải được danh sách báo lỗi.</b> {loadError}</p>
+            <p>Thao tác xem danh sách báo lỗi chỉ dành cho <b>quản trị viên</b>. Nếu anh/chị là quản trị viên,
+              hãy kiểm tra lại quyền của tài khoản ở mục «Phân quyền công việc / Chức năng».</p>
+          </div>
+        )}
+        {!loadError && !reports.length && <p className="admin-empty">Chưa có báo lỗi nào.</p>}
+        {!loadError && !!reports.length && (
           <div className="table-wrap">
             <table className="admin-table">
               <thead>

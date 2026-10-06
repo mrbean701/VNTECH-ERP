@@ -90,7 +90,14 @@ public class ErrorReportStoreAdapter implements ErrorReportStore {
     }
 
     @Override
-    public boolean markResolved(String reportId, String resolvedAt, String note) {
+    public boolean markResolved(String reportId, String resolvedAt, String updatedAt, String note) {
+        // ⛔⛔ VÁ 05/10/2026 (GO-LIVE · BUG-20261005-008): tham số thứ 4 TRƯỚC ĐÂY là `resolvedAt`.
+        //   `updated_at` là **varchar(32) NOT NULL** ⇒ khi MỞ LẠI report (`resolvedAt = null`) thì
+        //   `updated_at = NULL` ⇒ `DataIntegrityViolationException` ⇒ `markResolved` **LUÔN hỏng**.
+        //   UI `ErrorReportAdminPanel:52` gọi đúng nhánh này khi tick vào report ĐÃ xong
+        //   (`next = String(r.status) !== "resolved"` ⇒ `false`) ⇒ **nút «mở lại» hỏng 100%**, và
+        //   người dùng chỉ thấy thông báo sai lệch «Dữ liệu vi phạm ràng buộc của hệ thống…».
+        //   Nay `updated_at` lấy từ tham số RIÊNG, LUÔN có giá trị.
         int n = jdbcTemplate.update("""
                 UPDATE error_reports
                    SET status=?,resolved_at=?,resolution_note=?,updated_at=?
@@ -98,7 +105,7 @@ public class ErrorReportStoreAdapter implements ErrorReportStore {
                 resolvedAt == null ? "open" : "resolved",
                 resolvedAt,
                 note,
-                resolvedAt,
+                updatedAt,
                 reportId);
         return n > 0;
     }

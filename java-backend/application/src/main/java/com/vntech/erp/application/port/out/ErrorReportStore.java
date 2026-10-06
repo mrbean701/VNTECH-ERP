@@ -47,7 +47,12 @@ public interface ErrorReportStore {
      * USER 29/09/2026 — tick «đã xử lý xong» (nút ✓ trong danh sách tab 14).
      *
      * @param resolvedAt thời điểm xử lý (chuỗi); {@code null} ⇒ mở lại thành {@code open}.
+     * @param updatedAt  thời điểm cập nhật (chuỗi, ⛔ LUÔN có giá trị).
+     *                   ⛔⛔ VÁ 05/10/2026 (GO-LIVE · BUG-20261005-008): trước bản vá, adapter lấy
+     *                   `resolvedAt` gán cho cột `updated_at`; mà `updated_at` là **NOT NULL** ⇒ khi
+     *                   MỞ LẠI (`resolvedAt = null`) thì `updated_at = NULL` ⇒ vi phạm ràng buộc,
+     *                   `markResolved` **LUÔN ném lỗi** và nút «mở lại» ở tab 14 hỏng 100%.
      * @return {@code true} nếu có dòng bị cập nhật.
      */
-    boolean markResolved(String reportId, String resolvedAt, String note);
+    boolean markResolved(String reportId, String resolvedAt, String updatedAt, String note);
 }

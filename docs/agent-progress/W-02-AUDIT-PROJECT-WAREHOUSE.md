@@ -222,3 +222,72 @@ Phân bố kho theo dự án (đo 28/09/2026): `PRJ-DEMO-01 → 4` · `DA-MAU-01
 Lệnh đo lại: `node tools/mt3-measure-w02.mjs` (đọc MySQL thật, **không** ghi).
 ⇒ Hợp đồng `tests/w02-project-warehouse-relation.test.mjs` cập nhật theo **số đo mới (7 · 3 · 6 · 0 mồ côi)**;
 ⛔ **KHÔNG** sửa dữ liệu DB để khớp tài liệu (GOAL §19).
+
+---
+
+## 🔄 CẬP NHẬT SỐ ĐO — 02/10/2026 (kiểm thử E2E toàn hệ thống)
+
+Kết luận **CONFIRMED 1:N** ⛔ **KHÔNG đổi** — và mạnh lên: lần này có **hai** dự án có ≥ 2 kho
+(`PRJ-DEMO-01 → 4` và `E2E-DA-01 → 3`), nên chiều N>1 không còn dựa vào **một** dự án duy nhất.
+
+Số dòng tăng vì kịch bản kiểm thử E2E tạo dữ liệu thật trên cơ sở dữ liệu đang chạy:
+dự án `E2E-DA-01` (kho công trường `KHO-E2E-01`) và dự án chẩn đoán `E2E-DIAG-01`
+(kho `KHO-DIAG`), cộng **hai kho tổ đội** `TD-E2E-DA-01-E2E-TD01` / `TD-E2E-DA-01-E2E-TD02`
+do hệ thống tự sinh khi tạo tổ đội — đúng luồng nghiệp vụ, không phải dữ liệu giả.
+
+| Chỉ số | Truy vấn | Đo 28/09 | **Đo lại 02/10** |
+|---|---|---|---|
+| Tổng số kho | `SELECT COUNT(*) FROM warehouses` | 7 | **11** |
+| Tổng số dự án | `SELECT COUNT(*) FROM projects` | 3 | **5** |
+| Kho CÓ gắn dự án | `... WHERE project_id IS NOT NULL` | 6 | **10** |
+| Kho KHÔNG gắn dự án (Kho Tổng) | `... WHERE project_id IS NULL` | 1 | **1** |
+| Dòng mồ côi | `LEFT JOIN projects … p.id IS NULL` | 0 | **0** ✅ |
+| Dự án có ≥ 2 kho (chiều N>1) | `GROUP BY p.id` | `PRJ-DEMO-01 → 4` | **`PRJ-DEMO-01 → 4`, `E2E-DA-01 → 3`** |
+
+Phân bố kho theo dự án (đo 02/10/2026): `PRJ-DEMO-01 → 4` · `E2E-DA-01 → 3` ·
+`DA-MAU-01 → 1` · `DA06 → 1` · `E2E-DIAG-01 → 1` · `KHO-TONG` (loại `central`,
+`project_id IS NULL`) → không thuộc dự án nào.
+
+Lệnh đo lại: `node tools/mt3-measure-w02.mjs` (đọc MySQL thật, **không** ghi).
+⇒ Hợp đồng `tests/w02-project-warehouse-relation.test.mjs` cập nhật theo **số đo mới (11 · 5 · 10 · 0 mồ côi)**;
+⛔ **KHÔNG** sửa dữ liệu DB để khớp tài liệu (GOAL §19).
+
+---
+
+## 🔄 CẬP NHẬT SỐ ĐO — 05/10/2026 (GO-LIVE · áp `V37` — kho Transit hệ thống)
+
+Kết luận **CONFIRMED 1:N** ⛔ **KHÔNG đổi** · số dòng **mồ côi vẫn 0** ✅
+
+**Vì sao số kho tăng:** migration `V37__contract_reviews_review_logs_error_reports_transit_warehouse.sql`
+được **áp lên MySQL thật** ngày 05/10/2026 (trước đó `flyway_schema_history` mới tới **V34**, nên V37 chưa
+từng chạy). V37 tạo **một kho HỆ THỐNG**:
+
+| id | code | name | type | project_id |
+|---|---|---|---|---|
+| `WH-TRANSIT` | `TRANSIT` | Hàng đang vận chuyển | `transit` | `NULL` |
+
+⛔ **Đây KHÔNG phải dữ liệu test.** Kho này là điều kiện BẮT BUỘC của nghiệp vụ: `StockManagementUseCase`
+gọi `findTransitWarehouse()` và ném `Api("Thiếu kho Transit hệ thống.")` khi không có — nghĩa là **mọi phiếu
+điều chuyển kho dừng ngay ở bước kiểm tra, trước khi ghi bất cứ thứ gì**. Đo được trước khi áp V37:
+`SELECT COUNT(*) FROM warehouses WHERE type='transit'` = **0** ⇒ chức năng điều chuyển **bất khả thi**.
+Sau khi áp: = **1**. (Bản SQLite `drizzle/0030_…` đã có sẵn dòng này từ trước — chỉ nhánh Java thiếu.)
+
+> Vì `WH-TRANSIT` là kho **hệ thống không gắn dự án**, chỉ `warehouses` tăng; `projects` và
+> `warehouses WHERE project_id IS NOT NULL` **KHÔNG đổi** — chiều N>1 không bị ảnh hưởng.
+
+| Chỉ số | Truy vấn | Đo 02/10 | **Đo lại 05/10** |
+|---|---|---|---|
+| Tổng số kho | `SELECT COUNT(*) FROM warehouses` | 11 | **12** |
+| Tổng số dự án | `SELECT COUNT(*) FROM projects` | 5 | **5** (không đổi) |
+| Kho CÓ gắn dự án | `... WHERE project_id IS NOT NULL` | 10 | **10** (không đổi) |
+| Kho KHÔNG gắn dự án | `... WHERE project_id IS NULL` | 1 | **2** (`KHO-TONG` + `WH-TRANSIT`) |
+| Dòng mồ côi | `LEFT JOIN projects … p.id IS NULL` | 0 | **0** ✅ |
+| Dự án có ≥ 2 kho (chiều N>1) | `GROUP BY p.id` | `PRJ-DEMO-01 → 4`, `E2E-DA-01 → 3` | **không đổi** |
+
+Phân bố kho theo dự án (đo 05/10/2026): `PRJ-DEMO-01 → 4` · `E2E-DA-01 → 3` · `DA-MAU-01 → 1` ·
+`DA06 → 1` · `E2E-DIAG-01 → 1` · **không thuộc dự án: `KHO-TONG` (`central`) + `WH-TRANSIT` (`transit`)**.
+
+Lệnh đo lại: `node tools/mt3-measure-w02.mjs` (đọc MySQL thật, **không** ghi).
+⇒ Hợp đồng `tests/w02-project-warehouse-relation.test.mjs` cập nhật theo **số đo mới (12 · 5 · 10 · 0 mồ côi)**;
+⛔ **KHÔNG** sửa dữ liệu DB để khớp tài liệu (GOAL §19) — lần này chiều ngược lại: **dữ liệu đổi vì nghiệp vụ
+cần**, nên tài liệu và hợp đồng phải theo.

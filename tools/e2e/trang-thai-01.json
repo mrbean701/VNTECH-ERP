@@ -1,0 +1,259 @@
+{
+  "duAn": "PRJ_0af3201a-22d0-4870-961a-26d367350d45",
+  "duAnCode": "E2E-DA-01",
+  "khoSite": "WH_84200d27-0d30-4a73-9ebc-43800e741c2a",
+  "khoSiteCode": "KHO-E2E-01",
+  "bch": "ORG_586f9823-1c06-4e09-8f03-23b73f1cc743",
+  "donVi": {
+    "Dự án": "ORG-DA",
+    "Kế hoạch": "ORG_1ef47315-b38f-43de-9d9e-0624a7afb11d",
+    "Kế toán": "ORG_f60f9161-c7ab-49d6-bb1b-415d78ebd5e5",
+    "Ban giám đốc": "ORG-BGD",
+    "Nhân sự": "ORG_634eeb63-d4dc-4618-a7fe-4723c492abdc",
+    "Hành chính Pháp chế": "ORG-HCPC"
+  },
+  "matKhau": "Vn@2026Test",
+  "users": [
+    {
+      "id": "USR_d3dce944-4b07-49c5-88a7-a5c4305687f8",
+      "username": "e2e.cht",
+      "vai": "cht",
+      "donVi": "ORG-DA",
+      "ten": "E2E Chỉ huy trưởng"
+    },
+    {
+      "id": "USR_ee14609c-f681-4b20-a639-ac7498dea678",
+      "username": "e2e.chtsa",
+      "vai": "cht",
+      "donVi": "ORG-DA",
+      "ten": "E2E Chỉ Huy Trưởng SA"
+    },
+    {
+      "id": "USR_e66f85ff-96ad-40d5-a632-10be87ab10d5",
+      "username": "e2e.bgd",
+      "vai": "director",
+      "donVi": "ORG-BGD",
+      "ten": "E2E Giám đốc"
+    },
+    {
+      "id": "USR_f47a166f-0d39-440f-b796-08a5527de3f4",
+      "username": "e2e.kt",
+      "vai": "accountant",
+      "donVi": "ORG_f60f9161-c7ab-49d6-bb1b-415d78ebd5e5",
+      "ten": "E2E Kế toán"
+    },
+    {
+      "id": "USR_7ae68731-da43-4dc1-922d-a03b6a2ee9c9",
+      "username": "e2e.ksda",
+      "vai": "ksda",
+      "donVi": "ORG-DA",
+      "ten": "E2E Kỹ sư Dự án"
+    },
+    {
+      "id": "USR_dda7f31c-b907-4fd3-95d8-a9513e6a86f0",
+      "username": "e2e.ns",
+      "vai": "hr",
+      "donVi": "ORG-HCPC",
+      "ten": "E2E Nhân sự"
+    },
+    {
+      "id": "USR_1489da18-e042-424b-aef8-2964fcebd323",
+      "username": "e2e.khnv",
+      "vai": "kh_nv",
+      "donVi": "ORG_1ef47315-b38f-43de-9d9e-0624a7afb11d",
+      "ten": "E2E Nhân viên Kế hoạch"
+    },
+    {
+      "id": "USR_bed00dc5-39ac-4dac-b89b-16f54f45e9f2",
+      "username": "e2e.project",
+      "vai": "da_nv",
+      "donVi": "ORG-DA",
+      "ten": "E2E project"
+    },
+    {
+      "id": "USR_9bf366bf-0e6b-4cd1-9e9e-47725034cdb1",
+      "username": "e2e.tk",
+      "vai": "thu_kho",
+      "donVi": "ORG-DA",
+      "ten": "E2E Thủ kho"
+    },
+    {
+      "id": "USR_c8765a28-9318-4ee9-926b-1f889599ecc9",
+      "username": "e2e.thukysa",
+      "vai": "thuky",
+      "donVi": "ORG-DA",
+      "ten": "E2E Thư ký SA"
+    },
+    {
+      "id": "USR_61e13947-4c36-4977-8214-41ec00edc6da",
+      "username": "e2e.thuky",
+      "vai": "thuky",
+      "donVi": "ORG-BGD",
+      "ten": "E2E Thư ký Tổng giám đốc"
+    },
+    {
+      "id": "USR_e723b85e-0240-4c60-9be6-30b2dbb51a2f",
+      "username": "e2e.to",
+      "vai": "team",
+      "donVi": "ORG-DA",
+      "ten": "E2E Tổ Trưởng"
+    },
+    {
+      "id": "USR_9021140a-3cb4-4a01-a958-d88a3bc8c722",
+      "username": "e2e.kh",
+      "vai": "kh_truong",
+      "donVi": "ORG_1ef47315-b38f-43de-9d9e-0624a7afb11d",
+      "ten": "E2E Trưởng phòng Kế hoạch"
+    }
+  ],
+  "teams": [
+    {
+      "id": "TEAM_d7b32ae6-95c8-46b8-9180-09363af4cac7",
+      "code": "E2E-DA-01-E2E-TD01",
+      "ten": "Tổ đội 1 — Xây dựng kết cấu",
+      "trade": "Xây dựng",
+      "kho": "WHTEAM_5c0900a5-107e-4e43-9508-bfba52d66e7a"
+    },
+    {
+      "id": "TEAM_c23e09d6-4886-4241-a935-daa729839e64",
+      "code": "E2E-DA-01-E2E-TD02",
+      "ten": "Tổ đội 2 — Hoàn thiện",
+      "trade": "Hoàn thiện",
+      "kho": "WHTEAM_5604112a-726a-4626-a9a7-c0d6ccb26f35"
+    }
+  ],
+  "khoTeam": [
+    {
+      "id": "WHTEAM_5c0900a5-107e-4e43-9508-bfba52d66e7a",
+      "code": "TD-E2E-DA-01-E2E-TD01"
+    },
+    {
+      "id": "WHTEAM_5604112a-726a-4626-a9a7-c0d6ccb26f35",
+      "code": "TD-E2E-DA-01-E2E-TD02"
+    }
+  ],
+  "luongE2E": "WF_e70aedca-b369-4975-a5b6-acdaf024c299",
+  "luongE2ECode": "WF-E2E-MUAHANG",
+  "luongCu": "WF_e70aedca-b369-4975-a5b6-acdaf024c299",
+  "luongCuCode": "WF-E2E-MUAHANG",
+  "stagesE2E": [
+    {
+      "stepNo": 1,
+      "name": "E2E-1 Kỹ sư Dự án đề nghị mua",
+      "description": "Xác nhận nhu cầu vật tư tại hiện trường",
+      "approvalMode": "single",
+      "slaHours": 12,
+      "approverUserIds": [
+        "USR_7ae68731-da43-4dc1-922d-a03b6a2ee9c9"
+      ]
+    },
+    {
+      "stepNo": 2,
+      "name": "E2E-2 Trưởng Kế hoạch kiểm tra khối lượng",
+      "description": "Đối chiếu BOQ và khối lượng",
+      "approvalMode": "single",
+      "slaHours": 24,
+      "approverUserIds": [
+        "USR_9021140a-3cb4-4a01-a958-d88a3bc8c722"
+      ]
+    },
+    {
+      "stepNo": 3,
+      "name": "E2E-3 Kế toán kiểm tra giá",
+      "description": "Kiểm tra đơn giá và tổng giá trị",
+      "approvalMode": "single",
+      "slaHours": 24,
+      "approverUserIds": [
+        "USR_f47a166f-0d39-440f-b796-08a5527de3f4"
+      ]
+    },
+    {
+      "stepNo": 4,
+      "name": "E2E-4 Giám đốc phê duyệt",
+      "description": "Phê duyệt cuối cùng",
+      "approvalMode": "single",
+      "slaHours": 12,
+      "approverUserIds": [
+        "USR_e66f85ff-96ad-40d5-a632-10be87ab10d5"
+      ]
+    }
+  ],
+  "hopDongId": "PCON_94598137-bbe5-4681-ab27-4924fe9fe790",
+  "hopDongNo": "E2E-HĐ-001",
+  "boqVersionId": "BQVER_e85d70c9-2619-440e-9872-a9a8bd769f37",
+  "donDat": [
+    {
+      "id": "MR_a527bff5-4733-4de1-ac42-150ae92c6dc6",
+      "so": "DNMH-E2E-DA-01-2026-0018",
+      "status": "pending_approval"
+    },
+    {
+      "id": "MR_0e19dd6c-18a0-47a1-ac8c-bf047d0692ce",
+      "so": "DNMH-E2E-DA-01-2026-0017",
+      "status": "pending_approval"
+    },
+    {
+      "id": "MR_d65aeb46-4804-4dfe-bfec-59a7578bccf8",
+      "so": "DNMH-E2E-DA-01-2026-0016",
+      "status": "pending_approval"
+    },
+    {
+      "id": "MR_08b45e43-e04a-4a46-9020-d0b2bbd3dcf0",
+      "so": "DNMH-E2E-DA-01-2026-0015",
+      "status": "approved"
+    },
+    {
+      "id": "MR_f8028188-d64b-4b52-a3d4-adb937bc5fe9",
+      "so": "DNMH-E2E-DA-01-2026-0014",
+      "status": "approved"
+    },
+    {
+      "id": "MR_9af20a81-d285-4f69-8b93-d7346a84126d",
+      "so": "DNMH-E2E-DA-01-2026-0013",
+      "status": "approved"
+    }
+  ],
+  "poList": [
+    {
+      "id": "PO_c37cec3a-feca-4195-9057-0b844e1a2731",
+      "so": "PO-E2E-DA-01-2026-0003",
+      "status": "completed",
+      "requestId": "MR_9af20a81-d285-4f69-8b93-d7346a84126d"
+    },
+    {
+      "id": "PO_e772e4af-887c-4841-90d0-d2846f475458",
+      "so": "PO-E2E-DA-01-2026-0002",
+      "status": "completed",
+      "requestId": "MR_f8028188-d64b-4b52-a3d4-adb937bc5fe9"
+    },
+    {
+      "id": "PO_7a92ebab-ebda-41c1-b146-4ad619669feb",
+      "so": "PO-E2E-DA-01-2026-0001",
+      "status": "completed",
+      "requestId": "MR_08b45e43-e04a-4a46-9020-d0b2bbd3dcf0"
+    }
+  ],
+  "nccId": "SUP_8b3df0f0-f63b-441e-a17f-00f6adf669cd",
+  "grns": [
+    {
+      "id": "GRN_37f82427-e97a-4910-8491-74353e0db2af",
+      "so": "GRN-PX-2026-0002",
+      "xacNhan": "confirmed"
+    },
+    {
+      "id": "GRN_ca841c0a-abf9-44f4-9abd-2672d281fc6f",
+      "so": "GRN-E2E-DA-01-2026-0003",
+      "xacNhan": "confirmed"
+    },
+    {
+      "id": "GRN_eb47d38d-d8b7-4edd-a7eb-b2efc0905899",
+      "so": "GRN-E2E-DA-01-2026-0002",
+      "xacNhan": "confirmed"
+    },
+    {
+      "id": "GRN_bf8ce38f-596f-4423-90c6-bd47a580c2a6",
+      "so": "GRN-E2E-DA-01-2026-0001",
+      "xacNhan": "confirmed"
+    }
+  ]
+}

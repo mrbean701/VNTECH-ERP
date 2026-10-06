@@ -86,3 +86,8 @@ mt2chk.xml
 
 # Cache bien dich cua TypeScript - file sinh ra may, KHONG dua vao kho ma.
 *.tsbuildinfo
+
+# ⭐ 06/10/2026 — TỆP KHOÁ OFFICE (Word/Excel/PowerPoint đang mở, tên bắt đầu bằng ~$)
+# ⚠️ Đây là tệp tạm do Office tạo, ⛔ KHÔNG phải nội dung thật — ⛔ không commit.
+# ⭐ Thêm vào khi phát hiện 2 tệp khoá lọt vào danh sách chưa commit (BAO-CAO-TUAN + BAN-GIAO).
+~$*

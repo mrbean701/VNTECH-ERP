@@ -297,6 +297,22 @@ public final class FinanceManagementUseCase {
         double totalAmount = strictNonNegative(payload.get("totalAmount"), "Giá trị chứng từ");
         String filesJson = nvl(payload.get("filesJson"));
         if (voucherDate.isEmpty() || voucherType.isEmpty()) throw Api("Chứng từ kế toán cần ngày và loại chứng từ.");
+        // ⛔⛔ VÁ 05/10/2026 (GO-LIVE · BUG-20261005-015 — MEDIUM) — **HTTP 500 thật, ⛔ không phải giả thuyết**.
+        //   TRƯỚC BẢN VÁ: chốt trên ⛔ **chỉ kiểm RỖNG**, ⛔ **KHÔNG kiểm ĐỘ DÀI/ĐỊNH DẠNG** ⇒ một `voucherDate`
+        //   **NGẮN HƠN 4 KÝ TỰ** (⭐ đo được: `"1"`) **qua được chốt** rồi tới dòng:
+        //     `String voucherNo = "CT-" + voucherDate.substring(0, 4) + "-" + String.format("%04d", n);`
+        //   ⚠️ dòng đó **NẰM NGOÀI `try`** (⭐ `try` chỉ bọc `Long.parseLong(...)` ở dòng trên)
+        //   ⇒ ⭐ **`StringIndexOutOfBoundsException` ⛔ KHÔNG BẮT** ⇒ **HTTP 500 «Internal Server Error»** ✓
+        //   📍 **BẰNG CHỨNG**: E2E `tools/e2e/go-live-thanh-cong-chung-tu-kt.mjs` bước ① ⇒ **500** ✓
+        //   ⚠️ **VÌ SAO UI KHÔNG THẤY**: `app/**/DocumentsScreen.tsx` dùng `<input name="voucherDate" type="date" required/>`
+        //     ⇒ ⭐ **tầng HTML LUÔN gửi `YYYY-MM-DD`** ⇒ ⭐ Java **giả định** điều đó ✓
+        //     ⭐ NHƯNG **API gọi trực tiếp được** (curl · client khác · UI tương lai) ⇒ ⭐ **backend PHẢI kiểm**
+        //     — ⭐ **đúng goal §3: «backend là lớp kiểm soát, ⛔ không chỉ ẩn nút ở UI»** ✓
+        //   ⭐ CÁCH VÁ: **dùng ĐÚNG chốt mà `saveConstructionDailyLog` đã có** (`workDate.matches("\\d{4}-\\d{2}-\\d{2}")`)
+        //     ⇒ ⭐ **theo MẪU NHÀ, ⛔ không tự nghĩ ra** ✓ ⛔ **không workaround, ⛔ không bọc try** ✓
+        //   ⭐ **AN TOÀN VỚI UI**: `type="date"` ⛔ không bao giờ gửi giá trị khác `YYYY-MM-DD` ⇒ ⛔ không làm hỏng gì ✓
+        if (!voucherDate.matches("\\d{4}-\\d{2}-\\d{2}"))
+            throw Api("Ngày chứng từ phải theo định dạng YYYY-MM-DD.");
         Instant now = Instant.now();
         if (!voucherId.isEmpty()) {
             store.findAccountingVoucher(voucherId).orElseThrow(() -> Api("Không tìm thấy chứng từ."));

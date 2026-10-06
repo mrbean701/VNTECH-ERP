@@ -302,7 +302,27 @@ public final class UserManagementUseCase {
             // hard-code `'department_default'` ⇒ mọi dòng đều mang nhãn mặc định phòng ⇒
             // `deleteModuleOverride` lọc `permission_source='manual_override'` nên KHÔNG BAO GIỜ
             // xoá được ngoại lệ thật ⇒ nút «Xóa ngoại lệ cá nhân» là nút chết.
-            String source = Boolean.TRUE.equals(row.get("isOverride")) ? "manual_override" : "department_default";
+            // ⛔⛔ VÁ 05/10/2026 (GO-LIVE) — MỐC 112 mới chỉ NỐI tham số xuống adapter, GIÁ TRỊ vẫn sai:
+            //    `row.get("isOverride")` là trường mà UI **KHÔNG BAO GIỜ gửi** (`Boolean.TRUE.equals(null)`
+            //    luôn `false`) ⇒ **100% dòng thành `department_default`**. Đo trên MySQL thật:
+            //    `user_module_permissions` = **2198 dòng, 2198 `department_default`, 0 `manual_override`**,
+            //    và `permission_expires_at` NULL toàn bộ ⇒ nút «Xóa ngoại lệ cá nhân» VẪN là nút chết.
+            // ⭐ Bản JS cũ (`scripts/system-route.mjs:3084`) tính ĐÚNG bằng cách **SO với mặc định phòng**:
+            //      const defaults = defaultDepartmentPermission(target, moduleKey);
+            //      const differs  = keys.some((key) => submitted[key] !== defaults[key]);
+            //      const source   = differs ? "manual_override" : "department_default";
+            //    Khi chuyển sang kiến trúc hexagonal, phép SO đó bị đánh rơi. Khôi phục đúng ngữ nghĩa.
+            Caps submittedCaps = new Caps(intOf(row.get("canView")), intOf(row.get("canUse")),
+                    intOf(row.get("canCreate")), intOf(row.get("canEdit")),
+                    intOf(row.get("canApprove")), intOf(row.get("canExport")));
+            Caps defaultCaps = effectiveDepartmentDefault(target, moduleKey);
+            boolean differsFromDefault = submittedCaps.canView != defaultCaps.canView
+                    || submittedCaps.canUse != defaultCaps.canUse
+                    || submittedCaps.canCreate != defaultCaps.canCreate
+                    || submittedCaps.canEdit != defaultCaps.canEdit
+                    || submittedCaps.canApprove != defaultCaps.canApprove
+                    || submittedCaps.canExport != defaultCaps.canExport;
+            String source = differsFromDefault ? "manual_override" : "department_default";
             store.insertDepartmentDefaultPermission(idGenerator.next("UMP"), targetUserId, moduleKey,
                     intOf(row.get("canView")), intOf(row.get("canUse")), intOf(row.get("canCreate")),
                     intOf(row.get("canEdit")), intOf(row.get("canApprove")), intOf(row.get("canExport")),
@@ -318,7 +338,16 @@ public final class UserManagementUseCase {
         String moduleKey = trim(payload.get("moduleKey"));
         if (targetUserId.isEmpty() || moduleKey.isEmpty())
             throw new AuthUseCase.ApiError("Ngoại lệ cá nhân không hợp lệ.", 400);
-        store.deleteModuleOverride(targetUserId, moduleKey);
+        // ⛔⛔ VÁ 05/10/2026 (GO-LIVE · BUG-20261011 — LOW). TRƯỚC BẢN VÁ: gọi thẳng rồi trả về
+        //   «Đã xóa ngoại lệ cá nhân…» ⇒ với `userId`/`moduleKey` BỊA thì vẫn **HTTP 200** dù ⛔
+        //   không có gì để xoá — trong khi **33/34** action `delete_*` khác đều trả 400 «Không tìm thấy …».
+        //   ⭐ GHI CHÚ NGỮ CẢNH: hiện `user_module_permissions` là **100% `department_default`**
+        //   (2198 dòng, **0** dòng `manual_override`) — hệ quả hạ nguồn của BUG-20261005-003
+        //   (nút «Xóa ngoại lệ cá nhân» từng là nút chết, **đã vá nhưng chưa triển khai**).
+        //   ⛔ Khác BUG-20261010 ở chỗ **KHÔNG có tác dụng phụ toàn hệ thống** ⇒ mức chỉ **LOW**.
+        if (store.deleteModuleOverride(targetUserId, moduleKey) == 0)
+            throw new AuthUseCase.ApiError(
+                    "Không tìm thấy ngoại lệ cá nhân cho chức năng này.", 400);
         return "Đã xóa ngoại lệ cá nhân; quyền hiệu lực quay về mặc định của phòng/bộ phận.";
     }
 
@@ -471,6 +500,24 @@ public final class UserManagementUseCase {
     }
 
     /**
+     * GO-LIVE 05/10/2026 — MẶC ĐỊNH HIỆU LỰC của phòng cho một chức năng, dùng để phân biệt
+     * «quyền theo phòng» với «ngoại lệ cá nhân» khi lưu phân quyền.
+     *
+     * <p>Quy tắc lấy **đúng như** {@code replaceDepartmentDefaults}: nếu phòng đã được cấu hình
+     * (có dòng trong {@code department_module_permissions}) thì lấy dòng đó; nếu chưa thì rơi về
+     * quy tắc mặc định cũ. ⛔ Hai nơi PHẢI dùng cùng một quy tắc, nếu không thì một dòng vừa được
+     * ghi là «mặc định phòng» lại bị chính hệ thống coi là «ngoại lệ» ở lần lưu sau.
+     */
+    private Caps effectiveDepartmentDefault(Map<String, Object> user, String moduleKey) {
+        String orgUnitId = user == null ? "" : svAny(user, "organizationUnitId", "organizationunitid");
+        if (!orgUnitId.isEmpty()) {
+            Optional<Map<String, Object>> dep = store.findDepartmentPermission(orgUnitId, moduleKey);
+            if (dep.isPresent()) return capsOfDepartment(dep.get());
+        }
+        return user == null ? new Caps(0, 0, 0, 0, 0, 0) : defaultDepartmentPermission(user, moduleKey);
+    }
+
+    /**
      * P5.3 — chặn cấp cho người dùng quyền mà PHÒNG BAN không có.
      * Ngoại lệ (P5.8): tài khoản admin và cấp bậc có auto_grant_all.
      * Nếu phòng ban CHƯA cấu hình quyền nào thì bỏ qua — tránh khoá nhầm toàn hệ thống
@@ -538,6 +585,20 @@ public final class UserManagementUseCase {
         String moduleKey = trim(payload.get("moduleKey"));
         if (organizationUnitId.isEmpty() || moduleKey.isEmpty())
             throw new AuthUseCase.ApiError("Cần chọn phòng ban và chức năng.", 400);
+        // ⛔⛔ VÁ 05/10/2026 (GO-LIVE · BUG-20261010 — HIGH, liên quan QUYỀN).
+        //   TRƯỚC BẢN VÁ: hàm này **KHÔNG kiểm gì** rồi gọi `store.deleteDepartmentPermission(...)`
+        //   (xoá 0 dòng nếu khoá sai) và **LUÔN** chạy `syncDepartmentUsers(...)` — mà hàm đó duyệt
+        //   **MỌI tài khoản đang hoạt động** (trừ admin; đo được **27 tài khoản**) và gọi
+        //   `replaceDepartmentDefaults` cho **từng người** ⇒ **GHI ĐÈ quyền mặc định phòng ban của
+        //   toàn bộ tài khoản** chỉ vì một cú bấm, rồi vẫn trả thông báo **THÀNH CÔNG**.
+        //   ĐO ĐƯỢC: gọi với `organizationUnitId` bịa ⇒ **HTTP 200** + «Đã thu hồi quyền của phòng ban;
+        //   đồng bộ lại 27 tài khoản…» — trong khi **7** action `delete_*` khác đều trả «Không tìm thấy …».
+        //   ⛔ Hệ quả: bấm nhầm/bấm đúp cũng kích hoạt đồng bộ quyền **TOÀN HỆ THỐNG**, và người dùng
+        //   tưởng đã thu hồi quyền trong khi ⛔ không có gì để thu hồi.
+        //   ✅ Nay: ⛔ không có dòng quyền ⇒ **400** (đúng khuôn 7 action kia) và ⛔ **KHÔNG** đồng bộ gì.
+        if (store.findDepartmentPermission(organizationUnitId, moduleKey).isEmpty())
+            throw new AuthUseCase.ApiError(
+                    "Không tìm thấy quyền của phòng ban cho chức năng này.", 400);
         store.deleteDepartmentPermission(organizationUnitId, moduleKey);
         int synced = syncDepartmentUsers(Instant.now());
         return "Đã thu hồi quyền của phòng ban; đồng bộ lại " + synced + " tài khoản (ngoại lệ cá nhân giữ nguyên).";

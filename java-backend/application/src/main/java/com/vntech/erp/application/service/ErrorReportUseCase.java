@@ -93,7 +93,10 @@ public class ErrorReportUseCase {
         boolean resolved = payload.get("resolved") == null
                 || Boolean.parseBoolean(String.valueOf(payload.get("resolved")));
         String stamp = resolved ? LocalDateTime.now().format(STAMP) : null;
-        if (!store.markResolved(id, stamp, trim(payload.get("note"))))
+        // ⛔⛔ VÁ 05/10/2026 (GO-LIVE · BUG-20261005-008): `updated_at` PHẢI luôn có giá trị.
+        //   Trước bản vá, adapter lấy `resolvedAt` gán cho `updated_at` (NOT NULL) ⇒ mở lại report
+        //   (`resolvedAt = null`) làm `updated_at = NULL` ⇒ vi phạm ràng buộc, nút «mở lại» hỏng 100%.
+        if (!store.markResolved(id, stamp, LocalDateTime.now().format(STAMP), trim(payload.get("note"))))
             throw Api("Không tìm thấy report " + id + ".");
         return Map.of("ok", true);
     }

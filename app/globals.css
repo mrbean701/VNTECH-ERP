@@ -64,4 +64,4 @@
    SUA: chua padding cho hang footer. */
 .toast{z-index:9600!important}
 .review-modal-actions{padding:12px 18px 16px!important}
-/* VNTECH_MASTER_BASELINE_CSS_R1_1_1_END */
+/* VONG 1 GO-LIVE · BUG-202010-002: báo lỗi dùng chung cơ chế `.toast` (z-index 9600, nằm trên `.overlay` z-index 100) ⇒ lỗi API trong modal không còn bị giấu sau lớp phủ màn hình. Chỉ đổi màu huy hiệu sang đỏ của nhà (`#d93b49`, dùng ở `.danger-outline`), KHÔNG đổi nền `.toast` ⇒ thông báo vẫn đọc được trên nền tối. */.toast.error span{background:#d93b49}/* VNTECH_MASTER_BASELINE_CSS_R1_1_1_END */

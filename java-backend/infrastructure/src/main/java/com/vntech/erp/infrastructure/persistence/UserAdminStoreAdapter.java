@@ -176,8 +176,10 @@ public class UserAdminStoreAdapter implements UserAdminStore {
 
     @Override
     @Transactional
-    public void deleteModuleOverride(String userId, String moduleKey) {
-        jdbcTemplate.update("""
+    public int deleteModuleOverride(String userId, String moduleKey) {
+        // ⛔⛔ VÁ 05/10/2026 (GO-LIVE · BUG-20261011 — LOW): trả về SỐ DÒNG đã xoá thay vì `void`
+        //   ⇒ use-case biết được «có ngoại lệ nào để xoá không» và ⛔ không báo thành công sai nữa.
+        return jdbcTemplate.update("""
                 DELETE FROM user_module_permissions WHERE user_id=? AND module_key=? AND permission_source='manual_override'""",
                 userId, moduleKey);
     }

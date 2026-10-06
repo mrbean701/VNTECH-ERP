@@ -1,0 +1,257 @@
+
+==============================================================================
+GIAI DOAN 3 — HO SO NHAN SU / HOP DONG LAO DONG / BAO HIEM XA HOI
+==============================================================================
+  TRUOC KHI CHAY: tai khoan=24 · staffDirectory=24 · ho so=22 · hop dong=22 · bao hiem=44
+
+==============================================================================
+1. DANH SACH MUC TIEU — 'toan bo' = bao nhieu nguoi
+==============================================================================
+  Tong tai khoan trong he thong : 24
+  BI LOAI                       : 2
+    - testuser86661 (Người dùng kiểm chứng) :: Tai khoan kiem chung bao mat tu sinh: ho ten 'Nguoi dung kiem chung', email @test.local, ma NV SEC-866610 — KHONG phai nguoi that.
+    - admin (Quản trị viên VNTECH) :: Tai khoan quan tri he thong (role=admin) — khong phai nhan su lao dong.
+  MUC TIEU (22 nguoi):
+    - e2e.diag        ksda        Chẩn đoán
+    - cha.ht          cht         Chỉ huy trưởng A
+    - e2e.cht         cht         E2E Chỉ huy trưởng
+    - e2e.bgd         director    E2E Giám đốc
+    - e2e.kt          accountant  E2E Kế toán
+    - e2e.ksda        ksda        E2E Kỹ sư Dự án
+    - e2e.ns          hr          E2E Nhân sự
+    - e2e.khnv        kh_nv       E2E Nhân viên Kế hoạch
+    - e2e.tk          thu_kho     E2E Thủ kho
+    - e2e.thuky       thuky       E2E Thư ký Tổng giám đốc
+    - e2e.kh          kh_truong   E2E Trưởng phòng Kế hoạch
+    - giamdoc.demo    director    Giám đốc Demo
+    - kttdemo         accountant  Kế toán trưởng H
+    - ksda.demo       ksda        Kỹ sư dự án (đề nghị mua)
+    - engineer.demo   ksda        Kỹ sư hiện trường
+    - hrm             hr          Ngọc Mai
+    - nvdademo        da_nv       Nhân viên Dự án E
+    - nvkhdemo        kh_nv       Nhân viên Kế hoạch F
+    - tkhodemo        thu_kho     Thủ kho G
+    - thukydemo       thuky       Thư ký TGĐ D
+    - trdademo        da_truong   Trưởng phòng Dự án C
+    - trinhtrench     kh_truong   Trưởng phòng Kế hoạch B
+
+==============================================================================
+2. TAO HO SO NHAN SU — action save_hr_record
+==============================================================================
+  Da co ho so san (KHONG sua): 22 → e2e.diag, cha.ht, e2e.cht, e2e.bgd, e2e.kt, e2e.ksda, e2e.ns, e2e.khnv, e2e.tk, e2e.thuky, e2e.kh, giamdoc.demo, kttdemo, ksda.demo, engineer.demo, hrm, nvdademo, nvkhdemo, tkhodemo, thukydemo, trdademo, trinhtrench
+  Can tao moi: 0
+
+==============================================================================
+3. TAO HOP DONG LAO DONG — action save_labor_contract
+==============================================================================
+  Da co hop dong san (KHONG sua): 22 → e2e.diag/HĐLĐ-00003, cha.ht/HĐLĐ-00001, e2e.cht/HĐLĐ-00004, e2e.bgd/HĐLĐ-00005, e2e.kt/HĐLĐ-00006, e2e.ksda/HĐLĐ-00007, e2e.ns/HĐLĐ-00008, e2e.khnv/HĐLĐ-00021, e2e.tk/HĐLĐ-00009, e2e.thuky/HĐLĐ-00022, e2e.kh/HĐLĐ-00010, giamdoc.demo/HĐLĐ-00011, kttdemo/HĐLĐ-00012, ksda.demo/HĐLĐ-00013, engineer.demo/HĐLĐ-00014, hrm/HĐLĐ-00015, nvdademo/HĐLĐ-00002, nvkhdemo/HĐLĐ-00016, tkhodemo/HĐLĐ-00017, thukydemo/HĐLĐ-00018, trdademo/HĐLĐ-00019, trinhtrench/HĐLĐ-00020
+  Can tao moi: 0
+  Doc lai tu may chu: ho so=22 · hop dong=22
+
+==============================================================================
+4. XAC NHAN HOP DONG TON TAI — action set_labor_contract_status
+==============================================================================
+  Hop dong co dau E2E: 20
+  [DAT] trang thai HD · Giám đốc Demo
+  [DAT] trang thai HD · E2E Nhân viên Kế hoạch
+  [DAT] trang thai HD · Kỹ sư dự án (đề nghị mua)
+  [DAT] trang thai HD · E2E Thủ kho
+  [DAT] trang thai HD · E2E Thư ký Tổng giám đốc
+  [DAT] trang thai HD · E2E Nhân sự
+  [DAT] trang thai HD · E2E Chỉ huy trưởng
+  [DAT] trang thai HD · Nhân viên Kế hoạch F
+  [DAT] trang thai HD · E2E Kế toán
+  [DAT] trang thai HD · Trưởng phòng Kế hoạch B
+  [DAT] trang thai HD · E2E Kỹ sư Dự án
+  [DAT] trang thai HD · Ngọc Mai
+  [DAT] trang thai HD · Kế toán trưởng H
+  [DAT] trang thai HD · Thủ kho G
+  [DAT] trang thai HD · Thư ký TGĐ D
+  [DAT] trang thai HD · E2E Trưởng phòng Kế hoạch
+  [DAT] trang thai HD · Trưởng phòng Dự án C
+  [DAT] trang thai HD · Chẩn đoán
+  [DAT] trang thai HD · E2E Giám đốc
+  [DAT] trang thai HD · Kỹ sư hiện trường
+
+==============================================================================
+5. TAO BAO HIEM XA HOI — action save_benefit_record
+==============================================================================
+  Nguoi duoc tao bao hiem: 22 · moi nguoi 2 loai (BHXH + BHYT)
+    [BO QUA] e2e.diag · BHXH đã có bản ghi
+    [BO QUA] e2e.diag · BHYT đã có bản ghi
+    [BO QUA] cha.ht · BHXH đã có bản ghi
+    [BO QUA] cha.ht · BHYT đã có bản ghi
+    [BO QUA] e2e.cht · BHXH đã có bản ghi
+    [BO QUA] e2e.cht · BHYT đã có bản ghi
+    [BO QUA] e2e.bgd · BHXH đã có bản ghi
+    [BO QUA] e2e.bgd · BHYT đã có bản ghi
+    [BO QUA] e2e.kt · BHXH đã có bản ghi
+    [BO QUA] e2e.kt · BHYT đã có bản ghi
+    [BO QUA] e2e.ksda · BHXH đã có bản ghi
+    [BO QUA] e2e.ksda · BHYT đã có bản ghi
+    [BO QUA] e2e.ns · BHXH đã có bản ghi
+    [BO QUA] e2e.ns · BHYT đã có bản ghi
+    [BO QUA] e2e.khnv · BHXH đã có bản ghi
+    [BO QUA] e2e.khnv · BHYT đã có bản ghi
+    [BO QUA] e2e.tk · BHXH đã có bản ghi
+    [BO QUA] e2e.tk · BHYT đã có bản ghi
+    [BO QUA] e2e.thuky · BHXH đã có bản ghi
+    [BO QUA] e2e.thuky · BHYT đã có bản ghi
+    [BO QUA] e2e.kh · BHXH đã có bản ghi
+    [BO QUA] e2e.kh · BHYT đã có bản ghi
+    [BO QUA] giamdoc.demo · BHXH đã có bản ghi
+    [BO QUA] giamdoc.demo · BHYT đã có bản ghi
+    [BO QUA] kttdemo · BHXH đã có bản ghi
+    [BO QUA] kttdemo · BHYT đã có bản ghi
+    [BO QUA] ksda.demo · BHXH đã có bản ghi
+    [BO QUA] ksda.demo · BHYT đã có bản ghi
+    [BO QUA] engineer.demo · BHXH đã có bản ghi
+    [BO QUA] engineer.demo · BHYT đã có bản ghi
+    [BO QUA] hrm · BHXH đã có bản ghi
+    [BO QUA] hrm · BHYT đã có bản ghi
+    [BO QUA] nvdademo · BHXH đã có bản ghi
+    [BO QUA] nvdademo · BHYT đã có bản ghi
+    [BO QUA] nvkhdemo · BHXH đã có bản ghi
+    [BO QUA] nvkhdemo · BHYT đã có bản ghi
+    [BO QUA] tkhodemo · BHXH đã có bản ghi
+    [BO QUA] tkhodemo · BHYT đã có bản ghi
+    [BO QUA] thukydemo · BHXH đã có bản ghi
+    [BO QUA] thukydemo · BHYT đã có bản ghi
+    [BO QUA] trdademo · BHXH đã có bản ghi
+    [BO QUA] trdademo · BHYT đã có bản ghi
+    [BO QUA] trinhtrench · BHXH đã có bản ghi
+    [BO QUA] trinhtrench · BHYT đã có bản ghi
+
+==============================================================================
+6. XAC NHAN BAO HIEM TON TAI — action set_benefit_record_status
+==============================================================================
+  Ban ghi bao hiem co dau E2E: 43
+  [DAT] trang thai BH · Kỹ sư dự án (đề nghị mua) · BHXH
+  [DAT] trang thai BH · Thư ký TGĐ D · BHYT
+  [DAT] trang thai BH · Kỹ sư dự án (đề nghị mua) · BHYT
+  [DAT] trang thai BH · Kỹ sư hiện trường · BHYT
+  [DAT] trang thai BH · E2E Thủ kho · BHYT
+  [DAT] trang thai BH · E2E Nhân sự · BHYT
+  [DAT] trang thai BH · Nhân viên Kế hoạch F · BHXH
+  [DAT] trang thai BH · E2E Trưởng phòng Kế hoạch · BHYT
+  [DAT] trang thai BH · E2E Thủ kho · BHXH
+  [DAT] trang thai BH · Nhân viên Dự án E · BHXH
+  [DAT] trang thai BH · Chẩn đoán · BHXH
+  [DAT] trang thai BH · Chẩn đoán · BHYT
+  [DAT] trang thai BH · Kế toán trưởng H · BHXH
+  [DAT] trang thai BH · Thủ kho G · BHXH
+  [DAT] trang thai BH · E2E Thư ký Tổng giám đốc · BHYT
+  [DAT] trang thai BH · E2E Kế toán · BHXH
+  [DAT] trang thai BH · E2E Giám đốc · BHXH
+  [DAT] trang thai BH · Giám đốc Demo · BHYT
+  [DAT] trang thai BH · Giám đốc Demo · BHXH
+  [DAT] trang thai BH · E2E Chỉ huy trưởng · BHYT
+  [DAT] trang thai BH · Trưởng phòng Kế hoạch B · BHYT
+  [DAT] trang thai BH · E2E Thư ký Tổng giám đốc · BHXH
+  [DAT] trang thai BH · Thư ký TGĐ D · BHXH
+  [DAT] trang thai BH · Trưởng phòng Dự án C · BHXH
+  [DAT] trang thai BH · Trưởng phòng Kế hoạch B · BHXH
+  [DAT] trang thai BH · Ngọc Mai · BHXH
+  [DAT] trang thai BH · E2E Kế toán · BHYT
+  [DAT] trang thai BH · Nhân viên Dự án E · BHYT
+  [DAT] trang thai BH · Thủ kho G · BHYT
+  [DAT] trang thai BH · E2E Nhân sự · BHXH
+  [DAT] trang thai BH · Kỹ sư hiện trường · BHXH
+  [DAT] trang thai BH · Nhân viên Kế hoạch F · BHYT
+  [DAT] trang thai BH · E2E Trưởng phòng Kế hoạch · BHXH
+  [DAT] trang thai BH · E2E Kỹ sư Dự án · BHXH
+  [DAT] trang thai BH · Ngọc Mai · BHYT
+  [DAT] trang thai BH · E2E Giám đốc · BHYT
+  [DAT] trang thai BH · Kế toán trưởng H · BHYT
+  [DAT] trang thai BH · E2E Nhân viên Kế hoạch · BHYT
+  [DAT] trang thai BH · E2E Kỹ sư Dự án · BHYT
+  [DAT] trang thai BH · Trưởng phòng Dự án C · BHYT
+  [DAT] trang thai BH · E2E Chỉ huy trưởng · BHXH
+  [DAT] trang thai BH · E2E Nhân viên Kế hoạch · BHXH
+  [DAT] trang thai BH · Chỉ huy trưởng A · BHYT
+
+==============================================================================
+7. DEM LAI TU MAY CHU (bootstrap la doc lai, khong tin bao cao)
+==============================================================================
+                    TRUOC      SAU      TANG
+  hrRecords            22       22       0
+  laborContracts       22       22       0
+  benefitRecords       44       44       0
+
+  TINH TRANG TUNG NGUOI (muc tieu 22):
+  e2e.diag         hoSo=Y(E2E) hopDong=Y(E2E) baoHiem=2/2
+  cha.ht           hoSo=Y(E2E) hopDong=Y(cũ) baoHiem=2/2
+  e2e.cht          hoSo=Y(E2E) hopDong=Y(E2E) baoHiem=2/2
+  e2e.bgd          hoSo=Y(E2E) hopDong=Y(E2E) baoHiem=2/2
+  e2e.kt           hoSo=Y(E2E) hopDong=Y(E2E) baoHiem=2/2
+  e2e.ksda         hoSo=Y(E2E) hopDong=Y(E2E) baoHiem=2/2
+  e2e.ns           hoSo=Y(E2E) hopDong=Y(E2E) baoHiem=2/2
+  e2e.khnv         hoSo=Y(E2E) hopDong=Y(E2E) baoHiem=2/2
+  e2e.tk           hoSo=Y(E2E) hopDong=Y(E2E) baoHiem=2/2
+  e2e.thuky        hoSo=Y(E2E) hopDong=Y(E2E) baoHiem=2/2
+  e2e.kh           hoSo=Y(E2E) hopDong=Y(E2E) baoHiem=2/2
+  giamdoc.demo     hoSo=Y(E2E) hopDong=Y(E2E) baoHiem=2/2
+  kttdemo          hoSo=Y(cũ) hopDong=Y(E2E) baoHiem=2/2
+  ksda.demo        hoSo=Y(E2E) hopDong=Y(E2E) baoHiem=2/2
+  engineer.demo    hoSo=Y(E2E) hopDong=Y(E2E) baoHiem=2/2
+  hrm              hoSo=Y(E2E) hopDong=Y(E2E) baoHiem=2/2
+  nvdademo         hoSo=Y(E2E) hopDong=Y(cũ) baoHiem=2/2
+  nvkhdemo         hoSo=Y(E2E) hopDong=Y(E2E) baoHiem=2/2
+  tkhodemo         hoSo=Y(cũ) hopDong=Y(E2E) baoHiem=2/2
+  thukydemo        hoSo=Y(E2E) hopDong=Y(E2E) baoHiem=2/2
+  trdademo         hoSo=Y(cũ) hopDong=Y(E2E) baoHiem=2/2
+  trinhtrench      hoSo=Y(E2E) hopDong=Y(E2E) baoHiem=2/2
+  → 22/22 có hồ sơ · 22/22 có hợp đồng · 22/22 có bảo hiểm
+
+==============================================================================
+8. TAI KHOAN E2E TU DOC LAI HO SO CUA CHINH MINH (dang nhap lai + bootstrap lai)
+==============================================================================
+  [OK ] e2e.diag     hoSo=Chẩn đoán · HĐ=HĐLĐ-00003 · BH=2
+  [OK ] e2e.cht      hoSo=E2E Chỉ huy trưởng · HĐ=HĐLĐ-00004 · BH=2
+  [OK ] e2e.bgd      hoSo=E2E Giám đốc · HĐ=HĐLĐ-00005 · BH=2
+  [OK ] e2e.kt       hoSo=E2E Kế toán · HĐ=HĐLĐ-00006 · BH=2
+  [OK ] e2e.ksda     hoSo=E2E Kỹ sư Dự án · HĐ=HĐLĐ-00007 · BH=2
+  [OK ] e2e.ns       hoSo=E2E Nhân sự · HĐ=HĐLĐ-00008 · BH=2
+  [OK ] e2e.khnv     hoSo=E2E Nhân viên Kế hoạch · HĐ=HĐLĐ-00021 · BH=2
+  [OK ] e2e.tk       hoSo=E2E Thủ kho · HĐ=HĐLĐ-00009 · BH=2
+  [OK ] e2e.thuky    hoSo=E2E Thư ký Tổng giám đốc · HĐ=HĐLĐ-00022 · BH=2
+  [OK ] e2e.kh       hoSo=E2E Trưởng phòng Kế hoạch · HĐ=HĐLĐ-00010 · BH=2
+  → Đã đăng nhập lại admin. 10/10 tài khoản E2E thấy đủ hồ sơ của chính mình.
+
+==============================================================================
+TONG KET GIAI DOAN 3
+==============================================================================
+  Buoc DAT : 63/63 · that bai 0
+  Tai khoan ghi du lieu: e2e.ns (lần chay trước), e2e.ns  (Phong Nhan su thuc hien kich ban trang thai duoc quyen day du)
+  Nguoi da goi tung action nhom nhan-su (doc tu bien-chung.jsonl):
+    save_hr_record            e2e.ns
+    save_labor_contract       e2e.ns
+    set_labor_contract_status e2e.ns
+    save_benefit_record       e2e.ns
+    set_benefit_record_status e2e.ns
+    delete_labor_contract     (chua co lenh nao)
+    delete_benefit_record     (chua co lenh nao)
+    delete_hr_record          (chua co lenh nao)
+
+  BANG TONG HOP TRUOC / SAU (dem lai tu may chu):
+    KHOA                TRUOC    SAU   TANG
+    hrRecords              22     22      0
+    laborContracts         22     22      0
+    benefitRecords         44     44      0
+  Ban ghi E2E con tren may chu: ho so=19 · hop dong=20 · bao hiem=43
+  Lan chay nay tao moi: ho so=0 · hop dong=0 · bao hiem=0
+
+  BANG XAC NHAN TAI KHOAN E2E DOC LAI HO SO CUA CHINH MINH:
+    TAI KHOAN   VAO  HO SO (ho ten · chuc danh)                  HOP DONG              BAO HIEM      KET
+    e2e.diag    OK   Chẩn đoán · Kỹ sư dự án                     HĐLĐ-00003 · active   BHXH+BHYT     ĐẠT
+    e2e.cht     OK   E2E Chỉ huy trưởng · Chỉ huy trưởng         HĐLĐ-00004 · active   BHXH+BHYT     ĐẠT
+    e2e.bgd     OK   E2E Giám đốc · Ban giám đốc                 HĐLĐ-00005 · active   BHXH+BHYT     ĐẠT
+    e2e.kt      OK   E2E Kế toán · Tài chính Kế toán             HĐLĐ-00006 · active   BHXH+BHYT     ĐẠT
+    e2e.ksda    OK   E2E Kỹ sư Dự án · Kỹ sư dự án               HĐLĐ-00007 · active   BHXH+BHYT     ĐẠT
+    e2e.ns      OK   E2E Nhân sự · Nhân sự                       HĐLĐ-00008 · active   BHXH+BHYT     ĐẠT
+    e2e.khnv    OK   E2E Nhân viên Kế hoạch · Nhân viên Phòng K  HĐLĐ-00021 · active   BHXH+BHYT     ĐẠT
+    e2e.tk      OK   E2E Thủ kho · Thủ kho dự án                 HĐLĐ-00009 · active   BHXH+BHYT     ĐẠT
+    e2e.thuky   OK   E2E Thư ký Tổng giám đốc · Thư ký Tổng giá  HĐLĐ-00022 · active   BHXH+BHYT     ĐẠT
+    e2e.kh      OK   E2E Trưởng phòng Kế hoạch · Trưởng phòng K  HĐLĐ-00010 · active   BHXH+BHYT     ĐẠT
+
+  Da luu   : tools/e2e/ket-qua-03.json

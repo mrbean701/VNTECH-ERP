@@ -41,7 +41,18 @@ public interface UserAdminStore {
     void insertProjectScope(String scopeId, String userId, String projectId, String permission, Instant now);
     void insertWarehouseScope(String scopeId, String userId, String warehouseId, String permission, Instant now);
     void clearUserScopes(String userId); // DELETE user_project_scopes + user_warehouse_scopes + user_module_permissions
-    void deleteModuleOverride(String userId, String moduleKey);
+    /**
+     * Xoá ngoại lệ cá nhân (chỉ dòng có {@code permission_source='manual_override'}).
+     *
+     * <p>⛔⛔ VÁ 05/10/2026 (GO-LIVE · BUG-20261011 — LOW): đổi {@code void} → {@code int} để use-case
+     * <b>biết được có dòng nào bị xoá hay không</b>. Trước bản vá, {@code delete_user_module_override}
+     * với {@code userId}/{@code moduleKey} <b>bịa</b> vẫn trả <b>HTTP 200</b> «Đã xóa ngoại lệ cá nhân…»
+     * ⇒ báo thành công cho việc ⛔ không tồn tại — trong khi <b>33/34</b> action {@code delete_*} khác
+     * đều trả 400 «Không tìm thấy …».
+     *
+     * @return số dòng đã xoá (0 ⇒ ⛔ không có ngoại lệ nào để xoá).
+     */
+    int deleteModuleOverride(String userId, String moduleKey);
 
     // ---- warehouse kiểm tra ----
     Optional<Map<String, Object>> findActiveWarehouse(String warehouseId);

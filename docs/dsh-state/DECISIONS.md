@@ -220,7 +220,7 @@ chỉ hiện với `role === "admin"` ⇒ kể cả khi cấp được `admin`, 
 ## Bằng chứng (đọc mã nguồn, không đoán)
 
 ```java
-// java-backend/application/.../UserManagementUseCase.java:427-436
+// java-backend/application/.../UserManagementUseCase.java:499-509
 Optional<Map<String,Object>> dep = store.findDepartmentPermission(orgUnitId, moduleKey);
 boolean allowed = dep.isPresent() && intOf(dep.get().get("active")) == 1
         && intOf(dep.get().get("can_view")) == 1;
@@ -1667,7 +1667,7 @@ ngay tại tiêu đề và hiệu chính bằng `114g`. Ghi lại kết luận s
 # D-052 — KHÔNG CHẠY `npm run build` KHI APP ĐANG MỞ; VÀ CỔNG FINGERPRINT CÓ "HAI LỚP"
 
 **Quy tắc 1 — `npm run build` phá app đang chạy.** Build ghi lại `dist/` với tên asset có hash **mới**,
-xoá bản cũ đang được phục vụ. `scripts/local-server.mjs:181` phục vụ tài nguyên từ `dist/client`, nên
+xoá bản cũ đang được phục vụ. `scripts/local-server.mjs:20` **nạp** bundle SSR `dist/server/index.js`; chính bundle đó render HTML và phục vụ asset từ `dist/client/assets` (xem `docs/24_SYSTEM_AUDIT_REPORT.md:23` — UI là SSR, trong `dist/client` không có `index.html`), nên
 HTML cũ trỏ tới tên không còn tồn tại ⇒ **404 toàn bộ JS/CSS** ⇒ trang kẹt ở màn boot mà **không** có
 bất kỳ dấu hiệu lỗi nào trong UI. ⇒ **Tắt app trước khi build, build xong mở lại.**
 Dấu hiệu nhận biết: `/api/*` còn sống nhưng trang không qua được màn boot, và HTML trả về
@@ -1800,3 +1800,1500 @@ Node đọc raw buffer. Không bao giờ chạy lệnh sửa hàng loạt chỉ 
 
 Cùng nguyên tắc với D-053 (suy đoán từ màu trong ảnh) và với lần quét scanner mà lỗi bị nuốt:
 **đo sai rồi hành động còn tệ hơn không hành động.**
+
+## D-058 — TÀI LIỆU TỰ KHẲNG ĐỊNH "ĐÃ KIỂM CHỨNG" THÌ VẪN PHẢI KIỂM CHỨNG LẠI (01/10/2026)
+
+**Bối cảnh:** mục "DANH SÁCH CỐ Ý **KHÔNG** SỬA" trong `CHECKLIST.md` ghi
+"(đã kiểm chứng là đúng)". Khi mở ra đối chiếu từng dòng với mã nguồn thật thì
+**2/5 mục sai**, và sai theo hướng nguy hiểm: dòng `ui-shared.tsx:347`
+(`sheetName:"Ton kho"` — chuỗi **hiển thị cho người dùng**) bị đặt vào nhóm
+"cố ý không sửa" như thể nó là bảng alias.
+
+**Quyết định:**
+1. Chữ **"đã kiểm chứng"** trong tài liệu **không phải bằng chứng**. Mỗi khi dùng
+   danh sách loại trừ nào đó để quyết định "có sửa hay không", phải mở tệp ra
+   đọc đúng dòng đó trước. Vì checklist thay mạnh hơn cả mã nguồn trong đầu người đọc.
+2. Danh sách loại trừ phải ghi **số dòng + trích đoạn đủ để tự kiểm lại**,
+   và phải kèm mệnh đề **vì sao** thêm dấu sẽ hỏng (ở đây: so khớp *sau khi* đã bỏ dấu).
+3. Khi một danh sách "không sửa" sai, phải ghi lại cả **hệ quả đã bỏ sót** — ở đây là
+   chuỗi `Ton kho` sống sót vì bị che sai. Nếu chỉ sửa số dòng thì người đọc sau
+   không biết vì sao lỗi đó tồn tại lâu đến thế.
+4. Sửa tài liệu bằng **script Node**, không dùng `edit`, và **luôn kèm `git diff`**
+   để chứng minh không đụng phần có sẵn (xem `D-050` về `edit` làm hỏng code point).
+
+**Áp dụng rộng:** mọi danh sách "đã kiểm chứng", "đúng rồi", "không cần sửa" trong
+`docs/` đều là **giả định cần kiểm lại**, không phải kết luận.
+
+## D-059 — TRÍCH DẪN SỐ DÒNG TRONG TÀI LIỆU SẼ TỰ HỎNG; ƯU TIÊN DÙNG TÊN HÀM (01/10/2026)
+
+**Bối cảnh:** quét 22 trích dẫn dạng `tệp:sốdòng` trong `docs/dsh-state/`, có **3** trỏ
+sai. Đáng chú ý: chúng **sai theo kiểu khác nhau**, và cả ba đều đã sai từ lâu mà không ai biết.
+
+| trích dẫn cũ | thực tế | vì sao hỏng |
+|---|---|---|
+| `UserManagementUseCase.java:427-436` | **:499-509** | thêm code phía trên làm dịch dòng |
+| `globals.css:155,159` | tệp **đã nén** còn 68 dòng, quy tắc nằm ngay **dòng 1** | tệp bị minify |
+| `scripts/local-server.mjs:181` | tệp chỉ có 119 dòng, và **không hề có** `dist/client` | gán nhầm tệp |
+
+Trường hợp thứ 3 nặng nhất: nó không chỉ sai dòng mà **sai cả cơ chế**. Điều
+D-052 mô tả là "tài nguyên phục vụ từ `dist/client` bị xoá khi build" — điều đó
+**đúng**; nhưng `local-server.mjs` không phục vụ gì cả, nó chỉ **nạp** bundle SSR
+`dist/server/index.js` (`:20`), và chính bundle đó render HTML + phục vụ asset.
+Đọc theo trích dẫn cũ sẽ tìm nhầm sang tệp hoàn toàn khác.
+
+**Quyết định:**
+1. Khi trích dẫn vị trí trong mã, ưu tiên **tên tệp + tên hàm/biến/selector** trước,
+   số dòng sau và **luôn kèm câu**: "đã đính chính ngày …" khi mới sửa.
+2. Trích dẫn kiểu `tệp:NNN` **không được dùng làm căn cứ kết luận**. Kết luận phải đứng
+   được **ngay cả khi số dòng đã lỗi thời** — ở đây cả 3 mục đều đúng về kết luận,
+   chỉ sai ở con trỏ. Đó là dấu hiệu con trỏ mới là thứ sai, không phải kết luận.
+3. Tệp **đã bị minify** thì **không được** trích dẫn số dòng — dòng 1 dài 365.116 ký tự.
+4. Khi sửa trích dẫn, **giữ lại dòng cũ trong diff** (không xoá lịch sử), đúng như D-053.
+
+**Bài học chung với D-058:** cả hai đều là "tài liệu tự khẳng định và được tin một cách
+mù quáng". Kiểm chứng bằng cách **mở tệp thật ra đọc** là cách rẻ nhất và chắc nhất.
+
+## D-060 — «CÓ MARKUP» KHÔNG ĐỒNG NGHĨA VỚI «CÓ HIỂN THỊ»: GREP 3 TẦNG TRƯỚC KHI KẾT LUẬN TÍNH NĂNG CHƯA LÀM
+
+**Tình huống (MỐC 121, 01/10/2026):** user báo *«trong menu PR & PO sẽ có 2 tab»*.
+Đọc `app/screens/Purchasing.tsx` thấy **đã có trọn vẹn**: `PURCHASING_TABS` (`:51-55`),
+dải `<button role="tab">` (`:267-270`), `tabRows` (`:229-235`), tiêu đề đổi theo tab (`:272`),
+2 bảng riêng PR/PO, tiêu đề bảng, 6 chiều lọc — tất cả từ TASK-119 (21/09/2026).
+Trực giác ban đầu: «chức năng chưa làm ⇒ viết mới». **Sai.**
+
+Đo thật mới ra: `grep` cả `app/globals.css` lẫn `app/styles/canonical.css` ⇒ **0 kết quả** cho
+`.purchase-tabbar` · `.purchase-tab` · `.purchasing-tabs-card` · `.purchasing-tab-note`.
+Còn class **có** trong bundle đang chạy (`dist/client/assets/page-C3_ADzid.js`) ⇒ chắc chắn là
+thiếu CSS chứ không phải thiếu markup.
+
+**Quy tắc:** khi user nói «tính năng X chưa có / không thấy», phải kiểm **3 tầng theo thứ tự**, và
+**chỉ kết luận «chưa làm» khi cả 3 đều rỗng**:
+
+1. **mã nguồn** (`app/`, `lib/`) — có component/state/handler không?
+2. **CSS** (`app/globals.css`, `app/styles/canonical.css`, rồi bundle `dist/client/assets/*.css`) — có rule cho class đó không?
+3. **bundle đang chạy** (`dist/client/assets/*.js`) — class có sống sót tới bundle không?
+
+Nhánh quyết định:
+
+| tầng 1 | tầng 2 | tầng 3 | kết luận |
+|---|---|---|---|
+| có | **rỗng** | có | ⭐ **thiếu CSS** ⇒ thêm rule, **không** viết lại tính năng |
+| có | có | có | kiểm điều kiện hiển thị / state / dữ liệu rỗng |
+| rỗng | — | — | mới thật sự phải viết mới |
+
+**Bằng chứng điển hình:** 4 `<button>` không có CSS ⇒ `display:inline` ⇒ chữ dính liền thành
+`PR74PO28`. Người dùng thấy «một chuỗi vô nghĩa», còn code thì đã đúng 100%.
+
+Quan hệ với quyết định đã có: cùng **dạng** với `D-056` (MỐC 120 — dùng chung component nhưng đặt
+ngoài `.modal-body` ⇒ mất style của cha). Cả hai đều là **tầng trình bày hỏng, không phải tầng logic hỏng**.
+Bổ sung cho `D-058` (phải kiểm chứng lại chính khẳng định trong tài liệu) và `D-059` (trích dẫn dòng hỏng theo thời gian):
+**D-058 = nội dung tài liệu có thể sai · D-059 = con trỏ tài liệu có thể sai · D-060 = phần đã viết có thể chưa được hiển thị.**
+
+⛔ Đặc biệt: `npm run verify` / `typecheck` / `test:regression` **đều không bắt được lỗi này** —
+bundle vẫn hợp lệ, kiểu dữ liệu vẫn đúng. Chỉ nhìn giao diện mới thấy. Vì vậy phải **hỏi chính user**
+hoặc **đo bằng công cụ trình duyệt** — không suy từ việc test xanh.
+
+---
+
+## D-061 — KHÔNG THỜ GỌI NHẦM CON SỐ ƯỚC LƯỢNG LÀ SỐ THẬT: GHI NHÃN THAY VÌ ĐỔI CON SỐ
+
+**Tình huống (vòng 191):** bảng «LŨY KẾ THEO HỆ VẬT TƯ» có cột `THANH TOÁN (D)` tính bằng
+`paid × (hợp đồng hệ / tổng hợp đồng dự án)` ⇒ về bản chất là **phân bổ tỷ lệ**, không phải số thật
+của từng hệ. Nhưng cột lại tên là «THANH TOÁN», **không nói gì là ước lượng**.
+
+**Đo trên dữ liệu thật (`/api/system`, 01/10/2026):**
+
+| bảng | dòng | có trường trỏ về hệ vật tư? |
+|---|---|---|
+| `contractPayments` | 2 | ⛔ không — chỉ `projectId` + `amount` (+ `recoveryRecordId` đang `null`) |
+| `capitalRecoveryRecords` | 1 | ⛔ không |
+| `paymentPlans` | 4 | ⛔ không |
+| `contractStockLedger` | 75 | ⛔ không — theo vật tư/kho |
+
+⇒ **Số thật không tồn tại trong dữ liệu.** Lấy được thì phải **thêm trường + màn nhập theo hệ**
+⇒ đó là **tính năng mới** (cần migration, cần UI, cần nghiệp vụ), không phải **lỗi cần sửa**.
+
+**Quy tắc:** khi phát hiện một con số là *đại lượng dẫn xuất* nhưng nhãn làm nó trông như *số đo thật*
+thì **ghi rõ đi bằng nhãn + tooltip + ghi chú**, **không** tự ý đổi công thức.
+
+| cách | hậu quả |
+|---|---|
+| ✅ ghi nhãn «ƯỚC TÍNH» (đã làm) | người đọc không bị hiểu sai; số liệu không đổi; **không** cần migration |
+| ❌ đổi sang số thật | ⛔ **không làm được** — dữ liệu không có; tự bịa số là vi phạm «KHÔNG nội suy» đã ghi ở `Purchasing.tsx` |
+| ❌ bỏ cột D | mất thông tin đang có, và lại là **xoá UI** ⇒ cần anh quyết (TYPE 3) |
+
+**Cùng dạng với `C/E/B` → `C/B`** (MỐC 121): ở đó nhãn sai với công thức, sửa nhãn là đủ.
+Ở đây nhãn **đúng chữ** nhưng **giả định sai** ⇒ vẫn phải sửa nhãn, chỉ là theo hướng ngược lại.
+
+**Phần còn lại — `boqItems.systemCode` — thuộc loại khác:** đó là **dữ liệu nghiệp vụ sai**
+(6 vật tư kết cấu/kiến trúc bị xếp vào `KHAC`, chiếm 97,7 % giá trị hợp đồng).
+Không thể tự quyết vật tư nào thuộc hệ nào ⇒ **TYPE 3**, chỉ báo cáo, **không** sửa.
+
+---
+
+## D-062 — CỔNG PHẢI QUÉT MỌI STYLESHET ĐANG ĐƯỢC NẠP, VÀ BÓC CHÚ THÍCH TRƯỚC KHI DÒ (01/10/2026)
+
+**Bối cảnh.** Lỗi "PR74PO28" của MỐC 121 không phải do thiếu CSS thuần: JSX có `.purchase-tabbar`
+từ TASK-119 nhưng không tệp nào định nghĩa. Nguyên nhân sâu hơn là **cổng kiểm không nhìn thấy nơi
+CSS thật sự nằm**: `scripts/css-baseline-audit.mjs` chỉ đọc `app/globals.css`, trong khi `app/layout.tsx`
+nạp 4 tệp (tokens → globals → canonical → font-floor) và `canonical.css` — nơi CSS mới đặt — nạp SAU
+nên thắng điểm cùng cấp độ. Đo được **205 lớp chỉ tồn tại trong `canonical.css`, nằm ngoài tầm nhìn cổng**.
+
+**Quyết định 1 — mở rộng tầm nhìn, không nới lỏng điều kiện.** Cổng nay đọc cả 3 stylesheet. Các
+ngưỡng byte / `!important` / marker lịch sử vẫn áp cho `globals.css` RIÊNG (baseline R1.1.1 gốc, không đổi số).
+Phát hiện CSS chết nay phủ cả `canonical.css` ⇒ lộ **16 lớp chết** (11 không tệp nào nhắc tới, 5 chỉ còn
+sót trong `tools/probe-*.mjs` và 1 test ⇒ UI đã bỏ chúng nhưng công cụ chưa cập nhật). ⛔ KHÔNG xoá trong MỐC 121
+(ngoài phạm vi yêu cầu của anh theo D-022) — đăng ký tên vào `KNOWN_DEAD_CANONICAL` để **nợ MỚI bị chặn**,
+nợ cũ vẫn hiện tên trong dòng kết quả.
+
+**Quyết định 2 — dò phải bóc chú thích CSS.** Đã xảy ra thật trong lúc viết cổng: banner của khối CSS mới
+liệt kê tên selector dưới dạng văn xuôi (`canonical.css:1325`), nên khi thử xoá rule thật
+`.purchasing-tabs-card .purchase-tabbar{…}` thì cổng VẪN báo ĐẠT — tức lọt đúng lỗi mà cổng sinh ra để chặn.
+Bài học chung: **mọi cổng dò selector phải bóc `/* … */` trước**, vì comment kiểu liệt kê là phổ biến.
+
+**Quyết định 3 — hợp đồng có mục tiêu, không kiểm trải kèm.** Đo được **133 lớp trong JSX không stylesheet nào
+định nghĩa** (phần lớn là móc ngữ nghĩa), nên quy tắc "mọi class phải có CSS" chỉ tạo báo động giả. Cổng chỉ
+khóa đúng bộ lớp của màn Mua hàng, đúng cách file đó vốn khóa `nav-glyph` / `density-*` / `boq-row-*`.
+
+**Cách kiểm chứng (thử đột biến).** Không tin cổng chỉ vì nó xanh. Ba tình huống, mỗi cái sửa rồi khôi phục:
+(1) CSS đủ ⇒ ĐẠT; (2) xoá `.purchase-tabbar` ⇒ ĐỎ đúng lý do; (3) bỏ `<p className="purchasing-tab-note">`
+khỏi JSX ⇒ ĐỎ (chiều ngược). Xác minh sau mỗi phép: hai tệp nguồn khớp byte bản gốc.
+
+**Bài học kế thêm.** `verify:css-baseline` KHÔNG nằm trong `npm test` (`lint && typecheck && test:regression
+&& test:workflow`). Sửa cổng thì chưa đủ — phải đưa hợp đồng vào `tests/` và khai báo trong `test:regression`
+thì mới chạy mỗi lần. Đó là lý do thêm `tests/moc121-purchasing-tabs.test.mjs` (**10 ca**, tổng cổng 72 → **82**).
+
+---
+
+## D-063 — MỘT TEST KHÔNG NẰM TRONG CỔNG CHẠY THÌ HỎNG ÂM THẦM; CỔNG XANH KHÔNG PHẢI BẰNG CHỨNG (01/10/2026)
+
+**Bối cảnh.** Vòng 192 phát hiện `tools/probe-*.mjs` và 1 test vẫn trỏ tới các lớp UI đã biến mất.
+Khi truy vết, câu hỏi đặt ra không phải «xoá test cũ hay giữ», mà là **«UI bỏ class đó cố ý hay do hồi qui?»**
+— vì xoá một test thối có thể **che giấu đúng lỗi** mà test đó sinh ra để bắt.
+
+**Kết quả đo (đo thật, không suy đoán).** `tests/` có **119 tệp / 696 ca**. `test:regression` chạy
+**14 tệp**. ⇒ **105 tệp — 583 ca — không được chạy ở bất kỳ đâu**, kể cả CI. Trong đó **10 tệp / 25 ca
+đang ĐỎ**, tất cả đều ngoài cổng, nên `npm test` báo **xanh hoàn hảo** suốt từ lúc chúng hỏng.
+Trường hợp rõ nhất: `tests/mt3-ui-14-admin-notification.test.mjs` đòi ô tìm/lọc + danh sách đã chọn
+trong modal thông báo, trong khi `app/page.tsx` (`NotificationConfigModal`) không có.
+
+**Quyết định 1 — đo trước, xoá sau.** Không xoá test nào chỉ vì nó đỏ. Với mỗi tệp đỏ, xác định cái nào
+**thật sự** sai trước. Ở đây tỏ ra khác nhau:
+- `f03-tai-chinh-audit-deps` đỏ vì **hồ sơ thối**, không phải mã thiếu (xem D-064) → đã sửa.
+- `p01-p02-p03-contract` đỏ vì **UI thật sự thiếu nghĩa** (xem §123 CHECKLIST) → đã sửa.
+- 7 tệp `mt3-*` đỏ vì thuộc **đợt đã rollback** ⇒ ⛔ KHÔNG tự quyết, nêu TYPE 3.
+
+**Quyết định 2 — nợ cũ thì ghi nhận, nợ mới thì chặn.** Lập `scripts/test-suite-health.mjs`
+(`npm run audit:tests`) theo đúng khuôn `KNOWN_DEAD_CANONICAL` của D-062: danh sách `KNOWN_RED`
+(10 mục, mỗi mục ghi **vì sao đỏ** + **mã mục** để gỡ) chặn cổng báo xanh giả; tệp đỏ **không có trong
+danh sách** ⇒ exit ≠ 0. Ngoài ra cổng chặn luôn tệp đỏ **đang nằm trong `test:regression`** và báo nếu một
+mục `KNOWN_RED` đã xanh lại (nợ bị giấu). ⛔ Cố ý **không** đưa vào `npm test` (119 tiến trình node, vài phút).
+
+**Quyết định 3 — chứng minh cổng bằng thử đột biến.** Không tin cổng chỉ vì nó báo ĐẠT. Bỏ `KNOWN_RED`
+⇒ exit **1**; khôi phục ⇒ exit **0**.
+
+**Quy tắc kế thêm — kiểm tra chính cái chẩn đoán.** Ở chính vòng này, hai lần chẩn đoán của tôi sai và
+đều ra kết luận ngược nhau với sự thật:
+1. `node --test` **thiếu `--import tsx`** ⇒ mọi tệp import `.tsx` chết với `ERR_UNKNOWN_FILE_EXTENSION`
+   ⇒ tôi báo «59 ca hỏng»; số thật là **27 ca**.
+2. Hàm kiểm `--is-ancestor` bắt lỗi rồi `return ""`, rồi lại so `=== ""` — mà `git merge-base --is-ancestor`
+   **trả về ≠ 0 khi thất bại** ⇒ tôi kết luận ngược «nhánh giao hàng chưa từng có tính năng này».
+
+⇒ **Trước khi báo một khiếm khuyết, hãy kiểm chứng chính cách đo.** Lỗi đo lường nguy hiểm hơn lỗi
+được đo, vì nó tạo ra một sự thật giả có vẻ rất chắc chắn.
+
+⚠️ **Nhận ra ngay trong lúc viết mục này.** Script kiểm FFFD của tôi báo «3 tệp hỏng» vì dò
+`[object Promise]` — hoá ra cả 5 chỗ đều là **văn xuôi đang mô tả chính lỗi đó**, không phải dữ liệu hỏng.
+Đây là **lần thứ hai** một công cụ dò của tôi khớp trong *prose/comment* thay vì trong *mã* (lần đầu là
+`canonical.css:1325` theo D-062). ⇒ **Mọi dò chữ trong văn bản cũng phải bóc bối cảnh trước**, không riêng
+chú thích CSS. Và như mọi lần: một cờ báo phải mở dòng đó ra xem **trước khi** kết luận lỗi tồn tại.
+
+**Bài học kế thêm.** `package.json` là **tài liệu kiến trúc**: `test:regression` là danh sách những hợp
+đồng nào được canh. Sửa nó = thay đổi bảo đảm chất lượng, phải nói rõ và có lý do, không phải chuyện vặt.
+
+---
+
+## D-064 — KHI HỒ SƠ VÀ MÃ NGUỒN BẤT ĐỒNG VỀ VỊ TRÍ, HÃY XÁC ĐỊNH CÁI NÀO SAI TRƯỚC KHI SỬA TEST (01/10/2026)
+
+**Bối cảnh.** `tests/f03-tai-chinh-audit-deps.test.mjs` đỏ: «hồ sơ F-03 ghi sai vị trí action ⇒ báo cáo
+audit mất giá trị», với 3 dòng đỏ `JAVA :613 / :618 / :623`. Cái dễ làm là nới phép kiểm tra cho qua.
+
+**Điều tra.** Grep `SystemController.java`: ba `case` **có thật**, ở dòng **629 / 634 / 639** — lệch
+đúng **+16**. Quét toàn bộ bảng hồ sơ: **23/23 dòng sai số dòng Java**, cột JS thì đúng hết. ⇒ Đây là
+**số dòng thối rot**, không phải thiếu mã. (D-059 đã cảnh báo hiện tượng này cho *con trỏ trong tài liệu
+của tôi*; ở đây nó nằm ngay trong *một test*, nên bài học phải mở rộng sang test.)
+
+**Quyết định — sửa NGUỒN SỰ THẬT, không nới phép kiểm.** Hồ sơ `F-03-TAI-CHINH-AUDIT-PHU-THUOC.md`
+được cập nhật đúng 23 số dòng (chỉ cột Java). **Phép kiểm giữ nguyên còn chặt** — nó vẫn đòi dòng ghi
+trong hồ sơ phải thật sự chứa action. Kết quả **7/7 xanh**.
+
+**Vì sao không chọn hướng kia.** Có thể sửa test cho «dung động» (tìm action theo tên, bỏ đòi số dòng).
+Nhưng làm vậy là **xoá đúng điều F-03 tồn tại để canh**: một báo cáo audit chỉ có giá trị nếu mọi khẳng
+định của nó còn đúng với mã nguồn. Điểm yếu nằm ở **hồ sơ**, không nằm ở **phép kiểm**.
+⚠️ Hệ quả thừa nhận: số dòng sẽ lại thối ở lần chèn kế tiếp. Đây là **cách tính giá được** — một lần
+chèn phía trên sẽ báo đỏ kèm số dòng thật, và lần đó ta biết chắc là do ai; đổi lại không bao giờ có một
+báo cáo audit trôi lệch âm thầm. Nếu sau này số dòng thối quá đáng, hãy đổi hợp đồng sang khớp theo
+**tên hàm** (`save_capital_recovery`) — theo đúng D-059 — chứ đừng âm thầm nới.
+
+**Bài học kế thêm.** Test đỏ là **tín hiệu**, không phải kẻ phá hoại. Hỏi «ai đang sai: mã, tài liệu,
+hay phép kiểm?» trước khi chạm vào bất kỳ bên nào.
+
+---
+
+## D-065 — ĐỪNG SỬA TIN NÓ ĐÃ BÁO; HÃY SỬA CÁI NÓ CHƯA THẤY (01/10/2026)
+
+**Bối cảnh.** TASK-018 mở ra từ một món nợ nhỏ của TASK-017: hai probe U-09 và U-14…U-17 «trông như
+đang truy tìm lớp mà UI không còn dùng». Kế hoạch ban đầu của tôi rất gọn: **xoá vài dấu hiệu chết
+khỏi danh sách** cho khỏi nhiễu.
+
+**Quyết định — đo trước, rồi mới kết luận là lớp thối.** Quét 581 tệp nguồn cho thấy chẩn đoán ban
+đầu **chỉ đúng một nửa**, còn một nửa quan trọng hơn nhiều bị bỏ qua:
+
+| mức độ | nội dung | xử lý |
+|---|---|---|
+| sâu hơn một nửa | cả hai probe **chỉ đọc `app/page.tsx`**, bỏ sót `app/screens/*.tsx` (34 tệp) | **đây mới là lỗi thật** |
+| nông | vài dấu hiệu không còn tệp UI nào dùng | chỉ là **hiện tượng vệ sinh** |
+
+Bằng chứng không phải suông: `baseline-filter-card` **còn sống** trong `app/screens/Receiving.tsx`.
+Bảng kiểm kê **9 → 21 dòng**; mục B của probe thứ hai báo thiếu gần một nửa (`table-wrap` 51 → **104**,
+`overlay` 2 → **13**). Và chính công cụ đó **tự mâu thuẫn**: mục A quét cả `app/screens/`, mục B thì
+không ⇒ **hai phạm vi trong một báo cáo**, nên phần báo thiếu **âm thầm**, không bao giờ kêu ca.
+
+**Quy tắc rút ra.**
+
+1. ⭐ **Khi ai đó báo một cái tên đã chết, phải hỏi: nó chết ở đâu?** Chết trong *toàn bộ* mã nguồn, hay
+   chết trong *tệp mà công cụ tình cờ đọc*? Hai câu hỏi khác nhau dẫn tới hai cách sửa khác nhau, và
+   cách sai là **xoá dấu vết** thay vì sửa chỗ đo sai.
+2. ⭐ **Một công cụ mà các mục dùng khác phạm vi là lỗi kiến trúc, không phải lỗi gõ.** `probe-ui-adoption`
+   vẽ bằng `page.tsx` ở B và bằng 58 tệp ở A — đây là chỗ **tệ nhất** của vòng này vì nó không lộ ra
+   dưới dạng con số sai, mà dưới dạng **hai con số phản chân nhau trong cùng một lần chạy**.
+3. ⭐ **Dấu hiệu không còn ai dùng không phải là rác — nó là hợp đồng.** `staff-toolbar`,
+   `staff-directory-head`, `delivery-timeline` đều **còn CSS** và đã nằm trong `KNOWN_DEAD_CANONICAL`
+   của `scripts/css-baseline-audit.mjs`. Xoá chúng khỏi probe = **mất một vé cảnh báo hồi qui có tác
+   dụng**, đổi lại chỉ thu được một dòng danh sách ngắn hơn. Thay bằng **mục D** in ra từng dấu hiệu
+   chết kèm phân loại «CÒN CSS · vé hồi qui» / «không CSS · bóng ma thuần». ✅ **Đối chiếu chéo tự động
+   bằng `KNOWN_DEAD_CANONICAL`: hai lớp khớp chính xác** — bằng chứng công cụ đang đúng chứ không phải đoán.
+4. ⭐ **Mở rộng phạm vi đọc là hướng sửa ĐƯỢC; nới lỏng điều kiện thì không.** Đây là D-044 áp cho công cụ
+   đo: sửa chỗ đo *hẹp*, không sửa chỗ đo *dễ*.
+5. ⭐ **Bóc bối cảnh trước khi dò chữ** — mở rộng của D-062. Không bóc thì một dòng
+   `// .staff-toolbar` trong mã đủ để báo động giả.
+
+**Kỷ luật với chính công cụ kiểm chứng.** Thử đột biến là bắt buộc (D-062), nhưng **bản thân bản thử
+cũng có thể sai**, và ở đây nó sai **hai lần**:
+
+- Gõ nhầm mã ký tự Unicode (`\u1ed1` thay vì `\u1ed7` cho `ỗ`, `\u1ea4` thay vì `\u1ea6` cho `Ầ`) ⇒
+  **6 phép kiểm báo bại trong khi cả hai probe hoàn toàn đúng**. Cùng một lớp lỗi như quy tắc «không
+  dùng `\uXXXX` cho tiếng Việt»: ký tự nào khó gõ thì **gõ thật**, đừng escape.
+- THỬ 1 đã **xoá tệp `.bak`** quá sớm ⇒ THỬ 2 không khôi phục được ⇒ script sập giữa chừng và **để
+  lại một tệp nguồn thật ở trạng thái đột biến**. Đã phát hiện ngay, `git checkout` về HEAD, xác
+  nhận sạch. Bản sau: **backup một lần + `try/finally`**, và mọi phép khôi phục phải có **kiểm tra
+  byte-for-byte**.
+
+⇒ **Mỗi công cụ tạm dùng để chứng minh điều gì đó phải tự chịu trách nhiệm chứng minh nó đúng.** Không
+có phép chấp nhận «cỗng về là đủ» — phải là «cổng **bắt được** lỗi, và **không** bắt nhầm thứ không
+phải lỗi». Đây là lần thứ tư trong phiên mà chính bộ đo của tôi suýt dẫn tới kết luận sai (sau
+`catch { return "" }` quanh `git merge-base --is-ancestor`, sau lần thiếu `--import tsx`, sau phép dò
+`[object Promise]` khớp trong văn xuôi). **Nguyên tắc không đổi: một phát hiện chỉ đáng tin khi cách
+đo đã được kiểm chứng.**
+
+**Bài học kế thêm.** Đây là **lần thứ ba** phát hiện cùng một mẫu hình: D-062 (cổng CSS đọc 1/3
+stylesheet), TASK-017 (119 tệp test, 14 trong cổng), D-065 (2 probe, 1 tệp trong 58). **Công cụ của
+tôi luôn có xu hướng giữ một "phạm vi quen thuộc" cũ trong khi dự án đã lớn ra quanh nó.** Nên mỗi
+lần sửa một công cụ, hãy hỏi thêm câu nữa: *«còn bao nhiêu tệp ngoài phạm vi quen thuộc mà công cụ
+này không thấy?»* — và câu trả lời phải là **một danh sách đo được**, không phải «chắc là không còn».
+---
+
+## D-066 — PHẠM VI HẸP KHÔNG CHỈ BÁO SAI NÓ CÒN GIẤU LỖI (01/10/2026)
+
+D-065 nói: *«Khi ai đó báo một cái tên đã chết, phải hỏi: nó chết ở đâu? Chết trong **toàn bộ** mã nguồn,
+hay chết trong **tệp mà công cụ tình cờ đọc**?»* TASK-019 áp dụng câu hỏi đó lên **toàn bộ** công cụ đo
+của dự án, và câu trả lời làm thay đổi cả cách nhìn.
+
+### Quy tắc 1 — Phạm vi hẹp là lỗi kiến trúc, không phải lỗi cấu hình
+
+Một công cụ đo có hai phạm vi: phạm vi nó **được giao** và phạm vi nó **nên đo**. Khi phạm vi đo thu hẹp
+theo một tệp mà dự án vẫn tiếp tục sinh tệp mới ở nơi khác, phạm vi giao **tự động trở thành sai** mà
+không ai sửa nó. Nó không hỏng khi viết — nó hỏng khi dự án lớn thêm, và **không hề báo là đang hỏng**.
+
+### Quy tắc 2 — Trước khi sửa phạm vi, hỏi phạm vi hẹp có **cố ý** không
+
+Trong 19 cổng, **3** đọc đúng một tệp cố định: `probe-statusbadge-parity` (so `toneOf` với bản chép của
+`<Pill>`), `probe-work-item-field-contract` (hợp đồng của riêng màn `WorkCenter`), `probe-modal-branch-coverage`.
+Cả ba **đúng**. Sửa chúng thành quét toàn bộ sẽ phá hỏng mục đích. ⇒ **Phạm vi hẹp mặc định là hợp lý;
+chỉ sai khi mục đích là "toàn bộ mã" mà phạm vi lại hẹp lại.** Phải đọc mục đích trước khi đụng.
+
+### Quy tắc 3 — Phép đo tĩnh **không** chứng minh được khoá có tới tay người dùng
+
+So khớp tên chuỗi với mã nguồn chỉ trả lời *«có khai báo hay không»*, không trả lời *«có chạy tới không»*.
+Trường hợp này: Java có khai báo `workItemParticipants` ở một nơi khác mà cổng không quét, nên phép đo
+tĩnh báo **"đạt"** trong khi dịch vụ sống **không có khoá đó**. ⇒ Với bất kỳ cổng nào hỏi «người dùng có
+nhận được không», phải có **một đường đo trực tiếp**. `--live` được thêm vì lý do đó, và nó là thứ
+bắt được lỗi thật.
+
+### Quy tắc 4 — Một lỗi sản phẩm có thể nằm sau một phép đo sai
+
+Đây là điểm mới so với D-065. Ở TASK-018, phạm vi hẹp chỉ khiến **con số** sai. Ở TASK-019, nó khiến
+cổng **không bao giờ hỏi** tới 13 khoá — trong đó có một khoá mà sản phẩm thật sự không cung cấp. Một
+màn hình chết âm thầm đã tồn tại trong sản phẩm, và cổng có nhiệm vụ bắt nó, nhưng cổng không thấy nó.
+⇒ **Công cụ đo hỏng không chỉ tốn công sửa lại; nó âm thầm cho phép lỗi sống sót.**
+
+### Quy tắc 5 — Sửa một công cụ là phải bàn giao cả **bằng chứng rằng nó đã hỏng**
+
+Bằng chứng ở đây là **thử đột biến**, không phải "chạy thử xem có ra số không". Nhưng thử đột biến cũng
+phải tự chịu sự kiểm chứng: hai lần đầu báo HỎNG và **cả hai do biến dị** chứ không do công cụ
+(`if (false) data.put(…)` vẫn để nguyên chuỗi mà cổng quét; và tệp có hai chỗ khai báo trong khi biến dị
+chỉ gỡ một chỗ). ⇒ **Một thử đột biến báo HỎNG là nghi vấn về biến dị trước, về công cụ sau.**
+
+### Quy tắc 6 — Kỷ luật với chính công cụ kiểm chứng (bổ sung)
+
+Phiên này công cụ của tôi tự làm sai **7 lần** (chi tiết ở `TASK-019`): hai lần phép đo sống sai
+(bóc sai nhánh payload, rồi gọi sai action `bootstrap` trong khi đường thật là `GET`), hai lần thử
+đột biến sai, một lần `process.exit(0)` làm cổng "đạt" báo **HỎNG**, và các lần trước đã ghi ở D-063/D-065.
+Điều đáng nói không phải là sai — mà là **cả 7 lần đều bị chặn lại bởi cùng một thói quen**: không tin
+phép đo của chính mình, mở tệp thật ra xem. Nếu để mình tin, phiên này sẽ có 3 báo cáo sai
+(«96 khoá bootstrap thiếu hết», «`workItemParticipants` chưa từng được trả», «cổng hỏng»).
+
+### Điều chưa giải quyết
+
+Bản vá Java **chưa được biên dịch** (máy không có Maven — D-044) và **chỉ có hiệu lực sau khi dựng lại
+`:18081`**. Cho tới lúc đó, `probe-bootstrap-keys --live` vẫn báo `workItemParticipants` — đúng, không phải
+cổng sai. Không được coi MỐC 125 là xong hoàn toàn khi hai việc đó chưa làm.
+
+## D-067 — Một tệp thử trỏ sai chỗ cũng hỏng âm thầm; và cách tự kiểm công cụ của chính mình
+
+### Bối cảnh
+D-065: cổng đo hỏng thì lỗi sản phẩm sống dai (lần 1 `verify:css-baseline` đọc 1/3 tệp CSS;
+lần 2 `test:regression` 119 tệp mới chạy 14; lần 3–4 hai probe đọc 1 tệp trong 58).
+**Lần 5 — vòng 196 — xảy ra trong một TỆP KIỂM THỬ, không phải probe:**
+`tests/ad11-scope-audit.test.mjs` cắt khối `UserAccessModal` trong `app/page.tsx` rồi đòi chuỗi
+`1. Phạm vi dự án`. MỐC 117 tách nội dung sang `PermissionAccessPanel.tsx` — một lần tách mã
+**đúng** — và tệp thử đỏ mà **không ai thấy**, vì nó nằm ngoài cổng (D-063).
+
+### Quy tắc rút ra
+
+1. **Tệp thử cắt một khoảng văn bản cố định là một dạng "phép đo" — và hỏng theo đúng
+   quy luật của phép đo.** Sau mỗi lần tách mã, phải rà lại tệp thử nào đang cắt vào vùng đã bị
+   dời. Cách rẻ nhất: khi tách, cập nhật ngay tệp thử và tài liệu cùng lúc, không để lệch.
+2. **Đừng gọi một tệp thử đỏ là "hồi quy" trước khi đọc tên test đỏ và thông điệp khẳng định.**
+   Vòng 194 tôi xếp `p2-d4` vào nhóm "không phải MT3"; tên test là «§19 + **MT3-B.2** …».
+   **Phân loại cũ sai, công cụ (`KNOWN_RED`) thì đúng.** Phải giữ các bước trung gian có bằng
+   chứng để sửa được bản tóm tắt của chính mình.
+3. **Sửa tệp thử phải mạnh hơn, không phải bằng.** Bản cũ chỉ so chuỗi trong panel ⇒ panel bị
+   rời rạc vẫn xanh. Bản mới thêm: modal **phải render** panel và truyền đúng `userRow`.
+4. **Một bước "cây sạch phải xanh" (canary) là bắt buộc khi thử đột biến.** Vòng này canary M0
+   báo HỎNG và phơi ra bộ thử **toàn bộ vô hiệu**: tôi dò `ℹ pass 3` trong khi bộ báo đỏ dùng
+   `# pass`, nên cả 6 biến dị đều "đạt" một cách giả. Nếu không có M0, tôi đã kết luận sai.
+   D-066 đã nói *"nghi ngờ biến dị của mình trước" — canary là hình thức cưỡng chế điều đó.*
+5. **Biến dị phải mạnh hơn khẳng định, và phải tự kiểm nó đã áp dụng.**
+   - `/save_user_access/` **không neo** ⇒ biến dị `save_user_access_x` vẫn khớp ⇒ không bị bắt.
+   - `String.replace(x, y)` chỉ thay **lần đầu** ⇒ `<PermissionAccessPanel` xuất hiện lần đầu ở
+     `UserEditModal` (dòng 3234), không phải `UserAccessModal` (3251) ⇒ biến dị **không áp dụng**
+     mà bộ thử báo "không bắt". Phải `split().join()` và phải kiểm chuỗi đích **biến mất khỏi
+     đúng vùng mà khẳng định đo**.
+6. **⛔ Đừng biến đổi byte rồi ghi bằng `"utf8"`.** `String.fromCharCode(b[i])` rồi
+   `writeFileSync(..., "utf8")` ⇒ **mã hoá kép**, tệp tiếng Việt thành `â—TIá»`. Đọc/ghi bằng
+   **chuỗi** utf8; chỉ đổi ký tự cuối dòng.
+7. **Line ending không phải chi tiết vụn vặt.** Nội dung trong git là **LF**, cây làm việc là
+   **CRLF**. Tách bằng `split("\n")` để lại `\r`, rồi ghi bằng `join("\n")` ⇒ **đổi cả tệp**.
+   Phải nhận diện EOL và giữ nguyên, rồi đo lại.
+8. **`scripts/` CÓ nằm trong vùng băm fingerprint** (`ROOT_DIRS`). Sửa một dòng trong
+   `scripts/` làm `verify:fingerprint` đỏ ⇒ phải tính lại **điểm cố định** (D-055).
+   - `brandFingerprint` **phụ thuộc** `sourceFingerprint` (nằm trong `brandManifestPayload`) ⇒ phải tính lại.
+   - `releaseFingerprint` **không** phụ thuộc (`releaseFingerprintPayload` chỉ có build /
+     migrationHead / packageId / uiContractId) ⇒ **đừng** sửa nó; hãy để script tự kiểm và **dừng lại**
+     nếu nó đổi bất thường.
+9. **Một tệp thử có thể mâu thuẫn với chính nó.** `pr03`: tiêu đề «GIỮ NGUYÊN dải 6 tab» nhưng
+   khẳng định đòi BCH ở chỉ số 4 «sau khi bỏ tab Tổng quan». Loại này **không sửa được một cách
+   máy móc** — đó là quyết định nghiệp vụ ⇒ hỏi user, đừng chọn bừa (D-044, §9 TYPE 3).
+
+### Những lần tự gây lỗi trong vòng này (9)
+1. Tính lệch chỉ số dòng sau khi thay khối (guard chặn).
+2. `split("\n")` giữ `\r` ⇒ so sánh `});` không khớp (guard chặn).
+3. Ghi bằng `String.fromCharCode` + `"utf8"` ⇒ **mã hoá kép, hỏng tệp** (khôi phục bằng
+   `git checkout --` rồi áp lại bản sửa có guard).
+4. Vá tệp bằng `String.replace` của PowerShell rối escaping (`\"` thành hai ký tự).
+5. Dò `ℹ pass` / `# pass` sai ⇒ **6/6 biến dị "đạt" giả** (canary M0 bắt).
+6. `String.replace` chỉ thay lần đầu ⇒ biến dị M1 không áp dụng.
+7. Nối đuôi tên hàm trong biến dị M6 ⇒ regex không neo nên không bị bắt.
+8. Guard đo **vùng rộng hơn** khối mà khẳng định thật dùng ⇒ báo sai.
+9. Chỉ số dòng lệch 1 sau `splice` ⇒ KNOWN_RED sửa dở (guard chặn).
+
+⇒ Nguyên tắc giữ: **mọi thao tác trên tệp phải có guard trước khi ghi, và luôn có một canary
+«trạng thái sạch phải đúng» ở cuối.** Bảy lần trong chín lần lỗi là do guard/canary bắt, không phải do tôi nhận ra.
+
+
+## D-068 — Trước khi gọi một mâu thuẫn là TYPE 3, hãy đi tới chỗ khai báo sinh ra nó
+
+### Bối cảnh
+Tôi xếp `pr03-project-detail-tabs` là «TYPE 3, cần user chốt 6 tab hay 5 tab» chỉ vì **tên
+test** («GIỮ NGUYÊN dải 6 tab») và **một khẳng định** (`tab === 4`) không khớp nhau. Thực tế
+chỉ cần đọc 3 dòng khai báo là hết mâu thuẫn:
+
+- `app/page.tsx:807` `const TAB_LABELS = [LIST_TAB, ...DETAIL_TABS]` — `DETAIL_TABS` có 5
+  phần tử ⇒ dải **6 ô**, chỉ số 0..5.
+- `app/page.tsx:810` `const view = tab === 0 ? "list" : "detail"` — chỉ số 0 là **danh sách**.
+- `app/page.tsx:982` — **comment của chính mã**: «tab 5 = Ban chỉ huy».
+
+⇒ Mã, tiêu đề test và comment mã đều đồng ý **6 tab, BCH ở 5**. Một khẳng định sót là
+**hệ quả của PR-01 tách chỉ số 0**, không phải ý định sản phẩm.
+
+### Quy tắc
+
+1. **TYPE 3 là câu hỏi về ý định, không phải câu hỏi về mã.** Trước khi nâng lên user, đi tới
+   **chỗ khai báo sinh ra cả hai vế** (mảng tab, hằng số index, chính sách). Nếu mã tự nhất quán
+   và chỉ một phía là cũ ⇒ đó là **khẳng định sót**, tự sửa được.
+2. **Dấu hiệu nhận biết:** mâu thuẫn *nội tại một tệp thử* (tiêu đề vs khẳng định) thường là
+   tệp thử tự lệch phiên bản, không phải yêu cầu nghiệp vụ mâu thuẫn. Yêu cầu nghiệp vụ mâu
+   thuẫn thường nằm ở **hai tài liệu yêu cầu** khác nhau.
+3. **Ưu tiên bằng chứng cụ thể hơn khẳng định trừu tượng.** `DETAIL_TABS` + `TAB_LABELS`
+   + `view` là dữ kiện; câu chữ khẳng định là diễn giải. Khi hai bên lệch, **đọc mã**.
+4. **Hỏi user tốn kém hơn bạn tưởng.** Vòng này tôi suýt gửi câu hỏi về một chi tiết đã có
+   câu trả lời ngay trong `app/page.tsx`. **Một câu hỏi TYPE 3 phải kèm bằng chứng là không
+   tự quyết được** — không phải «tôi chưa đọc tới đâu».
+5. **Sửa thì phải mạnh hơn.** Tiêu đề nói «6 tab» mà không khẳng định nào đo con số đó là
+   một lỗ hổng riêng: đã thêm `DETAIL_TABS` đúng 5 · dải ghép `[LIST_TAB, ...DETAIL_TABS]`
+   · `view` từ `tab === 0` · phủ định `tab === 4`. Đột biến 6/6.
+
+⇒ Hệ quả: **đỏ ngoài cổng còn 8 tệp / 23 case và TẤT CẢ là MT3 đã rollback** — không còn tệp
+đỏ nào là lỗi thật cần săn.
+## D-069 — Danh sách tệp cổng kiểm thử phải SUY RA, không được viết tay (01/10/2026)
+
+**Bối cảnh.** Vòng 197 phải dựng lại cổng kiểm thử cho toàn bộ nhánh `unity`. Ban đầu danh
+sách tệp cổng được viết tay dưới dạng chuỗi tĩnh trong tệp kịch bản. Khi một tệp thử mới
+xuất hiện trong `tests/` mà không ai thêm vào danh sách đó, cổng **vẫn xanh** — tệp thử mới
+nằm ngoài mắt lưới mà không ai báo.
+
+**Quyết định.**
+1. Danh sách cổng **phải được suy ra** từ nội dung thư mục `tests/` mỗi lần chạy. Tệp nào
+   không nằm trong cổng thì phải nằm trong danh sách `KNOWN_RED` có lý do ghi rõ.
+2. **Xoá một chốt kiểm rỗng** còn xanh vì lý do sai, thay vì giữ lại cho «xanh đẹp».
+   Một chốt kiểm không thể thất bại không có giá trị bằng chứng.
+3. `npm test` phải là lối vào **duy nhất**: một lệnh phải kích hoạt lint + typecheck +
+   toàn bộ tệp thử, và phải chết khi bất kỳ tầng nào đỏ.
+
+**Vì sao quan trọng.** Cổng kiểm thử giả là tệ hơn không có cổng: nó tạo cảm giác an toàn
+trong khi không bảo vệ gì. Nguyên tắc chung — **mọi phép đo phải bắt được thứ nó đo**.
+
+---
+
+## D-070 — Thông báo "đã ghi" của chính lệnh ghi KHÔNG phải bằng chứng (02/10/2026)
+
+**Bối cảnh.** Bộ đo của tôi báo thành công cho 6 trên 11 lệnh ghi. Thực tế máy chủ trả
+`ok:false` cho tất cả: cờ `lenient` trong bộ đo nuốt luôn lỗi, nên «không ném lỗi» bị hiểu
+thành «thành công». Chỉ lúc **đếm lại từ máy chủ** mới lộ ra `users` 14 → 14.
+
+**Quyết định.**
+1. Thành công phải được **xác minh lại từ máy chủ**, bằng cách đọc lại dữ liệu và đếm.
+   Không bao giờ tin thông báo trả về của chính lệnh ghi.
+2. Cờ bỏ qua lỗi **đổi tên** thành `boQuaLoi` và ghi rõ trong tên: nó chỉ khiến không ném
+   lỗi, người gọi vẫn phải tự kiểm `ok`.
+3. Có thêm một hàm **bắt buộc thành công** cho lệnh không được phép lỗi.
+
+**Vì sao quan trọng.** Đây là dạng lỗi tệ nhất: âm thầm, có vẻ thành công, và càng chạy
+càng tin. Nó cũng là lý do phần lớn các quy trình ký hiệu mới phải có bước đọc lại.
+
+---
+
+## D-071 — Bắt lỗi mà quên mất trạng thái thất bại (02/10/2026)
+
+**Bối cảnh.** `buoc()` bắt lỗi của `coThat()`, ghi lại, rồi **trả về `null`**. Vòng lặp
+của tôi kiểm `if (r?.ok === false) break;` — điều kiện này **không bao giờ đúng** với `null`
+(`null?.ok` là `undefined`, không phải `false`). Hệ quả: lỗi không dừng vòng lặp, vòng lặp
+quay 8 lần rồi mới đâm vào bước kế tiếp trên dữ liệu chưa được tạo.
+
+**Quyết định.** Mọi chỗ dùng kết quả bắt lỗi phải kiểm **cả hai** trạng thái:
+`if (!r || r.ok === false) break;`. Quy tắc chung: **hàm có thể trả về `null` phải kèm
+điều kiện chặn bao trùm `null`, không chỉ so sánh với giá trị thất bại của nó.**
+
+---
+
+## D-072 — Quyền xem phân công phê duyệt chỉ có với quản trị (02/10/2026)
+
+**Bối cảnh.** Tôi lấy người duyệt từ `bs.workflowAssignments` trong một kịch bản chạy bằng
+tài khoản nghiệp vụ ⇒ trả `undefined`, suýt kết luận sai rằng phân công người duyệt không tồn
+tại. Trường `approvals[]` của chính phiếu thì luôn có `approverUserId`.
+
+**Quyết định.** Đọc người duyệt từ `approvals[]` của đối tượng cần kiểm, không đọc từ màn
+hình cấu hình. Không kết luận «dữ liệu không có» từ một lần đọc trả `undefined`.
+
+---
+
+## D-073 — Tên đăng nhập không suy ra được từ khoá ngoại (02/10/2026)
+
+**Bối cảnh.** `bs.users` có `id` và `username` tách biệt. Tôi tra tên bằng cách lọc mảng
+`users` theo `id`, nhưng khi đăng nhập bằng tài khoản nghiệp vụ thì danh sách người dùng
+trả về **không đầy đủ**, nên tra luôn trượt.
+
+**Quyết định.** Dựng bảng tra `Map(id → username)` **ngay tại thời điểm đăng nhập quản
+trị** — lúc đó danh sách đầy đủ nhất — rồi mang bảng tra đi khắp kịch bản.
+
+---
+
+## D-074 — Tên trường đọc lại KHÁC tên cột trong cơ sở dữ liệu (02/10/2026)
+
+**Bối cảnh.** Tôi đoán tên trường theo trực giác (`confirmationStatus`, `materialReturns`,
+`inventory[].quantity`) và đều ra `undefined`. Ba lần mất thời gian đoán mò.
+
+**Quyết định.** Ở lần chạy đầu tiên của mỗi kịch bản, **in `Object.keys()`** của mọi khoá
+dữ liệu sẽ dùng. Sau đó chỉ dùng tên đã kiểm chứng. Danh sách đã xác minh:
+`bchConfirmationStatus`, `postingStatus`, `attachmentCount`, `acceptedQty`,
+`itemCount`, `balance`/`reserved`/`available` (không phải `quantity`),
+`issues` (không phải `stockIssues`), `returns` (không phải `materialReturns`).
+
+---
+
+## D-075 — Kiểu dữ liệu trong tệp trạng thái phải kiểm trước khi dựng payload (02/10/2026)
+
+**Bối cảnh.** Sáu lần lưu quyền người dùng đều trả lỗi ràng buộc dữ liệu. Nguyên nhân: trong
+tệp trạng thái tôi lưu kho tổ đội là **mảng chuỗi**, còn máy chủ thực tế là **mảng đối tượng**
+`{ id, code }`. Tôi đoán sai kiểu trong 6 lần liên tiếp mà không hề kiểm lại tệp trạng thái.
+
+**Quyết định.** Trước khi dựng payload từ tệp trạng thái, **in tối thiểu một phần tử** để xác
+nhận kiểu. Không tin vào chính tệp trạng thái do mình tạo ở lần chạy trước.
+
+---
+
+## D-076 — Cấp quyền chức năng phải có nền phòng ban đi trước (02/10/2026)
+
+**Bối cảnh.** Lưu quyền người dùng bị từ chối với thông báo *"Phòng ban … chưa được cấp quyền
+cho chức năng …"*. Hệ thống có **ba cổng quyền độc lập**: ① vai trò ② bảng quyền theo chức
+năng của người dùng ③ bảng quyền nền của **phòng ban** — ngoài ra còn phạm vi dự án và phạm vi
+kho. Kịch bản của tôi chỉ lo cổng ②.
+
+**Quyết định.** Trước khi cấp một chức năng **có thao tác thật**, phải bảo đảm có dòng cấp
+nền ở cấng phòng ban. Với người dùng thật được cấp quyền qua giao diện, quản trị viên phải
+quản lý **cả hai tầng** — giao diện cần nói rõ điều này, nếu không sẽ tạo ra tài khoản «có
+khoá chức năng nhưng không làm được gì».
+
+---
+
+## D-077 — Kiểm CÓ MẶT không phải kiểm MỨC (02/10/2026)
+
+**Bối cảnh.** Cấp phạm vi dự án cho 11 tài khoản, mỗi tài khoản bị từ chối ở mọi thao tác ghi.
+Nguyên nhân: dòng phạm vi do `create_user` sinh ra **đã có sẵn** ở mức chỉ đọc. Đoạn nâng cấp
+của tôi dùng `if (!bảnĐồ.has(dự án))` — mà `Map.has()` chỉ trả lời «có dòng này không», nên
+dòng sẵn có ở mức chỉ đọc **không bao giờ được nâng**, và mọi thao tác ghi trên dự án đó vĩnh
+viễn trả lỗi 403.
+
+**Quyết định.** Khi dùng lại một khoá đã có, **phải so sánh MỨC** chứ không kiểm sự hiện diện.
+Tên hàm kiểm phải phản ánh đúng việc: `has` cho hiện diện, `thieuBang` cho mức.
+
+---
+
+## D-078 — Khẳng định phải so với ẢNH CHỤP GỐC, không dò lại từ dữ liệu đang đổi (02/10/2026)
+
+**Bối cảnh.** Kịch bản kiểm tra chống ghi cứng chạy lần đầu báo hỏng 2 trong 7 khẳng định, trong
+khi máy chủ **đã làm đúng**. Nguyên nhân là tôi so với **chính dữ liệu vừa thay đổi**: một
+vế so sánh dựng số thứ tự vô nghĩa, một vế so với nhánh sai sau khi hai phòng ban đã đổi chỗ.
+
+**Quyết định.** Chuỗi kiểm thử biến đổi trạng thái phải **chụp ảnh trạng thái gốc** ở bước
+đầu, và mọi khẳng định phải so với ảnh chụp đó. Khi một khẳng định đỏ mà **thao tác trung gian
+đều báo thành công**, nghi vấn đầu tiên là **tiêu chí so sánh**, không phải hệ thống.
+
+---
+
+## D-079 — Cờ "mặc định" phải kèm điều kiện phạm vi mới là mặc định thật (02/10/2026)
+
+**Bối cảnh.** Tôi kết luận «có 2 quy trình mặc định cho chức năng `requests`» và lên kế hoạch
+khôi phục — trong khi máy chủ chỉ xét mặc định công ty khi `project_id IS NULL`. Quy trình thứ
+hai là quy trình **gán riêng cho một dự án**, vốn không ghi đè mặc định công ty. Kịch bản "khôi
+phục" của tôi còn **hỏng**: nó lọc sai cột người duyệt nên tạo ra một quy trình không có
+người duyệt nào.
+
+**Quyết định.** Khi kiểm tra «cái này có phải mặc định không», phải dựng **đúng điều kiện mà
+máy chủ dùng**, không lọc theo cờ một cách đơn giản. Cùng quy tắc với D-074: **điều kiện lọc là
+mã nguồn, phải đọc từ mã nguồn.**
+
+⇒ Ghi chú dương: phát hiện này đã **cứu** một lần khôi phục sai. Khi một hành động "sửa" mà
+đọc đúng mã sẽ **phá** cấu hình, đó là dấu hiệu phải dừng lại.
+---
+
+## D-081 — PHẢI ĐỌC CHÍNH XÁC BYTECODE ĐANG CHẠY, VÀ ĐỪNG TIN MỐC THỜI GIAN
+
+**Ngày:** 02/10/2026 · **Vòng:** 199 · **Ghi nhận trong:** `docs/agent-progress/TASK-142.md` · `MASTER_STATUS.md` Known Problem #102
+
+### Bối cảnh
+
+Bản báo cáo vòng 198 nói: *«6 thao tác không có lớp cưỡng chế quyền nào»*. Câu đó **chưa đủ chính xác**. Vòng 199
+đo thật trên hệ thống đang chạy thì ra một kết luận khác, nặng hơn, và khác chỗ.
+
+### Phép đo
+
+Đăng nhập bằng tài khoản **không phải admin**, gọi `list_contract_review` (module `dept_legal_contract_review`),
+đối chiếu với `modulePermissions` mà **chính máy chủ** trả về — không tin danh sách cầm tay:
+
+| Tài khoản | Có module `dept_legal_contract_review`? | HTTP | Nội dung |
+|---|---|---|---|
+| `e2e.kt` (kế toán) | **KHÔNG** | **200** | `total=2`, hồ sơ `HĐLĐ-00002` |
+| `e2e.bgd` (giám đốc) | **KHÔNG** | **200** | `total=2` |
+| `e2e.thuky`, `e2e.ns`, `e2e.project`, `e2e.kh`, `e2e.thukysa`, `e2e.chtsa` | KHÔNG | 403 | bị chặn |
+
+⇒ **Hai tài khoản không có quyền vẫn đọc được dữ liệu thật.** Không phải «6 action chưa khai», mà là:
+
+### Nguyên nhân gốc — `RbacService.java:69`
+
+```java
+if (isCompanyLeadership(user) && !required.contains("admin")) return;
+```
+
+`isCompanyLeadership` = `List.of("director", "accountant").contains(user.role())`.
+**Hai vai trò này bỏ qua kiểm tra module.** Ranh giới đo khớp **chính xác** với mã nguồn: 2/8 tài khoản lọt, 6/8 bị chặn.
+
+### Quy tắc mới
+
+**D-081.1 — Một lớp cưỡng chế có thể đúng mà vẫn hỏng.** Đọc mã thấy `guard()` gọi `requireActionModule` ⇒ dễ kết luận «đã có kiểm quyền». Thực tế kiểm quyền **có chạy** nhưng **thoát sớm**. ⛔ Không suy «có lời gọi kiểm quyền» ⇒ «có kiểm quyền». Phải đo bằng tài khoản thật.
+
+**D-081.2 — Đo bằng nhiều tài khoản, không một tài khoản.** Một tài khoản cho ra kết luận sai theo cả hai chiều. Phải vẽ **ranh giới**: tài khoản nào lọt, tài khoản nào không — rồi mới đoán nguyên nhân.
+
+**D-081.3 — Khi không xác minh được thứ mình đo, phải nói ra (mở rộng D-080).** Cơ chế chính xác của 6 tài khoản bị 403 vẫn **chưa khép lại**: bytecode đang chạy **có** khai `manage_contract_review → dept_legal_contract_review`, song máy chủ vẫn trả nhánh «chưa khai báo quyền». Không có Maven ⇒ không đóng lại được. **Ghi rõ điểm dừng, không đoán bừa.**
+
+### Hai bẫy đo gặp ngay trong lúc làm — đều đã tự bắt
+
+1. ⛔ **Giải mã sai byte ⇒ kết luận ngược.** Tôi giải mã `.class` bằng Latin1 rồi tìm chuỗi tiếng Việt ⇒ **không tìm thấy** ⇒ kết luận sai «không class nào chứa thông báo này». Giải mã bằng UTF-8 mới ra ngay. ⛔ **Tiếng Việt trong bytecode phải giải mã UTF-8.** Đây là biến thể của «đo sai ⇒ kết luận sai».
+2. ⛔ **Phân loại HTTP sai làm hỏng phép đo.** Bộ đo đếm «bị chặn» khi status là 401/403; 4 action trả **400 «thiếu tham số»** bị tính là «không chặn» ⇒ báo động giả. Đúng ra 400 cũng là chặn, nhưng **phải tách hai loại** vì chúng chứng minh hai điều khác nhau.
+
+### Ảnh hưởng tới báo cáo đã phát ra
+
+⛔ **Câu «6 thao tác không có lớp cưỡng chế quyền nào» trong báo cáo vòng 198 là KHÔNG CHÍNH XÁC** và phải được đọc lại
+theo kết luận đúng ở `TASK-142.md`. Lỗi này do **tôi báo cáo một kết luận suy ra từ công cụ đo mà chưa đo thử** —
+đúng dạng lỗi mà `D-080` đã cảnh báo, áp vào chính mình.
+
+### Chưa giải quyết được
+
+⛔ Cơ chế chính xác khiến 6 tài khoản kia bị 403 **chưa khép lại** (mã nguồn và bytecode đang chạy **không khớp**).
+Cần `mvn -o -B test` + đóng gói lại (D-044). **Không tự kết luận vòng tròn.**
+
+### Vòng 200 — bốn hướng thử, đã loại trừ ba, còn một
+
+Tôi không dừng ở chỗ «chưa khép lại» được — đã thử tiếp để xem có đóng được không:
+
+| # | Giả thuyết | Cách kiểm | Kết quả |
+|---|---|---|---|
+| 1 | Module key không tồn tại trong danh mục | `tools/e2e/do-module-ton-tai.mjs` — đọc danh mục module do **máy chủ** trả về | ⛔ **LOẠI**. Danh mục có **76** mục, `dept_legal_contract_review` **có thật**, cùng nhóm `dept_legal_hr`, `dept_legal_labor`, `dept_legal_benefits`, `dept_legal_correspondence`, `dept_legal_documents`, `dept_legal_seal` |
+| 2 | Thông báo 403 đến từ tầng dưới | đọc [ModulePermissionStoreAdapter.java:34-62](java-backend/infrastructure/src/main/java/com/vntech/erp/infrastructure/persistence/ModulePermissionStoreAdapter.java#L34) | ⛔ **LOẠI**. `canUseModule` **trả `boolean`**, không ném lỗi ⇒ 403 buộc phải đến từ nhánh `required.isEmpty()` |
+| 3 | Entry khai báo nằm ngoài `Map` (sau dấu `)`) | đọc [ActionRbacRegistry.java:204-217](java-backend/application/src/main/java/com/vntech/erp/application/rbac/ActionRbacRegistry.java#L204) | ⛔ **LOẠI**. Entry nằm **đúng giữa** `Map.ofEntries`, cạnh `save_labor_contract` và `save_legal_document`. Mã nguồn chuẩn |
+| 4 | JAR chạy khác tệp tôi mở | tìm toàn bộ `vntech-erp-web-*.jar` trên `D:\` | ⛔ **LOẠI**. Chỉ **một** tệp. Nhưng nó build **01/10 10:24**, còn mã sửa **01/10 16:53** ⇒ **chậm hơn ~6,5 giờ** |
+
+⭐ **Kết luận còn lại:** mã nguồn **đúng**, nhưng **tiến trình đang chạy không phải bản dựng từ mã nguồn đó**.
+Entry `manage_contract_review` được thêm cho menu «REVIEW HĐ» (ghi chú MỐC 103 ngay tại dòng 210) — khả năng cao
+thêm sau lần build 10:24 ⇒ **máy chủ đang chạy chưa có nó** ⇒ `modulesFor()` rỗng ⇒ 403 cho mọi
+tài khoản không phải ban lãnh đạo. Đây là **giải thích khớp mọi quan sát**, nhưng tôi **không đánh dấu
+là đã xác nhận** vì không thể chứng minh bằng bytecode mà không cần biên dịch.
+
+⛔ **Hành động quyết định duy nhất:** `mvn -o -B test` + đóng gói lại rồi chạy lại
+`tools/e2e/do-ranh-gi-quyen.mjs`. Nếu 6 tài khoản chuyển từ 403 sang chạy được thì xác nhận.
+
+⛔ Cơ chế chính xác khiến 6 tài khoản kia bị 403 **vẫn chưa khép lại** — đã loại trừ 3 giả thuyết, còn 1 giả thuyết chưa chứng minh được. **Không tự kết luận vòng tròn.**
+
+## D-082 — Migration V37 cho 3 bảng Java dùng nhưng không migration nào tạo
+
+**Vấn đề (L-10 + L-09, đã kiểm chứng bằng đọc mã nguồn, không phải suy đoán):**
+- `contract_reviews`, `contract_review_logs` — `ContractReviewStoreAdapter.java:53,76,83,101,130,143`
+- `error_reports` — `ErrorReportStoreAdapter.java:47,72,86,95`
+- kho `TRANSIT` — `StockManagementUseCase.java:624 findTransitWarehouse()`
+
+Ba bảng đầu chỉ được tạo bởi `drizzle/0315_review_hop_dong.sql` (chạy trên SQLite, **không** phải MySQL).
+⇒ Cài mới từ đầu bằng Flyway thì các màn hình này **gọi API vào bảng không tồn tại**.
+
+**Đã viết:** `java-backend/infrastructure/src/main/resources/db/migration/V37__contract_reviews_review_logs_error_reports_transit_warehouse.sql`
+Số thứ tự: `V36` đã dành trước ⇒ lấy `V37`, không đụng `V36`.
+
+**Vì sao an toàn khi chạy lại nhiều lần:** `CREATE TABLE IF NOT EXISTS` + `INSERT IGNORE` +
+khối nạp hợp đồng có điều kiện `WHERE NOT EXISTS (SELECT 1 FROM contract_reviews cr WHERE cr.contract_id = lc.id)`
+⇒ không ghi đè dữ liệu người dùng đã xử lý. ⛔ Chỉ ADD/UPDATE, không DELETE.
+
+**⛔ CHƯA CHẠY.** CSDL thật `flyway_schema_history` mới tới **V31**; V32–V35 và V37 đều chưa từng chạy.
+Cần: ① anh duyệt nội dung ② `mvn -o -B test` ③ build lại JAR ④ khởi động lại backend để Flyway chạy.
+⛔ **Không tự ý chạy trên CSDL thật.**
+
+**Kiểm chứng sau khi viết (vòng 203):**
+- 5 cổng quyền: `probe-action-role-parity` / `-scope-parity` / `probe-action-parity` /
+  `probe-action-coverage-controller` EXIT=0 — **không hồi quy**; `probe-action-registry-coverage`
+  EXIT=1 (đã biết, chính là L-11, chưa sửa vì TYPE 3).
+- `probe-schema-drift` EXIT=2 «KHÔNG KẾT LUẬN» — **đúng như mong đợi**: ảnh schema đã cũ.
+- `npm test` EXIT=0, `pass 644 · fail 0`.
+
+## D-083 — Sửa nhân đôi dòng BOQ: nhanh UPDATE bo qua `project_boq_item_id`
+
+**Triệu chứng (L-08):** 12 lần `save_boq_item` cho ra 24 dòng `project_boq_items`.
+
+**Cơ chế — bằng chứng quyết định, không phải suy đoán:**
+`BoqManagementUseCase.java:186` có ghi chú **«đồng bộ lại project_boq_item_id trên source item»**
+rồi gọi `upsertSourceItem(item, false, now)` (:188). Nhưng nhánh UPDATE của
+`BoqStoreAdapter.upsertSourceItem` **không hề ghi cột `project_boq_item_id`**
+— trong khi nhánh INSERT (:147) **có** ghi. ⇒ Lần đầu: INSERT dòng source với
+`project_boq_item_id = NULL` (vì `existingPbiId` lúc đó còn rỗng, :169), rồi tạo dòng
+`project_boq_items` với id mới (:176, :185). Lần gọi thứ hai (:188) **cố** ghi lại liên kết
+nhưng UPDATE không có cột đó ⇒ **liên kết không bao giờ được lưu**.
+Lần sửa tiếp theo đọc `sv(before, "project_boq_item_id")` (:116) ⇒ luôn rỗng ⇒ lại
+`idGenerator.next("BOQ")` ⇒ **INSERT thêm một dòng nữa**. Vòng lặp nhân đôi khép lại.
+
+**Đã sửa** `BoqStoreAdapter.java` — thêm `project_boq_item_id=?` vào SET của nhánh UPDATE
+và thêm đúng một đối số `item.get("projectBoqItemId")` tương ứng, đặt đúng vị trí ngay trước
+`mapped_by` để khớp thứ tự cột của nhánh INSERT.
+
+**Kiểm chứng tĩnh (máy này không có Maven — D-044, không biên dịch được):**
+- Số dấu `?` trong khối UPDATE = **25**; đối số = 24 `item.get` + 1 `now` = **25** ⇒ khớp tuyệt đối.
+- Nhánh INSERT: 31 `?` = 28 `item.get` + 2 `now` + 1 chuỗi literal ⇒ vẫn khớp.
+- Tổng số dòng **không đổi** (718); `{` = `}` = 69; CRLF giữ nguyên.
+- `npm test` EXIT=0, `pass 644 · fail 0`; `probe-action-parity` EXIT=0.
+
+⛔ **CHƯA ĐƯỢC BIÊN DỊCH.** Sửa Java không kiểm chứng được ở máy này.
+Cần: `mvn -o -B test` + build lại rồi chạy lại bài kiểm thử BOQ trước khi tin là hết lỗi.
+
+**⛔ DỮ LIỆU ĐÃ NHÂN BẢN VẪN CÒN.** Bản vá chỉ chặn lỗi **tiếp diễn**; các cặp dòng trùng
+đã sinh trước đó **không tự biến mất**. Dọn dữ liệu cần một migration riêng và phải được
+duyệt — **không tự xoá**.
+
+## D-084 — L-03 nghiêm trọng hơn mô tả cũ: KHÔNG CHỈ xoá toàn cục, mà xoá CẢ các bước form không hiển thị
+
+**Mô tả cũ trong hồ sơ:** «`save_email_settings` xoá TOÀN CỤC `approval_project_assignments`».
+Mô tả đó **chưa đủ sâu**. Lần đọc kỹ vòng 205 cho thấy đây là **xoá âm thầm, không phục hồi**.
+
+**Chuỗi lỗi (đọc mã nguồn, không phải suy đoán):**
+1. `app/page.tsx:2812` — `stageRows` lọc bằng
+   `data.approvalStages.filter(row => row.active || pendingStageNos.has(Number(row.stageNo)))`
+   ⇒ **mọi bước `active = 0` mà không có hồ sơ đang chờ bị LOẠI KHỎI FORM**.
+2. `page.tsx:2818-2819` — payload `assignments` chỉ được dựng từ `activeStages` × `data.projects`.
+   ⇒ Các cặp (dự án, bước) bị loại ở bước 1 **không hề có trong payload**.
+3. `AdminOpsManagementUseCase.java:96` — `if (assignmentsProvided) store.clearApprovalProjectAssignments();`
+   ⇒ `AdminOpsStoreAdapter.java:65` chạy `DELETE FROM approval_project_assignments` — **không có mệnh đề WHERE**.
+   ⇒ Xoá **toàn bộ bảng**, kể cả những cặp **không hề nằm trong payload**.
+4. `AdminOpsManagementUseCase.java:103` — dòng có `ownerUserId` rỗng thì `continue` ⇒ **không được ghi lại**.
+
+**⇒ Hệ quả xác định, không phải «có thể»:** chỉ cần **mở màn hình Cấu hình email và bấm Lưu**,
+mọi phân công Owner của **các bước phê duyệt đang ẩn** — trên **toàn bộ dự án** — bị xoá vĩnh viễn,
+không có gì ghi lại. Bảng này là nguồn sự thật của `stageApproverUserIds` (Engine A của chuỗi phê duyệt).
+
+**Hai đường kích hoạt thứ hai (cùng kết quả):**
+- `ownerFor()` (`page.tsx:2825`) đọc `data.workflowAssignments` — mà theo **D-072** mảng này **chỉ admin mới có**.
+  Nếu lúc mở form mảng đó rỗng ⇒ **mọi** select Owner hiển thị trống ⇒ payload toàn `ownerUserId = null`
+  ⇒ xoá sạch toàn bộ chuỗi phê duyệt.
+- `eligibleOwners()` lọc theo phạm vi dự án + vai trò; bước không còn ai hợp lệ ⇒ select rỗng ⇒ xoá luôn.
+
+**⛔ BLOCKED — USER CONFIRMATION REQUIRED (loại 3, quyết định nghiệp vụ).**
+**Câu hỏi:** với một cặp (dự án, bước) **có mặt trong form** nhưng ô Owner **để trống**,
+hệ thống nên (a) **xoá** phân công đó — coi là «quản trị viên chủ động bỏ trống», hay
+(b) **giữ nguyên** phân công cũ — coi là «chưa ai được chọn, đừng đụng»?
+
+**Vì sao chưa tự quyết:** hai cách đều hợp lý nghiệp vụ và dẫn tới dữ liệu khác nhau.
+Trường hợp (a) cho phép xoá nhầm Owner khi danh sách người dùng hợp lệ bị thu hẹp tạm thời;
+trường hợp (b) khiến không bao giờ gỡ được một Owner đã sai.
+Ngoài ra **không có Maven trên máy này (D-044)** ⇒ sửa Java không biên dịch kiểm chứng được.
+
+**Đề xuất của em:** **(b) giữ nguyên**, kèm thu hẹp DELETE chỉ trong đúng các cặp có trong payload.
+Thu hẹp này **an toàn dưới mọi cách hiểu** (hiện tại còn xoá cả cặp ngoài payload — vô điều kiện sai),
+nên dù anh chọn (a) hay (b) thì phần này vẫn nên làm.
+
+**Khung vá (chưa viết, chờ anh chốt):** thêm `deleteApprovalAssignment(projectId, stage)` ở tầng store,
+thay cho `clearApprovalProjectAssignments()` toàn cục; vòng lặp hiện tại đổi thành
+«xoá đúng cặp đang xét → rồi `insertApprovalAssignment` nếu có Owner».
+⛔ Chưa đụng vào CSDL thật.
+
+## D-085 — WorkflowModal: đính chính mô tả sai + thu hồi một ghi nhận cũ của chính tôi
+
+**⛔ ĐÍNH CHÍNH (quan trọng — bản ghi cũ SAI):**
+Trong danh sách phần việc tồn đọng có câu:
+*«`WorkflowModal.tsx:151` cho phép lưu bước không có người duyệt trong khi server `saveWorkflow` từ chối».*
+**Câu này SAI nửa đầu.** Đọc lại từ đầu cho thấy
+`WorkflowModal.tsx:70` **đã chặn sẵn**:
+`if (!users.length) return setError("Bước … chưa chỉ định người duyệt.");`
+⇒ **UI không hề cho lưu** bước không có người duyệt. Đây là hành vi ĐÚNG.
+Sai lệch giữa UI và server chỉ tồn tại **ở câu chữ**, không phải ở hành vi.
+
+**Vì sao từng tin sai:** bản ghi cũ chỉ đọc đúng một dòng (151) và **suy diễn** hành vi từ câu chữ.
+Câu chữ nói *"theo chế độ CHỈ CẢNH BÁO, quy trình VẪN lưu được"* — em lấy câu chữ làm bằng chứng về hành vi.
+⇒ **Bằng chứng từ câu chữ không phải bằng chứng về hành vi** (cùng tinh thần D-080).
+
+**Lỗi thật còn lại:** `WorkflowModal.tsx:151` **mô tả sai implementation**.
+Server (`OpsTaskManagementUseCase.java:704`) từ chối tuyệt đối:
+`throw Api("Bước … chưa chỉ định người duyệt.")` — **không tồn tại** chế độ «chỉ cảnh báo».
+⇒ Người dùng đọc cảnh báo này sẽ tin rằng bấm «Lưu quy trình» được, và **thất vọng khi bị chặn**.
+
+**Đã sửa** — chỉ một câu, thay bằng mô tả đúng thực tế:
+> «Bước N chưa có người duyệt — phải chỉ định ít nhất một người duyệt thì mới lưu được quy trình này.»
+
+**Vì sao đây là loại sửa an toàn:** nó chỉ sửa **văn bản hiển thị**, **không đụng** logic,
+không đụng payload, không đụng quyền. Đây cũng là sửa đúng theo §15 —
+«không để documentation mô tả sai implementation hiện tại».
+
+**Kiểm chứng (sửa TypeScript ⇒ ĐƯỢC biên dịch thật, khác mọi sửa Java trước đó):**
+- Hai chuỗi cũ `CHỈ CẢNH BÁO` / `VẪN lưu được` còn **0** lần trong tệp.
+- Tổng số dòng **không đổi** (162); CRLF giữ nguyên.
+- `npm test` EXIT=0 — `pass 644 · fail 0` (bao gồm bước kiểm tra kiểu của TypeScript).
+
+## D-086 — Test hồi quy hợp đồng UI↔server (V207) + PHÁT HIỆN fingerprint đã trôi từ vòng 206
+
+### Phần 1 — Tệp thử `tests/v207-workflow-approver-contract.test.mjs` (5 vệ)
+Sửa ở D-085 mới chỉ là sửa **một câu chữ**. §14 yêu cầu mọi thay đổi mã phải có kiểm chứng,
+nên vòng 207 khoá lại hợp đồng giữa modal và server. Tệp thử **tự đọc nguồn và tự xác minh**
+— không tin lời kể (đúng quy ước của `tests/ad11-scope-audit.test.mjs`):
+1. **UI CHẶN THẬT** trước khi gọi API khi bước chưa có người duyệt (và lệnh chặn phải nằm TRƯỚC lời gọi `submit`).
+2. **Server THẬT SỰ từ chối** — câu chữ UI nói tới phải có thật trong mã Java.
+3. Câu chữ **KHÔNG được hứa** «VẪN lưu được», không được viết ra «CHỈ CẢNH BÁO» như thể có chế độ đó.
+4. Cảnh báo phải **khớp đúng** với điều kiện chặn (phải là `inline-alert`, **không** phải dòng `menu-drop-empty` ngay trên).
+5. Chế độ «một người duyệt» phải bị chặn ở **cả hai** phía.
+
+**Lỗi của chính tôi, đã tự bắt và sửa:** lần chạy đầu **ĐỎ (4/5)** vì regex ở vệ 4 quá lỏng,
+khớp nhầm dòng 149 (`menu-drop-empty`) thay vì dòng 151 (`inline-alert`) — cả hai đều chứa chữ «người duyệt».
+Mã nguồn vẫn đúng; **lỗi nằm ở tệp thử**. Đã siết regex, không sửa lại mã nguồn để chiều theo tệp thử.
+
+**Đối chứng âm — chứng minh tệp thử THẬT SỰ bắt lỗi** (theo tinh thần D-081.3):
+| Trạng thái | Kết quả |
+|---|---|
+| Mã nguồn đúng | `pass 5 · fail 0` — **EXIT=0** |
+| Cố ý đưa lại câu cũ | `pass 3 · fail 2` — **EXIT=1** ✅ bắt đúng |
+| Hoàn tác | **byte-identical**, 0 chuỗi xấu |
+Tệp thử xanh mà không bắt được lỗi thì **vô dụng** — nên phải có bước phá rồi hoàn tác.
+
+### Phần 2 — ⭐ PHÁT HIỆN: fingerprint đã trôi TỪ VÒNG 206, không phải do tệp thử
+`scripts/verify-vntech-fingerprint.mjs` báo:
+`expected 6f0d53db…, actual 5a3d6432…` ⇒ EXIT=1.
+
+**Nguyên nhân gốc rễ:** `app/screens/WorkflowModal.tsx` thuộc `app/` — nằm trong `ROOT_DIRS` được băm.
+**Sửa ở vòng 206 ĐÃ LÀM TRÔI FINGERPRINT**, và em đã **không phát hiện** vì chỉ chạy `npm test`.
+`npm test` **không** kiểm tra fingerprint ⇒ xanh suốt trong khi bộ kiểm thử toàn hệ thống lại đang ĐỎ.
+(Thêm nữa, tệp thử v207 làm tệp danh sách lên 695 từ 694 — nhưng nguyên nhân **đã có sẵn từ vòng 206**.)
+
+**⇒ Bài học: `npm test` xanh KHÔNG đồng nghĩa trạng thái khoẻ.** Phải chạy `verify-vntech-fingerprint.mjs`
+sau **mọi** thay đổi trong `app/ db/ deploy/ drizzle/ lib/ public/ scripts/ tests/ worker/`.
+
+**Đã sửa** (tính đúng bằng hàm gốc `calculateBrandFingerprint` — **không** chạy `tools/refresh-phase-identity.mjs`):
+| Trường | Cũ | Mới |
+|---|---|---|
+| `sourceFingerprint` | `6f0d53db64c9…` | `5a3d6432c5f9c868ea6b57667189ce7f75b99c3496bb32639ef0e56cd33a8850` |
+| `sourceFingerprintShort` | `VNTECH-FP-6F0D53DB64C96848` | `VNTECH-FP-5A3D6432C5F9C868` |
+| `brandFingerprint` | `cdb3b5102a60…` | `12c3d53f3f532c79bd3956c3f25be6ee9bf8d7bc5d7b361b3f8b6e4f02389b4d` |
+| `releaseFingerprint` | `f7d72d34…` | **GIỮ NGUYÊN** (không phụ thuộc mã nguồn) |
+
+Cập nhật đồng thời `lib/vntech-identity-data.mjs` và `VNTECH_FINGERPRINT.json` (hai nơi phải khớp nhau);
+`lib/vntech-identity-data.mjs` nằm trong `EXCLUDED` nên sửa nó **không gây trôi mới** — đây là điểm cố định.
+
+**Kiểm chứng:** `verify-vntech-fingerprint.mjs` → `ĐẠT · VNTECH-FP-5A3D6432C5F9C868 · source:695 files · brand/release verified` **EXIT=0**.
+`npm test` → `pass 649 · fail 0` **EXIT=0**. Tệp JSON vẫn parse được. Tệp tạm trong `tools/` đã xoá.
+
+## D-087 — L-06: số phiếu GRN-PX trùng giữa các dự án (đã vá GRN-PX; GRN-STO để lại)
+
+### Quy tắc đã được CHÍNH MÃNG NGUỒN tự nói ra — không phải suy đoán của tôi
+[StockManagementUseCase.java:972] có sẵn câu:
+`// Kèm mã dự án: stock_counts_no_uidx unique TOÀN CỤC, sequence lại đếm theo (project, year).`
+
+⇒ **Bất biến:** khi bộ đếm đếm **theo từng dự án** mà cột số phiếu có **chỉ mục DUY NHẤT toàn cục**,
+thì số phiếu **bắt buộc** phải kèm mã dự án.
+
+### Kiểm kê đủ 7 chỗ đặt số trong cùng tệp — 5/7 ĐÃ LÀM ĐÚNG, 2 CHỖ SAI
+| # | Dòng | Ký hiệu | Khoá đếm | Cột UNIQUE | Có mã dự án? |
+|---|---|---|---|---|---|
+| 84 | `PX-` | theo dự án | `stock_issues_no_uidx` toàn cục | ✅ CÓ |
+| **366** | `GRN-STO-` | theo dự án | `goods_receipts_no_uidx` toàn cục | ❌ **SAI** |
+| **451** | `GRN-PX-` | theo dự án | `goods_receipts_no_uidx` toàn cục | ❌ **SAI** |
+| 522 | `RET-` | theo dự án | `material_returns_no_uidx` toàn cục | ✅ CÓ |
+| 633 | `TRF-` | **toàn cục** (`TRANSFER:<year>`) | toàn cục | ✅ cặp đúng |
+| 815 | `KT-RET-` | theo dự án | toàn cục | ✅ CÓ |
+| 973 | `KK-` | theo dự án | `stock_counts_no_uidx` toàn cục | ✅ CÓ |
+⇒ Chỉ `GRN-PX` và `GRN-STO` **ghép sai cặp**. `TRANSFER` là ví dụ cặp đúng: số toàn cục + khoá đếm toàn cục.
+
+### Đã vá: GRN-PX
+Số phiếu đổi từ `GRN-PX-2026-0001` → `GRN-PX-<MÃ DỰ ÁN>-2026-0001`.
+**KHÔNG phải lựa chọn mở mang** — đây là bám đúng quy ước mà 5 chỗ còn lại trong cùng tệp đã theo.
+
+Vá được là nhờ **truy vết trước, sửa sau** (bài học D-080 — không đoán):
+- `stock_issues` **không có** cột `project_code` ⇒ `sv(issue,"projectCode")` sẽ trả `""` và sinh ra
+  `GRN-PX--2026-0001` ⇒ **vẫn trùng**. Vì vậy phải sửa **tầng lưu trữ**, không sửa tại chỗ.
+- `findStockIssueFull` (`WarehouseStockStoreAdapter:246`) bổ sung `p.code AS "projectCode"`
+  + `LEFT JOIN projects p ON p.id=si.project_id`. **Chỉ 1 nơi đọc** ⇒ thay đổi cộng, không ảnh hưởng nơi khác.
+- Đã xác minh `projects.code` **text NOT NULL** tồn tại thật (`drizzle/0000:155`).
+
+### ⛔ CHƯA VÁ: GRN-STO (cùng gốc rễ, nhưng tách riêng có chủ đích)
+`findTransferOrder` dùng chung cho **4 nơi**: `:332` lập GRN, `:694/:710/:744` phê duyệt–giao–nhận.
+Thêm JOIN vào nó ⇒ mở rộng ảnh hưởng sang 3 luồng phê duyệt đang chạy thật.
+Theo §22 (không mở rộng phạm vi), em **dừng lại** thay vì sửa lo. Ghi **FOLLOW-UP**.
+
+### Kiểm chứng — chỉ kiểm tra TĨNH (máy này KHÔNG có Maven, D-044)
+`projects.code` tồn tại · JOIN hợp lệ · ngoặc cân bằng `90/90` và `113/113` ·
+số dòng `1133` không đổi và `1218 → 1220` (+2 dòng chú thích) · CRLF giữ nguyên ở cả hai tệp.
+⛔ **CHƯA BIÊN DỊCH. ⛔ CHƯA CHẠY ĐƯỢC.** Cần build để xác nhận số phiếu thực tế.
+
+### ⚠️ Ảnh hưởng nhìn thấy được
+Định dạng số phiếu nhập **đổi**, người dùng sẽ thấy mã dự án trong số phiếu.
+Đánh đổi lại: **hết trùng số phiếu giữa các dự án**. Số cũ đã sinh (`GRN-PX-2026-0001`)
+và số mới có **cấu trúc khác nhau** nên **không đụng** dữ liệu cũ, **không cần migration**.
+
+### Phân loại
+**TYPE 2** — không phải TYPE 3, vì quy tắc đã được viết sẵn trong mã và 5/7 chỗ đã tuân theo;
+đây là sửa chỗ lệch, không phải đặt nghiệp vụ mới. Nhưng vì **đổi định dạng số phiếu ra ngoài**,
+em vẫn nêu rõ ở đây để anh có thể chặn nếu không đồng ý.
+
+---
+
+## TASK-025 — Sửa lỗi PO → «Xem phiếu đề nghị nguồn» (vòng 211)
+
+- **STATUS:** DONE
+- **COMPLETED:**
+  - Truy vết gốc rễ, KHÔNG phỏng đoán: `PurchaseOrderDrawer` gọi `open("detail", { id, requestNo })` — object RÚT GỌN 2 trường.
+  - `RequestDrawer` (`app/screens/RequestDrawer.tsx:25-37`) dùng THẲNG `request`, KHÔNG tự tra cứu lại ⇒ mọi trường khác `undefined` ⇒ màn vỡ.
+  - Mọi call site khác đều truyền DÒNG ĐẦY ĐỦ (`Requests.tsx:128`, `page.tsx:600/707/1174`) ⇒ lỗi chỉ ở PO.
+  - Sửa: tra cứu bản ghi thật trong `data.requests` theo `purchaseOrder.requestId`; không có thì KHÔNG mở màn vỡ, hiện thông báo nêu `request_id` + nút bị tắt.
+- **FILES CHANGED:**
+  - `app/screens/PurchaseOrderDrawer.tsx` (sửa)
+  - `tests/v211-po-xem-phieu-de-nghi-nguon.test.mjs` (MỚI, 5 vệ)
+  - `lib/vntech-identity-data.mjs` · `VNTECH_FINGERPRINT.json` (fingerprint)
+- **DATABASE:** ❌ KHÔNG thay đổi
+- **API:** ❌ KHÔNG thay đổi (lỗi nằm hoàn toàn ở tầng UI)
+- **TEST:**
+  - Tệp thử riêng `pass 5 · fail 0` EXIT=0
+  - Đối chứng âm: trả về object rút gọn ⇒ `pass 3 · fail 2` EXIT=1 ⇒ hoàn tác byte-identical
+  - `npm test` `pass 660 · fail 0` EXIT=0
+  - `verify-vntech-fingerprint.mjs` ĐẠT · 697 files · EXIT=0
+- **REMAINING:** Còn 11 mục của yêu cầu vòng 211 (menu · tab · PR · PO · báo cáo) — xem `CHECKLIST.md` § VÒNG 211
+- **NEXT:** Nhóm MENU (1.1–1.4)
+- **BLOCKER:** không cho bước này
+
+### Bài học vòng 211
+- **`verify-vntech-fingerprint.mjs` bắt được lỗi của chính tôi**: tôi truyền nhầm giá trị fingerprint CŨ (vòng 208) vào `.Replace`, trong khi tệp đã mang giá trị vòng 210 ⇒ `.Replace` không khớp ⇒ **không có gì thay đổi mà không ai báo**. Đã sửa bằng cách **kiểm tra giá trị cũ có thật sự nằm trong tệp không, rồi mới thay** ⇒ đã bổ sung thành chuẩn bắt buộc.
+- Đừng tin `.Replace` là đã ghi. **Luôn kiểm tra `Contains` trước, và chạy `verify` sau.**
+
+## D-090 — Sửa gốc: dòng dữ liệu có TÊN CỘT, mã có TÊN BIẾN KHÁC ⇒ trạng thái gộp còn MỘT khoá và lưu "toàn false"
+
+- **TÌNH HUỐNG (vòng 214):** `PermissionAccessPanel.tsx` dựng `assignableModules` từ `data.moduleCatalog` bằng `(item) => Boolean(item.enabled !== false) && item.key !== "admin"`. Đo trên API sống: dòng `moduleCatalog` chỉ có `moduleKey`, `active`, `groupKey`, `groupName`, `icon`, `label`, `sortOrder`, `systemLocked` — **không có `key`, không có `enabled`**.
+- **HỆ QUẢ ĐO ĐƯỢC (không phải suy đoán):** `item.key === undefined` cho cả 76 dòng ⇒ `Object.fromEntries` gộp thành đúng MỘT khoá `"undefined"`. (1) Ma trận hiện ô tick TRỐNG cho cả tài khoản đang có quyền. (2) «Chọn tất cả» / «Bỏ chọn tất cả» / checkbox đầu cột dựng state toàn bằng khoá `undefined` ⇒ payload `save_user_access` gửi 76 module **TẤT CẢ `false`** ⇒ vế Java bỏ qua cổng P5.3 (`want == 0`) rồi `clearUserScopes()` **XÓA SẠCH** toàn bộ quyền, vẫn trả HTTP 200 «Đã lưu quyền hiệu lực».
+- **QUYẾT ĐỊNH:** mọi khóa suy ra từ dữ liệu API phải lấy từ **tên cột thật** (`moduleKey`, `active`), không suy từ tên biến quen dùng ở nơi khác. Với mã sinh tự động (`Object.fromEntries` theo khoá) phải **kiểm tra số khoá** trước khi gửi, và nếu danh mục không dùng được thì **từ chối** chứ không gửi payload toàn `false`.
+- **ÁP DỤNG CỤ THỂ:** thêm `moduleKeys` = hợp nhất khoá từ `moduleCatalog` **và** khoá của dòng ma trận thật (`entry.module?.key`) ⇒ state luôn phủ đúng các dòng được vẽ; `setAll` / `setColumnAll` / `columnState` chuyển sang `moduleKeys`.
+- **BÀI HỌC BỔ SUNG:** **một biến có thể mang hai nghĩa khác nhau trong cùng một tệp.** `item` trong `assignableModules` là dòng `moduleCatalog` (`.key` không tồn tại), còn `item` trong phần vẽ là `entry.module` (`.key` đúng). Vì vậy lệnh cấm phải **khoanh đúng vùng dựng state**, không cấm chung toàn tệp — nếu không sẽ cấm nhầm chỗ đang đúng.
+- **CÁCH KIỂM CHỨNG:** `tests/v214-phan-quyen-luu-quyen.test.mjs` — vệ 5 chạy ngược biểu thức CŨ trên 76 dòng giả lập và **bắt buộc phải ra đúng một khoá `"undefined"`** (khóa lỗi lại); đối chứng âm trên tệp thật cho `fail 1` EXIT=1, khôi phục byte-identical rồi `pass 6 fail 0`.
+- **PHẠM VI:** chỉ sửa `.tsx` (kiểm tra được ngay bằng `npm test`). **KHÔNG** sửa Java: máy này không có Maven (D-044) nên không thêm được lớp phòng vệ ở vế máy chủ. ⏳ FOLLOW-UP nếu cần: `saveUserAccess` nên **từ chối rõ ràng** payload mà mọi module đều không có quyền nào, thay vì âm thầm thay thế toàn bộ.
+
+## D-091 — TAB THỨ 3 «CHI TIẾT LŨY KẾ THEO VẬT TƯ» THAY THẾ MỘT PHẦN CHỈ ĐẠO 21/09 (vòng 215 · mục 1.4)
+═══════════════════════════════════════════════════════════════════════
+
+**TÌNH HUỐNG.** Chỉ đạo 21/09/2026: «bỏ P-01 không tách MR PR PO nữa mà chỉ còn PR và PO thôi». Chỉ đạo đó đã được **mã hoá vào 2 tệp test**: `tests/p01-purchasing-two-tabs.test.mjs` (khẳng định `PURCHASING_TABS.length === 2`) và `tests/moc121-purchasing-tabs.test.mjs` (khẳng định đúng 2 `key:` trong `PURCHASING_TABS`). Sau đó, vòng 211, USER yêu cầu mục 1.4: thêm tab thứ 3 «Chi tiết lũy kế theo vật tư» vào chính dải tab đó.
+
+**NGUYÊN TẮC ÁP DỤNG.** Khi hai chỉ đạo xung đột: ưu tiên chỉ đạo **MỚI HƠN + CHI TIẾT HƠN**, nhưng chỉ trong phạm vi nó thật sự nói tới, và **không được âm thầm xoá luật cũ còn đúng**. Ở đây:
+
+1. ⛔ **KHÔNG đụng** phần cấm `MR`. Hai khẳng định cấm `MR` trong `p01-purchasing-two-tabs.test.mjs` giữ nguyên, vẫn phải xanh.
+2. ✅ **Mở rộng** `PURCHASING_TABS` từ 2 lên 3 — **có ghi lý do**, không nới lỏng điều kiện.
+3. 📌 **Lập luận cho việc không vi phạm ý 21/09:** chỉ đạo 21/09 nhắm vào việc **bỏ tách CHỨNG TỪ MR** thành một tab hồ sơ riêng. Tab mới **không phải chứng từ**: nó là bảng TỔNG HỢP suy ra từ `data.boqItems` (BOQ/Hợp đồng), không có `requestNo`/`poNo` riêng, không bấm để mở phiếu, chỉ đọc. ⇒ Số tab CHỨNG TỪ vẫn đúng là **2**.
+4. ⛔ **KHÔNG bịa cột** (D-085/D-080): chỉ dùng trường đo thật trên `data.boqItems`. Thêm `orderedNotReceivedQty` (1/32 dòng) và `issuedQty` (5/32); cố ý bỏ `installedQty` (toàn 0), `variance*` (toàn âm), `variationStatus`, `mappingStatus`. `stockQty` cũng bị bỏ vì đụng công thức nghiệp vụ «Còn phải mua» — việc đó là quyết định của USER, không phải của tôi.
+
+**HỆ QUẢ PHẢI CÔNG BỐ (không giấu).** Hai tệp test đã bị SỬA nội dung khẳng định. Vì vậy bắt buộc: (a) ghi lý do thay thế vào **đầu cả hai tệp test**, (b) vào banner đầu `app/screens/Purchasing.tsx`, (c) vào `MASTER_STATUS.md`, (d) báo Telegram, (e) để mục 215.13 trong `CHECKLIST.md` ở trạng thái **chờ USER xác nhận**. Nếu USER muốn giữ đúng 2 tab thì hoàn tác bằng `git checkout` là đủ — thay đổi chỉ nằm trong 3 tệp nêu trên.
+
+**HỌC ĐƯỢC VỀ KỸ THUẬT (vòng 215).** `tsc` chỉ báo `TS1005 '}' expected` ở CUỐI tệp — nó không chỉ vị trí thật. Cách dò đúng: lần lượt chèn `}` vào TỪNG dòng rồi đưa qua `esbuild` (`loader: "tsx"`); dòng đầu tiên parse thành công là chỗ đang thiếu. Và đừng bao giờ gỡ khối trùng bằng `$st = $i - 2`: nó cắn 2 ký tự trước mốc — mất `}` đóng hàm, mất 2 ký tự trang trí, và **không báo lỗi nào**.
+
+## D-094 — `material_requests.requested_by` LƯU TÊN HIỂN THỊ, còn backend so với `user.id` (UUID) ⇒ mọi cổng sở hữu chỉ chạy được với admin
+═══════════════════════════════════════════════════════════════════════
+
+**TÌNH HUỐNG (đo ngày 02/10/2026).** `RequestModal` ghi `requestedBy: data.user.fullName` — tức cột `material_requests.requested_by` lưu **TÊN HIỂN THỊ** («Kỹ sư dự án (đề nghị mua)»…). Nhưng bốn cổng RBAC phía máy chủ so `mr.requestedBy` với **`user.id`** (UUID): `delete_request` · `cancel_request` · `resubmit_request` · `update_returned_request`.
+
+**HỆ QUẢ (đo, không suy đoán).** Không tài khoản nào khác `admin` có `requested_by` trùng UUID của mình ⇒ bốn cổng đó thực tế **chỉ mở cho admin**, dù ở màn «Phiếu đề nghị mua hàng» có tới **40/84** phiếu ở trạng thái `returned` — đúng loại phiếu mà người dùng cần gửi lại.
+
+**QUYẾT ĐỊNH (vòng 216).** ⛔ **KHÔNG ship nút «Xoá phiếu» / «Huỷ phiếu» lên UI.** Một nút mà 95 % người dùng bấm là vô nghĩa thì còn tệ hơn không có nút. Việc sửa gốc cần **thêm cột `material_requests.requested_by_id`** (hoặc tra `full_name → user.id` khi so) ⇒ đòi hỏi **migration** ⇒ thuộc **TYPE 3**, phải hỏi USER, không tự quyết.
+
+**CÁCH KIỂM CHỨNG.** `tests/v215-phieu-de-nghi-muc-2-1-den-2-7.test.mjs` — vệ «⛔ KHÔNG ship nút Xóa/Hủy phiếu» quét toàn tệp `Requests.tsx` và đòi **không** có `open("delete_…"/"cancel_…"/"resubmit_…")`. Nếu mai có ai thêm nút Xoá mà không kèm migration, vệ này đỏ ngay.
+
+## D-095 — Chỉ số dòng trả về từ hàm tìm là 0-BASED; mốc gỡ khối là CHÍNH SỐ ĐÓ, không lùi thêm
+═══════════════════════════════════════════════════════════════════════
+
+**TÌNH HUỐNG (vòng 216).** Hàm `FindLine` trả về chỉ số **0-based** của DÒNG ĐẦU TIÊN của khối. Tôi viết `RemoveRange($i - 1, 3)` vì «chắc khối bắt đầu bằng dòng sau tiêu đề». Sai: `$i - 1` là dòng trước đó — là **nút `✎ Xem / Sửa phiếu`**. Khối bị xoá đúng 3 dòng nhưng **không phải 3 dòng của khối** ⇒ còn sót 1 dòng mồ côi (`của phiếu» + §IV.4 … */}`) và **mất** dòng nút.
+
+**VÌ SAO NÓ IM LẶNG.** Cơ chế kiểm tra trước khi ghi vẫn chạy và **bắt được** (probe nhiều dòng liền nhau không khớp) — nhưng tôi đã sửa bản đính chính một lần rồi chạy tiếp, và khi bỏ điều kiện đó thì tệp bị ghi hỏng.
+
+**QUY TẮC.**
+1. ⛔ Khi `FindLine` trả chỉ số 0-based của DÒNG ĐẦU khối thì **mốc gỡ CHÍNH LÀ `$i`**. Không lùi thêm trừ khi đã **chứng minh** tiêu đề nằm ở một dòng sau.
+2. ⛔ Không bao giờ viết một phép trừ «để chắc». Sai số âm hay dương đều xoá nhầm và **không báo lỗi**.
+3. ✅ **Kiểm tra trước khi ghi** phải là probe **nhiều dòng liền nhau** của **toàn bộ khối vừa dựng lại**, không phải một dòng đơn lẻ — một dòng đơn lẻ không chứng minh được khối còn liền mạch.
+4. ✅ Nếu phải **lấy lại** một dòng từ kịch bản vá trước, **đọc nguyên dòng từ tệp kịch bản** (đếm dấu nháy để cắt cho đúng) — **không gõ tay**, vì gõ tay tiếng Việt lại là nguồn sai khác.
+
+## D-096 — `Substring(1, len-2)` trên một dòng kịch bản `'…',` GIỮ LẠI dấu nháy đơn ⇒ `tsc` XANH nhưng màn hình hiện rác
+═══════════════════════════════════════════════════════════════════════
+
+**TÌNH HUỐNG (vòng 216).** Dòng kịch bản có dạng `        <button …>✎ Xem / Sửa phiếu</button>',` — tức `[0]='`, `[1..len-3]=nội dung`, `[len-2]='`, `[len-1]=,`. Tôi dùng `Substring(1, $s.Length - 2)` ⇒ **nhận luôn dấu `'` đóng** vào dòng kết quả ⇒ dòng JSX kết thúc bằng `</button>'`.
+
+**VÌ SAO `tsc` KHÔNG BẮT.** Trong JSX, một dấu `'` đứng sau thẻ đóng chỉ là **text node** ⇒ hợp lệ về mặt cú pháp, **màn hình hiện thêm một dấu nháy lơ lửng**. Chỉ `eslint` với `react/no-unescaped-entities` mới bắt được — và `npm test` chạy lint **sau** typecheck nên phải đọc tới cuối mới thấy.
+
+**QUY TẮC.** Với chuỗi `'…',` (mảng PowerShell), nội dung là `Substring(1, $s.Length - 3)`. Và **bắt buộc** có một vệ test chặn dạng hỏng này: `tests/v215-phieu-de-nghi-muc-2-1-den-2-7.test.mjs` khẳng định không có `</[a-zA-Z]+>'$` và không có `}'$` theo cuối dòng.
+
+**BÀI HỌC CHUNG CỦA VÒNG 216.** Ba lỗi trong một vòng đều có chung một dạng: **thao tác cắt chuỗi ở ranh giới** (chỉ số dòng, `Substring`, `.Replace`) — tức đúng ở ranh giới này thì sai ở ranh giới kia, và **không cái nào báo lỗi**. Cách chống duy nhất đã chứng minh được: **đếm trước, kiểm tra sau, và có một vệ test khóa đúng hình dạng lỗi đó.**
+
+---
+
+## D-097 — Vân tay `brand` SUY RA TỪ `source`: phải GHI `source` trước, TÍNH LẠI, rồi mới ghi `brand`
+
+**Bối cảnh (vòng 216 lần 2, sau khi vá `app/screens/PurchaseOrderDrawer.tsx`).**
+Sửa xong mã, phải cập nhật vân tay nguồn. Script tính (`tools/tmp-v216-fp.mjs`) in ra CẢ BA vân tay
+trong một lượt, lấy từ dữ liệu cũ:
+
+```
+SOURCE_FULL  fdcbf492…c0d39      ← đúng
+BRAND_NEW    ade4c7fc…bb3649     ← SAI, đây là brand của dữ liệu CŨ
+RELEASE_NEW  f7d72d34…58d49      ← đúng (release không phụ thuộc source)
+```
+
+Ghi cả ba vào `lib/vntech-identity-data.mjs` + `VNTECH_FINGERPRINT.json`, rồi chạy
+`scripts/verify-vntech-fingerprint.mjs` ⇒ **EXIT=1**:
+
+```
+Error: Brand fingerprint không hợp lệ.
+```
+
+**Nguyên nhân.** `scripts/verify-vntech-fingerprint.mjs:30` gọi
+`await calculateBrandFingerprint(expected)` — tức brand **được tính từ chính object `expected`
+mà ta vừa sửa**, trong đó có `sourceFingerprint`. Tính cả ba trong một lượt từ dữ liệu cũ
+là tính trên **snapshot đã lỗi thời**.
+
+**Sửa — điểm cố định (fixpoint) hai lượt:**
+
+| Lượt | Việc | Kết quả |
+|---|---|---|
+| 1 | Ghi `sourceFingerprint` + `sourceFingerprintShort` vào cả hai tệp | source mới = `fdcbf492…` · count **701** |
+| 2 | Chạy LẠI script tính (đọc lại dữ liệu đã sửa) ⇒ brand mới = `ef02e9e9…`; ghi vào cả hai tệp | brand/release khớp |
+| 3 | `node scripts/verify-vntech-fingerprint.mjs` | `VNTECH FINGERPRINT: ĐẠT · VNTECH-FP-FDCBF492F4832A5A · source:701 files · brand/release verified` · **EXIT=0** |
+
+`releaseFingerprint` **không** đổi qua 3 lượt (`f7d72d34…`) — nó không suy ra từ source.
+
+**Quy tắc rút ra (áp dụng mọi lần đổi vân tay):**
+1. `source` là **duy nhất** phải tính từ cây tệp (`ROOT_DIRS` = `app, db, deploy, drizzle, lib, public, scripts, tests, worker`;
+   `EXCLUDED` = `lib/vntech-identity-data.mjs` ⇒ **giá trị trong tệp SSOT không làm đổi chính nó**).
+2. `brand` và `release` là **hàm của `expected`** ⇒ **luôn tính SAU lần ghi `source`**.
+3. Chỉ tin `ĐẠT / EXIT=0` từ `scripts/verify-vntech-fingerprint.mjs`. ⛔ Không có
+   `tools/refresh-fingerprint.mjs`; ⛔ không chạy `tools/refresh-phase-identity.mjs` giữa phiên.
+
+**Cùng kiểu lỗi (nhỏ hơn, cũng xảy ra vòng này):** cổng kiểm tra **sau khi ghi** viết tay
+`'Quay lại danh sách'` (không dấu) trong khi tệp chứa `Quay lại danh sách` (có dấu) ⇒ cổng báo
+«nút cũ còn trong `<header>`» **giả**, dù tệp đã sửa đúng. Bài học: **cổng kiểm tra cũng là
+mã nguồn** — phải viết bằng đúng ký tự có dấu, và khi cổng đỏ mà tệp vốn đã sửa đúng thì phải
+**đọc lại tệp bằng mắt** trước khi kết luận là sửa hỏng.
+
+---
+
+## D-098 — Đối chứng âm: hàm tiêm lỗi phải SỬA BIẾN BỐI CẢNH, không được viết lại từ bản gốc
+
+**Bối cảnh (vòng 216 lần 2).** Viết `tools/tmp-v216-neg.ps1` để chứng minh 8 vệ test mới
+thật sự bắt lỗi. Kịch bản đầu tiên tiêm **hai lỗi liên tiếp trên cùng một tệp**:
+
+```powershell
+function Inject([string]$old, [string]$new, [string]$label) {
+  $n = ([regex]::Matches($script:orig, [regex]::Escape($old))).Count   # ← đọc từ $script:orig
+  …
+  [System.IO.File]::WriteAllText($path, $script:orig.Replace($old, $new), $enc)  # ← ghi lại từ $script:orig
+}
+```
+
+Kết quả lượt đầu: `fail 2` — nhưng **đúng 2 vệ đỏ đều là vệ HỒI QUY**, còn vệ chính
+«3.2 — nút phải nằm trong prop `actions`» lại **XANH**.
+
+**Nguyên nhân.** Mỗi lần gọi `Inject` đều ghi lại tệp từ `$script:orig` (bản **chưa** nhiễm lỗi).
+⇒ Lần tiêm thứ hai **xoá mất kết quả của lần tiêm thứ nhất**. Đối chứng âm vẫn «bắt lỗi» nhưng
+bắt **nhầm lỗi**, tức là xanh/đỏ theo cách không có ý nghĩa.
+
+**Sửa — dùng biến bối cảnh làm nguồn sự thật, và reset rõ ràng giữa các kịch bản:**
+
+```powershell
+$script:buf = $orig                      # nguồn sự thật của vòng lặp
+function Inject([string]$old, [string]$new, [string]$label) {
+  $n = ([regex]::Matches($script:buf, [regex]::Escape($old))).Count
+  if ($n -ne 1) { throw ('MOC "' + $label + '" xuat hien ' + $n + ' lan (phai = 1) — BO QUA') }
+  $script:buf = $script:buf.Replace($old, $new)          # SỬA buffer, không đọc lại $orig
+  [System.IO.File]::WriteAllText($path, $script:buf, $enc)
+}
+…
+$script:buf = $orig                      # reset RÕ RÀNG trước kịch bản kế tiếp
+```
+
+**Kết quả sau khi sửa (đúng ý):**
+
+| Kịch bản | Kết quả mong đợi | Thực tế |
+|---|---|---|
+| Lỗi 1 — gỡ `actions=`, trả nút `page-back` về `<header>` của tab | các vệ 3.2 + hồi quy đỏ | **fail 3** (`actions`, `.secondary`, hồi quy `<header>`) |
+| Lỗi 2 — trả lại dòng rác «Mã kỹ thuật (request_id)» | vệ 3.3 đỏ | **fail 1** |
+| Sau cả hai | tệp khôi phục **byte-identical** | `byte-identical = True` |
+
+**Quy tắc rút ra:**
+- Hàm tiêm lỗi **phải cộng dồn** trên một bộ đệm duy nhất; khởi tạo lại bộ đệm bằng một câu
+  lệnh tường minh giữa các kịch bản, không để xảy ra ngầm.
+- ⛔ Toàn bộ thao tác MUTATE phải nằm trong `try` để `finally` luôn khôi phục (giữ nguyên
+  bài học vòng 215), và khôi phục phải được kiểm bằng so sánh **byte-identical**.
+- Đối chứng âm chỉ có giá trị khi **số vệ đỏ khớp số lỗi tiêm**; nếu đỏ «dễ dàng» ở những vệ
+  hồi quy mà vệ chính vẫn xanh thì phải nghi ngờ chính script tiêm, không phải tệp đích.## D-099 — UI LÀ **BẢN BUILD TĨNH**: SỬA MÃ NGUỒN KHÔNG TỰ LÊN; PHẢI **BUILD + KHỞI ĐỘNG LẠI `:8787`** (02/10/2026)
+
+**Bối cảnh — chính tôi trả lời sai người dùng.** Sau khi sửa `PurchaseOrderDrawer.tsx`, `tsc` xanh,
+`npm test` 701/0 xanh, tôi báo: «Vite dev server, anh chỉ cần F5 là thấy». Người dùng đáp:
+*«nếu không cần rebuild mà vẫn áp dụng được những chỉnh sửa vừa rồi thì hiện tại tôi không thấy
+bất cứ thay đổi gì ở frontend cả»*. **Người dùng đúng. Tôi sai.**
+
+### Quy tắc 1 — đo trước, đừng tin trí nhớ về hạ tầng (mở rộng D-085 cho **hạ tầng**, không chỉ nghiệp vụ)
+
+Bằng chứng đo được, không phải suy luận:
+
+| Dấu hiệu đo từ HTTP | Kết quả | Kết luận |
+|---|---|---|
+| HTML có `/@vite/client` | **không** | không có HMR |
+| `<link href="/assets/index-DJmIzF_H.css">` | có, **tên có hash** | đã đóng gói |
+| `<meta name="vntech-source-fingerprint">` | `f0af3695…` | **khác** `fdcbf492…` của mã nguồn ⇒ bản build cũ |
+| `scripts/local-server.mjs:20` | `await import(dist/server/index.js)` | nạp bundle SSR **một lần lúc khởi động** |
+| `scripts/local-runtime.mjs:180` | `new LocalAssets(join(projectRoot,"dist","client"))` | asset phục vụ từ `dist/client` |
+
+⇒ `:8787` là **bản build tĩnh**. Sửa `.tsx`/`.css` trên đĩa **không** lên trình duyệt.
+⛔ Đừng bao giờ trả lời «chỉ cần F5» cho câu hỏi này. Hãy chạy
+`node tools/verify-ui-build-applied.mjs` (xem quy tắc 5).
+
+### Quy tắc 2 — **BUILD XONG VẪN CHƯA ĐỦ.** Phải khởi động lại `:8787`.
+
+`dist/server/index.js` được `await import` **một lần duy nhất** khi tiến trình bắt đầu.
+Build lại mà **không** khởi động lại ⇒ tiến trình cũ vẫn render bằng bundle cũ.
+⚠️ Chỉ dừng **đúng PID** của `scripts/local-server.mjs` — **⛔ tuyệt đối không**
+`Stop-Process node` hàng loạt: cùng máy còn có proxy `:9000`, Java `:18081`,
+dsh runtime, dsh-ai-router, tts-server.
+
+### Quy tắc 3 — quy trình đầy đủ 5 bước (đã chạy thật 2 lần trong ngày)
+
+1. **Sao lưu** `.local-data/warehouse.sqlite`.
+2. **Cập nhật lớp vân tay runtime** — `scripts/local-runtime.mjs:176` so
+   `vntech_product_identity.source_fingerprint` trong SQLite với SSOT; lệch là
+   *«Dau van tay san pham VNTECH khong hop le hoac da bi thay doi»* ⇒ **app không boot**.
+   Có 2 trigger `RAISE(ABORT)` ⇒ đúng thứ tự **DROP trigger → UPDATE → CREATE trigger**
+   (quy tắc 3 của D-052). Đo được: `feb8cebf…` → `fdcbf492…` → `d6656e64…`, mỗi lần **1 dòng**.
+3. `npm run build` — 5 preflight trước đó gồm `verify-vntech-fingerprint.mjs`.
+4. Khởi động lại `:8787`.
+5. **Đo lại bằng HTTP thật** (quy tắc 4).
+
+### Quy tắc 4 — `tests/` CŨNG nằm trong tập tính vân tay
+
+`lib/trust/source-fingerprint.mjs:12` → `ROOT_DIRS = ["app","db","deploy","drizzle","lib","public","scripts","tests","worker"]`.
+⇒ **thêm MỘT tệp test cũng làm đổi vân tay nguồn.** Thêm `tests/v217-ban-chay-moi-nhat.test.mjs`
+⇒ **701 → 702 file**. Cổng mới phải đặt ở `tools/` (`tools/` **không** thuộc `ROOT_DIRS`) — đã có test
+`217-7` khoá điều này.
+⛔ Bỏ một test chỉ để giữ nguyên vân tay là **đánh tráo**; phải đi hết vòng fixpoint.
+
+### Quy tắc 5 — ⭐ ĐO BẰNG **HTTP THẬT**, VÀ **TRÍCH** DẤU HIỆU TỪ TỆP NGUỒN (D-097(a) MỞ RỘNG)
+
+Cổng mới `tools/verify-ui-build-applied.mjs` đo 3 cái:
+
+| # | Đo | Bắt được lỗi gì |
+|---|---|---|
+| 1 | **Độ mới** — file nguồn mới nhất trong `app\|lib\|public` có già hơn `dist/client` không | «anh sửa xong không thấy gì» |
+| 2 | **Vân tay** — `<meta name="vntech-source-fingerprint">` trong HTML có khớp `lib/vntech-identity-data.mjs` không | `:8787` còn phục vụ bản build cũ |
+| 3 | **Byte** — mọi bundle `:9000` phục vụ có giống hệt tệp trong `dist/` không | tên tệp cũ còn sót |
+
+Đo được sau khi build: `dist/ mới hơn nguồn 27s · 113 tệp nguồn đã đổi` · `HTML mang d6656e64b4db591e · khớp SSOT`
+· `6/6 bundle đúng byte trên :9000`. Đối chứng âm (đẩy mốc build về 24h trước) ⇒ bắt được
+`soiMoiMs > 0` và **chỉ đúng tệp** `lib\vntech-identity-data.mjs`.
+
+⛔ **SAI LẦM ĐÃ PHẠM HAI LẦN TRONG HAI VÒNG — đừng gõ tay chuỗi đối chiếu.**
+Lần này tôi viết `\u1EA3I` (chữ `ả` + chữ **I** Latin) thay vì `\u1EA3i` ⇒ script báo
+*«3.2 KHÔNG tìm thấy trong bundle»* **trong lúc thay đổi đã được áp dụng đúng**.
+Vòng trước gõ `Quay lại` không dấu cho `Quay lại`. ⇒ **luôn `indexOf` + `slice` + `match` ra
+dấu hiệu từ chính tệp nguồn**; và **luôn có một dấu hiệu đối chứng** để chứng minh phép tìm là
+đúng (ở đây: `data-vntech="po-source-pr"` tồn tại ⇒ phép tìm có dấu là hợp lệ).
+Vệ `217-6` khoá thêm: **cổng không được gõ cứng một mã vân tay** — phải đọc từ SSOT.
+
+### Quy tắc 6 — `sourceFingerprint` là FIXPOINT, và lần này cần **3 lượt**
+
+Đo được 02/10/2026:
+`fdcbf492…` → lượt 1 `0f5a3be2…` → lượt 2 `d6656e64…` → **lượt 3 khớp chính nó**.
+SSOT mới: `d6656e64b4db591edad1e37b30080019392891b820e270eb532c67b90457b297`
+· short `VNTECH-FP-D6656E64B4DB591E` · **702 file** · brand `690ef8c7…` · release **không đổi**.
+⛔ `calculateBrandFingerprint(expected)` nhận `expected` **chứa** `sourceFingerprint`
+⇒ phải ghi `source` **rồi mới** tính `brand` (D-097). Ghi cả hai trong một lượt ⇒
+`Error: Brand fingerprint không hợp lệ.`
+
+### Bài học cốt lõi
+
+⛔ **Đừng trả lời về hạ tầng bằng trí nhớ.** Tôi tin mình nhớ stack là Vite dev server và nói
+vậy với người dùng — sai hoàn toàn, trong khi chỉ cần **đọc HTML thật và đọc 2 dòng mã nguồn**
+(`local-server.mjs:20`, `local-runtime.mjs:180`) là ra ngay. Với mọi câu hỏi kiểu
+«cần build không / F5 có đủ không», **trả lời bằng phép đo, không bằng khẳng định.**
+## D-100 — «Không lưu được» mà KHÔNG có lý do ⇒ lỗi bị GIẤU, không phải API chết
+
+**Ngày:** 02/10/2026 · **Vòng 1 (GO-LIVE)** · **BUG-20201002-002 / yêu cầu số 8** · SEVERITY **CRITICAL**
+
+### Hiện tượng
+Admin phân quyền cho người dùng, bấm «Lưu bảng phân quyền» ⇒ **không có gì xảy ra, không có lý do nào
+hiện ra**; modal không đóng. Đóng rồi mở lại ⇒ quyền vừa tích biến mất.
+
+### Điều tra theo đúng thứ tự GOAL §3 (UI → API → BACKEND → DATABASE → PERMISSION)
+
+| Tầng | Kết quả đo | Kết luận |
+|---|---|---|
+| BACKEND | `UserManagementUseCase.java:480-511` (`assertDepartmentAllowsPermissions`) ném **400 cho cả lần lưu** nếu phòng ban chưa được cấp `can_view` cho một chức năng đang cấp. Gọi ở `:266`, **trước** `runAtomically` ở `:278` | **Có chủ đích** — tường trần phòng ban, chống mất quyền hàng loạt. **KHÔNG nới.** |
+| DATABASE | 478 dòng quyền phòng ban / 8 đơn vị; mỗi đơn vị phủ **59-60 / 76** chức năng; 27/28 tài khoản thuộc phòng ban đã cấu hình | **441 / 2052 cặp = 21,5%** không lưu được ⇒ **phạm vi rộng**, không phải vài tài khoản |
+| API | Tái hiện: user `e2e.diag` (ORG-DA) + module `admin_tab_01` ⇒ **HTTP 400** kèm lý do đầy đủ | API **có** trả lỗi đúng — không mất thông tin |
+| ĐỌC LẠI | `allModulePermissions` = 2200 dòng, **TRÙNG = 0** | Đường đọc lại **không hỏng** ⇒ loại trừ lỗi hiển thị |
+| **UI** | `action()` `setError(...)` ⇒ render ở `app/page.tsx:718` **bên trong `<main className="main-content">`**; còn `.overlay` là `position:fixed; inset:0; z-index:100`, modal vẽ ở gốc app **SAU `</main>`** | ⭐ **MẤU CHỐT: thông báo nằm SAU tấm overlay ⇒ người dùng không thấy gì** |
+
+⇒ Hai triệu chứng của người dùng là **một** nguyên nhân: bấm Lưu bị từ chối 400, **không ghi được dòng
+nào** ⇒ mở lại thấy đúng quyền cũ; và lý do 400 thì **bị giấu**.
+
+### Quyết định
+1. **Không** sửa `assertDepartmentAllowsPermissions` — hành vi này đúng nghiệp vụ, và máy này **không có
+   Maven** (D-044) ⇒ không biên dịch được, sửa mà không kiểm chứng là viết code chết.
+2. **Sửa đúng mắt xích đứt:** dùng **chính cơ chế `.toast` sẵn có của nhà** — `position:fixed`,
+   `z-index:9600` (cao hơn `.overlay:100`), render ở gốc app **sau khối modal** — cho thông báo lỗi.
+   Nhà đã có sẵn, chỉ là chỉ dùng cho **thành công**, không dùng cho **lỗi**.
+3. **Một rule CSS duy nhất**, dùng màu đỏ đã có trong nhà (`#d93b49` ở `.danger-outline`), **không** đổi
+   nền `.toast` ⇒ không phát minh bảng màu, không sinh lớp CSS mới cho lớp vân tay z-index.
+4. Vì lỗi nằm ở tầng hiển thị chung ⇒ **vá này sửa được lỗi ở MỌI modal**, không riêng modal phân quyền.
+
+### Bài học
+- ⛔ **Đừng dừng ở tầng frontend.** Người dùng mô tả «bấm lưu không được», nhìn UI sẽ tưởng API chết.
+  Lần theo tới DB mới thấy: API trả 400 đúng lý do, nhưng **lý do không bao giờ tới mắt người dùng**.
+- ⛔ **Trước khi chế cơ chế mới (D-092), phải dò xem nhà đã có chưa.** Ở đây cơ chế đúng đã nằm sẵn trong
+  CSS, chỉ là chưa ai dùng cho nhánh lỗi.
+- ⭐ **Công cụ đo của tôi có thể SAI và phải tự bắt (D-089):** lượt đo đầu dùng `d.active === 1` trong khi
+  cột là **boolean** ⇒ ra `0/0` và `NaN%`. Phải in **kiểu từng cột** trước khi tin số. Nếu báo cáo như vậy
+  là **bịa số liệu**.
+- ⛔ **Mọi vệ test phải ĐO từ tệp, không gõ cứng.** Vệ z-index quét mọi rule `.toast`/`.overlay` trong
+  `app/globals.css` và so `max(toast) > max(overlay)` ⇒ CSS đổi sau này thì vệ báo động thật, không xanh giả.
+SSOT mới (02/10, sau **mục 2** — dải tab theo khuôn nhà):
+`f5cce656f23bd18e0e475404f37ef2246d613112d95368ff0459c1b986a0cfac`
+· short `VNTECH-FP-F5CCE656F23BD18E` · **710 file** · brand `76714191eb7f31ea…` · release không đổi.
+· (Ghi chú 02/10: các lượt đổi vân tay liên tiếp là BUG-20201002-002 → ghi chú sai ở `scripts/system-route.mjs` →
+  **mục 5** → **mục 3 + mục 4** (`VNTECH-FP-DB750C0DC7E9FA51`, 708 tệp) → **mục 3 chú thích + BUG-004**
+  (`VNTECH-FP-9683BC1821070E13`, 710 tệp) → **mục 2** (con số ở trên).
+  Luôn chạy lại fixpoint **sau khi test hợp đồng đã xanh**, không chạy trước.)
+· ⛔ Thứ tự bắt buộc: xoá probe tạm ở repo root → fixpoint (thường **2 vòng**) → `verify-vntech-fingerprint.mjs`
+  (**ĐẠT**) → backup `.local-data/warehouse.sqlite` + `tools/set-local-identity.mjs` («KHỚP: true») → `npm run build`
+  → restart `:8787` → `tools/verify-ui-build-applied.mjs` (kết luận bằng **3 dấu ✓ + dòng KẾT LUẬN**, xem D-103) →
+  `npm test`. ⛔ `docs/` và `testlog.md` **không** nằm trong vân tay ⇒ viết tài liệu **không** cần chạy lại chuỗi build.
+· ⛔ Khi sửa `brandFingerprint` phải đồng bộ **CẢ HAI** nơi (`lib/vntech-identity-data.mjs` **và**
+  `VNTECH_FINGERPRINT.json`); chỉ sửa một nơi thì `verify` báo «không khớp SSOT tại brandFingerprint».
+· ⛔ `calculateSourceFingerprint` trả `{ fingerprint, fileCount }` — **KHÔNG** có `short`/`files`/`brandFingerprint`;
+  short phải tự cắt 16 hex rồi viết hoa (đã viết sai 2 lần trong probe, mất 2 lượt).
+
+## D-101 — VỆ TEST "ĐIỀU KIỆN CỦA MARKER LÀ DẤU HIỆU GẦN NHẤT PHÍA TRƯỚC" LÀ VỆ RỖNG
+
+**Bối cảnh.** Mục 5 (CHECKLIST VÒNG 1 · §C) yêu cầu mỗi tab chỉ hiện danh sách của riêng nó.
+Cách kiểm bằng thứ trong JSX thường là: tìm `activeTab==="…"`, coi đó là cổng tab của marker.
+
+**Quyết định.** Bỏ vệ đó — nó **là vệ rỗng**: một phép đo không có giá trị kiểm chứng.
+Với bảng «LŨY KẾ THEO HỆ VẬT TƯ», dấu hiệu gần nhất phía trước **là `{activeTab==="MAT"}` của chính
+bảng TAB 3 ở dòng ngay trên** ⇒ vệ **XANH kể cả khi chưa sửa gì**.
+
+**Cách đúng (giữ trong bộ test).** `gateAt(src, stop)` quét **cấu trúc ngoặc `{…}`**:
+- mỗi lần thấy `{` thì đẩy khung, khung **nhớ điều kiện của chính nó** (chỉ khi ngay sau `{` là `activeTab==="X"`);
+- thấy `}` thì bỏ khung ⇒ hết hiệu lực;
+- trả về **điều kiện gần nhất đang bao quanh** vị trí, quét từ khung sâu nhất ra ngoài.
+
+**Ba bài học con bắt buộc phát sinh khi làm vệ này**
+
+1. **Dấu hiệu gần nhất là sai.** Phải lần theo **cấp cấu trúc**, không phải theo vị trí ký tự.
+2. **Phải hiểu `${…}` lồng nhau.** `${` KHÔNG phải khung JSX; nếu không ghi nhớ lúc quay lại chuỗi
+   template (`resume: "`"`) thì bộ đếm lệch cho cả tệp.
+3. **Chỉ `activeTab` đứng ngay sau `{` mới là cổng tab.** Biểu thức
+   `const dateDim=(activeTab==="PR"||activeTab==="PO")?…` là **logic JS**, không phải cổng tab —
+   quét mù sẽ gán `gate="PO"` cho **cả thân component**, khiến mọi marker phía sau trả về cùng một kết quả.
+
+**Chuẩn hoá.** Mỗi vệ "marker có nằm trong khối này hay không" **phải kèm một vệ đối chứng âm**: sửa ngược
+tệp thì vệ phải **đỏ ra** (D-098). Vệ không thể đỏ thì không phải vệ.
+
+---
+
+## D-102 — BẪN CÔNG CỤ SỬA FILE: `edit` THẤT BẠI DÙ BYTES KHỚP, VÀ CÁCH SỬA AN TOÀN TRÊN TỆP CRLF
+
+**Hiện tượng đo được.** `edit` báo `old_string was not found` với `old_string` có `<dấu-nháy kép>`,
+dù `[System.IO.File]::ReadAllLines` in ra **y hệt** ký tự (đúng byte, không phải khác font hay khác BOM).
+Lần khác: chèn ký tự lạ (NUL) làm `edit` báo **`cannot edit … : binary file`** ⇒ chỉ còn cách
+`write` lại **toàn bộ** tệp.
+
+**Quy tắc rút ra (áp dụng cho mọi tệp trong repo này).**
+1. Tệp **CRLF** (`docs/dsh-state/*`) ⇒ `old_string` **nhiều dòng** không khớp (D-086) ⇒ sửa **một dòng một lần**.
+2. Neo phải **đo số lần xuất hiện = 1** trước khi sửa (D-090); nếu > 1 thì **đo cụ thể vị trí sửa neo**.
+3. Khi `edit` thất bại **2 lần liên tiếp** với cùng một neo ⇒ **dừng thử**, chuyển sang `write` toàn tệp.
+4. `write` lên tệp **không tồn tại** báo `file no longer exists` ⇒ `read` (không thấy) rồi `write` lại.
+5. Tệp tạm đặt ở **repo root** — KHÔNG đặt trong `app/ lib/ scripts/ tests/ public/` vì sẽ làm lệch vân tay —
+   và **xoá ngay** khi dùng xong.
+
+**⛔ Một bẫy mới đo được cùng ngày — truyền tiếng Việt qua `pwsh` làm hỏng ký tự.**
+Khi ghi khối văn bản tiếng Việt dài vào tệp bằng lệnh `pwsh`, **mọi dấu tiếng Việt bị thay bằng `?`**;
+đồng thời `.Replace` với chuỗi tìm kiểu đệm `?` **không khớp** nên lệnh báo thành công nhưng **không ghi gì**.
+⇒ **Không dùng `pwsh` để soạn văn bản tiếng Việt.** Cách đúng: soạn bằng công cụ `write`/`edit`
+(giữ UTF-8 đúng), rồi dùng `pwsh` **thuần ASCII** chỉ để nối/chuyển xuống dòng — và **luôn đọc lại**
+đoạn vừa ghi để tự bắt (D-085).
+
+---
+
+
+## D-103 — `tools/verify-ui-build-applied.mjs` TRẢ EXIT CODE **KHÔNG TẤT ĐỊNH** ⇒ KẾT LUẬN BẰNG NỘI DUNG
+
+**Bối cảnh.** Cổng này là phép đo cuối trước khi kết luận «bản chạy đúng bản đã build». Nó chạy 3 phép đo:
+`do-moi` (dist/ mới hơn nguồn) · `van-tay` (HTML mang đúng vân tay SSOT) · `byte` (6/6 bundle đúng byte trên `:8787`).
+
+**Đo được (8 lần chạy liên tiếp):** **2/5 lần** trả `EXIT=0`; **3/5 lần** văng
+`Assertion failed: !(handle->flags & UV_HANDLE_CLOSING)` với mã `-1073740791` (`0xC0000409`).
+**Cả 8 lần đều in đủ 3 dấu ✓ và dòng `KET LUAN: BAN CHAY DUNG BAN DA BUILD MOI NHAT.`**
+
+**Quyết định.** ⛔ **KHÔNG sửa** tệp này giữa chừng. Kết luận **chỉ** bằng **3 dấu ✓ + dòng KẾT LUẬN**,
+**KHÔNG** bằng exit code. Ghi rõ mã thoát bất thường là **lỗi của tiến trình Node khi thoát**, không phải
+bằng chứng build sai — nếu kết luận theo exit code thì sẽ **báo động giả** và dễ dẫn tới sửa nhầm thứ đang đúng.
+
+**Kèm theo.** Cùng họ với lỗi đã gặp: khi pipe output qua `Select-String`, `$LASTEXITCODE` trả **rỗng**
+⇒ mọi kết luận phải dựa trên **số dòng `✔`/`✖`** in ra, không dựa vào biến exit code.
+
+---
+
+## D-105 — TRONG JSX, `/* … */` TRẦN LÀ **CHỮ**, KHÔNG PHẢI COMMENT
+
+**Bối cảnh.** MỤC 3 (VÒNG 1 GO-LIVE) yêu cầu xoá văn bản thừa dưới nhóm nút. Tôi thay 2 đoạn văn bằng một
+comment `/* … */` đặt **trực tiếp giữa các phần tử con** trong `return` của `Purchasing.tsx`.
+
+**Sự cố.** User chụp màn hình: **nguyên khối chữ của comment hiện lên giao diện**.
+
+**Nguyên nhân gốc.** Trong JSX **chỉ `{/* … */}` mới là comment**. `/* … */` đứng giữa children là một
+**TEXT NODE** ⇒ React vẽ thẳng ra màn hình.
+
+**Vì sao lọt qua mọi cổng:**
+- `npx tsc --noEmit` → **EXIT=0**
+- `npm run build` → **ĐẠT**
+- `tools/verify-ui-build-applied.mjs` → **3/3 ✓**
+- 7 vệ của `tests/v1-muc3-…` → **XANH** (chỉ khớp **chuỗi**, không hiểu JSX)
+- 79 vệ hợp đồng → **XANH**
+- ⛔ **ESLint báo ĐÚNG** (`react/jsx-no-comment-textnodes` + 4 × `react/no-unescaped-entities`) và **tôi đã đọc
+  nhưng đi tìm chỗ khác**.
+
+**Quyết định.**
+1. Bọc lại thành `{/* … */}`. Đổi `"` trong chú thích sang `«»` (lint chặn `"` trần).
+2. ⛔ **Trong chú thích JSX KHÔNG được viết `{`, `}`, hay `*/`** — đóng/mở ngoặc sớm. Đã dính:
+   `366:93 Parsing error: '}' expected` vì chú thích chứa `{ }`.
+3. Vệ mới `tests/d105-jsx-comment-textnode.test.mjs`, chạy trên **MÃ NGUỒN THÔ**, quét **chiều sâu khung**,
+   chỉ báo lỗi khi đang ở độ sâu 1 (con trực tiếp của JSX).
+4. ⭐ **Quy tắc vàng:** khi ESLint báo lỗi ở **đúng vùng mình vừa sửa** thì **đó là lỗi thật** — sửa trước,
+   không chạy tiếp bất cứ thứ gì.
+
+---
+
+## D-106 — VỆ RỖNG (lần 2): **BÓC CHÚ THÍCH RỒI MỚI ĐI TÌM CHÚ THÍCH**
+
+**Bối cảnh.** Vệ D-105 viết lần đầu: `const code = maCode(src)` rồi quét `code` để tìm comment.
+
+**Sai ở đâu.** `maCode()` **xoá sạch** chú thích ⇒ tập cần tìm bị **rỗng hoá trước khi tìm** ⇒ vệ **xanh vĩnh viễn**.
+Đây là **cùng một họ** với D-101 (vệ rỗng) nhưng khác cơ chế: lần này là **tự tay xoá mất dữ liệu cần kiểm**.
+
+**Quyết định.** ⛔ Vệ tìm chú thích phải quét trên **MÃ NGUỒN THÔ**.
+
+**Ba lỗi nữa tự phát hiện trong cùng lượt (ghi để không lặp):**
+- ⛔ `new URL(...).pathname` giữ `%20` ⇒ `ENOENT` với repo có **khoảng trắng** trong đường dẫn.
+  Phải dùng `fileURLToPath`.
+- ⛔ Dò `return (` **bỏ sót `return <div …>` không có ngoặc tròn** — dạng đang dùng ở `Purchasing.tsx:307`
+  ⇒ chiều sâu mãi bằng 0 ⇒ vệ lại rỗng. Phải dò `return\s*[<(]`.
+- ⛔ Cờ `sauReturn` chỉ bật **một lần** ⇒ các `return` ở component sau bị bỏ qua. Mỗi `return` phải **đặt lại**
+  chiều sâu.
+
+**Phép thử bắt buộc.** ⭐ **ĐỐI CHỨNG ÂM**: cài lại **đúng lỗi gốc** vào tệp rồi chạy vệ — **phải ĐỎ**;
+khôi phục — phải XANH. Vệ D-105 đã **2 lần** xanh oan và chỉ lộ ra nhờ phép thử này.
+⛔ Không có đối chứng âm thì không được coi là «đã có bảo vệ».
+
+---
+
+## D-107 — LỖI HIỂN THỊ BẢNG PHẢI CÓ VỆ **ĐẾM CẤU TRÚC**, KHÔNG CHỈ KHỚP CHUỖI
+
+**Bối cảnh.** BUG-20261002-004: bảng PR lệch 1 cột.
+
+**Đo được.** Dòng dữ liệu PR phát **12 ô `<td>`** nhưng tiêu đề chỉ **11 ô `<th>`**
+(10 cột khai báo trong `PURCHASING_PR_COLUMNS` + 1 ô trống cho cột nút).
+Ô thứ 3 là **BẢN SAO** của ô thứ 2 — cùng in **mã dự án**, chỉ **đảo thứ tự ưu tiên**:
+`data.projects.find(…)?.code || row.projectCode` so với `row.projectCode || data.projects.find(…)?.code`.
+Thừa 1 ô ⇒ **mọi cột từ «Người đề nghị» trở đi bị đẩy lệch sang phải**, cột cuối tràn ra ngoài bảng.
+
+**Không phải do bản sửa của tôi.** `git diff` xác nhận bản `HEAD` **cũng** 11 ô / 10 tiêu đề;
+MỤC 7 thêm nút «Xem chi tiết PR» + `<th />` nhưng **không gỡ ô sao chép còn sót** ⇒ vẫn lệch 1.
+
+**Vì sao lọt.** `tsc` EXIT=0 · `npm run build` ĐẠT · cổng UI 3/3 ✓ · **80 vệ hợp đồng XANH** —
+**không phép đo nào đối chiếu SỐ Ô của tiêu đề với SỐ Ô của dữ liệu**.
+
+**Quyết định.**
+1. ⭐ Với **bảng/biểu mẫu**, bắt buộc có vệ **đếm cấu trúc** `<th>` ↔ `<td>`
+   (`tests/d107-bang-pr-khop-so-o.test.mjs`), không chỉ khớp chuỗi.
+2. Vệ «hai ô trùng nhau» phải so theo **tập toán hạng đã sắp xếp** (`a||b` ↔ `b||a`) **và bóc `{` `}` ngoài cùng** —
+   nếu không sẽ **trượt đúng ca lỗi thật** (đã dính; ca âm V4 phát hiện).
+3. Khi đếm: `colSpan={n}` nghĩa là **thay cho n cột** ⇒ số cột hiệu dụng = số ô **trừ** số ô có `colSpan`.
+4. ⛔ Cắt khối bảng phải neo vào `data-vntech="…"` / `<tbody>`; **không** neo vào chuỗi con như `purchasing-`
+   vì nó khớp ngay trong tên `data-vntech` (đã dính, lấy nhầm `</tr>` của tiêu đề).
+
+---
+
+## D-108 — «CHỌN TẬP TỆP TEST» CŨNG LÀ MỘT PHẦN CỦA PHÉP ĐO
+
+**Bối cảnh.** Sau khi sửa mục 2, tôi tự glob **toàn bộ** `tests/*.test.mjs` + `*.test.ts` (**135 tệp**) và chạy
+bằng `node --import tsx --test` ⇒ **51 dòng đỏ** (alias vật tư ở `page.tsx` · MT3-UI-04/12d/13/14 ·
+`hubChildrenByGroup` · approval timeline). Suýt kết luận nhầm là **mình vừa gây regression**.
+
+**Sự thật (đo được).** `package.json` khai:
+`test = lint && typecheck && test:regression && test:workflow`, trong đó
+`test:regression = node scripts/regression-suite.mjs` — một **danh sách chọn lọc**, KHÔNG phải mọi tệp trong `tests/`.
+Và `npm run audit:tests` (`scripts/test-suite-health.mjs`) in thẳng:
+**«Ngoai gate: 8 tep / 51 test case — DEBIT DA BIET, co y khong chay trong cong»**.
+
+**Quyết định.**
+1. ⛔ Cổng thật là `npm test`. Muốn biết cổng gồm gì thì đọc `package.json` +
+   `scripts/regression-suite.mjs` + `npm run audit:tests` — **không** tự đoán theo thư mục.
+2. ⛔ **Không** dùng phép «glob rồi đếm đỏ» làm bằng chứng regression, vì nó tính cả nợ đã biết ⇒ báo động giả.
+3. Khi một tệp ngoài cổng đỏ lên: ghi nhận vào **nợ đã biết** (`KNOWN_RED` của `audit:tests`), không sửa mù
+   giữa vòng GO-LIVE (D-022: ngoài phạm vi yêu cầu).
+
+**Cùng họ với D-104** (bộ đếm `✖ ` đếm trùng làm 1 lỗi thành 3): **đo sai tập ⇒ kết luận sai.**
+Trước khi tin một con số đỏ, phải trả lời được: *tập đo này do ai định nghĩa, và nó có bao gồm thứ đã biết là đỏ không?*
+
+---
+
+## D-109 — ĐỔI THIẾT KẾ THÌ PHẢI CẬP NHẬT **MỌI** CỔNG ĐANG KHOÁ THIẾT KẾ CŨ — VÀ KHÔNG ĐƯỢC NỚI LỎNG
+
+**Bối cảnh.** GO-LIVE mục 2 yêu cầu dải tab PR/PO/Chi tiết lũy kế **giống tabbar menu Công việc**.
+Khuôn nhà đo được ở `app/screens/WorkCenter.tsx:295`: `.project-scope-tabs` + `<button className="active">`,
+rule ở `canonical.css:371-389` (khối `.work-center …`). Màn Mua hàng đang dùng lớp **tự chế** của MỐC 121
+(`.purchase-tabbar` / `.purchase-tab`) ⇒ phải bỏ.
+
+**Hệ quả đo được.** Vừa đổi xong, **2 cổng đỏ ngay**:
+- `tests/moc121-purchasing-tabs.test.mjs` — khoá cứng `className="purchase-tabbar"`, `.purchase-tab.is-active`…
+- `scripts/css-baseline-audit.mjs` — khoá cứng **tên lớp** (2 chiều: thiếu rule / CSS chết) **và** 3 khai báo
+  chống lỗi «PR74PO28» (`display:flex` · `align-items` · `gap`).
+
+**Quyết định.**
+1. ⛔ **KHÔNG xoá phép kiểm cho xanh.** Cách đúng: **giữ nguyên mọi phép kiểm giá trị**, chỉ **trỏ lại selector mới**,
+   rồi **THÊM** điều kiện mới: `min-width` + `min-height` theo GOAL §11 (tab phải đồng nhất cỡ, không co theo độ dài chữ).
+2. ⛔ Hai khai báo chống «PR74PO28» vẫn bắt buộc, chỉ đổi `display:flex` → `display:inline-flex`
+   (khuôn nhà dùng nút inline-flex; giữ `gap` để nhãn KHÔNG dính vào số đếm).
+3. ⭐ Bắt buộc chạy **đối chứng âm cho chính cổng vừa sửa**: gỡ `gap` ⇒ **vệ test ĐỎ** *và* **cổng CSS KHÔNG ĐẠT**;
+   khôi phục ⇒ cả hai xanh. Đã chạy thật, cả hai đều đúng.
+4. ⭐ Giữ nguyên mốc đo `data-vntech="purchasing-tab"` và `data-vntech="purchasing-tab-count"` ⇒ 2 hợp đồng khác
+   đang khoá 2 mốc này (`tests/p01-…`, `tests/v211-…`) **không phải sửa** — đổi ít nhất có thể (D-092).
+
+**Bài học chung.** Khi một thay đổi UI bị nhiều cổng chặn, đó thường **không** phải «cổng hỏng» mà là
+**cổng đang làm đúng việc của nó**: nó ghi lại thiết kế cũ. Việc phải làm là **chuyển hợp đồng sang thiết kế mới
+mà không đánh mất giá trị nào đang được bảo vệ**.
+
+---
+
+## D-110 — «MÁY NÀY KHÔNG CÓ MAVEN» LÀ **SAI**: JDK 21 + MAVEN 3.9.16 CÓ SẴN, BUILD OFFLINE ĐƯỢC (05/10/2026)
+
+**Đo được (05/10/2026), không suy đoán:**
+
+| Thứ | Sự thật đo được |
+|---|---|
+| JDK | `javac 21.0.12.1` (Eclipse Adoptium JDK 21) — có cả `java` lẫn `javac` |
+| Maven | **3.9.16**, tại `C:\Users\PC\.m2\wrapper\dists\apache-maven-3.9.16\<hash>\bin\mvn.cmd` |
+| Repo Maven của dự án | `_m2-repo` (**807 jar**), khai trong `java-backend/.mvn/maven.config` |
+| `mvnw.cmd` trong `java-backend` | ⛔ **KHÔNG có** ⇒ `Get-Command mvnw` không thấy |
+| `mvn -o -DskipTests compile` | **BUILD SUCCESS**, 5/5 module, ~35 giây |
+| `mvn -o -am -pl web -Dtest=<TênTest> -Dsurefire.failIfNoSpecifiedTests=false test` | **BUILD SUCCESS**, harness H2 chạy tốt |
+
+**Vì sao nhiều phiên liên tiếp tin là «không có Maven».** Phép đo duy nhất được dùng là
+`Get-Command mvnw` — nó không thấy gì vì `java-backend` **thiếu script wrapper** (`mvnw`/`mvnw.cmd`),
+trong khi **Maven thật vẫn nằm trong `.m2\wrapper\dists`**. Một phép đo hụt bị biến thành định đề,
+rồi được lặp lại nguyên văn qua nhiều tài liệu (`MASTER_STATUS.md:62`, `TASK-142.md:151`,
+`TASK-143.md:71`, `TASK-144.md:6`).
+
+**⛔ ĐÍNH CHÍNH VỀ SỐ QUYẾT ĐỊNH.** Các chỗ trên đều ghi kèm «(D-044)», nhưng **`D-044` KHÔNG nói về Maven** —
+D-044 là «TUYỆT ĐỐI KHÔNG HẠ PHIÊN BẢN TEST VỀ HỢP ĐỒNG CŨ ĐỂ LÀM XANH». Việc gán số là **SAI**;
+định đề «không có Maven» chưa từng có quyết định nào đứng sau. Từ nay nó bị bác bỏ bằng D-110 này.
+
+**Hệ quả — bỏ hẳn các câu «bất khả thi» sau:**
+
+1. **Build JAR backend là LÀM ĐƯỢC** (`mvn -o -DskipTests package`) ⇒ sửa Java rồi triển khai được.
+2. **Chạy test Java là LÀM ĐƯỢC** (JUnit 5 + Spring Boot + H2, đường `/api/system` thật) ⇒ Java **phải** được
+   nghiệm thu bằng test, không chỉ «verify tĩnh».
+3. **Ghi `flyway_schema_history`** chỉ cần khởi động lại app — không cần Maven.
+
+**⛔ GIỚI HẠN CÒN LẠI (đo được, không phải suy đoán):** khởi động lại Java `:18081` vẫn nằm trong danh sách
+CẤM của phiên (đang phục vụ test của người dùng) ⇒ **triển khai vẫn cần người dùng đồng ý**. Không có Maven
+không còn là lý do; **quyền quyết định của người dùng mới là lý do**.
+
+---
