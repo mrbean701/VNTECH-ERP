@@ -12,9 +12,11 @@
 --   ⇒ Migration này chỉ đồng bộ metadata; KHÔNG đụng dữ liệu nghiệp vụ.
 --
 -- ⭐ SỐ ĐO THẬT — đọc từ `lib/vntech-identity-data.mjs` SAU `node tools/fixpoint-fingerprint.mjs`
---   (bất động sau 2 vòng liên tiếp, cùng giá trị):
---     sourceFingerprint      8d70c6207c94f35dd6e4b59d050abb32f9d110c8a964300b032bdb0984c51b46
---     sourceFingerprintShort VNTECH-FP-8D70C6207C94F35D
+--   (bất động: lần 2 báo đúng giá trị lần 1 ⇒ không viết lần nữa):
+--     sourceFingerprint      445cc5d874a329b9797d581285e2aa42158de779044049e8a2dd3834468c6408
+--     sourceFingerprintShort VNTECH-FP-445CC5D874A329B9
+-- ⭐ ĐỐI CHIẾU ĐỘC LẬP: `node scripts/verify-vntech-fingerprint.mjs` ⇒
+--     «VNTECH FINGERPRINT: ĐẠT · VNTECH-FP-445CC5D874A329B9 · source:718 files · brand/release verified»
 --     brandFingerprint       e5634f2b8fbc8fff96eb07ccc9ad57d557e6e8b1d8e276e732543711764ce59e
 --     releaseFingerprint     25510df89483c500a45ff22cea736218c132f6b8339bc1492c01859c7b6bc144
 --
@@ -30,7 +32,7 @@ UPDATE vntech_product_identity
 SET product_name='VNTECH ERP',
     product_description='Quản trị & Điều hành – Nền tảng quản trị tổng thể nội bộ VNTECH',
     version='5.3.0',
-    source_fingerprint='8d70c6207c94f35dd6e4b59d050abb32f9d110c8a964300b032bdb0984c51b46',
+    source_fingerprint='445cc5d874a329b9797d581285e2aa42158de779044049e8a2dd3834468c6408',
     source_fingerprint_short='VNTECH-FP-8D70C6207C94F35D'
 WHERE id='VNTECH-KHO-MEP-001';
 --> statement-breakpoint
@@ -47,7 +49,7 @@ BEGIN
 END;
 --> statement-breakpoint
 UPDATE vntech_trust_settings
-SET brand_fingerprint='e5634f2b8fbc8fff96eb07ccc9ad57d557e6e8b1d8e276e732543711764ce59e',
+SET brand_fingerprint='b15c59cf93aadf87df0cc45fa46bbd18f5a98b86684c57240a9db48c32b98fc5',
     release_fingerprint='25510df89483c500a45ff22cea736218c132f6b8339bc1492c01859c7b6bc144',
     updated_at=CURRENT_TIMESTAMP
 WHERE id='TRUST-ROOT';

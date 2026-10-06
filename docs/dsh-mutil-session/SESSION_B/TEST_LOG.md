@@ -86,3 +86,45 @@ Notes: KET LUAN DUT DIEM — HTML may chu cua app nay la SHELL (7.123 ky tu) BAT
   => van trang dang nhap; (3) :9000/api/system + cookie tuong minh => van trang dang nhap. CA 3 DEU THAT BAI VE PHUONG PHAP.
   => CACH DUY NHAT: TRINH DUYET (probe) — ma probe dang KHONG DUNG DUOC vi anh chuan cu 5 ngay (BUG-005).
   => KET LUAN: NGHIEM THU CUOI CUNG BAT BUOC DO USER THUC HIEN TREN :9000. ⛔ Day KHONG phai loi san pham.
+
+## TEST-20261006-009
+Date: 2026-10-06 | Task: TASK-226 | Module: DevOps — Cong chan hoi quy thi giac | Test Type: UNIT (kiem chung logic)
+Scenario: Kiem chung ban sua cua ERP-SESSION-01 trong `tools/probe-visual-regression.mjs` cho 3 man
+  `NO_CLICK_TARGET` (11-modal-request · 16-modal-receipt · 18-modal-team-create) — ap dung BUG-20261006-006.
+Expected: `clickText` moi khop voi NHAN NUT THAT trong ma nguon => 3/3 man se mo duoc khung.
+Actual: **2/3 DUNG, 1/3 SAI**. Chec chinh xac bang Node (khong doan):
+  (a) Man 16: clickText `tao phieu nhap kho` vs nhan that «⭱ Tạo phiếu nhập kho» (`Inventory.tsx:372`)
+      -> norm: "taophieunhapkho" == "taophieunhapkho"  => **KHOP** (dung)
+  (b) Man 18: clickText `Thêm tổ đội` vs «＋ Thêm tổ đội →» => norm "themtooi" == "themtooi"  => **KHOP** (dung)
+  (c) Man 11: clickText `tao phieu` vs nhan that «＋ **Lập** phiếu đề nghị» (`Requests.tsx:105`)
+      -> norm: "taophieu" ⊄ "lapphieuenghi"  => **KHONG KHOP** => van `NO_CLICK_TARGET`
+Result: **FAIL (1/3 man)** | Regression: N/A | Environment: Node + doc ma nguon thuc (`app/screens/Requests.tsx`, `app/screens/Inventory.tsx`)
+Related Bug: BUG-20261006-006 | Related Change: CHG-20261006-006
+Notes: 
+  * SAI 1 T U: sua `clickText: "tao phieu"` -> `clickText: "lap phieu"` (norm "lapphieu" ⊂ "lapphieuenghi").
+  * ✅ XAC NHAN `clickText` viet KHONG DAU la hop le: `norm()` tai dong 342 = `toLowerCase().normalize("NFD")
+    .replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"")` => co bo dau that. ⛔ KHONG phai loi khi viet khong dau.
+  * ⚠️ RUI RO PHU (chua gay hong): dong 345 — ban `norm` chay BEN TRONG trinh duyet qua `evaluate()` dung
+    `/[\\u0300-\\u036f]/g` (HAI dau gach cheo) ⇒ KHONG khop dai `u0300`, do: "Tạo phiếu" -> "taophie" (MAT chu `u`).
+    ⛔ Hien tai VAN ra cung chuoi vi `normalize('NFD')` tach dau truoc + loc `[a-z0-9]` sau ⇒ chua lam sai ket qua,
+    nhung la MA DE VO nen nen thong nhat 1 ban.
+  * ⛔ DE XUAT 3 (cho cong `nav != OK => FAIL`) CHUA THAY TRONG DIFF ⇒ hong dieu huong van bi CHE thanh «lech anh».
+  * ⛔ KHONG sua tep cua ERP-SESSION-01 (Goal §7/§28) — chi doc va do.
+
+## TEST-20261006-010
+Date: 2026-10-06 | Task: TASK-226 | Module: DevOps — Cong chan hoi quy thi giac | Test Type: UNIT (doc ma)
+Scenario: Kiem tra ERP-SESSION-01 da them gi cho DE XUAT 3 (`nav != OK` => cong THAT BAI) trong
+  `tools/probe-visual-regression.mjs` chua, va o che do SO ANH CHINH (khong phai --crop/--locate).
+Expected: Che do so anh se THAT BAI (khong bao gio ket luan DAT) khi `nav !== "CLICKED_UI"`.
+Actual: **MOT PHAN — DUOC LAM O --crop, CHUA LAM O CHE DO SO ANH CHINH.**
+  - ✅ Dong 453 (che do `--crop`): ERP-SESSION-01 da them canh bao
+    `if (i === 0) ... else if (nav !== "CLICKED_UI") console.log('⚠️ nav ... HỎNG ... cảnh này so MÀN NỀN, KHÔNG phải màn cần kiểm')`
+  - ❌ Dong 383 (che do SO ANH CHINH): `const nav = await clickSteps(screen.steps);` — `nav` DUOC GAN nhung
+    **KHONG duoc dung de kiem** ⇒ hong dieu huong VAN bi CHE thanh «lech anh». ⛔ Van la loi im lang o che do quan trong nhat.
+  - ⚠️ Dong 453 chi CANH BAO bang console.log, **KHONG lam cong FAIL** ⇒ van co the bao «DAT mot phan` khi anh sai.
+Result: **FAIL (chua dat yeu cau)** | Regression: N/A | Environment: doc truc tiep `tools/probe-visual-regression.mjs:381-453`
+Related Bug: BUG-20261006-006
+Notes: De dat dung DE XUAT 3 can hai thu:
+  (1) o dong 383 them `if (nav !== "CLICKED_UI") { failures.push(...); continue; }` (hoac tuong duong) de **THAT BAI that**;
+  (2) sua man 11 `clickText: "tao phieu"` -> `"lap phieu"` (xem TEST-20261006-009).
+  ⛔ KHONG sua — thuoc ERP-SESSION-01 (Goal §7/§28).

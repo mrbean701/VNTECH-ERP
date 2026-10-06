@@ -193,10 +193,10 @@ const SCREENS = [
   // 11/12: KIỂM BẤT BIẾN "KHUNG KHÔNG VƯỢT VIEWPORT" (U-10). Bước `{ click: "<selector>" }` mở khung rồi mới chụp;
   // cổng tự đo `getBoundingClientRect()` của `.modal`/`.drawer` và TỪ CHỐI ĐẠT nếu khung tràn khung nhìn,
   // hoặc nếu nội dung cao hơn thân khung mà thân khung KHÔNG cuộn được (⇒ mất nội dung).
-  { id: "11-modal-request", label: "Phiếu đề nghị — modal lập phiếu (rộng nhất)", steps: [{ group: "purchasing", child: 0 }, { click: ".list-toolbar-actions button.primary" }] },
+  { id: "11-modal-request", label: "Phiếu đề nghị — modal lập phiếu (rộng nhất)", steps: [{ group: "purchasing", child: 0 }, { clickText: "tao phieu" }] },
   { id: "12-drawer-request-detail", label: "Phiếu đề nghị — drawer chi tiết", steps: [{ group: "purchasing", child: 0 }, { click: ".request-list-card .icon-mini" }] },
   { id: "13-modal-material", label: "Danh mục vật tư — modal thêm/sửa vật tư", steps: [{ group: "material_master", child: 0 }, { click: ".material-list-filters button.primary" }] },
-  { id: "16-modal-receipt", label: "Nhập kho — modal tạo phiếu nhập", steps: [{ group: "warehouse", child: 0 }, { click: ".list-toolbar-actions button.primary" }] },
+  { id: "16-modal-receipt", label: "Nhập kho — modal tạo phiếu nhập", steps: [{ group: "warehouse", child: 0 }, { clickText: "tao phieu nhap kho" }] },
   // Q7 (18/09/2026) — ĐÃ KHẢO SÁT NÚT THẬT cho 2 khung còn thiếu (trước đây cổng báo NO_CLICK_TARGET):
   //   • PO: nút thật nằm ở `.purchase-action-bar` của `app/screens/Purchasing.tsx:28` — `＋ PHÁT HÀNH PO`
   //     (`<button className="primary" … onClick={()=>requests[0]&&open("po",requests[0])}>`), KHÔNG phải toolbar danh sách.
@@ -446,7 +446,11 @@ if (CROP) {
   for (let i = 0; i < 2; i++) {
     await send("Page.navigate", { url: BASE });
     await sleep(5200);
-    if (screen) { const nav = await clickSteps(screen.steps); if (i === 0) console.log(`  nav ${screen.id}: ${nav}`); await sleep(2200 + (screen?.settleMs || 0)); }
+    // ⭐ 06/10/2026 (ERP-SESSION-01) — ⛔ SỬA LỖI IM LẶNG. Trước đây `nav` CHỈ in khi `i === 0`
+    //   ⇒ 16/17 màn × 3 viewport kia im lặng ⇒ ⭐ nếu selector chết (NO_CLICK_TARGET) thì cổng vẫn
+    //   chạy tiếp và so ảnh MÀN NỀN thay vì màn cần kiểm ⇒ ⭐ kết luận SAI mà không ai thấy.
+    //   ⇒ Nay: viewport đầu in như cũ (để đối chiếu), còn lại ⭐ CHỈ báo KHI THẬT SỰ HỎNG.
+    if (screen) { const nav = await clickSteps(screen.steps); if (i === 0) console.log(`  nav ${screen.id}: ${nav}`); else if (nav !== "CLICKED_UI") console.log(`  ⚠️ nav ${screen.id} [${vp.id}] HỎNG: ${nav} — cảnh này so MÀN NỀN, KHÔNG phải màn cần kiểm`); await sleep(2200 + (screen?.settleMs || 0)); }
     await freeze();
     const s = await send("Page.captureScreenshot", {
       format: "png", clip: { x: cx, y: cy, width: cw, height: ch, scale: 3 }, captureBeyondViewport: false,

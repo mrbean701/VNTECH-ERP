@@ -70,3 +70,15 @@ Description: Sub-agent 93fb6719 bao cao ket qua cong anh + TIM RA NGUYEN NHAN GO
 thay ca 68 anh chuan khi CSDL chua khoi tao => moi so sanh la setup-vs-setup. Them 2 phat hien: BUG-006 (cong am tham so sai man o
 11/16/18) va BUG-007 (FALSE GREEN o MASTER_STATUS.md:426 + TASK_INDEX.md:160). Tin hieu tich cuc: 0 lan «KHUNG VUOT VIEWPORT»
 => bat bien U-10 DAT cho ca 68 anh. Da gui Telegram. ⛔ KHONG chay --update (git status tools/baseline = 0 tep thay doi).
+
+## EVT-20261006-015
+Timestamp: 2026-10-06 17:30:00 | Event: TEST_COMPLETE | Status: OPEN
+Description: Kiem chung ban sua cua ERP-SESSION-01 cho BUG-006 (probe am thanh so sai man). Ket qua **2/3 dung — man 11 SAI**:
+`clickText: "tao phieu"` khong khop nhan nut that «＋ Lập phiếu đề nghị» (`Requests.tsx:105`) ⇒ van `NO_CLICK_TARGET`.
+Sua dung: `"lap phieu"`. Ghi TEST-20261006-009. ⛔ KHONG sua tep cua ERP-SESSION-01.
+
+## EVT-20261006-016
+Timestamp: 2026-10-06 17:17:00 | Event: HANDOFF | Status: OPEN
+Description: Kiem lai `tools/probe-visual-regression.mjs` (moc sua van la 17:12:48, gio 17:16:50) ⇒ ERP-SESSION-01 **CHUA sua nốt**
+2 cho da duoc huong dan: (a) dong 196 van `clickText: "tao phieu"` ⇒ sai vs nhan that «Lập phiếu đề nghị»;
+(b) dong 383 van gan `nav` nhung KHONG kiem ⇒ che do so anh chinh van che loi. ⇒ ghi HANDOFF-20261006-003 chinh thuc.
