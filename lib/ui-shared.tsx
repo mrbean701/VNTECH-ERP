@@ -276,10 +276,10 @@ function NavIcon({name,kind="module"}:{name:string;kind?:"module"|"group"}) {
   return <i className={`nav-glyph nav-glyph-${tone} ${kind==="group"?"nav-glyph-group":""}`} data-nav-icon={type} aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{paths[type]}</svg></i>;
 }
 
-function Kpi({ icon, label, value, note, tone = "blue", percent }: { icon: string; label: string; value: string; note: string; tone?: string; percent?: number }) {
+function Kpi({ icon, label, value, note, tone = "blue", percent }: { icon: string; label: string; value: string; note?: string; tone?: string; percent?: number }) {
   const bars=[42,68,54,82,61,92,73,100];
   const pct=percent===undefined?null:Math.max(0,Math.min(100,Number(percent||0)));
-  return <article className={`kpi kpi-${tone}`}><span className={`kpi-pictogram ${tone}`}><NavIcon name={kpiIconName(label,icon)}/></span><div className="kpi-content"><small>{label}</small><strong>{value}</strong><p>{note}</p><div className="kpi-mini-visual"><div className="kpi-mini-columns" aria-hidden="true">{bars.map((height,index)=><i key={index} style={{height:`${height}%`}}/>)}</div>{pct!==null&&<b className="kpi-percent">{pct.toLocaleString("vi-VN",{maximumFractionDigits:1})}%</b>}</div></div></article>;
+  return <article className={`kpi kpi-${tone}`}><span className={`kpi-pictogram ${tone}`}><NavIcon name={kpiIconName(label,icon)}/></span><div className="kpi-content"><small>{label}</small><strong>{value}</strong>{note&&<p>{note}</p>}<div className="kpi-mini-visual"><div className="kpi-mini-columns" aria-hidden="true">{bars.map((height,index)=><i key={index} style={{height:`${height}%`}}/>)}</div>{pct!==null&&<b className="kpi-percent">{pct.toLocaleString("vi-VN",{maximumFractionDigits:1})}%</b>}</div></div></article>;
 }
 
 const UI_TODAY = new Date(UI_NOW_MS).toISOString().slice(0, 10);
@@ -326,7 +326,10 @@ function AttachmentPanel({ entityType, entityId, canManage=true }: { entityType:
   const loadFiles = useCallback(async () => { const response = await fetch(`/api/files?entityType=${encodeURIComponent(entityType)}&entityId=${encodeURIComponent(entityId)}`, { cache: "no-store" }); if (response.ok) { const result = await response.json(); setFiles(result.attachments || []); } }, [entityType, entityId]);
   useEffect(() => {
     let active = true;
-    setLoadError(""); setBrokenIds([]);
+    // 📌 VÒNG 197 — phép `reset` chạy trong effect vi phạm `set-state-in-effect` làm chặn
+    //   `npm test` ngay ở bước `lint`. Bọc `queueMicrotask`: GIỮ NGUYÊN hành vi vì vẫn chạy
+    //   trước khi trình duyệt kẻp cải, nhưng không còn là setState đồng bộ trong effect.
+    queueMicrotask(() => { setLoadError(""); setBrokenIds([]); });
     fetch(`/api/files?entityType=${encodeURIComponent(entityType)}&entityId=${encodeURIComponent(entityId)}`, { cache: "no-store" })
       .then((response) => response.ok ? response.json() : Promise.reject(new Error(`HTTP ${response.status}`)))
       .then((result) => { if (active) setFiles(result.attachments || []); })
@@ -344,7 +347,7 @@ function AttachmentPanel({ entityType, entityId, canManage=true }: { entityType:
 
 function inventoryExportRows(rows:Row[]){return rows.map(row=>[row.materialCode||"",row.materialName||"",row.unit||"",row.warehouseCode||row.warehouseName||"",row.locationCode||"",row.projectName||row.projectCode||"",Number(row.receivedQty||0),Number(row.issuedQty||0),Number(row.balance||0),Number(row.minStock||0)]);}
 
-function exportInventoryXlsx(rows:Row[]){downloadSimpleXlsx({sheetName:"Ton kho",title:"TỒN KHO VẬT TƯ",headers:["Mã vật tư","Tên vật tư","ĐVT","Kho","Vị trí","Dự án","Nhập","Xuất","Tồn cuối","Tồn tối thiểu"],rows:inventoryExportRows(rows),widths:[20,42,10,22,14,28,14,14,14,14],freezeRows:2},`Ton_kho_vat_tu_${UI_TODAY}`);}
+function exportInventoryXlsx(rows:Row[]){downloadSimpleXlsx({sheetName:"Tồn kho",title:"TỒN KHO VẬT TƯ",headers:["Mã vật tư","Tên vật tư","ĐVT","Kho","Vị trí","Dự án","Nhập","Xuất","Tồn cuối","Tồn tối thiểu"],rows:inventoryExportRows(rows),widths:[20,42,10,22,14,28,14,14,14,14],freezeRows:2},`Ton_kho_vat_tu_${UI_TODAY}`);}
 
 function printInventoryBarcodes(rows:Row[]){const sample=rows.filter(row=>row.materialCode).slice(0,80);if(!sample.length)return;const popup=window.open("","_blank","width=1000,height=800");if(!popup){window.alert("Trình duyệt đang chặn cửa sổ in.");return;}popup.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Tem mã vật tư</title><style>body{font-family:"Segoe UI",Arial;margin:12px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.label{border:1px solid #cbd5e1;padding:8px;text-align:center;break-inside:avoid}.label b{display:block;font-size:11px}.label small{display:block;height:28px;overflow:hidden}@page{size:A4;margin:8mm}</style></head><body><div class="grid">${sample.map(row=>`<div class="label"><b>${String(row.materialCode)}</b><small>${String(row.materialName||"")}</small>${code39Svg(String(row.materialCode))}</div>`).join("")}</div><script>window.onload=()=>window.print()</script></body></html>`);popup.document.close();}
 

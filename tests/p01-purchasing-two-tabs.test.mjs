@@ -1,7 +1,14 @@
-// P-01 / P-02 / P-03 — HỢP ĐỒNG MÀN «MUA HÀNG»: ĐÚNG 2 TAB (PR · PO) + SẮP XẾP `created DESC` + 6 CHIỀU LỌC.
+// P-01 / P-02 / P-03 — HỤP ĐỒNG MÀN «MUA HÀNG»: ĐÚNG 3 TAB (PR · PO · CHI TIẾT LŨY KẾ THEO VẬT TƯ) + SẮP XẾP `created DESC` + 6 CHIỀU LỌC.
 //
 // CHỈ ĐẠO NGƯỜI DÙNG 21/09/2026: «bỏ P-01 không tách MR PR PO nữa mà chỉ còn PR và PO thôi»
-//   ⇒ màn Mua hàng có ĐÚNG 2 TAB: `PR` (nguồn `data.requests` = bảng `material_requests`) và
+//   ⇒ màn Mua hàng có 2 TAB CHỨNG TỪ: `PR` (nguồn `data.requests` = bảng `material_requests`) và
+//
+// ⛔ CHỈ ĐẠO MỚI HƠN (vòng 211 · mục 1.4, yêu cầu USER từ ảnh chụp màn hình): thêm TAB THỨ 3
+//   «CHI TIẾT LŨY KẾ THEO VẬT TƯ» ⇒ dải tab nay ĐÚNG 3 tab.
+//   VÌ SAO KHÔNG VI PHẠM CHỈ ĐẠO 21/09: tab 3 KHÔNG phải một chứng từ thứ ba — nó là BẢNG TỔNG HỢP suy
+//   ra từ BOQ/Hợp đồng (`data.boqItems`), không có `requestNo`/`poNo` riêng. Ý «bỏ tách chứng từ
+//   MR/PR/PO thành 3 tab» của 21/09 vẫn được giữ nguyên: chỉ còn 2 tab CHỨNG TỪ.
+//   ⚠️ LUẬT CẤM `MR` KHÔNG ĐƯỢC NỚI LẠI — hai khẳng định cấm `MR` trong P-01.1 vẫn giữ nguyên và vẫn phải xanh.
 //     `PO` (nguồn `data.purchaseOrders` = bảng `purchase_orders`). KHÔNG có tab `MR` riêng.
 //
 // Đây là yêu cầu GIAO DIỆN: KHÔNG xóa bảng/cột/dòng nào. Tệp này khẳng định thêm luật đó bằng
@@ -73,13 +80,15 @@ const DATA = {
   users: [],
 };
 
-// ── 1. ĐÚNG 2 TAB: PR · PO — KHÔNG có tab MR ────────────────────────────────────────────────────────
-test("P-01.1 — màn Mua hàng khai ĐÚNG 2 tab: `PR` rồi `PO`, và KHÔNG có tab `MR`", () => {
-  assert.deepEqual(PURCHASING_TABS.map((t) => t.key), ["PR", "PO"], "phải là ĐÚNG 2 tab, thứ tự PR · PO");
-  assert.deepEqual(PURCHASING_TABS.map((t) => t.label), ["PR", "PO"], "nhãn hiển thị trên dải tab phải là `PR` · `PO`");
+// ── 1. ĐÚNG 3 TAB: PR · PO · MAT — VẪN KHÔNG có tab MR ────────────────────────────────────────────────────────
+test("P-01.1 — màn Mua hàng khai ĐÚNG 3 tab: `PR` · `PO` · «Chi tiết lũy kế theo vật tư», và VẪN KHÔNG có tab `MR`", () => {
+  assert.deepEqual(PURCHASING_TABS.map((t) => t.key), ["PR", "PO", "MAT"], "phải là ĐÚNG 3 tab, thứ tự PR · PO · MAT (vòng 211 · mục 1.4)");
+  assert.deepEqual(PURCHASING_TABS.map((t) => t.label), ["PR", "PO", "Chi tiết lũy kế theo vật tư"], "nhãn trên dải tab: `PR` · `PO` · «Chi tiết lũy kế theo vật tư»");
   assert.equal(PURCHASING_TABS.some((t) => String(t.key).toUpperCase() === "MR"), false, "KHÔNG được còn tab `MR` riêng");
   assert.equal(PURCHASING_TABS.some((t) => String(t.label).toUpperCase().includes("MR")), false, "KHÔNG nhãn tab nào chứa `MR`");
-  assert.equal(PURCHASING_TABS.length, 2, "chỉ đạo 21/09: bỏ tách 3 tab, chỉ còn 2 tab");
+  assert.equal(PURCHASING_TABS.length, 3, "vòng 211 · mục 1.4: 2 tab chứng tữ (21/09) + 1 tab TỔNG HỢP mới");
+  assert.equal(PURCHASING_TABS.filter((t) => ["requests", "purchaseOrders"].includes(t.source)).length, 2,
+    "chỉ đạo 21/09 vẫn đúng: đúng 2 tab là CHỨNG TỪ (PR · PO), tab thứ 3 là bảng tổng hợp BOQ");
 });
 
 test("P-01.2 — nguồn dữ liệu mỗi tab: PR = `data.requests` (bảng `material_requests`), PO = `data.purchaseOrders`", () => {
@@ -87,6 +96,9 @@ test("P-01.2 — nguồn dữ liệu mỗi tab: PR = `data.requests` (bảng `ma
   const po = PURCHASING_TABS.find((t) => t.key === "PO");
   assert.equal(pr.source, "requests", "tab PR phải đọc `requests` (material_requests là NGUỒN của PR)");
   assert.equal(po.source, "purchaseOrders", "tab PO phải đọc `purchaseOrders`");
+  const mat = PURCHASING_TABS.find((t) => t.key === "MAT");
+  assert.equal(mat.source, "boqItems", "tab thứ 3 phải đọc `boqItems` (bảng `project_boq_items`)");
+  assert.match(SOURCE, /data\.boqItems/, "nguồn `data.boqItems` phải còn được dùng cho tab lũy kế vật tư");
   assert.match(SOURCE, /data\.requests/, "nguồn `data.requests` phải còn được dùng (không bỏ mất phiếu đề nghị)");
   assert.match(SOURCE, /data\.purchaseOrders/, "nguồn `data.purchaseOrders` phải còn được dùng");
 });

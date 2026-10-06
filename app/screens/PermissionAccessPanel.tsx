@@ -124,8 +124,27 @@ export default function PermissionAccessPanel({
 }) {
   const HelpTip = help;
   const userId = String(user.id || "");
-  const assignableModules = (data.moduleCatalog || []).filter(
-    (item) => Boolean(item.enabled !== false) && item.key !== "admin",
+  // SỬA (vòng 214) — `data.moduleCatalog` lấy từ cột `module_key`; dòng API sống KHÔNG có
+  // trường `key` (đo 02/10/2026: khoá = active, groupKey, groupName, icon, label, moduleKey,
+  // sortOrder, systemLocked). Bản cũ đọc `item.key` ⇒ MỌI dòng có `key === undefined` ⇒
+  // `Object.fromEntries` gộp 76 dòng thành MỘT khoá `"undefined"`. Hệ quả đo được:
+  //   1. Ma trận hiện ô tick TRỐNG cho cả tài khoản đang CÓ quyền.
+  //   2. Mọi nút hàng loạt («Chọn tất cả», «Bỏ chọn tất cả», checkbox đầu cột) dựng state
+  //      bằng khoá `undefined` ⇒ payload `save_user_access` gửi 76 module TẤT CẢ `false` ⇒
+  //      `clearUserScopes()` XOÁ SẠCH toàn bộ quyền và KHÔNG lưu quyền vừa chọn.
+  const assignableModules = (data.moduleCatalog || [])
+    .filter((item) => item.active !== false)
+    .map((item) => ({ ...item, key: String(item.moduleKey) }));
+
+  // Khoá của MỌI dòng ma trận thật sự được vẽ (`entries`) ∪ khoá từ danh mục module.
+  // Bản cũ dựng state chỉ từ `assignableModules` ⇒ chức năng có trong `entries` mà không có
+  // trong `moduleCatalog` không có ô trạng thái ⇒ hiện tick trống và bị gửi `false` khi Lưu.
+  const moduleKeys = Array.from(
+    new Set<string>(
+      assignableModules
+        .map((item) => item.key)
+        .concat(entries.map((entry) => String(entry.module?.key ?? "")).filter((key) => key !== "")),
+    ),
   );
   const activeProjects = (data.adminProjects || []).filter((row) => row.status === "active");
 
@@ -138,10 +157,10 @@ export default function PermissionAccessPanel({
   // Đây là điều kiện để lần Lưu đầu tiên không gửi toàn `false` ⇒ xoá sạch quyền.
   const [permissionState, setPermissionState] = useState<PermissionState>(() =>
     Object.fromEntries(
-      assignableModules.map((item) => {
-        const current = permissionFor(item.key);
+      moduleKeys.map((key) => {
+        const current = permissionFor(key);
         return [
-          item.key,
+          key,
           Object.fromEntries(
             PERMISSION_CAPABILITIES.map((cap) => [
               cap,
@@ -167,8 +186,8 @@ export default function PermissionAccessPanel({
   const setAll = (value: boolean) => {
     setPermissionState(
       Object.fromEntries(
-        assignableModules.map((item) => [
-          item.key,
+        moduleKeys.map((key) => [
+          key,
           Object.fromEntries(PERMISSION_CAPABILITIES.map((cap) => [cap, value])) as Cell,
         ]),
       ),
@@ -178,9 +197,9 @@ export default function PermissionAccessPanel({
   const setColumnAll = (cap: PermissionCapability, value: boolean) => {
     setPermissionState(
       Object.fromEntries(
-        assignableModules.map((item) => [
-          item.key,
-          normalizePermissionCaps(permissionState[item.key] || (Object.fromEntries(PERMISSION_CAPABILITIES.map((k) => [k, false])) as Cell), cap, value),
+        moduleKeys.map((key) => [
+          key,
+          normalizePermissionCaps(permissionState[key] || (Object.fromEntries(PERMISSION_CAPABILITIES.map((k) => [k, false])) as Cell), cap, value),
         ]),
       ),
     );
@@ -202,10 +221,10 @@ export default function PermissionAccessPanel({
   };
 
   const columnState = (cap: PermissionCapability) => {
-    const selected = assignableModules.filter((item) => permissionState[item.key]?.[cap]).length;
+    const selected = moduleKeys.filter((key) => permissionState[key]?.[cap]).length;
     return {
-      all: assignableModules.length > 0 && selected === assignableModules.length,
-      some: selected > 0 && selected < assignableModules.length,
+      all: moduleKeys.length > 0 && selected === moduleKeys.length,
+      some: selected > 0 && selected < moduleKeys.length,
     };
   };
 

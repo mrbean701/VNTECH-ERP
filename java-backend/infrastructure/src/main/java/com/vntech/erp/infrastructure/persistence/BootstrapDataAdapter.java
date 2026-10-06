@@ -1605,10 +1605,12 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
         data.put("workItems", workItems);
 
         // JS `:718` — sự kiện CHỈ của các công việc vừa trả về (trước đây Java trả SỰ KIỆN CỦA MỌI CÔNG VIỆC).
-        if (workItems.isEmpty()) {
+        List<String> workItemIds = workItems.stream().map(r -> String.valueOf(r.get("id"))).toList();
+        if (workItemIds.isEmpty()) {
             data.put("workItemEvents", List.of());
+            data.put("workItemComments", List.of());
+            data.put("workItemParticipants", List.of());
         } else {
-            List<String> workItemIds = workItems.stream().map(r -> String.valueOf(r.get("id"))).toList();
             data.put("workItemEvents", query("""
                     SELECT e.id,e.work_item_id AS workItemId,e.event_type AS eventType,
                            e.from_status AS fromStatus,e.to_status AS toStatus,
@@ -1617,6 +1619,28 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                            e.reason,e.detail_json AS detailJson,e.occurred_at AS occurredAt
                     FROM work_item_events e LEFT JOIN users u ON u.id=e.actor_user_id
                     WHERE e.work_item_id IN (%s) ORDER BY e.occurred_at DESC""".formatted(inClause(workItemIds)),
+                    params(workItemIds)));
+            // TASK-019 — JS `:812-815` (T-04) trả THÊM 2 khoá của ĐÚNG tập công việc vừa lọc:
+            // bình luận + người tham gia. Bản Java thiếu cả hai ⇒ `app/screens/WorkHierarchy.tsx:113`
+            // luôn đọc `data.workItemParticipants || []` ⇒ màn "Hỗ trợ liên phòng" CHẾT ÂM THẦM trên
+            // bản Java, trong khi `tests/work-item-comment-participant.test.ts:187` đòi đúng hợp đồng này.
+            // Không mở rộng phạm vi nhìn thấy: hai khoá bám `IN (workItemIds)` — cùng tập như `workItemEvents`.
+            data.put("workItemComments", query("""
+                    SELECT c.id,c.work_item_id AS workItemId,c.user_id AS userId,u.full_name AS userName,
+                           c.comment,c.visibility,c.created_at AS createdAt,c.updated_at AS updatedAt
+                    FROM work_item_comments c LEFT JOIN users u ON u.id=c.user_id
+                    WHERE c.work_item_id IN (%s) ORDER BY c.created_at""".formatted(inClause(workItemIds)),
+                    params(workItemIds)));
+            data.put("workItemParticipants", query("""
+                    SELECT p.id,p.work_item_id AS workItemId,p.user_id AS userId,u.full_name AS userName,
+                           u.employee_code AS employeeCode,u.role AS roleCode,COALESCE(rc.name,u.role) AS roleName,
+                           p.role_in_task AS roleInTask,p.notify,p.added_by AS addedBy,ub.full_name AS addedByName,
+                           p.created_at AS createdAt,p.updated_at AS updatedAt
+                    FROM work_item_participants p
+                    LEFT JOIN users u ON u.id=p.user_id
+                    LEFT JOIN role_catalog rc ON rc.code=u.role
+                    LEFT JOIN users ub ON ub.id=p.added_by
+                    WHERE p.work_item_id IN (%s) ORDER BY p.created_at""".formatted(inClause(workItemIds)),
                     params(workItemIds)));
         }
         // TASK-059 — JS `:719` trả `workItemId`/`channel`/`title`/`body`/`lastError` và sắp **chưa đọc TRƯỚC**
@@ -1890,7 +1914,8 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
             }
             if (!anyModule(view, "dept_plan_tasks", "dept_plan_assign", "dept_project_tasks",
                     "dept_project_assign", "site_command")) {
-                blank(data, "workItems", "workItemEvents", "taskNotifications");
+                blank(data, "workItems", "workItemEvents", "workItemComments", "workItemParticipants",
+                        "taskNotifications");
             }
             // TASK-065 — ba khoá `adminMaterial*` KHÔNG nằm trong danh sách xoá-trắng vô điều kiện nữa:
             // JS `:694-696` chỉ trả `[]`/danh sách rút gọn khi `!canEditCentral`, còn khi `canEditCentral`

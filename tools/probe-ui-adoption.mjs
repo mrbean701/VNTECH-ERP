@@ -71,6 +71,11 @@ for (const [name, code] of shared) {
 console.log("");
 console.log("B. MẪU CŨ CÒN TỒN — khối lượng còn phải chuyển");
 console.log("-".repeat(84));
+// ⚠️ VÒNG 194 — mục B trước đây đếm trên `app/page.tsx` RIÊNG trong khi mục A quét cả
+// `app/screens/` + `app/components/`. Cùng một công cụ, hai phạm vi khác nhau ⇒ "khối lượng
+// mẫu cũ còn tồn" luôn BÁO THIẾU, và báo thiếu một cách âm thầm. Nay dùng chính `outside`
+// đã tính ở dòng 35 (mọi tệp app/** ngoài thư viện) cho cả hai phía.
+console.log("  (đếm trên " + outside.length + " tệp app/** ngoài thư viện — cùng phạm vi với mục A)");
 const page = readFileSync(pageFile, "utf8");
 const legacy = [
   ["<Pill ...> tự tạo nhãn trạng thái", /<Pill(?![A-Za-z])/g, "U-15 · thay bằng StatusBadge"],
@@ -78,10 +83,22 @@ const legacy = [
   ["trạng thái rỗng tự viết (<Empty)", /<Empty(?![A-Za-z])/g, "U-15 · DataTable có sẵn empty"],
   ["modal/drawer tự viết (className=overlay)", /className="overlay/g, "U-14 · thay bằng EntityDetailModal"],
   ["điều kiện quyền rải rác", /canUse\s*&&|permission\.[A-Za-z]+\s*&&/g, "U-16 · thay bằng PermissionGuard"],
+  // `timeline` / `supply-timeline` / `delivery-timeline` — số 0 ở đây là THẬT, không phải regex
+  // hỏng: kỷ luật đã ghi tại `app/screens/SupplierDetailModal.tsx` («⛔ KHÔNG dùng `.timeline`»)
+  // và thư viện đã chuyển sang `vt-timeline-*`. Giữ nguyên 3 tên này làm VÉ HỒI QUI.
   ["dải phê duyệt/lịch sử tự viết", /className="timeline"|className="supply-timeline"|className="delivery-timeline"/g, "U-17 · thay bằng Approval/ActivityTimeline"],
 ];
 for (const [label, re, note] of legacy) {
-  console.log(`  ${String(count(page, re)).padStart(4)} chỗ   ${label.padEnd(42)} → ${note}`);
+  let total = 0;
+  const where = [];
+  for (const { f, t } of outside) {
+    const n = count(t, re);
+    if (n) { total += n; where.push(relative(ROOT, f).replace(/\\/g, "/") + " ×" + n); }
+  }
+  console.log(`  ${String(total).padStart(4)} chỗ   ${label.padEnd(42)} → ${note}`);
+  if (where.length) {
+    console.log("      " + where.slice(0, 6).join(" · ") + (where.length > 6 ? " · … +" + (where.length - 6) : ""));
+  }
 }
 
 console.log("");

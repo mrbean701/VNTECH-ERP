@@ -81,7 +81,7 @@ const modules: { key: ModuleKey; label: string; icon: string; groupKey?: string;
   { key: "teams", label: "Tổ đội theo dự án", icon: "TĐ", groupKey: "project_management" },
   { key: "requests", label: "Phiếu đề nghị mua hàng", icon: "ĐN", groupKey: "purchasing" },
   { key: "approvals", label: "Workflow", icon: "PD", groupKey: "purchasing" },
-  { key: "purchasing", label: "Mua hàng & PO", icon: "PO", groupKey: "purchasing" },
+  { key: "purchasing", label: "PR & PO", icon: "PO", groupKey: "purchasing" },
   // 📌 QUYẾT ĐỊNH USER 26/09/2026 (MT3 §E): «Giao nhận công trường» / «Kế hoạch giao hàng» —
   //    user chốt «cứ làm theo đề xuất» ⇒ ĐỔI TÊN mục/màn hiện có thành «Giao nhận công trường»
   //    (⛔ KHÔNG tách 2 tab: bản chất là cùng một việc thông báo cho BCH dự án sắp xếp nhận hàng).

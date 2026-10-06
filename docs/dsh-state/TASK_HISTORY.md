@@ -882,3 +882,691 @@ dùng ⇒ không ảnh hưởng bảng nào khác.
 ### Việc còn tồn
 Xem lại ảnh thì cột «HẾT HẠN» vẫn là ô `dd/mm/yyyy` trống chưa có ý nghĩa rõ (mục TYPE 3 đã
 dời từ trước). Chưa tự ý sửa vì USER chưa yêu cầu trong vòng này.
+
+## TASK-012 — ĐÍNH CHÍNH DANH SÁCH "CỐ Ý KHÔNG SỬA" (vòng 190, 01/10/2026)
+
+**TASK:** kiểm chứng danh sách tệp "cố ý không thêm dấu" mà tài liệu tự khẳng định là "đã kiểm chứng là đúng".
+**STATUS:** ✅ DONE
+**COMPLETED:**
+- Kiểm chứng lại **từng dòng** thay vì tin lời tự khẳng định của tài liệu.
+- Phát hiện danh sách **sai 2/5 mục**.
+
+**FILES CHANGED:**
+- `docs/dsh-state/CHECKLIST.md` — sửa mục "DANH SÁCH CỐ Ý **KHÔNG** SỬA" (chỉ tài liệu, **không** sửa mã nguồn).
+
+**DATABASE:** không đổi.
+**API:** không đổi.
+**SOURCE CODE:** **không sửa gì** — cả 2 chuỗi sai đều là chuỗi hiển thị, để nguyên theo quyết định của user.
+
+**KẾT QUẢ KIỂM CHỨNG:**
+
+| mục trong tài liệu | thực tế |
+|---|---|
+| `admin-bulk-import.ts:107-132` | ✅ đúng — `USER_ALIASES` |
+| `material-import.ts:114-129` | ✅ đúng — `requestAliases` |
+| `boq-normalize.ts` | ✅ đúng — `markers=["cot he thong tu link tinh khong nhap tay", …]` dòng ~12 |
+| `ui-shared.tsx:347,364,365,388` | ❌ **sai toàn bộ** |
+| `p2-approval-flow.mjs` | ❌ **không thuộc nhóm này** |
+
+- **:347** = `sheetName:"Ton kho"` ⇒ **chuỗi hiển thị cho người dùng** trong tệp Excel xuất, KHÔNG phải bảng alias.
+- **:364, :365, :388** = code thường của `mapBoqPriceRows`.
+- Bảng alias thật của tệp này nằm ở **:356** (`aliases={boqItemId:["ma dong boq",…]}`),
+  **:373-374** (`["khoa doi chieu","giu nguyen",…]`) và **:397** (`aliases={paymentDate:["ngay thanh toan",…]}`).
+- `p2-approval-flow.mjs` = **0 bảng alias bỏ dấu**; chỉ có alias tên trường camelCase/snake_case.
+
+**TEST / XÁC MÌNH:**
+- Bằng chứng dòng 371 `normalizeBoqHeader(…)` bỏ dấu TRƯỚC, rồi :373-374 so mảng chuỗi không dấu
+  ⇒ thêm dấu chắc chắn làm hỏng tra cứu. Bằng chứng khớp với cơ chế `.normalize("NFD")`.
+- `git diff` cho **đúng 2 hunk**, cả hai đều là nội dung vòng này ⇒ **không hỏng** phần tài liệu có sẵn.
+- `npm run verify:fingerprint` → **ĐẠT**, `VNTECH-FP-F0AF369533F385B2` **không đổi**
+  ⇒ xác nhận `docs/` không nằm trong tập băm nguồn.
+- FFFD = 0.
+
+**REMAINING:**
+- `ui-shared.tsx:347` `"Ton kho"` → `"Tồn kho"`: **CHƯA SỬA** (user đã dừng đợt quét chính tả này).
+  Nay đã **gỡ bỏ hàng rào bảo vệ nhầm**, nên có thể sửa khi user cho phép.
+- `TASK-HISTORY.md` mục này.
+
+**NEXT:** chờ user cho phép đợt quét chính tả, hoặc sang mục TYPE 1/2 kế tiếp.
+
+**BLOCKER:** không có.
+
+## TASK-013 — RÀ TRÍCH DẪN SỐ DÒNG TRONG TÀI LIỆU (vòng 190, 01/10/2026)
+
+**TASK:** rà toàn bộ trích dẫn dạng `tệp:sốdòng` trong `docs/dsh-state/`.
+**STATUS:** ✅ DONE
+**FILES CHANGED:** `CHECKLIST.md` (2 dòng) · `DECISIONS.md` (2 dòng + D-059).
+**DATABASE / API / SOURCE CODE:** không đổi.
+
+**KẾT QUẢ:** quét 22 trích dẫn ⇒ **3 sai thật**, đã sửa hết.
+
+| # | trích dẫn cũ | đã sửa thành | kết luận gốc |
+|---|---|---|---|
+| 1 | `UserManagementUseCase.java:427-436` | **:499-509** | ✅ vẫn đúng |
+| 2 | `globals.css:155,159` | bỏ số dòng (tệp đã minify còn 68 dòng) | ✅ vẫn đúng |
+| 3 | `scripts/local-server.mjs:181` phục vụ `dist/client` | `:20` **nạp** bundle SSR; bundle đó mới phục vụ asset | ✅ quy tắc vẫn đúng, **gán sai cơ chế** |
+
+**XÁC MÌNH:**
+- #1: đọc `:499-509` — đúng là `findDepartmentPermission` + `throw ApiError(... "chưa được cấp quyền" ...)`,
+  và thông báo có hướng dẫn cụ thể ⇒ **quy tắc nghiệp vụ cố ý** như tài liệu nói. Chỉ sai dòng.
+- #2: quét `app/globals.css` ⇒ có quy tắc `.modal` với `display:flex;flex-direction:column` ⇒ nội dung còn nguyên.
+- #3: `local-server.mjs` **119 dòng**, **không có** chuỗi `dist/client`; chỉ có `dist` ở `:20`.
+  Đối chiếu `docs/24_SYSTEM_AUDIT_REPORT.md:23` và `docs/14_...:105`: UI là **SSR**,
+  `dist/client` **không có** `index.html` ⇒ xác nhận bundle `dist/server/index.js` phục vụ asset.
+- `git diff` xem lại: **chỉ 4 dòng** bị đổi, không đụng phần có sẵn. FFFD = 0.
+
+**BẪY ĐÃ TRÁNH:** bộ quét của tôi báo 8 lần sai cho `REARM-GOAL-CHECKLIST.md`
+(ví dụ dòng nói "quét lại toàn bộ fence của `CHECKLIST.md`: 271 dòng" — con số 271 thuộc về
+`CHECKLIST.md`, không phải tệp `REARM`, nhưng regex ghép nhầm). Đã mở từng dòng kiểm lại
+trước khi kết luận ⇒ **chỉ 3 lỗi thật, không phải 11**. Công cụ quét cũng cần được kiểm chứng.
+
+**REMAINING:** xem `NEXT`.
+**NEXT:** mọi quyết định loại "TYPE 3 / nghiệp vụ" vẫn đang chờ user (2 đổi tên kho · ngữ nghĩa
+cột «Hết hạn» · 18 action mồ côi · `delete_partner`/`delete_supplier` · SMTP · MỐC 104/105 ·
+gia hạn HĐ lần N · dừng tunnel Cloudflare); `mvn -o -B test` cần máy có Maven.
+
+## TASK-014 — MỐC 121 · 2 TAB PR/PO KHÔNG HIỆN + ĐỔI TÊN MENU + RÀ CHÍNH TẢ MÀN MUA HÀNG (01/10/2026)
+
+**Kích hoạt:** anh gửi 3 ảnh chụp màn PR & PO đang chạy (`127.0.0.1:9000`, 21:14–21:16) kèm 4 yêu cầu.
+
+| # | yêu cầu | kết quả |
+|---|---|---|
+| 1 | Đổi tên menu → `PR & PO` | ✅ `lib/menu-helpers.ts` · `app/page.tsx` · **migration `V35` + `drizzle/0328`** |
+| 2 | 2 tab PR / PO | ✅ **đã có sẵn từ TASK-119 — thiếu CSS**, không phải thiếu tính năng |
+| 3 | Giải thích 2 bảng dưới | ✅ giải thích + viết vào UI |
+| 4 | Rà chính tả / hiển thị | ✅ 7 mục |
+
+### Phát hiện quan trọng nhất
+`PR74PO28` anh thấy trong ảnh 3 **không phải lỗi dữ liệu** — nó chính là dải 2 tab đã có sẵn.
+Vì `globals.css` và `canonical.css` **không có rule nào** cho `.purchase-tabbar` / `.purchase-tab`,
+4 phần tử `<button>` rơi về `display:inline` và chữ dính liền: `PR`+`74`+`PO`+`28`.
+Đã thêm **23 rule CSS** vào `canonical.css`. ⛔ Không sửa markup, không sửa logic, không đụng dữ liệu.
+
+### Bài học → D-060
+**«Có markup» ≠ «có hiển thị».** Trước khi kết luận *tính năng chưa làm*, phải grep **3 tầng**:
+mã nguồn → CSS → bundle đang chạy. Ở đây tầng 1 có đủ, tầng 2 rỗng ⇒ 2 tầng đầu báo «chưa làm»
+nếu chỉ đọc mã nguồn. Cùng dạng với `D-056` (MỐC 120).
+
+### Gate
+`typecheck` 0 lỗi · `test:regression` 72/72 · `verify:fingerprint` **ĐẠT** (`VNTECH-FP-9582AE7DBD0A9B62`, source 691).
+⏳ `npm run build` **chưa chạy** (quy tắc 1 của `D-052` — app đang mở) ⇒ anh chưa thấy thay đổi trên trình duyệt.
+
+### Hai việc CHỜ ANH QUYẾT (không tự ý làm)
+1. **Bảng PO lặp 2 lần** — tab `:293` và card `:297` cùng dữ liệu `visiblePO`, trùng `data-vntech="purchasing-po-row"`.
+2. **Cột D của bảng 1 là phân bổ tỷ lệ**, không phải số thật của từng hệ
+   (`paid × hợp đồng hệ / tổng hợp đồng dự án`).
+
+---
+
+
+---
+
+## TASK-015 — VÒNG 191: KIỂM CHỨNG MỐC 121 KHÔNG CẦN BUILD + GHI NHÃN CỘT D + ĐỒNG BỘ SQLite
+
+**Bối cảnh:** MỐC 121 đã xong mã nhưng **chưa build** (app đang mở ⇒ `D-052` quy tắc 1).
+Không chờ user, tìm cách **kiểm chứng không cần build** và làm việc song song.
+
+| việc | kết quả |
+|---|---|
+| Build có redirect được không? | ⛔ **không** — `vinext` **hardcode** `outDir = process.cwd()/dist`, không có `--outDir` |
+| Kiểm chứng thay bằng gì | **phân tích tĩnh + dữ liệu thật từ `/api/system`** |
+| Bằng chứng `PR74PO28` | ✅ `requests = 74`, `purchaseOrders = 28` — **khớp đúng** 4 chữ user thấy |
+| CSS có hợp lệ? | ✅ quét **345** rule toàn file ⇒ **0 lỗi cú pháp** |
+| CSS có chết không? | ✅ 6 class đều dùng thật trong JSX (`:267,268,269,290,291`) |
+| Nhãn DB | `moduleCatalog[32].label = "Mua hàng & PO"` ⇒ **V35 chưa chạy**, đúng dự kiến |
+| Cột D (bảng 1) | ✅ gắn nhãn **«ƯỚC TÍNH»** — xem `D-061` |
+| Số thanh toán thật theo hệ | ⛔ **KHÔNG THỂ** — không bảng nào có trường trỏ về hệ |
+| Phát hiện thêm | ⛔ 6/8 vật tư BOQ (97,7 % giá trị HĐ) đều xếp vào `KHAC` |
+| Đồng bộ SQLite | ✅ làm lại **bước 7 của `D-055`** mà vòng 190 bỏ sót |
+| Fingerprint | `VNTECH-FP-B76E3EB75E05E375` · source 691 · **ĐẠT** |
+| Lỗi tự phát hiện | ⛔ quên `await` ⇒ ghi `[object Promise]` vào `brandFingerprint` — đã sửa, verify ĐẠT |
+| Gate | `typecheck` **0** · `test:regression` **72/72** · `lint` **223/2** (đúng baseline) |
+
+---
+
+## TASK-016 — Bịt điểm mù cổng CSS phát hiện sau MỐC 121
+
+- **Ngày:** 01/10/2026 · **Vòng goal:** 192
+- **STATUS:** DONE
+- **COMPLETED:**
+  - Đo được cổng CSS mù `canonical.css` (205 lớp) và mù chiều ngược; đo được 133 lớp trơ ⇒ bác bỏ quy tắc trải kèm.
+  - `scripts/css-baseline-audit.mjs`: đọc 3 stylesheet, bóc chú thích, đăng ký 16 lớp chết, khóa hợp đồng MỐC 121.
+  - `tests/moc121-purchasing-tabs.test.mjs`: 10 ca; khai báo vào `package.json` → `test:regression`.
+- **FILES CHANGED:** `scripts/css-baseline-audit.mjs`, `tests/moc121-purchasing-tabs.test.mjs` (mới), `package.json`,
+  `lib/vntech-identity-data.mjs`, `VNTECH_FINGERPRINT.json`, `VNTECH_PRODUCT_IDENTITY.txt`, `docs/dsh-state/*.md`.
+- **DATABASE:** SQLite `.local-data/warehouse.sqlite` — đồng bộ `source_fingerprint` / `brand_fingerprint`,
+  trigger bảo vệ 2/2 còn nguyên. **Không** đụng MySQL, **không** migration mới.
+- **API:** không đổi.
+- **TEST:** `typecheck` exit 0 · `test:regression` **82/82** · `verify:css-baseline` exit 0 ·
+  `verify:fingerprint` ĐẠT · thử đột biến bắt đúng cả hai chiều · app HTTP 200 (7 123 bytes).
+- **REMAINING:**
+  - `npm run build` — CHỜ anh đóng trình duyệt (D-052 rule 1; `vinext build` ghi cứng vào `dist/`).
+  - Chạy `V35` trên MySQL thật (`flyway_schema_history` đang ở V31).
+  - 3 quyết định TYPE 3: bảng PO lặp (`Purchasing.tsx:293` vs `:297`), phân bổ lại `boqItems.systemCode`, tệp `.docx`.
+  - Ngoài phạm vi đã ghi nhận: 3 công cụ dò (`tools/probe-*.mjs`) và 1 test còn trỏ tới lớp UI đã bị bỏ.
+- **NEXT:** chờ anh đóng trình duyệt để build thật; sau đó `V35` trên MySQL.
+- **BLOCKER:** không có blocker kỹ thuật cho phần đã xong; phần còn lại đều cần anh quyết hoặc thao tác tay.
+
+**Bài học rút ra (đã ghi D-062).**
+1. Cổng dò selector phải bóc `/* … */` — banner kiểu liệt kê làm cho phép "còn class" đúng giả. Thử đột biến mới phát hiện.
+2. Cổng không nằm trong `npm test` thì không được canh mỗi lần; sửa cổng phải kèm test trong `tests/`.
+3. Sửa phạm vi đọc của một cổng = mở rộng điều kiện, không phải nới lỏng.
+
+---
+
+## TASK-017 — ĐO LẠI TOÀN BỘ BỘ TEST, VÁ 2 LỖI THẬT, CHỐNG HỎNG ÂM THẦM (01/10/2026) — **DONE**
+
+**Bối cảnh.** Vòng 192 phát hiện `tools/probe-*.mjs` + 1 test vẫn trỏ tới lớp UI đã biến mất. Trước khi
+sửa/xoá, phải trả lời: **UI bỏ lớp đó cố ý hay do hồi qui?** Xoá test thối có thể che giấu đúng lỗi.
+
+**Kết quả đo.** `tests/` = **119 tệp / 696 ca**; `test:regression` = **14 tệp** ⇒ **105 tệp / 583 ca
+không được chạy ở đâu cả**, trong đó **10 tệp / 25 ca đang đỏ** mà `npm test` vẫn báo xanh.
+
+**Hai chẩn đoán sai trước khi đúng** (đã thành quy tắc trong D-063):
+1. `node --test` thiếu `--import tsx` ⇒ mọi tệp import `.tsx` chết `ERR_UNKNOWN_FILE_EXTENSION` ⇒ tôi
+   báo «59 ca hỏng». Số thật **27 ca**. → **Luôn chạy `node --import tsx --test`.**
+2. Hàm kiể `--is-ancestor` bắt lỗi rồi `return ""` và so `=== ""`, trong khi `git merge-base --is-ancestor`
+   trả ≠ 0 **khi thất bại** ⇒ kết luận ngược. Quét blob của cả **84 commit** chạm `app/page.tsx` cho
+   **0 lần đổi trạng thái** ⇒ `unity` **chưa từng có** ô tìm/lọc + danh sách đã chọn của modal thông báo;
+   tính năng chỉ còn ở `backup/mt3-head-20260928` (`7fdf71d`) và `73ff69d`.
+
+**Vá 2 lỗi thật.**
+- `app/screens/Purchasing.tsx`: nhãn lọc ngày ghi chung «Ngày (từ)/(đến)» cho cả PR và PO, trong khi
+  logic (`purchasingRowDate`) vốn đúng và khác nhau ⇒ thêm `PURCHASING_DATE_DIM`, nhãn đổi theo tab,
+  thêm ghi chú `purchasing-date-dim-note` nêu rõ 2 cột thật. `p01-p02-p03-contract` **14/15 → 15/15**.
+- `docs/agent-progress/F-03-TAI-CHINH-AUDIT-PHU-THUOC.md`: **23/23 số dòng Java thối rot** (lệch +16, riêng
+  một dòng +42). Mã đúng, hồ sơ sai ⇒ **sửa hồ sơ, giữ nguyên phép kiểm** ⇒ **7/7** (D-064).
+
+**Chống tái diễn.** `scripts/test-suite-health.mjs` + `npm run audit:tests`. `KNOWN_RED` = 10 mục kèm
+lý do + mã mục. Tệp đỏ ngoài danh sách, hoặc đang nằm trong `test:regression` ⇒ exit ≠ 0. Mục đã xanh
+lại ⇒ báo để gỡ. ⛔ Không đưa vào `npm test` (vài phút). **Thử đột biến:** bỏ `KNOWN_RED` ⇒ exit 1.
+
+**Cổng.** `test:regression` ✅ **113/113** (82 → 113) · `typecheck` · `verify:css-baseline` ·
+`verify:fingerprint` · `test:workflow` · `audit:tests` đều exit 0 · `lint` giữ nền **223 / 2**.
+Kiểm kê: **10 tệp đỏ / 25 ca**, tất cả ngoài cổng, đã ghi `KNOWN_RED`.
+
+**Fingerprint.** Điểm cố định sau 2 vòng · `fileCount` **692 → 693** · source `e0e795001c1df084…` →
+**`9aa782dc3f6ebbf4…`** · short → **`VNTECH-FP-9AA782DC3F6EBBF4`** · brand `5ece5036…` → **`586bd208…`**
+(đổi vì brand chứa source) · release `f7d72d34…` **không đổi**. Tính lại độc lập đã khớp; không có
+`[object Promise]`, FFFD = 0. SQLite: backup → bỏ 2 trigger → `UPDATE` cả 2 bảng trong **một**
+transaction → COMMIT → tạo lại trigger; khớp SSOT, trigger 2/2, thử ghi trái phép bị chặn.
+
+**Bài học rút ra (D-063, D-064).**
+1. **Một test không nằm trong cổng chạy thì hỏng âm thầm; cổng xanh không phải bằng chứng.**
+2. **Trước khi báo khiếm khuyết, hãy kiểm chứng chính cách đo** — lỗi đo lường nguy hiểm hơn lỗi được đo,
+   vì nó tạo ra một sự thật giả có vẻ rất chắc chắn.
+3. **Test đỏ là tín hiệu, không phải kẻ phá hoại** — hỏi «mã, tài liệu, hay phép kiểm đang sai?» trước.
+4. `package.json` là **tài liệu kiến trúc**: `test:regression` là danh sách hợp đồng nào được bảo đảm.
+
+**BLOCKER:** không có blocker kỹ thuật. ⛔ **Không commit** — anh đã nói «Chưa commit, để tôi xem trước».
+
+**Chờ anh (TYPE 3).** ⭐ 10 tệp đỏ còn lại; nổi bật là 7 tệp `mt3-*` thuộc đợt đã rollback trong khi
+`TASK_INDEX.md:158` + `MASTER_STATUS.md:395` vẫn ghi DONE ⇒ **108/110 đang thổi phồng**. Khôi phục MT3
+(còn nguyên trên `backup/mt3-head-20260928`) hay phân loại lại NOT DONE? ⛔ Không tự sửa/xoá 7 test —
+chúng là chứng cứ duy nhất còn lại của đợt làm bị rollback.
+
+---
+
+## TASK-018 — SỬA HAI PROBE ĐANG BÁO SAI PHẠM VI (01/10/2026) — **DONE**
+
+**Bối cảnh.** Round 193 (TASK-017) đóng lại bằng phát hiện lớn: *những test nằm ngoài cổng chạy thì
+hỏng âm thầm*. Nhưng nó cũng để lại hai món nợ nhỏ ghi ở `CHECKLIST.md:3986-3987`: hai probe U-09 và
+U-14…U-17 vẫn truy tìm lớp mà UI không còn dùng. Đây là lượt **TYPE 1** kế tiếp: hai công cụ đang
+**báo sai**.
+
+**Chẩn đoán vòng đầu chỉ đúng một nửa.** Tôi định xoá `delivery-timeline` và `staff-toolbar` khỏi
+danh sách dấu hiệu. Đo trước (quy tắc **đo trước, xoá sau** của D-063) cho thấy vấn đề thật **lớn hơn
+nhiều**: cả hai probe **chỉ đọc `app/page.tsx`** trong khi mã đã tách sang `app/screens/*.tsx` (34 tệp)
++ `app/components/*.tsx`. `probe-ui-adoption` còn **tự mâu thuẫn**: mục A quét cả `app/screens/`,
+mục B thì không ⇒ «khối lượng mẫu cũ còn tồn» luôn báo thiếu **âm thầm**. Đây là lỗi của **D-062**
+(cổng CSS chỉ đọc 1 trong 3 stylesheet) lặp lại ở tầng probe.
+
+**Bằng chứng cụ thể.** `baseline-filter-card` **còn sống** trong `app/screens/Receiving.tsx` nhưng
+bảng kiểm kê cũ không thấy. Sau khi mở rộng: bảng kiểm kê **9 → 21 dòng**, CẦN CHUYỂN **8 → 17**,
+ĐÃ CHUẨN **1 → 4**, tệp quét **1 → 58**. Mục B: `table-wrap` **51 → 104**, `<Empty` **54 → 104**,
+`overlay` **2 → 13**, điều kiện quyền rải rác **19 → 51**.
+
+**Sửa, không nới.** (1) Mở rộng **phạm vi đọc** — hướng D-044 cho phép, nới điều kiện thì không.
+(2) Bóc chú thích trước khi dò — không thì một dòng `// .staff-toolbar` là báo động giả (D-062).
+(3) **Không xoá dấu hiệu nào.** `staff-toolbar` / `staff-directory-head` / `delivery-timeline` không
+còn UI dùng nhưng **CSS còn** và đã nằm trong `KNOWN_DEAD_CANONICAL` ⇒ xoá đi là **mất vé cảnh báo
+hồi qui**. Thay bằng **mục D** in ra từng dấu hiệu chết kèm phân loại («CÒN CSS» / «bóng ma thuần»).
+Đối chiếu chéo với `KNOWN_DEAD_CANONICAL`: **khớp chính xác**.
+
+**Kiểm chứng bằng thử đột biến — 12/12.** Comment giả ⇒ không báo; class thật ⇒ báo, 17 → 18 và dấu
+hiệu biến mất khỏi mục D; `table-wrap` thêm ở màn hình tách file ⇒ 104 → 105; khôi phục byte-for-byte.
+
+⚠️ **Bản thử đầu của tôi báo sai hai lần** — nhắc lại vì đây là lần thứ tư trong phiên:
+1. Gõ nhầm mã ký tự Unicode (`\u1ed1` thay vì `\u1ed7`, `\u1ea4` thay vì `\u1ea6`) ⇒ **6 phép kiểm
+   "bại" trong khi cả hai probe hoàn toàn đúng**. Đổi sang ký tự thật.
+2. THỬ 1 xoá tệp `.bak` sớm ⇒ THỬ 2 không khôi phục được ⇒ script sập giữa chừng và **để lại
+   `app/screens/Delivered.tsx` ở trạng thái đột biến**. Phát hiện ngay, `git checkout` về HEAD, xác
+   nhận sạch; bản sau dùng backup một lần + `try/finally`.
+
+**Bài học rút ra (D-065).** Xem §DECISIONS.
+
+**Cổng.** Cả 6 exit 0 · `test:regression` **113/113** · FFFD = 0. `verify:fingerprint` xanh xác nhận
+`tools/` **không** thuộc tập băm ⇒ sửa probe **không** đổi fingerprint. `MANIFEST_SHA256.txt` không
+sửa tay (chỉ tái sinh bằng tool lúc đóng gói).
+
+**Chờ anh (TYPE 3).** Hai probe vẫn **chỉ là công cụ đo, không phải cổng chặn** — có biến thành cổng
+thật không? · `approved-module-head` (bóng ma thuần) gỡ hay giữ? · 10 tệp đỏ + 108/110 thổi phồng
+(xem TASK-017) · **commit** («Chưa commit, để tôi xem trước») ⇒ ⛔ chưa tự `git add`/`commit`/`push`.
+---
+
+## TASK-019 — QUÉT TOÀN BỘ CÔNG CỤ ĐO, SỬA CỔNG `probe-bootstrap-keys`, VÁ LỖI BOOTSTRAP JAVA (01/10/2026) — **DONE**
+
+**Bối cảnh.** D-065 (TASK-018) sửa 2 probe vì chúng đọc hẹp hơn cả mã nguồn. D-065 tự đặt câu hỏi ở
+đoạn kết: «còn bao nhiêu tệp ngoài phạm vi quen thuộc mà công cụ này không thấy?» — TASK-019 là câu trả lời
+đo được cho câu đó, trên **toàn bộ** công cụ đo chứ không riêng 2 cái đó.
+
+**Phạm vi đã quét.** 345 công cụ (304 `tools/` + 41 `scripts/`), trong đó 153 là công cụ đo.
+Thu hẹp lại 19 cổng thật theo `docs/dsh/MT2_GATE_SWEEP_23-09.md:69`.
+
+**Kết quả kiểm chứng từng cổng hẹp (mở tệp, không tin bộ dò).**
+
+| Cổng | Đọc gì | Kết luận |
+|---|---|---|
+| `probe-bootstrap-keys` | `app/page.tsx` duy nhất | ⛔ lỗi thời — 83/96 khoá, mù với 13 khoá |
+| `probe-statusbadge-parity` | `StatusBadge.tsx` | ✅ đúng (so 1 tệp với bản chép `<Pill>` cũ) |
+| `probe-work-item-field-contract` | `WorkCenter.tsx` | ✅ đúng (hợp đồng của riêng một màn) |
+| `probe-modal-branch-coverage` | không đọc tệp nguồn | ✅ không liên quan |
+
+**Phát hiện sản phẩm.** `workItemParticipants` + `workItemComments` có trong bản Node
+(`scripts/system-route.mjs:812-815,824`), **không** trong `BootstrapDataAdapter.java`, và bị một tệp
+kiểm thử đòi (`tests/work-item-comment-participant.test.ts:187`). Đo trên `:18081` và `:9000`
+(giống nhau) xác nhận bản Java thật sự không trả 2 khoá này ⇒ màn «Hỗ trợ liên phòng»
+(`app/screens/WorkHierarchy.tsx:113`) chết âm thầm.
+
+**Thay đổi.**
+1. `java-backend/infrastructure/src/main/java/com/vntech/erp/infrastructure/persistence/BootstrapDataAdapter.java`
+   — thêm 2 khoá theo SQL bản Node + đưa vào `blank(...)`. *(chưa biên dịch: máy không có Maven)*
+2. `tools/probe-bootstrap-keys.mjs` — phạm vi đọc 1 tệp → 65 tệp UI + 33 adapter Java; báo kèm tệp
+   đọc khoá; thêm `--live`; `process.exit(0)` → `process.exitCode = 0` (tránh libuv assert trên Windows).
+3. Tài liệu: `CHECKLIST.md` §125 · `CURRENT_STATE.md` MỐC 125 · `DECISIONS.md` D-066.
+
+**Kiểm chứng.** Thử đột biến **5/5** · 6 cổng **6/6 exit 0** · FFFD = 0 · cân bằng cú pháp tệp Java OK.
+
+**Tự phê bình.** Hai lần thử đột biến đầu báo HỎNG và **cả hai do biến dị, không do cổng**: một lần
+biến `if (false) data.put(…)` (vẫn còn chuỗi `.put("…")` mà cổng quét văn bản), một lần gỡ mới một chỗ
+trong khi tệp có hai chỗ khai báo. Đã sửa biến dị rồi mới 5/5 — lần thứ **7** công cụ của tôi tự làm
+sai trong phiên này (xem D-066, quy tắc 6).
+
+**Chưa xong / cần người dùng.**
+* ⛔ `mvn -o -B test` trên máy có Maven để xác nhận bản vá Java.
+* ⛔ Dựng lại `:18081`; hiện `--live` **vẫn** báo `workItemParticipants` — đúng, vì đang chạy bản cũ.
+* ❓ Cổng này có thành cổng chặn thật không (giống §124.9 câu 1)?
+
+
+## TASK-020 — Ba tệp kiểm thử đỏ ngoài cổng: một là thật, một là MT3, một cần user chốt
+
+**Bối cảnh.** Vòng 194 phát hiện `tests/` có 119 tệp nhưng `test:regression` chỉ chạy 14;
+105 tệp ngoài cổng có 10 tệp đang đỏ. `scripts/test-suite-health.mjs` lập `KNOWN_RED` để chặn
+nợ mới. Vòng này xử lý từng tệp thay vì để tồn.
+
+**Kết quả**
+
+| Tệp | Kết luận | Xử lý |
+|---|---|---|
+| `ad11-scope-audit` | Tệp thử trỏ sai chỗ sau MỐC 117 (nội dung đã tách sang `PermissionAccessPanel`) | **ĐÃ SỬA** + mạnh thêm 2 khẳng định · đột biến 8/8 · gỡ khỏi `KNOWN_RED` |
+| `p2-d4-approval-timeline` | Test đỏ là «§19 + **MT3-B.2**» ⇒ thuộc đợt MT3 đã rollback, **không phải** hồi quy P2-D4 | Ghi rõ lý do trong `KNOWN_RED` · **đính chính phân loại sai của vòng 194** |
+| `pr03-project-detail-tabs` | **Mâu thuẫn nội tại**: tiêu đề giữ dải 6 tab, khẳng định đòi BCH ở chỉ số 4; mã có 6 tab | **CHỜ USER CHỐT** (quyết định nghiệp vụ) |
+
+**Phương pháp.** Không tin log cắt: chạy `--test-reporter=tap` và trích **tên test đỏ** cho từng
+tệp. Đó là bằng chứng, và nó lật ngược phân loại của chính tôi.
+
+**Nguyên tắc giữ.** Sửa `ad11` bằng cách **mạnh hơn** chứ không phải nới: vẫn kiểm đủ hai mục phạm
+vi, cổng `warehouse_scope_kind`, hai bảng riêng, action `save_user_access` — và thêm chứng minh
+modal thật sự render panel. Đột biến 8/8 bắt đúng.
+
+**Kệ vì sao cần nói.** D-065 nói *công cụ đo hỏng thì lỗi sản phẩm sống dai*. Vòng này là
+**tệp thử** trỏ sai chỗ sau một lần tách mã đúng — cùng hình dạng, lần thứ 5. Và một lần nữa,
+**chính phần trình bày sai tôi viết, không phải sản phẩm**.
+
+**Chưa làm.** Không commit (user: «Chưa commit, để tôi xem trước»). Không merge `unity` → `main`.
+Không đụng 8 tệp MT3. Không tự quyết `pr03`.
+
+
+## TASK-020 (bổ sung) — `pr03` tự giải quyết bằng bằng chứng, không hỏi user
+
+Tôi đã xếp `pr03` là TYPE 3 cần anh chốt. **Đó là do tôi dừng ở mức «hai câu trong tệp thử
+mâu thuẫn nhau».** Đọc thêm 3 dòng mã đã hết mâu thuẫn: `TAB_LABELS = [LIST_TAB, ...DETAIL_TABS]`
+(dải 6 ô) · `view = tab === 0 ? "list" : "detail"` (0 = danh sách) · `tab === 5 &&
+<SiteCommandScreen` (BCH) · comment `app/page.tsx:982` «tab 5 = Ban chỉ huy».
+
+Tiêu đề test và mã **cùng đồng ý** ⇒ chỉ có một khẳng định sót. Đây là **TYPE 1** (khẳng định
+mô tả trạng thái trước một lần tách mã đúng), **không phải** quyết định nghiệp vụ.
+
+Đã sửa và **mạnh thêm** 3 khẳng định; bản cũ không có khẳng định nào đo con số «6 tab» dù
+tiêu đề nói tới nó. Đột biến 6/6 (trong đó P1 tái lập đúng lỗi bản cũ bỏ sót).
+
+**Kết cục TASK-020:** 10 tệp đỏ → **8 tệp, toàn bộ là MT3 đã rollback**. Xanh 111/119.
+6 cổng 6/6 xanh. Chưa commit theo chỉ đạo của anh.
+## TASK-021 — Bảy cổng kiểm thử suy ra tự động, và hai lỗi lint đã giấu 645 test trong 2 vòng
+
+Vòng 196 phát hiện `npm test` chết ngay ở bước đầu: 2 lỗi `set-state-in-effect` có sẵn từ
+HEAD. Hệ quả không chỉ là «2 lỗi lint» — **typecheck và toàn bộ 645 test chưa bao giờ chạy
+được một lần**. Đã sửa cả hai và chạy xanh.
+
+Đồng thời: danh sách tệp cổng được viết tay nên một tệp thử mới nằm ngoài lưới mà cổng vẫn
+xanh — tệp thử không bao giờ được chạy mà không ai biết. Đã đổi sang **suy ra từ nội dung
+`tests/`**, mọi tệp không thuộc cổng phải khai trong `KNOWN_RED` kèm lý do. Đồng thời xoá
+một chốt kiểm **rỗng** vốn xanh nhưng không thể thất bại: đỏ ngoài cổng tệt hơn cổng giả.
+⇒ **D-069**. Kết quả 7 cổng · 7/7 xanh · 111/119 tệp xanh · fingerprint `VNTECH-FP-FEB8CEBF62CDF404` (694 tệp).
+
+## TASK-022 — Kiểm thử hành vi toàn hệ thống: KHÔNG GHI CỨNG, nhưng điều chuyển kho KHÔNG CHẠY ĐƯỢC
+
+> **Hồ sơ chính thức:** `docs/agent-progress/TASK-142.md` · đã đánh chỉ mục ở `docs/agent-progress/MASTER_STATUS.md`
+> (dòng «Thay đổi trong phiên gần nhất» + **Known Problem #102**). Mốc lưu ý: số `TASK-022` ở đây thuộc
+> **số riêng của sổ `docs/dsh-state/TASK_HISTORY.md`**, khác với số của sổ `docs/agent-progress/TASK-*.md`
+> (đã tới `TASK-141` trước vòng này) — hai sổ **không dùng chung** số thứ tự.
+
+Anh yêu cầu chạy toàn bộ chuỗi nghiệp vụ trên dữ liệu thật, mọi người thao tác đúng, không dùng
+dữ liệu giả; sau đó kiểm xem quy trình có bị ghi cứng không bằng cách đổi người duyệt từng bước
+rồi đảo thứ tự phòng ban.
+
+**Đã chạy:** 8 giai đoạn, tất cả bằng tài khoản thật đăng nhập thật. Thêm 3 tài khoản dự phòng
+để đổi người duyệt mà không phá vỡ bằng chứng cũ.
+
+**Kết luận chính:** quy trình phê duyệt **không bị ghi cứng** — 7/7 khẳng định, có cả phép âm
+(người duyệt cũ bị chặn) và phép âm thứ hai (đánh số lại bước đã có phiếu duyệt bị chặn).
+Cấu hình đã được trả về nguyên trạng.
+
+**Hai việc phát sinh phải nói rõ:** (a) phát hiện **hai cơ chế phê duyệt song song** — cửa sổ
+«Quy trình phê duyệt» không dựng chuỗi nhưng vẫn cấp quyền duyệt; (b) **điều chuyển kho không
+chạy được** vì bộ lược đồ dựng bằng cơ chế bay thiếu kho trung chuyển, đã truy tới tận gốc và
+cần một tập lướt bay mới — **chờ anh duyệt**.
+
+**Ba lỗi của chính tôi trong vòng này, đã ghi đủ ở `testlog.md` §3:** bộ đo báo thành công
+cho 6 lệnh ghi thực tế không ghi gì (D-070); điều kiện `r?.ok === false` không bắt được
+`null` nên vòng lặp không dừng (D-071); và 2 khẳng định ở GĐ9 đỏ vì **tiêu chí so sánh của tôi**
+chứ không phải vì hệ thống (D-078). Cộng D-072…D-077, D-079 — tổng cộng **11 quyết định** mới.
+
+**Sản phẩm:** báo cáo `.md` + `.docx` chuẩn hoá (11.318 byte, 7/7 XML hợp lệ), `testlog.md`
+24 dòng sự cố. **Chưa commit** theo chỉ đạo của anh.
+
+## TASK-023 — Vòng 203–208: vá lỗi tĩnh, tìm ra lỗi xoá âm thầm, bổ sung tệp thử hợp đồng
+
+- **STATUS:** PARTIALLY COMPLETED (còn chờ build + 6 quyết định loại 3)
+- **COMPLETED:**
+  - `V37` tạo 3 bảng thiếu + kho trung chuyển, có chặn lặp lại (⛔ CHƯA CHẠY) — D-082.
+  - Vá nhân đôi dòng BOQ: `BoqStoreAdapter.java` (⛔ CHƯA BIÊN DỊCH) — D-083.
+  - Điều tra L-03 → phát hiện **nặng hơn hồ sơ cũ**: `save_email_settings` xoá âm thầm
+    `approval_project_assignments` của **mọi bước form không hiển thị**, không ghi lại — D-084.
+  - Sửa câu chữ sai ở `WorkflowModal.tsx:151`; **đính chính bản ghi cũ của chính mình** — D-085.
+  - Thêm `tests/v207-workflow-approver-contract.test.mjs` (5 vệ) + đối chứng âm — D-086.
+  - Phát hiện fingerprint trôi **từ vòng 206**; tính lại bằng hàm gốc; verify **ĐẠT**.
+- **FILES CHANGED:** `V37__…sql` · `BoqStoreAdapter.java` · `app/screens/WorkflowModal.tsx` ·
+  `tests/v207-workflow-approver-contract.test.mjs` · `lib/vntech-identity-data.mjs` ·
+  `VNTECH_FINGERPRINT.json` · `docs/dsh-state/{DECISIONS,CHECKLIST}.md`
+- **DATABASE:** ❌ KHÔNG thay đổi (⛔ không chạy gì lên CSDL thật)
+- **API:** KHÔNG thay đổi hợp đồng API
+- **TEST:** `npm test` **pass 649 · fail 0 · EXIT=0** · `v207` riêng **5/0 EXIT=0** (đối chứng âm **3 pass 2 fail EXIT=1**) · `verify-vntech-fingerprint` **ĐẠT EXIT=0**
+- **REMAINING:** build (chặn V37 + BOQ + L-03) · 6 quyết định loại 3 chờ anh
+- **NEXT:** chờ build ⇒ chạy V32–V37 ⇒ vá L-03 theo phương án anh chọn ⇒ RBAC dòng 69 ⇒ khử trùng BOQ
+- **BLOCKER:** TYPE 3 (RBAC dòng 69 · L-03 a/b · chạy migration · khử trùng · con số 108/110) + D-044 (không có Maven)
+- **⛔ CHƯA COMMIT. ⛔ CHƯA PUSH.**
+
+- **Vòng 209 bổ sung (D-087):** vá L-06 cho `GRN-PX` (`StockManagementUseCase:451` + JOIN `projects` tại
+  `WarehouseStockStoreAdapter:246-253`). ⛔ CHƯA BIÊN DỊCH. ⛔ `GRN-STO` cùng lỗi nhưng **để lại** vì
+  `findTransferOrder` dùng chung cho 4 luồng — ghi FOLLOW-UP.
+
+---
+
+## TASK-024 — Khoá bất biến số phiếu kho bằng tệp thử (vòng 210)
+
+- **STATUS:** DONE
+- **COMPLETED:**
+  - Tạo `tests/v210-so-phieu-khong-trung.test.mjs` (6 vệ) khoá bất biến «bộ đếm theo dự án ⇒ số phiếu kèm mã dự án».
+  - Tự phát hiện và sửa 2 lỗi của chính tệp thử (khớp nhầm dòng chú thích `PX`; tên khoá `CENTRAL_RETURN` khác tiền tố số phiếu `KT-RET-`).
+  - Đối chứng âm: bỏ mã dự án khỏi `GRN-PX` ⇒ `pass 4 · fail 2` EXIT=1 ⇒ hoàn tác byte-identical.
+  - Tính lại fingerprint, đồng bộ `lib/vntech-identity-data.mjs` + `VNTECH_FINGERPRINT.json`.
+- **FILES CHANGED:**
+  - `tests/v210-so-phieu-khong-trung.test.mjs` (MỚI)
+  - `lib/vntech-identity-data.mjs` · `VNTECH_FINGERPRINT.json` (3 trường; `releaseFingerprint` giữ nguyên)
+  - `docs/dsh-state/DECISIONS.md` (D-087) · `CHECKLIST.md` · `CURRENT_STATE.md`
+  - Tạo rồi **xoá** trong cùng phiên: `tools/v210-tinh-brand-fingerprint.mjs`
+- **DATABASE:** ❌ KHÔNG thay đổi
+- **API:** ❌ KHÔNG thay đổi
+- **TEST:**
+  - Tệp thử riêng `pass 6 · fail 0` EXIT=0 · đối chứng âm `pass 4 · fail 2` EXIT=1
+  - `npm test`: `pass 655 · fail 0` EXIT=0
+  - `verify-vntech-fingerprint.mjs`: ĐẠT · 696 files · EXIT=0
+- **REMAINING:** `GRN-STO` (FOLLOW-UP) · ⛔ CHƯA BIÊN DỊCH mọi sửa đổi Java (D-044)
+- **NEXT:** Vòng 211 — menu · PR · PO · báo cáo khối điều hướng NCC↔PO↔vật tư
+- **BLOCKER:** Chờ user quyết — RBAC dòng 69 · L-03 (a/b) · build · V32–V37 · khử trùng BOQ
+
+---
+
+## TASK-025 — Sửa lỗi PO → «Xem phiếu đề nghị nguồn» (vòng 211)
+
+- **STATUS:** DONE
+- **COMPLETED:**
+  - Truy vết gốc rễ, KHÔNG phỏng đoán: `PurchaseOrderDrawer` gọi `open("detail", { id, requestNo })` — object RÚT GỌN 2 trường.
+  - `RequestDrawer` (`app/screens/RequestDrawer.tsx:25-37`) dùng THẲNG `request`, KHÔNG tự tra cứu lại ⇒ mọi trường khác `undefined` ⇒ màn vỡ.
+  - Mọi call site khác đều truyền DÒNG ĐẦY ĐỦ (`Requests.tsx:128`, `page.tsx:600/707/1174`) ⇒ lỗi chỉ ở PO.
+  - Sửa: tra cứu bản ghi thật trong `data.requests` theo `purchaseOrder.requestId`; không có thì KHÔNG mở màn vỡ, hiện thông báo nêu `request_id` + nút bị tắt.
+- **FILES CHANGED:**
+  - `app/screens/PurchaseOrderDrawer.tsx` (sửa)
+  - `tests/v211-po-xem-phieu-de-nghi-nguon.test.mjs` (MỚI, 5 vệ)
+  - `lib/vntech-identity-data.mjs` · `VNTECH_FINGERPRINT.json` (fingerprint)
+- **DATABASE:** ❌ KHÔNG thay đổi
+- **API:** ❌ KHÔNG thay đổi (lỗi nằm hoàn toàn ở tầng UI)
+- **TEST:**
+  - Tệp thử riêng `pass 5 · fail 0` EXIT=0
+  - Đối chứng âm: trả về object rút gọn ⇒ `pass 3 · fail 2` EXIT=1 ⇒ hoàn tác byte-identical
+  - `npm test` `pass 660 · fail 0` EXIT=0
+  - `verify-vntech-fingerprint.mjs` ĐẠT · 697 files · EXIT=0
+- **REMAINING:** Còn 11 mục của yêu cầu vòng 211 (menu · tab · PR · PO · báo cáo) — xem `CHECKLIST.md` § VÒNG 211
+- **NEXT:** Nhóm MENU (1.1–1.4)
+- **BLOCKER:** không cho bước này
+
+### Bài học vòng 211
+- **`verify-vntech-fingerprint.mjs` bắt được lỗi của chính tôi**: tôi truyền nhầm giá trị fingerprint CŨ (vòng 208) vào `.Replace`, trong khi tệp đã mang giá trị vòng 210 ⇒ `.Replace` không khớp ⇒ **không có gì thay đổi mà không ai báo**. Đã sửa bằng cách **kiểm tra giá trị cũ có thật sự nằm trong tệp không, rồi mới thay** ⇒ đã bổ sung thành chuẩn bắt buộc.
+- Đừng tin `.Replace` là đã ghi. **Luôn kiểm tra `Contains` trước, và chạy `verify` sau.**
+
+## TASK-026 — Bắt lỗi gấp tab «Phân quyền người dùng» (vòng 214)
+
+- **YÊU CẦU USER:** «Lỗi phân quyền, không thể cấp quyền cho user từ tab Phân quyền người dùng: không sử dụng được copy quyền từ phòng ban, không lưu được quyền đã chọn cho user. Tiến hành bắt lỗi và xử lý gấp.»
+- **TRẠNG THÁI:** **DONE** — đã sửa tận gốc, có bằng chứng đo, có test hồi quy và đối chứng âm.
+- **PHẠM VI:** chỉ sửa phía giao diện (`.tsx`). **KHÔNG** sửa Java ⇒ không cần build lại (D-044) ⇒ sửa được ngay trên máy đang chạy.
+- **TỆP ĐÃ SỬA:** `app/screens/PermissionAccessPanel.tsx` (assignableModules · moduleKeys · setAll · setColumnAll · columnState); `tests/v214-phan-quyen-luu-quyen.test.mjs` (mới); `lib/vntech-identity-data.mjs` + `VNTECH_FINGERPRINT.json` (khoá mới).
+- **KIỂM CHỨNG:** `npm test` `pass 666 · fail 0` EXIT=0 · `verify-vntech-fingerprint.mjs` EXIT=0 (`VNTECH-FP-E538CEA79AA2F9B7`, 698 files).
+- **CHƯA LÀM:** chưa gọi thử `save_user_access` trên dữ liệu thật (hàm này THAY THẾ TOÀN BỘ và xoá sạch — không được thử trên tài khoản thật). Cần USER xác nhận sau khi tải lại trang.
+- **REMAINING:** 11 mục của yêu cầu vòng 211 — xem `CHECKLIST.md` § VÒNG 211 và § VÒNG 214
+- **NEXT:** nhóm MENU (1.2 · 1.4) rồi nhóm PR (2.1–2.7)
+- **BLOCKER:** 1.2 chờ duyệt chạy V32–V35 + V37 (không tự quyết)
+
+## TASK-027 — MENU mục 1.4: bảng lũy kế theo vật tư thành TAB THỨ 3 của màn Mua hàng (vòng 215)
+
+**Bối cảnh.** Bảng «Chi tiết lũy kế theo vật tư» đã có sẵn ở cuối màn Mua hàng từ trước, nhưng treo dưới màn nên không ai tìm thấy. USER yêu cầu (vòng 211, mục 1.4) đưa nó lên dải tab.
+
+- [x] Sửa `app/screens/Purchasing.tsx` biên dịch được (gỡ hậu quả lần gỡ khối nhân đôi ở vòng trước)
+- [x] Thêm tab `MAT` (`TabKey`, `TabDef.source += "boqItems"`, entry thứ 3 trong `PURCHASING_TABS`)
+- [x] Tách hàm thuần `buildMaterialCumulativeRows` ra khỏi inline filter (để test được, và để tách bạch bộ lọc)
+- [x] Chuyển khối `<section>` từ cuối màn vào trong thẻ tab + chặn theo tab
+- [x] Thêm 2 cột có số liệu thật; giữ nguyên công thức `boqControlQty` của cột «Còn phải mua»
+- [x] Chỉ hiện 2 ô ngày ở PR/PO (`dateDim === null` ở MAT)
+- [x] Cập nhật 2 tệp test cũ (3 tab) + viết `tests/v211-purchasing-mat-tab.test.mjs` (7 vệ)
+- [x] `npm test` 673/0 EXIT=0 · fingerprint `VNTECH-FP-C9BD271ECBE48601` · 699 files · verify EXIT=0
+- [x] Ghi `D-091` (thay thế một phần chỉ đạo 21/09) + cập nhật `CHECKLIST` · `CURRENT_STATE` · `testlog.md` · `MASTER_STATUS.md` + Telegram
+
+- **DATABASE:** ❌ KHÔNG thay đổi — **API:** ❌ KHÔNG thay đổi — **Java:** ❌ KHÔNG sửa (không cần biên dịch)
+- **FILES:** `app/screens/Purchasing.tsx` · `tests/p01-purchasing-two-tabs.test.mjs` · `tests/moc121-purchasing-tabs.test.mjs` · `tests/v211-purchasing-mat-tab.test.mjs` (MỚI) · `lib/vntech-identity-data.mjs` · `VNTECH_FINGERPRINT.json`
+- **REMAINING:** menu 1.2 (chờ chạy V35) · PR 2.1–2.7 · PO 3.2/3.3 · báo cáo 4.1
+- **NEXT:** nhóm PR — `app/screens/Requests.tsx`: bỏ label thừa, nhóm nút CRUD, search theo tên người tạo + mã phiếu
+- **BLOCKER:** không cho bước này
+
+## TASK-028 — NHÓM PR mục 2.1–2.7: làm lại màn «Phiếu đề nghị mua hàng» (vòng 216)
+
+**Bối cảnh.** 7 mục nhóm PR của yêu cầu vòng 211, tất cả trên một tệp: `app/screens/Requests.tsx` (+ `app/page.tsx`, `lib/labels.ts`, `lib/ui-shared.tsx`).
+
+- [x] ĐO dữ liệu sống trước khi code (84 phiếu) — ⛔ bịa cột là lỗi nặng nhất của dự án
+- [x] 2.1 bỏ label thừa + đổi cột «SLA» → «Ngày cần»
+- [x] 2.2 nhóm nút CRUD đúng khuôn `ListToolbar`
+- [x] 2.3 tìm theo mã phiếu + người tạo; bộ lọc «Người tạo»
+- [x] 2.4 sắp xếp `neededAt`/`totalEstimatedValue`/`requestedBy` + bộ lọc «Bước duyệt»/«Ưu tiên»
+- [x] 2.5 **vá D-093** — `permission` chưa từng được truyền ở nơi gọi ⇒ 3 nút biến mất
+- [x] 2.6 nút «＋ Phát hành PO» cổng `purchasing.canCreate` (prop `poPermission`)
+- [x] 2.7 dịch nhãn `returned`/`issued`/`partial_issued`; «Trả lại CHT» → «Trả lại»
+- [x] Ghi `D-094` · `D-095` · `D-096`
+- [x] 20 vệ test + đối chứng âm × 3 · `npm test` 693/0 EXIT=0 · fingerprint 700 files ĐẠT
+
+- **DATABASE:** ❌ KHÔNG thay đổi — **API:** ❌ KHÔNG thay đổi — **Java:** ❌ KHÔNG sửa
+- **FILES:** `app/screens/Requests.tsx` · `app/page.tsx` · `lib/labels.ts` · `lib/ui-shared.tsx` · `tests/v215-phieu-de-nghi-muc-2-1-den-2-7.test.mjs` (MỚI) · `lib/vntech-identity-data.mjs` · `VNTECH_FINGERPRINT.json`
+- **CHƯA LÀM (cố ý):** nút Xoá/Huỷ phiếu — xem `D-094`
+- **REMAINING:** menu 1.2 (chờ chạy V35) · PO 3.2/3.3 · báo cáo 4.1
+- **NEXT:** nhóm PO — `app/screens/PurchaseOrderDrawer.tsx`
+- **BLOCKER:** không cho bước này
+
+---
+
+## TASK-029 — VÒNG 216 (lần 2) · NHÓM PO mục 3.2 + 3.3
+
+- **Ngày:** 02/10/2026 · **Nhánh:** `unity` · **Trạng thái:** ✅ XONG (mã + test + tài liệu)
+- **Phạm vi:** `app/screens/PurchaseOrderDrawer.tsx` (mục 3.2 + 3.3 của nhóm PO) — màn Chi tiết Đơn mua.
+
+### Đã làm
+
+1. **ĐO** (không đoán): `<header>` của tab không có quy tắc layout; `.page-back` chỉ có CSS dưới `.project-detail-head`; `.card-head>button` + `!important` sẽ **xoá viền** của nút ⇒ loại phương án `.card-head`; tìm thấy khe đúng `actions` của `EntityDetailModal` (đã tài liệu hoá «góc phải tiêu đề», đã có `.edm-head-actions{display:flex}`).
+2. **3.2:** nút «← Quay lại» chuyển từ `<header>` sang `actions`, thêm lớp nhà `.secondary`. **0 dòng CSS mới.**
+3. **3.3:** xoá dòng «Mã kỹ thuật (request_id)»; đo trước 31/31 PO có `requestNo` ⇒ không mất thông tin; giữ nguyên 4 dấu `data-vntech` §21 + nhánh PO mồ côi + `requestNo || requestId`.
+
+### Kết quả kiểm chứng
+
+| Hạng mục | Kết quả |
+|---|---|
+| `npx tsc --noEmit --incremental false` | **EXIT=0** |
+| Test PO liên quan (4 tệp) | **34 pass / 0 fail** |
+| Tệp mới `tests/v216-don-mua-muc-3-2-3-3.test.mjs` | **8 vệ** (3 vệ hồi quy) |
+| Đối chứng âm lỗi 1 (nút về `<header>`) | **fail 3** |
+| Đối chứng âm lỗi 2 (dòng rác quay lại) | **fail 1** |
+| Khôi phục sau đối chứng âm | **byte-identical = True** |
+| `npm test` | **701 pass / 0 fail / skipped 1** · lint 246 warning **0 error** · **EXIT=0** |
+| Vân tay | `VNTECH-FP-FDCBF492F4832A5A` · **701 files** · ĐẠT · **EXIT=0** |
+| Sống thật | UI `:9000` **HTTP 200** (7 456 bytes) · API `ok=True requests=84 purchaseOrders=31` |
+
+### Quyết định sinh ra
+
+- **D-097** — vân tay `brand` là **hàm của** `source`; phải ghi `source` → tính lại → ghi `brand` (fixpoint 2 lượt). Tính cả ba trong một lượt từ dữ liệu cũ ⇒ `verify` EXIT=1 «Brand fingerprint không hợp lệ».
+- **D-098** — hàm tiêm lỗi của đối chứng âm phải **cộng dồn trên một bộ đệm**; viết lại từ `$orig` mỗi lần ⇒ lần tiêm sau **xoá mất** lần tiêm trước ⇒ đối chứng âm báo động sai.
+
+### Bài học
+
+- Chọn phương án UI bằng **số đo specificity/độ phủ**, không bằng «trông hợp lý». `.card-head` trông đúng nhưng `!important` sẽ làm nút **nhạt hơn trước**.
+- Dọn dòng rác phải kèm bằng chứng «không mất thông tin» và phải giữ được hợp đồng test cũ.
+- Đối chứng âm **đỏ sai cũng là hỏng** — phải đối chiếu *số vệ đỏ* với *số lỗi tiêm*.
+
+### BLOCKER
+
+- Không có blocker mới. **Vẫn chờ USER (TYPE 3):** chạy `V32`–`V35` + `V37` (đang chặn mục 1.2), RBAC bypass `RbacService.java:69`, L-03 (D-084), GRN-STO (D-087), `npm run build`, và **commit** («Chưa commit, để tôi xm trước»).## TASK-030 — VÒNG 217 · SỬA MÃ NGUỒN KHÔNG LÊN TRÌNH DUYỆT → ĐO, BUILD, ÁP DỤNG
+
+**Bối cảnh.** Người dùng: *«nếu không cần rebuild mà vẫn áp dụng được những chỉnh sửa vừa rồi thì
+hiện tại tôi không thấy bất cứ thay đổi gì ở frontend cả»*. Tôi đã trả lời sai: «Vite dev server,
+F5 là thấy».
+
+**Đã làm**
+
+1. **Đo hạ tầng thay vì tin trí nhớ.** HTML `:9000` không có `/@vite/client`, có asset tên có hash,
+   `<meta vntech-source-fingerprint>` = `f0af3695…` ≠ `fdcbf492…` của mã nguồn.
+   `scripts/local-server.mjs:20` nạp `dist/server/index.js` một lần lúc khởi động;
+   `scripts/local-runtime.mjs:180` phục vụ asset từ `dist/client`.
+   ⇒ `:8787` là **bản build tĩnh** ⇒ sửa nguồn không tự lên.
+2. **Cập nhật lớp vân tay runtime** (D-052 quy tắc 2) — nếu bỏ bước này app **không boot**
+   («Dau van tay san pham VNTECH khong hop le hoac da bi thay doi»).
+3. **`npm run build`** → EXIT 0, 5 preflight ĐẠT.
+4. **Dừng đúng PID** `local-server.mjs` (⛔ không đụng Java `:18081`, proxy `:9000`, dsh runtime,
+   router, tts-server) rồi khởi động lại.
+5. **Đo lại bằng HTTP thật** (D-052 quy tắc 6).
+
+**Bảng kiểm chứng**
+
+| Hạng mục | Kết quả |
+|---|---|
+| HTML `:9000` sau build | 7 456 byte, vân tay `fdcbf492…` → sau lần 2 `d6656e64…` |
+| Bundle chứa nhãn 3.2 | `page-BJ5W9xGL.js` → `page-ryxlFfpZ.js`: **có** |
+| Bundle chứa dòng rác 3.3 | **không** (0/6 file) |
+| Dấu hiệu đối chứng `po-source-pr` | **có** ⇒ phép tìm có dấu là hợp lệ |
+| Byte phục vụ qua HTTP | **6/6** khớp tệp trên đĩa |
+| `npm test` | 701/0 (lần 1) → **708/0** (lần 2) · EXIT 0 |
+| Lint | 246 warnings, **0 error** |
+| Fixpoint vân tay | **3 lượt** · 702 file |
+| Cổng mới | `✓ do-moi · ✓ van-tay · ✓ byte` |
+| Test vệ | **7/7**, gồm 2 đối chứng âm |
+
+**Quyết định**
+
+| Mã | Nội dung |
+|---|---|
+| **D-099** | UI là bản build tĩnh; phải **build + khởi động lại `:8787`**; quy trình 5 bước; cổng mới; D-097(a) mở rộng |
+
+**Bài học**
+
+1. ⛔ Đừng trả lời về hạ tầng bằng trí nhớ — đo HTML thật và đọc mã nguồn.
+2. ⛔ Đừng gõ tay chuỗi đối chiếu (`\u1EA3I` vs `\u1EA3i`) — trích từ tệp nguồn + có dấu hiệu đối chứng.
+3. ⛔ Đừng gõ cứng vân tay trong cổng kiểm tra — nó sẽ báo đỏ sai ở lần fixpoint kế tiếp.
+4. ⛔ Build xong chưa đủ — phải khởi động lại `:8787`.
+5. ✅ Người dùng nhìn thấy thứ mình không thấy là **bằng chứng**.
+
+**BLOCKER**
+
+⛔ Không có blocker kỹ thuật mới. Vẫn còn các blocker TYPE 3 đã ghi ở vòng trước (RBAC, L-03, build
+Java, duyệt chạy V32–V35/V37, RBAC bypass…), **không tự quyết, không hỏi lại lần thứ ba**.
+⛔ Chưa commit (anh dặn: «Chưa commit, để tôi xem trước»).
+
+---
+
+# TASK-146 — VÒNG GO-LIVE 1 (02/10/2026) · 10 YÊU CẦU USER + 4 BUG
+
+| | |
+|---|---|
+| **Trạng thái** | ✅ 9/10 yêu cầu XONG · ⛔ mục 9 BLOCKED (chờ USER duyệt Flyway) |
+| **Tệp mã sửa** | `app/screens/Purchasing.tsx` · `app/styles/canonical.css` |
+| **Cổng phải sửa theo thiết kế mới** | `scripts/css-baseline-audit.mjs` · `tests/moc121-purchasing-tabs.test.mjs` · `tests/v211-purchasing-mat-tab.test.mjs` |
+| **Test mới** | `tests/d105-jsx-comment-textnode.test.mjs` · `tests/d107-bang-pr-khop-so-o.test.mjs` · `tests/v1-muc3-…` · `tests/v1-muc4-…` |
+| **Nhật ký đầy đủ** | `docs/agent-progress/TASK-146.md` |
+
+**4 BUG đã đóng**
+
+| BUG ID | Module | Severity | Root cause |
+|---|---|---|---|
+| BUG-20261002-001 | Trung tâm phê duyệt / PO | HIGH | `window.alert` là **mã chết** + `title` hứa hư |
+| BUG-20201002-002 | Quản trị › Phân quyền | **CRITICAL** | backend chặn HTTP 400 **trước** `runAtomically`; lỗi bị `.overlay` z100 **che** |
+| BUG-20261002-003 | Mua hàng (mọi tab) | **CRITICAL** | comment `/* … */` **trần** trong JSX = **TEXT NODE** ⇒ vẽ chữ ra màn |
+| BUG-20261002-004 | Bảng PR (**thead**) | HIGH | **12 ô `<td>`** / **11 ô `<th>`**; ô 3 sao chép ô 2 ⇒ lệch cột |
+
+**Đo cuối vòng**
+
+| Phép đo | Kết quả |
+|---|---|
+| `tsc --noEmit` | **EXIT=0** |
+| `npm test` | **751 · 750 pass · 0 fail · EXIT=0** (lint **0 error**) |
+| `npm run audit:tests` | 128/135 tệp xanh; 7 tệp đỏ **ngoài cổng** (nợ đã biết, 51 test case) |
+| `css-baseline-audit.mjs` | **ĐẠT** · dead classes=0 |
+| `verify-vntech-fingerprint.mjs` | **ĐẠT** · `VNTECH-FP-F5CCE656F23BD18E` · **710 tệp** |
+| `verify-ui-build-applied.mjs` | **3/3 ✓** |
+
+**Quyết định**
+
+| Mã | Nội dung |
+|---|---|
+| **D-103** | Cổng UI exit code **không tất định** ⇒ kết luận bằng **NỘI DUNG** |
+| **D-105** | JSX: `/* … */` trần là **CHỮ**, chỉ `{/* … */}` là comment |
+| **D-106** | Vệ rỗng lần 2: bóc chú thích rồi đi tìm chú thích ⇒ **bắt buộc đối chứng âm** |
+| **D-107** | Bảng phải có vệ **ĐẾM CẤU TRÚC** `<th>` ↔ `<td>` |
+| **D-108** | Cổng test là `scripts/regression-suite.mjs`, **không** phải mọi tệp `tests/` |
+| **D-109** | Đổi thiết kế ⇒ cập nhật **mọi** cổng khoá thiết kế cũ, **giữ nguyên phép kiểm** |
+
+**Bài học**
+
+1. ⛔ ESLint báo lỗi ở **đúng vùng vừa sửa** ⇒ lỗi thật, sửa trước khi chạy tiếp.
+2. ⛔ **Đối chứng âm** là thứ duy nhất phân biệt «có bảo vệ» với «tưởng là có bảo vệ» — vệ D-105 phải viết lại **4 lần**.
+3. ⛔ **Đo sai tập ⇒ kết luận sai** (D-108): glob `tests/**` rồi đếm đỏ là tính cả **nợ đã biết**.
+4. ⭐ Trước khi chế lớp CSS mới: **đo khuôn nhà** (D-092) — mục 2 giải bằng cách bắt chước `.work-center`.
+5. ⭐ User nhìn thấy thứ mình không thấy là **BẰNG CHỨNG**.
+
+**BLOCKER**
+
+⛔ **mục 9** cần USER quyết: build JAR backend + duyệt chạy Flyway `V35`.
+⛔ Các việc TYPE 3 vòng trước giữ nguyên (không tự quyết, không hỏi lại lần thứ ba).
+⛔ **Chưa commit** (`AUTO_COMMIT = FALSE`, `AUTO_PUSH = FALSE` — USER dặn «Chưa commit, để tôi xem trước»).

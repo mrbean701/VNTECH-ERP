@@ -148,7 +148,7 @@ function WorkflowModal({ data, row, close, submit }: { data: AppData; row?: Row;
               })}
               {!selected.length && <div className="menu-drop-empty">Chưa chỉ định người duyệt cho bước này.</div>}
             </div>
-            {!selected.length && <div className="inline-alert">Bước {index + 1} chưa có người duyệt — theo chế độ CHỈ CẢNH BÁO, quy trình VẪN lưu được.</div>}
+            {!selected.length && <div className="inline-alert">Bước {index + 1} chưa có người duyệt — phải chỉ định ít nhất một người duyệt thì mới lưu được quy trình này.</div>}
           </section>;
         })}
       </div>

@@ -163,7 +163,7 @@ public class BoqStoreAdapter implements BoqStore {
                            boq_code=?,contract_code=?,contract_material_code=?,approved_material_code=?,
                            contract_material_name=?,unit=?,contract_qty=?,remeasured_qty=?,unit_price=?,
                            item_type=?,note=?,source_system_code=?,source_subgroup_name=?,mapped_material_id=?,
-                           standard_material_name_snapshot=?,mapping_status=?,mapped_by=?,mapped_at=?,active=1,
+                           standard_material_name_snapshot=?,mapping_status=?,project_boq_item_id=?,mapped_by=?,mapped_at=?,active=1,
                            updated_at=? WHERE id=?""",
                     item.get("sourceOrder"), item.get("sourceRow"), item.get("contractLineRef"),
                     item.get("rowRole"), item.get("boqCode"), item.get("contractCode"),
@@ -171,7 +171,7 @@ public class BoqStoreAdapter implements BoqStore {
                     item.get("contractMaterialName"), item.get("unit"), item.get("contractQty"),
                     item.get("remeasuredQty"), item.get("unitPrice"), item.get("itemType"), item.get("note"),
                     item.get("sourceSystemCode"), item.get("subgroupName"), item.get("mappedMaterialId"),
-                    item.get("standardMaterialName"), item.get("mappingStatus"), item.get("mappedBy"),
+                    item.get("standardMaterialName"), item.get("mappingStatus"), item.get("projectBoqItemId"), item.get("mappedBy"),
                     item.get("mappedAt"), now, item.get("id"));
         }
     }

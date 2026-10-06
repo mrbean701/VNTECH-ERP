@@ -100,6 +100,29 @@ function extractSql(src) {
   return out;
 }
 
+/**
+ * ⚠️ BỔ SUNG 02/10/2026 — VÌ SAO KHÔNG ĐƯỢC `split(",")` CHO DANH SÁCH `SET`.
+ * Mệnh đề `SET` chứa hàm có dấu phẩy, ví dụ
+ *     `image_updated_at = IF(?,CURRENT_TIMESTAMP,image_updated_at)`
+ * `split(",")` cắt thành các mảnh vô nghĩa, và mảnh đầu của mỗi mảnh bị tưởng là tên cột ⇒
+ * báo oan `CURRENT_TIMESTAMP`, `NOT`, `EXISTS` là cột không tồn tại (3 báo oan đã đo được ở
+ * `HrStoreAdapter.java:108`). Nay chỉ tách ở **độ sâu ngoặc = 0** và **ngoài dấu nháy**.
+ */
+function tachCapNgoac(s) {
+  const out = []; let cur = ""; let depth = 0; let q = null;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (q) { cur += ch; if (ch === q && s[i - 1] !== "\\") q = null; continue; }
+    if (ch === "'" || ch === '"' || ch === "`") { q = ch; cur += ch; continue; }
+    if (ch === "(") depth++;
+    else if (ch === ")") depth--;
+    if (ch === "," && depth === 0) { out.push(cur); cur = ""; continue; }
+    cur += ch;
+  }
+  if (cur.trim()) out.push(cur);
+  return out;
+}
+
 const findings = [];
 const seenSql = new Set();
 const KNOWN_SKIP_STRICT = new Set(["supply_workflow_steps", "vntech_product_identity"]);
@@ -129,10 +152,10 @@ for (const file of javaFiles) {
       const key = `UPD|${rel}|${t}|${m[2]}`;
       if (seenSql.has(key)) continue; seenSql.add(key);
       if (!tables.has(t)) { findings.push({ kind: "BẢNG KHÔNG TỒN TẠI", table: t, col: "", rel, line }); continue; }
-      for (const a of m[2].split(",")) {
+      for (const a of tachCapNgoac(m[2])) {
         const name = a.split("=")[0].trim().replace(/[`"']/g, "").split(".").pop().toLowerCase();
         if (!name || !/^\w+$/.test(name)) continue;
-        if (/^(values|case|when|then|else|end)$/.test(name)) continue;
+        if (/^(values|case|when|then|else|end|and|or|not|exists|select|from|where)$/.test(name)) continue;
         if (!schema.get(t).has(name)) findings.push({ kind: "CỘT KHÔNG TỒN TẠI (UPDATE SET)", table: t, col: name, rel, line });
       }
     }
