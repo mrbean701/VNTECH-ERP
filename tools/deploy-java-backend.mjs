@@ -83,39 +83,73 @@ B(`sẽ sao lưu ⇒ ${TEP_LUI.replace(GOC + "\\", "")}`);
 if (THUC_THI) { mkdirSync(THU_MUC_LUI, { recursive: true }); copyFileSync(JAR, TEP_LUI); ok("đã sao lưu"); }
 else B("(chạy thử: ⛔ chưa sao lưu)");
 
-// ── ④ BUILD ───────────────────────────────────────────────────────────────────────────────
-buoc(4, "Build lại JAR");
+// ── ④ DỪNG Java — ⭐ PHẢI DỪNG TRƯỚC KHI BUILD ──────────────────────────────────────────────
+// ⛔⛔ VÁ 06/10/2026 (GO-LIVE) — **LỖI THẬT CỦA CHÍNH CÔNG CỤ NÀY**.
+//   📍 TRIỆU CHỨNG ĐO ĐƯỢC (lần triển khai 06/10 09:25): bước ④ BUILD thất bại sau ~2 giây:
+//      `Failed to execute goal org.springframework.boot:spring-boot-maven-plugin:3.5.0:repackage
+//       … Unable to rename '…vntech-erp-web-0.1.0-SNAPSHOT.jar' to '…jar.original'`
+//   🔎 NGUYÊN NHÂN GỐC (đo trực tiếp, ⛔ không suy đoán): ⭐ tiến trình Java đang chạy
+//      (`java -jar <JAR>`) **GIỮ KHOÁ tệp JAR** ⇒ ⭐ `repackage` **⛔ không đổi tên được tệp**
+//      ⇒ BUILD FAILURE ✓ Thử mở tệp bằng `[System.IO.File]::Open(...,'ReadWrite','None')` ⇒
+//      `The process cannot access the file because it is being used by another process.` ✓
+//   ⚠️ VÌ SAO DRY-RUN ⛔ KHÔNG PHÁT HIỆN: ⭐ chế độ chạy thử **⛔ không build** ⇒ ⭐ **⛔ không lộ
+//      lỗi khoá tệp** ⇒ ⭐ **một công cụ «đã kiểm dry-run» vẫn có thể ⛔ không chạy được thật** ✓
+//   ⇒ ⭐ SỬA: **dừng Java TRƯỚC khi build** (⭐ thứ tự đúng trên Windows) ⇒ ⭐ và ⭐ **nếu build
+//      thất bại thì KHỞI ĐỘNG LẠI JAR CŨ** để ⛔ không để hệ thống chết ✓
+//   ⚠️ HỆ QUẢ VỀ THỜI GIAN: gián đoạn = **thời gian build** + khởi động (⭐ ⛔ không còn là
+//      «vài chục giây» như ghi ở đầu tệp) — ⭐ build nhanh (~8–46 giây) ✓
+buoc(4, `Dừng PID ${pid} để GIẢI PHÓNG JAR trước khi build`);
+if (THUC_THI) {
+  spawnSync("powershell", ["-NoProfile", "-Command", `Stop-Process -Id ${pid} -Force`], { encoding: "utf8" });
+  await new Promise((s) => setTimeout(s, 3000));
+  const con = ngheCong(CONG);
+  if (con !== null) { canh(`⛔ vẫn còn tiến trình nghe :${CONG} (PID ${con}) ⇒ DỪNG.`); process.exit(1); }
+  ok(`đã dừng PID ${pid} · cổng :${CONG} đã trống`);
+} else B(`sẽ dừng PID ${pid} (⛔ chưa dừng)`);
+
+// ── ⑤ BUILD ───────────────────────────────────────────────────────────────────────────────
+buoc(5, "Build lại JAR");
 B(`mvn -o -DskipTests package   (chạy trong java-backend)`);
 if (THUC_THI) {
   const r = spawnSync("cmd", ["/c", `"${MVN}" -o -DskipTests package 2>&1`], { cwd: join(GOC, "java-backend"), encoding: "utf8" });
   const out = (r.stdout || "") + (r.stderr || "");
-  if (!/BUILD SUCCESS/.test(out)) { canh("⛔ BUILD ⛔ KHÔNG THÀNH CÔNG ⇒ DỪNG (JAR cũ vẫn nguyên vì đã sao lưu)."); B(out.split("\n").filter((l) => /ERROR|BUILD/.test(l)).slice(0, 8).join("\n")); process.exit(1); }
+  if (!/BUILD SUCCESS/.test(out)) {
+    canh("⛔ BUILD ⛔ KHÔNG THÀNH CÔNG ⇒ KHỞI ĐỘNG LẠI JAR CŨ để ⛔ không để hệ thống chết.");
+    B(out.split("\n").filter((l) => /ERROR|BUILD/.test(l)).slice(0, 8).join("\n"));
+    const cu = spawn("java", ["-jar", JAR, `--server.port=${CONG}`], {
+      cwd: join(GOC, "java-backend"), detached: true, stdio: "ignore",
+    });
+    cu.unref();
+    canh(`⛔ đã khởi động lại JAR CŨ (PID ${cu.pid}) ⇒ ⭐ hệ thống vẫn phục vụ bản 01/10 ✓`);
+    process.exit(1);
+  }
   ok("BUILD SUCCESS");
 } else B("(chạy thử: ⛔ chưa build)");
 
-// ── ⑤ JAR MỚI PHẢI CHỨA V35 + V37 ────────────────────────────────────────────────────────
-buoc(5, "Kiểm JAR mới chứa migration V35 + V37");
+// ── ⑥ KIỂM MIGRATION + KHỞI ĐỘNG JAR MỚI ───────────────────────────────────────────────────
+buoc(6, "Kiểm JAR mới chứa migration V35 + V37, rồi khởi động");
 if (THUC_THI) {
   const libDir = join(GOC, "java-backend", "infrastructure", "target", "classes", "db", "migration");
   const ds = existsSync(libDir) ? readdirSync(libDir).filter((f) => f.endsWith(".sql")) : [];
   const co35 = ds.some((f) => f.startsWith("V35")), co37 = ds.some((f) => f.startsWith("V37"));
-  if (!co35 || !co37) { canh(`⛔ thiếu migration trong bản build (V35=${co35} · V37=${co37}) ⇒ DỪNG.`); process.exit(1); }
+  if (!co35 || !co37) {
+    canh(`⛔ thiếu migration trong bản build (V35=${co35} · V37=${co37}) ⇒ khởi động lại JAR CŨ.`);
+    const cu = spawn("java", ["-jar", JAR, `--server.port=${CONG}`], {
+      cwd: join(GOC, "java-backend"), detached: true, stdio: "ignore",
+    });
+    cu.unref();
+    process.exit(1);
+  }
   ok(`có V35 + V37 (tổng ${ds.length} migration)`);
-} else B("(chạy thử: ⛔ chưa kiểm)");
-
-// ── ⑥ DỪNG + KHỞI ĐỘNG LẠI ────────────────────────────────────────────────────────────────
-buoc(6, `Dừng PID ${pid} rồi khởi động JAR mới`);
-if (THUC_THI) {
-  spawnSync("powershell", ["-NoProfile", "-Command", `Stop-Process -Id ${pid} -Force`], { encoding: "utf8" });
-  ok(`đã dừng PID ${pid}`);
-  const con = ngheCong(CONG);
-  if (con !== null) { canh(`⛔ vẫn còn tiến trình nghe :${CONG} (PID ${con}) ⇒ DỪNG.`); process.exit(1); }
   const con2 = spawn("java", ["-jar", JAR, `--server.port=${CONG}`], {
     cwd: join(GOC, "java-backend"), detached: true, stdio: "ignore",
   });
   con2.unref();
   ok("đã khởi động JAR mới (tách tiến trình)");
-} else { B(`sẽ dừng PID ${pid} và chạy: java -jar <JAR> --server.port=${CONG}`); }
+} else {
+  B("(chạy thử: ⛔ chưa kiểm migration)");
+  B(`sẽ khởi động: java -jar <JAR> --server.port=${CONG}`);
+}
 
 // ── ⑦ HEALTH-CHECK ────────────────────────────────────────────────────────────────────────
 buoc(7, `Health-check :${CONG}`);
