@@ -82,3 +82,24 @@ Timestamp: 2026-10-06 17:17:00 | Event: HANDOFF | Status: OPEN
 Description: Kiem lai `tools/probe-visual-regression.mjs` (moc sua van la 17:12:48, gio 17:16:50) ⇒ ERP-SESSION-01 **CHUA sua nốt**
 2 cho da duoc huong dan: (a) dong 196 van `clickText: "tao phieu"` ⇒ sai vs nhan that «Lập phiếu đề nghị»;
 (b) dong 383 van gan `nav` nhung KHONG kiem ⇒ che do so anh chinh van che loi. ⇒ ghi HANDOFF-20261006-003 chinh thuc.
+
+## EVT-20261006-017
+Timestamp: 2026-10-06 17:18:30 | Event: BUG_FOUND | Status: OPEN
+Description: ERP-SESSION-01 da COMMIT + PUSH `54384e0` (17:17:34) "fix(probe): 2 man modal dung clickText ... + canh bao nav that".
+Kiem chung tren GitHub bang `git show HEAD:tools/probe-visual-regression.mjs` ⇒ **BAN CON SAI**: dong 196 van `clickText: "tao phieu"`
+(sai vs «Lập phiếu đề nghị»), dong 383 van KHONG kiem `nav` ⇒ cong van che loi o che do so anh chinh. Ghi TEST-20261006-011.
+⇒ Da co y phai sua them 1 commit nua cho moi dung. Ke tiep: chay `--only=11-modal-request --locate=1` de do `nav` that.
+
+## EVT-20261006-018
+Timestamp: 2026-10-06 17:20:30 | Event: BUG_FOUND | Status: OPEN
+Description: CHAY THAT probe `--only=11-modal-request --locate=10,300` => **`nav 11-modal-request: NO_GROUP()`** (khong phai NO_CLICK_TARGET).
+Trang dang o `.auth-page` «Dang mo VNTECH ERP» ⇒ buoc `{ group: "purchasing" }` chua ton tai ⇒ CHUA sang ERP that.
+⇒ Phat hien **lop thuong loi thu 2** (sau NO_CLICK_TARGET): **NO_GROUP / trang chua boot xong** — chua ai sua.
+Ghi TEST-20261006-012. ⛔ tools/baseline SACH (khong dung anh chuan). ⛔ KHONG sua ma.
+
+## EVT-20261006-019
+Timestamp: 2026-10-06 17:25:00 | Event: BUG_FOUND | Status: OPEN
+Description: **PHAT HIEN CRITICAL** — app `:9000` khong boot: 3 tai nguyen **404** (`index-DrGoA0VD.js` · `page-DdkxN2Fj.js` ·
+`layout-segment-context-CfvhuIcI.js`) vi HTML tro hash CU con `dist/` da build lai 17:22 (`index-BVZQBH_9.js` · `page-DFsU9Xvb.js`).
+Do 30.774 ms lien tuc van o `.auth-page`. ⇒ cong anh hoi quy thi giac dang **so so mot build KHONG TON TAI** ⇒ chan toan bo.
+Ghi TEST-20261006-013 + BUG-20261006-008 (CRITICAL). ⛔ KHONG sua tep cua ERP-SESSION-01.

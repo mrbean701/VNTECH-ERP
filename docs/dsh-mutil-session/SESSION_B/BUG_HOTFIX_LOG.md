@@ -82,3 +82,19 @@ Fix: ⛔ CHUA sua — de xuat DINH CHINH 2 dong tai lieu tren (⛔ khong phai ba
 Files Changed: ⛔ (chua)
 Test: TEST-20261006-005 | Regression: N/A | Verification: hash 68 tep + git log | Status: OPEN
 Related Bug: BUG-20261006-005
+
+## BUG-20261006-008
+Date: 2026-10-06 | Session: ERP-SESSION-02 | Module: DevOps / Trien khai | Feature: Server UI phuc vu build | Severity: **CRITICAL** | Source: INTERNAL_TEST
+Problem: App tren `:9000` **KHONG BAO GIO BOOT XONG** — ket o `.auth-page` «Dang mo VNTECH ERP» > 30 giay. Cong anh hoi quy thi giac
+  vì vay **KHONG THE chup dung manh nao** (17 man × 4 kich thuoc = 68 anh chi la MAN NEN boot).
+Impact: ⛔ **CHAN TOAN BO CONG KIEM TRA HINH ANH** · ⛔ **KHONG THE nghiem thu TASK-226 bang cong** (cung sai) ·
+  ⛔ moi lan build moi lam tinh huong xau hon hon (HTML cu vs asset moi).
+Root Cause: **HTML duoc serve no tro toi hash tai nguyen CU** (`index-DrGoA0VD.js` · `page-DdkxN2Fj.js` ·
+  `layout-segment-context-CfvhuIcI.js`) trong khi `dist/client/assets/` da bi **build lai luc 17:22** san
+  `index-BVZQBH_9.js` · `page-DFsU9Xvb.js` ⇒ **404 ca 3 file** ⇒ `Failed to fetch dynamically imported module` ⇒ app treo.
+  Bang chung: console trinh duyet that bat duoc 6 loi 404/1 exception; doi chieu hash HTML vs hash tren dia khong trung nhau.
+Fix: ⛔ **CHUA sua** — thuoc ERP-SESSION-01/van hanh may chu (Goal §7/§28). De xuat: server UI phai doc **`dist/` cung thu muc**
+  voi HTML (hoac khoi dong lai server sau moi lan build) + them kiem tra khoi dong bang HTTP 200 tung file hash.
+Files Changed: ⛔ (chua)
+Test: TEST-20261006-013 | Regression: N/A | Verification: bat console trinh duyet that · doi chieu hash HTML vs dist
+Status: **OPEN** | Related Task: TASK-20261006-226 | Related Bug: BUG-20261006-005 · BUG-20261006-006

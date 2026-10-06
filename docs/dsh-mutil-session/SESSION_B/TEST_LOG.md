@@ -128,3 +128,68 @@ Notes: De dat dung DE XUAT 3 can hai thu:
   (1) o dong 383 them `if (nav !== "CLICKED_UI") { failures.push(...); continue; }` (hoac tuong duong) de **THAT BAI that**;
   (2) sua man 11 `clickText: "tao phieu"` -> `"lap phieu"` (xem TEST-20261006-009).
   ⛔ KHONG sua — thuoc ERP-SESSION-01 (Goal §7/§28).
+
+## TEST-20261006-011
+Date: 2026-10-06 | Task: TASK-226 | Module: DevOps — Cong chan hoi quy thi giac | Test Type: UNIT (doc COMMIT tren GitHub)
+Scenario: Kiem tra ket qua khi ERP-SESSION-01 da COMMIT ban sua: co dung 2 cho da noi chua, tren ban da PUSH len GitHub hay chua.
+Expected: commit moi sua (a) dong 196 `clickText` thanh khop nhan nut that, (b) dong 383 co `if (nav !== "CLICKED_UI")` de cong THAT BAI.
+Actual: **ERP-SESSION-01 DA COMMIT + PUSH BAN CON SAI** (commit `54384e0` 17:17:34, `AHEAD 0 BEHIND 0`).
+  - Dinh nghia commit: "fix(probe): 2 man modal dung clickText (selector .list-toolbar-actions button.primary da chet) + canh bao nav that"
+  - Da doc TRUC TIEP tren GitHub (`git show HEAD:tools/probe-visual-regression.mjs`):
+    · Dong 196: van `clickText: "tao phieu"`  ⇒ **VAN SAI** (nhan that = «＋ Lập phiếu đề nghị», `Requests.tsx:105`)
+    · Dong 199: `clickText: "tao phieu nhap kho"` ⇒ **dung**
+    · Dong 209: `clickText: "Thêm tổ đội"` ⇒ **dung**
+    · Dong 383: `const nav = await clickSteps(screen.steps);` ⇒ **VAN KHONG KIEM** ⇒ hong dieu huong van bi che o che do so anh chinh
+    · Dong 453 (che do `--crop`): co canh bao `⚠️ nav ... HONG` ⇒ chi canh bao, **khong lam cong FAIL**
+  - HEAD == DIA ⇒ khong con thay doi chua commit cho probe.
+Result: **FAIL (1/3 man + de xuat 3 chua dat)** | Regression: N/A | Environment: `git show HEAD:...` (doc ban da push)
+Related Bug: BUG-20261006-006
+Notes: ⛔ Hieu luc nghiep: commit + push da len remote nhung **van chua dung** ⇒ tu day moi phai sua them 1 commit nua.
+  ⛔ ERP-SESSION-02 KHONG sua tep (Goal §7/§28) — da gui Telegram va ghi HANDOFF-20261006-003.
+
+## TEST-20261006-012
+Date: 2026-10-06 | Task: TASK-226 | Module: DevOps — Cong chan hoi quy thi giac | Test Type: E2E (CHAY THAT tren trinh duyet that)
+Scenario: Thay vi suy doan, CHAY THAT probe `--locate` cho man 11 de DO gia tri `nav` that cua trinh duyet.
+  Lenh: `node tools/probe-visual-regression.mjs --only=11-modal-request --locate=10,300` (⛔ KHONG `--update`).
+Expected: `nav 11-modal-request: CLICKED_UI` (neu selector dung) hoac `NO_CLICK_TARGET` (neu selector chet).
+Actual: **`nav 11-modal-request: NO_GROUP()`** — ⭐ KHONG PHAI `NO_CLICK_TARGET`.
+  Phan tu tai (10,300): `<DIV> .auth-page` rect=0,0,1920,1080 — noi dung «Đang mở VNTECH ERP · Đang kiểm tra dữ liệu và quyền truy cập…»
+  ⇒ trang DANG O MAN BOOT, CHUA sang ERP that ⇒ buoc `{ group: "purchasing", child: 0 }` that bai cham den menu CHUA TON TAI.
+  (Doi chieu: clickSteps tra `NO_GROUP()` khi khong tim thay nhom/tab, `NO_CLICK_TARGET` khi tim nhom xong nhung khong tim nut.)
+  EXIT=0. ⛔ `git status --porcelain -- tools/baseline` = **SACH, 0 tep thay doi** ⇒ an toan, khong dung anh chuan.
+Result: **FAIL (khong do duoc man can kiem)** | Regression: N/A | Environment: probe chay that tren Chrome DevTools Protocol, base :9000
+Related Bug: BUG-20261006-006
+Notes: ⭐ **PHAT HIEN MOI, QUAN TRONG:** chay thu cho thay co **NGUYEN NHAN GOC TANG 1** — hong dieu huong co **HAI tang**:
+  (1) `NO_CLICK_TARGET` (selector chet) — 3 man, da bi S01 sua 2/3.
+  (2) **`NO_GROUP`** (trang CHUA sang ERP that) — lop truoc, chua ai sua.
+  ⇒ KET LUAN SAI TRUOC DAY: «chi 1 man con NO_CLICK_TARGET» — thuc te con **lop 2 chua duoc kiem la moi that su gay anh lech o 3 man`.
+  ⚠️ Do them: 3 lan fetch `http://127.0.0.1:9000/` deu tra **7.123 ky tu** (khong phai setup) ⇒ **SPA shell** nhu da ghi TEST-007/008.
+  ⛔ KHONG sua tep cua ERP-SESSION-01 (Goal §7/§28) — chi chay cong o che do doc (`--locate`).
+
+## TEST-20261006-013
+Date: 2026-10-06 | Task: TASK-226 | Module: DevOps — Cong chan hoi quy thi giac | Test Type: E2E (do that bang trinh duyet that)
+Scenario: Do lai tang loi thu 2 (`NO_GROUP`) bang CAC DO THAT chu khong doan: (a) do thoi gian boot, (b) bat console trinh duyet.
+Expected: hoac trang boot xong sau vai giay, hoac console chi ra loi cu the.
+Actual: ⭐ **NGUYEN NHAN GOC THAT — 3 TAI NGUYEN 404 ⇒ APP KET VINH VIEN.**
+  (a) DO THOI GIAN BOOT: 30.774 ms lien tuc `navGroup=false auth=true sidebar=false` ⇒ `.nav-tree-group` **KHONG BAO GIO xuat hien**
+      ⇒ ⛔ KHONG phai "cho lau hon" — cong chi cho 5.200 ms ⇒ **do sai** ngay tu dau.
+  (b) CONSOLE TRINH DUYET THAT:
+      [log.error]    404 (Not Found)  http://127.0.0.1:9000/assets/layout-segment-context-CfvhuIcI.js
+      [log.error]    404 (Not Found)  http://127.0.0.1:9000/assets/index-DrGoA0VD.js
+      [log.error]    404 (Not Found)  http://127.0.0.1:9000/assets/page-DdkxN2Fj.js
+      [EXCEPTION]    Uncaught (in promise) TypeError: Failed to fetch dynamically imported module: /assets/index-DrGoA0VD.js
+      Trang dang o: "Đang mở VNTECH ERP · Đang kiểm tra dữ liệu và quyền truy cập…"
+  (c) DOI CHIEU HASH (bang chung quyet dinh):
+      · HTML server dang tra ve tro toi:  layout-segment-context-CfvhuIcI.js · index-DrGoA0VD.js · page-DdkxN2Fj.js
+      · `dist/client/assets/` tren dia:  index-**BVZQBH_9**.js + page-**DFsU9Xvb**.js (moc sua **06/10 17:22**)
+      · 3 file ma HTML can deu: **KHONG CO** tren dia => **404 xac nhan**
+  (d) Server dang chay: `tools/cutover-proxy.mjs --port 9000 --ui-port 8787 --api-port 18081` (PID 13288)
+      + `scripts/local-server.mjs` (PID 22192).
+      Java :18081 khoe: `status:UP · db:MySQL · isValid:true`; API `/api/system` tra **401 sau 71 ms** ⇒ ⛔ backend khong treo.
+Result: **FAIL — hong THAT, khong phai im lang** | Regression: N/A | Environment: Edge headless + CDP, base :9000
+Related Bug: BUG-20261006-008 (moi)
+Notes: ⭐ **KET LUAN CHINH XAC:** cong anh hoi quy thi giac **DANG SO SO MOT BUILD KHONG TON TAI**.
+  · Noi dung HTML bi tao tu mot lan build truoc, roi `dist/` bi build lai (17:22) ⇒ hash doi ⇒ **404 moi file JS** ⇒ app khong bao gio boot.
+  ⇒ **Moi phat hien truoc day ve "3 man khong mo duoc" deu co the la HUU QUA cua loi nay**, khong phai loi selector don le.
+  ⇒ ⛔ `tools/baseline` van SACH (khong dung anh chuan). ⛔ ERP-SESSION-02 KHONG sua tep cua ERP-SESSION-01 (Goal §7/§28).
+  ⇒ CAN: dung server UI phai phuc vu `dist/` **cung thu muc voi HTML** (hoac khoi dong lai server sau moi lan build).
