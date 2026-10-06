@@ -308,3 +308,26 @@ Notes: ⭐ **BAI HOC**: ⭐ **phat hien phien khac bang `git status`** — ⛔ *
 
 > ⭐ ⭐ **TỔNG CUỐI: 12 bài test** — ⭐ ⭐ **11 PASS** · ⚠️ **1 PARTIAL** (⭐ `-010`) · ⛔ **0 FAIL** ✓
 > ⚠️ ⭐ **CÒN LẠI**: ⭐ kiểm **runtime** đoạn «đợi nhả khoá» của `tools/deploy-java-backend.mjs` ⚠️ — ⭐ mới chỉ qua **dry-run** ✓
+
+# TEST-20261006-012 — XÁC MINH MODAL CHI TIẾT «BÁO LỖI»
+
+| ⭐ Trường (§4) | ⭐ Giá trị |
+|---|---|
+| **TEST_ID** | `TEST-20261006-012` |
+| **DATE** | 2026-10-06 |
+| **SESSION_ID** | `ERP-SESSION-01` |
+| **TASK_ID** | `TASK-20261006-012` |
+| **MODULE** | Quản trị hệ thống — tab «Báo lỗi» |
+| **TEST_TYPE** | ⭐ `UNIT` + ⭐ `REGRESSION` + ⭐ `BUILD` + ⭐ `RUNTIME` (⭐ **đọc bundle thật trên `:9000`**) |
+| **SCENARIO** | ⭐ ① `tsc` toàn dự án ② `eslint` tệp đã sửa ③ `npm test` ④ `grep` xem có test nào đo `error-report-detail` ⑤ `npm run build` ⑥ đọc **bundle đang được `:9000` phục vụ** |
+| **EXPECTED** | ⭐ ① 0 lỗi ② 0 lỗi ③ không test mới đỏ ④ 0 test ⑤ build ĐẠT ⑥ bundle chứa marker của modal |
+| **ACTUAL** | ⭐ ① **EXIT=0** ② **EXIT=0**, 1 warning `react-hooks/exhaustive-deps` dòng 82 — ⭐ **có sẵn từ trước**, ⛔ không do thay đổi này ③ **pass 802 · fail 0 · EXIT=0** ④ **0 kết quả** ⭐ ⇒ ⛔ thay đổi **không phá** hợp đồng nào ⑤ **EXIT=0** + `BUILT ARTIFACT VALIDATION: ĐẠT` ⑥ `:9000` HTTP 200 ⇒ bundle `page-DdkxN2Fj.js` **1.063.343 byte** ⇒ `open-report-detail` ✓ `error-report-detail` ✓ `modal-overlay` ✓ `error-report-tab` ✓ ⇒ `jsxs(BaseModal, { title: 'CHI TIẾT …', children: [ dl.error-report-detail-list … ] })` ⇒ ⭐ **nội dung NẰM TRONG modal** ✓ |
+| **RESULT** | ⭐ **PASS** ⭐ (⭐ riêng phần hành vi người dùng ⭐ **chờ user nghiệm thu** ⇒ chưa `VERIFIED` ✓) |
+| **REGRESSION** | ✅ **PASS** — `npm test` 802/0 không đổi so với trước khi sửa ⭐; ⭐ **0 test hợp đồng nào chạm vào màu chi tiết** ⇒ ⛔ không có hồi quy nào bị che ✓; ⚠️ **giới hạn đã biết**: baseline ảnh 68 PNG vẫn hỏng (⚠️ đã ghi sẵn ở TODO ✓) ⇒ ⛔ **không** dùng probe ảnh để kết luận ✓ |
+| **ENVIRONMENT** | ⭐ Node v24.19.0 · JDK 21 (Adoptium) · MySQL 8 (không đụng) · UI cục bộ `:8787` (`local-server.mjs` PID 10468) · GO-LIVE `:9000` (`cutover-proxy.mjs --port 9000 --ui-port 8787 --api-port 18081`) · Java `:18081` PID 3456 |
+| **RELATED_BUG** | ⭐ ⚠️ **Sự cố tự gây** (⛔ không phải bug sản phẩm): dừng `local-server.mjs` trước khi build ⇒ `:9000` 404 ⇒ khôi phục đủ 5 bước. ⭐ Ghi thành **LUẬT §⑦** trong `docs/dsh-state/SESSION_REGISTRY.md` ✓ |
+| **RELATED_CHANGE** | `CHG-20261006-012` |
+| **NOTES** | ⭐ ⭐ **VÌ SAO PHẢI CÓ MIGRATION 0330**: sửa mã ⇒ `source_fingerprint` đổi ⇒ bảng `vntech_product_identity` có TRIGGER `RAISE(ABORT, 'VNTECH product identity is protected.')` ⇒ `scripts/local-runtime.mjs:177` từ chối khởi động UI ⇒ `:8787` chết ⇒ `:9000` 404. ⭐ Áp migration xong: **CẢ 4 TRƯỒNG KHỚP** (source · short · brand · release). ⭐ ⚠️ **Thêm migration ⇒ vân tay đổi lần 2** (`e7195a48…` → `8d70c620…`) ⇒ phải chạy lại `fixpoint-fingerprint` ⇒ ⭐ **fixpoint bất động sau 2 vòng liên tiếp, cùng giá trị** ✓ |
+
+---
+

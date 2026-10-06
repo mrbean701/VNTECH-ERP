@@ -298,3 +298,24 @@ Status: **FIXED** (⭐ **TIEN DO da xong** — ⚠️ **nhung GOC VAN CON**: ⭐
 > ✅ ⭐ ⭐ **`CHG-20261006-011` NAY ĐÃ HẾT «GỐC VẪN CÒN»** — ⭐ **backend đã sửa + đã lên sóng + đã đo** ✓
 > ⚠️ ⭐ **CÒN LẠI**: ⭐ rủi ro nếu **lời gọi CUỐI lỗi** ⇒ ⭐ ⛔ không đồng bộ lần nào ⚠️ ⇒ ⭐ **bấm Lưu lại** (⭐ idempotent ✓) ✓
 > ⚠️ ⭐ **`CHG-20261006-010` vẫn `IN_PROGRESS`** ⚠️ — ⭐ xem `TASK_LOG` ✓
+
+# CHG-20261006-012 — TAB 14 «BÁO LỖI»: CHI TIẾT HIỂN THỊ BẰNG MODAL
+
+| ⭐ Trường (§4) | ⭐ Giá trị |
+|---|---|
+| **CHANGE_ID** | `CHG-20261006-012` |
+| **DATE** | 2026-10-06 |
+| **SESSION_ID** | `ERP-SESSION-01` |
+| **CATEGORY** | ⭐ `UI_UX` · `FRONTEND` · `Shared Component` · `MIGRATION` |
+| **MODULE** | Quản trị hệ thống — tab «Báo lỗi» |
+| **BEFORE** | ⭐ Chi tiết là **thẻ inline** `<section class="card" data-vntech="error-report-detail">` nằm DƯỚI bảng ⇒ phải **cuộn** mới thấy; mọi dòng đều mở **cùng một thẻ** ⇒ dễ lẫn với dòng đang xem; nhãn nút `Thu gọn`. |
+| **AFTER** | ⭐ Chi tiết mở trong **`BaseModal`** (`@/lib/ui-blocks`) — nổi giữa màn, đóng bằng **nút ×** hoặc **click ra ngoài**; nhãn nút `Chi tiết` ↔ `✕ Đóng`; marker mới `data-vntech="open-report-detail"`; ⭐ **9 trường + khối NỘI DUNG BÁO LỖI giữ nguyên 100 %**. |
+| **REASON** | ⭐ USER yêu cầu (nguyên văn): «tab báo lỗi tôi muốn khi click vào xem chi tiết báo lỗi thì sẽ hiển thị ra modal hiển thị thông tin chi tiết của rp đó.» ⭐ Thẻ inline **không đáp ứng** yêu cầu và gây hiểu nhầm dòng đang xem. |
+| **FILES** | ⭐ `app/screens/ErrorReportAdminPanel.tsx` (sửa) · ⭐ `drizzle/0330_session_a_task_20261006_012_tab_14_bao_loi_chi_tiet_modal_identity.sql` (mới) · ⭐ `.gitignore` (bỏ qua log `local-server`) · ⭐ `VNTECH_FINGERPRINT.json` + `lib/vntech-identity-data.mjs` (⛔ **sinh ra bởi công cụ**, ⭐ không sửa tay ✓) |
+| **IMPACT** | ⭐ Chỉ **UI hiển thị** ⇒ ⛔ **không đụng** API, CSDL nghiệp vụ, RBAC, workflow ✓ · ⭐ Hành vi đóng/mở, nội dung chi tiết, nút «Đánh dấu xong» ⭐ **không đổi** ✓ |
+| **COMPATIBILITY** | ✅ **TƯƠNG THÍCH NGƯỜI DÙNG**: nội dung y hệt, chỉ đổi cách hiện. ✅ **TƯƠNG THÍCH KIỂM THỬ**: `grep error-report-detail` trong `tests/` ⇒ **0 kết quả** ⇒ ⛔ không phá hợp đồng nào. ✅ **TƯƠNG THÍCH DB**: migration **metadata-only**, chỉ `UPDATE` 2 bảng identity. |
+| **TEST** | ✅ `npx tsc --noEmit` EXIT=0 · ✅ `eslint` EXIT=0 (1 warning có sẵn từ trước) · ✅ `npm test` **802 pass / 0 fail** EXIT=0 · ✅ `npm run build` EXIT=0 `BUILT ARTIFACT VALIDATION: ĐẠT` · ✅ **đọc bundle thật** trên `:9000` có `open-report-detail` + `error-report-detail` + `modal-overlay` |
+| **STATUS** | ⭐ **FIXED + ĐÃ LÊN SÓNG** (⭐ `:9000` HTTP 200 ✓) ⭐ chờ **user nghiệm thu** ⇒ `VERIFIED` (§24 ✓) |
+
+---
+

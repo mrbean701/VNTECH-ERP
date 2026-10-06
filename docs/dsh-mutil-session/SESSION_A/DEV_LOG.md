@@ -283,3 +283,62 @@ await requestApi("save_department_permission", {
 > ⭐ ⭐ **TỔNG CUỐI: 10 entry DEV** ✓
 > ✅ ⭐ ⭐ **ĐIỂM NÓNG KỸ THUẬT Ở DÒNG 203 NAY ⛔ KHÔNG CÒN** — ⭐ `save_department_permission` **11,50 giây → 0,03 giây** ✓
 > ⚠️ ⭐ **CÒN LẠI**: ⚠️ đoạn «đợi nhả khoá» của công cụ ⭐ **mới qua dry-run** ⇒ ⭐ cần kiểm **runtime** ở lần triển khai THẬT kế tiếp ✓
+
+---
+
+# DEV-20261006-011 — TAB 14 «BÁO LỖI»: XEM CHI TIẾT BẰNG MODAL (⭐ REUSE SHARED COMPONENT)
+
+| ⭐ Trường | ⭐ Giá trị |
+|---|---|
+| **DEV_ID** | `DEV-20261006-011` |
+| **DATE** | 2026-10-06 ~17:30 → 18:20 |
+| **SESSION_ID** | `ERP-SESSION-01` |
+| **AREA** | `UI_UX` · `FRONTEND` · `Shared Component` · `MIGRATION` · `DEVOPS` |
+| **MODULE** | Quản trị hệ thống — tab «Báo lỗi» |
+| **TASK** | `TASK-20261006-012` · **CHG** `CHG-20261006-012` |
+
+## YÊU CẦU USER (nguyên văn)
+> «tab báo lỗi tôi muốn khi click vào xem chi tiết báo lỗi thì sẽ hiển thị ra modal hiển thị thông tin chi tiết của rp đó.»
+
+## ĐÃ PHÁT TRIỂN GÌ (§4 — mô tả KỸ THUẬT, không chỉ nói task)
+### ① Frontend — thay thẻ inline bằng modal dùng chung
+- `app/screens/ErrorReportAdminPanel.tsx`: `<section className="card" data-vntech="error-report-detail">`
+  (chi tiết nằm DƯỚI bảng ⇒ phải cuộn mới thấy, và mọi dòng đều mở chung một thẻ ⇒ dễ lẫn dòng)
+  ⇒ `BaseModal` của `@/lib/ui-blocks` (`{ title, note?, close, children }`, click overlay = đóng).
+- ⭐ **TÁI DÙNG, KHÔNG TẠO MODAL MỚI** (§17): `BaseModal` đã có sẵn, 8 màn khác đang dùng.
+- ⭐ **NỘI DUNG GIỮ NGUYÊN 100 %**: 9 trường `<dl class="error-report-detail-list">` + khối
+  `.error-report-content` «NỘI DUNG BÁO LỖI» ⇒ chỉ đổi CÁCH HIỂN THỊ, không mất trường nào.
+- ⭐ **Nhãn nút theo ngữ nghĩa modal**: `Chi tiết` ↔ `✕ Đóng` (trước ghi `Thu gọn` — ⛔ chỉ đúng khi là thẻ inline).
+- ⭐ Marker mới `data-vntech="open-report-detail"` để probe đo được **mà không cần cập nhật test khác**.
+
+### ② Migration — đồng bộ metadata identity (⭐ ⛔ BẮT BUỘC, không phải tuỳ chọn)
+- `drizzle/0330_session_a_task_20261006_012_tab_14_bao_loi_chi_tiet_modal_identity.sql`
+- Mẫu theo `0049_master_baseline_identity_refresh_r1_1_1.sql`: `DROP TRIGGER` → `UPDATE vntech_product_identity`
+  → `CREATE TRIGGER` lại → `UPDATE vntech_trust_settings`.
+- ⭐ **Metadata-only**: ⛔ không đụng dữ liệu nghiệp vụ, RBAC, BOQ, kho.
+
+### ③ DevOps — quy trình vân tay (⭐ đã ghi thành LUẬT ở `SESSION_REGISTRY.md` §⑦)
+- `node tools/fixpoint-fingerprint.mjs` phải **BẤT ĐỘNG** (chạy 2 vòng, cùng giá trị) trước khi build.
+- ⭐ **SỬA MÃ ⇒ VÂN TAY ĐỔI ⇒ PHẢI CÓ MIGRATION IDENTITY ⇒ UI MỚI LÊN ĐƯỢC** — đã xảy ra 2 lần trong 2 tuần.
+
+## SỐ ĐO (không suy đoán)
+| ⭐ | ⭐ |
+|---|---|
+| ⭐ `npx tsc --noEmit` | ✅ **EXIT=0** |
+| ⭐ `npx eslint app/screens/ErrorReportAdminPanel.tsx` | ✅ **EXIT=0** — 1 warning `exhaustive-deps` dòng 82 **có sẵn từ trước**, ⛔ không do thay đổi này |
+| ⭐ `npm test` | ✅ **pass 802 · fail 0 · EXIT=0** |
+| ⭐ Kiểm hồi quy | ⭐ `grep error-report-detail` trong `tests/` ⇒ **0 test nào đo màu này** ⇒ ⛔ thay đổi không phá hợp đồng nào |
+| ⭐ `npm run build` | ✅ **EXIT=0** · `BUILT ARTIFACT VALIDATION: ĐẠT` |
+| ⭐ Vân tay nguồn | `8d70c6207c94f35dd6e4b59d050abb32f9d110c8a964300b032bdb0984c51b46` (⭐ **bất động 2 vòng**) |
+| ⭐ Đối chiếu CSDL sau áp migration | ✅ **CẢ 4 TRƯỜNG KHỚP** (source · short · brand · release) |
+| ⭐ Đọc **bundle thật** trên `:9000` | ✅ `open-report-detail` ✓ `error-report-detail` ✓ `modal-overlay` ✓ `error-report-tab` ✓ ⇒ `jsxs(BaseModal, { title: 'CHI TIẾT …', children: [dl…] })` |
+
+## ⚠️ SỰ CỐ TỰ GÂY — GHI TRUNG THỰC (§22)
+⭐ Tôi restart `local-server.mjs` **trước khi** build lại ⇒ nó không khởi động được ⇒ `:9000` trả 404 ⇒ **UI chết**.
+⇒ Đã khôi phục đủ 5 bước (fixpoint ×2 → đọc SSOT+đối chiếu CSDL → tạo migration → áp (có BACKUP) → khởi động lại) ⇒ `:9000` HTTP 200.
+
+## 💡 BÀI HỌC KỸ THUẬT
+1. ⭐ ⭐ **BUILD TRƯỚC, RESTART SAU** — `npm run build` ⛔ **không cần server sống** ⇒ ⭐ vừa nhanh vừa an toàn.
+2. ⭐ ⭐ **Thêm migration ⇒ vân tay đổi LẦN NỮA** ⇒ ⭐ phải chạy lại fixpoint (⭐ đo được: `e7195a48…` → `8d70c620…`).
+3. ⭐ **Đọc trạng thái CSDL trước khi áp migration** — nếu không, dễ ghi nhầm vân tay (⭐ lần đầu tôi ghi `e7195a48…` trong khi SSOT đã là `8d70c620…`).
+4. ⭐ **`scripts/set-local-identity.mjs` KHÔNG TỒN TẠI** (MODULE_NOT_FOUND) và **`scripts/local-start.sh` chạy `wrangler dev`, KHÁC kiến trúc** ⇒ ⭐ kiểm tệp thật trước khi chạy.

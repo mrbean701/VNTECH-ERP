@@ -541,3 +541,76 @@ JAR ✅ 86,8 MB · 15:07:06 (MỚI + LÀNH + CÓ syncNow)
 ⭐ Log: 9/9 tệp SESSION_A + 2 tệp dùng chung ✓
 ⛔ HEAD = b5ca4cc · 28 đường chưa commit (⭐ chờ user bảo) ✓
 ```
+
+---
+
+# 🚨🚨 ⑦ ⭐⭐⭐ **LUẬT SỐ 1 — SỬA MÃ ⇒ VÂN TAY ĐỔI ⇒ PHẢI CÓ MIGRATION IDENTITY** (06/10/2026)
+
+> ⭐ ⭐ **ĐÃ XẢY RA 2 LẦN TRONG 2 TUẦN** ⇒ ⭐ **ĐÂY LÀ NGUYÊN NHÂN SỐ 1 KHIẾN `:8787`/UI KHÔNG LÊN ĐƯỢC** ✓
+
+## ⭐ **CHUỖI NHÂN – QUANG — ĐO ĐƯỢC, KHÔNG ĐOÁN**
+```
+① SỬA 1 TỆP MÃ NGUỒN (app/ lib/ scripts/ tests/ drizzle/ …)
+      ⇓ ⭐ `lib/trust/source-fingerprint.mjs` băm `ROOT_DIRS` ⇒ SOURCE FINGERPRINT ĐỔI
+② `npm run build` ⇒ ❌ FAIL: "Source fingerprint không hợp lệ:
+                          expected dc6a989d…, actual e7195a48…"
+      ⇒ ⭐ CHỈ SỬA 2 TỆP SSOT:  VNTECH_FINGERPRINT.json  +  lib/vntech-identity-data.mjs
+      ⇒ LỆNH:  node tools/fixpoint-fingerprint.mjs     (⭐ chạy 2 vòng ⇔ phải BẤT ĐỘNG ✓)
+③ ⚠️⚠️ `vntech_product_identity.source_fingerprint` TRONG CSDL ⛔ CÓ TRIGGER CHẶN:
+      RAISE(ABORT, 'VNTECH product identity is protected.')
+      ⇒ ⭐ `scripts/local-runtime.mjs:177` TỪ CHỐI KHỞI ĐỘNG:
+         «Dau van tay san pham VNTECH khong hop le hoac da bi thay doi.»
+      ⇒ ⭐⭐ `:8787` CHẾT ⇒ ⭐⭐ `:9000` (proxy --ui-port 8787) TRẢ 404 ⇒ ⭐⭐ **UI GO-LIVE CHẾT**
+④ ⇒ ⭐ BẮT BUỘC TẠO **MIGRATION metadata-only** trong `drizzle/` (⭐ mẫu: `0049_…`) ⭐ rồi ÁP vào CSDL
+⑤ ⇒ ⭐⚠️ **THÊM MIGRATION ⇒ VÂN TAY ĐỔI LẦN NỮA** ⇒ ⭐ **PHẢI CHẠY LẠI FIXPOINT** ⭐
+      (⭐ đo được: e7195a48… → 8d70c620… ⇒ ⚠️ 2 lần đổi liên tiếp ✓)
+⑥ Khởi động lại `scripts/local-server.mjs` ⇒ `:8787` HTTP 200 ⇒ `:9000` hết 404 ✓
+```
+
+## ⭐ **5 BƯỚC — LÀM THEO ĐÚNG THỨ TỰ (⭐ đã chứng minh thành công 06/10)**
+```bash
+# ① cố định vân tay — 2 vòng phải BẤT ĐỘNG (cùng giá trị)
+node tools/fixpoint-fingerprint.mjs
+node tools/fixpoint-fingerprint.mjs
+# ② đọc 4 giá trị SSOT + đối chiếu giá trị đang lưu trong CSDL
+node -e "import('./lib/vntech-identity-data.mjs').then(m=>console.log(JSON.stringify(m.VNTECH_IDENTITY_DATA,null,1)))"
+# ③ TẠO drizzle/<số>_<session>_<task>_<mô_tả>_identity.sql   ⭐ SAU migration này → QUAY LẠI ① !!!
+# ④ build:  npm run build       (⭐ build KHÔNG cần local-server ✓ ⭐ an toàn hơn)
+# ⑤ áp migration vào CSDL (⚠️ BACKUP TRƯỚC) → khởi động lại local-server.mjs → đo :9000
+```
+
+## ⛔ **BA SAI LẦM ĐÃ MẮC — ⛔ KHÔNG ĐƯỢC MẮC LẦN 3**
+| ⭐ # | ⭐ SAI LẦM | ⭐ HẬU QUẢ ĐO ĐƯỢC | ⭐ LÀM ĐÚNG |
+|---|---|---|---|
+| ⭐ 1 | ⭐ Dừng `local-server.mjs` **rồi tính build lại** (⭐ một lệnh dài) | ⭐⭐ **UI chết** ⭐ (⭐ lần 2 trong 2 tuần ⚠️) | ⭐ **BUILD TRƯỚC** ⭐ (⭐ `npm run build` ⛔ KHÔNG cần server ✓) ⇒ ⭐ xong mới restart ⭐ |
+| ⭐ 2 | ⭐ `scripts/set-local-identity.mjs` | ⭐ **MODULE_NOT_FOUND** ⭐ — ⭐ tệp **KHÔNG tồn tại** ⚠️ | ⭐ ⛔ Dùng `node tools/fixpoint-fingerprint.mjs` ✓ |
+| ⭐ 3 | ⭐ `scripts/local-start.sh` | ⭐ chạy **wrangler dev** ⚠️ ⭐ **KHÔNG phải** `local-server.mjs` ⇒ ⭐ sai kiến trúc ✓ | ⭐ dùng `node scripts/local-server.mjs` ✓ |
+
+## ⚠️ **DẤU HIỆU NHẬN BIẾT (⭐ đo được)**
+```
+⚠️ `:9000` trả HTML 7123 byte rồi 404 ở /assets/*.js tên CŨ (page-BGG4ijxO.js)
+   ⭐ trong khi dist/client/assets có page-<tên MỚI>.js
+   ⇒ CHẨN ĐOÁN: local-server đang giữ HTML cũ ⇒ cần khởi động lại
+⚠️ log đỏ: «Dau van tay san pham VNTECH khong hop le hoac da bi thay doi.»
+   ⇒ CHẨN ĐOÁN: thiếu migration identity ⇒ đọc mục ① ở trên
+```
+
+## ⚠️ **GHI CHÚ AN TOÀN**
+```
+⛔ ⛔ KHÔNG BAO GIỜ xoá/dùng .local-data ⇒ ⭐ migration chỉ UPDATE 2 bảng metadata ✓
+⭐ PHẢI BACKUP .local-data/warehouse.sqlite TRƯỚC khi áp migration ✓
+⛔ KHÔNG đụng `java-backend/**` cho việc này (⭐ tách biệt hoàn toàn ✓)
+⛔ KHÔNG chạy `git reset --hard` / `git clean -fd` (§38 ✓)
+⛔ KHÔNG dừng `java.exe` theo tên — 2 tiến trình thuộc DỰ ÁN KHÁC (mục ⑤ ✓)
+```
+
+## ⑥ 🎉 **TRẠNG THÁI CUỐI PHIÊN (CẬP NHẬT 06/10/2026 SAU TASK-20261006-012)**
+```
+:18081 ✅ PID 3456 · :9000 ✅ PID 13288 (HTTP 200) · :8787 ✅ proxy PID 1448
+⭐ UI cục bộ ✅ local-server.mjs PID 10468 (khởi động lại 06/10 ~17:5x)
+⭐ JAR ✅ 86,8 MB (MỚI + LÀNH + CÓ syncNow)
+⭐ Vân tay nguồn: 8d70c6207c94f35dd6e4b59d050abb32f9d110c8a964300b032bdb0984c51b46
+⭐ Migration mới: drizzle/0330_session_a_task_20261006_012_tab_14_bao_loi_chi_tiet_modal_identity.sql
+⭐ Log: 9/9 tệp SESSION_A + 2 tệp dùng chung ✓
+⭐ HEAD = dfc189d (đã push `unity`, chưa commit = 0 đường) ✓
+```

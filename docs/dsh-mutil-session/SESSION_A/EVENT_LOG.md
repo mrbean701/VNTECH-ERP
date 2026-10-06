@@ -465,3 +465,28 @@ Related Change: CHG-20261006-009
 - **Nguyên nhân gốc của sự cố**: gộp «dừng service + build + start» vào **một lệnh dài**.
 - **Luật mới**: tách thành lệnh ngắn, hoặc chạy `run_in_background` để không thể bị ngắt.
 - **Trạng thái cuối**: `:18081` PID 3456 · `:9000` PID 13288 · `:8787` PID 1448 — cả 3 sống.
+
+# EVT-20261006-030 — TASK START · TAB 14 «BÁO LỖI» → MODAL
+```
+2026-10-06 ~17:30 · ERP-SESSION-01 · TASK-20261006-012
+USER YÊU CẦU: «tab báo lỗi … click vào xem chi tiết … sẽ hiển thị ra modal …»
+ĐÃ ĐỌC MÃ THẬT (§16): ErrorReportAdminPanel.tsx — chi tiết là thẻ inline dưới bảng (dòng ~158-178)
+ĐÃ TÌM DÙNG CHUNG (§17): BaseModal ở lib/ui-blocks.tsx — đã có, 8 màn khác dùng ⇒ REUSE, không tạo modal mới
+TELEGRAM: START đã gửi ✓
+```
+
+# EVT-20261006-031 — TASK COMPLETE + SỰ CỐ TỰ GÂY + ĐÃ KHÔI PHỤC
+```
+2026-10-06 ~18:20 · ERP-SESSION-01
+✅ HOTFIX_COMPLETE: chi tiết ⇒ BaseModal (+ marker open-report-detail, nhãn «✕ Đóng»)
+✅ TEST_COMPLETE: TEST-20261006-012 PASS (tsc 0 · eslint 0 · npm test 802/0 · build ĐẠT · đọc bundle thật)
+🚨 SYSTEM_DOWN (UI cục bộ): dừng local-server.mjs trước khi build ⇒ :9000 trả 404 ⇒ UI GO-LIVE chết (~15 phút)
+✅ RECOVERY: fixpoint ×2 (bất động 8d70c620…) → đọc SSOT + đối chiếu CSDL → tạo drizzle/0330 (có BACKUP)
+             → áp migration (CẢ 4 TRƯỜNG KHỚP) → npm run build → khởi động lại local-server.mjs
+             ⇒ :9000 HTTP 200 ✓
+✅ CHANGE: CHG-20261006-012 · MIGRATION: drizzle/0330_session_a_task_20261006_012_…sql
+✅ OWNERSHIP_CLAIM → OWNERSHIP_RELEASE (app/screens/ErrorReportAdminPanel.tsx · drizzle/0330 · SESSION_REGISTRY.md §⑦)
+📤 TELEGRAM: COMPLETE đã gửi ✓
+📤 COMMIT dfc189d đã push `unity` (5 tệp) — chưa commit = 0 đường ✓
+⏳ CHỜ USER: Ctrl+F5 :9000 → Quản trị hệ thống → tab «Báo lỗi» → bấm «Chi tiết»
+```
