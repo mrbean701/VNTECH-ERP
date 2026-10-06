@@ -104,3 +104,11 @@ tmp-proxy.log
 #    ⛔ Không phải mã nguồn ⇒ ⛔ không commit. ⚠️ Tệp .TMP này từng lọt vào danh sách chưa commit.
 *~RF*.TMP
 *.TMP
+
+# ── 06/10/2026 — log của `scripts/local-server.mjs` (UI cục bộ :8787) ──────────────────────────────
+# ⚠️ Tiến trình GIỮ TỆP MỞ ⇒ ⛔ không xoá được khi đang chạy ⇒ ⛔ không commit.
+#    Chạy UI cục bộ:  node scripts/local-server.mjs
+logs-ls.out
+logs-ls.err
+logs-local-server.out
+logs-local-server.err

@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
 import type { AppData, Row } from "@/lib/ui-shared";
+// ⭐ 06/10/2026 (USER YÊU CẦU) — bấm «Chi tiết» phải mở **MODAL** chứ không phải thẻ inline dưới bảng.
+//   §17 SHARED COMPONENT RULE: ⭐ **TÁI DÙNG `BaseModal`** của `@/lib/ui-blocks` (đã có sẵn, 8 màn khác
+//   đang dùng) ⇒ ⛔ KHÔNG tạo modal mới, ⛔ KHÔNG sao chép CSS. Modal tự đóng khi click ra ngoài.
+import { BaseModal } from "@/lib/ui-blocks";
 
 /**
  * USER 29/09/2026 (MỐC 42) — TAB 14 «Báo lỗi» của màn Quản trị hệ thống.
@@ -136,9 +140,11 @@ export default function ErrorReportAdminPanel({ data, submit }: {
                     <td>{label(String(r.moduleKey ?? ""))}</td>
                     <td>
                       <div className="row-actions">
-                        <button type="button" className="export-mini"
+                        {/* ⭐ 06/10/2026 — nhãn nút theo ngữ nghĩa MODAL: mở thì hiện «✕ Đóng»
+                            (⚠️ trước đây ghi «Thu gọn» — ⛔ chỉ đúng khi chi tiết là thẻ INLINE). */}
+                        <button type="button" className="export-mini" data-vntech="open-report-detail"
                           onClick={() => setOpenId(String(r.id) === openId ? "" : String(r.id))}>
-                          {String(r.id) === openId ? "Thu gọn" : "Chi tiết"}
+                          {String(r.id) === openId ? "✕ Đóng" : "Chi tiết"}
                         </button>
                         <button type="button" className={`export-mini ${String(r.status) === "resolved" ? "" : "mini-approve"}`}
                           disabled={busy} data-vntech="mark-report-resolved"
@@ -155,13 +161,18 @@ export default function ErrorReportAdminPanel({ data, submit }: {
         )}
       </section>
 
+      {/* ⭐ 06/10/2026 (USER YÊU CẦU) — CHI TIẾT HIỂN THỊ TRONG **MODAL**.
+          ⚠️ TRƯỚC ĐÂY là thẻ `<section className="card">` INLINE dưới bảng ⇒ phải CUỘN MỚI THẤY,
+          và bấm «Chi tiết» ở dòng nào cũng mở cùng một thẻ ⇒ dễ lẫn với dòng đang xem.
+          ⇒ Nay dùng `BaseModal` (tái dùng) ⇒ nổi lên giữa màn, đóng bằng nút × hoặc click ra ngoài.
+          ⛔ NỘI DUNG GIỮ NGUYÊN 100 % (9 trường + nội dung báo lỗi) — chỉ đổi CÁCH HIỂN THỊ. */}
       {open && (
-        <section className="card" data-vntech="error-report-detail">
-          <header className="card-head"><div><h3>CHI TIẾT · {String(open.reportCode)}</h3>
-            <p>Toàn bộ thông tin người gửi và nội dung báo lỗi.</p></div>
-            <button type="button" className="secondary" onClick={() => setOpenId("")}>Đóng</button>
-          </header>
-          <dl className="error-report-detail-list">
+        <BaseModal
+          title={`CHI TIẾT · ${String(open.reportCode)}`}
+          note="Toàn bộ thông tin người gửi và nội dung báo lỗi."
+          close={() => setOpenId("")}
+        >
+          <dl className="error-report-detail-list" data-vntech="error-report-detail">
             <div><dt>Mã report</dt><dd>{open.reportCode}</dd></div>
             <div><dt>Tiêu đề</dt><dd>{open.title}</dd></div>
             <div><dt>Mã nhân viên</dt><dd>{open.employeeCode || "—"}</dd></div>
@@ -174,7 +185,7 @@ export default function ErrorReportAdminPanel({ data, submit }: {
             {open.resolutionNote ? <div><dt>Ghi chú xử lý</dt><dd>{open.resolutionNote}</dd></div> : null}
           </dl>
           <div className="error-report-content"><b>NỘI DUNG BÁO LỖI</b><p>{open.content}</p></div>
-        </section>
+        </BaseModal>
       )}
     </div>
   );
