@@ -1424,3 +1424,131 @@ xoá tmp-* ở gốc → node tools/fixpoint-fingerprint.mjs → node scripts/ve
 > ⭐ Và: **công cụ đo QUÁ LỎNG sẽ luôn nói «sạch»** — kiểu sai nguy hiểm nhất; ⭐ **xác minh tay một mẫu đủ lớn** trước khi tin công cụ.
 > ⭐ **Cảnh báo khẩn cần mức bằng chứng CAO HƠN, ⛔ không thấp hơn** — một cảnh báo khẩn SAI còn tệ hơn một cảnh báo CHẬM.
 
+---
+
+# ⭐ TRẠNG THÁI HIỆN TẠI — 06/10/2026 · phiên `ERP-SESSION-01` (chế độ GO-LIVE đa phiên)
+
+> 📌 **ĐỌC ĐẦU TIÊN** khi mở phiên mới. ⭐ Chi tiết đầy đủ: `docs/dsh-state/SESSION_REGISTRY.md` (§11 CURRENT ACTIVITY) ·
+> `docs/dsh-state/CHECKLIST.md` §«VÒNG 79» (⭐ 3 bug đủ 13 trường) ✓
+
+## 1. ⭐ PHIÊN ĐANG CHẠY
+
+| | |
+|---|---|
+| **SESSION_ID** | `ERP-SESSION-01` |
+| **Trạng thái** | 🟢 **WORKING** — ⚠️ **giữ quyền sở hữu** (⛔ chưa nhả: mã **chưa commit**) |
+| **Phiên khác?** | ⭐ **ĐÃ ĐO — ⛔ KHÔNG CÓ** (⭐ quét `node.exe` + `java.exe` + cổng) ⇒ ⛔ **không xung đột** ✓ |
+| **Cổng** | `:8787` PID **18160** (local-server) · `:9000` PID **18264** (proxy → **MÔI TRƯỜNG THẬT**) · `:18081` PID **19916** (Java) · `:3000` PID **15076** |
+
+## 2. ⭐ 3 BUG ĐÃ VÁ TRONG PHIÊN (⭐ đều `FIXED`, ⚠️ **chưa `VERIFIED`** — ⭐ chờ user bấm thử)
+
+| Bug | SEVERITY | ⭐ Nguyên nhân gốc | Tệp |
+|---|---|---|---|
+| **BUG-20261006-003** — cấp quyền cho user **vượt** quyền phòng ban | HIGH | ⭐ chốt **`P5.3`** = `assertDepartmentAllowsPermissions(...)` ở `UserManagementUseCase:266` | `UserManagementUseCase.java` + `AdminGovernanceIntegrationTest.java` |
+| **BUG-20261006-004** — tab phòng ban **«báo lỗi lưu»** | HIGH | ⭐ `action()` **⛔ không trả payload** ⇒ `ok` luôn 0 ⇒ hiện **«Đã lưu 0/N»** ⚠️ — ⭐ **DỮ LIỆU VẪN LƯU THẬT** | `app/page.tsx` |
+| **BUG-20261006-005** — thiếu nút **«Chọn tất cả»** + **«Cả dòng»** | MEDIUM | ⭐ chỉ có 4 nút theo **nhóm**; bảng `DataTable` ⛔ không có cột «Cả dòng» (⭐ panel dùng chung thì có) | `app/page.tsx` |
+
+### ⚠️⚠️ `BUG-20261006-003` ĐÃ TRIỂN KHAI — 2 bug kia **chỉ mới build lên `:8787`**
+⭐ JAR mới: **06/10 11:49:25** · PID **19916** · trả lời sau **6 giây** ✓
+⭐ **BẢN LÙI**: `java-backend/web/target/backup/vntech-erp-web-BUG003-2026-10-06T11-49-12.jar` ✓
+⚠️ **`:9000` phục vụ CÙNG bundle với `:8787`** ⇒ ⭐ 2 bug UI đã lên **cả môi trường thật** ✓
+
+## 3. ⭐ BẰNG CHỨNG KIỂM THỬ
+
+| Bài kiểm | ⭐ Kết quả |
+|---|---|
+| `mvn -o test` (Java) | ✅ **BUILD SUCCESS · 156/156 · 0 lỗi** (19 + 38 + 13 + 86) |
+| `npm test` (giao diện) | ✅ **pass 780 · fail 0** |
+| `npm run build` | ✅ **EXIT=0** |
+| Cổng UI `verify-ui-build-applied --port=8787` | ✅ **3/3** — `✓ do-moi` · `✓ van-tay` · **`✓ byte 6/6`** ⇒ «BẢN CHẠY ĐÚNG BẢN ĐÃ BUILD MỚI NHẤT» |
+| Vân tay nguồn | ✅ **ĐẠT** `VNTECH-FP-8D7D11ECC7D6887C` (713 tệp) |
+
+## 4. ⚠️⚠️ CẦN USER — 3 VIỆC (⭐ ⛔ không phải blocker kỹ thuật)
+
+| # | Việc | ⭐ Vì sao |
+|---|---|---|
+| ① | ⭐ **Cho phép commit + push** | ⭐ **§47 luật 25/26**: `AUTO_COMMIT = FALSE` ⇒ ⭐ **6 đường đang chờ** ⚠️ (⭐ nếu phiên khác vào, ⭐ **phải coi đó là thay đổi CỦA PHIÊN NÀY**, ⛔ đừng `git checkout` — §38) |
+| ② | ⭐ **Bấm thử `:9000`** — 5 điểm | ① dropdown «Nhóm chức năng» **~75 mục** ② tab «Báo lỗi» **16 báo cáo** ③ nút bước 14 **bị khoá** với tài khoản thường ④ **cấp quyền vượt phòng ban LƯU ĐƯỢC** ⑤ **tab phòng ban: «Chọn tất cả» + «Cả dòng» + lưu hiện «N/N»** |
+| ③ | ⭐ **Mật khẩu MỚI tài khoản `e2e.*`** | ⚠️ `Vn@2026Test` nay trả **HTTP 401** ⇒ ⭐ **hầu hết bài E2E ⛔ không chạy được** ✓ |
+
+## 5. ⛔ VIỆC ĐANG HOÃN (⭐ ⛔ không phải bỏ)
+
+| Việc | ⭐ Trạng thái |
+|---|---|
+| **F2** — `receive_goods` ⛔ **không kiểm trạng thái PO** | ⭐ **ĐÃ HOÀN NGUYÊN** để giữ cây **XANH** (⭐ đã thử và làm **3 test ĐỎ**) ⚠️ — ⭐ **kế hoạch còn nguyên**: sửa **2 bài test** (chèn `approve_po` trước `receive_goods`) + thêm **chốt chặn** ở `receiveGoods` (⛔ **KHÔNG** đặt ở `findPoForReceiving` — ⭐ sẽ **khoá chết** đường phát hành PO) ✓ |
+| **F4** | ⛔ chờ user chốt đặc tả (quyền duyệt rộng hơn phân công dự án) |
+| **Chính sách dữ liệu nhân sự** | ⛔ chờ user (xoá nhân sự có giữ hồ sơ HR/HĐLĐ/bảo hiểm không) |
+
+## 6. ⭐ DỮ LIỆU — ĐÃ DỌN SẠCH TRONG PHIÊN
+
+| Mục | ⭐ Trước ⇒ Sau |
+|---|---|
+| `central_returns` `in_transit` | **5 ⇒ 0** ✓ (⭐ ghi bù **10 dòng** `contract_stock_ledger` — ⭐ `backup_csl_20261006` 150 dòng) |
+| `transfer_orders` `in_transit` | **1 ⇒ 0** ✓ |
+| Sổ kho `stock_movements` | **96 ⇒ 101** ⇒ ⭐ xuất hiện **`CENTRAL_RETURN_RECEIVE` = 5** ⇒ ⭐ **`BUG-20261005-005` `VERIFIED`** ✓ |
+| Quyền mồ côi `user_module_permissions` | **2198 ⇒ 1628** dòng · mồ côi **570 ⇒ 0** · hợp lệ **1628 ⛔ KHÔNG ĐỔI** ✓ (⭐ `backup_ump_20261006`) |
+
+## 7. ⭐ BÀI HỌC MỚI NHẤT (⭐ ⛔ đừng lặp lại)
+
+1. ⭐⭐⭐ **`action()` TRONG `page.tsx` ⛔ KHÔNG TRẢ PAYLOAD** — ⭐ nó trả `undefined` khi thành công ✓
+   ⇒ ⭐ **CẦN ĐỌC KẾT QUẢ TRẢ VỀ ⇒ ⭐ PHẢI DÙNG `requestApi`** ✓
+   ⚠️ Lỗi này đã gây **2 bug trong cùng một ngày**: `BUG-20261006-001` (danh sách báo lỗi luôn rỗng) **và** `BUG-20261006-004` («Đã lưu 0/N») ✓
+   ⭐ CHÍNH NHÀ đã ghi cảnh báo ở **`page.tsx:318-319`** ✓
+2. ⭐⭐⭐ **«Báo lỗi» có thể chỉ là ĐẾM SAI, ⛔ không phải GHI SAI** — ⭐ `BUG-004` báo «0/N» nhưng **dữ liệu VẪN ĐƯỢC LƯU THẬT** ✓ ⇒ ⭐ **kiểm CSDL trước khi kết luận «mất dữ liệu»** ✓
+3. ⭐⭐⭐ **Test cũ có thể ĐANG MÃ HOÁ CHÍNH HÀNH VI CỦA LỖI** — ⭐ gặp **2 lần**: `phanQuyenPhongBan_chanVuotQuyen…` (⭐ khẳng định chốt `P5.3`) và 2 bài test của **F2** ✓ ⇒ ⭐ **đọc test trước khi tin nó «đúng»** ✓
+4. ⭐⭐ **Kiểm chứng bằng cổng UI `byte 6/6`, ⛔ KHÔNG bằng tìm chuỗi trong bundle** — ⭐ tiếng Việt bị **escape unicode** khi minify ⇒ ⭐ tìm chuỗi thô **luôn False** ⚠️ ✓
+5. ⭐⭐ **Trong khối văn bản Java (`"""`), `//` LÀ MỘT PHẦN CỦA CHUỖI SQL** ⛔ không phải chú thích ✓ (⭐ đã gây **1 lần 500** ngay sau khi triển khai) ✓
+6. ⭐⭐ **Phải DỪNG Java TRƯỚC khi build** (Windows khoá tệp JAR) ⭐ **và dry-run ⛔ không phát hiện được** vì nó ⛔ không build ✓
+7. ⭐⭐ **`mvn -o test` 156/156 ⛔ KHÔNG chứng minh SQL chạy được** — ⭐ H2 **dễ dãi hơn MySQL** ✓ ⇒ ⭐ phải **gọi action THẬT** ✓
+
+---
+
+# ⭐ CẬP NHẬT 06/10/2026 (sau đó) — **F2 ĐÃ `VERIFIED`** + 2 bài học mới
+
+## 8. ⭐⭐ **F2 — `receive_goods` ⛔ KHÔNG kiểm trạng thái PO — ĐÃ `VERIFIED`**
+
+| | |
+|---|---|
+| **NGUYÊN NHÂN GỐC** | ⭐ `java-backend/web/src/**test**/resources/schema-h2.sql` **THIẾU 3 CỘT** (`decision_reason` · `decided_by` · `decided_at`) — ⚠️ **MySQL thật CÓ** (⭐ do migration **`V18__wf_b2_po_decision.sql`**) ⇒ ⭐ **`approve_po` ⛔ KHÔNG CHẠY ĐƯỢC TRONG BÀI KIỂM THỬ** ⇒ ⭐ các bài test **phải ĐI VÒNG** — gọi thẳng `receive_goods` trên PO chưa phát hành ⇒ ⭐ **vô tình MÃ HOÁ CHÍNH HÀNH VI CỦA LỖI F2** ✓ |
+| **FIX** | ⭐ **4 chỗ**: ① thêm 3 cột vào schema **test** ② `StockChainIntegrationTest` chèn `approve_po` ③ `SupplyChainEndToEndIntegrationTest` chèn `approve_po` + assert `waiting_delivery` ④ **chốt chặn** ở `receiveGoods` ✓ |
+| **TEST** | ✅ **`mvn -o test` 156/156 · 0 lỗi** |
+| **DEPLOY** | ✅ JAR **06/10 12:50:20** · PID **16148** · bản lùi `vntech-erp-web-F2-2026-10-06T12-50-06.jar` |
+| ⭐ **VERIFIED** | ✅ **gọi THẬT trên `:9000`** (⭐ PO `pending_approval`) ⇒ **HTTP 400** + **đúng thông điệp mới** · ⭐ **đối chứng**: `status` ⛔ không đổi · `so_GRN` ⛔ **không tăng** ⇒ ⭐ **chốt chặn ĐÃ NGĂN việc ghi** ✓ |
+| **STATUS** | ⭐ **`VERIFIED`** · ⚠️ **chưa commit** (⭐ chờ user cho phép — §47 luật 25/26) |
+
+## 9. ⭐⭐⭐ **LUẬT MỚI — `mvn` ĐỎ ⇒ ĐỌC `surefire-reports` NGAY**
+
+> ⭐ **KHI `mvn -o test` ĐỎ ⇒ ĐỌC `java-backend/web/target/surefire-reports/*.txt` NGAY LẬP TỨC —
+> ⛔ TRƯỚC MỌI SUY LUẬN VÀ ⛔ TRƯỚC KHI HOÀN NGUYÊN** ✓
+> ⭐ Lần chạy **XANH** kế tiếp sẽ **GHI ĐÈ** mất bằng chứng ✓
+> ⚠️ **Tôi đã tự xoá mất bằng chứng 2 LẦN** và **đoán SAI 3 lần** liên tiếp vì ⛔ không đọc ngăn xếp ✓
+> ⭐ **ĐỌC MÃ ⛔ KHÔNG THAY THẾ ĐƯỢC ĐỌC NGĂN XẾP LỖI THẬT** ✓
+
+## 10. ⭐⭐ **MỘT TỆP SCHEMA CÓ THỂ CÓ NHIỀU BẢN** — ⭐ phải xác định bản NÀO đang dùng
+
+| ⭐ Tệp | ⭐ Vai trò |
+|---|---|
+| `web/src/**test**/resources/schema-h2.sql` (**86.697 B**) | ⭐ **NGUỒN THẬT của bài kiểm thử** ✓ |
+| `web/src/**main**/resources/db/demo/schema-h2.sql` (67.413 B) | ⚠️ ⛔ **KHÔNG PHẢI** tệp bài test dùng — ⭐ sửa nó ⛔ **không có tác dụng** ✓ |
+| `infrastructure/…/migration/**V18__wf_b2_po_decision.sql**` | ⭐ migration **THẬT** đã thêm `decision_reason` cho MySQL ✓ |
+
+⇒ ⭐ **TRƯỚC KHI SỬA một tệp schema/config: ⭐ PHẢI xác định bản nào đang được nạp** ✓
+
+## 11. ⚠️ **KIỂM THÔNG ĐIỆP TIẾNG VIỆT TỪ JSON ⇒ ⛔ ĐỪNG KHỚP CHUỖI THÔ**
+
+⭐ JSON **escape unicode** (`ch\u01B0a` thay vì `chưa`) ⇒ ⭐ `-match 'chưa'` **luôn False** ⚠️
+⇒ ⭐ **phải `ConvertFrom-Json` rồi so**, ⭐ hoặc **in ra và đọc bằng mắt** ✓
+⚠️ **Tôi đã mắc lỗi này 3 LẦN** (⭐ 2 lần trên bundle minify · 1 lần trên JSON API) ✓
+
+---
+
+## ⭐ TRẠNG THÁI LÚC GHI (06/10/2026 — sau F2)
+
+| | |
+|---|---|
+| `mvn -o test` | ✅ **156/156 · 0 lỗi** |
+| `:18081` | ✅ JAR **06/10 12:50:20** · PID **16148** · **401 = sống** |
+| `:8787` · `:9000` | ✅ **200** · ✅ proxy sống |
+| ⭐ F2 | ⭐ **`VERIFIED`** ✓ |
+| ⚠️ Chưa commit | ⭐ **12 tệp CỦA `ERP-SESSION-01`** · 🚨 **5 tệp CỦA PHIÊN KHÁC** (⛔ **KHÔNG** `git add -A` — ⭐ xem `SESSION_REGISTRY.md` §«LUẬT TỰ RÀNG BUỘC» luật 8) ✓ |
+

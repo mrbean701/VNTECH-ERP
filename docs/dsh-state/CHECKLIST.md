@@ -9510,3 +9510,317 @@ E2E-XM-002 → 6  ·  E2E-XM-001 → 5  ·  E2E-XM-003 → 1   ⇒ TỔNG 12
 
 ---
 
+# VÒNG 79 · 06/10/2026 — 3 BUG USER BÁO TRỰC TIẾP (tab «Phân quyền phòng ban» + người dùng)
+
+**PHIÊN**: `ERP-SESSION-01` (⭐ chế độ GO-LIVE đa phiên) · ⭐ **chỉ 1 phiên chạy** nên ⛔ không xung đột ✓
+
+---
+
+## BUG-20261006-003 — «modal không cấp thêm được quyền cho user nếu > quyền phòng ban»
+
+| Trường | ⭐ Nội dung |
+|---|---|
+| **TIME** | 06/10/2026 |
+| **MODULE** | Phân quyền người dùng (`save_user_access`) |
+| **USER/CONTEXT** | User báo: «modal không thể cấp thêm quyền cho user nếu như số lượng quyền đó lớn hơn số lượng quyền đã cấp cho phòng ban. Tôi muốn sửa lại có thể thêm quyền cho người dùng kể cả phòng ban của user đó không có quyền như vậy.» |
+| **DESCRIPTION** | ⛔ Không cấp được quyền cho user vượt quá quyền của phòng ban |
+| **REPRODUCTION** | Mở modal phân quyền user → tick quyền mà phòng ban chưa có → bấm Lưu ⇒ ⛔ bị chặn |
+| **SEVERITY** | **HIGH** (⭐ chặn nghiệp vụ; ⚠️ chỉ admin gọi được nên ⛔ không phải lỗ hổng bảo mật) |
+| **ROOT CAUSE** | ⭐ Chốt **`P5.3`** — `assertDepartmentAllowsPermissions(targetUserId, target, payload)` ở `UserManagementUseCase:266` ⇒ ném `ApiError("Phòng ban “…” chưa được cấp quyền cho chức năng “…”")` (dòng ~553) ✓ ⭐ **Đo được từ mã, ⛔ không suy đoán** |
+| **FIX** | ⛔ Bỏ lời gọi (1 dòng) · ⭐ **giữ** hàm để tham chiếu (⛔ không xoá — §12 `SMALL SAFE FIX`) · ⭐ **GIỮ** chốt **MỐC 111** ngay dưới (chặn payload rỗng ⇒ ⛔ không mất toàn bộ quyền) ✓ |
+| **FILES CHANGED** | `java-backend/application/src/main/java/com/vntech/erp/application/service/UserManagementUseCase.java` · `java-backend/web/src/test/java/com/vntech/erp/web/controller/AdminGovernanceIntegrationTest.java` |
+| **TEST** | ✅ `mvn -o test` **BUILD SUCCESS · 156/156 · 0 lỗi** · ⚠️ **REGRESSION BẮT ĐƯỢC 1 BÀI ĐỎ**: `phanQuyenPhongBan_chanVuotQuyen_vaKhongMatDuLieuKhiBiChan` — ⭐ bài này **đang khẳng định chính `P5.3`** ⇒ ⭐ đã sửa sang hành vi MỚI (`expectRejected` ⇒ `ok` + khẳng định quyền ĐƯỢC ghi thật + đổi tên hàm) ✓ |
+| **STATUS** | ⭐ **`FIXED`** (§24: CODE FIXED + TEST PASSED) · ⚠️ **chưa `VERIFIED`** |
+| **NEXT ACTION** | ⭐ Đã **triển khai** lên `:18081` (JAR 06/10 **11:49:25** · PID **19916** · trả lời sau 6 giây · bản lùi `vntech-erp-web-BUG003-2026-10-06T11-49-12.jar`) ⇒ ⭐ **chờ user bấm thử trên `:9000`** để chuyển `VERIFIED` ✓ |
+
+⭐ **PHÁT HIỆN THÊM ĐÁNG GIÁ**: ⭐ nhà **đã có sẵn đường miễn trừ** — user có **CẤP BẬC** (`set_user_system_level`) thì ⛔ **không bị `P5.3`** (⭐ chính bài test ghi vậy ở dòng ~254) ✓
+
+---
+
+## BUG-20261006-004 — «tab phân quyền phòng ban đang báo lỗi lưu phân quyền»
+
+| Trường | ⭐ Nội dung |
+|---|---|
+| **TIME** | 06/10/2026 |
+| **MODULE** | Tab «Phân quyền phòng ban» (`save_department_permission` · `delete_department_permission`) |
+| **USER/CONTEXT** | User báo: «Tab phân quyền phòng ban đang báo lỗi lưu phân quyền.» |
+| **DESCRIPTION** | ⚠️ Sau khi bấm Lưu, thông báo luôn hiện **«Đã lưu 0/N chức năng…»** ⇒ ⭐ **trông như lỗi lưu** |
+| **REPRODUCTION** | Tab phòng ban → tick vài quyền → bấm **Lưu thay đổi** ⇒ ⭐ luôn hiện **0/N** (⭐ tương tự khi **Xoá mục đã chọn**: «Đã xoá 0/N») |
+| **SEVERITY** | **HIGH** (⭐ user tưởng mất dữ liệu — ⚠️ nhưng dữ liệu **VẪN ĐƯỢC LƯU THẬT**) |
+| **ROOT CAUSE** | ⭐ Vòng lặp dùng `action(...)` ⚠️ nhưng **`action()` ⛔ KHÔNG trả payload — nó trả `undefined` khi thành công** (⭐ CHÍNH NHÀ ghi cảnh báo ở `page.tsx:318-319`) ⇒ ⭐ biến đếm `ok` **LUÔN = 0** ⇒ ⭐ câu thông báo luôn nói «0/N» ✓ ⭐ **Lỗi ở CÂU THÔNG BÁO, ⛔ không phải ở việc ghi dữ liệu** ✓ |
+| **FIX** | ⭐ Dùng **`requestApi`** (⭐ hàm **CÓ** trả `result` — ⭐ cùng cách đã vá `BUG-20261006-001`) + `try/catch` **từng chức năng** ⇒ ⭐ một chức năng lỗi ⛔ **không chặn** các chức năng còn lại + ⭐ đếm thêm số **LỖI** và hiện **thông điệp lỗi đầu tiên** ✓ ⭐ Vá **cả** `save()` **và** `deleteSelected()` ✓ |
+| **FILES CHANGED** | `app/page.tsx` |
+| **TEST** | ✅ `npm run build` **EXIT=0** · ✅ cổng UI **3/3** («byte 6/6 · BẢN CHẠY ĐÚNG BẢN ĐÃ BUILD MỚI NHẤT») · ✅ `npm test` **pass 780 · fail 0** |
+| **STATUS** | ⭐ **`FIXED`** · ⚠️ chưa `VERIFIED` |
+| **NEXT ACTION** | ⭐ Chờ user bấm Lưu ⇒ ⭐ phải hiện **«N/N»** (⛔ không còn «0/N») ✓ |
+
+---
+
+## BUG-20261006-005 — «thêm nút chọn tất cả» + «nút tick chọn cả dòng đang không hoạt động»
+
+| Trường | ⭐ Nội dung |
+|---|---|
+| **TIME** | 06/10/2026 |
+| **MODULE** | Tab «Phân quyền phòng ban» (bảng quyền + thanh hành động) |
+| **USER/CONTEXT** | User báo: «Sửa tab phân quyền phòng ban, thêm nút chọn tất cả và bỏ chọn tất cả. … Nút tick chọn cả dòng đang không hoạt động.» |
+| **DESCRIPTION** | ⛔ Thiếu nút **«Chọn tất cả»** · ⛔ **không có cột «Cả dòng»** ⇒ ⛔ không tick được cả dòng |
+| **REPRODUCTION** | Tab phòng ban ⇒ ⭐ chỉ thấy 4 nút theo **nhóm** + «Bỏ chọn tất cả» ⚠️ (⛔ không có nút tổng) · ⭐ bảng ⛔ không có ô «Cả dòng» |
+| **SEVERITY** | **MEDIUM** (⭐ dùng được nhưng thiếu thao tác hàng loạt — ⭐ user phải tick từng ô) |
+| **ROOT CAUSE** | ⭐ Tab phòng ban **chỉ có** `applyPrefix("dept_plan_"/"dept_project_"/"dept_finance_"/"dept_legal_")` + `clearAll` ⇒ ⛔ **thiếu hàm/nút cho TOÀN BỘ** ✓ ⚠️ VÀ bảng dựng bằng `DataTable` + `PERM_CAPS` ⇒ ⛔ **không có cột «Cả dòng»** — ⭐ trong khi `PermissionAccessPanel` **dùng chung thì CÓ** (`setRowAll` dòng ~208 · cột «Cả dòng» dòng ~332) ⇒ ⭐ **hai nơi lệch nhau** ✓ |
+| **FIX** | ⭐ **3 chỗ**: ① thêm `selectAll` + `setRowAll` + `rowState` + `allRowsFull` — ⭐ **cùng hình dạng quyền với `applyPrefix`** (`canView/canUse/canCreate/canEdit=1 · canApprove=0 · canExport=1`) ⇒ ⛔ không lệch chuẩn của nhà ✓ ② thêm nút **«Chọn tất cả»** cạnh «Bỏ chọn tất cả» ✓ ③ thêm **cột «Cả dòng»** — ô đầu cột chọn/bỏ **MỌI** chức năng · ô từng dòng chọn/bỏ **toàn bộ quyền của chức năng đó** · ⭐ có **trạng thái một phần** (`indeterminate`) ⇒ ⛔ không tick giả ✓ |
+| **FILES CHANGED** | `app/page.tsx` |
+| **TEST** | ✅ `npm run build` **EXIT=0** · ✅ cổng UI **3/3** · ✅ `npm test` **pass 780 · fail 0** · ✅ vân tay `VNTECH-FP-8D7D11ECC7D6887C` |
+| **STATUS** | ⭐ **`FIXED`** · ⚠️ chưa `VERIFIED` |
+| **NEXT ACTION** | ⭐ Chờ user kiểm: ⭐ có nút **«Chọn tất cả»** · cột **«Cả dòng»** tick được · bấm Lưu hiện **«N/N»** ✓ |
+
+---
+
+## ⭐ BÀI HỌC VÒNG 79
+
+1. ⭐⭐⭐ **CÙNG MỘT LỖI LẶP LẠI 3 LẦN TRONG NGÀY**: ⭐ **`action()` ⛔ KHÔNG trả payload** — ⭐ đã gây `BUG-20261006-001` (danh sách báo lỗi) **VÀ** `BUG-20261006-004` (lưu quyền phòng ban) ✓ ⇒ ⭐ **QUY TẮC: cần ĐỌC kết quả trả về ⇒ ⭐ PHẢI dùng `requestApi`** ✓
+2. ⭐⭐⭐ **«Báo lỗi» có thể chỉ là ĐẾM SAI, ⛔ không phải ghi sai** — ⭐ `BUG-004` báo «0/N» nhưng ⭐ **dữ liệu VẪN ĐƯỢC LƯU THẬT** ⇒ ⭐ phải kiểm **CSDL** trước khi kết luận «mất dữ liệu» ✓
+3. ⭐⭐⭐ **Một quy tắc nghiệp vụ CỐ Ý có thể bị user yêu cầu BỎ** — ⭐ `P5.3` được **cài + có test khẳng định** ⚠️ nhưng user là **chủ sản phẩm** và yêu cầu rõ ⇒ ⭐ **sửa mã + SỬA LUÔN BÀI TEST** (⭐ ⛔ không để test đỏ) ✓
+4. ⭐⭐ **Test cũ có thể ĐANG MÃ HOÁ CHÍNH HÀNH VI CỦA LỖI** — ⭐ như F2 (⭐ test gọi `receive_goods` trên PO chưa phát hành) và `P5.3` ✓ ⇒ ⭐ **đọc test trước khi kết luận nó «đúng»** ✓
+5. ⭐⭐ **Kiểm chứng bằng cổng UI `byte 6/6`, ⛔ KHÔNG bằng tìm chuỗi trong bundle** — ⭐ tiếng Việt bị **escape unicode** khi minify ⇒ ⭐ tìm chuỗi thô luôn **False** ⚠️ (⭐ tôi đã mất 2 vòng vì phép kiểm sai phương pháp) ✓
+6. ⭐⭐ **Trong khối văn bản Java (`"""`), `//` LÀ MỘT PHẦN CỦA CHUỖI SQL** — ⭐ ⛔ không phải chú thích ✓ (⭐ đã gây 1 lần 500 khi triển khai) ✓
+7. ⭐⭐ **Công cụ triển khai phải DỪNG Java TRƯỚC khi build** — ⭐ trên Windows `repackage` ⛔ không đổi tên được JAR đang bị giữ ✓ ⭐ VÀ: **dry-run ⛔ không phát hiện được** vì nó ⛔ không build ✓
+8. ⭐⭐ **`mvn -o test` 156/156 ⛔ KHÔNG chứng minh SQL chạy được** — ⭐ H2 **dễ dãi hơn MySQL** ✓ ⇒ ⭐ phải **gọi action THẬT** để kiểm ✓
+
+---
+
+## F2 — `receive_goods` ⛔ KHÔNG kiểm trạng thái PO · ⭐ **`VERIFIED`**
+
+| Trường | ⭐ Nội dung |
+|---|---|
+| **BUG ID** | **F2** (⭐ báo cáo `docs/agent-progress/BAO-CAO-LUONG-DUYET-WF-MUAHANG-01.md` §F2) |
+| **TIME** | 06/10/2026 |
+| **MODULE** | Mua hàng — giao nhận (`receive_goods`) |
+| **USER/CONTEXT** | ⭐ Phát hiện khi kiểm lường duyệt **WF-MUAHANG-01**: lúc `receive_goods`, PO `PO-PRJ-DEMO-01-2026-0017` đang **`pending_approval`** mà vẫn nhận hàng **HTTP 200** ✓ |
+| **DESCRIPTION** | ⛔ Nhận hàng được trên PO **CHƯA ĐƯỢC PHÁT HÀNH** ⇒ ⭐ cổng «Lập & **PHÁT HÀNH** PO» (bước 101) bị **VÔ HIỆU** ⇒ bước 102/103 vẫn «xanh» dù 101 chưa xong ⇒ ⭐ **hệ thống trông đúng nhưng THIẾU một cổng kiểm soát** ✓ ⭐ VÀ nó **che** hậu quả của lỗi **F1** (`approve_po` 403) ✓ |
+| **REPRODUCTION** | ① `create_po` ⇒ PO ở `pending_approval` ② gọi `receive_goods` **ngay** ⇒ ⛔ trước đây **HTTP 200** ✓ |
+| **SEVERITY** | **HIGH** (⭐ lỗi **WORKFLOW** — ⛔ không mất dữ liệu nhưng **vô hiệu một cổng phê duyệt**) |
+| **ROOT CAUSE** | ⭐⭐ **ĐỌC TỪ NGĂN XẾP LỖI THẬT** (`web/target/surefire-reports/`): `JdbcSQLSyntaxErrorException: Column "decision_reason" not found` ⇒ ⭐ **`java-backend/web/src/**test**/resources/schema-h2.sql` THIẾU 3 CỘT** (`decision_reason` · `decided_by` · `decided_at`) ⚠️ trong khi **MySQL thật CÓ** (⭐ do migration **`V18__wf_b2_po_decision.sql`**) ⇒ ⭐ **`approve_po` ⛔ KHÔNG CHẠY ĐƯỢC TRONG BÀI KIỂM THỬ** ⇒ ⭐ các bài test **phải ĐI VÒNG** — gọi thẳng `receive_goods` trên PO chưa phát hành ⇒ ⭐ **vô tình MÃ HOÁ CHÍNH HÀNH VI CỦA LỖI F2** ✓ |
+| **FIX (4 chỗ)** | ① ⭐ thêm **3 cột** vào **`web/src/**test**/resources/schema-h2.sql`** ✓ (⚠️ ⛔ **KHÔNG PHẢI** `web/src/main/resources/db/demo/schema-h2.sql` — ⭐ sửa tệp đó ⛔ **không có tác dụng**) ② `StockChainIntegrationTest` chèn `approve_po` giữa `create_po` và `receive_goods` ✓ ③ `SupplyChainEndToEndIntegrationTest` chèn `approve_po` + `assertTrue` `waiting_delivery` ✓ ④ **chốt chặn** ở `PurchaseManagementUseCase.receiveGoods`: `if (!List.of("waiting_delivery","partial_delivery").contains(sv(po,"status"))) throw Api("PO chưa được phát hành nên chưa thể giao nhận. Hãy phát hành PO ở bước “Lập & phát hành PO” trước.");` ✓ ⚠️ ⛔ **KHÔNG** đặt chốt ở `findPoForReceiving` — ⭐ hàm đó còn phục vụ `decidePo` (**CẦN** PO ở `pending_approval`) ⇒ ⭐ sẽ **KHOÁ CHẾT** đường phát hành PO ✓ (⭐ đã kiểm **3 nơi gọi** trước khi sửa) ✓ |
+| **FILES CHANGED** | `java-backend/web/src/test/resources/schema-h2.sql` · `java-backend/web/src/test/java/…/StockChainIntegrationTest.java` · `java-backend/web/src/test/java/…/SupplyChainEndToEndIntegrationTest.java` · `java-backend/application/src/main/java/…/PurchaseManagementUseCase.java` |
+| **TEST** | ✅ **`mvn -o test` BUILD SUCCESS · 156/156 · 0 lỗi** ✓ |
+| **VERIFIED** | ✅ **GỌI THẬT trên `:9000`** (⭐ PO `PO-PRJ-DEMO-01-2026-0006` · `pending_approval`) ⇒ ⭐ **HTTP 400** + ⭐ **ĐÚNG thông điệp mới** («PO chưa được phát hành nên chưa thể giao nhận…») ✓ ⭐ **ĐỐI CHỨNG**: `status` ⛔ **KHÔNG ĐỔI** (`pending_approval`) · `so_GRN` ⛔ **KHÔNG TĂNG** (vẫn 3) ⇒ ⭐ **chốt chặn ĐÃ NGĂN việc ghi** ✓ |
+| **STATUS** | ⭐ **`VERIFIED`** ✓ |
+| **DEPLOY** | ✅ sao lưu `vntech-erp-web-F2-2026-10-06T12-50-06.jar` → dừng PID **19916** (cmdline khớp) → **BUILD SUCCESS** → JAR **06/10 12:50:20** → PID mới **16148** → trả lời sau **6 giây** ✓ |
+| **NEXT ACTION** | ⭐ **Chờ user bấm thử** trên `:9000` để xác nhận bằng mắt ✓ · ⚠️ **chưa commit** (⭐ chờ user cho phép — §47 luật 25/26) ✓ |
+
+### ⭐⭐⭐ BÀI HỌC LỚN NHẤT CỦA F2 — ⭐ TÔI ĐÃ MẤT **4 VÒNG** VÌ ĐOÁN
+
+| Vòng | ⭐ Tôi đoán | ⭐ Kết quả |
+|---|---|---|
+| 1 | «thiếu quyền `purchasing`» | ⛔ **SAI** — ⭐ `RbacService` **loại trừ `admin`**, và `approve_po` có `admin` trong danh sách vai trò ✓ |
+| 2 | «chưa biết» | ⚠️ trung thực nhưng ⛔ **vô ích** |
+| 3 | «sửa `schema-h2.sql`» | ⚠️ **ĐÚNG Ý nhưng SAI TỆP** — ⭐ `web/src/**main**/` thay vì `web/src/**test**/` ✓ |
+| ⭐ **4** | ⭐ **ĐỌC NGĂN XẾP LỖI THẬT** | ✅ **ĐÚNG NGAY** ✓ |
+
+⭐⭐ **LUẬT MỚI (⭐ bắt buộc từ nay)**:
+> ⭐ **KHI `mvn -o test` ĐỎ ⇒ ĐỌC `java-backend/web/target/surefire-reports/*.txt` NGAY LẬP TỨC —
+> ⛔ TRƯỚC MỌI SUY LUẬN VÀ ⛔ TRƯỚC KHI HOÀN NGUYÊN** ✓
+> ⭐ Lần chạy **XANH** kế tiếp sẽ **GHI ĐÈ** mất bằng chứng ✓ — ⭐ **tôi đã tự xoá mất bằng chứng 2 LẦN trong ngày** ⚠️
+> ⭐ **ĐỌC MÃ ⛔ KHÔNG THAY THẾ ĐƯỢC ĐỌC NGĂN XẾP LỖI THẬT** ✓
+> ⭐ **MỘT TỆP SCHEMA CÓ THỂ CÓ NHIỀU BẢN** (`main/` vs `test/`) ⇒ ⭐ **phải xác định bản NÀO đang được dùng** trước khi sửa ✓
+> ⚠️ ⭐ **Khi kiểm thông điệp tiếng Việt từ JSON ⇒ ⛔ ĐỪNG khớp chuỗi thô** — ⭐ JSON **escape unicode** (`ch\u01B0a`) ⇒ ⭐ phải **in ra và đọc bằng mắt**, hoặc so sau khi `ConvertFrom-Json` ✓ (⭐ tôi đã mắc **3 lần**) ✓
+
+---
+
+# VÒNG 80 · 06/10/2026 — NGHIỆM THU E2E + 2 BUG `VERIFIED` + KHOẢNG TRỐNG QUYỀN `e2e.*`
+
+**PHIÊN**: `ERP-SESSION-01` · ⭐ chạy song song với **`ERP-SESSION-02`** (⭐ `TASK-226` «HUB KHO VẬT TƯ») ✓
+⚠️ **TÁCH VÙNG**: 01 = «phân quyền + báo lỗi + mua hàng» · 02 = «kho vật tư» ✓ — ⛔ **không đụng mã nguồn của nhau** ✓
+
+---
+
+## ① ⭐⭐ `/VERIFIED` hai bug — ⭐ USER XÁC NHẬN BẰNG MẮT
+
+| Bug | ⭐ Trước | ⭐ Nay | ⭐ Bằng chứng |
+|---|---|---|---|
+| **BUG-20261006-001** — danh sách báo lỗi rỗng với MỌI tài khoản | `FIXED` | ⭐ **`VERIFIED`** | ⭐ User nói: «**đã hiển thị báo lỗi**» ✓ |
+| **BUG-20261006-006** — nút bước 14 bị **khoá oan** với tài khoản `admin` | `FIXED` | ⭐ **`VERIFIED`** | ⭐ Cùng lần xác nhận trên ✓ |
+
+### ⭐ BUG-20261006-006 — ⭐ **LỖI DO CHÍNH TÔI GÂY RA** (⭐ ghi rõ để ⛔ không lặp)
+| Trường | ⭐ Nội dung |
+|---|---|
+| **TRIỆU CHỨNG** | ⭐ User: «tab Báo lỗi **vẫn chưa** hiển thị thông tin» — ⭐ **sau khi** tôi đã vá BUG-001 |
+| **ROOT CAUSE** | ⚠️ Bản vá **BUG-B** của tôi khoá nút bước 14 bằng `hasAdminTab(data,"admin")` ⚠️ — ⭐ hàm này **CHỈ đọc `allModulePermissions`** ⚠️ **nhưng tài khoản `admin` có ⛔ 0 DÒNG QUYỀN MODULE** (⭐ ĐO: `so_dong_quyen = 0`) ⇒ ⭐ `hasAdminTab` trả **FALSE** ⇒ ⭐ **NÚT BỊ KHOÁ VĨNH VIỄN** ✓ |
+| ⭐ **VÌ SAO API VẪN CHẠY** | ⭐ **`RbacService` LOẠI TRỪ vai trò `admin`** khỏi kiểm module (⭐ đo: gọi thật `error_reports` bằng admin ⇒ **HTTP 200 · 18 báo cáo**) ⚠️ **nhưng UI ⛔ không biết** ⇒ ⭐ **UI chặt hơn API** ✓ |
+| **FIX** | ⭐ `isAdminUser(data.user) \|\| hasAdminTab(data,"admin")` — ⭐ dùng **helper CÓ SẴN CỦA NHÀ** (`lib/permissions.ts:13`), ⭐ chính nhà dùng nó ở `modulePermission` (dòng 16: `if (isAdminUser(data.user)) return { canView: true, … }`) ✓ |
+| **FILE** | `app/page.tsx` (⭐ dòng ~2689) |
+| **TEST** | ✅ `npm run build` EXIT=0 · ✅ cổng UI **3/3** · ✅ ⭐ **CHUỖI ĐẶC TRƯNG CÓ TRONG BUNDLE PHỤC VỤ**: «Chỉ tài khoản được cấp quyền xem báo lỗi mới mở được bước này» ✓ |
+| **STATUS** | ⭐ **`VERIFIED`** (⭐ user xác nhận) ✓ |
+
+⭐⭐ **BÀI HỌC**: ⭐ **`hasAdminTab` ⛔ KHÔNG thay thế được `isAdminUser`** ⚠️ — ⭐ **kiểm quyền module phải LUÔN tính cả vai trò `admin`** ✓ (⭐ vì admin **đi ngoài** qua `RbacService`) ✓
+
+---
+
+## ② ⭐ NGHIỆM THU E2E — **7/8 ĐẠT · ⛔ KHÔNG REGRESSION**
+
+| ⭐ Bài | ⭐ Kết quả |
+|---|---|
+| `go-live-bao-loi-danh-dau-xong` | ✅ **3/3** |
+| `go-live-phu-toan-bo-delete` | ✅ PASS |
+| `go-live-kiem-30-action-con-lai` | ✅ **30/30** |
+| `go-live-kiem-ung-vien-500` | ✅ **8/8** |
+| `go-live-kiem-tham-so-meo` | ✅ **49/49** |
+| `go-live-thanh-cong-danh-muc-vt` | ✅ **7/7** |
+| `go-live-thanh-cong-chung-tu-kt` | ✅ **6/6** |
+| ⚠️ `go-live-chuoi-kho` | ⚠️ **5/9 nghiệp vụ** — ⛔ hỏng vì **THIẾU QUYỀN `e2e.*`** (⭐ xem ③) |
+
+⇒ ⭐⭐ **7 BẢN VÁ CỦA TÔI ⛔ KHÔNG GÂY REGRESSION NÀO** ✓✓✓
+
+---
+
+## ③ 🐛 **KHOẢNG TRỐNG DỮ LIỆU KIỂM THỬ** (⭐ ⛔ KHÔNG phải lỗi sản phẩm, ⛔ KHÔNG do tôi)
+
+| Trường | ⭐ Nội dung |
+|---|---|
+| **TRIỆU CHỨNG** | ⭐ `go-live-chuoi-kho.mjs`: **6/7 lỗi** — ⛔ **CÙNG MỘT THÔNG ĐIỆP**: «**Tài khoản chưa được quản trị viên cấp đúng quyền cho thao tác này**» (⭐ HTTP **403**) ✓ |
+| **CÁC ACTION HỎNG** | ⭐ `issue_stock` · `approve_stock_issue` · `issue_stock_confirm` · `confirm_stock_issue` · `return_stock` · `create_transfer_order` ✓ |
+| **MODULE CHÚNG CẦN** (⭐ đọc `ActionRbacRegistry`) | ⭐ `issue_stock` → `teams`+`warehouse_issue` (:159) · `approve_stock_issue` → `approvals` (:36) + **`canApprove`** (:322) · `issue_stock_confirm` → `warehouse_issue` (:42) · `return_stock` → `teams`+`stocktake` (:183) · `create_transfer_order` → `inventory` (:100) ✓ |
+| ⭐⭐ **CHỨNG MINH ⛔ KHÔNG DO TÔI** | ⭐ **ĐỐI CHIẾU BẢNG SAO LƯU `backup_ump_20261006`** (⭐ chụp TRƯỚC khi tôi dọn 570 dòng): ⭐ **`e2e.cht` 60→60 · `e2e.tk` 60→60 · `e2e.to` 60→60 · cả 14 tài khoản ⛔ KHÔNG ĐỔI** ✓ · ⭐ **«dòng bị xoá THUỘC về `e2e.*`» = 0** ✓ |
+| **KẾT LUẬN** | ⭐ **LỖI DỮ LIỆU KIỂM THỬ CÓ SẴN** — ⭐ tài khoản `e2e.*` **thiếu dòng quyền cho các module trên** (⭐ hoặc có dòng nhưng `canUse=0`) ✓ ⛔ **KHÔNG phải lỗi sản phẩm** ✓ ⛔ **KHÔNG phải do tôi** ✓ |
+| **CÁCH SỬA** | ⭐ Cấp thêm module **`teams` · `warehouse_issue` · `approvals` · `stocktake` · `inventory`** cho `e2e.tk`/`e2e.to`/`e2e.cht` ⭐ với `canUse` (⭐ và `canApprove` cho `approve_stock_issue`) ✓ — ⚠️ **là GHI CSDL** ⇒ ⭐ **chờ user cho phép** ✓ |
+| **STATUS** | ⚠️ **CHƯA SỬA** (⭐ chờ cho phép) · ⭐ **ĐÃ GHI NHẬN** ✓ |
+
+⚠️ **CẢNH BÁO**: ⭐ **33/76 bài E2E dùng tài khoản `e2e.*`** ⇒ ⭐ các bài cần 5 module trên **sẽ 403** cho tới khi cấp quyền ✓
+
+---
+
+## ④ ⛔ **ĐÍNH CHÍNH 2 KẾT LUẬN SAI CỦA TÔI** (⭐ ⛔ đừng tin chúng)
+
+| ⭐ Tôi từng nói | ⭐ **SỰ THẬT ĐO ĐƯỢC** |
+|---|---|
+| ⛔ «Mật khẩu `e2e.*` **đã ĐỔI** — `Vn@2026Test` nay **401**» ⇒ ⭐ **đã XIN user mật khẩu mới** ⚠️ | ⭐ **SAI** — ⭐ **đo lại: CẢ 14 tài khoản `e2e.*` đăng nhập được HTTP 200** với `Vn@2026Test` ✓ ⇒ ⭐ **MỤC ĐÓ ĐÃ HUỶ, ⛔ không cần user làm gì** ✓ |
+| ⛔ «Nghi vấn số 1: **browser cache**» (⭐ khi user báo tab phòng ban thiếu nút) | ⭐ **SAI** — ⭐ **bundle đang phục vụ lúc đó THẬT SỰ THIẾU** 2 bản vá (`«Cả dòng»` · `"crow"` ⛔ không có trong `page-CygT2G3w.js`) ✓ ⇒ ⭐ **USER BÁO ĐÚNG** ✓ |
+
+---
+
+## ⑤ ⭐⭐⭐ **7 LỖI ĐO CỦA TÔI TRONG NGÀY** — ⭐ CÙNG MỘT LOẠI: **TIN KẾT QUẢ ÂM TÍNH TỪ PHÉP ĐO HỎNG**
+
+| # | ⭐ Tôi kết luận từ… | ⭐ **SỰ THẬT** |
+|---|---|---|
+| 1–2 | ⭐ tìm chuỗi Việt trong **bundle minify** ⇒ «không có» | ⛔ Bundle lưu **RAW**, ⛔ không escape — ⭐ tôi tìm **dạng `\u`** ⚠️ |
+| 3 | ⭐ tìm chuỗi Việt trong **JSON API** ⇒ «không có» | ⛔ JSON **escape** `ch\u01B0a` — ⭐ lần này tôi lại tìm **RAW** ⚠️ |
+| 4 | ⭐ `Get-ChildItem 'app' -Include '*.css'` ⇒ **4 ký tự** | ⛔ CSS thật ở **`app/globals.css`** (363 KB) ⚠️ |
+| 5 | ⭐ tìm `dept-perm` **chỉ trong `globals.css`** ⇒ «thiếu CSS» | ⛔ Nó ở **`app/styles/canonical.css`** §11 (**20 quy tắc**, ⭐ có cả chú thích nhà «Nút gom về MỘT HÀNG») ⚠️ |
+| 6 | ⭐ `src="…"` để lấy bundle từ HTML ⇒ **0 tệp** | ⛔ Next.js dùng **`<link rel="modulepreload" href="…">`** ⚠️ |
+| ⭐ **7** | ⭐ **MỘT lần** đăng nhập 401 ⇒ «mật khẩu đã đổi» | ⛔ **Sai** — ⭐ **đo lại thì 200 OK** ⚠️ |
+
+### ⭐⭐⭐ LUẬT BẮT BUỘC (⭐ ghi để ⛔ không lặp)
+> ⭐ **TRƯỚC KHI TIN MỘT KẾT QUẢ «KHÔNG CÓ» / «ĐÃ ĐỔI», PHẢI KIỂM 3 ĐIỀU:**
+> ① ⭐ **Phép đo có ĐỌC ĐƯỢC dữ liệu thật không?** ⚠️ → ⭐ **số vô lý = PHÉP ĐO HỎNG** ⛔ không phải code thiếu ✓
+> &nbsp;&nbsp;&nbsp;📍 **Dấu hiệu đã gặp**: «so bundle = **0**» · «tổng ký tự CSS = **4**» ✓
+> ② ⭐ **Đã kiểm HẾT nguồn chưa?** (`globals.css` **+** `canonical.css` **+** CSS đã build) ✓
+> ③ ⭐ **Dạng dữ liệu có bị escape/biến đổi không?** (minify · JSON) ✓
+> ⭐ **VÀ**: ⭐ **MỘT LẦN đo thất bại ⛔ KHÔNG ĐỦ để kết luận «đã đổi»** — ⭐ **phải THỬ LẠI ≥2 lần** + ⭐ **kiểm trạng thái trong CSDL** ⛔ **trước khi biến nó thành YÊU CẦU cho user** ✓
+
+---
+
+## ⑥ ⭐ PHƯƠNG PHÁP **ĐÚNG** ĐỂ KIỂM «BUNDLE PHỤC VỤ CÓ BẢN VÁ CHƯA» (⭐ copy được)
+```powershell
+# ① lấy danh sách bundle — ⭐ dùng href, ⛔ KHÔNG chỉ src
+$h  = (Invoke-WebRequest -Uri 'http://127.0.0.1:8787/' -UseBasicParsing).Content
+$fs = [regex]::Matches($h,'(?:href|src)="(/assets/[^"]+\.js)"') | % { $_.Groups[1].Value } | Select-Object -Unique
+# ② TẢI VỀ ĐĨA rồi đọc (⭐ ⛔ đừng đọc Content trực tiếp)
+Invoke-WebRequest -Uri ('http://127.0.0.1:8787'+$big) -OutFile $tmp -UseBasicParsing
+$js = [System.IO.File]::ReadAllText($tmp)
+# ③ tìm chuỗi tiếng Việt **RAW** (⭐ ⛔ KHÔNG escape)
+$js.Contains('Không tải được danh sách báo lỗi')
+```
+⭐ **VÀ LUÔN**: `node tools/verify-ui-build-applied.mjs --port=8787` ⇒ ⭐ phải thấy **`✓ byte 6/6`** + **`KET LUAN: BAN CHAY DUNG BAN DA BUILD MOI NHAT`** ✓
+
+---
+
+## ⑦ 🚨 MỐI NGUY ĐA PHIÊN **THẬT** — ⭐ `dist/` ĐỔI THEO NGƯỜI BUILD CUỐI
+
+📍 **ĐO ĐƯỢC** (⭐ bundle trang đổi **3 LẦN** trong một phiên):
+```
+page-CQTVKoge.js   ← build của SESSION-01
+page-CygT2G3w.js   ⚠️ ĐỔI — ⭐ VÀ BUNDLE NÀY ⛔ THIẾU 2 BẢN VÁ CỦA SESSION-01  ← ⭐ LÚC USER BÁO LỖI
+page-CcbWX2ln.js   ← build lại của SESSION-01 — ✅ ĐÃ CÓ ĐỦ 7 bản vá
+```
+### ⭐ LUẬT BẮT BUỘC CHO **CẢ HAI PHIÊN** (§36 «same generated output»)
+1. ⭐ **Trước khi báo user test ⇒ PHẢI**: ① `npm run build` ② **khởi động lại cổng theo ĐÚNG PID** ③ `verify-ui-build-applied.mjs` ④ ⭐ **kiểm CHUỖI ĐẶC TRƯNG của mình có trong bundle** ✓
+2. ⚠️ **Nếu phiên kia vừa build xong** ⇒ ⭐ bundle có thể **thiếu thay đổi mới nhất của mình** ⇒ ⭐ **build lại + restart + kiểm lại** ✓
+3. ⛔ **KHÔNG kết luận «do cache trình duyệt»** khi ⭐ **chưa chứng minh bundle chứa bản vá** ✓ — ⭐ **tôi đã kết luận sai như vậy và nói sai với user** ⚠️ ✓
+
+---
+
+# VÒNG 81 · 06/10/2026 — BUG-20261007-001 «LƯU PHÂN QUYỀN PHÒNG BAN ĐỢI RẤT LÂU»
+
+**PHIÊN**: `ERP-SESSION-01` · ⭐ §5 đủ **13 trường**
+
+| ⭐ Trường | ⭐ Nội dung |
+|---|---|
+| **MÃ BUG** | `BUG-20261007-001` |
+| **MỨC** | ⭐ **CHẶN NGƯỜI DÙNG** (§21 mức 4) — ⭐ ⛔ không phải cosmetic ✓ |
+| **TRIỆU CHỨNG** (user, nguyên văn) | «tab phần quyền phòng ban khi bấm **chọn tất cả** -> bấm **lưu** thì nút lưu hiện trạng thái **đang lưu** nhưng **đợi rất lâu không thấy phản hồi**» ✓ |
+| **PHẠM VI** | ⭐ Tab «Phân quyền phòng ban» (AD-08) · ⭐ nút «Chọn tất cả» + «Lưu» ✓ |
+| **ROOT CAUSE** (⭐ ĐO THẬT, ⛔ không suy đoán) | ① ⭐ **MỘT** lời gọi `save_department_permission` = ⭐ **11,50 GIÂY** (⭐ đo trên `:9000` — HTTP 200) ✓<br>② ⭐ vì backend chạy **`syncDepartmentUsers`** (`UserManagementUseCase.java:632`) **SAU MỖI lần lưu** ⇒ ⭐ lặp qua **27 tài khoản** × **`replaceDepartmentDefaults`** (:484) ⭐ lặp qua **61 module** ⇒ ⭐ **~1.647 lượt truy vấn+ghi cho MỘT lần lưu** ⚠️<br>③ ⚠️ **«Chọn tất cả» = 61 module** ⇒ ⭐ vòng lặp frontend gọi **TUẦN TỰ 61 lần** ⇒ ⭐ **61 × 11,5s ≈ 701 giây ≈ 11,7 PHÚT** ⚠️<br>④ ⚠️ VÀ ⭐ **⛔ KHÔNG có tiến độ** ⇒ ⭐ nút chỉ hiện «Đang lưu…» ⇒ ⭐ **trông như TREO** ✓ |
+| **BẰNG CHỨNG CSDL** | ⭐ `department_module_permissions` của phòng **`ORG-BGD`** (`code` = `BGD`, «Ban giám đốc»):<br>⭐ `updated_at` chạy **13:33:19.122 → 13:40:09.404** (**~7 PHÚT**) rồi **DỪNG GIỮA CHỪNG** ⚠️<br>⇒ ⭐ **55/61 module ĐÃ lưu** ✓<br>⚠️ **6 module ⛔ CHƯA** (⭐ vẫn giữ `updated_at = 2026-09-18 00:57:49.455`): `dept_plan_contracts` · `dept_plan_price_data` · `dept_plan_suppliers` · `dept_plan_supply` · `payments` · `supplier_catalog` ✓<br>⇒ ⭐ **user rời trang trước khi xong** vì ⛔ không thấy tiến độ ✓<br>📐 **Mẫu số đúng**: ⭐ `module_catalog` có **76 module đang bật** · ⭐ BGD có **61** ⇒ ⭐ **15 module ⛔ không thuộc phạm vi phòng ban** ✓ |
+| **TỆP SỬA** | `app/page.tsx` — ⭐ hàm `save()` (⭐ dòng ~1933) ✓ |
+| **CÁCH SỬA** (⭐ §12 «nhỏ · an toàn · ⛔ không đụng backend») | ① ⭐ **HIỆN TIẾN ĐỘ THẬT** sau **mỗi lô**: «**⏳ Đang lưu 5/61 chức năng… (⭐ vui lòng ⛔ đừng rời trang)**» ⇒ ⭐ **⛔ không bao giờ trông như treo** ✓<br>② ⭐ **GỌI SONG SONG THEO LÔ 4** (`Promise.all`) ⇒ ⭐ **nhanh ~4 lần** ⇒ ⭐ **~3 phút thay vì ~12** ✓<br>⚠️ **VÌ SAO LÔ 4** (⛔ không phải 61): ⭐ mỗi lời gọi ghi **~1.647 dòng** ⚠️ ⇒ ⭐ gọi 61 lời cùng lúc sẽ **tranh khoá CSDL** ⚠️ ⇒ ⭐ **lô 4 là mức an toàn** ✓ |
+| **TEST** (§10) | ✅ `npm test` **EXIT=0 · pass 802 · fail 0** ✓<br>✅ `npm run build` **EXIT=0** · `Route (app)` = True ✓<br>✅ **Cổng UI 3/3** «BẢN CHẠY ĐÚNG BẢN ĐÃ BUILD MỚI NHẤT» ✓<br>✅ ⭐ **CHUỖI ĐẶC TRƯNG CÓ TRONG BUNDLE PHỤC VỤ** (⭐ phương pháp ĐÚNG): «⏳ Đang lưu » ✅ · «vui lòng ⛔ đừng rời trang» ✅ ✓ |
+| **HỒI QUY** (§25) | ✅ ⭐ `:8787` **và** `:9000` **cùng** phục vụ `page-BSHvuT1H.js` (⭐ 1038,6 KB) ⭐ **đều CÓ chuỗi tiến độ mới** ✓<br>✅ ⭐ 7 bản vá trước ⛔ **không bị ảnh hưởng** ✓<br>✅ Vân tay **ĐẠT** `VNTECH-FP-03E43CA917A18A30` · **716 tệp** ✓ |
+| **STATUS** | ⭐ **`FIXED`** (⭐ code sửa + test đạt) — ⚠️ **CHỜ USER `VERIFY`** (§24) ✓ |
+| **CÒN LẠI** | ⛔ `deleteSelected()` (⭐ xoá quyền) **cũng gọi TUẦN TỰ y hệt** ⚠️ — ⭐ **CHƯA sửa** để giữ thay đổi **nhỏ và an toàn** ✓ |
+| **BÀI HỌC** | ⭐ **MỘT lời gọi API 11,5 giây là dấu hiệu backend làm việc NẶNG GẤP BỘI** ⚠️ — ⭐ phải **ĐO thời gian 1 lời gọi** trước khi đoán «treo» hay «lỗi» ✓<br>⭐ **VÀ**: ⭐ **thiếu TIẾN ĐỘ ⇒ user rời trang ⇒ dữ liệu lưu DỞ DANG** ⚠️ — ⭐ đó là **hỏng dữ liệu thật**, ⛔ không chỉ là vấn đề UI ✓<br>⭐ **BẰNG CHỨNG**: ⭐ 55/61 module lưu được rồi **dừng** ⇒ ⭐ **6 module còn nguyên quyền CŨ** ✓ |
+
+
+---
+
+<!-- ===== ERP-SESSION-02 · TASK-226 · APPEND ngày 2026-10-06 · ⛔ KHÔNG sửa nội dung phía trên ===== -->
+
+# ✅ TASK-226 — HUB «KHO VẬT TƯ» · HOÀN THÀNH (ERP-SESSION-02 · 2026-10-06)
+
+> Mục này do **`ERP-SESSION-02`** **APPEND** (⛔ không sửa/xoá bất kỳ nội dung nào có sẵn của phiên khác).
+> Nguồn sự thật đầy đủ: `docs/agent-progress/TASK-226.md` (564 dòng) · `docs/dsh-mutil-session/SESSION_B/*` (9 log).
+
+## Trạng thái: **DONE (mã) — ĐÃ BUILD — ĐANG PHỤC VỤ — chờ user nghiệm thu**
+
+| # | Yêu cầu user | Trạng thái |
+|---|---|---|
+| 1 | Click menu ⇒ **dashboard tồn kho** + tabbar **3 tab** (KHO · XUẤT & NHẬP · CẤP PHÁT & HOÀN TRẢ) | ✅ |
+| 2 | **Tab KHO**: card kho **Tên · Mã · Dự án · Tồn hiện tại** | ✅ |
+| 3 | Kho **DỰ ÁN** chỉ hiện với **thành viên dự án** | ✅ |
+| 4 | **Ngoại lệ BAN GIÁM ĐỐC/ADMIN/IT** xem **tất cả kho** (thao tác theo quyền module) | ✅ |
+| 5 | Click card ⇒ **MÀN CHI TIẾT KHO** + nút quay lại + **5 tab** | ✅ |
+| 6 | **Tab XUẤT & NHẬP** + **Tab CẤP PHÁT & HOÀN TRẢ** (subtab theo quyền + CRUD/tìm/sắp xếp/lọc) | ✅ |
+| 7 | **GOM 7 mục menu → 1 mục «Kho vật tư»** | ✅ |
+
+## Bug đã sửa (4 lỗi CÓ SẴN — ⛔ không do phiên này tạo ra)
+| Bug | Severity | Root Cause (ngắn) | Status |
+|---|---|---|---|
+| Card kho hiện **UUID** thay vì tên | MEDIUM | đọc `w.warehouseName/warehouseCode/warehouseType` — **3 trường ⛔ KHÔNG tồn tại** | FIXED |
+| **Tìm kiếm / sắp xếp kho ⛔ không chạy** + **Excel cột Mã/Tên RỖNG** | HIGH | cùng gốc trên ⇒ mọi so khớp `undefined` | FIXED |
+| Nhãn **loại kho luôn sai** | MEDIUM | đọc `w.warehouseType` ⛔ không tồn tại | FIXED |
+| **«Số phiếu xuất» luôn = 0** | HIGH | lọc `issues[]` theo `warehouseId` — **trường ⛔ KHÔNG có trong `issues[]`** | FIXED |
+
+## Cổng nghiệm thu (đo được)
+```
+npx tsc --noEmit                    -> EXIT=0
+npm run test:regression             -> EXIT=0  (803 test · 802 pass · 0 fail · 1 skip)
+tests/warehouse-hub.test.mjs        -> 22/22 PASS
+node tools/gd-cycle.mjs "<nhãn>"    -> GD_EXIT=0
+   FULL W2 SOURCE PREFLIGHT  : ĐẠT
+   VNTECH FINGERPRINT        : ĐẠT  VNTECH-FP-121300BEED7174E4 (716 file)
+   BUILT ARTIFACT VALIDATION : ĐẠT
+Java :18081 · UI :8787 · proxy :9000 -> đều 200 · asset ĐỔI HASH /assets/index-BjTKD8Zf.css
+```
+
+## ⚠️ 1 việc CÒN MỞ — `BUG-20261006-005` (`Status: OPEN`)
+**Cổng ảnh: KHÔNG ĐẠT ❌ 68/68 ảnh lệch** — **nguyên nhân: `tools/baseline/` CŨ 5 NGÀY** (tất cả 68 ảnh cùng mốc **01/10 16:53:14**, hôm nay **06/10**)
+⇒ **lệch HỆ THỐNG**, ⛔ **KHÔNG phải 68 lỗi** và ⛔ **không do thay đổi của phiên này** (màn kho lệch giống hệt các màn phiên này ⛔ chưa từng đụng).
+⛔ **KHÔNG chạy `--update`** (cập nhật ảnh chuẩn) — làm vậy là **CHE LỖI**. **Cần user quyết định** và nên chụp ở trạng thái **đã biết là TỐT**.
+
+## ⛔ Chưa commit
+Luật 25 `AUTO_COMMIT = FALSE` — **chờ user cho phép**.
+
+## Tệp đã thay đổi (ERP-SESSION-02)
+`lib/warehouse-hub.ts` (MỚI) · `tests/warehouse-hub.test.mjs` (MỚI) · `app/screens/Inventory.tsx` · `tests/w04-inventory-dashboard.test.mjs` ·
+`lib/menu-helpers.ts` · `tests/w01-warehouse-menu.test.mjs` · `tests/mt3-ui-29-view-collision-diagnostic.test.mjs` ·
+`docs/agent-progress/TASK-226.md` (MỚI) · `docs/dsh-state/00_GOAL_S4_MAPPING.md` (MỚI) · `docs/dsh-mutil-session/**` (MỚI · 24 tệp)
+<!-- ===== HẾT mục APPEND của ERP-SESSION-02 ===== -->

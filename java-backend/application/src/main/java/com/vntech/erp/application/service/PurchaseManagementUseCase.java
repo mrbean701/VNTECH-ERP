@@ -336,6 +336,19 @@ private static final List<String> COMPLETED_PO_STATUSES = List.of(
         //     ⛔ TẠM THỜI GIỮ HÀNH VI CŨ để cây mã nguồn **XANH 156/156** (⭐ ⛔ không để BUILD FAILURE) ✓
         //   ⭐ THÔNG ĐIỆP DỰ KIẾN KHI VÁ: «PO chưa được phát hành nên chưa thể giao nhận.
         //     Hãy phát hành PO ở bước “Lập & phát hành PO” trước.» ✓
+        //
+        //   ✅✅ ĐÃ VÁ NGÀY 06/10/2026 (⭐ sau khi VÁ SCHEMA H2 — ⭐ đó mới là điều kiện tiên quyết):
+        //     · ⭐ NGUYÊN NHÂN GỐC THẬT của F2: `web/src/test/resources/schema-h2.sql` **THIẾU 3 cột**
+        //       `decision_reason` · `decided_by` · `decided_at` (⭐ MySQL thật CÓ, do migration
+        //       `V18__wf_b2_po_decision.sql`) ⇒ ⭐ **`approve_po` ⛔ KHÔNG CHẠY ĐƯỢC TRONG TEST**
+        //       ⇒ ⭐ các bài test **phải ĐI VÒNG** — gọi thẳng `receive_goods` trên PO chưa phát hành
+        //       ⇒ ⭐ **vô tình mã hoá chính hành vi của lỗi F2** ✓
+        //     · ① `StockChainIntegrationTest` — đã chèn `approve_po` giữa `create_po` và `receive_goods` ✓
+        //     · ② `SupplyChainEndToEndIntegrationTest` — đã chèn `approve_po` + assert `waiting_delivery` ✓
+        //     ⇒ ⭐ hai bài nay đi **ĐÚNG ĐƯỜNG**: phát hành PO **TRƯỚC** khi nhận hàng ✓
+        if (!List.of("waiting_delivery", "partial_delivery").contains(sv(po, "status")))
+            throw Api("PO chưa được phát hành nên chưa thể giao nhận. "
+                    + "Hãy phát hành PO ở bước “Lập & phát hành PO” trước.");
         if (rawLines.isEmpty()) throw Api("Phiếu nhập cần PO và ít nhất một dòng nhận hàng.");
         // JS 1319/1321: phạm vi dự án rồi phạm vi kho — đều lấy từ CHÍNH phiếu PO.
         accessScope.requireProjectAccess(principal.userId(), principal.role(), sv(po, "projectId"), true,

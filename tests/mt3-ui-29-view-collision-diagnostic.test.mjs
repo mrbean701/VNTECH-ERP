@@ -49,14 +49,14 @@ function collisions() {
 
 test("CHẨN ĐOÁN: `view=\"dashboard\"` bị dùng cho CẢ `my_work` VÀ `warehouse` (lỗi có sẵn)", () => {
   const hit = collisions();
-  assert.ok(hit.length > 0,
-    "⚠️ KHÔNG còn va chạm `view` nào. Nếu đã sửa `activateModule` ⇒ **XOÁ bài này** và bỏ ghi chú "
-    + "`HUB_TAB_GROUP_KEYS` trong `lib/menu-helpers.ts` để bật lại tab cho `my_work`/`warehouse`.");
-
-  const dashboard = hit.find((c) => c.view === "dashboard");
-  assert.ok(dashboard, "kỳ vọng: `dashboard` vẫn là view bị dùng trùng");
-  assert.deepEqual(dashboard.groups.sort(), ["my_work", "warehouse"],
-    "kỳ vọng: `dashboard` dùng cho đúng 2 nhóm my_work + warehouse");
+  // 📌 CẬP NHẬT **06/10/2026** (`ERP-SESSION-02` · `TASK-226`): nhóm `warehouse` đã **GOM 7 → 1 mục** và mục
+  //    «Kho vật tư» ⛔ **KHÔNG còn `view: "dashboard"`** (dashboard nay là **TAB ĐẦU của tab «KHO»** trong hub
+  //    `app/screens/Inventory.tsx`) ⇒ **VA CHẠM `view` ĐÃ HẾT** cho nhóm `warehouse`.
+  //    Bài test nay khẳng định **KHÔNG còn va chạm** (⭐ **CẢI THIỆN THẬT** — ⛔ KHÔNG tắt cổng: vẫn kiểm
+  //    đúng điều cần kiểm, chỉ đổi CHIỀU kỳ vọng cho khớp thực tế mới).
+  const warehouseCollisions = hit.filter((c) => c.groups.includes("warehouse"));
+  assert.equal(warehouseCollisions.length, 0,
+    "Nhóm «Kho» KHÔNG được còn va chạm `view` với nhóm khác — đo được: " + JSON.stringify(warehouseCollisions));
 
   console.log(`   [đã biết] view bị dùng trùng: ${hit.map((c) => c.view + "→" + c.groups.join("+")).join(", ")}`);
 });

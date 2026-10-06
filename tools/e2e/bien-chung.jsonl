@@ -6444,3 +6444,423 @@
 {"ts":"2026-10-06T04:26:37.777Z","loai":"action","action":"receive_central_return","ok":true,"status":200,"loi":null,"nhan":"nhận KT-RET-PRJ-2026-0010","user":"admin"}
 {"ts":"2026-10-06T04:26:37.832Z","loai":"upload","entityType":"central_return","entityId":"CRET_b6dac1c5-9f92-4a3d-ab40-3d5058973b0b","tenTep":"e2e-kiem-dem.png","status":201,"ok":true,"user":"admin"}
 {"ts":"2026-10-06T04:26:37.938Z","loai":"action","action":"receive_central_return","ok":true,"status":200,"loi":null,"nhan":"nhận KT-RET-PRJ-2026-0012","user":"admin"}
+{"ts":"2026-10-06T06:23:31.797Z","loai":"login","username":"e2e.kh","status":200}
+{"ts":"2026-10-06T06:23:31.932Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:31.971Z","loai":"action","action":"save_error_report","ok":true,"status":200,"loi":null,"nhan":"","user":"e2e.kh"}
+{"ts":"2026-10-06T06:23:31.972Z","loai":"buoc","ten":"gửi báo lỗi","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:32.564Z","loai":"login","username":"admin","status":200}
+{"ts":"2026-10-06T06:23:32.599Z","loai":"action","action":"error_reports","ok":true,"status":200,"loi":null,"nhan":"tim-moi","user":"admin"}
+{"ts":"2026-10-06T06:23:32.638Z","loai":"action","action":"mark_error_report_resolved","ok":true,"status":200,"loi":null,"nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:32.639Z","loai":"buoc","ten":"mark_error_report_resolved (resolved=true)","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:32.672Z","loai":"action","action":"error_reports","ok":true,"status":200,"loi":null,"nhan":"doc-lai","user":"admin"}
+{"ts":"2026-10-06T06:23:32.723Z","loai":"action","action":"mark_error_report_resolved","ok":true,"status":200,"loi":null,"nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:32.724Z","loai":"buoc","ten":"mark_error_report_resolved (resolved=false)","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:32.753Z","loai":"action","action":"error_reports","ok":true,"status":200,"loi":null,"nhan":"doc-lai","user":"admin"}
+{"ts":"2026-10-06T06:23:33.382Z","loai":"login","username":"admin","status":200}
+{"ts":"2026-10-06T06:23:33.408Z","loai":"action","action":"mark_error_report_resolved","ok":false,"status":400,"loi":"Không tìm thấy report ERPT_khong_ton_tai_xyz.","nhan":"am-ma-khong-ton-tai","user":"admin"}
+{"ts":"2026-10-06T06:23:33.438Z","loai":"action","action":"mark_error_report_resolved","ok":false,"status":400,"loi":"Thiếu mã report.","nhan":"am-thieu-ma","user":"admin"}
+{"ts":"2026-10-06T06:23:33.970Z","loai":"login","username":"e2e.kh","status":200}
+{"ts":"2026-10-06T06:23:33.981Z","loai":"action","action":"mark_error_report_resolved","ok":false,"status":403,"loi":"Tài khoản chưa được quản trị viên cấp đúng quyền cho thao tác này.","nhan":"B5-user-thuong","user":"e2e.kh"}
+{"ts":"2026-10-06T06:23:34.549Z","loai":"login","username":"admin","status":200}
+{"ts":"2026-10-06T06:23:34.576Z","loai":"action","action":"error_reports","ok":true,"status":200,"loi":null,"nhan":"doc-lai","user":"admin"}
+{"0":"g","1":"o","2":"-","3":"l","4":"i","5":"v","6":"e","7":"-","8":"b","9":"a","10":"o","11":"-","12":"l","13":"o","14":"i","15":"-","16":"d","17":"a","18":"n","19":"h","20":"-","21":"d","22":"a","23":"u","24":"-","25":"x","26":"o","27":"n","28":"g","ts":"2026-10-06T06:23:34.576Z"}
+{"ts":"2026-10-06T06:23:35.310Z","loai":"login","username":"admin","status":200}
+{"ts":"2026-10-06T06:23:35.332Z","loai":"action","action":"delete_accounting_voucher","ok":false,"status":400,"loi":"Không tìm thấy chứng từ.","nhan":"D-delete_accounting_voucher","user":"admin"}
+{"ts":"2026-10-06T06:23:35.355Z","loai":"action","action":"delete_advance_request","ok":false,"status":400,"loi":"Không tìm thấy phiếu tạm ứng.","nhan":"D-delete_advance_request","user":"admin"}
+{"ts":"2026-10-06T06:23:35.379Z","loai":"action","action":"delete_approval_stage","ok":false,"status":400,"loi":"Không tìm thấy bước phê duyệt.","nhan":"D-delete_approval_stage","user":"admin"}
+{"ts":"2026-10-06T06:23:35.407Z","loai":"action","action":"delete_benefit_record","ok":false,"status":400,"loi":"Không tìm thấy bản ghi.","nhan":"D-delete_benefit_record","user":"admin"}
+{"ts":"2026-10-06T06:23:35.426Z","loai":"action","action":"delete_boq_item","ok":false,"status":400,"loi":"Không tìm thấy dòng BOQ.","nhan":"D-delete_boq_item","user":"admin"}
+{"ts":"2026-10-06T06:23:35.440Z","loai":"action","action":"delete_business_role_group","ok":false,"status":400,"loi":"Không tìm thấy nhóm nghiệp vụ.","nhan":"D-delete_business_role_group","user":"admin"}
+{"ts":"2026-10-06T06:23:35.452Z","loai":"action","action":"delete_business_scope","ok":false,"status":400,"loi":"Không tìm thấy phạm vi nghiệp vụ.","nhan":"D-delete_business_scope","user":"admin"}
+{"ts":"2026-10-06T06:23:35.468Z","loai":"action","action":"delete_capital_recovery","ok":false,"status":400,"loi":"Không tìm thấy hồ sơ thu hồi vốn.","nhan":"D-delete_capital_recovery","user":"admin"}
+{"ts":"2026-10-06T06:23:35.483Z","loai":"action","action":"delete_cashbook_entry","ok":false,"status":400,"loi":"Không tìm thấy bút toán.","nhan":"D-delete_cashbook_entry","user":"admin"}
+{"ts":"2026-10-06T06:23:35.499Z","loai":"action","action":"delete_construction_daily_log","ok":false,"status":400,"loi":"Không tìm thấy nhật ký thi công.","nhan":"D-delete_construction_daily_log","user":"admin"}
+{"ts":"2026-10-06T06:23:35.514Z","loai":"action","action":"delete_contract_payment","ok":false,"status":400,"loi":"Không tìm thấy dòng thanh toán.","nhan":"D-delete_contract_payment","user":"admin"}
+{"ts":"2026-10-06T06:23:35.526Z","loai":"action","action":"delete_correspondence","ok":false,"status":400,"loi":"Không tìm thấy công văn.","nhan":"D-delete_correspondence","user":"admin"}
+{"ts":"2026-10-06T06:23:35.537Z","loai":"action","action":"delete_department_permission","ok":false,"status":400,"loi":"Không tìm thấy quyền của phòng ban cho chức năng này.","nhan":"D-delete_department_permission","user":"admin"}
+{"ts":"2026-10-06T06:23:35.548Z","loai":"action","action":"delete_form_field_config","ok":false,"status":400,"loi":"Không tìm thấy trường cấu hình.","nhan":"D-delete_form_field_config","user":"admin"}
+{"ts":"2026-10-06T06:23:35.562Z","loai":"action","action":"delete_labor_contract","ok":false,"status":400,"loi":"Không tìm thấy hợp đồng.","nhan":"D-delete_labor_contract","user":"admin"}
+{"ts":"2026-10-06T06:23:35.574Z","loai":"action","action":"delete_legal_document","ok":false,"status":400,"loi":"Không tìm thấy văn bản.","nhan":"D-delete_legal_document","user":"admin"}
+{"ts":"2026-10-06T06:23:35.584Z","loai":"action","action":"delete_material","ok":false,"status":400,"loi":"Không tìm thấy vật tư.","nhan":"D-delete_material","user":"admin"}
+{"ts":"2026-10-06T06:23:35.601Z","loai":"action","action":"delete_material_norm","ok":false,"status":400,"loi":"Không tìm thấy định mức.","nhan":"D-delete_material_norm","user":"admin"}
+{"ts":"2026-10-06T06:23:35.614Z","loai":"action","action":"delete_material_subcategory","ok":false,"status":400,"loi":"Không tìm thấy nhóm con.","nhan":"D-delete_material_subcategory","user":"admin"}
+{"ts":"2026-10-06T06:23:35.627Z","loai":"action","action":"delete_menu_group","ok":false,"status":400,"loi":"Không tìm thấy nhóm menu.","nhan":"D-delete_menu_group","user":"admin"}
+{"ts":"2026-10-06T06:23:35.637Z","loai":"action","action":"delete_notification_config","ok":false,"status":400,"loi":"Không tìm thấy cấu hình thông báo E2E_KHONG_TON_TAI_c4d8.","nhan":"D-delete_notification_config","user":"admin"}
+{"ts":"2026-10-06T06:23:35.651Z","loai":"action","action":"delete_partner","ok":false,"status":400,"loi":"Không tìm thấy đối tác.","nhan":"D-delete_partner","user":"admin"}
+{"ts":"2026-10-06T06:23:35.666Z","loai":"action","action":"delete_payment_plan","ok":false,"status":400,"loi":"Không tìm thấy kế hoạch thanh toán.","nhan":"D-delete_payment_plan","user":"admin"}
+{"ts":"2026-10-06T06:23:35.682Z","loai":"action","action":"delete_project","ok":false,"status":400,"loi":"Không tìm thấy dự án.","nhan":"D-delete_project","user":"admin"}
+{"ts":"2026-10-06T06:23:35.701Z","loai":"action","action":"delete_project_contract","ok":false,"status":400,"loi":"Không tìm thấy hợp đồng.","nhan":"D-delete_project_contract","user":"admin"}
+{"ts":"2026-10-06T06:23:35.719Z","loai":"action","action":"delete_request","ok":false,"status":400,"loi":"Không tìm thấy phiếu đề nghị.","nhan":"D-delete_request","user":"admin"}
+{"ts":"2026-10-06T06:23:35.736Z","loai":"action","action":"delete_seal","ok":false,"status":400,"loi":"Không tìm thấy con dấu.","nhan":"D-delete_seal","user":"admin"}
+{"ts":"2026-10-06T06:23:35.765Z","loai":"action","action":"delete_selected_materials","ok":true,"status":200,"loi":null,"nhan":"D-delete_selected_materials","user":"admin"}
+{"ts":"2026-10-06T06:23:35.782Z","loai":"action","action":"delete_site_expense_claim","ok":false,"status":400,"loi":"Không tìm thấy chi phí.","nhan":"D-delete_site_expense_claim","user":"admin"}
+{"ts":"2026-10-06T06:23:35.805Z","loai":"action","action":"delete_supplier","ok":false,"status":400,"loi":"Không tìm thấy nhà cung cấp.","nhan":"D-delete_supplier","user":"admin"}
+{"ts":"2026-10-06T06:23:35.825Z","loai":"action","action":"delete_system_level","ok":false,"status":400,"loi":"Không tìm thấy cấp bậc.","nhan":"D-delete_system_level","user":"admin"}
+{"ts":"2026-10-06T06:23:35.840Z","loai":"action","action":"delete_user","ok":false,"status":400,"loi":"Không tìm thấy tài khoản.","nhan":"D-delete_user","user":"admin"}
+{"ts":"2026-10-06T06:23:35.864Z","loai":"action","action":"delete_user_module_override","ok":false,"status":400,"loi":"Không tìm thấy ngoại lệ cá nhân cho chức năng này.","nhan":"D-delete_user_module_override","user":"admin"}
+{"ts":"2026-10-06T06:23:35.880Z","loai":"action","action":"delete_workflow","ok":false,"status":400,"loi":"Không tìm thấy quy trình.","nhan":"D-delete_workflow","user":"admin"}
+{"0":"g","1":"o","2":"-","3":"l","4":"i","5":"v","6":"e","7":"-","8":"p","9":"h","10":"u","11":"-","12":"t","13":"o","14":"a","15":"n","16":"-","17":"b","18":"o","19":"-","20":"d","21":"e","22":"l","23":"e","24":"t","25":"e","ts":"2026-10-06T06:23:35.881Z"}
+{"ts":"2026-10-06T06:23:36.531Z","loai":"login","username":"admin","status":200}
+{"ts":"2026-10-06T06:23:36.798Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:36.826Z","loai":"action","action":"cancel_request","ok":false,"status":400,"loi":"Phải nhập lý do hủy phiếu.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:36.826Z","loai":"buoc","ten":"cancel_request — payload RỖNG ⇒ ⛔ không 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:37.082Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:37.126Z","loai":"action","action":"check_material_alias_conflicts","ok":true,"status":200,"loi":null,"nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:37.127Z","loai":"buoc","ten":"check_material_alias_conflicts — payload RỖNG ⇒ ⛔ không 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:37.390Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:37.404Z","loai":"action","action":"close_po_line","ok":false,"status":400,"loi":"Đóng thiếu phải có lý do được phê duyệt.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:37.405Z","loai":"buoc","ten":"close_po_line — payload RỖNG ⇒ ⛔ không 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:37.645Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:37.660Z","loai":"action","action":"compare_boq_materials","ok":false,"status":400,"loi":"Hợp đồng không tồn tại/đã ngừng áp dụng trong dự án này.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:37.661Z","loai":"buoc","ten":"compare_boq_materials — payload RỖNG ⇒ ⛔ không 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:37.914Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:37.932Z","loai":"action","action":"confirm_boq_material_mappings","ok":false,"status":400,"loi":"Chưa chọn dòng mapping để cập nhật.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:37.932Z","loai":"buoc","ten":"confirm_boq_material_mappings — payload RỖNG ⇒ ⛔ không 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:38.227Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:38.238Z","loai":"action","action":"create_self_work_item","ok":false,"status":400,"loi":"Cần nhập nội dung công việc.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:38.238Z","loai":"buoc","ten":"create_self_work_item — payload RỖNG ⇒ ⛔ không 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:38.504Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:38.537Z","loai":"action","action":"create_stock_count","ok":false,"status":400,"loi":"Phiếu kiểm kê phải đúng dự án, kho và có dữ liệu đếm.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:38.538Z","loai":"buoc","ten":"create_stock_count — payload RỖNG ⇒ ⛔ không 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:38.840Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:38.860Z","loai":"action","action":"delete_material_category","ok":false,"status":400,"loi":"Không tìm thấy nhóm vật tư.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:38.860Z","loai":"buoc","ten":"delete_material_category — payload RỖNG ⇒ ⛔ không 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:39.148Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:39.161Z","loai":"action","action":"delete_project_team","ok":false,"status":400,"loi":"Không tìm thấy tổ đội.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:39.162Z","loai":"buoc","ten":"delete_project_team — payload RỖNG ⇒ ⛔ không 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:39.442Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:39.456Z","loai":"action","action":"delete_role_catalog","ok":false,"status":400,"loi":"Không tìm thấy vai trò.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:39.456Z","loai":"buoc","ten":"delete_role_catalog — payload RỖNG ⇒ ⛔ không 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:39.690Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:39.714Z","loai":"action","action":"director_pending_approvals","ok":true,"status":200,"loi":null,"nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:39.715Z","loai":"buoc","ten":"director_pending_approvals — payload RỖNG ⇒ ⛔ không 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:39.978Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:39.988Z","loai":"action","action":"estimate_material_norms","ok":false,"status":400,"loi":"Không tìm thấy vật tư.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:39.988Z","loai":"buoc","ten":"estimate_material_norms — payload RỖNG ⇒ ⛔ không 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:40.252Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:40.276Z","loai":"action","action":"notification_configs","ok":true,"status":200,"loi":null,"nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:40.276Z","loai":"buoc","ten":"notification_configs — payload RỖNG ⇒ ⛔ không 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:40.523Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:40.549Z","loai":"action","action":"notification_log","ok":true,"status":200,"loi":null,"nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:40.549Z","loai":"buoc","ten":"notification_log — payload RỖNG ⇒ ⛔ không 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:40.851Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:40.922Z","loai":"action","action":"preview_material_dependencies","ok":true,"status":200,"loi":null,"nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:40.922Z","loai":"buoc","ten":"preview_material_dependencies — payload RỖNG ⇒ ⛔ không 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:41.152Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:41.168Z","loai":"action","action":"preview_request_import","ok":false,"status":400,"loi":"Chọn dự án và file có ít nhất một dòng vật tư trước khi đối chiếu.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:41.168Z","loai":"buoc","ten":"preview_request_import — payload RỖNG ⇒ ⛔ không 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:41.390Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:41.401Z","loai":"action","action":"reassign_work_item","ok":false,"status":400,"loi":"Không tìm thấy nhiệm vụ.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:41.402Z","loai":"buoc","ten":"reassign_work_item — payload RỖNG ⇒ ⛔ không 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:41.627Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:41.643Z","loai":"action","action":"reconcile_contract_stock","ok":false,"status":400,"loi":"Đối soát cần chọn đúng một dự án và kho.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:41.643Z","loai":"buoc","ten":"reconcile_contract_stock — payload RỖNG ⇒ ⛔ không 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:41.878Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:41.888Z","loai":"action","action":"reject_po","ok":false,"status":400,"loi":"PO không tồn tại hoặc đã xử lý.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:41.888Z","loai":"buoc","ten":"reject_po — payload RỖNG ⇒ ⛔ không 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:42.105Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:42.116Z","loai":"action","action":"replace_boq_items","ok":false,"status":400,"loi":"File BOQ không có dòng dữ liệu.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:42.117Z","loai":"buoc","ten":"replace_boq_items — payload RỖNG ⇒ ⛔ không 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:42.327Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:42.340Z","loai":"action","action":"settle_advance_request","ok":false,"status":400,"loi":"Số tiền đã chi tạm ứng không được để trống.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:42.341Z","loai":"buoc","ten":"settle_advance_request — payload RỖNG ⇒ ⛔ không 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:42.563Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:42.575Z","loai":"action","action":"settle_team_subcontract","ok":false,"status":400,"loi":"Không có quyền quyết toán hợp đồng này.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:42.575Z","loai":"buoc","ten":"settle_team_subcontract — payload RỖNG ⇒ ⛔ không 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:42.833Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:42.846Z","loai":"action","action":"supplier_material_gaps","ok":false,"status":400,"loi":"Thiếu đơn mua hàng.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:42.846Z","loai":"buoc","ten":"supplier_material_gaps — payload RỖNG ⇒ ⛔ không 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:43.091Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:43.106Z","loai":"action","action":"supplier_materials","ok":false,"status":400,"loi":"Thiếu nhà cung cấp.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:43.106Z","loai":"buoc","ten":"supplier_materials — payload RỖNG ⇒ ⛔ không 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:43.339Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:43.349Z","loai":"action","action":"system_level_impact","ok":true,"status":200,"loi":null,"nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:43.349Z","loai":"buoc","ten":"system_level_impact — payload RỖNG ⇒ ⛔ không 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:43.553Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:43.564Z","loai":"action","action":"transfer_contract_ownership","ok":false,"status":400,"loi":"Chuyển ownership cần đủ kho, vật tư, Contract nguồn/đích hợp lệ và số lượng > 0.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:43.564Z","loai":"buoc","ten":"transfer_contract_ownership — payload RỖNG ⇒ ⛔ không 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:43.790Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:43.798Z","loai":"action","action":"update_boq_contract_prices","ok":false,"status":400,"loi":"Hợp đồng không tồn tại/đã ngừng áp dụng trong dự án này.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:43.798Z","loai":"buoc","ten":"update_boq_contract_prices — payload RỖNG ⇒ ⛔ không 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:44.014Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:44.026Z","loai":"action","action":"update_po_price","ok":false,"status":400,"loi":"PO không tồn tại.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:44.027Z","loai":"buoc","ten":"update_po_price — payload RỖNG ⇒ ⛔ không 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:44.245Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:44.254Z","loai":"action","action":"update_returned_request","ok":false,"status":400,"loi":"Không tìm thấy phiếu đề nghị.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:44.254Z","loai":"buoc","ten":"update_returned_request — payload RỖNG ⇒ ⛔ không 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:44.476Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:44.487Z","loai":"action","action":"update_work_item_progress","ok":false,"status":400,"loi":"Không tìm thấy nhiệm vụ.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:44.487Z","loai":"buoc","ten":"update_work_item_progress — payload RỖNG ⇒ ⛔ không 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:44.704Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:45.366Z","loai":"login","username":"admin","status":200}
+{"ts":"2026-10-06T06:23:45.590Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:45.606Z","loai":"action","action":"issue_stock","ok":false,"status":400,"loi":"Phiếu cấp phát phải đúng dự án, MR, tổ đội và có vật tư.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:45.607Z","loai":"buoc","ten":"issue_stock — payload RỖNG (StockManagementUseCase:380,384 — `lines.get(0)` / `items.get(0)`)","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:45.626Z","loai":"action","action":"create_transfer_order","ok":false,"status":400,"loi":"Phiếu điều chuyển phải có kho nguồn, kho đích khác nhau và ít nhất một vật tư.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:45.626Z","loai":"buoc","ten":"create_transfer_order — payload RỖNG (StockManagementUseCase:455,473,474 — `selected.get(0)` / `items.get(0)`)","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:45.644Z","loai":"action","action":"receive_transfer_order","ok":false,"status":400,"loi":"Phiếu chưa ở trạng thái đang vận chuyển.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:45.644Z","loai":"buoc","ten":"receive_transfer_order — payload RỖNG (StockManagementUseCase — cùng họ)","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:45.659Z","loai":"action","action":"ship_transfer_order","ok":false,"status":400,"loi":"Phiếu chưa được duyệt hoặc đã xuất.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:45.659Z","loai":"buoc","ten":"ship_transfer_order — payload RỖNG (StockManagementUseCase — cùng họ)","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:45.672Z","loai":"action","action":"create_central_return","ok":false,"status":400,"loi":"Phiếu trả Kho Tổng phải đúng kho dự án và có vật tư.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:45.673Z","loai":"buoc","ten":"create_central_return — payload RỖNG (StockManagementUseCase — cùng họ)","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:45.686Z","loai":"action","action":"approve_central_return","ok":false,"status":400,"loi":"Phiếu không còn ở trạng thái chờ duyệt.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:45.686Z","loai":"buoc","ten":"approve_central_return — payload RỖNG (StockManagementUseCase — cùng họ)","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:45.711Z","loai":"action","action":"create_request","ok":false,"status":400,"loi":"Phiếu đề nghị phải có ít nhất một dòng vật tư.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:45.712Z","loai":"buoc","ten":"create_request — payload RỖNG (RequestManagementUseCase:521 — `stages.get(0)`)","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:45.726Z","loai":"action","action":"create_stock_count","ok":false,"status":400,"loi":"Phiếu kiểm kê phải đúng dự án, kho và có dữ liệu đếm.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:45.726Z","loai":"buoc","ten":"create_stock_count — payload RỖNG (StockManagementUseCase — cùng họ)","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:45.960Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:46.586Z","loai":"login","username":"admin","status":200}
+{"ts":"2026-10-06T06:23:46.867Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:46.886Z","loai":"action","action":"save_accounting_voucher","ok":false,"status":400,"loi":"Giá trị chứng từ không được để trống.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:46.886Z","loai":"buoc","ten":"save_accounting_voucher — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:46.897Z","loai":"action","action":"save_advance_request","ok":false,"status":400,"loi":"Số tiền tạm ứng không được để trống.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:46.897Z","loai":"buoc","ten":"save_advance_request — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:46.913Z","loai":"action","action":"save_approval_stage","ok":false,"status":400,"loi":"Bước phê duyệt phải có tên và ít nhất một vai trò được phép duyệt.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:46.913Z","loai":"buoc","ten":"save_approval_stage — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:46.931Z","loai":"action","action":"save_bank_account","ok":false,"status":400,"loi":"Số dư đầu kỳ không được để trống.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:46.931Z","loai":"buoc","ten":"save_bank_account — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:46.950Z","loai":"action","action":"save_benefit_record","ok":false,"status":400,"loi":"Bảo hiểm & chế độ cần nhân sự và loại.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:46.950Z","loai":"buoc","ten":"save_benefit_record — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:46.962Z","loai":"action","action":"save_boq_item","ok":false,"status":400,"loi":"Hợp đồng không tồn tại/đã ngừng áp dụng trong dự án này.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:46.962Z","loai":"buoc","ten":"save_boq_item — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:46.973Z","loai":"action","action":"save_boq_version","ok":false,"status":400,"loi":"Hợp đồng không tồn tại/đã ngừng áp dụng trong dự án này.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:46.973Z","loai":"buoc","ten":"save_boq_version — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:46.984Z","loai":"action","action":"save_business_role_group","ok":false,"status":400,"loi":"Tên hoặc quyền nền của nhóm nghiệp vụ chưa hợp lệ.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:46.984Z","loai":"buoc","ten":"save_business_role_group — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:46.996Z","loai":"action","action":"save_business_scope","ok":false,"status":400,"loi":"Mã hoặc tên phạm vi nghiệp vụ đã tồn tại.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:46.997Z","loai":"buoc","ten":"save_business_scope — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:47.014Z","loai":"action","action":"save_capital_recovery","ok":false,"status":400,"loi":"Giá trị hồ sơ trình không được để trống.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:47.015Z","loai":"buoc","ten":"save_capital_recovery — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:47.027Z","loai":"action","action":"save_cashbook_entry","ok":false,"status":400,"loi":"Số tiền không được để trống.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:47.027Z","loai":"buoc","ten":"save_cashbook_entry — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:47.037Z","loai":"action","action":"save_construction_daily_log","ok":false,"status":400,"loi":"Nhật ký thi công phải có dự án và ngày YYYY-MM-DD.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:47.037Z","loai":"buoc","ten":"save_construction_daily_log — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:47.050Z","loai":"action","action":"save_contract_payment","ok":false,"status":400,"loi":"Giá trị thanh toán không được để trống.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:47.050Z","loai":"buoc","ten":"save_contract_payment — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:47.061Z","loai":"action","action":"save_correspondence","ok":false,"status":400,"loi":"Công văn cần hướng đến/đi và loại văn bản.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:47.061Z","loai":"buoc","ten":"save_correspondence — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:47.092Z","loai":"action","action":"save_email_settings","ok":true,"status":200,"loi":null,"nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:47.092Z","loai":"buoc","ten":"save_email_settings — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:47.104Z","loai":"action","action":"save_engine_role_profile","ok":false,"status":400,"loi":"Không tìm thấy quyền nền cần cập nhật.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:47.104Z","loai":"buoc","ten":"save_engine_role_profile — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:47.113Z","loai":"action","action":"save_error_report","ok":false,"status":400,"loi":"Thiếu tiêu đề.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:47.113Z","loai":"buoc","ten":"save_error_report — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:47.124Z","loai":"action","action":"save_form_field_config","ok":false,"status":400,"loi":"Biểu mẫu cấu hình không hợp lệ.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:47.124Z","loai":"buoc","ten":"save_form_field_config — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:47.134Z","loai":"action","action":"save_hr_record","ok":false,"status":400,"loi":"Hồ sơ nhân sự cần nhân sự và họ tên.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:47.134Z","loai":"buoc","ten":"save_hr_record — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:47.145Z","loai":"action","action":"save_labor_contract","ok":false,"status":400,"loi":"Hợp đồng lao động cần nhân sự và loại hợp đồng.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:47.145Z","loai":"buoc","ten":"save_labor_contract — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:47.154Z","loai":"action","action":"save_legal_document","ok":false,"status":400,"loi":"Văn bản pháp lý cần số, loại và tiêu đề.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:47.154Z","loai":"buoc","ten":"save_legal_document — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:47.164Z","loai":"action","action":"save_mar_approval","ok":false,"status":400,"loi":"Trạng thái MAR không hợp lệ.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:47.164Z","loai":"buoc","ten":"save_mar_approval — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:47.180Z","loai":"action","action":"save_material","ok":false,"status":400,"loi":"Hệ M&E không tồn tại.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:47.180Z","loai":"buoc","ten":"save_material — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:47.192Z","loai":"action","action":"save_material_category","ok":false,"status":400,"loi":"Mã nhóm vật tư đã tồn tại.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:47.192Z","loai":"buoc","ten":"save_material_category — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:47.202Z","loai":"action","action":"save_material_external_code","ok":false,"status":400,"loi":"Mapping mã tham chiếu chưa hợp lệ.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:47.202Z","loai":"buoc","ten":"save_material_external_code — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:47.212Z","loai":"action","action":"save_material_norm","ok":false,"status":400,"loi":"Định mức tiêu hao không được để trống.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:47.212Z","loai":"buoc","ten":"save_material_norm — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:47.221Z","loai":"action","action":"save_material_subcategory","ok":false,"status":400,"loi":"Hệ M&E không tồn tại.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:47.222Z","loai":"buoc","ten":"save_material_subcategory — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:47.230Z","loai":"action","action":"save_material_uom_conversion","ok":false,"status":400,"loi":"Quy đổi đơn vị chưa hợp lệ.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:47.230Z","loai":"buoc","ten":"save_material_uom_conversion — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:47.240Z","loai":"action","action":"save_menu_group","ok":false,"status":400,"loi":"Không tìm thấy nhóm menu.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:47.240Z","loai":"buoc","ten":"save_menu_group — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:47.250Z","loai":"action","action":"save_module_catalog","ok":false,"status":400,"loi":"Mục chức năng không hợp lệ.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:47.250Z","loai":"buoc","ten":"save_module_catalog — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:47.260Z","loai":"action","action":"save_notification_config","ok":false,"status":400,"loi":"Loại thông báo phải là web hoặc email.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:47.260Z","loai":"buoc","ten":"save_notification_config — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:47.269Z","loai":"action","action":"save_organization_unit","ok":false,"status":400,"loi":"Loại đơn vị tổ chức không hợp lệ.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:47.269Z","loai":"buoc","ten":"save_organization_unit — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:47.280Z","loai":"action","action":"save_partner","ok":false,"status":400,"loi":"Không tìm thấy đối tác.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:47.280Z","loai":"buoc","ten":"save_partner — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:47.290Z","loai":"action","action":"save_payment_plan","ok":false,"status":400,"loi":"Giá trị kế hoạch không được để trống.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:47.290Z","loai":"buoc","ten":"save_payment_plan — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:47.300Z","loai":"action","action":"save_production_report","ok":false,"status":400,"loi":"Giá trị kế hoạch không được để trống.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:47.300Z","loai":"buoc","ten":"save_production_report — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:47.311Z","loai":"action","action":"save_project_contract","ok":false,"status":400,"loi":"Số hợp đồng và tên hợp đồng là bắt buộc.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:47.311Z","loai":"buoc","ten":"save_project_contract — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:47.320Z","loai":"action","action":"save_role_catalog","ok":false,"status":400,"loi":"Nhóm quyền nghiệp vụ không tồn tại hoặc đang bị ẩn.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:47.320Z","loai":"buoc","ten":"save_role_catalog — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:47.328Z","loai":"action","action":"save_seal","ok":false,"status":400,"loi":"Con dấu cần số hiệu, tên và loại.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:47.329Z","loai":"buoc","ten":"save_seal — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:47.337Z","loai":"action","action":"save_site_expense_claim","ok":false,"status":400,"loi":"Số chi phí không được để trống.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:47.337Z","loai":"buoc","ten":"save_site_expense_claim — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:47.349Z","loai":"action","action":"save_supplier","ok":false,"status":400,"loi":"Không tìm thấy nhà cung cấp.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:47.350Z","loai":"buoc","ten":"save_supplier — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:47.362Z","loai":"action","action":"save_supplier_material","ok":false,"status":400,"loi":"Không tìm thấy nhà cung cấp 1.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:47.362Z","loai":"buoc","ten":"save_supplier_material — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:47.374Z","loai":"action","action":"save_system_level","ok":false,"status":400,"loi":"Mã cấp bậc chỉ gồm chữ, số và gạch dưới (2–64 ký tự).","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:47.374Z","loai":"buoc","ten":"save_system_level — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:47.385Z","loai":"action","action":"save_team_payment","ok":false,"status":400,"loi":"Số tiền thanh toán không được để trống.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:47.386Z","loai":"buoc","ten":"save_team_payment — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:47.397Z","loai":"action","action":"save_team_production","ok":false,"status":400,"loi":"Giá trị trình không được để trống.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:47.397Z","loai":"buoc","ten":"save_team_production — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:47.409Z","loai":"action","action":"save_team_subcontract","ok":false,"status":400,"loi":"Giá trị giao khoán không được để trống.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:47.410Z","loai":"buoc","ten":"save_team_subcontract — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:47.432Z","loai":"action","action":"save_trust_development_settings","ok":true,"status":200,"loi":null,"nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:47.432Z","loai":"buoc","ten":"save_trust_development_settings — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:47.458Z","loai":"action","action":"save_ui_display_settings","ok":true,"status":200,"loi":null,"nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:47.458Z","loai":"buoc","ten":"save_ui_display_settings — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:47.470Z","loai":"action","action":"save_warehouse_location","ok":false,"status":400,"loi":"Kho không còn tồn tại.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:47.470Z","loai":"buoc","ten":"save_warehouse_location — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:47.483Z","loai":"action","action":"save_workflow","ok":false,"status":400,"loi":"Quy trình phải có ít nhất một bước duyệt.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:47.483Z","loai":"buoc","ten":"save_workflow — tham số MÉO \"1\" ⇒ ⛔ KHÔNG 5xx","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:47.729Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:48.446Z","loai":"login","username":"admin","status":200}
+{"ts":"2026-10-06T06:23:48.680Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:48.731Z","loai":"action","action":"save_material_category","ok":true,"status":200,"loi":null,"nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:48.732Z","loai":"buoc","ten":"① save_material_category (TẠO THẬT)","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:48.757Z","loai":"action","action":"save_material_category","ok":false,"status":400,"loi":"Mã nhóm vật tư đã tồn tại.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:48.758Z","loai":"buoc","ten":"② TẠO LẦN 2 CÙNG MÃ ⇒ phải 400 «đã tồn tại» (⛔ chứng minh ĐÃ GHI THẬT)","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:48.989Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:48.990Z","loai":"buoc","ten":"③ ĐỌC LẠI — tìm id nhóm vừa tạo trong ĐÚNG mảng","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:49.027Z","loai":"action","action":"save_material_subcategory","ok":true,"status":200,"loi":null,"nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:49.027Z","loai":"buoc","ten":"④ save_material_subcategory (TẠO THẬT, gắn nhóm vừa tạo)","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:49.268Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:49.269Z","loai":"buoc","ten":"⑤ ĐỌC LẠI — thử tìm id nhóm con (⛔ thiếu id KHÔNG tính là lỗi — xem ghi chú)","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:49.309Z","loai":"action","action":"delete_material_category","ok":true,"status":200,"loi":null,"nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:49.309Z","loai":"buoc","ten":"⑥ delete_material_category (XOÁ THẬT)","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:49.329Z","loai":"action","action":"delete_material_category","ok":false,"status":400,"loi":"Không tìm thấy nhóm vật tư.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:49.329Z","loai":"buoc","ten":"⑥b XOÁ NHÓM LẦN 2 ⇒ phải 400 (⛔ chứng minh ĐÃ XOÁ THẬT)","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:49.566Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:50.192Z","loai":"login","username":"admin","status":200}
+{"ts":"2026-10-06T06:23:50.425Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:50.658Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:50.913Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:51.419Z","loai":"login","username":"e2e.tk","status":200}
+{"ts":"2026-10-06T06:23:51.437Z","loai":"action","action":"issue_stock","ok":false,"status":403,"loi":"Tài khoản chưa được quản trị viên cấp đúng quyền cho thao tác này.","nhan":"","user":"e2e.tk"}
+{"ts":"2026-10-06T06:23:51.437Z","loai":"buoc","ten":"① issue_stock (thủ kho lập phiếu xuất)","ok":false,"loi":"issue_stock → Tài khoản chưa được quản trị viên cấp đúng quyền cho thao tác này."}
+{"ts":"2026-10-06T06:23:51.550Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:52.075Z","loai":"login","username":"e2e.cht","status":200}
+{"ts":"2026-10-06T06:23:52.093Z","loai":"action","action":"approve_stock_issue","ok":false,"status":403,"loi":"Tài khoản chưa được quản trị viên cấp đúng quyền cho thao tác này.","nhan":"","user":"e2e.cht"}
+{"ts":"2026-10-06T06:23:52.093Z","loai":"buoc","ten":"② approve_stock_issue (CHT duyệt)","ok":false,"loi":"approve_stock_issue → Tài khoản chưa được quản trị viên cấp đúng quyền cho thao tác này."}
+{"ts":"2026-10-06T06:23:52.208Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:52.715Z","loai":"login","username":"e2e.tk","status":200}
+{"ts":"2026-10-06T06:23:52.732Z","loai":"action","action":"issue_stock_confirm","ok":false,"status":403,"loi":"Tài khoản chưa được quản trị viên cấp đúng quyền cho thao tác này.","nhan":"","user":"e2e.tk"}
+{"ts":"2026-10-06T06:23:52.733Z","loai":"buoc","ten":"③ issue_stock_confirm (XUẤT KHO THẬT — ghi stock_movements)","ok":false,"loi":"issue_stock_confirm → Tài khoản chưa được quản trị viên cấp đúng quyền cho thao tác này."}
+{"ts":"2026-10-06T06:23:52.851Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:52.873Z","loai":"action","action":"confirm_stock_issue","ok":false,"status":403,"loi":"Tài khoản chưa được quản trị viên cấp đúng quyền cho thao tác này.","nhan":"","user":"e2e.tk"}
+{"ts":"2026-10-06T06:23:52.873Z","loai":"buoc","ten":"④ confirm_stock_issue (thủ kho xác nhận đủ)","ok":false,"loi":"confirm_stock_issue → Tài khoản chưa được quản trị viên cấp đúng quyền cho thao tác này."}
+{"ts":"2026-10-06T06:23:53.007Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:53.622Z","loai":"login","username":"admin","status":200}
+{"ts":"2026-10-06T06:23:53.868Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:54.407Z","loai":"login","username":"e2e.to","status":200}
+{"ts":"2026-10-06T06:23:54.541Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:54.564Z","loai":"action","action":"return_stock","ok":false,"status":403,"loi":"Tài khoản chưa được quản trị viên cấp đúng quyền cho thao tác này.","nhan":"","user":"e2e.to"}
+{"ts":"2026-10-06T06:23:54.564Z","loai":"buoc","ten":"return_stock (tổ đội trả vật tư dư)","ok":false,"loi":"return_stock → Tài khoản chưa được quản trị viên cấp đúng quyền cho thao tác này."}
+{"ts":"2026-10-06T06:23:54.683Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:55.225Z","loai":"login","username":"admin","status":200}
+{"ts":"2026-10-06T06:23:55.504Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:56.033Z","loai":"login","username":"e2e.tk","status":200}
+{"ts":"2026-10-06T06:23:56.044Z","loai":"action","action":"create_transfer_order","ok":false,"status":403,"loi":"Tài khoản chưa được quản trị viên cấp đúng quyền cho thao tác này.","nhan":"","user":"e2e.tk"}
+{"ts":"2026-10-06T06:23:56.044Z","loai":"buoc","ten":"3 create_transfer_order (KHO-E2E-01 → kho tổ đội 2)","ok":false,"loi":"create_transfer_order → Tài khoản chưa được quản trị viên cấp đúng quyền cho thao tác này."}
+{"ts":"2026-10-06T06:23:56.151Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:56.703Z","loai":"login","username":"admin","status":200}
+{"ts":"2026-10-06T06:23:56.923Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:56.954Z","loai":"action","action":"create_central_return","ok":true,"status":200,"loi":null,"nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:56.954Z","loai":"buoc","ten":"create_central_return (admin — có quyền central_warehouse)","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:57.181Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:57.713Z","loai":"login","username":"admin","status":200}
+{"ts":"2026-10-06T06:23:57.971Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:57.972Z","giaiDoan":"chuoi-kho","taoPhieu":true,"chtDuyet":false,"xuatThat":false,"tonSauXuat":7,"thuKhoXacNhan":false,"xacNhan":0,"hoanTra":false,"dieuChuyen":true,"traTong":true,"dat":5,"tong":9}
+{"ts":"2026-10-06T06:23:58.597Z","loai":"login","username":"admin","status":200}
+{"ts":"2026-10-06T06:23:58.953Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:58.979Z","loai":"action","action":"save_accounting_voucher","ok":false,"status":400,"loi":"Ngày chứng từ phải theo định dạng YYYY-MM-DD.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:58.979Z","loai":"buoc","ten":"① save với voucherDate=\"1\" (ngắn <4) ⇒ ⛔ KHÔNG được 500 (ứng viên lỗi)","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:59.007Z","loai":"action","action":"save_accounting_voucher","ok":true,"status":200,"loi":null,"nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:59.008Z","loai":"buoc","ten":"② save_accounting_voucher (TẠO THẬT — ngày hợp lệ)","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:59.264Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:23:59.265Z","loai":"buoc","ten":"③ ĐỌC LẠI — tìm id MỚI bằng SO TẬP ID","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:59.277Z","loai":"action","action":"save_accounting_voucher","ok":false,"status":400,"loi":"Chứng từ kế toán cần ngày và loại chứng từ.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:59.277Z","loai":"buoc","ten":"④ save với voucherType RỖNG ⇒ phải 400 «cần ngày và loại chứng từ.» (CHIỀU ÂM)","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:59.313Z","loai":"action","action":"delete_accounting_voucher","ok":true,"status":200,"loi":null,"nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:59.313Z","loai":"buoc","ten":"⑤ delete_accounting_voucher (XOÁ THẬT — DỌN SẠCH)","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:59.322Z","loai":"action","action":"delete_accounting_voucher","ok":false,"status":400,"loi":"Không tìm thấy chứng từ.","nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:23:59.322Z","loai":"buoc","ten":"⑥ XOÁ LẦN 2 ⇒ phải 400 «Không tìm thấy chứng từ.»","ok":true,"loi":null}
+{"ts":"2026-10-06T06:23:59.575Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:24:14.710Z","loai":"login","username":"admin","status":200}
+{"ts":"2026-10-06T06:24:15.003Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:24:15.324Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:24:15.653Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:24:16.225Z","loai":"login","username":"e2e.tk","status":200}
+{"ts":"2026-10-06T06:24:16.246Z","loai":"action","action":"issue_stock","ok":false,"status":403,"loi":"Tài khoản chưa được quản trị viên cấp đúng quyền cho thao tác này.","nhan":"","user":"e2e.tk"}
+{"ts":"2026-10-06T06:24:16.246Z","loai":"buoc","ten":"① issue_stock (thủ kho lập phiếu xuất)","ok":false,"loi":"issue_stock → Tài khoản chưa được quản trị viên cấp đúng quyền cho thao tác này."}
+{"ts":"2026-10-06T06:24:16.385Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:24:16.933Z","loai":"login","username":"e2e.cht","status":200}
+{"ts":"2026-10-06T06:24:16.958Z","loai":"action","action":"approve_stock_issue","ok":false,"status":403,"loi":"Tài khoản chưa được quản trị viên cấp đúng quyền cho thao tác này.","nhan":"","user":"e2e.cht"}
+{"ts":"2026-10-06T06:24:16.958Z","loai":"buoc","ten":"② approve_stock_issue (CHT duyệt)","ok":false,"loi":"approve_stock_issue → Tài khoản chưa được quản trị viên cấp đúng quyền cho thao tác này."}
+{"ts":"2026-10-06T06:24:17.084Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:24:17.656Z","loai":"login","username":"e2e.tk","status":200}
+{"ts":"2026-10-06T06:24:17.677Z","loai":"action","action":"issue_stock_confirm","ok":false,"status":403,"loi":"Tài khoản chưa được quản trị viên cấp đúng quyền cho thao tác này.","nhan":"","user":"e2e.tk"}
+{"ts":"2026-10-06T06:24:17.677Z","loai":"buoc","ten":"③ issue_stock_confirm (XUẤT KHO THẬT — ghi stock_movements)","ok":false,"loi":"issue_stock_confirm → Tài khoản chưa được quản trị viên cấp đúng quyền cho thao tác này."}
+{"ts":"2026-10-06T06:24:17.826Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:24:17.857Z","loai":"action","action":"confirm_stock_issue","ok":false,"status":403,"loi":"Tài khoản chưa được quản trị viên cấp đúng quyền cho thao tác này.","nhan":"","user":"e2e.tk"}
+{"ts":"2026-10-06T06:24:17.858Z","loai":"buoc","ten":"④ confirm_stock_issue (thủ kho xác nhận đủ)","ok":false,"loi":"confirm_stock_issue → Tài khoản chưa được quản trị viên cấp đúng quyền cho thao tác này."}
+{"ts":"2026-10-06T06:24:18.014Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:24:18.649Z","loai":"login","username":"admin","status":200}
+{"ts":"2026-10-06T06:24:18.888Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:24:19.444Z","loai":"login","username":"e2e.to","status":200}
+{"ts":"2026-10-06T06:24:19.551Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:24:19.565Z","loai":"action","action":"return_stock","ok":false,"status":403,"loi":"Tài khoản chưa được quản trị viên cấp đúng quyền cho thao tác này.","nhan":"","user":"e2e.to"}
+{"ts":"2026-10-06T06:24:19.565Z","loai":"buoc","ten":"return_stock (tổ đội trả vật tư dư)","ok":false,"loi":"return_stock → Tài khoản chưa được quản trị viên cấp đúng quyền cho thao tác này."}
+{"ts":"2026-10-06T06:24:19.676Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:24:20.180Z","loai":"login","username":"admin","status":200}
+{"ts":"2026-10-06T06:24:20.419Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:24:20.928Z","loai":"login","username":"e2e.tk","status":200}
+{"ts":"2026-10-06T06:24:20.948Z","loai":"action","action":"create_transfer_order","ok":false,"status":403,"loi":"Tài khoản chưa được quản trị viên cấp đúng quyền cho thao tác này.","nhan":"","user":"e2e.tk"}
+{"ts":"2026-10-06T06:24:20.949Z","loai":"buoc","ten":"3 create_transfer_order (KHO-E2E-01 → kho tổ đội 2)","ok":false,"loi":"create_transfer_order → Tài khoản chưa được quản trị viên cấp đúng quyền cho thao tác này."}
+{"ts":"2026-10-06T06:24:21.060Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:24:21.599Z","loai":"login","username":"admin","status":200}
+{"ts":"2026-10-06T06:24:21.847Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:24:21.881Z","loai":"action","action":"create_central_return","ok":true,"status":200,"loi":null,"nhan":"","user":"admin"}
+{"ts":"2026-10-06T06:24:21.881Z","loai":"buoc","ten":"create_central_return (admin — có quyền central_warehouse)","ok":true,"loi":null}
+{"ts":"2026-10-06T06:24:22.108Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:24:22.633Z","loai":"login","username":"admin","status":200}
+{"ts":"2026-10-06T06:24:22.882Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T06:24:22.882Z","giaiDoan":"chuoi-kho","taoPhieu":true,"chtDuyet":false,"xuatThat":false,"tonSauXuat":7,"thuKhoXacNhan":false,"xacNhan":0,"hoanTra":false,"dieuChuyen":true,"traTong":true,"dat":5,"tong":9}
+{"ts":"2026-10-06T07:20:52.467Z","loai":"login","username":"admin","status":200}
+{"ts":"2026-10-06T07:20:52.674Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T07:20:52.901Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T07:20:53.153Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T07:20:53.683Z","loai":"login","username":"e2e.tk","status":200}
+{"ts":"2026-10-06T07:20:54.246Z","loai":"action","action":"issue_stock","ok":true,"status":200,"loi":null,"nhan":"","user":"e2e.tk"}
+{"ts":"2026-10-06T07:20:54.246Z","loai":"buoc","ten":"① issue_stock (thủ kho lập phiếu xuất)","ok":true,"loi":null}
+{"ts":"2026-10-06T07:20:54.400Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T07:20:54.919Z","loai":"login","username":"e2e.cht","status":200}
+{"ts":"2026-10-06T07:20:55.025Z","loai":"action","action":"approve_stock_issue","ok":true,"status":200,"loi":null,"nhan":"","user":"e2e.cht"}
+{"ts":"2026-10-06T07:20:55.026Z","loai":"buoc","ten":"② approve_stock_issue (CHT duyệt)","ok":true,"loi":null}
+{"ts":"2026-10-06T07:20:55.191Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T07:20:55.702Z","loai":"login","username":"e2e.tk","status":200}
+{"ts":"2026-10-06T07:20:55.784Z","loai":"action","action":"issue_stock_confirm","ok":true,"status":200,"loi":null,"nhan":"","user":"e2e.tk"}
+{"ts":"2026-10-06T07:20:55.785Z","loai":"buoc","ten":"③ issue_stock_confirm (XUẤT KHO THẬT — ghi stock_movements)","ok":true,"loi":null}
+{"ts":"2026-10-06T07:20:55.897Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T07:20:55.930Z","loai":"action","action":"confirm_stock_issue","ok":true,"status":200,"loi":null,"nhan":"","user":"e2e.tk"}
+{"ts":"2026-10-06T07:20:55.930Z","loai":"buoc","ten":"④ confirm_stock_issue (thủ kho xác nhận đủ)","ok":true,"loi":null}
+{"ts":"2026-10-06T07:20:56.042Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T07:20:56.560Z","loai":"login","username":"admin","status":200}
+{"ts":"2026-10-06T07:20:56.779Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T07:20:57.307Z","loai":"login","username":"e2e.to","status":200}
+{"ts":"2026-10-06T07:20:57.422Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T07:20:57.496Z","loai":"action","action":"return_stock","ok":true,"status":200,"loi":null,"nhan":"","user":"e2e.to"}
+{"ts":"2026-10-06T07:20:57.497Z","loai":"buoc","ten":"return_stock (tổ đội trả vật tư dư)","ok":true,"loi":null}
+{"ts":"2026-10-06T07:20:57.610Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T07:20:58.130Z","loai":"login","username":"admin","status":200}
+{"ts":"2026-10-06T07:20:58.353Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T07:20:58.862Z","loai":"login","username":"e2e.tk","status":200}
+{"ts":"2026-10-06T07:20:58.954Z","loai":"action","action":"create_transfer_order","ok":true,"status":200,"loi":null,"nhan":"","user":"e2e.tk"}
+{"ts":"2026-10-06T07:20:58.955Z","loai":"buoc","ten":"3 create_transfer_order (KHO-E2E-01 → kho tổ đội 2)","ok":true,"loi":null}
+{"ts":"2026-10-06T07:20:59.078Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T07:20:59.697Z","loai":"login","username":"admin","status":200}
+{"ts":"2026-10-06T07:20:59.979Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T07:21:00.012Z","loai":"action","action":"create_central_return","ok":true,"status":200,"loi":null,"nhan":"","user":"admin"}
+{"ts":"2026-10-06T07:21:00.013Z","loai":"buoc","ten":"create_central_return (admin — có quyền central_warehouse)","ok":true,"loi":null}
+{"ts":"2026-10-06T07:21:00.333Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T07:21:00.864Z","loai":"login","username":"admin","status":200}
+{"ts":"2026-10-06T07:21:01.092Z","loai":"bootstrap","status":200,"khoa":106}
+{"ts":"2026-10-06T07:21:01.093Z","giaiDoan":"chuoi-kho","taoPhieu":true,"chtDuyet":true,"xuatThat":true,"tonSauXuat":7,"thuKhoXacNhan":true,"xacNhan":0,"hoanTra":true,"dieuChuyen":true,"traTong":true,"dat":9,"tong":9}

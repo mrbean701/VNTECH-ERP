@@ -1442,6 +1442,22 @@ CREATE TABLE IF NOT EXISTS `purchase_orders` (
   `delivery_completed_at` TIMESTAMP(3) NULL,
   `contract_id` VARCHAR(64) NULL,
   `boq_version_id` VARCHAR(64) NULL,
+  -- ⛔⛔ VÁ 06/10/2026 (GO-LIVE · F2) — **SCHEMA H2 CỦA BÀI KIỂM THỬ THIẾU 3 CỘT**.
+  --   📍 BẰNG CHỨNG (⭐ ngăn xếp lỗi THẬT từ `web/target/surefire-reports/`):
+  --      `JdbcSQLSyntaxErrorException: Column "decision_reason" not found; SQL statement:
+  --       UPDATE purchase_orders SET status=?, decision_reason=?, decided_by=?, decided_at=?, updated_at=? WHERE id=?`
+  --      `at PurchaseStoreAdapter.decidePo(PurchaseStoreAdapter.java:268)`
+  --      `at PurchaseManagementUseCase.approvePo(PurchaseManagementUseCase.java:236)`
+  --   ⇒ ⭐ **`approve_po` ⛔ KHÔNG CHẠY ĐƯỢC TRONG BÀI KIỂM THỬ** ✓
+  --   ⚠️ **ĐÂY LÀ GỐC CỦA F2**: ⭐ vì `approve_po` hỏng trong test ⇒ ⭐ các bài test **phải ĐI VÒNG** —
+  --      gọi thẳng `receive_goods` trên PO **chưa phát hành** ⇒ ⭐ **mã hoá chính hành vi của lỗi F2** ✓
+  --   ⭐ ĐỐI CHỨNG MySQL THẬT: ✅ **CÓ** `decision_reason varchar(500) NULL` — ⭐ do migration
+  --      **`V18__wf_b2_po_decision.sql`** ✓ ⇒ ⭐ **H2 LỆCH, ⛔ không phải MySQL thiếu** ✓
+  --   ⚠️⚠️ **TỆP NÀY LÀ `web/src/**TEST**/resources/`** — ⛔ **KHÔNG PHẢI**
+  --      `web/src/main/resources/db/demo/schema-h2.sql` (⭐ sửa tệp đó ⛔ **KHÔNG có tác dụng**) ✓
+  `decision_reason` VARCHAR(500) NULL,
+  `decided_by` VARCHAR(64) NULL,
+  `decided_at` TIMESTAMP(3) NULL,
   PRIMARY KEY (`id`)
 ) ;
 

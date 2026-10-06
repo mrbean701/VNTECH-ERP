@@ -160,11 +160,15 @@ const legacyWorkMenuKeys: ModuleKey[] = ["dept_plan_tasks", "dept_project_tasks"
 // ─────────────────────────────────────────────────────────────────────────────
 type WarehouseMenuView = "dashboard";
 const warehouseMenuItems: { key: string; label: string; groupKey: "warehouse"; moduleKey: ModuleKey; permissionKeys: ModuleKey[]; view?: WarehouseMenuView }[] = [
-  { key: "warehouse_hub", label: "Kho", groupKey: "warehouse", moduleKey: "central_warehouse", permissionKeys: ["central_warehouse"] },
-  { key: "warehouse_inbound", label: "Nhập", groupKey: "warehouse", moduleKey: "warehouse_receipt", permissionKeys: ["warehouse_receipt"] },
-  { key: "warehouse_outbound", label: "Xuất", groupKey: "warehouse", moduleKey: "warehouse_issue", permissionKeys: ["warehouse_issue"] },
-  { key: "warehouse_transfer", label: "Điều chuyển", groupKey: "warehouse", moduleKey: "inventory", permissionKeys: ["inventory"] },
-  { key: "warehouse_dashboard", label: "Dashboard tồn kho", groupKey: "warehouse", moduleKey: "inventory", permissionKeys: ["stocktake"], view: "dashboard" },
+  // ⭐ GOM 7 MỤC → 1 MỤC «Kho vật tư» — QUYẾT ĐỊNH USER 06/10/2026 (`ERP-SESSION-02` · `TASK-226`, user chốt «Làm luôn»).
+  //   LÝ DO: user yêu cầu mở menu là ra NGAY dashboard tồn kho + tabbar 3 tab (KHO · XUẤT & NHẬP · CẤP PHÁT & HOÀN TRẢ)
+  //   ⇒ 7 mục rời là THỪA (nhiều cửa vào CÙNG một màn) và trùng chức năng.
+  //   ⚠️ CỔNG QUYỀN: gom CẢ SÁU khoá kho ĐÃ CÓ ⇒ mục hiện khi user có `canView` **BẤT KỲ** khoá nào
+  //      (⛔ không hardcode admin · ⛔ KHÔNG khoá module mới · ⛔ KHÔNG dòng `module_catalog`).
+  //   ⚠️ ĐÍCH ĐẾN `moduleKey: "inventory"` — khoá DUY NHẤT render HUB (`app/screens/Inventory.tsx`).
+  //   ⛔ SÁU mục cũ bỏ khỏi MENU nhưng **KHOÁ VẪN SỐNG** (`legacyWarehouseMenuKeys` bên dưới): quyền · tiêu đề màn ·
+  //      tìm kiếm · nhánh render `app/page.tsx` đều vẫn treo trên các khoá đó ⇒ ⛔ KHÔNG mất chức năng nào.
+  { key: "warehouse_hub", label: "Kho vật tư", groupKey: "warehouse", moduleKey: "inventory", permissionKeys: ["central_warehouse", "warehouse_receipt", "warehouse_issue", "inventory", "stocktake", "material_norms"] },
 ];
 // SÁU MỤC CŨ BỊ ẨN KHỎI MENU (`W-01`). Khoá vẫn sống: quyền, tiêu đề màn, tìm kiếm, nhánh render.
 const legacyWarehouseMenuKeys: ModuleKey[] = ["warehouse_receipt", "warehouse_issue", "inventory", "stocktake", "material_norms", "central_warehouse"];
@@ -183,7 +187,11 @@ const legacyWarehouseMenuKeys: ModuleKey[] = ["warehouse_receipt", "warehouse_is
 //    `view: "list"` để `app/page.tsx` phân biệt màn mới với màn «Xuất» (cùng moduleKey) — khuôn
 //    `supplierPartnerViewFor`. KHÔNG khoá module mới · KHÔNG hardcode admin · KHÔNG dòng module_catalog.
 const allocateReturnMenuItems: { key: string; label: string; groupKey: "warehouse"; moduleKey: ModuleKey; view: "list"; permissionKeys: ModuleKey[] }[] = [
-  { key: "warehouse_allocate_return", label: "Cấp phát & hoàn trả", groupKey: "warehouse", moduleKey: "warehouse_issue", view: "list", permissionKeys: ["warehouse_issue"] },
+  // ⭐ MỤC NÀY **ĐÃ GOM VÀO «Kho vật tư»** (06/10/2026 · `ERP-SESSION-02` · `TASK-226`): tab «CẤP PHÁT & HOÀN TRẢ»
+  //   nay nằm TRONG hub (`app/screens/Inventory.tsx`) ⇒ ⛔ KHÔNG còn mục menu riêng.
+  //   MẢNG RỖNG ⇒ `allocateReturnMenuChildren` rỗng ở `app/page.tsx:523` ⇒ mục tự biến mất khỏi menu
+  //   mà ⛔ KHÔNG phải sửa `app/page.tsx` (⭐ tránh xung đột với phiên khác đang giữ tệp đó).
+  //   GIỮ khai báo + hàm `allocateReturnViewFor` bên dưới vì `app/page.tsx` vẫn `import` (⛔ tránh vỡ import).
 ];
 // ĐÍCH ĐẾN: `view` trả "list" CHỈ khi active = `warehouse_issue` (cổng quyền); điều hướng cũ (không kèm
 // view) trả `null` để GIỮ NGUYÊN hành vi màn «Xuất» (đúng cách `warehouseMenuViewFor`/`supplierPartnerViewFor`).

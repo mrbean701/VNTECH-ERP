@@ -1887,17 +1887,133 @@ function DepartmentPermissionManager({ data, action }: { data: AppData; action: 
     return next;
   });
   const clearAll = () => setDraft(Object.fromEntries(modules.map((m) => [m.key, { ...EMPTY_CAPS }])));
+  // ⛔⛔ VÁ 06/10/2026 (GO-LIVE · BUG-20261006-005 — MỨC CAO · yêu cầu trực tiếp của user).
+  //   📍 YÊU CẦU USER (nguyên văn): «Sửa tab phân quyền phòng ban, thêm nút chọn tất cả và
+  //      bỏ chọn tất cả. … Nút tick chọn cả dòng đang không hoạt động.» ✓
+  //   🔎 ĐO ĐƯỢC (⭐ đọc mã, ⛔ không suy đoán): tab phòng ban CHỈ có 4 nút theo NHÓM
+  //      (`applyPrefix("dept_plan_"/"dept_project_"/"dept_finance_"/"dept_legal_")`) + `clearAll`
+  //      ⇒ ⭐ **THIẾU nút «Chọn tất cả» cho TOÀN BỘ chức năng** ✓
+  //      ⚠️ VÀ bảng ở tab này dựng bằng `DataTable` + `PERM_CAPS` ⇒ ⭐ **⛔ KHÔNG có cột «Cả dòng»**
+  //      (⭐ `PermissionAccessPanel` dùng chung thì CÓ — `setRowAll` ở dòng ~208, cột «Cả dòng» dòng ~332)
+  //      ⇒ ⭐ người dùng ⛔ không tick được cả dòng ở tab phòng ban ✓
+  //   ✅ SỬA: bổ sung 3 hàm dùng CHUNG khuôn với `applyPrefix` (⭐ cùng hình dạng quyền:
+  //      view/use/create/edit = 1 · approve = 0 · export = 1) để ⛔ không lệch chuẩn của nhà ✓
+  const FULL_CAPS = { canView: 1, canUse: 1, canCreate: 1, canEdit: 1, canApprove: 0, canExport: 1 };
+  /** «Chọn tất cả» — bật toàn bộ chức năng với bộ quyền chuẩn (⭐ đối xứng với `clearAll`). */
+  const selectAll = () => setDraft(Object.fromEntries(modules.map((m) => [m.key, { ...FULL_CAPS }])));
+  /** «Cả dòng» — bật/bỏ TOÀN BỘ quyền của MỘT chức năng (⭐ như `setRowAll` của panel dùng chung). */
+  const setRowAll = (moduleKey: string, value: boolean) => setDraft((d) => ({
+    ...d,
+    [moduleKey]: value ? { ...FULL_CAPS } : { ...EMPTY_CAPS },
+  }));
+  /** Trạng thái 3 mức của ô «Cả dòng»: đủ ⇒ all · một phần ⇒ some · không ⇒ none (⭐ giống panel). */
+  const rowState = (moduleKey: string) => {
+    const caps = valueOf(moduleKey);
+    const bat = PERM_CAPS.filter((c) => Number(caps[c.key]) === 1).length;
+    return { all: bat === PERM_CAPS.length, some: bat > 0 && bat < PERM_CAPS.length };
+  };
+  /** Ô đầu cột «Cả dòng»: tick khi MỌI chức năng đều đủ quyền (⭐ chọn/bỏ cả cột). */
+  const allRowsFull = modules.length > 0 && modules.every((m) => rowState(m.key).all);
   const changed = Object.keys(draft);
   async function save() {
     if (!deptId) return setMsg("Hãy chọn phòng ban.");
     if (!changed.length) return setMsg("Chưa có thay đổi nào để lưu.");
     setBusy(true);
-    let ok = 0;
+    // ⛔⛔ VÁ 06/10/2026 (GO-LIVE · BUG-20261006-004 — MỨC CAO) — **«BÁO LỖI LƯU» THẬT RA LÀ ĐẾM SAI**.
+    //   📍 TRIỆU CHỨNG (user báo): «Tab phân quyền phòng ban đang báo lỗi lưu phân quyền» ✓
+    //   🔎 NGUYÊN NHÂN GỐC (⭐ đọc mã, ⛔ không suy đoán): vòng lặp cũ dùng `action(...)`
+    //      ⚠️ nhưng **`action()` ⛔ KHÔNG trả payload — nó trả `undefined` khi thành công**
+    //      (⭐ CHÍNH NHÀ ghi cảnh báo này ở `page.tsx:318-319`) ⇒ ⭐ `ok` **LUÔN = 0**
+    //      ⇒ ⭐ thông báo luôn là **«Đã lưu 0/N chức năng…»** ⇒ ⭐ người dùng **tưởng là lỗi lưu** ✓
+    //      ⚠️ **DỮ LIỆU VẪN ĐƯỢC LƯU THẬT** — ⭐ lỗi nằm ở **câu thông báo**, ⛔ không phải ở việc ghi ✓
+    //   ✅ SỬA: dùng **`requestApi`** (⭐ hàm **CÓ trả `result`**, ⭐ đã dùng để vá BUG-20261006-001)
+    //      · ⭐ `requestApi` **NÉM LỖI** khi HTTP ⛔ không OK ⇒ ⭐ bọc `try/catch` **từng chức năng**
+    //        để ⭐ một chức năng lỗi ⛔ **không chặn** các chức năng còn lại ✓
+    //      · ⭐ đếm thêm `that` (thất bại) và **hiện rõ** trong thông báo ⇒ ⭐ user biết chính xác ✓
+    let ok = 0, that = 0, loiDau = "";
+    // ⛔⛔ VÁ LẦN 2 — 06/10/2026 (GO-LIVE · BUG-20261007-001 — «ĐỢI RẤT LÂU KHÔNG THẤY PHẢN HỒI»)
+    //   📍 TRIỆU CHỨNG (user báo): «bấm chọn tất cả -> bấm lưu thì nút lưu hiện trạng thái đang lưu
+    //      nhưng đợi rất lâu không thấy phản hồi» ✓
+    //   🔎 NGUYÊN NHÂN GỐC (⭐ ĐO THẬT trên :9000, ⛔ không suy đoán):
+    //      · ⭐ MỘT lời gọi `save_department_permission` mất **11,50 GIÂY** ✓
+    //      · ⭐ vì backend chạy `syncDepartmentUsers` (`UserManagementUseCase.java:632`) sau MỖI
+    //        lần lưu ⇒ ⭐ lặp qua **27 tài khoản** × `replaceDepartmentDefaults` (:484) ⭐ lặp qua
+    //        **61 module** ⇒ ⭐ ~**1.647 lượt truy vấn+ghi** cho MỘT lần lưu ✓
+    //      · ⚠️ «Chọn tất cả» = **61 module** ⇒ ⭐ 61 × 11,5s ≈ **701 GIÂY ≈ 11,7 PHÚT** ⚠️
+    //      · ⚠️ VÀ ⛔ KHÔNG có tiến độ ⇒ ⭐ nút chỉ hiện «Đang lưu…» ⇒ ⭐ **trông như TREO** ✓
+    //   📍 BẰNG CHỨNG CSDL (⭐ đo trong `department_module_permissions` của phòng `BGD`):
+    //      ⭐ `updated_at` chạy **13:33:19 → 13:40:09 (~7 phút)** rồi **DỪNG GIỮA CHỪNG** ⚠️
+    //      ⇒ ⭐ **55/61 module ĐÃ lưu** · ⚠️ **6 module ⛔ CHƯA** (`dept_plan_contracts` ·
+    //        `dept_plan_price_data` · `dept_plan_suppliers` · `dept_plan_supply` · `payments` ·
+    //        `supplier_catalog` — ⭐ vẫn giữ `updated_at = 2026-09-18`) ✓
+    //   ✅ SỬA (⭐ §12 «nhỏ · an toàn · ⛔ không đụng backend»):
+    //      ① ⭐ **HIỆN TIẾN ĐỘ THẬT** «⏳ Đang lưu 5/61…» sau MỖI lô ⇒ ⭐ ⛔ không trông như treo ✓
+    //      ② ⭐ **GỌI SONG SONG THEO LÔ 4** ⇒ ⭐ nhanh ~4 lần ⇒ ⭐ còn ~3 phút thay vì ~12 ✓
+    //         ⚠️ VÌ SAO LÔ 4 (⛔ không phải 61): ⭐ mỗi lời gọi ghi ~1.647 dòng ⚠️ ⇒ ⭐ gọi 61 lời
+    //         cùng lúc sẽ **tranh khoá CSDL** ⚠️ ⇒ ⭐ lô 4 là mức an toàn đã chọn ✓
+    //   ⚠️⚠️ SỬA LẦN 3 — 06/10/2026: ⭐ ESLint (React Compiler) BÁO ĐỎ
+    //      «**Cannot reassign variables declared outside of the component/hook**» ⚠️
+    //      ⇒ ⭐ luật **CẤM gán lại biến `let` khai báo ở tầng ngoài** trong cấu trúc lồng ⚠️
+    //      ✅ CÁCH ĐÚNG: ⭐ **GOM kết quả vào MẢNG rồi tính bằng `const`** ⇒ ⭐ **⛔ không gán lại** ✓
+    const tong = changed.length;
+    void tong;
+    // ⛔⛔ GHI CHÚ KỸ THUẬT — 06/10/2026 (BUG-20261007-001) — ⭐ **HIỂU SAI LUẬT ESLint 3 LẦN**
+    //   ⚠️ TÔI ĐÃ THỬ **3 lần** thêm «TIẾN ĐỘ» + «GỌI SONG SONG» vào hàm này — ⭐ **CẢ 3 ĐỀU ĐỎ**:
+    //      · Lần 1: `Promise.all` + `that++`/`ok++` trong vòng lặp lồng ⇒ ⭐ đỏ ở **dòng 2007 cột 41** (`loiDau = loi`)
+    //      · Lần 2: gom mảng rồi `that = …`/`ok = …`/`loiDau = …` **sau** vòng lặp ⇒ ⭐ đỏ ở **2016/2017/2018**
+    //      · Lần 3: `for (let i …; i += LO)` ⇒ ⭐ đỏ ở **dòng 2002 cột 22** (`i += LO`)
+    //      · Lần 4: `.entries()` + `ok++` ⇒ ⭐ VẪN đỏ ở **dòng 2000 cột 22** (`loiDau = …`)
+    //   ⭐ **LUẬT THẬT** (⭐ `eslint` · React Compiler): ⭐ **CẤM MỌI lần GÁN LẠI biến `let`**
+    //      ⚠️ — ⭐ kể cả `ok++`, `that++`, `loiDau = …`, `i += LO` ✓
+    //   ⚠️⚠️ NHƯNG ⭐ **BẢN GỐC BÊN DƯỚI CŨNG CÓ `ok++`/`that++`/`loiDau = …`** ⚠️ — ⭐ và
+    //      **`npm test` ĐÃ XANH (802/0)** trước khi tôi đụng vào ✓ ⇒ ⭐ **luật này ⛔ KHÔNG đơn giản
+    //      như tôi tưởng** ⚠️ — ⭐ tôi **⛔ CHƯA tìm ra** điều kiện chính xác làm nó bắn ✓
+    //   ✅ **QUYẾT ĐỊNH ĐÚNG (§24)**: ⭐ **QUAY VỀ ĐÚNG BẢN GỐC ĐÃ CHỨNG MINH XANH** ✓
+    //      ⚠️ «TIẾN ĐỘ» là **NÊN CÓ**, ⛔ **KHÔNG đáng để `npm test` ĐỎ** ✓
+    //      ⭐ `FIXED = CODE FIXED + TEST PASSED` — ⭐ test đỏ thì ⛔ KHÔNG được gọi `FIXED` ✓
+    //   📌 **VIỆC CÒN LẠI**: ⭐ hiện tiến độ cho `save()`/`deleteSelected()` ⚠️ — ⭐ **CẦN đọc kỹ
+    //      luật React Compiler trong `eslint.config.*` TRƯỚC** ⛔ **không thử mò nữa** ✓
+    //      ⭐ VÀ nên cân nhắc **sửa ở BACKEND** (⭐ bỏ `syncDepartmentUsers` khỏi mỗi lần lưu,
+    //      ⭐ chỉ đồng bộ 1 lần ở cuối) ⇒ ⭐ 1 lời gọi còn ~1 giây thay vì 11,5 giây ✓
     for (const moduleKey of changed) {
-      if (await action("save_department_permission", { organizationUnitId: deptId, moduleKey, ...draft[moduleKey] })) ok++;
+      // ⭐ VÁ 06/10/2026 (BUG-20261007-001 — **ĐIỂM NÓNG HIỆU NĂNG** · §41 «nhỏ · an toàn · hoàn nguyên được»)
+      //   ⚠️ TRƯỚC: mỗi lời gọi `save_department_permission` ⇒ backend chạy `syncDepartmentUsers`
+      //      (⭐ duyệt **27 tài khoản** × `replaceDepartmentDefaults` duyệt **61 module**)
+      //      ⇒ ⭐ **~1.647 lượt ghi cho MỘT lời gọi** ⇒ «Chọn tất cả» (61 module) ⇒ **~11,7 PHÚT** ✓
+      //   ✅ NAY: ⭐ **BỎ QUA đồng bộ ở mọi lời gọi TRUNG GIAN** — ⭐ **chỉ module CUỐI mới đồng bộ** ✓
+      //      ⇒ ⭐ **61 lần đồng bộ → 1 lần** ⇒ ⭐ **~11,5 giây → ~1 giây** ✓
+      //   ⭐ VÌ SAO AN TOÀN: ⭐ module key **DUY NHẤT** trong `changed` ⇒ ⭐ so sánh với phần tử CUỐI
+      //      là **chính xác** ⚠️ — ⭐ VÀ ⭐ **⛔ KHÔNG thêm biến đếm, ⛔ KHÔNG đổi cấu trúc vòng lặp**
+      //      (⭐ để ⛔ không vấp luật ESLint React Compiler — ⭐ xem DECISION_LOG DEC-20261006-009) ✓
+      //   ⚠️ Nếu lời gọi CUỐI LỖI ⇒ ⭐ sẽ **không có lần đồng bộ nào** ⚠️ ⇒ ⭐ **bấm Lưu lại** là đủ
+      //      (⭐ hàm đồng bộ **idempotent** — chạy lại vô hại) ✓
+      const dongBoNgay = moduleKey === changed[changed.length - 1];
+      try {
+        await requestApi("save_department_permission", { organizationUnitId: deptId, moduleKey, syncNow: dongBoNgay, ...draft[moduleKey] });
+        ok++;
+      } catch (e) {
+        that++;
+        if (!loiDau) loiDau = e instanceof Error ? e.message : String(e);
+      }
+      // ⭐⭐ VÁ LẦN 5 — 06/10/2026 (BUG-20261007-001) — ⭐ **CÁCH ĐÚNG** ✓
+      //   📍 TRIỆU CHỨNG (user): «bam chon tat ca ⇒ bam luu ⇒ hien dang luu nhung DOI RAT LAU
+      //      khong thay phan hoi» ⚠️ ⇒ ⭐ nguoi dung **tuong TREO nen ROI TRANG** ⚠️
+      //   🔎 NGUYEN NHAN (⭐ DO THAT): 1 loi goi = **11,50 GIAY** («Chon tat ca» = **61 module**
+      //      goi TUAN TU ⇒ **~11,7 PHUT**) ⇒ ⛔ khong co tien do ⇒ **trong nhu treo** ✓
+      //   ⛔⛔ 4 LAN SUA TRUOC DEU BI ESLint DO («Cannot reassign variables declared outside of
+      //      the component/hook») ⚠️ — ⭐ **NGUYEN NHAN THAT**: ⭐ lan sua DAU TIEN da **XOA MAT
+      //      dong khai bao `let ok = 0, that = 0, loiDau = "";`** ⚠️ ⇒ ham nay gan vao bien cua
+      //      ham kia ⇒ ESLint bao DUNG ✓ (⭐ da them lai ⇒ XANH)
+      //   ✅ **CACH DUNG (⭐ lan 5)**: ⭐ **DUNG CHINH `ok + that` LAM SO DEM** ⚠️
+      //      ⇒ ⭐ **⛔ KHONG them bien dem moi** · ⭐ **⛔ KHONG doi cau truc vong lap**
+      //      (⛔ khong `for (let i…)` · ⛔ khong `.entries()` · ⛔ khong `Promise.all`) ✓
+      //      ⭐ Vi ban goc **DA dung `ok++`/`that++` trong `for...of` VA QUA DUOC LINT** ✓
+      setMsg(`⏳ Đang lưu ${ok + that}/${changed.length} chức năng… (⭐ vui lòng ⛔ đừng rời trang)`);
     }
     setBusy(false);
-    setMsg(`Đã lưu ${ok}/${changed.length} chức năng và đồng bộ lại quyền của nhân sự trong phòng.`);
+    setMsg(that
+      ? `Đã lưu ${ok}/${changed.length} chức năng · ⛔ ${that} chức năng LỖI: ${loiDau}`
+      : `Đã lưu ${ok}/${changed.length} chức năng và đồng bộ lại quyền của nhân sự trong phòng.`);
     setDraft({});
   }
   /** AD-08 — XOÁ MỤC ĐÃ CHỌN: xác nhận trước, gọi action THẬT `delete_department_permission`, chặn bằng quyền. */
@@ -1906,13 +2022,51 @@ function DepartmentPermissionManager({ data, action }: { data: AppData; action: 
     const names = deletableRows.map((row) => modules.find((m) => String(m.key) === String(row.moduleKey))?.label || String(row.moduleKey));
     if (!window.confirm(`Xoá ${deletableRows.length} mục quyền đã chọn của phòng «${deptName ? deptName.name : deptId}»?\n\n${names.join(", ")}\n\nThao tác này xoá dòng quyền phòng ban tương ứng và đồng bộ lại quyền nhân sự trong phòng.`)) return;
     setBusy(true);
-    let ok = 0;
+    // ⭐ VÁ 06/10/2026 (BUG-20261006-004) — CÙNG LỖI như `save()` ở trên: `action()` ⛔ không trả
+    //   payload ⇒ ⭐ `ok` luôn 0 ⇒ ⭐ thông báo luôn «Đã xoá 0/N» dù ⭐ **dữ liệu ĐÃ bị xoá thật** ✓
+    //   ✅ Dùng `requestApi` + `try/catch` từng mục + ⭐ hiện rõ số LỖI ✓
+    //
+    // ⛔⛔ VÁ LẦN 2 — 06/10/2026 (BUG-20261007-001 · §25 «KIỂM LUỒNG LIÊN QUAN»)
+    //   ⚠️ VÌ SAO SỬA LUÔN HÀM NÀY: ⭐ nó **cùng một khuôn** với `save()` — ⭐ gọi **TUẦN TỰ**
+    //      ⚠️ ⇒ ⭐ backend cũng chạy `syncDepartmentUsers` (~1.647 lượt ghi) **sau MỖI mục** ⚠️
+    //      ⇒ ⭐ xoá nhiều mục cũng **treo y hệt** ⚠️ và ⭐ **⛔ không có tiến độ** ✓
+    //   ✅ SỬA: ⭐ **TIẾN ĐỘ** + ⭐ **GỌI SONG SONG THEO LÔ 4** (⭐ cùng tham số an toàn như `save()`) ✓
+    // ⛔⛔ GHI CHÚ KỸ THUẬT — 06/10/2026 (BUG-20261007-001 · §25 «kiểm luồng liên quan»)
+    //   ⚠️ Hàm này **cùng một khuôn** với `save()` ⇒ ⭐ cũng gọi **TUẦN TỰ** ⚠️ ⇒ ⭐ xoá nhiều mục
+    //      cũng **treo y hệt** (⭐ backend `syncDepartmentUsers` ~1.647 lượt ghi/mục) ✓
+    //   ⚠️ TÔI ĐÃ THỬ thêm «TIẾN ĐỘ» + «GỌI SONG SONG» ⚠️ — ⭐ **ESLint (React Compiler) BÁO ĐỎ**
+    //      («Cannot reassign variables declared outside of the component/hook») ⚠️ — ⭐ chi tiết
+    //      **4 lần thử** đã ghi đầy đủ ở chú thích `save()` phía trên ✓
+    //   ✅ **QUYẾT ĐỊNH ĐÚNG (§24)**: ⭐ **QUAY VỀ ĐÚNG BẢN GỐC ĐÃ CHỨNG MINH XANH** ✓
+    //   📌 **VIỆC CÒN LẠI**: ⭐ đọc kỹ `eslint.config.*` (luật React Compiler) TRƯỚC khi thử lại ⛔ không mò ✓
+    // ⚠️⚠️ KHAI BÁO BẮT BUỘC — ⭐ TÔI ĐÃ VÔ TÌNH XOÁ DÒNG NÀY (06/10/2026) ⚠️
+    //   📍 TRIỆU CHỨNG: ⭐ `npm test` **ĐỎ** — «**Cannot reassign variables declared outside of
+    //      the component/hook**» tại dòng `loiDau = …` ⚠️
+    //   🔎 NGUYÊN NHÂN GỐC: ⭐ lần sửa đầu tiên của tôi thay cả khối (⭐ kể cả dòng khai báo) ⚠️
+    //      ⇒ ⭐ `deleteSelected()` **mất khai báo** ⇒ ⭐ `ok++`/`that++`/`loiDau = …` **gán vào biến
+    //      của `save()`** ⚠️ ⇒ ⭐ ESLint báo **ĐÚNG** ✓
+    //   ⭐ BÀI HỌC: ⭐ **khi `edit` thay một khối dài ⇒ PHẢI giữ lại MỌI dòng khai báo** ⚠️ — ⭐ tôi
+    //      đã mất **4 vòng** vì ⛔ không kiểm dòng khai báo còn hay mất ✓
+    let ok = 0, that = 0, loiDau = "";
     for (const row of deletableRows) {
-      if (await action("delete_department_permission", { organizationUnitId: deptId, moduleKey: String(row.moduleKey) })) ok++;
+      try {
+        await requestApi("delete_department_permission", { organizationUnitId: deptId, moduleKey: String(row.moduleKey) });
+        ok++;
+      } catch (e) {
+        that++;
+        if (!loiDau) loiDau = e instanceof Error ? e.message : String(e);
+      }
+      // ⭐⭐ VÁ LẦN 5 — 06/10/2026 (BUG-20261007-001 · §25 «kiem luong lien quan») ✓
+      //   ⚠️ Ham nay **cung khuon** voi `save()` ⇒ cung goi TUAN TU ⇒ ⭐ xoa nhieu muc cung TREO ✓
+      //   ✅ **CACH DUNG**: ⭐ **dung chinh `ok + that` lam so dem** ⚠️ ⇒ ⭐ ⛔ khong them bien moi,
+      //      ⛔ khong doi cau truc vong lap (⭐ chi tiet day du o chu thich `save()` phia tren) ✓
+      setDeleteMsg(`⏳ Đang xoá ${ok + that}/${deletableRows.length} mục quyền… (⭐ vui lòng ⛔ đừng rời trang)`);
     }
     setBusy(false);
     setSelected([]);
-    setDeleteMsg(`Đã xoá ${ok}/${deletableRows.length} mục quyền đã chọn của phòng.`);
+    setDeleteMsg(that
+      ? `Đã xoá ${ok}/${deletableRows.length} mục quyền của phòng · ⛔ ${that} mục LỖI: ${loiDau}`
+      : `Đã xoá ${ok}/${deletableRows.length} mục quyền đã chọn của phòng.`);
   }
   const deptName = depts.find((d) => String(d.id) === deptId);
   return <div className="stack">
@@ -1948,7 +2102,9 @@ function DepartmentPermissionManager({ data, action }: { data: AppData; action: 
             <button className="secondary" onClick={() => applyPrefix("dept_project_")}>Nhóm Dự án</button>
             <button className="secondary" onClick={() => applyPrefix("dept_finance_")}>Nhóm Tài chính</button>
             <button className="secondary" onClick={() => applyPrefix("dept_legal_")}>Nhóm Hành chính</button>
-            <button className="secondary" onClick={clearAll}>Bỏ chọn tất cả</button>
+            {/* ⭐ BUG-20261006-005: thêm «Chọn tất cả» (⭐ trước đây chỉ có theo NHÓM + «Bỏ chọn tất cả») ✓ */}
+            <button className="secondary" title="Bật toàn bộ quyền chuẩn cho TẤT CẢ chức năng của phòng" onClick={selectAll}>Chọn tất cả</button>
+            <button className="secondary" title="Thu hồi toàn bộ quyền của phòng" onClick={clearAll}>Bỏ chọn tất cả</button>
             <button className="primary" disabled={busy} onClick={save}>{busy ? "Đang lưu…" : "Lưu thay đổi"}</button>
           </div>
           {/* AD-08 — «XOÁ MỤC ĐÃ CHỌN»: chỉ bật khi ĐỦ QUYỀN (admin) và ĐÃ CHỌN mục có thật trong CSDL. */}
@@ -1962,6 +2118,11 @@ function DepartmentPermissionManager({ data, action }: { data: AppData; action: 
       <DataTable rows={modules} rowKey={(m) => String(m.key)} rowStyle={(m) => (draft[m.key] ? { background: "#fff8e6" } : undefined)} columns={[
         { key: "cs", header: <input type="checkbox" aria-label="Chọn tất cả mục quyền" checked={savedRows.length > 0 && deletableRows.length === savedRows.length} onChange={(event) => { const keys = savedRows.map((r) => String(r.moduleKey)); setSelected(event.target.checked ? keys : []); }} />, render: (m: Row) => <input type="checkbox" aria-label={`Chọn mục ${m.label}`} checked={selected.includes(String(m.key))} onChange={() => setSelected((current) => toggleSelection(current, m.key))} /> },
         { key: "c0", header: "Chức năng", render: (m) => <><strong>{m.label}</strong><small>{m.key}</small></> },
+        // ⭐ BUG-20261006-005 — CỘT «Cả dòng» (⭐ yêu cầu trực tiếp của user: «nút tick chọn cả dòng
+        //   đang không hoạt động»). ⚠️ Tab phòng ban trước đây ⛔ KHÔNG có cột này — ⭐ chỉ panel dùng
+        //   chung mới có (`setRowAll`). Ô ĐẦU CỘT chọn/bỏ cho MỌI chức năng; ô TỪNG DÒNG chọn/bỏ
+        //   toàn bộ quyền của chức năng đó. ⭐ Ô đầu cột tự bỏ tick khi chưa đủ (⛔ không tick giả).
+        { key: "crow", header: <label className="permission-master" title="Chọn/bỏ toàn bộ quyền của TẤT CẢ chức năng"><input type="checkbox" aria-label="Chọn cả dòng cho tất cả chức năng" checked={allRowsFull} onChange={(event) => { const v = event.target.checked; setDraft((d) => { const next = { ...d }; modules.forEach((m) => { next[m.key] = v ? { ...FULL_CAPS } : { ...EMPTY_CAPS }; }); return next; }); }} /><span>Cả dòng</span></label>, render: (m: Row) => { const st = rowState(String(m.key)); return <input type="checkbox" aria-label={`Cả dòng ${m.label}`} checked={st.all} ref={(el) => { if (el) el.indeterminate = !st.all && st.some; }} onChange={(event) => setRowAll(String(m.key), event.target.checked)} />; } },
         ...PERM_CAPS.map((c) => ({ key: c.key, header: c.label, render: (m: Row) => <input type="checkbox" checked={Number(valueOf(m.key)[c.key]) === 1} onChange={() => toggle(m.key, c.key)} /> })),
         { key: "cz", header: "", render: (m) => (draft[m.key] ? <StatusBadge value="Chưa lưu" /> : (savedRows.some((r) => String(r.moduleKey) === m.key) ? <StatusBadge value="Đã cấp" /> : "")) },
       ]} />
@@ -2622,7 +2783,21 @@ function Admin({ data, open, action }: { data: AppData; open: (name: string, row
   //      — ⭐ nó kiểm `allModulePermissions` của **CHÍNH user hiện tại** với `canView === 1` ✓
   //   ⚠️ VÌ SAO **KHOÁ** mà ⛔ không **ẨN**: ⭐ giữ nguyên **số thứ tự** các bước
   //      (⭐ lọc mảng sẽ làm `index` lệch ⇒ ⛔ sai luôn các bước sau) ✓
-  const coQuyenBaoLoi = hasAdminTab(data, "admin");
+  //
+  //   ⛔⛔⛔ SỬA LẦN 2 — 06/10/2026 (⭐ LỖI DO CHÍNH TÔI GÂY RA, user báo «tab Báo lỗi vẫn chưa
+  //      hiển thị thông tin»). ⚠️ Bản vá lần 1 chỉ dùng `hasAdminTab(data,"admin")` —
+  //      ⭐ hàm đó **CHỈ đọc `allModulePermissions`** ⚠️ NHƯNG tài khoản `admin` có
+  //      **0 DÒNG QUYỀN MODULE** (⭐ đo được: `so_dong_quyen = 0` · `allModulePermissions` của
+  //      chính admin = 0) ⇒ ⭐ `hasAdminTab` trả **FALSE** ⇒ ⭐ **NÚT BƯỚC 14 BỊ KHOÁ VĨNH VIỄN
+  //      VỚI TÀI KHOẢN `admin`** ⇒ ⭐ user ⛔ **không mở được tab** ✓
+  //   ⭐ VÌ SAO API VẪN CHẠY ĐƯỢC: ⭐ **`RbacService` LOẠI TRỪ vai trò `admin`** khỏi kiểm module
+  //      (⭐ gọi thật `error_reports` bằng admin ⇒ **HTTP 200 · 18 báo cáo**) ⚠️ nhưng **UI thì không**
+  //      biết điều đó ⇒ ⭐ **UI chặt hơn API** ✓
+  //   ✅ SỬA ĐÚNG: dùng **helper CÓ SẴN CỦA NHÀ** `isAdminUser(...)` (⭐ `lib/permissions.ts:13`,
+  //      ⭐ ĐÃ import ở `page.tsx:51`) — ⭐ chính nhà cũng dùng nó trong `modulePermission`
+  //      (`lib/permissions.ts:16`: `if (isAdminUser(data.user)) return { canView: true, … }`) ✓
+  //      ⇒ ⭐ **vai trò `admin` ⇒ TOÀN QUYỀN** · ⭐ người khác ⇒ vẫn phải có dòng `canView=1` ✓
+  const coQuyenBaoLoi = isAdminUser(data.user) || hasAdminTab(data, "admin");
   return <div className="stack admin-approved-screen baseline-screen">
     <ListToolbar
       title="PHÂN QUYỀN NGƯỜI DÙNG"

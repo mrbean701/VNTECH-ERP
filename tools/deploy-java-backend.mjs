@@ -105,6 +105,38 @@ if (THUC_THI) {
   const con = ngheCong(CONG);
   if (con !== null) { canh(`⛔ vẫn còn tiến trình nghe :${CONG} (PID ${con}) ⇒ DỪNG.`); process.exit(1); }
   ok(`đã dừng PID ${pid} · cổng :${CONG} đã trống`);
+  // ⛔⛔ VÁ 06/10/2026 — ⭐ **LỖI THẬT KHIẾN BUILD LUÔN THẤT BẠI** (§9 «ROOT CAUSE REQUIRED»)
+  //   📍 TRIỆU CHỨNG: ⭐ công cụ dừng Java ⇒ ⭐ bước [5] build ⇒ ⚠️ `spring-boot-maven-plugin:3.5.0:repackage`
+  //      báo «**Unable to rename '…SNAPSHOT.jar' to '…jar.original'**» ⇒ ⭐ BUILD ⛔ LUÔN THẤT BẠI ✓
+  //   🔎 NGUYÊN NHÂN GỐC (⭐ ĐO THẬT): ⚠️ **CỔNG TRỐNG ⛔ KHÔNG CÓ NGHĨA LÀ JAR ĐÃ NHẢ KHOÁ** ⚠️ —
+  //      ⭐ tiến trình JVM có thể **vẫn giữ handle trên file JAR** thêm một lúc sau khi cổng đã đóng ✓
+  //      ⭐ Đo được: ⭐ phép thử rename **thất bại lúc đầu và chỉ THÀNH CÔNG sau ~2 GIÂY** nữa ✓
+  //      ⇒ ⚠️ Vì vậy «đợi 3 giây cố định» ở trên là **⛔ KHÔNG ĐỦ TIN CẬY** (⭐ đúng lúc nhanh thì qua,
+  //        ⭐ lúc máy bận thì ⛔ trượt) ⇒ ⭐ build **LUÔN thất bại trong thực tế** ✓
+  //   ✅ SỬA: ⭐ **ĐỢI ĐẾN KHI JAR THỰC SỰ NHẢ KHOÁ** — ⭐ kiểm bằng **PHÉP THỬ RENAME** (⭐ cùng phép thử
+  //      mà ERP-SESSION-01 đã dùng để khôi phục hệ thống thành công ✓) — ⭐ tối đa 60 giây ✓
+  //   ⚠️ VÌ SAO DÙNG `powershell` MÀ ⛔ KHÔNG import `fs`: ⭐ tệp này ⛔ chưa import `fs` ⚠️ ⇒ ⭐ thêm
+  //      import sẽ là thay đổi rộng hơn cần thiết (§41 «nhỏ · an toàn · hoàn nguyên được») ✓
+  const choNhaKhoa = () =>
+    spawnSync(
+      "powershell",
+      [
+        "-NoProfile",
+        "-Command",
+        `$j='${JAR.replace(/'/g, "''")}'; for($i=0;$i -lt 30;$i++){ try{ [System.IO.File]::Move($j,"$j.lk"); [System.IO.File]::Move("$j.lk",$j); exit 0 }catch{ Start-Sleep -Milliseconds 2000 } }; exit 1`,
+      ],
+      { encoding: "utf8" },
+    ).status === 0;
+  let daNha = false;
+  for (let i = 1; i <= 3; i++) {
+    if (choNhaKhoa()) { daNha = true; ok(`JAR đã NHẢ KHOÁ (lần thử ${i})`); break; }
+    B(`⏳ JAR còn bị giữ khoá — chờ tiếp (lần ${i}/3)…`);
+  }
+  if (!daNha) {
+    canh("⛔ JAR ⛔ VẪN BỊ GIỮ KHOÁ sau ~60 giây ⇒ DỪNG để ⛔ không build hỏng.");
+    canh("   ⭐ Kiểm tiến trình java khác đang giữ JAR (⛔ đừng kill bừa — luật 36) rồi chạy lại.");
+    process.exit(1);
+  }
 } else B(`sẽ dừng PID ${pid} (⛔ chưa dừng)`);
 
 // ── ⑤ BUILD ───────────────────────────────────────────────────────────────────────────────

@@ -263,7 +263,25 @@ public final class UserManagementUseCase {
         // P5.3 — BẮT BUỘC kiểm tra ràng buộc TRƯỚC khi xoá quyền cũ.
         // Nếu đặt sau clearUserScopes(), một yêu cầu bị TỪ CHỐI vẫn xoá sạch phạm vi
         // dự án / kho / quyền hiện có của người dùng ⇒ MẤT DỮ LIỆU.
-        assertDepartmentAllowsPermissions(targetUserId, target, payload);
+        // ⛔⛔ VÁ 06/10/2026 (GO-LIVE · BUG-20261006-003 — MỨC CAO) — **BỎ CHỐT `P5.3`**.
+        //   📍 YÊU CẦU USER (nguyên văn): «Đang gặp lỗi trong phần phân quyền người dùng, modal
+        //      không thể cấp thêm quyền cho user nếu như số lượng quyền đó lớn hơn số lượng quyền
+        //      đã cấp cho phòng ban. Tôi muốn sửa lại có thể thêm quyền cho người dùng kể cả
+        //      phòng ban của user đó không có quyền như vậy.» ✓
+        //   🔎 NGUYÊN NHÂN GỐC (⭐ đo từ mã, ⛔ không suy đoán): lời gọi
+        //      `assertDepartmentAllowsPermissions(targetUserId, target, payload)` — ⭐ chốt **P5.3**
+        //      (⭐ chú thích gốc ở dòng ~521: «chặn cấp cho người dùng quyền mà PHÒNG BAN không có»)
+        //      ⇒ ⭐ ném `ApiError` «Phòng ban “…” chưa được cấp quyền cho chức năng “…”» (dòng ~553)
+        //      ⇒ ⭐ **chặn ĐÚNG thao tác mà user muốn làm** ✓
+        //   ✅ SỬA: ⛔ **bỏ lời gọi** ⇒ ⭐ cấp được quyền cho user **kể cả phòng ban ⛔ không có** ✓
+        //   ⚠️ GIỮ LẠI hàm `assertDepartmentAllowsPermissions` (⭐ thành không dùng) — ⭐ ⛔ không xoá
+        //      để còn tham chiếu và ⛔ không phình diff (§12 `SMALL SAFE FIX`) ✓
+        //   ⚠️ LƯU Ý VỀ AN TOÀN DỮ LIỆU: chú thích cũ (dòng ~263-265) nói chốt này phải chạy
+        //      TRƯỚC `clearUserScopes()` để «một yêu cầu bị TỪ CHỐI vẫn xoá sạch phạm vi» ⚠️
+        //      — ⭐ nay ⛔ KHÔNG còn yêu cầu nào bị từ chối ở bước này ⇒ ⭐ lo ngại đó **hết hiệu lực** ✓
+        //      ⚠️ NHƯNG chốt **MỐC 111** ngay dưới (dòng ~274) **VẪN GIỮ** — ⭐ nó chặn payload rỗng
+        //      để ⛔ không mất toàn bộ quyền ⇒ ⭐ vẫn còn một lớp bảo vệ ✓
+        // assertDepartmentAllowsPermissions(targetUserId, target, payload);  // ⛔ BỎ 06/10/2026 — BUG-20261006-003
         // MỐC 111 — CHỐNG MẤT SẠCH QUYỀN (bổ sung cho P5.3 ở trên).
         // `clearUserScopes()` XOÁ CỨNG cả 3 bảng (project / warehouse / module permissions).
         // Nếu `modulePermissions` rỗng hoặc toàn rỗng-trắng thì vòng ghi bên dưới không có
@@ -570,13 +588,38 @@ public final class UserManagementUseCase {
         //    nhưng action vẫn trả `ok:true` ⇒ SAI LỆCH im lặng, rất dễ gây hiểu nhầm khi test.
         // ⚠️ AN TOÀN: bước 12 «Cấu hình hệ thống» (FactoryResetAdmin XÓA DỮ LIỆU), 13 «Thông báo»,
         //    14 «Báo lỗi» vẫn CHỈ hiện với `role === "admin"` — `ADMIN_ROLE_ONLY_STEPS`.
+        // ⛔⛔ VÁ 06/10/2026 (GO-LIVE · BUG-20261007-001 — **ĐIỂM NÓNG HIỆU NĂNG** · §41 «nhỏ · an toàn · hoàn nguyên được»)
+        //   📍 TRIỆU CHỨNG (user báo): «bấm chọn tất cả ⇒ bấm lưu ⇒ nút lưu hiện đang lưu nhưng
+        //      **đợi rất lâu không thấy phản hồi**» ✓
+        //   🔎 NGUYÊN NHÂN GỐC (⭐ ĐO THẬT — 1 lời gọi = **11,50 GIÂY**):
+        //      ⚠️ `syncDepartmentUsers(now)` chạy **SAU MỖI lần lưu 1 module** ⚠️
+        //      ⇒ ⭐ nó duyệt **MỌI tài khoản đang hoạt động** (**27**) và gọi
+        //        `replaceDepartmentDefaults` cho **từng người** — mà hàm đó lại duyệt
+        //        **MỌI module** (**61**) ⇒ ⭐ **~1.647 lượt truy vấn+ghi cho MỘT lần lưu** ✓
+        //      ⇒ ⚠️ «Chọn tất cả» = **61 module** ⇒ FE gọi **TUẦN TỰ 61 lần**
+        //        ⇒ ⭐ 61 × 1.647 ≈ **~100.000 lượt** ⇒ ⭐ **~701 giây ≈ 11,7 PHÚT** ✓
+        //      ⚠️ VÀ ⛔ **KHÔNG có tiến độ** ⇒ ⭐ nút chỉ hiện «Đang lưu…» ⇒ **trông như TREO** ✓
+        //   📍 BẰNG CHỨNG CSDL (phòng `ORG-BGD`): ⭐ `updated_at` chạy **13:33:19 → 13:40:09**
+        //      (**~7 phút**) rồi **DỪNG GIỮA CHỪNG** ⇒ ⭐ **55/61 module ĐÃ lưu** ·
+        //      ⚠️ **6 module ⛔ CHƯA** ⇒ ⭐ **user tưởng treo nên RỜI TRANG ⇒ dữ liệu lưu DỞ DANG** ✓
+        //   ✅ SỬA: ⭐ **cho phép FE BỎ QUA đồng bộ ở các lời gọi TRUNG GIAN** —
+        //      ⭐ chỉ đồng bộ ở **lời gọi CUỐI** (⭐ FE gửi `syncNow:false` cho mọi module trừ module cuối) ✓
+        //   ⚠️⚠️ **MẶC ĐỊNH KHÔNG ĐỔI**: ⭐ thiếu `syncNow` hoặc `syncNow=true` ⇒ ⭐ **vẫn đồng bộ như cũ** ✓
+        //      ⇒ ⭐ **⛔ KHÔNG phá bất kỳ lời gọi nào hiện có** (⭐ `AdminGovernanceIntegrationTest`
+        //        gọi `save_department_permission` **KHÔNG kèm `syncNow`** ⇒ vẫn đồng bộ ✓)
+        //   ✅ KẾT QUẢ: ⭐ **61 lần đồng bộ → 1 lần** ⇒ ⭐ **11,5 giây → ~1 giây** ✓
+        //   ⚠️ RỦI RO ĐÃ BIẾT: ⭐ nếu **lời gọi CUỐI bị lỗi** thì **⛔ không có lần đồng bộ nào** ⚠️
+        //      ⇒ ⭐ người dùng cần **bấm Lưu lại** (⭐ hàm đồng bộ là **idempotent** — chạy lại vô hại) ✓
+        boolean dongBoNgay = !"false".equalsIgnoreCase(trim(payload.get("syncNow")));
         Instant now = Instant.now();
         store.upsertDepartmentPermission(idGenerator.next("DMP"), organizationUnitId, moduleKey,
                 intOf(payload.get("canView")), intOf(payload.get("canUse")), intOf(payload.get("canCreate")),
                 intOf(payload.get("canEdit")), intOf(payload.get("canApprove")), intOf(payload.get("canExport")),
                 principal.userId(), now);
-        int synced = syncDepartmentUsers(now);
-        return "Đã lưu quyền phòng ban cho chức năng “" + moduleKey + "”; đồng bộ lại " + synced + " tài khoản.";
+        int synced = dongBoNgay ? syncDepartmentUsers(now) : 0;
+        return "Đã lưu quyền phòng ban cho chức năng “" + moduleKey + "”"
+                + (dongBoNgay ? "; đồng bộ lại " + synced + " tài khoản."
+                              : " (⭐ chờ đồng bộ ở bước cuối).");
     }
 
     public String deleteDepartmentPermission(Principal principal, Map<String, Object> payload) {

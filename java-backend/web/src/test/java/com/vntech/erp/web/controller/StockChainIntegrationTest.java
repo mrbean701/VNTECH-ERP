@@ -127,6 +127,13 @@ class StockChainIntegrationTest {
                         + "\"lines\":[{\"requestItemId\":\"" + mriId + "\",\"quantity\":10,\"supplierId\":\"sup_stk\",\"plannedDeliveryAt\":\"2026-10-05\"}]"), 200);
         String poId = jdbc.queryForObject(
                 "SELECT id FROM purchase_orders WHERE request_id=? LIMIT 1", String.class, requestId);
+        // ⛔⛔ SỬA 06/10/2026 (GO-LIVE · F2) — **PHẢI PHÁT HÀNH PO TRƯỚC KHI NHẬN HÀNG**.
+        //   ⭐ `create_po` ghi PO ở **`pending_approval`** ⇒ bài này trước đây gọi THẲNG
+        //      `receive_goods` ⇒ ⭐ **ĐANG MÃ HOÁ CHÍNH HÀNH VI CỦA LỖI F2** ✓
+        //   ⭐ Trước đây `approve_po` ⛔ hỏng trong test vì thiếu 3 cột trong
+        //      `web/src/test/resources/schema-h2.sql` ⇒ ⭐ **NAY ĐÃ VÁ SCHEMA** ✓
+        //   ⚠️ `postAction(..., 200)` **ĐÃ tự khẳng định HTTP 200** ⇒ ⛔ KHÔNG dùng `assertEquals` ✓
+        postAction(action("approve_po", "\"purchaseOrderId\":\"" + poId + "\""), 200);
         String poiId = jdbc.queryForObject(
                 "SELECT id FROM purchase_order_items WHERE purchase_order_id=? LIMIT 1", String.class, poId);
         postAction(action("receive_goods",

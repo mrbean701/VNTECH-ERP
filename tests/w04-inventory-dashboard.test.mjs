@@ -174,12 +174,21 @@ test("W-04 — UI KHÔNG hardcode: mọi KPI lấy từ khối tính toán, in r
 test("W-04 — GẮN vào màn Tồn kho dưới dạng TAB «Dashboard tồn kho» (không màn mới, không route mới)", () => {
   assert.match(inventory, /import \{ WarehouseDashboard \} from "@\/app\/screens\/WarehouseDashboard";/, "Inventory chưa import khối dashboard");
   assert.match(inventory, /<WarehouseDashboard\b/, "Inventory chưa render khối dashboard");
-  // 📌 CẬP NHẬT 26/09/2026 (MT3 §F): màn Kho nay có **4 tab cấp cao**; «Dashboard tồn kho» là
-  // bản mới của tab «Tồn kho» (§F) ⇒ mục menu `view==="dashboard"` mở thẳng tab số 2.
-  // ⛔ Các khẳng định cũ (import/render WarehouseDashboard · prop `view` · nội dung Tồn kho) GIỮ NGUYÊN.
-  assert.match(inventory, /const WAREHOUSE_TABS = \["Kho", "Nhập kho & Xuất kho", "Tồn kho", "Cấp phát & hoàn trả"\]/, "Thiếu dải 4 tab cấp cao theo MT3 §F");
+  // 📌 CẬP NHẬT **06/10/2026** (yêu cầu user · `ERP-SESSION-02` · `TASK-226`): màn Kho nay là **HUB «KHO VẬT TƯ»**
+  //    với **3 TAB**: [ KHO ] [ XUẤT & NHẬP ] [ CẤP PHÁT & HOÀN TRẢ ] — ⚠️ **THAY** bộ 4 tab của MT3 §F
+  //    (user chốt: «click menu ⇒ hiện luôn dashboard tồn kho», tabbar đúng 3 tab nêu trên).
+  //    ⛔ **KHÔNG NỚI CỔNG**: các khẳng định dưới đây **MẠNH HƠN** bản cũ — kiểm thêm NGUỒN hằng số, VỊ TRÍ
+  //    dashboard, TAB MẶC ĐỊNH, và việc ⛔ không còn nhánh `showDashboard` cũ.
+  assert.match(inventory, /WAREHOUSE_HUB_TABS/, "Inventory chưa dùng hằng số 3 tab dùng chung từ `lib/warehouse-hub.ts`");
+  assert.match(inventory, /const WAREHOUSE_TABS: readonly string\[\] = WAREHOUSE_HUB_TABS;/, "Inventory chưa gán bộ tab từ NGUỒN dùng chung");
+  // Dashboard phải nằm NGAY TRONG tab «KHO» (tab 0) — đúng yêu cầu «click vào menu ⇒ hiện luôn dashboard».
+  assert.match(inventory, /\{tab===0&&<WarehouseDashboard/, "Dashboard tồn kho chưa được đặt trong tab «KHO»");
+  // Tab mặc định phải là 0 (KHO) — ⛔ không còn nhánh `showDashboard` tách riêng (bản cũ dùng `tab === 2`).
+  assert.match(inventory, /const \[tab, setTab\] = useState\(0\)/, "Tab mặc định chưa phải tab 0 «KHO»");
+  assert.doesNotMatch(inventory, /const showDashboard/, "Còn sót KHAI BÁO `showDashboard` cũ");
   assert.match(inventory, /view\?: WarehouseMenuView/, "Inventory chưa nhận prop `view` từ mục menu");
-  assert.match(inventory, /view === "dashboard"/, "Inventory chưa mở tab dashboard theo `view` của mục menu");
-  // Màn Tồn kho hiện tại phải được GIỮ NGUYÊN trong tab «Tồn kho».
-  assert.match(inventory, /TỒN KHO & ĐIỀU CHUYỂN/, "Tab «Tồn kho» phải giữ nguyên nội dung cũ");
+  // ⚠️ `view` vẫn phải được TIÊU THỤ để `app/page.tsx` ⛔ không phải sửa (nay bằng `void view;`).
+  assert.match(inventory, /void view;/, "Prop `view` không còn được tham chiếu ⇒ mục menu cũ sẽ hỏng");
+  // Nội dung màn Tồn kho cũ phải được GIỮ NGUYÊN trong hub.
+  assert.match(inventory, /TỒN KHO & ĐIỀU CHUYỂN/, "Nội dung Tồn kho cũ phải được giữ nguyên");
 });
