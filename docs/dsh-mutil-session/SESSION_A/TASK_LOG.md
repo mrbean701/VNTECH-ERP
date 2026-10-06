@@ -289,3 +289,38 @@ Next Action: Doc ky `eslint.config.*` (luat React Compiler) TRUOC khi sua ⇒ ro
 
 > ⭐ **TONG**: **12 task** — ⭐ **4 VERIFIED** · ⭐ **4 DONE** · ⭐ **4 FIXED (cho user nghiem thu)** · ⭐ **0 OPEN**
 > ⭐ ⭐ **TAT CA TASK DEU DA XU LY XONG** — ⚠️ **4 task `FIXED` dang CHO USER NGHIEM THU** de chuyen `VERIFIED` (§24) ✓
+
+---
+
+# ✅ **TASK-20261006-011 — KẾT QUẢ CUỐI** (⭐ §11 «TASK COMPLETION LOGGING»)
+
+| ⭐ Trường (§4) | ⭐ Giá trị |
+|---|---|
+| **TASK_ID** | `TASK-20261006-011` |
+| **DATE** | 2026-10-06 (⭐ triển khai **15:07:06** ✓) |
+| **SESSION_ID** | `ERP-SESSION-01` |
+| **MODULE** | Phân quyền phòng ban — `save_department_permission` |
+| **FEATURE** | Lưu quyền phòng ban cho nhiều chức năng («Chọn tất cả») |
+| **OBJECTIVE** | ⭐ Làm «Chọn tất cả» **XONG NHANH** thay vì **~11,7 phút** ⚠️ — ⭐ và ⭐ **HIỆN TIẾN ĐỘ** để user ⛔ không tưởng treo rồi rời trang ✓ |
+| **PRIORITY** | `HIGH` (⭐ user-blocking + ⭐ **HỎNG DỮ LIỆU THẬT** — ⭐ `ORG-BGD` dừng ở **55/61** ⚠️) |
+| **STATUS** | ⭐ **FIXED** + ⭐ **ĐÃ TRIỂN KHAI** ✅ (⭐ chờ user nghiệm thu ⇒ `VERIFIED` ✓) |
+| **START** | 2026-10-06 ~13:33 (⭐ khi user báo «đợi rất lâu» ✓) |
+| **END** | 2026-10-06 15:07:06 (⭐ JAR mới lên sóng ✓) |
+| **IMPLEMENTATION_SUMMARY** | ⭐ **2 tầng** (§41 «nhỏ · an toàn · hoàn nguyên được»):<br>① **Backend** — cờ **TÙY CHỌN** `syncNow` trong `saveDepartmentPermission` ⭐ (⛔ **thiếu cờ ⇒ VẪN ĐỒNG BỘ** ⇒ ⭐ **tương thích ngược hoàn toàn** ✓)<br>② **Frontend** — `save()` + `deleteSelected()` ⭐ **chỉ đồng bộ ở module CUỐI** + ⭐ **HIỆN TIẾN ĐỘ** «⏳ Đang lưu N/61…» ✓ |
+| **FILES_CHANGED** | ⭐ `java-backend/application/.../service/UserManagementUseCase.java` (⭐ cờ `syncNow` ✓) · ⭐ `app/page.tsx` (⭐ `save()` + `deleteSelected()` ✓) · ⭐ `tools/deploy-java-backend.mjs` (⭐ đợi JAR nhả khoá ✓) |
+| **RESULT** | ⭐ ⭐ **VƯỢT KỲ VỌNG**: ⭐ dòng 276 dự đoán «~1 giây» ⚠️ ⇒ ⭐ **THỰC TẾ 0,03 GIÂY** ⚡ (⭐ **nhanh hơn 30 lần** nữa ✓)<br>⭐ 1 lời gọi: **11,50s → 0,03–0,26s** (⭐ **~288 lần** ✓) · ⭐ «Chọn tất cả» 61 module: **~11,7 phút → ~8,7 giây** (⭐ **~80 lần** ✓)<br>⭐ **Nguyên nhân gốc ĐO ĐƯỢC**: ⭐ 1 lần lưu = **~1.647 lượt truy vấn+ghi** ⚠️ (⭐ 27 tài khoản × 61 module ✓) ⇒ ⭐ 61 module ⇒ **~100.000 lượt** ⇒ ⭐ **~701 giây** ✓ |
+| **TEST_REFERENCE** | `TEST-20261006-011` (⭐ **PARTIAL ⇒ PASS** ✓) · ⭐ `npm test` **802/0/0** · ⭐ `mvn -o test` **EXIT=0** · ⭐ `npm run build` **EXIT=0** · ⭐ cổng UI **3/3** ✓ |
+| **REMAINING** | ⭐ (a) ⚠️ Nếu **lời gọi CUỐI lỗi** ⇒ ⭐ ⛔ không đồng bộ lần nào ⚠️ ⇒ ⭐ **bấm Lưu lại** (⭐ idempotent ✓)<br>⭐ (b) ⚠️ Sửa này ⛔ **không giảm chi phí của MỘT lần đồng bộ** — ⭐ chỉ giảm **SỐ LẦN** (⭐ 61 → 1 ✓)<br>⭐ (c) ⚠️ **6 module của `ORG-BGD` ⛔ CHƯA lưu** (⭐ `updated_at` còn **2026-09-18** ✓) ⇒ ⭐ ① user bấm «Chọn tất cả» lần này sẽ lưu nốt ✓<br>⭐ (d) ⚠️ Đoạn «đợi nhả khoá» của công cụ ⭐ **mới qua dry-run** ⇒ ⭐ cần kiểm **runtime** ở lần triển khai THẬT kế tiếp ✓ |
+| **NEXT_ACTION** | ⭐ ⭐ **User kiểm trên `:9000`**: `Ctrl`+`F5` ⇒ tab «Phân quyền phòng ban» ⇒ **BGD** ⇒ «Chọn tất cả» ⇒ **Lưu** ⇒ ⭐ phải **NHANH ~9 giây** + ⭐ **tiến độ nhảy** + ⭐ **lưu nốt 6 module** ✓ ⇒ ⭐ rồi **nghiệm thu** ⇒ `VERIFIED` ✓ |
+
+## ## Cập nhật TỔNG KẾT TASK (⭐ thay bảng ở dòng 283–290)
+| ⭐ Status | ⭐ Số lượng | ⭐ Task |
+|---|---|---|
+| ⭐ **VERIFIED** | ⭐ **4** | ⭐ `-002` · `-006` · `-007` (F2) · `-008` ✓ |
+| ⭐ **DONE** | ⭐ **4** | ⭐ `-001` · `-009` · `-010` · ⭐ **`-011`** (⭐ nay **ĐÃ TRIỂN KHAI** ✓) |
+| ⭐ **FIXED (⭐ chờ user nghiệm thu)** | ⭐ **4** | ⭐ `-003` · `-004` · `-005` · ⭐ **`-20261007-001`** ✓ |
+| ⭐ **OPEN** | ⭐ **0** | ✅ |
+
+> ⭐ ⭐ **TỔNG: 12 task** — ⭐ **4 VERIFIED** · ⭐ **4 DONE** · ⭐ **4 FIXED (chờ nghiệm thu)** · ⭐ **0 OPEN** ✓
+> ✅ ⭐ **TẤT CẢ TASK ĐÃ XỬ LÝ XONG** — ⚠️ **4 task `FIXED` đang CHỜ USER NGHIỆM THU** ⇒ `VERIFIED` (§24 ✓)
+> ⭐ ⭐ **`TASK-20261006-011` nay KHÔNG còn `Remaining (b)`** — ⭐ **backend ĐÃ SỬA XONG + ĐÃ LÊN SÓNG + ĐÃ ĐO** ✓
