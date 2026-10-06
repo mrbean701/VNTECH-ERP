@@ -184,3 +184,63 @@ Related Change: CHG-20261006-009
 > ① ⭐ **`action()` ⛔ KHONG tra payload** ⇒ ⭐ can doc ket qua thi **PHAI dung `requestApi`** (-002) ✓
 > ② ⭐ **Khi `edit` thay KHOI DAI ⇒ PHAI giu lai MOI DONG KHAI BAO** (-005) ✓
 > ③ ⭐ **Truoc khi tin ket qua «KHONG CO» ⇒ PHAI kiem PHEP DO co doc duoc du lieu that khong** (-008) ✓
+
+---
+
+# 🧭 **4 QUYẾT ĐỊNH MỚI — 06/10/2026** (⭐ §11 «TASK COMPLETION LOGGING»)
+
+## ## DEC-20261006-011 — ⭐ `syncNow` LÀ CỜ **TÙY CHỌN**, MẶC ĐỊNH = ĐỒNG BỘ
+| ⭐ | ⭐ |
+|---|---|
+| **CATEGORY** | ⭐ `BACKEND` + `RBAC` + ⭐ **Technical Direction** |
+| **BỐI CẢNH** | ⚠️ `save_department_permission` mất **11,50 giây** ⚠️ vì `syncDepartmentUsers` chạy **sau MỖI module** ⚠️ ⇒ ⭐ «Chọn tất cả» 61 module ⇒ ⭐ **~11,7 PHÚT** ✓ |
+| **QUYẾT ĐỊNH** | ⭐ Thêm cờ **TÙY CHỌN** `syncNow` ⭐ — ⭐ **thiếu cờ ⇒ `dongBoNgay = true`** ⇒ ⭐ **VẪN ĐỒNG BỘ như cũ** ✓ |
+| **VÌ SAO ⛔ KHÔNG bỏ đồng bộ mặc định** | ⭐ **TƯƠNG THÍCH NGƯỢC** ⚠️ — ⭐ `AdminGovernanceIntegrationTest` gọi **không kèm cờ** ⚠️ ⇒ ⭐ nếu mặc định `false` thì ⭐ **test đó ⛔ sẽ đỏ** và ⭐ **quyền user ⛔ không được cập nhật** ✓ |
+| **ĐÁNH ĐỔI** | ✅ ⭐ **An toàn**: ⛔ không phá vỡ lời gọi nào hiện có ✓ · ⚠️ **Nhược điểm**: ⭐ nếu **lời gọi CUỐI lỗi** ⇒ ⭐ **⛔ không đồng bộ lần nào** ⚠️ ⇒ ⭐ **bấm Lưu lại** (⭐ hàm **idempotent** ✓) |
+| **LIÊN QUAN** | ⭐ `CHG-20261006-011` · ⭐ `DEV-20261006-010` · ⭐ `TEST-20261006-011` ✓ |
+
+## ## DEC-20261006-012 — ⭐ CÔNG CỤ PHẢI **ĐỢI JAR NHẢ KHOÁ**, ⛔ KHÔNG «ĐỢI N GIÂY CỐ ĐỊNH»
+| ⭐ | ⭐ |
+|---|---|
+| **CATEGORY** | ⭐ `DEVOPS` + ⭐ **Technical Direction** |
+| **BỐI CẢNH** | ⚠️ `tools/deploy-java-backend.mjs` đợi **3 giây cố định** + ⭐ **CHỈ kiểm «cổng đã trống»** ⚠️ ⇒ ⭐ **build LUÔN thất bại** ⚠️ (`repackage` ⛔ không rename được JAR ✓) |
+| **QUYẾT ĐỊNH** | ⭐ Thay bằng ⭐ **«ĐỢI ĐẾN KHI JAR THỰC SỰ NHẢ KHOÁ»** — ⭐ **PHÉP THỬ RENAME** ⭐ (⭐ `Move($j,"$j.lk")` rồi `Move` ngược lại ✓), ⭐ tối đa **60 giây** ✓ |
+| **VÌ SAO** | ⚠️ ⭐ **CỔNG TRỐNG ⛔ KHÔNG BẢO ĐẢM JAR ĐÃ NHẢ KHOÁ** ⚠️ — ⭐ đo được: ⭐ JVM giữ handle trên JAR **thêm ~2 GIÂY** nữa sau khi cổng đã đóng ✓ |
+| **ĐÁNH ĐỔI** | ✅ ⭐ **Chắc chắn đúng** (⭐ kiểm **trạng thái thật** thay vì **đoán bằng thời gian** ✓) · ⚠️ **Nhược điểm**: ⭐ nếu JAR bị giữ mãi thì ⭐ **dừng sau 60 giây** ⚠️ (⭐ ⛔ không build hỏng ✓) |
+| **LIÊN QUAN** | ⭐ `DEV-20261006-010` ③ ✓ |
+
+## ## DEC-20261006-013 — ⛔ **KHÔNG KILL `java.exe` CỦA DỰ ÁN KHÁC**
+| ⭐ | ⭐ |
+|---|---|
+| **CATEGORY** | ⭐ `DEVOPS` + ⭐ **Technical Direction** (§36 ✓) |
+| **BỐI CẢNH** | ⚠️ Trên máy có **3 tiến trình `java.exe`** ⚠️ — ⭐ 2 trong đó là ⭐ **DỰ ÁN KHÁC**: ⭐ `Phan mem Purchasing\Backend\mep-backend` ⭐ (⭐ `com.mep.mepbackend.MepBackendApplication` ✓) ⚠️ |
+| **QUYẾT ĐỊNH** | ⭐ **CHỈ dừng PID đã XÁC MINH `cmdline` chứa `vntech-erp-web`** ✓ — ⛔ **tuyệt đối ⛔ không `Stop-Process` theo TÊN** ⚠️ |
+| **VÌ SAO** | ⚠️ `Stop-Process -Name java` sẽ ⭐ **GIẾT ỨNG DỤNG CỦA USER** ⚠️ — ⭐ và ⭐ §36: ⭐ **phải xác định ĐÚNG PID/process trước** ✓ |
+| **ĐÃ KIỂM** | ✅ ⭐ 2 tiến trình dự án khác ⛔ **KHÔNG giữ JAR của VNTECH** (⭐ chứng minh bằng **phép thử rename** ✓) |
+
+## ## DEC-20261006-014 — ⛔ **KHÔNG GỘP «DỪNG SERVICE + BUILD + START» VÀO MỘT LỆNH DÀI**
+| ⭐ | ⭐ |
+|---|---|
+| **CATEGORY** | ⭐ `DEVOPS` + ⭐ **Technical Direction** |
+| **BỐI CẢNH** | 🚨 ⭐ **MỘT lệnh triển khai BỊ NGẮT GIỮA CHỪNG** ⚠️ ⇒ ⭐ nó đã: ① **DỪNG Java** ⇒ ② **`mvn package` GHI ĐÈ JAR** (⭐ còn **0,1 MB** = dở dang ⚠️) ⇒ ③ **BỊ NGẮT** trước khi build xong + trước khi start lại ⇒ ⭐ ⭐ **Java CHẾT + proxy `:9000` CHẾT** ⚠️✓ |
+| **QUYẾT ĐỊNH** | ⭐ ⭐ **LUẬT MỚI**: ⭐ **tách thành các lệnh NGẮN** ✓ ⭐ **hoặc** ⭐ chạy **`run_in_background`** ⭐ để ⛔ **không thể bị ngắt khi hết lượt** ✓ |
+| **VÌ SAO** | ⚠️ ⭐ Lệnh bị ngắt ⇒ ⭐ **kết quả KHÔNG RÕ** ⚠️ — ⭐ mà **service đã bị dừng** ⇒ ⭐ **hệ thống chết** ✓ |
+| **RỦI RO ẨN KÈM THEO** | 🚨 ⭐ Sau sự cố, ⭐ **JAR trên đĩa = 0,1 MB (HỎNG)** ⚠️ **NHƯNG Java vẫn trả 401 = SỐNG** ⚠️ ⇒ ⭐ nó chạy bằng **CLASSES ĐÃ NẠP TRONG RAM** ⚠️ ⇒ ⭐ ⭐ **NẾU RESTART (hoặc MÁY RESTART) ⇒ ⛔ KHÔNG KHỞI ĐỘNG LẠI ĐƯỢC** ⚠️✓ — ⭐ **ĐÃ KHÔI PHỤC** từ bản lùi **86,8 MB** ✓ |
+| **BÀI HỌC** | ⭐ **«Cổng trống» và «API trả 401» ⛔ KHÔNG chứng minh ARTIFACT TRÊN ĐĨA lành** ⚠️ ⇒ ⭐ **PHẢI KIỂM KÍCH THƯỚC/TEM THỜI GIAN của tệp** ✓ |
+| **LIÊN QUAN** | ⭐ `EVT-20261006-025/026/027` ✓ · ⭐ `BUG-20261007-001` (⭐ cùng đợt ✓) |
+
+---
+
+## ## Cập nhật bảng đếm CATEGORY (⭐ thay bảng ở dòng 172–180)
+| ⭐ Category | ⭐ Số lượng | ⭐ Mã |
+|---|---|---|
+| ⭐ **DEVOPS** | ⭐ **5** | ⭐ `-001` · `-008` · ⭐ **`-012`** · ⭐ **`-013`** · ⭐ **`-014`** ✓ |
+| ⭐ **BACKEND** | ⭐ **1** | ⭐ **`-011`** ✓ |
+| ⭐ **Technical Direction** | ⭐ **10** | ⭐ `-001` · `-002` · `-005` · `-006` · `-007` · `-008` · `-009` · ⭐ **`-011`** · ⭐ **`-012`** · ⭐ **`-013`** · ⭐ **`-014`** ✓ |
+| ⭐ `FRONTEND` · `RBAC` · `WORKFLOW` · `DATABASE` · `Business Logic` | ⭐ không đổi ✓ |
+
+> ⭐ ⭐ **TỔNG CUỐI: 14 quyết định** ✓
+> ⭐ ⭐ **LUẬT QUAN TRỌNG NHẤT ĐƯỢC THÊM**:
+> ④ ⭐ **«Cổng trống» ⛔ KHÔNG bảo đảm JAR đã nhả khoá ⇒ PHẢI kiểm bằng PHÉP THỬ RENAME** (`-012`) ✓
+> ⑤ ⭐ **⛔ KHÔNG gộp «dừng + build + start» vào MỘT lệnh dài** ⇒ ⭐ **tách lệnh NGẮN** hoặc ⭐ **`run_in_background`** (`-014`) ✓
+> ⑥ ⭐ **⛔ KHÔNG kill `java.exe` theo TÊN** — ⭐ **chỉ dừng PID đã xác minh `cmdline`** (`-013`) ✓

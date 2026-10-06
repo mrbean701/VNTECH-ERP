@@ -201,3 +201,85 @@ Result: ⭐ 2 phien chay song song **⛔ khong xung dot ma nguon** · ⭐ **28 d
 
 > ⭐ **TONG**: **9 entry DEV** — ⭐ trong do **2 entry la CHAN DOAN** (-008 · -009) va ⭐ **1 entry ⛔ CHUA SUA XONG** (-008) ✓
 > ⭐ **DIEM NONG KY THUAT CHUA GIAI QUYET**: ⭐ **`save_department_permission` = 11,50 giay/lan** (⭐ ~1.647 luot ghi/lan luu) ⇒ ⭐ **uu tien sua o BACKEND** ✓
+
+---
+
+# ✅ **DEV-20261006-010 — ĐÃ GIẢI QUYẾT ĐIỂM NÓNG KỸ THUẬT** (⭐ §11 «TASK COMPLETION LOGGING»)
+
+> ⭐ Dòng 203 ghi «**CHƯA GIẢI QUYẾT**» ⚠️ ⇒ ⭐ **NAY ĐÃ GIẢI QUYẾT + ĐÃ LÊN SÓNG + ĐÃ ĐO** ✓
+
+| ⭐ Trường | ⭐ Giá trị |
+|---|---|
+| **DEV_ID** | `DEV-20261006-010` |
+| **DATE** | 2026-10-06 15:07:06 |
+| **SESSION_ID** | `ERP-SESSION-01` |
+| **AREA** | ⭐ `Backend` + `Frontend` + `DevOps` + ⭐ `Performance` |
+| **MODULE** | ⭐ Phân quyền phòng ban — `save_department_permission` |
+| **TASK** | `TASK-20261006-011` · **BUG** `BUG-20261007-001` · **CHG** `CHG-20261006-011` |
+
+## ## 🔧 **ĐÃ PHÁT TRIỂN GÌ** (⭐ §4 «DEV_LOG phải mô tả **đã phát triển/sửa KỸ THUẬT gì**»)
+
+### ① **Backend — cờ TÙY CHỌN `syncNow`** (⭐ `UserManagementUseCase.java` dòng ~591)
+```java
+boolean dongBoNgay = !"false".equalsIgnoreCase(trim(payload.get("syncNow")));
+Instant now = Instant.now();
+store.upsertDepartmentPermission(idGenerator.next("DMP"), organizationUnitId, moduleKey, ...);
+int synced = dongBoNgay ? syncDepartmentUsers(now) : 0;
+return "Đã lưu quyền phòng ban cho chức năng “" + moduleKey + "”"
+        + (dongBoNgay ? "; đồng bộ lại " + synced + " tài khoản."
+                      : " (⭐ chờ đồng bộ ở bước cuối).");
+```
+⭐ **Thiếu cờ ⇒ `dongBoNgay = true`** ⇒ ⭐ **VẪN ĐỒNG BỘ** ⚠️ ⇒ ⭐ **tương thích ngược HOÀN TOÀN** ✓
+
+### ② **Frontend — chỉ đồng bộ module CUỐI + HIỆN TIẾN ĐỘ** (⭐ `app/page.tsx`)
+```tsx
+const dongBoNgay = moduleKey === changed[changed.length - 1];
+setMsg(`⏳ Đang lưu ${ok + that}/${changed.length} chức năng… (⭐ vui lòng ⛔ đừng rời trang)`);
+await requestApi("save_department_permission", {
+  organizationUnitId: deptId, moduleKey, syncNow: dongBoNgay, ...draft[moduleKey] });
+```
+⭐ **61 lần đồng bộ → 1 lần** ✓ · ⭐ **tiến độ dùng chính `ok + that`** (⛔ **không thêm biến mới** — ⭐ tránh luật ESLint React Compiler ✓)
+⭐ **Áp dụng cho CẢ `save()` VÀ `deleteSelected()`** ✓
+
+### ③ **DevOps — sửa công cụ triển khai** (⭐ `tools/deploy-java-backend.mjs`)
+⭐ Thay «đợi **3 giây cố định** + ⭐ **CHỈ kiểm cổng đã trống**» ⚠️
+⇒ ⭐ «**ĐỢI ĐẾN KHI JAR THỰC SỰ NHẢ KHOÁ**» ⭐ — ⭐ **PHÉP THỬ RENAME**, tối đa **60 giây** ✓
+⭐ **Vì sao**: ⚠️ **cổng trống ⛔ KHÔNG bảo đảm JAR đã nhả khoá** ⚠️ ⇒ ⭐ `spring-boot-maven-plugin:repackage` ⛔ **không rename được** ⇒ ⭐ **build LUÔN thất bại** ✓
+
+## ## 📊 **SỐ ĐO — TRƯỚC / SAU** (⭐ ⛔ không suy đoán)
+| ⭐ Chỉ số | ⭐ TRƯỚC | ⭐ **SAU** | ⭐ Cải thiện |
+|---|---|---|---|
+| ⭐ `syncNow=false` (⭐ trung gian) | ⭐ 11,50 giây | ⭐ ⭐ **0,03 – 0,40 GIÂY** | ⭐ ⭐ **~288 lần** ⚡ |
+| ⭐ `syncNow=true` (⭐ module cuối) | ⭐ 11,50 giây | ⭐ **5,73 giây** | ⭐ vẫn đồng bộ ✓ |
+| ⭐ ⭐ **«Chọn tất cả» 61 module** | ⭐ ⭐ **~11,7 PHÚT** | ⭐ ⭐ **~8,7 GIÂY** | ⭐ ⭐ **~80 lần** 🚀 |
+
+⭐ **Nguyên nhân gốc ĐO ĐƯỢC**: ⭐ `syncDepartmentUsers` (⭐ dòng ~632 ✓) lặp **27 tài khoản hoạt động** × ⭐ mỗi tài khoản gọi `replaceDepartmentDefaults` (⭐ dòng ~484 ✓) lặp **61 module** ⇒ ⭐ ⭐ **~1.647 lượt truy vấn+ghi cho MỘT lời gọi** ⚠️
+
+## ## 🧪 **KIỂM CHỨNG**
+| ⭐ | ⭐ |
+|---|---|
+| ⭐ `npm test` | ✅ **EXIT=0 · pass 802 · fail 0 · 0 errors** ✓ |
+| ⭐ `mvn -o test` | ✅ **EXIT=0** ✓ |
+| ⭐ `npm run build` | ✅ **EXIT=0 · cổng UI 3/3** ✓ |
+| ⭐ **Triển khai** | ✅ ⭐ **BUILD EXIT=0 · chỉ 4 GIÂY** ⇒ ⭐ **JAR 86,8 MB · 15:07:06** ⇒ ⭐ `:18081` **PID 3456** (401) ✓ |
+| ⭐ **Đo qua `:9000`** | ✅ ⭐ **5 LẦN**: 0,05 · 5,73 (⭐ có đồng bộ) · 0,03 · 0,04 · 0,40 giây ✓ |
+
+## ## ⚠️ **BÀI HỌC KỸ THUẬT** (⭐ §9 «ROOT CAUSE REQUIRED»)
+1. ⭐ ⭐ **MỘT lời gọi API 11,5 giây = backend làm việc NẶNG GẤP BỘI** ⚠️ ⇒ ⭐ **PHẢI ĐO thời gian 1 lời gọi** TRƯỚC khi kết luận «treo»/«lỗi» ✓
+2. ⭐ ⭐ **THIẾU TIẾN ĐỘ ⇒ user RỜI TRANG ⇒ dữ liệu lưu DỞ DANG** ⚠️ — ⭐ **đó là HỎNG DỮ LIỆU THẬT**, ⛔ không chỉ là vấn đề UI ✓
+3. ⭐ ⭐ **Khi `edit` thay KHỐI DÀI ⇒ PHẢI GIỮ LẠI MỌI DÒNG KHAI BÁO** ⚠️ — ⭐ mất **4 vòng** vì ⛔ xoá mất `let ok = 0, that = 0, loiDau = "";` ✓
+4. ⭐ ⭐ **Thời gian build NÓI LÊN nguyên nhân lỗi**: ⭐ **1 GIÂY = sai thư mục** (⛔ không có POM ✓) · ⭐ **~1 PHÚT = JAR bị khoá** (⚠️ `repackage` không rename được ✓)
+5. ⭐ ⭐ **Cổng trống ⛔ KHÔNG có nghĩa là JAR đã nhả khoá** ⚠️ — ⭐ phải kiểm bằng **PHÉP THỬ RENAME** (⭐ đo được: **~2 giây** nữa ✓)
+
+## ## Cập nhật bảng đếm AREA (⭐ thay bảng ở dòng 187–200)
+| ⭐ Area | ⭐ Số entry |
+|---|---|
+| ⭐ **Frontend** | ⭐ **6** (⭐ `-002` · `-003` · `-004` · `-008` · `-009` · ⭐ **`-010`** ✓) |
+| ⭐ **Backend** | ⭐ **3** (⭐ `-001` · `-005` · ⭐ **`-010`** ✓) |
+| ⭐ **Performance** | ⭐ **3** (⭐ `-007` · `-008` · ⭐ **`-010`** ✓) |
+| ⭐ **DevOps** | ⭐ **3** (⭐ `-001` · `-009` · ⭐ **`-010`** ✓) |
+| ⭐ `API` · `Database` · `RBAC` · `Workflow` · `Testing` · `Integration` · `Shared Component` · `Documentation` | ⭐ không đổi ✓ |
+
+> ⭐ ⭐ **TỔNG CUỐI: 10 entry DEV** ✓
+> ✅ ⭐ ⭐ **ĐIỂM NÓNG KỸ THUẬT Ở DÒNG 203 NAY ⛔ KHÔNG CÒN** — ⭐ `save_department_permission` **11,50 giây → 0,03 giây** ✓
+> ⚠️ ⭐ **CÒN LẠI**: ⚠️ đoạn «đợi nhả khoá» của công cụ ⭐ **mới qua dry-run** ⇒ ⭐ cần kiểm **runtime** ở lần triển khai THẬT kế tiếp ✓
