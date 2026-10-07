@@ -597,3 +597,17 @@ Notes: ⭐ **CÒN LẠI 2 KHỐI «GIẢI THÍCH» trong tab KHO** (⛔ không t
 | ⭐⭐⭐ **SAI LẦM ĐÃ SỬA (§22) — LẦN 9** | ⭐⭐ **EM GIẢ ĐỊNH TÊN NEO ⛔ KHÔNG ĐO TRƯỚC** ⭐⭐ ⚠️ ⭐ ⭐ (⭐ `TEST-030` nói «neo vào `[data-vntech]`» ⭐ nhưng ⭐⛔ **em KHÔNG kiểm tên đó có tồn tại** ⚠️ ✓) ⭐ ⇒ ⭐⭐ **LUẬT: TRƯỚC KHI ĐO BẰNG NEO ⇒ PHẢI LIỆT KÊ `[data-vntech]` CÓ THẬT TRÊN MÀN** ⭐⭐ ✓ |
 | **STATUS** | ⭐⭐ **INCONCLUSIVE** ⭐⭐ (⭐ lần 2 ✓) — ⭐ **⛔ vẫn chưa kết luận được empty state** ⚠️ ⭐ ⛔ **không sửa gì** (⭐ ⛔ không phải bug ✓) ✓ |
 | ⭐ **BÀI HỌC (§33)** | ⭐ ⭐⭐ **«NEO ĐÚNG KHỐI» CHƯA ĐỦ — PHẢI «NEO ĐÚNG TÊN CÓ THẬT»** ⭐ ⭐⭐ ⭐ ⭐ Cách làm đúng: ⭐ **BƯỚC 0 = LIỆT KÊ `document.querySelectorAll('[data-vntech]')` TRƯỚC** ⭐ rồi mới chọn neo ✓ ✓ |
+
+## ⭐⭐⭐ TEST-20261007-033 — §22 «EMPTY STATE» (LẦN 3) — ⭐⭐ **ĐẠT** ✅ — ĐÓNG VÒNG 2 LẦN INCONCLUSIVE ⭐⭐⭐
+| ⭐ | ⭐ |
+|---|---|
+| **DATE** | 2026-10-07 · **SESSION_ID** `ERP-SESSION-02` · **TEST_TYPE** `UI` |
+| ⭐⭐⭐ **ĐIỀU LÀM NÊN KHÁC BIỆT** | ⭐ Áp ⭐⭐ **LUẬT «BƯỚC 0»** ⭐⭐ (⭐ rút ra ở `TEST-032` ✓): ⭐⭐ **LIỆT KÊ `[data-vntech]` CÓ THẬT TRƯỚC KHI CHỌN NEO** ⭐⭐ — ⭐ ⛔ không giả định tên neo nữa ✓ |
+| ⭐ **BƯỚC 0 — KẾT QUẢ** | ⭐⭐ `{"inv-transfer-btn":1, "inv-ledger-btn":1, "warehouse-cards":1, "warehouse-card":12, "warehouse-open-detail":1, "open-error-report-fab":1}` ⭐⭐ ⇒ ⭐ **neo ĐÚNG = `[data-vntech="warehouse-cards"]`** ✅ |
+| **CÁCH ĐO** | ⭐ Trong khối `warehouse-cards`: ⭐ đếm `[data-vntech="warehouse-card"]` ⭐ (⭐ ⛔ **KHÔNG** dùng `tbody tr` — ⭐ tab «KHO» là **LƯỚI THẺ**, ⛔ không phải bảng ⚠️ ✓) ⭐ + ⭐ gõ từ khoá ⛔ không tồn tại vào **ô TRONG KHỐI** ⭐ (⭐ `placeholder = "Tìm theo tên hoặc mã kho..."` ✓) |
+| ⭐⭐⭐ **KẾT QUẢ — ĐẠT** | ⭐ **TRƯỚC lọc**: ⭐⭐ **12 thẻ** ⭐⭐ ⭐ **SAU lọc**: ⭐⭐ **0 thẻ** ⭐⭐ ⇒ ⭐⭐⭐ **CÓ EMPTY STATE**: ⭐⭐ «**Không có kho nào khớp từ khoá tìm kiếm**» ⭐⭐ ✅ ⭐⭐⭐ |
+| **KẾT LUẬN** | ⭐⭐ **PASS** ⭐⭐ — ⭐ UI ⭐ **CÓ thông báo rõ khi tập dữ liệu RỖNG** ✅ ⭐ ⛔ **không có «lưới trống trơn»** ⚠️ ⇒ ⭐ **§22 «Empty state» ĐẠT** ✅ |
+| ⭐ **ĐÓNG VÒNG** | ⭐ `TEST-20261007-030` (INCONCLUSIVE) ⭐ + ⭐ `TEST-20261007-032` (INCONCLUSIVE) ⇒ ⭐⭐ **nay `TEST-20261007-033` = PASS** ⭐⭐ ✅ |
+| ⭐⭐ **CHUỖI BÀI HỌC ĐÃ ĐI QUA (⭐ 3 lần mới đo được)** | ⭐ **Lần 1** (`TEST-030`): ⛔ `table tbody tr` **đếm TẤT CẢ bảng** ⇒ ⭐ luật **«CÔ LẬP ĐÚNG KHỐI»** ⭐ **Lần 2** (`TEST-032`): ⭐ neo vào `[data-vntech]` ⭐ nhưng ⭐ ⛔ **tên giả định không tồn tại** ⇒ ⭐ luật **«BƯỚC 0: LIỆT KÊ NEO THẬT»** ⭐ **Lần 3** (`TEST-033`): ⭐ ✅ **ĐẠT** ⭐ ⭐⭐⭐ **⇒ HAI LUẬT CỘNG LẠI = PHÉP ĐO ĐÚNG** ⭐⭐⭐ ✓ |
+| **STATUS** | ⭐⭐ **PASS** ⭐⭐ |
+| **RELATED** | ⭐ `TEST-20261007-030` · `TEST-20261007-032` · `EVT-20261007-044` ✓ |
