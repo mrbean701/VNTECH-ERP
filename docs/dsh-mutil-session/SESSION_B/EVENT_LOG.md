@@ -243,3 +243,13 @@ Description: **BUG-20261006-007 DA SUA (dinh chinh bao xanh gia)** — ghi khoi 
 | ⭐ **ĐỐI CHIẾU `unity` ↔ `main`** | ⭐⭐ **`unity` TRƯỚC `main` 34 commit** ⚠️ ⭐ **`main` trước `unity` 2 commit** ⚠️ ⇒ ⭐ ⛔ **CHƯA merge `unity` → `main`** ⭐ ⭐ **(⭐ user chỉ nói «merge vào unity» — ⭐ đã đạt; ⭐ chưa được yêu cầu merge sang `main` ⇒ ⏳ CHỜ USER ✓)** |
 | ⭐ **BÀI HỌC (§33)** | ⭐ ⭐ **LỖI DNS CÓ THỂ CHỈ LÀ TẠM THỜI — ⭐ PHẢI CHẨN ĐOÁN TRƯỚC KHI KẾT LUẬN «MẤT MẠNG»** ⭐ ⭐ — ⭐ DNS resolve được · TCP 443 mở · HTTP 200 ⭐ ⇒ ⭐ **thử lại 1 lần** là xong ✓ ⭐ ⛔ **đừng sửa cấu hình git/proxy khi chưa đo** ✓ |
 | ⭐ **TRUY VẾT** | ⭐ commit `7a033a0` ✓ |
+
+## ⭐⭐⭐ EVT-20261007-037 — QUÉT LỚP LỖI (lần 2) + SAI LẦM ĐO LỚN: SAI NGUỒN SỰ THẬT ⭐⭐⭐
+| ⭐ | ⭐ |
+|---|---|
+| **SỰ KIỆN** | ⭐ `BUG_FOUND` + ⭐⭐ `SAI LẦM ĐÃ SỬA` ⭐ — ⭐ quét mọi `action("…")` của UI đối chiếu backend ✓ |
+| ⭐⭐ **SAI LẦM** | ⭐ Bản 1 quét **`scripts/system-route.mjs`** ⇒ **16 tên thiếu** ⚠️ ⭐ nhưng ⭐⭐ chính tệp đó ghi «⚠️ **ROUTE NÀY KHÔNG ĐƯỢC APP ĐANG CHẠY GỌI: API thật là Java `:18081`**» ⭐⭐ ⇒ ⭐⭐⭐ **15/16 là DƯƠNG TÍNH GIẢ** ⭐⭐⭐ |
+| **SỬA** | ⭐ Đổi nguồn sang **`ActionRbacRegistry.java` + `SystemController.java`** ⭐ (⭐ `cutover-proxy.mjs:39` xác nhận `/api/system` → Java `:18081` ✓) ⇒ ⭐⭐ **16 → 1** ⭐⭐ ✓ |
+| **ĐỐI CHỨNG 2 CHIỀU** | ⭐ **âm**: `delete_warehouse`/`save_warehouse`/`allocate` = **KHÔNG** ✅ (⭐ khớp đã biết) ⭐ **dương**: `login`/`save_material`/`check_material_alias_conflicts` = **CÓ** ✅ ⇒ ⭐ **phép đo ĐÚNG** ✓ |
+| **KẾT QUẢ** | ⭐ 133 action UI gọi ⇒ ⭐ **132 CÓ Java** ✅ ⭐ **1 thiếu**: `delete_warehouse` ⭐ ⇒ ⭐ `BUG-20261007-015` ✓ |
+| ⭐ **BÀI HỌC (§33)** | ⭐ ⭐⭐ **PHẢI XÁC ĐỊNH NGUỒN SỰ THẬT TRƯỚC KHI QUÉT** ⭐ ⭐⭐ ⭐ + ⭐ ⭐⭐ **MỌI PHÉP QUÉT PHẢI CÓ ĐỐI CHỨNG CẢ 2 CHIỀU** ⭐ ⭐⭐ ✓ |

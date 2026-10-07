@@ -265,3 +265,22 @@ Status: **FIXED** | Related Bug: BUG-20261006-005 (FIXED) · BUG-20261006-006 (O
 | **ẢNH HƯỞNG** | ⭐ Hub «Kho vật tư» → tab «KHO»: ⭐⭐ **toàn bộ CRUD kho ⛔ không dùng được** ⭐⭐ (⭐ Tạo · Sửa ⭐) ⚠️ · ⭐ tab «CẤP PHÁT & HOÀN TRẢ» → «Tạo phiếu cấp phát» ⚠️<br>⭐ ✅ **KHÔNG ảnh hưởng**: 12 cards kho (⭐ chọn được ✓) · nút «Xem chi tiết» ✓ · «Xuất Excel» ✓ · tab «XUẤT & NHẬP» ✓ · «Tạo phiếu hoàn trả» ✓ |
 | **STATUS** | ⭐⭐ **OPEN** ⚠️ — ⭐ **ĐÃ CHỨNG MINH ROOT CAUSE + ĐÃ ĐO** ✓ · ⛔ **CHƯA SỬA** (⭐ chờ user ✓) |
 | **RELATED** | ⭐ `BUG-20261007-013` (⭐ cùng lớp) · `TASK-228` ✓ |
+
+---
+
+## ⭐⭐⭐ BUG-20261007-015 — NÚT «🗑 XÓA KHO» GỌI ACTION **KHÔNG TỒN TẠI** + ⭐⭐ SAI LẦM ĐO LỚN (§22) ⭐⭐
+
+| ⭐ | ⭐ |
+|---|---|
+| **SESSION** | ⭐ `ERP-SESSION-02` · ⭐ tệp `app/screens/Inventory.tsx` **thuộc phiên 02** ✓ |
+| **SEVERITY** | ⭐⭐ **HIGH** ⚠️ (⭐ «Xóa kho» ⛔ không hoạt động + ⭐ **im lặng/lỗi khó hiểu** ✓) |
+| **BẰNG CHỨNG MÃ** | ⭐ `Inventory.tsx:328` → `action("delete_warehouse", { warehouseId: w.id })` ✓<br>⭐⭐ `delete_warehouse` **0 lần** trong **TOÀN BỘ** `scripts/system-route.mjs` ⛔ ⭐ **VÀ** ⭐ **0 lần** trong **`ActionRbacRegistry.java` + `SystemController.java`** ⛔ ⭐⭐ ⇒ ⭐⭐ **KHÔNG tồn tại ở CẢ 2 backend** ⭐⭐ ✓ |
+| **ROOT CAUSE** | ⭐⭐⭐ `action("delete_warehouse")` ⇒ backend ⛔ **không có nhánh xử lý** ⇒ ⭐ **không xóa được** ⚠️ ⭐⭐⭐ ⭐ *(⭐ **CÙNG HỌ** với `BUG-013`/`014`: ⭐ UI gọi tên ⛔ **không tồn tại** ở backend/modal* ✓) |
+| ⭐⭐⭐ **SAI LẦM ĐÃ SỬA (§22) — SAI **NGUỒN SỰ THẬT**, ⭐⭐ suýt báo **16 BUG GIẢ** ⭐⭐** | ⭐ Bản quét 1 đối chiếu `action("…")` với **`scripts/system-route.mjs`** ⇒ ⭐ ⚠️ ra **16 tên thiếu** ⭐⚠️<br>⭐⭐ **NHƯNG `system-route.mjs:3074` GHI NGUYÊN VĂN**: ⭐⭐⭐ «⚠️ **ROUTE NÀY KHÔNG ĐƯỢC APP ĐANG CHẠY GỌI: API thật là Java `:18081`**» ⭐⭐⭐<br>⭐⭐ VÀ `tools/cutover-proxy.mjs:6`: «Người dùng → Node SSR (:8787) ──**proxy `/api/`\*──> Java API (:18081)**» ⭐ `:39` ⇒ `API_PREFIXES = ["/api/system", …]` ⭐⭐ ⇒ ⭐⭐⭐ **DANH SÁCH ACTION THẬT NẰM Ở JAVA** ⭐⭐⭐<br>⭐⭐ ⇒ **ĐỔI NGUỒN sang `ActionRbacRegistry.java` + `SystemController.java`** ⇒ ⭐⭐⭐ **16 → 1** ⭐⭐⭐ ⭐ ⇒ ⭐⭐ **15 tên kia là DƯƠNG TÍNH GIẢ** ⚠️ ⭐⭐ ✓ |
+| ⭐⭐ **ĐỐI CHỨNG 2 CHIỀU (⭐ để ⛔ không lặp §22)** | ⭐⭐ **CHIỀU ÂM** — 3 tên **đã biết là CHẾT** (⭐ đo thật ở `BUG-013`/`014`) ⭐ phải ra «KHÔNG CÓ»: ⭐ `delete_warehouse` = **KHÔNG** ✅ · `save_warehouse` = **KHÔNG** ✅ · `allocate` = **KHÔNG** ✅ ✓<br>⭐⭐ **CHIỀU DƯƠNG** — 3 tên **đã biết là SỐNG** ⭐ phải ra «CÓ»: ⭐ `login` = **CÓ** ✅ · `save_material` = **CÓ** ✅ · `check_material_alias_conflicts` = **CÓ** ✅ ✓<br>⭐⭐⭐ ⇒ ⭐⭐⭐ **PHÉP ĐO ĐÚNG CẢ 2 CHIỀU** ⭐⭐⭐ ⇒ ⭐ **kết quả 1 tên tin được** ✓ |
+| **KẾT QUẢ QUÉT CHÍNH THỨC** | ⭐ **133 action** UI gọi ⭐ ⇒ ⭐⭐ **132 CÓ trong Java** ✅ ⭐ ⭐ **1 ⛔ KHÔNG CÓ**: `delete_warehouse` ⭐ ⭐ (⭐ Java có **268 action** ✓) ✓ |
+| ⭐ **BÀI HỌC (§33)** | ⭐ ⭐⭐ **PHẢI XÁC ĐỊNH «NGUỒN SỰ THẬT» TRƯỚC KHI QUÉT** ⭐ ⭐⭐ — ⭐ em quét `scripts/system-route.mjs` ⚠️ ⭐ mà **chính tệp đó tự ghi «⛔ KHÔNG ĐƯỢC APP GỌI»** ⭐ ⭐⭐ ⇒ ⭐⭐ **16 «bug» mà thật ra chỉ 1** ⭐⭐ ⭐ ⭐ **⇒ ⛔ đừng tin «tệp có vẻ liên quan» — phải đọc nó nói gì về chính nó** ✓ |
+| | ⭐ ⭐ **MỌI PHÉP QUÉT PHẢI CÓ ĐỐI CHỨNG CẢ 2 CHIỀU** ⭐ ⭐ — ⭐ **chiều âm** (⭐ biết chắc SAI ⭐ phải ra SAI) ⭐ + ⭐ **chiều dương** (⭐ biết chắc ĐÚNG ⭐ phải ra ĐÚNG) ✓ ⭐ ⭐ (⭐ trong phiên này em **sai 4 lần** vì thiếu đối chứng: menu «2/2» giả · `innerText` rỗng · `modal` thiếu ⭐ · **quét nhầm backend** ⚠️) ✓ |
+| **ẢNH HƯỞNG** | ⭐ Hub «Kho vật tư» → tab «KHO» → «🗑 Xóa» ⭐ ⚠️ · ⭐ ✅ **KHÔNG ảnh hưởng** phần còn lại (⭐ 132/133 action khác đều có backend ✓) |
+| **STATUS** | ⭐⭐ **OPEN** ⚠️ — ⭐ **ĐÃ CHỨNG MINH ROOT CAUSE** ✓ · ⛔ **CHƯA SỬA** (⭐ cần user quyết: ⭐ viết API `delete_warehouse` ⭐ hoặc ⭐ khoá nút ✓) |
+| **RELATED** | ⭐ `BUG-20261007-013` · `BUG-20261007-014` (⭐ cùng họ: UI gọi tên ⛔ không tồn tại ✓) |
