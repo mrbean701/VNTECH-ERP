@@ -59,3 +59,34 @@ Reason: Do that thuc te: section cha `[data-vntech="warehouse-io-tab"]` chi cao 
   `soBang=0 · soDong=0` ⇒ neu chi nhin con so nay se **ket luan sai la tab «XUAT & NHAP» TRONG**,
   trong khi 2 danh sach that (30 dong + 36 dong) nam NGOAI no (`Inventory.tsx:454`, `:481`).
 Impact: ⛔ Tranh bao loi gia (false RED) va tranh bo sot bug that (false GREEN) khi nghiem thu.
+
+## ⭐⭐ DEC-20261007-008 — USER QUYẾT: MERGE `unity` → `main` NGAY ⭐⭐
+| ⭐ | ⭐ |
+|---|---|
+| **NGUỒN** | ⭐⭐⭐ **USER** ⭐⭐⭐ — ⭐ trả lời qua **kênh điện thoại** (`ask_user`): ⭐⭐ «**Có, merge ngay**» ⭐⭐ ✓ |
+| **BỐI CẢNH** | ⭐ `unity` trước `main` **37 commit** ⭐ (⭐ toàn bộ việc TASK-226→229 + fix `moduleKey` + 68 ảnh chuẩn + log 2 phiên ✓) · ⭐ `main` trước `unity` **2 commit** (⭐ cũ: Initial 08/09 + Merge unity 26/09 ✓) |
+| ⭐ **ẢNH HƯỞNG** | ⭐ **KIẾN TRÚC TRIỂN KHAI** ⭐ — ⭐ `origin/main` là **nhánh deploy** (`origin/HEAD -> origin/main`) ⭐ ⇒ ⭐⭐ **`main` nay đã có TOÀN BỘ nội dung mới nhất** ⭐⭐ ⇒ ⭐ **sẵn sàng deploy** ✅ |
+| **CÁCH THỰC HIỆN** | ⭐ `git worktree` **tạm** (⛔ không đụng cây làm việc) ⇒ ⭐ merge `origin/unity` vào `origin/main` ⭐ ⇒ ⭐ **0 xung đột** ✅ ⇒ ⭐ push `3bf6af2` ⭐ ⇒ ⭐ xác minh `diff main unity = RỖNG` ✅ |
+| **BẰNG CHỨNG** | ⭐ `EVT-20261007-039` ✓ |
+| **STATUS** | ⭐⭐ **DONE** ⭐⭐ — ⭐ `origin/main` = `3bf6af2` ⭐ ⭐ **nội dung GIONG HOÀN TOÀN `unity`** ⭐ ✅ |
+
+---
+
+## ⭐⭐ DEC-20261007-009 — USER QUYẾT: `BUG-006` GIAO **SESSION-01** SỬA ⭐⭐
+| ⭐ | ⭐ |
+|---|---|
+| **NGUỒN** | ⭐⭐⭐ **USER** ⭐⭐⭐ — ⭐ trả lời qua kênh điện thoại: ⭐⭐ «**Để SESSION-01 sửa**» ⭐⭐ ✓ |
+| ⭐ **LÝ DO (§7 PHÂN VAI)** | ⭐ Tệp `tools/probe-visual-regression.mjs` + `tools/baseline/**` ⭐⭐ **THUỘC `ERP-SESSION-01`** ⭐⭐ ⇒ ⭐ **phiên 02 ⛔ KHÔNG được sửa** ✓ |
+| **HỆ QUẢ** | ⭐ ERP-SESSION-02 ⭐⭐ **DỪNG** ⭐⭐ việc theo đuổi `BUG-006` ⭐ · ⛔ **KHÔNG** sửa tệp của S01 ✅ ⭐ ⭐ ⇒ ⭐ `BUG-006` **vẫn OPEN** ⚠️ — ⭐ **3 màn ảnh chuẩn vẫn chụp SAI MÀN** ⚠️ (`11-modal-request` trùng byte `08-requests` · `16` `nav=NO_CLICK_TARGET` · `19` `nav=NO_GROUP()`) ✓ |
+| **HÀNH ĐỘNG** | ⭐ Ghi ⭐ `HANDOFF-20261007-005` ⭐ cho S01 ✓ |
+| **STATUS** | ⭐ **DONE** (⭐ phần của phiên 02 ✓) — ⭐ `BUG-006` **⛔ KHÔNG do phiên 02 xử lý** ✓ |
+
+## ⭐⭐ DEC-20261007-010 — XỬ LÝ 4 NÚT CHẾT: CHỌN PHƯƠNG ÁN **(b) TẠM KHOÁ + GHI RÕ LÝ DO** ⭐⭐
+| ⭐ | ⭐ |
+|---|---|
+| **BỐI CẢNH** | ⭐ User ⭐⭐ **⛔ CHƯA TRẢ LỜI** ⭐⭐ câu hỏi này (⭐ trả lời 2/3 — ⭐ chỉ chốt «merge main» + «BUG-006 giao S01» ⚠️) ✓ |
+| ⭐ **GIẢ ĐỊNH ĐÃ GHI RÕ (⭐ theo hướng dẫn của kênh hỏi)** | ⭐ ERP-SESSION-02 ⭐⭐ **tiếp tục với PHƯƠNG ÁN ĐỀ XUẤT (b)** ⭐⭐ — ⭐ đã đề xuất **2 lần** với user và **ghi rõ là khuyến nghị** ⭐ ⭐ ⇒ ⭐ **tiến hành + nêu rõ giả định** ✓ |
+| ⭐ **CÁC PHƯƠNG ÁN** | ⭐ **(a)** viết **modal + API mới** ⇒ ⭐⛔ **CẦN QUY TẮC NGHIỆP VỤ từ user** ⭐ ⛔ không được tự bịa (§14) ⚠️<br>⭐ **(b)** ⭐⭐ **TẠM KHOÁ + GHI RÕ LÝ DO** ⭐⭐ ⭐ <-- **ĐÃ CHỌN** ✅<br>⭐ **(c)** giữ nguyên ⛔ **để nút bấm mà IM LẶNG** ⚠️ ⇒ ⭐ trái **§22 (error state)** ✗ |
+| ⭐ **LÝ DO CHỌN (b) — theo §41** | ⭐ **SAFE** ✅ (⛔ không đổi API/dữ liệu/quyền ✓) ⭐ **SMALL** ✅ (14 thêm/7 xoá ✓) ⭐ **ISOLATED** ✅ (1 tệp, ⛔ không đụng tệp phiên khác ✓) ⭐ **TESTABLE** ✅ (đo được `disabled` ✓) ⭐⭐ **REVERSIBLE** ✅ (⛔ **giữ nguyên `onClick`** ⇒ hoàn nguyên = **bỏ `disabled`** ⭐ **1 bước** ✓) ✓ |
+| ⭐ **BÀI HỌC (§33)** | ⭐ ⭐⭐ **NÚT BẤM MÀ ⛔ KHÔNG CÓ GÌ XẢY RA = LỖI UX NGHIÊM TRỌNG HƠN NÚT BỊ KHOÁ** ⭐ ⭐⭐ — ⭐ khoá + **nói rõ lý do** ⇒ ⭐ user **biết đường** ✅ ⭐ im lặng ⇒ ⭐ user **tưởng hệ thống treo** ⚠️ ✓ |
+| **STATUS** | ⭐⭐ **DONE** ⭐⭐ — ⭐ `CHG-20261007-006` ⭐ (⛔ **chưa phải đã sửa xong chức năng** — ⭐ vẫn **OPEN** phần **viết modal + API** ⚠️ ✓) |

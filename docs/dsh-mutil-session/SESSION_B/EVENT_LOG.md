@@ -264,3 +264,20 @@ Description: **BUG-20261006-007 DA SUA (dinh chinh bao xanh gia)** — ghi khoi 
 | ⭐ **BÀI HỌC (§33)** | ⭐ ⭐⭐ **CHỈ TIN PHÉP QUÉT KHI CÓ «TẬP ĐÓNG» ĐỂ ĐỐI CHIẾU** ⭐ ⭐⭐ — ⭐ ① `open("X")` ↔ **danh sách modal** ✅ ⭐ ② `action("X")` ↔ **danh sách action backend** ✅ ⇒ ⭐ **tin được** ✓ ⭐ `onClick` ⛔ **không có tập đóng** ⇒ ⛔ **bỏ** ✓ |
 | ⭐ **TỔNG SAI LẦM ĐO TRONG PHIÊN** | ⭐⚠️ **5 LẦN** ⚠️ — ⭐ ① menu «2/2» giả ⭐ ② `innerText` rỗng ⭐ ③ đo thiếu «đổi màn» ⭐ ④ **quét nhầm backend** ⭐ ⑤ **quét `<button>` sai parser** ⭐ ⭐ ⇒ ⭐⭐ **CẢ 5 ĐỀU DO THIẾU ĐỐI CHỨNG HOẶC SAI NGUỒN/MẪU** ⭐⭐ ✓ |
 | **TRUY VẾT** | ⭐ `TEST-20261007-028` ✓ |
+
+## ⭐⭐⭐ EVT-20261007-039 — MERGE `unity` → `main` THEO LỆNH USER + PUSH ⭐⭐⭐
+| ⭐ | ⭐ |
+|---|---|
+| **SỰ KIỆN** | ⭐ `USER DECISION` → ⭐ **MERGE** + ⭐ **PUSH** ⭐ — ⭐ user trả lời qua kênh điện thoại: ⭐⭐ «**Có, merge ngay**» ⭐⭐ ✓ |
+| **BỐI CẢNH ĐO TRƯỚC** | ⭐ `unity` **TRƯỚC** `main` **37 commit** ⭐ · ⭐ `main` trước `unity` **2 commit** ⭐ (`57ca9cc` Initial 08/09 · `e0bff9b` Merge unity 26/09) ✓ |
+| ⭐ **KIỂM TRƯỚC KHI LÀM (§28)** | ⭐ `git merge-base --is-ancestor origin/main origin/unity` ⇒ ⭐⭐ **⛔ KHÔNG phải tổ tiên** ⭐⭐ ⇒ ⭐ **merge sẽ TẠO COMMIT MERGE, có thể XUNG ĐỘT** ⚠️<br>⭐ phát hiện ⭐ **tệp `.xlsx` đang bị sửa cục bộ** ⭐ VÀ ⭐⭐ **⛔ KHÔNG tồn tại ở `main`** ⭐⭐ ⇒ ⭐ `git checkout main` **sẽ bị CHẶN** ⚠️<br>⭐ ⭐⭐ **⛔ KHÔNG phải tệp của em** ⇒ ⭐ theo **§38** ⛔ **KHÔNG được xoá/ghi đè** ⭐ ⭐⭐ ✓ |
+| ⭐⭐ **CÁCH LÀM AN TOÀN (⭐ tránh đụng cây làm việc)** | ⭐ Dùng **`git worktree` TẠM** ở `$env:TEMP\vntech-wt-main` ⭐ ⇒ ⭐⭐ **merge ở NGOÀI cây làm việc hiện tại** ⭐⭐ ⇒ ⭐ **tệp `.xlsx` ⛔ KHÔNG bị đụng** ✅ ⭐ (⭐ ⛔ không dùng `stash`/`checkout`/`reset` trên tệp ⛔ không phải của mình ✓) ✓ |
+| **KẾT QUẢ MERGE** | ⭐ `git merge origin/unity --no-commit --no-ff` ⇒ ⭐⭐ «**Automatic merge went well**» ⭐⭐ · ⭐ `--diff-filter=U` ⇒ ⭐⭐ **0 tệp xung đột** ⭐⭐ ✅ |
+| ⭐ **XÁC MINH TRƯỚC KHI PUSH** | ⭐ `git diff origin/unity --name-only` ⇒ ⭐⭐ **RỖNG** ⭐⭐ ⇒ ⭐⭐ **kết quả merge GIONG HOÀN TOÀN `unity`** ⭐⭐ ✅ |
+| **COMMIT** | ⭐ `3bf6af2` — «Merge origin/unity vao main — dong bo TOAN BO 37 commit cua unity (TASK-226..229 ERP-SESSION-02 + fix moduleKey hub Kho ERP-SESSION-01 + 68 anh chuan + log 2 phien). Khong xung dot.» ✓ |
+| ⭐ **PUSH (⭐ gặp lỗi DNS 4 lần)** | ⭐⭐ **`fatal: Could not resolve host: github.com`** ⭐ 4 lần liên tiếp ⚠️ ⭐ (⭐ **lần thứ 5 trong phiên** ⚠️)<br>⭐ **CHẨN ĐOÁN**: ⭐ DNS server `192.168.2.1` vẫn **giải được** `github.com` → **20.205.243.166** ✅ ⇒ ⭐ **lỗi TÌM KIẾM DNS THEO TỪNG LẦN, ⛔ không phải mất mạng** ✓<br>⭐⭐ **SỬA ĐƯỢC**: ⭐ `Clear-DnsClientCache` ⇒ ⭐⭐ **PUSH LẦN KẾ TIẾP THÀNH CÔNG NGAY** ⭐⭐ ⭐ `e0bff9b..3bf6af2  HEAD -> main` ✅ ⭐ ⭐⭐ **⇒ BÀI HỌC: XOÁ CACHE DNS LÀ CÁCH SỬA LỖI NÀY** ⭐ ⭐⭐ ✓ |
+| ⭐ **XÁC MINH SAU PUSH** | ⭐ `origin/main` = **`3bf6af2`** ⭐ `origin/unity` = **`0157ede`** ⭐ ⇒ ⭐⭐ `git diff origin/main origin/unity --name-only` ⇒ **RỖNG** ⭐⭐ ⇒ ⭐⭐⭐ **`main` ĐÃ CÓ TOÀN BỘ NỘI DUNG `unity`** ⭐⭐⭐ ✅<br>⭐ 4 tệp then chốt **có trên `main`**: `MaterialCategoryList.tsx` · `Inventory.tsx` · `WarehouseDashboard.tsx` · `01-dashboard__desktop.png` ✅<br>⭐ (⭐ SHA khác nhau là **ĐÚNG** — ⭐ `main` có **commit merge** ✓) ✓ |
+| ⭐ **DỌN DẸP + AN TOÀN** | ⭐ `git worktree remove --force` ⇒ ⭐ **exit 0** ✅ ⭐ `git worktree list` ⇒ ⭐ còn **đúng 1** worktree (⭐ thư mục dự án, nhánh `unity` ✓)<br>⭐⭐ cây làm việc hiện tại ⭐ **⛔ KHÔNG bị đụng**: ⭐ vẫn ở `unity` @ `0157ede` ⭐ ⭐ và **tệp `.xlsx` của người khác VẪN CÒN NGUYÊN** ⭐ ⭐ ✅ ✓ |
+| ⭐ **BÀI HỌC (§33)** | ⭐ ⭐⭐ **KHI CẦN THAO TÁC GIT MÀ CÂY LÀM VIỆC CÓ THAY ĐỔI ⛔ KHÔNG PHẢI CỦA MÌNH ⇒ DÙNG `git worktree` TẠM** ⭐ ⭐⭐ — ⭐ **hoàn toàn ⛔ không đụng** cây làm việc · ⭐ ⛔ không `stash` · ⛔ không `checkout` · ⛔ không `reset` ✓ ⭐ ⭐ an toàn cho **đa phiên** (§19) ✓ |
+| | ⭐ ⭐ **LỖI DNS LẶP LẠI ⇒ `Clear-DnsClientCache`** ⭐ ⭐ — ⭐ trong phiên gặp **5 lần** ⚠️ ⭐ lần nào **xoá cache DNS** cũng **thành công ngay** ✅ ✓ |
+| **TRUY VẾT** | ⭐ commit `3bf6af2` (main) · `0157ede` (unity) ✓ |

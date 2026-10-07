@@ -317,15 +317,22 @@ function Inventory({ data, project, open, action, view = null }: { data: AppData
 
       {/* ── MT3 §F — TAB 1 «KHO»: danh sách kho dạng CARD, bấm card mở modal chi tiết ── */}
       {tab===0&&<section className="card" data-vntech="warehouse-cards">
-        {/* MT3 §F — TOOLBAR CRUD CHO KHO (Tạo · Sửa · Xóa · Tìm · Sắp xếp · Lọc · Xuất Excel). */}
-        <ListToolbar title="KHO" note="Danh sách kho trong phạm vi dự án bạn được phân quyền. Bấm một thẻ để xem thủ kho, lịch sử xuất/nhập, lịch sử cấp phát/hoàn trả và danh mục vật tư trong kho."
+        {/* MT3 §F — TOOLBAR CRUD CHO KHO (Tạo · Sửa · Xóa · Tìm · Sắp xếp · Lọc · Xuất Excel).
+            ⚠️ 2026-10-07 (BUG-20261007-014/015, ERP-SESSION-02): 3 nút «Tạo kho / Sửa / Xóa» TẠM KHOÁ.
+            ĐO THẬT trên :9000 — bấm ⛔ KHÔNG có gì xảy ra (dai 107.793 → 107.793, hub vẫn true).
+            ROOT CAUSE (đã chứng minh): `open("warehouse")` ⇒ `setModal("warehouse")` nhưng `app/page.tsx`
+            có đủ 40 modal và ⛔ KHÔNG có tên `warehouse` (cũng ⛔ không có `WarehouseModal` nào);
+            `action("delete_warehouse")` ⛔ không tồn tại ở CẢ JS lẫn Java backend.
+            ⇒ ⛔ Không để nút bấm mà IM LẶNG (§22 — error state). Mở lại khi backend bổ sung modal + action.
+            ⛔ GIỮ NGUYÊN onClick để hoàn nguyên chỉ bằng cách bỏ `disabled`. */}
+        <ListToolbar title="KHO" note="Danh sách kho trong phạm vi dự án bạn được phân quyền. Bấm một thẻ để xem thủ kho, lịch sử xuất/nhập, lịch sử cấp phát/hoàn trả và danh mục vật tư trong kho. ⚠️ Ba nút «Tạo kho / Sửa / Xóa» đang TẠM KHOÁ: backend chưa khai báo modal «warehouse» và action «delete_warehouse» (§14/§20 — chờ bổ sung)."
           count={visibleWarehouses.length} total={allowedWarehouses.length} unit="kho"
           search={{value:whQuery,onChange:setWhQuery,placeholder:"Tìm theo tên hoặc mã kho..."}}
           sort={{value:whSortKey,onChange:setWhSortKey,options:[{value:"name_asc",label:"Tên A→Z"},{value:"name_desc",label:"Tên Z→A"},{value:"items_desc",label:"Nhiều vật tư trước"}]}}
           actions={<>
-            <button type="button" className="primary" onClick={()=>open("warehouse")}>＋ Tạo kho</button>
-            <button type="button" className="secondary" disabled={!selectedWhId} onClick={()=>{const w=allowedWarehouses.find((x:Row)=>String(x.id)===selectedWhId);if(w)open("warehouse",w);}}>✎ Sửa</button>
-            <button type="button" className="secondary" disabled={!selectedWhId} onClick={()=>{const w=allowedWarehouses.find((x:Row)=>String(x.id)===selectedWhId);if(w&&action&&window.confirm(`Xóa kho ${String(w.warehouseName||w.warehouseCode)}?`))void action("delete_warehouse",{warehouseId:w.id});}}>🗑 Xóa</button>
+            <button type="button" className="primary" disabled title="TẠM KHOÁ (BUG-20261007-014): app/page.tsx chưa có modal «warehouse» ⇒ bấm ⛔ không mở gì. Chờ backend bổ sung." onClick={()=>open("warehouse")}>＋ Tạo kho</button>
+            <button type="button" className="secondary" disabled title="TẠM KHOÁ (BUG-20261007-014): modal «warehouse» chưa tồn tại ⇒ ⛔ không sửa được. Chờ backend bổ sung." onClick={()=>{const w=allowedWarehouses.find((x:Row)=>String(x.id)===selectedWhId);if(w)open("warehouse",w);}}>✎ Sửa</button>
+            <button type="button" className="secondary" disabled title="TẠM KHOÁ (BUG-20261007-015): action «delete_warehouse» ⛔ không tồn tại ở cả JS lẫn Java backend ⇒ ⛔ không xoá được." onClick={()=>{const w=allowedWarehouses.find((x:Row)=>String(x.id)===selectedWhId);if(w&&action&&window.confirm(`Xóa kho ${String(w.warehouseName||w.warehouseCode)}?`))void action("delete_warehouse",{warehouseId:w.id});}}>🗑 Xóa</button>
           </>}
           secondaryActions={<button type="button" className="secondary" onClick={()=>exportWarehousesCsv(visibleWarehouses)}>⇩ Xuất Excel</button>}
         />
@@ -380,13 +387,13 @@ function Inventory({ data, project, open, action, view = null }: { data: AppData
         </div>
         <ListToolbar
           title={arTab==="allocate"?"DANH SÁCH PHIẾU CẤP PHÁT":"DANH SÁCH PHIẾU HOÀN TRẢ"}
-          note="Nguồn: phiếu xuất kho cấp cho tổ đội (cấp phát) · phiếu hoàn trả về kho. ⛔ Chưa có sửa/xoá: backend chưa khai báo action (§14/§20)."
+          note="Nguồn: phiếu xuất kho cấp cho tổ đội (cấp phát) · phiếu hoàn trả về kho. ⛔ Chưa có sửa/xoá: backend chưa khai báo action (§14/§20). ⚠️ Nút «Tạo phiếu cấp phát» đang TẠM KHOÁ: app/page.tsx chưa có modal «allocate» (BUG-20261007-013)."
           count={arRows.length} total={arSource.length} unit={arTab==="allocate"?"phiếu cấp phát":"phiếu hoàn trả"}
           search={{ value: arQuery, onChange: setArQuery, placeholder: "Tìm mã đơn · dự án · tổ đội · người nhận..." }}
           sort={{ value: arSortKey, onChange: setArSortKey, options: [{ value: "date", label: "Ngày" }, { value: "no", label: "Mã đơn" }, { value: "project", label: "Dự án" }, { value: "qty_desc", label: "Số lượng — cao nhất" }] }}
           filters={[{ key: "status", label: "Trạng thái", value: arStatus, onChange: setArStatus, options: [{ value: "ALL", label: "Tất cả trạng thái" }, ...arStatusOptions.map((s) => ({ value: s, label: s }))] }]}
           actions={arTab==="allocate"
-            ? <button type="button" className="primary" data-vntech="open-allocate" onClick={()=>open("allocate")}>＋ Tạo phiếu cấp phát</button>
+            ? <button type="button" className="primary" data-vntech="open-allocate" disabled title="TẠM KHOÁ (BUG-20261007-013): app/page.tsx chưa có modal «allocate» ⇒ bấm ⛔ không mở gì. Nút «Tạo phiếu hoàn trả» vẫn dùng được." onClick={()=>open("allocate")}>＋ Tạo phiếu cấp phát</button>
             : <button type="button" className="primary" data-vntech="open-return" onClick={()=>open("return")}>＋ Tạo phiếu hoàn trả</button>}
         />
         {arTab==="allocate"
