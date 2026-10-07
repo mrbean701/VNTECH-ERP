@@ -655,3 +655,22 @@ Ngoài 2 việc đó ⛔ em không đụng gì khác trong tệp.
 · **68 tệp `tools/baseline/*.png`** (56 ảnh duy nhất — đã chụp lại, ✅ tốt)
 · toàn bộ log + mã của TASK-227
 ⇒ ⛔ reset/checkout ⇒ **MẤT HẾT**. Đã ghi `HANDOFF-20261006-004`.
+
+---
+
+## ⭐⭐⭐ PHỐI HỢP LIÊN PHIÊN — `ERP-SESSION-02` CẬP NHẬT CHO `ERP-SESSION-01` (2026-10-07 16:2x) ⭐⭐⭐
+
+> ⭐ Khối này do **`ERP-SESSION-02`** ghi vào **state CHUNG** (⭐ theo **§5 · §15** — ⛔ không sửa log riêng của phiên 01 ✓).
+
+| ⭐ | ⭐ |
+|---|---|
+| **TỪ** | ⭐ `ERP-SESSION-02` ⭐ **ĐẾN** ⭐ `ERP-SESSION-01` |
+| ⭐⭐ **⚠️ `BUG-20261007-003` ĐÃ ĐỔI TRẠNG THÁI** | ⭐ S01 ghi: «nút tạo phiếu cấp phát / hoàn trả chưa có modal — **⛔ quyết định có chủ đích** của phiên 02» ⚠️<br>⭐⭐ **CẬP NHẬT**: ⭐ phiên 02 **ĐÃ ĐO THẬT + ĐÃ XỬ LÝ** ✅ — ⭐ `Inventory.tsx:389` `open("allocate")` ⇒ ⭐ `page.tsx` **đủ 40 modal, ⛔ KHÔNG có `allocate`** ⇒ ⭐ **NÚT CHẾT** (⛔ không phải «chủ đích») ⚠️ ⭐ ⇒ ⭐⭐ **ĐÃ TẠM KHOÁ + ghi rõ lý do** (`disabled` + `title`) ⭐⭐ |
+| **BẰNG CHỨNG** | ⭐ `BUG-20261007-013` · `-014` · `-015` ⭐ `CHG-20261007-006` ⭐ `DEC-20261007-010` ⭐ (⭐ trong `docs/dsh-mutil-session/SESSION_B/` ✓) |
+| ⭐⭐ **4 NÚT ĐÃ TẠM KHOÁ** | ⭐ «＋ Tạo kho» ⭐ «✎ Sửa» ⭐ «🗑 Xóa» ⭐ «＋ Tạo phiếu cấp phát» ⭐ (⭐ `app/screens/Inventory.tsx` ✓) ⭐ ⭐ ⛔ **`onClick` GIỮ NGUYÊN** ⇒ hoàn nguyên = bỏ `disabled` ✓ |
+| ⭐ **ĐO ĐƯỢC** | ⭐ 4/4 nút `disabled=true` + có `title` nêu lý do ✅ ⭐ **3/3 đối chứng dương VẪN CHẠY**: «⇩ Xuất Excel» ✅ · «◉ Xem chi tiết kho» ✅ (đổi màn thật) · «＋ Tạo phiếu hoàn trả» ✅ (**mở modal thật**) ✓ |
+| ⭐⭐ **ĐỀ NGHỊ S01** | ⭐ ① Cập nhật `TEST-20261007-003` mục `RELATED_BUG` cho khớp ⭐ ② ⛔ **KHÔNG** kiểm nút «＋ Tạo phiếu cấp phát» là **chức năng sống** nữa — ⭐ nó **bị khoá có chủ đích** ⚠️ ⭐ ③ ⭐⭐ **`BUG-20261007-003` nên đóng** (⭐ đã chuyển thành `BUG-013` ✓) ✓ |
+| ⭐ **PHÂN VAI — em ⛔ KHÔNG ĐỤNG** | ⭐ `tools/probe-visual-regression.mjs` ⭐ `tools/baseline/**` ⭐ `SESSION_A/**` ⭐ ⭐ (⭐ kể cả `SESSION_A/TEST_LOG.md` đang sửa dở — ⭐ em ⛔ **KHÔNG commit, ⛔ KHÔNG sửa** ✓) ✓ |
+| ⭐ **ĐÃ GIAO CHO S01** | ⭐ `HANDOFF-20261007-005` — ⭐ `BUG-006`: ⭐ 3 màn ảnh chuẩn **chụp SAI MÀN** ⚠️ (`11-modal-request` **trùng byte** `08-requests` = `497158D6415958FA` · `16-modal-receipt` `nav=NO_CLICK_TARGET` · `19-report-center` `nav=NO_GROUP()`) ⭐ + ⭐ ⚠️ **`nav` ⛔ KHÔNG được kiểm** (L428) ⇒ **cổng ảnh vẫn có thể BÁO XANH GIẢ** ⚠️ ⭐ — ⭐⭐ **user đã chỉ định giao cho S01** ⭐⭐ ✓ |
+| ⭐ **PHÍA EM ĐÃ XONG** | ⭐ MERGE `unity` → `main` ✅ (`3bf6af2` → `044deb1` → `666c4cb` · **0 xung đột** · nội dung **GIỐNG HOÀN TOÀN**) ⭐ hồi quy `803 test · 802 pass · 0 fail` ✅ ⭐ ⭐ **nên `main` đã có việc mới nhất của S01** ✓ |
+| ⭐ **GHI NHẬN TỪ S01 (§33 ⭐ hay)** | ⭐ S01 phát hiện ⭐⭐ **`element.click()` trong `browser_evaluate` ⛔ KHÔNG tạo `user-activation`** ⭐⭐ ⇒ ⭐ nút cần activation (duyệt · phát hành PO · lưu phiếu) ⭐⭐ **phải dùng `browser_click trusted:true`** ⭐⭐ ⭐ ⭐ ⭐ **EM XÁC NHẬN ĐÃ GẶP VẤN ĐỀ TƯƠNG TỰ** ⚠️ (⭐ `open()`/`action()` đo bằng `.click()` **vẫn hoạt động** cho modal ⭐ nhưng ⭐ **KHÔNG đủ cho luồng cần activation** ✓) ✓ |
