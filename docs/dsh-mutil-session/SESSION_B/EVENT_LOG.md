@@ -308,3 +308,12 @@ Description: **BUG-20261006-007 DA SUA (dinh chinh bao xanh gia)** — ghi khoi 
 | **KẾT QUẢ** | ⭐⭐⭐ **PASS** ⭐⭐⭐ — ⭐ S02 «Hub Kho vật tư» ✅ **107.934** ký tự ⭐ S03 «Cấp phát cho tổ đội» ✅ **2.179** ⭐ S01 «Danh mục & phân quyền» ✅ **5.843** ⭐ ⭐ **cả 3 render bình thường** ✅ |
 | **Ý NGHĨA (⭐ §2)** | ⭐⭐⭐ **«PARALLEL WORK = YES · CODE CONFLICT = NO»** ⭐⭐⭐ — ⭐ chứng minh **cơ chế phân vai + `SHARED_STATE` + HANDOFF ĐANG HOẠT ĐỘNG** ✅ ⭐ ⭐ (⭐ `S03` thậm chí đang ⭐ **sửa dở** `TeamDirectory.tsx` ⚠️ mà ⭐ **vẫn ⛔ không làm hỏng** màn của `S01`/`S02` ✓) ✓ |
 | **TRUY VẾT** | ⭐ `TEST-20261007-031` ✓ |
+
+## ⭐ EVT-20261007-043 — MỞ LẠI §22 «empty state» ⇒ ⛔ VẪN KHÔNG KẾT LUẬN (neo sai tên) ⭐
+| ⭐ | ⭐ |
+|---|---|
+| **SỰ KIỆN** | ⭐ `TEST_COMPLETE` — ⭐ làm lại phép đo empty state theo **luật mới** (⭐ neo `[data-vntech]` ✓) |
+| **KẾT QUẢ** | ⭐⭐ **⛔ THẤT BẠI LẦN 2** ⚠️ — ⭐ `[data-vntech="inventory-table-card"]` ⇒ ⭐⭐ **`false`** ⭐⭐ ⭐ ⛔ **tên neo ⛔ không tồn tại** ⚠️ ✓ |
+| ⭐⭐ **NEO **THẬT** ĐÃ ĐO ĐƯỢC** | ⭐ `warehouse-cards` ⭐ (**KHỐI LƯỚI THẺ KHO** ✓) ⭐ `warehouse-card` (×n) ⭐ `inv-transfer-btn` ⭐ `inv-ledger-btn` ⇒ ⭐⭐ **bàn giao tên neo CHÍNH XÁC cho lần sau** ⭐⭐ ✅ |
+| ⭐ **BÀI HỌC (§33)** | ⭐ ⭐⭐ **BƯỚC 0 BẮT BUỘC: LIỆT KÊ `[data-vntech]` CÓ THẬT TRƯỚC KHI CHỌN NEO** ⭐ ⭐⭐ ⭐ ⭐ (⭐ **lần thứ 9** trong phiên: giả định ⛔ không kiểm ⚠️) ✓ |
+| **TRUY VẾT** | ⭐ `TEST-20261007-030` · `TEST-20261007-032` ✓ |
