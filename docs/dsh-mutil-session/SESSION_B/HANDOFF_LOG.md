@@ -57,3 +57,17 @@ REQUIRED ACTION: `ERP-SESSION-01` commit + push (⛔ ERP-SESSION-02 không tự 
 RISK: **CAO** — mất bản sửa ⇒ chặn lại toàn bộ luồng Kho (GRN → cấp phát → hoàn trả → STO)
 TEST REQUIRED: đã có (TEST-20261006-020) — ⛔ không cần test lại
 STATUS: **OPEN** | COMPLETED_BY: (chờ S01) | COMPLETED_AT: (chờ)
+
+## ⭐⭐ HANDOFF-20261007-005 — `BUG-006`: GIAO LẠI **ERP-SESSION-01** (theo lệnh user) ⭐⭐
+| ⭐ | ⭐ |
+|---|---|
+| **FROM** | ⭐ `ERP-SESSION-02` ⭐ **TO** ⭐⭐ `ERP-SESSION-01` ⭐⭐ |
+| **TASK** | ⭐ Sửa cổng ảnh hồi quy: ⭐ `tools/probe-visual-regression.mjs` — ⭐ **3 màn chụp SAI MÀN** ⚠️ |
+| **LÝ DO** | ⭐⭐⭐ **USER CHỈ ĐỊNH** ⭐⭐⭐ (⭐ trả lời qua kênh điện thoại: «**Để SESSION-01 sửa**» ✓) ⭐ + ⭐ **§7 PHÂN VAI**: ⭐ tệp **thuộc S01** ✓ |
+| **TỆP BỊ ẢNH HƯỞNG** | ⭐ `tools/probe-visual-regression.mjs` ⭐ (⭐ S01 đang giữ ✓) ⭐ `tools/baseline/**` ⭐ (⭐ 68 ảnh ✓) |
+| ⭐ **TRẠNG THÁI HIỆN TẠI (⭐ đo thật, ⛔ không suy đoán)** | ⭐ `11-modal-request` ⭐⭐ **hash ẢNH GIONG HỆT `08-requests`** = `497158D6415958FA` ⭐⭐ ⇒ ⛔ **chụp nhầm màn** ✓<br>⭐ `16-modal-receipt` ⇒ ⭐ `nav=NO_CLICK_TARGET` ⚠️ (⭐ không có đích để bấm ✓)<br>⭐ `19-report-center` ⇒ ⭐ `nav=NO_GROUP()` ⚠️ (⭐ nhóm menu không tồn tại / tên sai ✓) |
+| ⭐ **VIỆC CẦN LÀM** | ⭐ Sửa ⭐ `SCREENS[]` ⭐ cho 3 màn trên (⭐ hoặc ⭐ bỏ khỏi `SCREENS[]` nếu ⛔ không còn màn đó ✓) ⭐ · ⭐ ⭐ **quan trọng**: ⭐ `const nav = await clickSteps(...)` ở **L428** ⭐ **kết quả `nav` ⛔ KHÔNG ĐƯỢC KIỂM** ⚠️ ⇒ ⭐ **cổng ảnh vẫn có thể báo XANH GIẢ** ⚠️ ⇒ ⭐ nên **THÊM KIỂM `nav`** ⭐ (⭐ như `--dump-nav` đã có ✓) ✓ |
+| **RỦI RO** | ⭐ Trung bình — ⭐ ⛔ không ảnh hưởng mã ứng dụng ⭐ · ⭐ chỉ ảnh hưởng **độ tin cậy của cổng hồi quy ảnh** ⚠️ |
+| **TEST CẦN CHẠY** | ⭐ `node tools/probe-visual-regression.mjs` (⭐ chế độ mặc định ✓) ⇒ ⭐ **3 màn trên phải ra hash KHÁC NHAU** ⭐ + ⭐ `nav` **phải có giá trị** ✅ |
+| **STATUS** | ⭐⭐ **OPEN** — ⭐ **CHUYỂN GIAO XONG** · ⭐ ⏳ **CHỜ SESSION-01** ✅ |
+| **GHI CHÚ** | ⭐ ERP-SESSION-02 ⭐⭐ **ĐÃ DỪNG** ⭐⭐ theo dõi `BUG-006` ✅ ⭐ (⭐ nếu S01 cần số liệu đo, ⭐ xem `BUG-20261006-005`/`006` trong `SESSION_B/BUG_HOTFIX_LOG.md` ✓) |
