@@ -253,3 +253,14 @@ Description: **BUG-20261006-007 DA SUA (dinh chinh bao xanh gia)** — ghi khoi 
 | **ĐỐI CHỨNG 2 CHIỀU** | ⭐ **âm**: `delete_warehouse`/`save_warehouse`/`allocate` = **KHÔNG** ✅ (⭐ khớp đã biết) ⭐ **dương**: `login`/`save_material`/`check_material_alias_conflicts` = **CÓ** ✅ ⇒ ⭐ **phép đo ĐÚNG** ✓ |
 | **KẾT QUẢ** | ⭐ 133 action UI gọi ⇒ ⭐ **132 CÓ Java** ✅ ⭐ **1 thiếu**: `delete_warehouse` ⭐ ⇒ ⭐ `BUG-20261007-015` ✓ |
 | ⭐ **BÀI HỌC (§33)** | ⭐ ⭐⭐ **PHẢI XÁC ĐỊNH NGUỒN SỰ THẬT TRƯỚC KHI QUÉT** ⭐ ⭐⭐ ⭐ + ⭐ ⭐⭐ **MỌI PHÉP QUÉT PHẢI CÓ ĐỐI CHỨNG CẢ 2 CHIỀU** ⭐ ⭐⭐ ✓ |
+
+## ⭐⭐⭐ EVT-20261007-038 — QUÉT ③ `<button>`: ⛔ PHƯƠNG PHÁP KHÔNG ĐÁNG TIN ⇒ TỰ DỪNG + GHI RÕ ⭐⭐⭐
+| ⭐ | ⭐ |
+|---|---|
+| **SỰ KIỆN** | ⭐ `SAI LẦM ĐÃ SỬA` (§22) — ⭐ quét `<button>` ⛔ không `onClick` để tìm nút chết im lặng ✓ |
+| **BẢN 1** | ⭐ **39 «nút trơ»** ⚠️ ⇒ ⭐ kiểm mã thật: ⭐ `ListToolbar.tsx:27` + `PermissionGuard.tsx:11` ⛔ **nằm trong CHÚ THÍCH** ⭐ + ⭐ **số dòng sai** ⇒ ⛔ **SAI** ✓ |
+| **BẢN 2** | ⭐ đã **bỏ chú thích** + **tính lại dòng** ⇒ **58 «nút trơ»** ⚠️ ⇒ ⭐ vẫn **SAI** vì **2 lỗi parser**: ⭐ **①** cắt thẻ tại `>` **đầu tiên** ⚠️ (⭐ `disabled={index > 0}` ⇒ `>` **trong biểu thức** ✓) ⭐ **②** `<button>` **trong `<form>`** ⛔ không `type` ⇒ **mặc định `submit`** ⇒ chạy qua **`onSubmit`** ⚠️ ✓ |
+| ⭐⭐⭐ **QUYẾT ĐỊNH** | ⭐⭐⭐ **⛔ KHÔNG báo con số** ⭐ **⛔ DỪNG hướng quét ③** ⭐⭐⭐ — ⭐ vì ⛔ **không có TẬP ĐÓNG để đối chiếu** ⚠️ ⭐ và ⭐ **phân tích tĩnh ⛔ không kết luận được** (⭐ `onClick` có thể đến từ **form cha** · **cloneElement** · **spread props** ✓) ⭐ ⭐⭐ **thà ⛔ không báo còn hơn báo SAI** ⭐ ⭐⭐ ✓ |
+| ⭐ **BÀI HỌC (§33)** | ⭐ ⭐⭐ **CHỈ TIN PHÉP QUÉT KHI CÓ «TẬP ĐÓNG» ĐỂ ĐỐI CHIẾU** ⭐ ⭐⭐ — ⭐ ① `open("X")` ↔ **danh sách modal** ✅ ⭐ ② `action("X")` ↔ **danh sách action backend** ✅ ⇒ ⭐ **tin được** ✓ ⭐ `onClick` ⛔ **không có tập đóng** ⇒ ⛔ **bỏ** ✓ |
+| ⭐ **TỔNG SAI LẦM ĐO TRONG PHIÊN** | ⭐⚠️ **5 LẦN** ⚠️ — ⭐ ① menu «2/2» giả ⭐ ② `innerText` rỗng ⭐ ③ đo thiếu «đổi màn» ⭐ ④ **quét nhầm backend** ⭐ ⑤ **quét `<button>` sai parser** ⭐ ⭐ ⇒ ⭐⭐ **CẢ 5 ĐỀU DO THIẾU ĐỐI CHỨNG HOẶC SAI NGUỒN/MẪU** ⭐⭐ ✓ |
+| **TRUY VẾT** | ⭐ `TEST-20261007-028` ✓ |
