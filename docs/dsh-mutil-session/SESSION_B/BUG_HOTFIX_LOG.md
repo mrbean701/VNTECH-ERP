@@ -284,3 +284,18 @@ Status: **FIXED** | Related Bug: BUG-20261006-005 (FIXED) · BUG-20261006-006 (O
 | **ẢNH HƯỞNG** | ⭐ Hub «Kho vật tư» → tab «KHO» → «🗑 Xóa» ⭐ ⚠️ · ⭐ ✅ **KHÔNG ảnh hưởng** phần còn lại (⭐ 132/133 action khác đều có backend ✓) |
 | **STATUS** | ⭐⭐ **OPEN** ⚠️ — ⭐ **ĐÃ CHỨNG MINH ROOT CAUSE** ✓ · ⛔ **CHƯA SỬA** (⭐ cần user quyết: ⭐ viết API `delete_warehouse` ⭐ hoặc ⭐ khoá nút ✓) |
 | **RELATED** | ⭐ `BUG-20261007-013` · `BUG-20261007-014` (⭐ cùng họ: UI gọi tên ⛔ không tồn tại ✓) |
+
+---
+
+## ⭐ BUG-20261007-016 — GHI CHÚ TRONG MÃ LỖI THỜI (`AdminUserModalTabs.tsx`) — **DOCUMENTATION** ⭐
+| ⭐ | ⭐ |
+|---|---|
+| **SESSION** | ⭐ `ERP-SESSION-02` ⛔ **CHƯA XÁC MINH PHÂN VAI** ⚠️ (⭐ ⛔ **KHÔNG sửa** — ⭐ §7 ✓) |
+| **SEVERITY** | ⭐ **LOW / UI** (⭐ ⛔ **không ảnh hưởng chạy** — ⭐ chỉ **gây hiểu nhầm cho người đọc mã** ⚠️ ✓) |
+| **VỊ TRÍ** | ⭐ `app/screens/AdminUserModalTabs.tsx:39-41` ⭐ (⭐ ghi chú «MỐC 115» ✓) |
+| **GHI CHÚ NÓI** | ⭐ «…chỉ nhận rule chung `[role="tablist"]` (`flex: 0 0 auto`) ⇒ ⭐⭐ **2 thẻ co theo độ dài chữ, lệch nhau rõ** ⭐⭐» ⚠️ |
+| ⭐ **THỰC TẾ ĐO ĐƯỢC** | ⭐⭐⭐ `getComputedStyle(button).flex = ` **`1 1 0px`** ⭐⭐ 2 tab **`609px` / `609px`** ⇒ ⭐⭐ **LỆCH 0px — ĐÃ CHIA ĐỀU** ⭐⭐ ✅ |
+| **ROOT CAUSE** | ⭐ Đã có rule **sau** ghi đè thành `flex:1 1 0` ⚠️ ⭐ nhưng ⭐⛔ **ghi chú ⛔ không được cập nhật** ✓ |
+| **ĐỀ XUẤT** | ⭐ Cập nhật ghi chú cho khớp mã hiện tại ⭐ ⛔ **KHÔNG phải việc của phiên 02 nếu tệp ⛔ không thuộc phiên 02** ⇒ ⭐ **chờ xác nhận phân vai** ⏳ |
+| **STATUS** | ⭐⭐ **OPEN** ⭐⭐ — ⭐ **ĐÃ ĐO + ĐÃ CHỨNG MINH** ✅ · ⛔ **CHƯA SỬA** (⭐ chờ xác nhận chủ sở hữu tệp ✓) |
+| **RELATED** | ⭐ `TEST-20261007-029` · `EVT-20261007-040` ✓ |

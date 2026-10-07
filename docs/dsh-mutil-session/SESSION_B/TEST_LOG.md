@@ -545,3 +545,18 @@ Notes: ⭐ **CÒN LẠI 2 KHỐI «GIẢI THÍCH» trong tab KHO** (⛔ không t
 | | ⚠️ ⭐ **TỔNG KẾT SAI LẦM ĐO TRONG PHIÊN: 5 LẦN** ⭐ — ⭐ ① menu «2/2» giả (⭐ đọc trước khi mở nhóm ✓) ⭐ ② `innerText` rỗng ở headless ✓ ⭐ ③ chỉ đo `modal`, thiếu «đổi màn» ✓ ⭐ ④ quét **nhầm backend** (⭐ 16 bug giả ✓) ⭐ ⑤ quét `<button>` (⭐ đếm cả **chú thích** + **2 lỗi parser** ✓) ⭐ ⭐ ⇒ ⭐⭐ **CẢ 5 ĐỀU DO THIẾU ĐỐI CHỨNG HOẶC SAI NGUỒN/MẪU** ⚠️ ⭐⭐ ✓ |
 | **KẾT QUẢ** | ⭐ **① TIN ĐƯỢC** (3 nút chết) ⭐ **② TIN ĐƯỢC** (1 action thiếu) ⭐ **③ ⛔ BỎ** (⛔ không kết luận) ✓ |
 | **TRUY VẾT** | ⭐ `BUG-20261007-013` · `-014` · `-015` · `EVT-20261007-035` · `-037` ✓ |
+
+## ⭐⭐ TEST-20261007-029 — §22: KÍCH THƯỚC TAB **TRONG MODAL** PHẢI NHẤT QUÁN — **ĐẠT** ✅ ⭐⭐
+| ⭐ | ⭐ |
+|---|---|
+| **DATE** | 2026-10-07 · **SESSION_ID** `ERP-SESSION-02` · **TEST_TYPE** `UI` (đo DOM thật) |
+| ⭐ **YÊU CẦU §22 (nguyên văn)** | ⭐⭐ «**Tất cả tabs bên trong cùng một modal phải có kích thước nhất quán. Không để title dài/ngắn làm thay đổi: width · height · title area · alignment · content positioning**» ⭐⭐ ✓ |
+| **MÔI TRƯỜNG** | ⭐ `:9000` (proxy → UI `:8787`) ⭐ login `200` ⭐ boot OK ⭐ `admin` ⭐ Edge headless 1920×1080 · `--force-device-scale-factor=1` ✓ |
+| ⭐ **CÁCH ĐO** | ⭐ Mở modal thật ⇒ ⭐ `document.querySelectorAll('[role="tablist"]')` ⇒ ⭐ **`getBoundingClientRect()` TỪNG tab** ⭐ + ⭐ `getComputedStyle(b).flex` ⭐ ⇒ ⭐ đánh dấu ⭐ **TRONG MODAL** ⭐ bằng ⭐ `closest('.modal,[role="dialog"],.overlay')` ✓ |
+| **ĐƯỜNG MỞ MODAL** | ⭐ Menu ⭐⭐ **«QUẢN TRỊ HỆ THỐNG» → «Danh mục & phân quyền»** ⭐⭐ ⇒ ⭐ danh sách tài khoản có nút ⭐ **«Sửa tài khoản»** ⭐ ⇒ ⭐ bấm ⇒ ⭐ `modal = 1` ✅ ⭐ (⭐ dải tab: `project-scope-tabs user-admin-tabs`, 2 tab ✓) ✓ |
+| ⭐⭐ **KẾT QUẢ — TAB TRONG MODAL** | ⭐⭐⭐ **ĐẠT** ⭐⭐⭐ — ⭐ 2 tab ⭐⭐ **`609px` và `609px`** ⭐⭐ ⇒ ⭐⭐ **LỆCH = 0px** ⭐⭐ ✅<br>⭐ `getComputedStyle(button).flex` = ⭐⭐ **`1 1 0px`** ⭐⭐ ⇒ ⭐ **chia đều, ⛔ KHÔNG phụ thuộc độ dài chữ** ✅<br>⭐ «Sửa tài khoản» (13 ký tự) ⭐ và ⭐ «Phân quyền công việc / Chức năng» (30 ký tự) ⭐ ⭐ **CÙNG 609px** ✅ ✓ |
+| ⭐ **ĐO THÊM — dải tab NGOÀI modal** | ⭐ Hub «Kho vật tư» ⇒ `.project-scope-tabs` 3 tab: ⭐ «KHO» **53px** ⭐ «XUẤT & NHẬP» **103,5px** ⭐ «CẤP PHÁT & HOÀN TRẢ» **151,1px** ⇒ ⭐⭐ **LỆCH 98,1px** ⚠️ ⭐ `flex = 0 1 auto` (⭐ rộng theo chữ ✓)<br>⭐ ⇒ ⭐ **ĐÂY LÀ THANH TAB CẤP MÀN, ⛔ KHÔNG thuộc phạm vi §22** (⭐ §22 chỉ nói **tab TRONG MODAL** ✓) ⭐ và ⭐ **đúng thiết kế CSS** (`.project-scope-tabs button` ⛔ không đặt `flex` ✓) ✓ |
+| ⭐⭐ **PHÁT HIỆN THÊM: GHI CHÚ TRONG MÃ ĐÃ LỖI THỜI** | ⭐ `app/screens/AdminUserModalTabs.tsx:39-41` (⭐ «MỐC 115») **ghi**: ⭐⭐ «…chỉ nhận rule chung `[role="tablist"]` (`flex: 0 0 auto`) ⇒ **2 thẻ co theo độ dài chữ, lệch nhau rõ**» ⚠️<br>⭐⭐ **ĐO THẬT: `flex = 1 1 0px`, lệch 0px** ⭐⭐ ⇒ ⭐⭐ **GHI CHÚ SAI SO VỚI MÃ HIỆN TẠI** ⚠️ ⭐⭐ — ⭐ chứng tỏ **đã có người sửa sau** nhưng ⛔ **không cập nhật ghi chú** ✓ (⭐ ⛔ **KHÔNG sửa tệp này** — ⭐ cần kiểm phân vai trước ⚠️ ✓) |
+| ⭐ **BÀI HỌC (§33)** | ⭐ ⭐⭐ **GHI CHÚ TRONG MÃ ⛔ KHÔNG PHẢI BẰNG CHỨNG — PHẢI ĐO LẠI** ⭐ ⭐⭐ — ⭐ nếu tin ghi chú «lệch nhau rõ» ⭐ thì đã **đi sửa một thứ ⛔ không hỏng** ⚠️ ⇒ ⭐⭐ **mất thời gian + rủi ro tạo lỗi mới** ⭐⭐ ⭐ ⭐ (⭐ đây là lần thứ 7 trong phiên một «nguồn tin» hoá ra ⛔ không khớp thực tế ⚠️ ✓) ✓ |
+| **TRẠNG THÁI** | ⭐⭐ **PASS** ⭐⭐ — ⭐ **§22 ĐẠT cho tab trong modal** ✅ ⭐ ⛔ **KHÔNG cần sửa gì** ✓ |
+| **RELATED** | ⭐ `EVT-20261007-040` ✓ |

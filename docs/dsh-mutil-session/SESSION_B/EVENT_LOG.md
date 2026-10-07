@@ -281,3 +281,13 @@ Description: **BUG-20261006-007 DA SUA (dinh chinh bao xanh gia)** — ghi khoi 
 | ⭐ **BÀI HỌC (§33)** | ⭐ ⭐⭐ **KHI CẦN THAO TÁC GIT MÀ CÂY LÀM VIỆC CÓ THAY ĐỔI ⛔ KHÔNG PHẢI CỦA MÌNH ⇒ DÙNG `git worktree` TẠM** ⭐ ⭐⭐ — ⭐ **hoàn toàn ⛔ không đụng** cây làm việc · ⭐ ⛔ không `stash` · ⛔ không `checkout` · ⛔ không `reset` ✓ ⭐ ⭐ an toàn cho **đa phiên** (§19) ✓ |
 | | ⭐ ⭐ **LỖI DNS LẶP LẠI ⇒ `Clear-DnsClientCache`** ⭐ ⭐ — ⭐ trong phiên gặp **5 lần** ⚠️ ⭐ lần nào **xoá cache DNS** cũng **thành công ngay** ✅ ✓ |
 | **TRUY VẾT** | ⭐ commit `3bf6af2` (main) · `0157ede` (unity) ✓ |
+
+## ⭐⭐ EVT-20261007-040 — KIỂM §22 «TAB TRONG MODAL PHẢI NHẤT QUÁN» ⇒ **ĐẠT** (⛔ không cần sửa) ⭐⭐
+| ⭐ | ⭐ |
+|---|---|
+| **SỰ KIỆN** | ⭐ `TEST_COMPLETE` — ⭐ khi ⛔ không còn bug ưu tiên cao ⭐ ⇒ ⭐ theo **§22 «UI/UX FOCUS»** ⭐ em kiểm **yêu cầu §22 chưa từng kiểm** ✓ |
+| **NGUỒN MANH MỐI** | ⭐ `AdminUserModalTabs.tsx:39-41` **tự ghi**: ⭐ «dải thẻ NÀY **nằm trong modal**… ⇒ **2 thẻ co theo độ dài chữ, lệch nhau rõ**» ⚠️ ⭐ + ⭐ CSS `.user-admin-tabs>button{flex:0 0 auto;white-space:nowrap}` ⭐⭐ ⇒ ⭐ **tưởng là vi phạm §22** ✓ |
+| ⭐⭐ **ĐO THẬT ⇒ NGƯỢC LẠI** | ⭐⭐⭐ **ĐẠT** ⭐⭐⭐ — ⭐ mở modal thật qua ⭐ **«QUẢN TRỊ HỆ THỐNG» → «Danh mục & phân quyền» → «Sửa tài khoản»** ⭐ ⇒ ⭐ 2 tab ⭐⭐ **609px / 609px · lệch 0px** ⭐⭐ ⭐ `flex = 1 1 0px` ⭐ ⇒ ⭐⭐ **đã chia đều** ✅ ✓ |
+| ⭐ **PHÁT HIỆN PHỤ** | ⭐ ⭐⭐ **GHI CHÚ TRONG MÃ ĐÃ LỖI THỜI** ⭐⭐ (`AdminUserModalTabs.tsx:39-41` mô tả trạng thái ⛔ không còn đúng) ⚠️ ⭐ ⛔ **KHÔNG tự sửa** — ⭐ cần kiểm **phân vai tệp** trước (§7) ✓ |
+| ⭐⭐ **BÀI HỌC (§33)** | ⭐ ⭐⭐ **GHI CHÚ TRONG MÃ ⛔ KHÔNG PHẢI BẰNG CHỨNG** ⭐ ⭐⭐ — ⭐ phải **ĐO LẠI** ⭐ ⭐ nếu tin ghi chú ⇒ ⭐ **đi sửa thứ ⛔ không hỏng** ⚠️ ⭐ (⭐ lần thứ **7** trong phiên nguồn tin ⛔ không khớp thực tế ✓) ✓ |
+| **KẾT LUẬN** | ⭐ **§22 ĐẠT** ✅ ⭐ ⛔ **không cần thay đổi mã** ✅ ⭐ ⇒ ⭐⭐ **KẾT QUẢ ÂM CÓ GIÁ TRỊ: xác nhận hệ thống ⛔ không vi phạm §22** ⭐⭐ ✓ |
