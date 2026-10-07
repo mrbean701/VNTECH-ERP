@@ -300,3 +300,11 @@ Description: **BUG-20261006-007 DA SUA (dinh chinh bao xanh gia)** — ghi khoi 
 | ⭐⭐ **QUYẾT ĐỊNH (§22 · thà ⛔ không báo còn hơn báo SAI)** | ⭐⛔ **KHÔNG báo kết luận** ⭐ ⛔ **không sửa gì** ⭐ ⭐ ghi rõ **hướng làm đúng** cho lần sau: ⭐ dùng `[data-vntech="inventory-table-card"]` / `[data-vntech^="ar-"]` ⭐ + ⭐ `khối.querySelector('input')` ✓ |
 | ⭐ **BÀI HỌC (§33)** | ⭐ ⭐⭐ **PHÉP ĐO PHẢI CÔ LẬP ĐÚNG KHỐI — ⛔ KHÔNG DÙNG SELECTOR TOÀN TRANG** ⭐ ⭐⭐ ⭐ (⭐ lần thứ **8** trong phiên ⚠️ — ⭐ **cùng một loại lỗi: THIẾU điều kiện cô lập** ✓) ⭐ ⭐ **⇒ luật rút ra: MỌI selector phải NEO vào `[data-vntech="…"]` của khối mục tiêu** ⭐ ✓ |
 | **TRUY VẾT** | ⭐ `TEST-20261007-030` ✓ |
+
+## ⭐⭐ EVT-20261007-042 — HỒI QUY LIÊN PHIÊN: 3 PHIÊN CÙNG SỬA ⇒ ⛔ KHÔNG PHÁ NHAU ⭐⭐
+| ⭐ | ⭐ |
+|---|---|
+| **SỰ KIỆN** | ⭐ `TEST_COMPLETE` — ⭐ 3 phiên (`S01` · `S02` · `S03`) **cùng sửa trên `unity`** ⭐ ⇒ ⭐ kiểm **tính tương thích chéo** (§25 ✓) |
+| **KẾT QUẢ** | ⭐⭐⭐ **PASS** ⭐⭐⭐ — ⭐ S02 «Hub Kho vật tư» ✅ **107.934** ký tự ⭐ S03 «Cấp phát cho tổ đội» ✅ **2.179** ⭐ S01 «Danh mục & phân quyền» ✅ **5.843** ⭐ ⭐ **cả 3 render bình thường** ✅ |
+| **Ý NGHĨA (⭐ §2)** | ⭐⭐⭐ **«PARALLEL WORK = YES · CODE CONFLICT = NO»** ⭐⭐⭐ — ⭐ chứng minh **cơ chế phân vai + `SHARED_STATE` + HANDOFF ĐANG HOẠT ĐỘNG** ✅ ⭐ ⭐ (⭐ `S03` thậm chí đang ⭐ **sửa dở** `TeamDirectory.tsx` ⚠️ mà ⭐ **vẫn ⛔ không làm hỏng** màn của `S01`/`S02` ✓) ✓ |
+| **TRUY VẾT** | ⭐ `TEST-20261007-031` ✓ |

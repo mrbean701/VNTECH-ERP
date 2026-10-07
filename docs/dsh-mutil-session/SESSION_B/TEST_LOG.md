@@ -573,3 +573,15 @@ Notes: ⭐ **CÒN LẠI 2 KHỐI «GIẢI THÍCH» trong tab KHO** (⛔ không t
 | **HƯỚNG LÀM ĐÚNG (⭐ cho lần sau)** | ⭐ Phải ⭐ **cô lập đúng khối**: ⭐ dùng `[data-vntech="inventory-table-card"]` (⭐ có sẵn ✓) ⭐ hoặc `[data-vntech^="ar-"]` ⭐ ⇒ ⭐ đếm `tr` **trong khối đó** ⭐ ⭐ + ⭐ dùng **đúng ô tìm kiếm của khối đó** (⭐ `khối.querySelector('input')` ✓) ✓ |
 | **STATUS** | ⭐⭐ **INCONCLUSIVE** ⭐⭐ — ⭐ **⛔ chưa kết luận được có/không có empty state** ⚠️ ⭐ (⭐ ⛔ không phải bug, ⛔ không phải PASS ✓) |
 | ⭐ **BÀI HỌC (§33)** | ⭐ ⭐⭐ **PHÉP ĐO PHẢI CÔ LẬP ĐÚNG KHỐI — ⛔ KHÔNG DÙNG SELECTOR TOÀN TRANG** ⭐ ⭐⭐ ⭐ (⭐ lần thứ **8** trong phiên một phép đo thiếu điều kiện ⚠️ ✓) |
+
+## ⭐⭐ TEST-20261007-031 — HỒI QUY **LIÊN PHIÊN** (3 phiên cùng sửa) — **PASS** ✅ ⭐⭐
+| ⭐ | ⭐ |
+|---|---|
+| **DATE** | 2026-10-07 · **SESSION_ID** `ERP-SESSION-02` · **TEST_TYPE** `REGRESSION / UI` |
+| ⭐ **MỤC ĐÍCH (§25 + §2)** | ⭐⭐ **3 phiên cùng sửa** ⭐⭐ (`S01` · `S02` · `S03`) ⭐ ⇒ ⭐ **phải chứng minh các màn CỦA CẢ 3 vẫn render** ⭐ ⭐ mục tiêu: ⭐ `CODE CONFLICT = NO` · ⭐ `STATE CONFLICT = NO` ✅ |
+| **MÔI TRƯỜNG** | ⭐ `:9000` (proxy → `:8787`) ⭐ login `200` · boot **OK** ⭐ `admin` ⭐ Edge headless 1920×1080 ✓ |
+| ⭐⭐ **KẾT QUẢ** | ⭐ **S02** — «Hub Kho vật tư» (`Inventory.tsx`) ⇒ h1 «Tồn kho & điều chuyển» · ⭐⭐ **107.934 ký tự** ⭐⭐ · 3 bảng ✅<br>⭐ **S03** — «Cấp phát cho tổ đội» (`TeamDirectory.tsx` ⭐ **đang sửa dở** ⚠️) ⇒ h1 «Cấp phát cho tổ đội» · **2.179 ký tự** · 1 bảng ✅<br>⭐ **S01** — «Danh mục & phân quyền» (⭐ dùng `app/page.tsx` của S01 ✓) ⇒ h1 «Danh mục & phân quyền» · **5.843 ký tự** · 1 bảng ✅<br>⭐⭐⭐ **⇒ CẢ 3 PHIÊN ĐỀU RENDER — KHÔNG PHIÊN NÀO PHÁ PHIÊN NÀO** ⭐⭐⭐ ✅ |
+| ⭐⭐ **2 KẾT QUẢ LÀ HIỆN TƯỢNG ĐÃ BIẾT (⛔ không phải lỗi)** | ⭐ ① ⭐ `material_master` có **0 mục con** ⚠️ ⇒ ⭐ **ĐÚNG THIẾT KẾ** (⭐ nhóm này **đi thẳng** vào màn, ⛔ không mở ra con — ⭐ đã chứng minh ở `TEST-20261007-027` ✓) ⭐ ⇒ ⭐ ⛔ **không phải lỗi** ✓<br>⭐ ② ⭐ **1 lỗi console `401 Unauthorized`** ⚠️ ⇒ ⭐ **fetch TRƯỚC khi đăng nhập** ⭐ ⭐ **ĐÚNG** (⭐ probe gọi `/api/system` khi trang còn chưa có phiên ✓) ⇒ ⭐ ⛔ **không phải lỗi** ✓ |
+| **GHI CHÚ PHÂN VAI** | ⭐ Màn `TeamDirectory.tsx` ⭐ **thuộc `ERP-SESSION-03`** ⭐ ⇒ ⭐ phiên 02 ⭐⭐ **CHỈ ĐỌC, ⛔ KHÔNG SỬA** ⭐⭐ ✅ (§7 ✓) |
+| **STATUS** | ⭐⭐ **PASS** ⭐⭐ |
+| **RELATED** | ⭐ `TEST-20261007-027` (hồi quy 54/54) · `HANDOFF-20261007-006` ✓ |
