@@ -176,8 +176,10 @@ public class UserAdminStoreAdapter implements UserAdminStore {
 
     @Override
     @Transactional
-    public void deleteModuleOverride(String userId, String moduleKey) {
-        jdbcTemplate.update("""
+    public int deleteModuleOverride(String userId, String moduleKey) {
+        // ⛔⛔ VÁ 05/10/2026 (GO-LIVE · BUG-20261011 — LOW): trả về SỐ DÒNG đã xoá thay vì `void`
+        //   ⇒ use-case biết được «có ngoại lệ nào để xoá không» và ⛔ không báo thành công sai nữa.
+        return jdbcTemplate.update("""
                 DELETE FROM user_module_permissions WHERE user_id=? AND module_key=? AND permission_source='manual_override'""",
                 userId, moduleKey);
     }
@@ -208,8 +210,15 @@ public class UserAdminStoreAdapter implements UserAdminStore {
 
     @Override
     public List<String> listActiveModuleKeys() {
+        // USER 28/09/2026 — bỏ mệnh đề `AND module_key<>'admin'`.
+        // LÝ DO: đây là nơi KHỚI ĐẦU của việc bỏ chặn cấp quyền Quản trị hệ thống cho user khác.
+        //   Nếu còn mệnh đề này ⇒ `admin` không bao giờ xuất hiện trong vòng lặp cấp quyền
+        //   ⇒ lệnh cấp vẫn trả `ok:true` nhưng KHÔNG ghi gì ⇒ SAI LỆCH im lặng, rất khó phát hiện.
+        // ⚠️ AN TOÀN (không nới ở đây, giữ nguyên): bước 12 «Cấu hình hệ thống» (FactoryResetAdmin XÓA
+        //    DỮ LIỆU), 13 «Thông báo», 14 «Báo lỗi» vẫn CHỈ hiện với `role === "admin"`
+        //    — `ADMIN_ROLE_ONLY_STEPS` trong app/screens/admin-governance-pure.ts.
         return jdbcTemplate.queryForList(
-                "SELECT module_key FROM module_catalog WHERE active=1 AND module_key<>'admin' ORDER BY sort_order,module_key",
+                "SELECT module_key FROM module_catalog WHERE active=1 ORDER BY sort_order,module_key",
                 String.class);
     }
 
@@ -219,21 +228,37 @@ public class UserAdminStoreAdapter implements UserAdminStore {
         jdbcTemplate.update("DELETE FROM user_module_permissions WHERE user_id=? AND permission_source='department_default'", userId);
     }
 
+    // MỐC 112 — `permission_source` + `permission_expires_at` do use-case quyết định, không hard-code.
+    // ⚠️ Sửa kèm BẮT BUỘC: `ON DUPLICATE KEY UPDATE` trước đây KHÔNG cập nhật `permission_expires_at`
+    //    ⇒ dù có truyền xuống, hạn dùng cũ vẫn treo vĩnh viễn ở dòng đã tồn tại.
     @Override
     @Transactional
     public void insertDepartmentDefaultPermission(String permissionId, String userId, String moduleKey,
                                                   int canView, int canUse, int canCreate, int canEdit,
-                                                  int canApprove, int canExport, Instant now) {
+                                                  int canApprove, int canExport,
+                                                  String permissionSource, Instant permissionExpiresAt, Instant now) {
         jdbcTemplate.update("""
                 INSERT INTO user_module_permissions (id,user_id,module_key,can_view,can_use,can_create,can_edit,
                                                      can_approve,can_export,permission_expires_at,permission_source,
                                                      created_at,updated_at)
-                VALUES (?,?,?,?,?,?,?,?,?,NULL,?,?,?) ON DUPLICATE KEY UPDATE
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE
                        can_view=VALUES(can_view),can_use=VALUES(can_use),can_create=VALUES(can_create),
                        can_edit=VALUES(can_edit),can_approve=VALUES(can_approve),can_export=VALUES(can_export),
+                       permission_expires_at=VALUES(permission_expires_at),
                        permission_source=VALUES(permission_source),updated_at=VALUES(updated_at)""",
                 permissionId, userId, moduleKey, canView, canUse, canCreate, canEdit, canApprove, canExport,
-                "department_default", now, now);
+                permissionExpiresAt,
+                (permissionSource == null || permissionSource.isBlank()) ? "department_default" : permissionSource,
+                now, now);
+    }
+
+    // MỐC 112 — mở transaction bao quanh một khối ghi bất kỳ của use-case.
+    // Các lệnh bên trong đều là phương thức port khác của chính adapter này, đều `@Transactional`
+    // với propagation REQUIRED mặc định ⇒ chúng THAM GIA transaction đang mở, không tự commit.
+    @Override
+    @Transactional
+    public void runAtomically(Runnable work) {
+        work.run();
     }
 
     private Optional<Map<String, Object>> first(String sql, Object... args) {

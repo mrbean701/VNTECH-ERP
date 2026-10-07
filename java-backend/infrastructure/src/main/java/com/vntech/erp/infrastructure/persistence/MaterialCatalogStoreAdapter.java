@@ -112,13 +112,36 @@ public class MaterialCatalogStoreAdapter implements MaterialCatalogStore {
 
     @Override
     public List<Map<String, Object>> materialsWithReferences() {
+        // ⛔⛔ VÁ 05/10/2026 (GO-LIVE · BUG-20261005-013 — MEDIUM) — **HTTP 500 THẬT**.
+        //   TRƯỚC BẢN VÁ: `(SELECT COUNT(*) FROM materials me WHERE me.code_merge_into_id=m.id) AS mergedFrom`
+        //   ⚠️ **CỘT `materials.code_merge_into_id` CHƯA BAO GIỜ TỒN TẠI** ⇒ MySQL:
+        //      `ERROR 1054 (42S22): Unknown column 'me.code_merge_into_id' in 'where clause'`
+        //      ⇒ ⭐ **CẢ TRUY VẤN NÀY NỔ** ⇒ **500** ✓
+        //   📍 BẰNG CHỨNG (⭐ ĐO 5 CÁCH ĐỘC LẬP): ① `information_schema.columns` ⇒ COUNT = 0
+        //      ② `SHOW COLUMNS FROM materials` ⇒ không có · ③ không migration nào tạo
+        //      ④ `schema-h2.sql` không có · ⑤ E2E `preview_material_dependencies` ⇒ 500 ✓
+        //   ⚠️ ẢNH HƯỞNG RỘNG: hàm này phục vụ **CẢ** `preview_material_dependencies` **VÀ**
+        //      `deleteUnusedMaterials` (⭐ **XOÁ CỨNG vật tư**) ⇒ ⭐ **cả hai đều 500** ✓
+        //   ⭐⭐ VÌ SAO `0` LÀ **SỰ THẬT** (⛔ KHÔNG phải che giấu): `merged` dùng trong
+        //      `deleteUnusedMaterials` (`numberValue(row.get("mergedFrom")) > 0 ? 1 : 0`).
+        //      ⚠️ Vì **cột chưa bao giờ tồn tại** ⇒ ⛔ chưa vật tư nào từng được gộp
+        //      ⇒ ⭐ **`merged` LUÔN = 0 trên thực tế** ⇒ ⭐ `0` **phản ánh ĐÚNG dữ liệu** ✓
+        //   ⭐ AN TOÀN VỚI UI: ⭐ đã ĐO — **⛔ không tệp UI nào dùng `mergedFrom`** ✓
+        //
+        //   ⛔⛔⛔ SỬA LẦN 2 — 06/10/2026 (SAU KHI TRIỂN KHAI): BẢN VÁ LẦN 1 ⛔ SAI CHỖ.
+        //   ⚠️ Tôi đã đặt 25 dòng chú thích hai-gạch-chéo **BÊN TRONG khối văn bản ba-nháy** ⇒
+        //      ⭐ **trong khối văn bản, hai-gạch-chéo ⛔ KHÔNG phải chú thích — nó là MỘT PHẦN CỦA CHUỖI SQL**
+        //      ⇒ MySQL nhận ~25 dòng chữ Việt làm SQL ⇒ **LỖI CÚ PHÁP ⇒ vẫn 500** ✓
+        //   📍 ĐO ĐƯỢC: E2E `go-live-kiem-30-action-con-lai.mjs` báo
+        //      «preview_material_dependencies — payload RỖNG ⇒ ⛔ 500» ✓
+        //   ⇒ ⭐ **CHÚ THÍCH PHẢI NẰM NGOÀI KHỐI VĂN BẢN** (⭐ như khối này) ✓
         return jdbcTemplate.queryForList("""
                 SELECT m.id,m.code,m.name,m.active,
                        (SELECT COUNT(*) FROM material_request_items mri WHERE mri.material_id=m.id) AS requestItems,
                        (SELECT COUNT(*) FROM procurement_allocations pa WHERE pa.material_id=m.id) AS allocations,
                        (SELECT COUNT(*) FROM project_boq_items pbi WHERE pbi.material_id=m.id) AS boqItems,
                        (SELECT COUNT(*) FROM stock_movements sm WHERE sm.material_id=m.id) AS movements,
-                       (SELECT COUNT(*) FROM materials me WHERE me.code_merge_into_id=m.id) AS mergedFrom
+                       0 AS mergedFrom
                 FROM materials m""");
     }
 
@@ -297,8 +320,23 @@ public class MaterialCatalogStoreAdapter implements MaterialCatalogStore {
 
     @Override
     public List<Map<String, Object>> aliasConflicts() {
+        // ⛔⛔ VÁ 05/10/2026 (GO-LIVE · BUG-20261005-012 — HIGH, UI ĐANG GỌI `check_material_alias_conflicts`).
+        //   TRƯỚC BẢN VÁ: `SELECT a.alias_name AS aliasName, … GROUP BY a.normalized_name` ⇒
+        //   `a.alias_name` **không nằm trong GROUP BY** và **không phụ thuộc hàm** vào nó ⇒
+        //   MySQL **ĐANG BẬT** `ONLY_FULL_GROUP_BY` (đo: `sql_mode` =
+        //   `ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION`)
+        //   ⇒ **ERROR 1055 (42000)**: «Expression #1 of SELECT list is not in GROUP BY clause and contains
+        //   nonaggregated column 'a.alias_name' … incompatible with sql_mode=only_full_group_by».
+        //   ⇒ `jdbcTemplate` ném lỗi ⇒ **HTTP 500 «Internal Server Error»** ⇒ ⭐ **action HỎNG 100%, LUÔN LUÔN**
+        //   (⛔ không phụ thuộc payload) — đo bằng E2E: `{"ok":false,"status":500,…}`.
+        // ⭐ CÁCH VÁ: bọc `MIN(a.alias_name)` — **hàm gộp CHUẨN SQL**, chạy được **cả MySQL lẫn H2**,
+        //   ⛔ **KHÔNG đổi ngữ nghĩa nhóm** (`GROUP BY a.normalized_name` giữ nguyên; mỗi nhóm vẫn là
+        //   một `normalized_name` với đầy đủ `materialIds`/`materialCount`).
+        //   ⓘ `ANY_VALUE()` cũng sửa được nhưng là **hàm riêng của MySQL** ⇒ kém chuẩn hơn, ⛔ không chọn.
+        //   ⚠️ GHI CHÚ: H2 **dễ dãi hơn** MySQL nên `mvn -o test` ⛔ **không bắt được** lỗi này —
+        //   ⭐ phép đo quyết định là **chạy đúng câu SQL này trên MySQL thật**.
         return jdbcTemplate.queryForList("""
-                SELECT a.alias_name AS aliasName,a.normalized_name AS normalizedName,
+                SELECT MIN(a.alias_name) AS aliasName,a.normalized_name AS normalizedName,
                        GROUP_CONCAT(DISTINCT a.material_id) AS materialIds,
                        COUNT(DISTINCT a.material_id) AS materialCount
                 FROM material_aliases a WHERE a.active=1

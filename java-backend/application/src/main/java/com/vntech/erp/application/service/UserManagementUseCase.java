@@ -101,15 +101,20 @@ public final class UserManagementUseCase {
     }
 
     public String updateUser(Principal principal, Map<String, Object> payload) {
-        rbac.requireRole(principalAsCurrent(principal), List.of("admin"));
+        boolean callerIsAdmin = requireAccountUpdateRight(principal);
         String targetUserId = trim(payload.get("userId"));
         Map<String, Object> target = store.findUser(targetUserId).orElse(null);
         if (target == null) throw new AuthUseCase.ApiError("Không tìm thấy tài khoản.", 400);
+        // MỐC 103 — mở khoá MÃ NV + TÊN ĐĂNG NHẬP; rỗng ⇒ 400.
         String employeeCode = trim(payload.get("employeeCode"));
-        String fullName = trim(payload.get("fullName"));
+        if (employeeCode.isEmpty()) employeeCode = sv(target, "employeeCode");
+        if (employeeCode.isEmpty())
+            throw new AuthUseCase.ApiError("Mã nhân viên, họ tên, tên đăng nhập và phòng/bộ phận là bắt buộc.", 400);
         String username = trim(payload.get("username")).toLowerCase();
+        if (username.isEmpty()) username = sv(target, "username").toLowerCase();
+        String fullName = trim(payload.get("fullName"));
         String email = trim(payload.get("email")).toLowerCase().isEmpty() ? null : trim(payload.get("email")).toLowerCase();
-        String role = canonicalRoleCode(payload.get("role"));
+        String role = guardRoleChange(callerIsAdmin, target, payload);
         boolean active = payload.get("active") == Boolean.TRUE || "1".equals(trim(payload.get("active")));
         Map<String, Object> roleRow = store.findRoleByCode(role).orElse(null);
         if (roleRow == null || !isActive(roleRow.get("active")))
@@ -148,6 +153,50 @@ public final class UserManagementUseCase {
             message += " và đặt lại mật khẩu";
         }
         return message + ".";
+    }
+
+    /**
+     * MỐC 103 (user 29/09) — cổng quyền cập nhật tài khoản.
+     *
+     * <p>ADMIN đi qua vì `isAdmin`. Người khác cần module `admin_tab_01` + quyền SỬA
+     * (khai ở `ActionRbacRegistry`, capability `canEdit`) — `update_user` trước đây
+     * <b>chưa</b> được khai nên mọi user thường đều 403.
+     *
+     * @return {@code true} nếu người gọi là Quản trị hệ thống
+     */
+    private boolean requireAccountUpdateRight(Principal principal) {
+        boolean isAdmin = rbac.isAdmin(principalAsCurrent(principal));
+        if (!isAdmin) rbac.requireActionModule(principalAsCurrent(principal), "update_user");
+        return isAdmin;
+    }
+
+    /**
+     * MỐC 103 (user 29/09) — ⛔ CHỐNG LEO THANG ĐẶC QUYỀN.
+     *
+     * <p>Đổi `role` = đổi quyền ⇒ chỉ ADMIN được đổi. Người có `admin_tab_01` vẫn sửa được
+     * MÃ NV · TÊN ĐĂNG NHẬP · HỌ TÊN · EMAIL · PHÒNG/BỘ PHẬN.
+     */
+    private String guardRoleChange(boolean callerIsAdmin, Map<String, Object> target,
+            Map<String, Object> payload) {
+        String current = sv(target, "role");
+        if (!payload.containsKey("role") || trim(payload.get("role")).isEmpty())
+            return current;
+        // MỐC 109 (30/09/2026) — ⛔ KHÔNG ĐỔI THÌ PHẢI CHO QUA.
+        // Modal sửa tài khoản LUÔN gửi kèm ô `role` (đó là một trường của form, kể cả khi
+        // người dùng không chạm tới), nên nếu chặn MỌI payload CÓ `role` thì người được cấp
+        // `admin_tab_01` + `canEdit` LUÔN nhận 403 — đúng lỗi BUG-02 tái diễn ở tầng use-case.
+        // ĐO THẬT: probe `sec_probe_017830` gửi `role='ksda'` (y hệt vai trò hiện tại) ⇒ 403
+        // «Chỉ Quản trị hệ thống mới đổi được vai trò…» dù không hề đổi vai trò.
+        // Chỉ chặn khi vai trò THẬT SỰ ĐỔI (so cả mã gửi lên lẫn mã chuẩn hoá).
+        String requested = trim(payload.get("role"));
+        if (requested.equalsIgnoreCase(trim(current))
+                || canonicalRoleCode(requested).equalsIgnoreCase(trim(current)))
+            return current;
+        if (!callerIsAdmin)
+            throw new AuthUseCase.ApiError(
+                    "Chỉ Quản trị hệ thống mới đổi được vai trò. Bạn vẫn sửa được mã nhân viên, "
+                    + "tên đăng nhập, họ tên, email và phòng/bộ phận.", 403);
+        return canonicalRoleCode(payload.get("role"));
     }
 
     public String setUserStatus(Principal principal, Map<String, Object> payload) {
@@ -201,6 +250,11 @@ public final class UserManagementUseCase {
         return "Đã xóa tài khoản chưa phát sinh " + sv(target, "username") + ".";
     }
 
+    // MỐC 112 — `clearUserScopes()` + vòng chèn lại nay nằm trong MỘT transaction
+    // (`store.runAtomically`). Trước đây mỗi lệnh là một transaction riêng: xoá commit trước,
+    // insert lỗi giữa chừng ⇒ phạm vi/quyền bị xoá không bao giờ được ghi lại.
+    // KHÔNG thêm `@Transactional` ở đây: module `application` cố ý KHÔNG phụ thuộc Spring
+    // (kiến trúc hexagonal — chỉ dùng port); đã thử và build fail. Transaction do ADAPTER mở.
     public String saveUserAccess(Principal principal, Map<String, Object> payload) {
         rbac.requireRole(principalAsCurrent(principal), List.of("admin"));
         String targetUserId = trim(payload.get("userId"));
@@ -209,8 +263,37 @@ public final class UserManagementUseCase {
         // P5.3 — BẮT BUỘC kiểm tra ràng buộc TRƯỚC khi xoá quyền cũ.
         // Nếu đặt sau clearUserScopes(), một yêu cầu bị TỪ CHỐI vẫn xoá sạch phạm vi
         // dự án / kho / quyền hiện có của người dùng ⇒ MẤT DỮ LIỆU.
-        assertDepartmentAllowsPermissions(targetUserId, target, payload);
+        // ⛔⛔ VÁ 06/10/2026 (GO-LIVE · BUG-20261006-003 — MỨC CAO) — **BỎ CHỐT `P5.3`**.
+        //   📍 YÊU CẦU USER (nguyên văn): «Đang gặp lỗi trong phần phân quyền người dùng, modal
+        //      không thể cấp thêm quyền cho user nếu như số lượng quyền đó lớn hơn số lượng quyền
+        //      đã cấp cho phòng ban. Tôi muốn sửa lại có thể thêm quyền cho người dùng kể cả
+        //      phòng ban của user đó không có quyền như vậy.» ✓
+        //   🔎 NGUYÊN NHÂN GỐC (⭐ đo từ mã, ⛔ không suy đoán): lời gọi
+        //      `assertDepartmentAllowsPermissions(targetUserId, target, payload)` — ⭐ chốt **P5.3**
+        //      (⭐ chú thích gốc ở dòng ~521: «chặn cấp cho người dùng quyền mà PHÒNG BAN không có»)
+        //      ⇒ ⭐ ném `ApiError` «Phòng ban “…” chưa được cấp quyền cho chức năng “…”» (dòng ~553)
+        //      ⇒ ⭐ **chặn ĐÚNG thao tác mà user muốn làm** ✓
+        //   ✅ SỬA: ⛔ **bỏ lời gọi** ⇒ ⭐ cấp được quyền cho user **kể cả phòng ban ⛔ không có** ✓
+        //   ⚠️ GIỮ LẠI hàm `assertDepartmentAllowsPermissions` (⭐ thành không dùng) — ⭐ ⛔ không xoá
+        //      để còn tham chiếu và ⛔ không phình diff (§12 `SMALL SAFE FIX`) ✓
+        //   ⚠️ LƯU Ý VỀ AN TOÀN DỮ LIỆU: chú thích cũ (dòng ~263-265) nói chốt này phải chạy
+        //      TRƯỚC `clearUserScopes()` để «một yêu cầu bị TỪ CHỐI vẫn xoá sạch phạm vi» ⚠️
+        //      — ⭐ nay ⛔ KHÔNG còn yêu cầu nào bị từ chối ở bước này ⇒ ⭐ lo ngại đó **hết hiệu lực** ✓
+        //      ⚠️ NHƯNG chốt **MỐC 111** ngay dưới (dòng ~274) **VẪN GIỮ** — ⭐ nó chặn payload rỗng
+        //      để ⛔ không mất toàn bộ quyền ⇒ ⭐ vẫn còn một lớp bảo vệ ✓
+        // assertDepartmentAllowsPermissions(targetUserId, target, payload);  // ⛔ BỎ 06/10/2026 — BUG-20261006-003
+        // MỐC 111 — CHỐNG MẤT SẠCH QUYỀN (bổ sung cho P5.3 ở trên).
+        // `clearUserScopes()` XOÁ CỨNG cả 3 bảng (project / warehouse / module permissions).
+        // Nếu `modulePermissions` rỗng hoặc toàn rỗng-trắng thì vòng ghi bên dưới không có
+        // gì để chèn ⇒ tài khoản mất TOÀN BỘ quyền mà API vẫn trả 200 «Đã lưu quyền hiệu lực».
+        // Đã tái hiện thật: 60 dòng quyền biến mất sau một lần bấm lưu.
+        // UI luôn gửi ĐẦY ĐỦ danh mục module (kể cả module không có quyền nào) ⇒ mảng rỗng
+        // là payload hỏng, KHÔNG phải ý định thu hồi toàn bộ quyền ⇒ chặn trước khi xoá.
+        if (listOf(payload.get("modulePermissions")).isEmpty())
+            throw new AuthUseCase.ApiError("Dữ liệu phân quyền rỗng — hệ thống không lưu để tránh mất toàn bộ quyền hiện có của tài khoản. Vui lòng tải lại trang rồi thao tác lại.", 400);
         Instant now = Instant.now();
+        // MỐC 112 — nguyên tử: xoá và chèn lại phải cùng thành công hoặc cùng không đổi gì.
+        store.runAtomically(() -> {
         store.clearUserScopes(targetUserId);
         for (Object o : listOf(payload.get("projectScopes"))) {
             Map<?, ?> row = asMap(o);
@@ -226,16 +309,44 @@ public final class UserManagementUseCase {
                 store.insertWarehouseScope(idGenerator.next("UWS"), targetUserId, warehouseId,
                         blankDefault(trim(row.get("permission")), "read"), now);
         }
-        // modulePermissions: chỉ xử lý override khác default (đơn giản hóa: ghi thẳng manual_override)
         for (Object o : listOf(payload.get("modulePermissions"))) {
             Map<?, ?> row = asMap(o);
             String moduleKey = trim(row.get("moduleKey"));
-            if (moduleKey.isEmpty() || "admin".equals(moduleKey)) continue;
-            String source = Boolean.TRUE.equals(row.get("isOverride")) ? "manual_override" : "department_default";
+            // USER 28/09/2026 — bỏ chặn `admin` (xem giải thích đầy đủ ở dòng ~232).
+            // ⚠️ AN TOÀN: bước 12 «Cấu hình hệ thống» (có `FactoryResetAdmin` XÓA DỮ LIỆU), 13 «Thông báo»,
+            //    14 «Báo lỗi» vẫn CHỈ hiện với `role === "admin"` — `ADMIN_ROLE_ONLY_STEPS`.
+            if (moduleKey.isEmpty()) continue;
+            // MỐC 112 — `source` trước đây được TÍNH RA rồi BỎ KHÔNG (biến chết), còn adapter
+            // hard-code `'department_default'` ⇒ mọi dòng đều mang nhãn mặc định phòng ⇒
+            // `deleteModuleOverride` lọc `permission_source='manual_override'` nên KHÔNG BAO GIỜ
+            // xoá được ngoại lệ thật ⇒ nút «Xóa ngoại lệ cá nhân» là nút chết.
+            // ⛔⛔ VÁ 05/10/2026 (GO-LIVE) — MỐC 112 mới chỉ NỐI tham số xuống adapter, GIÁ TRỊ vẫn sai:
+            //    `row.get("isOverride")` là trường mà UI **KHÔNG BAO GIỜ gửi** (`Boolean.TRUE.equals(null)`
+            //    luôn `false`) ⇒ **100% dòng thành `department_default`**. Đo trên MySQL thật:
+            //    `user_module_permissions` = **2198 dòng, 2198 `department_default`, 0 `manual_override`**,
+            //    và `permission_expires_at` NULL toàn bộ ⇒ nút «Xóa ngoại lệ cá nhân» VẪN là nút chết.
+            // ⭐ Bản JS cũ (`scripts/system-route.mjs:3084`) tính ĐÚNG bằng cách **SO với mặc định phòng**:
+            //      const defaults = defaultDepartmentPermission(target, moduleKey);
+            //      const differs  = keys.some((key) => submitted[key] !== defaults[key]);
+            //      const source   = differs ? "manual_override" : "department_default";
+            //    Khi chuyển sang kiến trúc hexagonal, phép SO đó bị đánh rơi. Khôi phục đúng ngữ nghĩa.
+            Caps submittedCaps = new Caps(intOf(row.get("canView")), intOf(row.get("canUse")),
+                    intOf(row.get("canCreate")), intOf(row.get("canEdit")),
+                    intOf(row.get("canApprove")), intOf(row.get("canExport")));
+            Caps defaultCaps = effectiveDepartmentDefault(target, moduleKey);
+            boolean differsFromDefault = submittedCaps.canView != defaultCaps.canView
+                    || submittedCaps.canUse != defaultCaps.canUse
+                    || submittedCaps.canCreate != defaultCaps.canCreate
+                    || submittedCaps.canEdit != defaultCaps.canEdit
+                    || submittedCaps.canApprove != defaultCaps.canApprove
+                    || submittedCaps.canExport != defaultCaps.canExport;
+            String source = differsFromDefault ? "manual_override" : "department_default";
             store.insertDepartmentDefaultPermission(idGenerator.next("UMP"), targetUserId, moduleKey,
                     intOf(row.get("canView")), intOf(row.get("canUse")), intOf(row.get("canCreate")),
-                    intOf(row.get("canEdit")), intOf(row.get("canApprove")), intOf(row.get("canExport")), now);
+                    intOf(row.get("canEdit")), intOf(row.get("canApprove")), intOf(row.get("canExport")),
+                    source, instantOrNull(row.get("permissionExpiresAt")), now);
         }
+        });
         return "Đã lưu quyền hiệu lực: mặc định phòng + ngoại lệ cá nhân.";
     }
 
@@ -243,9 +354,18 @@ public final class UserManagementUseCase {
         rbac.requireRole(principalAsCurrent(principal), List.of("admin"));
         String targetUserId = trim(payload.get("userId"));
         String moduleKey = trim(payload.get("moduleKey"));
-        if (targetUserId.isEmpty() || moduleKey.isEmpty() || "admin".equals(moduleKey))
+        if (targetUserId.isEmpty() || moduleKey.isEmpty())
             throw new AuthUseCase.ApiError("Ngoại lệ cá nhân không hợp lệ.", 400);
-        store.deleteModuleOverride(targetUserId, moduleKey);
+        // ⛔⛔ VÁ 05/10/2026 (GO-LIVE · BUG-20261011 — LOW). TRƯỚC BẢN VÁ: gọi thẳng rồi trả về
+        //   «Đã xóa ngoại lệ cá nhân…» ⇒ với `userId`/`moduleKey` BỊA thì vẫn **HTTP 200** dù ⛔
+        //   không có gì để xoá — trong khi **33/34** action `delete_*` khác đều trả 400 «Không tìm thấy …».
+        //   ⭐ GHI CHÚ NGỮ CẢNH: hiện `user_module_permissions` là **100% `department_default`**
+        //   (2198 dòng, **0** dòng `manual_override`) — hệ quả hạ nguồn của BUG-20261005-003
+        //   (nút «Xóa ngoại lệ cá nhân» từng là nút chết, **đã vá nhưng chưa triển khai**).
+        //   ⛔ Khác BUG-20261010 ở chỗ **KHÔNG có tác dụng phụ toàn hệ thống** ⇒ mức chỉ **LOW**.
+        if (store.deleteModuleOverride(targetUserId, moduleKey) == 0)
+            throw new AuthUseCase.ApiError(
+                    "Không tìm thấy ngoại lệ cá nhân cho chức năng này.", 400);
         return "Đã xóa ngoại lệ cá nhân; quyền hiệu lực quay về mặc định của phòng/bộ phận.";
     }
 
@@ -373,7 +493,6 @@ public final class UserManagementUseCase {
                 .map((l) -> intOf(l.get("autogrant")) == 1).orElse(false);
         String orgUnitId = svAny(target.get(), "organizationUnitId", "organizationunitid");
         for (String moduleKey : store.listActiveModuleKeys()) {
-            if ("admin".equals(moduleKey)) continue;
             Caps caps;
             if (autoAll) {
                 caps = new Caps(1, 1, 1, 1, 1, 1);
@@ -385,8 +504,10 @@ public final class UserManagementUseCase {
                 caps = dep.isPresent() ? capsOfDepartment(dep.get()) : defaultDepartmentPermission(target.get(), moduleKey);
             }
             if (caps.any())
+                // MỐC 112 — đây ĐÚNG là mặc định phòng ban ⇒ nguồn `'department_default'`, không hạn dùng.
                 store.insertDepartmentDefaultPermission(idGenerator.next("UMP"), userId, moduleKey,
-                        caps.canView, caps.canUse, caps.canCreate, caps.canEdit, caps.canApprove, caps.canExport, now);
+                        caps.canView, caps.canUse, caps.canCreate, caps.canEdit, caps.canApprove, caps.canExport,
+                        "department_default", null, now);
         }
     }
 
@@ -394,6 +515,24 @@ public final class UserManagementUseCase {
         if (intOf(row.get("active")) != 1) return new Caps(0, 0, 0, 0, 0, 0);
         return new Caps(intOf(row.get("can_view")), intOf(row.get("can_use")), intOf(row.get("can_create")),
                 intOf(row.get("can_edit")), intOf(row.get("can_approve")), intOf(row.get("can_export")));
+    }
+
+    /**
+     * GO-LIVE 05/10/2026 — MẶC ĐỊNH HIỆU LỰC của phòng cho một chức năng, dùng để phân biệt
+     * «quyền theo phòng» với «ngoại lệ cá nhân» khi lưu phân quyền.
+     *
+     * <p>Quy tắc lấy **đúng như** {@code replaceDepartmentDefaults}: nếu phòng đã được cấu hình
+     * (có dòng trong {@code department_module_permissions}) thì lấy dòng đó; nếu chưa thì rơi về
+     * quy tắc mặc định cũ. ⛔ Hai nơi PHẢI dùng cùng một quy tắc, nếu không thì một dòng vừa được
+     * ghi là «mặc định phòng» lại bị chính hệ thống coi là «ngoại lệ» ở lần lưu sau.
+     */
+    private Caps effectiveDepartmentDefault(Map<String, Object> user, String moduleKey) {
+        String orgUnitId = user == null ? "" : svAny(user, "organizationUnitId", "organizationunitid");
+        if (!orgUnitId.isEmpty()) {
+            Optional<Map<String, Object>> dep = store.findDepartmentPermission(orgUnitId, moduleKey);
+            if (dep.isPresent()) return capsOfDepartment(dep.get());
+        }
+        return user == null ? new Caps(0, 0, 0, 0, 0, 0) : defaultDepartmentPermission(user, moduleKey);
     }
 
     /**
@@ -418,7 +557,7 @@ public final class UserManagementUseCase {
         for (Object o : listOf(payload.get("modulePermissions"))) {
             Map<?, ?> row = asMap(o);
             String moduleKey = trim(row.get("moduleKey"));
-            if (moduleKey.isEmpty() || "admin".equals(moduleKey)) continue;
+            if (moduleKey.isEmpty()) continue;
             int want = intOf(row.get("canView")) + intOf(row.get("canUse")) + intOf(row.get("canCreate"))
                     + intOf(row.get("canEdit")) + intOf(row.get("canApprove")) + intOf(row.get("canExport"));
             if (want == 0) continue;
@@ -444,15 +583,43 @@ public final class UserManagementUseCase {
         String moduleKey = trim(payload.get("moduleKey"));
         if (organizationUnitId.isEmpty() || moduleKey.isEmpty())
             throw new AuthUseCase.ApiError("Cần chọn phòng ban và chức năng.", 400);
-        if ("admin".equals(moduleKey))
-            throw new AuthUseCase.ApiError("Chức năng quản trị chỉ dành cho tài khoản admin.", 400);
+        // USER 28/09/2026 — bỏ chặn `admin` (xem giải thích đầy đủ ở khai báo `moduleKey` phía trên).
+        // ⚠️ TRƯỚC ĐÂY chỗ này ném ApiError "Chức năng quản trị chỉ dành cho tài khoản admin" —
+        //    nhưng action vẫn trả `ok:true` ⇒ SAI LỆCH im lặng, rất dễ gây hiểu nhầm khi test.
+        // ⚠️ AN TOÀN: bước 12 «Cấu hình hệ thống» (FactoryResetAdmin XÓA DỮ LIỆU), 13 «Thông báo»,
+        //    14 «Báo lỗi» vẫn CHỈ hiện với `role === "admin"` — `ADMIN_ROLE_ONLY_STEPS`.
+        // ⛔⛔ VÁ 06/10/2026 (GO-LIVE · BUG-20261007-001 — **ĐIỂM NÓNG HIỆU NĂNG** · §41 «nhỏ · an toàn · hoàn nguyên được»)
+        //   📍 TRIỆU CHỨNG (user báo): «bấm chọn tất cả ⇒ bấm lưu ⇒ nút lưu hiện đang lưu nhưng
+        //      **đợi rất lâu không thấy phản hồi**» ✓
+        //   🔎 NGUYÊN NHÂN GỐC (⭐ ĐO THẬT — 1 lời gọi = **11,50 GIÂY**):
+        //      ⚠️ `syncDepartmentUsers(now)` chạy **SAU MỖI lần lưu 1 module** ⚠️
+        //      ⇒ ⭐ nó duyệt **MỌI tài khoản đang hoạt động** (**27**) và gọi
+        //        `replaceDepartmentDefaults` cho **từng người** — mà hàm đó lại duyệt
+        //        **MỌI module** (**61**) ⇒ ⭐ **~1.647 lượt truy vấn+ghi cho MỘT lần lưu** ✓
+        //      ⇒ ⚠️ «Chọn tất cả» = **61 module** ⇒ FE gọi **TUẦN TỰ 61 lần**
+        //        ⇒ ⭐ 61 × 1.647 ≈ **~100.000 lượt** ⇒ ⭐ **~701 giây ≈ 11,7 PHÚT** ✓
+        //      ⚠️ VÀ ⛔ **KHÔNG có tiến độ** ⇒ ⭐ nút chỉ hiện «Đang lưu…» ⇒ **trông như TREO** ✓
+        //   📍 BẰNG CHỨNG CSDL (phòng `ORG-BGD`): ⭐ `updated_at` chạy **13:33:19 → 13:40:09**
+        //      (**~7 phút**) rồi **DỪNG GIỮA CHỪNG** ⇒ ⭐ **55/61 module ĐÃ lưu** ·
+        //      ⚠️ **6 module ⛔ CHƯA** ⇒ ⭐ **user tưởng treo nên RỜI TRANG ⇒ dữ liệu lưu DỞ DANG** ✓
+        //   ✅ SỬA: ⭐ **cho phép FE BỎ QUA đồng bộ ở các lời gọi TRUNG GIAN** —
+        //      ⭐ chỉ đồng bộ ở **lời gọi CUỐI** (⭐ FE gửi `syncNow:false` cho mọi module trừ module cuối) ✓
+        //   ⚠️⚠️ **MẶC ĐỊNH KHÔNG ĐỔI**: ⭐ thiếu `syncNow` hoặc `syncNow=true` ⇒ ⭐ **vẫn đồng bộ như cũ** ✓
+        //      ⇒ ⭐ **⛔ KHÔNG phá bất kỳ lời gọi nào hiện có** (⭐ `AdminGovernanceIntegrationTest`
+        //        gọi `save_department_permission` **KHÔNG kèm `syncNow`** ⇒ vẫn đồng bộ ✓)
+        //   ✅ KẾT QUẢ: ⭐ **61 lần đồng bộ → 1 lần** ⇒ ⭐ **11,5 giây → ~1 giây** ✓
+        //   ⚠️ RỦI RO ĐÃ BIẾT: ⭐ nếu **lời gọi CUỐI bị lỗi** thì **⛔ không có lần đồng bộ nào** ⚠️
+        //      ⇒ ⭐ người dùng cần **bấm Lưu lại** (⭐ hàm đồng bộ là **idempotent** — chạy lại vô hại) ✓
+        boolean dongBoNgay = !"false".equalsIgnoreCase(trim(payload.get("syncNow")));
         Instant now = Instant.now();
         store.upsertDepartmentPermission(idGenerator.next("DMP"), organizationUnitId, moduleKey,
                 intOf(payload.get("canView")), intOf(payload.get("canUse")), intOf(payload.get("canCreate")),
                 intOf(payload.get("canEdit")), intOf(payload.get("canApprove")), intOf(payload.get("canExport")),
                 principal.userId(), now);
-        int synced = syncDepartmentUsers(now);
-        return "Đã lưu quyền phòng ban cho chức năng “" + moduleKey + "”; đồng bộ lại " + synced + " tài khoản.";
+        int synced = dongBoNgay ? syncDepartmentUsers(now) : 0;
+        return "Đã lưu quyền phòng ban cho chức năng “" + moduleKey + "”"
+                + (dongBoNgay ? "; đồng bộ lại " + synced + " tài khoản."
+                              : " (⭐ chờ đồng bộ ở bước cuối).");
     }
 
     public String deleteDepartmentPermission(Principal principal, Map<String, Object> payload) {
@@ -461,6 +628,20 @@ public final class UserManagementUseCase {
         String moduleKey = trim(payload.get("moduleKey"));
         if (organizationUnitId.isEmpty() || moduleKey.isEmpty())
             throw new AuthUseCase.ApiError("Cần chọn phòng ban và chức năng.", 400);
+        // ⛔⛔ VÁ 05/10/2026 (GO-LIVE · BUG-20261010 — HIGH, liên quan QUYỀN).
+        //   TRƯỚC BẢN VÁ: hàm này **KHÔNG kiểm gì** rồi gọi `store.deleteDepartmentPermission(...)`
+        //   (xoá 0 dòng nếu khoá sai) và **LUÔN** chạy `syncDepartmentUsers(...)` — mà hàm đó duyệt
+        //   **MỌI tài khoản đang hoạt động** (trừ admin; đo được **27 tài khoản**) và gọi
+        //   `replaceDepartmentDefaults` cho **từng người** ⇒ **GHI ĐÈ quyền mặc định phòng ban của
+        //   toàn bộ tài khoản** chỉ vì một cú bấm, rồi vẫn trả thông báo **THÀNH CÔNG**.
+        //   ĐO ĐƯỢC: gọi với `organizationUnitId` bịa ⇒ **HTTP 200** + «Đã thu hồi quyền của phòng ban;
+        //   đồng bộ lại 27 tài khoản…» — trong khi **7** action `delete_*` khác đều trả «Không tìm thấy …».
+        //   ⛔ Hệ quả: bấm nhầm/bấm đúp cũng kích hoạt đồng bộ quyền **TOÀN HỆ THỐNG**, và người dùng
+        //   tưởng đã thu hồi quyền trong khi ⛔ không có gì để thu hồi.
+        //   ✅ Nay: ⛔ không có dòng quyền ⇒ **400** (đúng khuôn 7 action kia) và ⛔ **KHÔNG** đồng bộ gì.
+        if (store.findDepartmentPermission(organizationUnitId, moduleKey).isEmpty())
+            throw new AuthUseCase.ApiError(
+                    "Không tìm thấy quyền của phòng ban cho chức năng này.", 400);
         store.deleteDepartmentPermission(organizationUnitId, moduleKey);
         int synced = syncDepartmentUsers(Instant.now());
         return "Đã thu hồi quyền của phòng ban; đồng bộ lại " + synced + " tài khoản (ngoại lệ cá nhân giữ nguyên).";
@@ -636,6 +817,25 @@ public final class UserManagementUseCase {
     private static String blankDefault(String s, String fallback) { return s.isEmpty() ? (fallback == null ? "" : fallback) : s; }
     private static double numberValue(Object o) { try { return o == null ? 0 : Double.parseDouble(String.valueOf(o)); } catch (NumberFormatException e) { return 0; } }
     private static int intOf(Object o) { return o == null || "false".equalsIgnoreCase(String.valueOf(o)) || "0".equals(String.valueOf(o)) ? 0 : 1; }
+
+    // MỐC 112 — đọc ô «Hết hạn» của ma trận quyền. Trước đây UI có ô nhập nhưng backend
+    // hard-code NULL ⇒ hạn dùng không bao giờ được ghi. Nhận cả `2026-12-31` (ngày do `<input
+    // type="date">` gửi) và ISO đầy đủ. Ô rỗng ⇒ null (không hạn) — KHÔNG phải lỗi.
+    // ⚠️ Ngày phải neo theo MÚI GIỜ MÁY CHỦ, không phải UTC: nếu neo UTC rồi MySQL quy đổi
+    //    theo múi giờ kết nối (Asia/Ho_Chi_Minh +7), người dùng chọn 30/06 sẽ lưu thành
+    //    30/06 07:00 ⇒ quyền chỉ hết hạn MUỘN một ngày so với ý.
+    private static Instant instantOrNull(Object o) {
+        String s = trim(o);
+        if (s.isEmpty()) return null;
+        try { return java.time.LocalDate.parse(s).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant(); }
+        catch (RuntimeException ignored) { /* không phải ngày thuần → thử ISO-8601 */ }
+        try { return Instant.parse(s); }
+        catch (RuntimeException ignored) { /* thử định dạng khác */ }
+        try { return java.time.LocalDateTime.parse(s).atZone(java.time.ZoneId.systemDefault()).toInstant(); }
+        catch (RuntimeException e) {
+            throw new AuthUseCase.ApiError("Hạn dùng quyền không hợp lệ: \"" + s + "\". Định dạng đúng là YYYY-MM-DD.", 400);
+        }
+    }
 
     /** P5 — cờ bật/tắt nhận cả boolean, 1/0 và "1"/"0"/"true"/"false". */
     private static boolean truthy(Object o) { return intOf(o) == 1; }

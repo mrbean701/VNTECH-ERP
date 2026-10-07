@@ -1,0 +1,39 @@
+{"ts":"2026-10-04T17:52:22.475Z","loai":"login","username":"admin","status":200}
+{"ts":"2026-10-04T17:52:22.564Z","loai":"action","action":"create_user","ok":false,"status":400,"loi":"Tên đăng nhập là bắt buộc.","nhan":"","user":"admin"}
+{"ts":"2026-10-04T17:52:22.617Z","loai":"action","action":"save_user_access","ok":false,"status":400,"loi":"Không tìm thấy tài khoản.","nhan":"","user":"admin"}
+{"ts":"2026-10-04T17:52:22.680Z","loai":"action","action":"update_user","ok":false,"status":400,"loi":"Không tìm thấy tài khoản.","nhan":"","user":"admin"}
+{"ts":"2026-10-04T17:52:22.711Z","loai":"action","action":"save_organization_unit","ok":false,"status":400,"loi":"Mã đơn vị gồm 2–24 ký tự A-Z, số, dấu chấm, gạch dưới hoặc gạch ngang.","nhan":"","user":"admin"}
+{"ts":"2026-10-04T17:52:22.741Z","loai":"action","action":"set_organization_unit_member","ok":false,"status":400,"loi":"Không tìm thấy nhân sự.","nhan":"","user":"admin"}
+{"ts":"2026-10-04T17:52:22.786Z","loai":"action","action":"save_material","ok":false,"status":400,"loi":"Mã vật tư, tên vật tư, ĐVT và hệ M&E là bắt buộc.","nhan":"","user":"admin"}
+{"ts":"2026-10-04T17:52:22.834Z","loai":"action","action":"save_supplier","ok":false,"status":400,"loi":"Nhà cung cấp phải có Mã NCC và Tên nhà cung cấp.","nhan":"","user":"admin"}
+{"ts":"2026-10-04T17:52:22.853Z","loai":"action","action":"save_partner","ok":false,"status":400,"loi":"Đối tác phải có Mã đối tác và Tên đối tác.","nhan":"","user":"admin"}
+{"ts":"2026-10-04T17:52:22.894Z","loai":"action","action":"save_hr_record","ok":false,"status":400,"loi":"Hồ sơ nhân sự cần nhân sự và họ tên.","nhan":"","user":"admin"}
+{"ts":"2026-10-04T17:52:22.927Z","loai":"action","action":"create_request","ok":false,"status":400,"loi":"Phiếu đề nghị phải có ít nhất một dòng vật tư.","nhan":"","user":"admin"}
+{"ts":"2026-10-04T17:52:22.964Z","loai":"action","action":"decide_approval","ok":false,"status":400,"loi":"Không tìm thấy đơn yêu cầu.","nhan":"","user":"admin"}
+{"ts":"2026-10-04T17:52:22.986Z","loai":"action","action":"receive_goods","ok":false,"status":400,"loi":"Phiếu nhập cần PO và ít nhất một dòng nhận hàng.","nhan":"","user":"admin"}
+{"ts":"2026-10-04T17:52:23.077Z","loai":"action","action":"issue_stock","ok":false,"status":400,"loi":"Phiếu cấp phát phải đúng dự án, MR, tổ đội và có vật tư.","nhan":"","user":"admin"}
+{"ts":"2026-10-04T17:52:23.092Z","loai":"action","action":"return_stock","ok":false,"status":400,"loi":"Phiếu hoàn trả cần đúng tổ đội và vật tư.","nhan":"","user":"admin"}
+{"ts":"2026-10-04T17:52:23.108Z","loai":"action","action":"create_transfer_order","ok":false,"status":400,"loi":"Phiếu điều chuyển phải có kho nguồn, kho đích khác nhau và ít nhất một vật tư.","nhan":"","user":"admin"}
+{"ts":"2026-10-04T17:52:23.125Z","loai":"action","action":"create_central_return","ok":false,"status":400,"loi":"Phiếu trả Kho Tổng phải đúng kho dự án và có vật tư.","nhan":"","user":"admin"}
+{"ts":"2026-10-04T17:52:23.142Z","loai":"action","action":"save_approval_stage","ok":false,"status":400,"loi":"Bước phê duyệt phải có tên và ít nhất một vai trò được phép duyệt.","nhan":"","user":"admin"}
+{"ts":"2026-10-04T17:52:23.180Z","loai":"action","action":"create_project","ok":false,"status":400,"loi":"Mã dự án gồm 2–24 ký tự A-Z, số, dấu chấm/gạch; tên dự án là bắt buộc.","nhan":"","user":"admin"}
+{"ts":"2026-10-04T17:52:23.214Z","loai":"action","action":"create_project_team","ok":false,"status":400,"loi":"Dự án, mã tổ đội, tên tổ đội và hạng mục là bắt buộc.","nhan":"","user":"admin"}
+{"ts":"2026-10-04T17:52:23.251Z","loai":"action","action":"save_team_production","ok":false,"status":400,"loi":"Giá trị trình không được để trống.","nhan":"","user":"admin"}
+{"ts":"2026-10-04T17:54:18.953Z","loai":"login","username":"admin","status":200}
+{"ts":"2026-10-04T17:54:19.338Z","loai":"bootstrap","status":200,"khoa":104}
+{"ts":"2026-10-04T17:55:11.390Z","loai":"login","username":"admin","status":200}
+{"ts":"2026-10-04T17:55:11.655Z","loai":"bootstrap","status":200,"khoa":104}
+{"ts":"2026-10-04T17:55:11.711Z","loai":"action","action":"save_approval_stage","ok":false,"status":400,"loi":"Bước đã có lịch sử phê duyệt nên không thể đổi số bước. Có thể đổi tên, vai trò, SLA hoặc thứ tự hiển thị.","nhan":"probe-stageNo","user":"admin"}
+{"ts":"2026-10-04T17:55:12.048Z","loai":"bootstrap","status":200,"khoa":104}
+{"ts":"2026-10-04T18:12:09.969Z","loai":"login","username":"admin","status":200}
+{"ts":"2026-10-04T18:12:10.243Z","loai":"bootstrap","status":200,"khoa":104}
+{"ts":"2026-10-04T18:16:38.088Z","loai":"login","username":"admin","status":200}
+{"ts":"2026-10-04T18:16:38.327Z","loai":"bootstrap","status":200,"khoa":104}
+{"ts":"2026-10-04T18:18:09.966Z","loai":"login","username":"admin","status":200}
+{"ts":"2026-10-04T18:18:10.214Z","loai":"bootstrap","status":200,"khoa":104}
+{"ts":"2026-10-04T18:33:26.499Z","loai":"login","username":"admin","status":200}
+{"ts":"2026-10-04T18:33:26.764Z","loai":"bootstrap","status":200,"khoa":104}
+{"ts":"2026-10-04T19:26:42.900Z","loai":"login","username":"admin","status":200}
+{"ts":"2026-10-04T19:26:43.214Z","loai":"bootstrap","status":200,"khoa":104}
+{"ts":"2026-10-04T19:27:56.267Z","loai":"login","username":"admin","status":200}
+{"ts":"2026-10-04T19:27:56.520Z","loai":"bootstrap","status":200,"khoa":104}

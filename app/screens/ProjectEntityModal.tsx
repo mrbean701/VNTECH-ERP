@@ -29,12 +29,19 @@ type ProjectEntityModalProps = {
   permission: Row;
 };
 
-/** Bảng 2 cột "Hạng mục | Giá trị" — dùng lại cho mọi loại thực thể. */
-function InfoTable({ rows }: { rows: { label: string; value: ReactNode; source: string }[] }) {
+/** Bảng 2 cột "Hạng mục | Giá trị" — dùng lại cho mọi loại thực thể.
+ *
+ *  MỐC 116 (user 01/10) — BỎ CỘT «NGUỒN». Trước đây cột thứ 3 in **tên cột DB thô**
+ *  (`projects.code`, `users.full_name`, `role_catalog.name`, `teams.trade`,
+ *  `warehouses.parent_warehouse_id`…). Đó là thứ **chỉ để dev test**, không phải thông tin
+ *  nghiệp vụ ⇒ không được phép hiện ra cho người dùng cuối.
+ *  `source` giữ lại (bắt buộc `?`) để các nơi gọi không phải sửa, nhưng KHÔNG render.
+ */
+function InfoTable({ rows }: { rows: { label: string; value: ReactNode; source?: string }[] }) {
   return <div className="table-wrap"><table className="baseline-table">
-    <thead><tr><th>Hạng mục</th><th>Giá trị</th><th>Nguồn</th></tr></thead>
+    <thead><tr><th>Hạng mục</th><th>Giá trị</th></tr></thead>
     <tbody>
-      {rows.map((item) => <tr key={item.label}><td>{item.label}</td><td><strong>{item.value === "" || item.value === undefined || item.value === null ? "—" : item.value}</strong></td><td><small>{item.source}</small></td></tr>)}
+      {rows.map((item) => <tr key={item.label}><td>{item.label}</td><td><strong>{item.value === "" || item.value === undefined || item.value === null ? "—" : item.value}</strong></td></tr>)}
     </tbody>
   </table></div>;
 }

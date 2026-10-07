@@ -194,26 +194,33 @@ class AdminGovernanceIntegrationTest {
     // ==================== P5 — RÀNG BUỘC PHÒNG BAN + CẤP BẬC ====================
 
     @Test
-    void phanQuyenPhongBan_chanVuotQuyen_vaKhongMatDuLieuKhiBiChan() throws Exception {
+    void phanQuyenPhongBan_capVuotQuyenChoNguoiDung_KHONGConChan() throws Exception {
         seed();
         int scopesBefore = count("SELECT COUNT(*) FROM user_project_scopes WHERE user_id=?", staffId);
         int permsBefore = count("SELECT COUNT(*) FROM user_module_permissions WHERE user_id=?", staffId);
         assertEquals(1, scopesBefore);
         assertEquals(1, permsBefore);
 
-        // Phòng KH CHƯA có 'dept_legal_hr' ⇒ cấp cho người dùng phải bị CHẶN
-        expectRejected(a("save_user_access",
-                        "\"userId\":\"" + staffId + "\",\"projectScopes\":[],\"warehouseScopes\":[],"
-                                + "\"modulePermissions\":[{\"moduleKey\":\"dept_legal_hr\",\"canView\":1,\"canUse\":1}]"),
-                "chưa được cấp quyền");
+        // ⛔⛔ SỬA 06/10/2026 (GO-LIVE · BUG-20261006-003) — **HÀNH VI ĐÃ ĐỔI THEO YÊU CẦU USER**.
+        //   📍 YÊU CẦU USER (nguyên văn): «modal không thể cấp thêm quyền cho user nếu như số lượng
+        //      quyền đó lớn hơn số lượng quyền đã cấp cho phòng ban. Tôi muốn sửa lại có thể thêm
+        //      quyền cho người dùng kể cả phòng ban của user đó không có quyền như vậy.» ✓
+        //   ⛔ TRƯỚC ĐÂY bài này khẳng định chốt **P5.3** CHẶN: `expectRejected(..., "chưa được cấp quyền")`
+        //      ⚠️ nhưng chốt đó đã bị **BỎ** ở `UserManagementUseCase` (dòng ~266) ⇒ ⭐ bài test ĐỎ ✓
+        //   ✅ NAY khẳng định điều **NGƯỢC LẠI**: cấp cho người dùng quyền mà **PHÒNG BAN CHƯA CÓ**
+        //      ⇒ ⭐ **PHẢI THÀNH CÔNG** (HTTP 200) **VÀ** quyền **thực sự được ghi** ✓
+        //   ⚠️ VẪN GIỮ phép kiểm «⛔ không mất dữ liệu» — ⭐ nhưng nay đo theo **giá trị MONG ĐỢI MỚI**
+        //      (⭐ payload gửi `projectScopes:[]` ⇒ ⭐ phạm vi dự án về 0 là **ĐÚNG Ý ĐỊNH**, ⛔ không phải mất) ✓
+        ok(a("save_user_access",
+                "\"userId\":\"" + staffId + "\",\"projectScopes\":[],\"warehouseScopes\":[],"
+                        + "\"modulePermissions\":[{\"moduleKey\":\"dept_legal_hr\",\"canView\":1,\"canUse\":1}]"));
+        assertTrue(count("SELECT COUNT(*) FROM user_module_permissions WHERE user_id=?"
+                        + " AND module_key='dept_legal_hr' AND can_view=1", staffId) > 0,
+                "⭐ BUG-20261006-003: phải cấp được quyền cho người dùng DÙ phòng ban chưa có quyền đó");
+        assertEquals(0, count("SELECT COUNT(*) FROM user_project_scopes WHERE user_id=?", staffId),
+                "⭐ payload gửi projectScopes rỗng ⇒ phạm vi dự án về 0 là ĐÚNG Ý ĐỊNH (⛔ không phải mất dữ liệu)");
 
-        // ĐIỀU QUAN TRỌNG NHẤT: yêu cầu bị từ chối KHÔNG được xoá dữ liệu hiện có.
-        assertEquals(scopesBefore, count("SELECT COUNT(*) FROM user_project_scopes WHERE user_id=?", staffId),
-                "phạm vi dự án KHÔNG được mất khi yêu cầu bị chặn");
-        assertEquals(permsBefore, count("SELECT COUNT(*) FROM user_module_permissions WHERE user_id=?", staffId),
-                "quyền chức năng KHÔNG được mất khi yêu cầu bị chặn");
-
-        // Cấp quyền cho PHÒNG trước, sau đó cấp cho người dùng ⇒ phải THÀNH CÔNG
+        // Cấp quyền cho PHÒNG rồi cấp lại cho người dùng ⇒ ⭐ vẫn phải THÀNH CÔNG (đường cũ không hỏng)
         ok(a("save_department_permission",
                 "\"organizationUnitId\":\"" + deptId + "\",\"moduleKey\":\"dept_legal_hr\","
                         + "\"canView\":1,\"canUse\":1,\"canCreate\":1,\"canEdit\":1,\"canApprove\":0,\"canExport\":1"));
@@ -223,6 +230,8 @@ class AdminGovernanceIntegrationTest {
                         + "\"canView\":1,\"canUse\":1,\"canCreate\":1,\"canEdit\":1,\"canApprove\":0,\"canExport\":1}]"));
         assertTrue(count("SELECT COUNT(*) FROM user_module_permissions WHERE user_id=? AND module_key='dept_legal_hr'",
                 staffId) > 0, "sau khi phòng được cấp quyền thì người dùng cấp được");
+        assertEquals(1, count("SELECT COUNT(*) FROM user_project_scopes WHERE user_id=?", staffId),
+                "⭐ lần này payload CÓ projectScopes ⇒ phạm vi dự án phải được ghi lại = 1");
 
         // Thu hồi quyền của phòng ⇒ quyền mặc định của người dùng biến mất, NGOẠI LỆ cá nhân giữ nguyên
         ok(a("delete_department_permission",

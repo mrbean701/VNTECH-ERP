@@ -23,11 +23,13 @@ const detailStart = pm.indexOf("// =========================== CHI TIẾT");
 assert.ok(detailStart > 0, "Không tách được nhánh CHI TIẾT của màn dự án");
 const detailBranch = pm.slice(detailStart);
 
-test("PR-03 — có ĐÚNG 5 tab con, nhãn khớp NGUYÊN VĂN roadmap (chung · nhân sự · tổ đội · kho · lịch sử)", () => {
+// 📌 CẬP NHẬT 26/09/2026 (MT3 §C): «Đổi "Chung" thành "Thông tin dự án"».
+// ⛔ KHOÁ NỘI BỘ `section === "chung"` GIỮ NGUYÊN (đó là khoá kỹ thuật, không phải nhãn hiển thị).
+test("PR-03 — có ĐÚNG 5 tab con, nhãn khớp MT3 §C (thông tin dự án · nhân sự · tổ đội · kho · lịch sử)", () => {
   const match = detailSource.match(/PROJECT_DETAIL_SUB_TABS\s*=\s*\[([^\]]*)\]/);
   assert.ok(match, "Không tìm thấy hằng số `PROJECT_DETAIL_SUB_TABS`");
   const labels = match[1].split(",").map((item) => item.trim().replace(/^"|"$/g, "")).filter(Boolean).map((item) => item.toLocaleLowerCase("vi"));
-  assert.deepEqual(labels, ["chung", "nhân sự", "tổ đội", "kho", "lịch sử"], `Nhãn tab con không khớp roadmap: ${JSON.stringify(labels)}`);
+  assert.deepEqual(labels, ["thông tin dự án", "nhân sự", "tổ đội", "kho", "lịch sử"], `Nhãn tab con không khớp MT3 §C: ${JSON.stringify(labels)}`);
 });
 
 test("PR-03 — mỗi tab con có NỘI DUNG + dùng DỮ LIỆU THẬT (không bảng dữ liệu mới)", () => {
@@ -48,10 +50,20 @@ test("PR-03 — mỗi tab con có NỘI DUNG + dùng DỮ LIỆU THẬT (không 
 
 test("PR-03 — màn dự án tái dùng component chi tiết (PR-01 GIỮ NGUYÊN dải 6 tab)", () => {
   assert.match(pageSource, /from "@\/app\/screens\/ProjectDetailTabs"/, "page.tsx chưa dùng component chi tiết dự án mới");
+  // ⭐ Dải tab ngoài ĐÚNG 6 ô: 0 = «Danh sách dự án» + 5 tab chi tiết (Tổng quan · Nhân sự · Tổ đội · Kho · Ban chỉ huy).
+  //   Tiêu đề test nói «6 tab» nhưng bản cũ KHÔNG có khẳng định nào đo nó ⇒ thêm vào đây cho khớp lời.
+  const dt = pageSource.match(/const DETAIL_TABS = \[([^\]]*)\]/);
+  assert.ok(dt, "Không tìm thấy hằng số `DETAIL_TABS`");
+  const dtLabels = dt[1].split(",").map((s) => s.trim().replace(/^"|"$/g, "")).filter(Boolean);
+  assert.equal(dtLabels.length, 5, `Cần ĐÚNG 5 tab chi tiết dự án, thấy ${dtLabels.length}: ${JSON.stringify(dtLabels)}`);
+  assert.match(pageSource, /const TAB_LABELS = \[LIST_TAB, \.\.\.DETAIL_TABS\]/, "Dải tab phải ghép tab danh sách + 5 tab chi tiết thành MỘT dải 6 ô");
+  assert.match(pageSource, /const view: "list" \| "detail" = tab === 0 \? "list" : "detail"/, "Chỉ số 0 phải là danh sách; 1..5 mới là chi tiết");
   for (const index of [1, 2, 3, 4]) {
     assert.match(detailBranch, new RegExp(`\\{tab === ${index} &&[^\\n]*<ProjectDetailTabs`), `Nhánh chi tiết chỉ số ${index} chưa render \`ProjectDetailTabs\``);
   }
-  assert.match(detailBranch, /\{tab === 5 && <SiteCommandScreen/, "Tab BCH (chỉ số 5) phải giữ nguyên như PR-01");
+  // ⭐ BCH ở chỉ số 5: PR-01 tách chỉ số 0 thành «Danh sách dự án» ⇒ BCH dịch 4 → 5.
+  assert.match(detailBranch, /\{tab === 5 && <SiteCommandScreen/, "Tab BCH phải ở chỉ số 5 của dải 6 ô (0 danh sách · 1 Tổng quan · 2 Nhân sự · 3 Tổ đội · 4 Kho · 5 BCH)");
+  assert.doesNotMatch(detailBranch, /\{tab === 4 && <SiteCommandScreen/, "Chỉ số 4 là tab KHO, KHÔNG phải Ban chỉ huy");
 });
 
 test("PR-03 — % TIẾN ĐỘ: ĐỂ TRỐNG có ghi chú, KHÔNG bịa công thức", () => {

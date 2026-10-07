@@ -102,12 +102,16 @@ console.log("3) BẤM VÀO MỤC → mở ĐÚNG MÀN `SupplierManager` với Đ
 for (const item of tree.supplierPartnerMenuChildren) {
   const active = item.moduleKey;
   const view = supplierPartnerViewFor(item.view, active);
-  // Cho phép prop KHÁC đi kèm (ví dụ `[P-08]` thêm `open={open}`) — chỉ chốt `view={supplierPartnerScreenView}`.
-  const branch = active === "dept_plan_suppliers"
-    && /active === "dept_plan_suppliers" && <SupplierManager data=\{data\} action=\{action\} view=\{supplierPartnerScreenView\}[^>]*\/>/.test(page);
+  // USER 28/09/2026 — probe này ĐÃ CŨ: sau TASK-125 (21/09) nhánh render tách 2 vế
+  //   `=== "partner"` → `<PartnerManager>`  và  `!== "partner"` → `<SupplierManager … view=… open loadGaps>`.
+  // ⇒ regex cũ (đòi `active === "dept_plan_suppliers" && <SupplierManager` liền kề) KHÔNG còn khớp,
+  //   dù code ĐÚNG hơn. Cập nhật regex cho khớp cả 2 vế + cho phép prop kèm (`open`, `loadGaps`).
+  const branch = active === "dept_plan_suppliers" && (item.view === "partner"
+    ? /active === "dept_plan_suppliers" && supplierPartnerScreenView === "partner" && <PartnerManager data=\{data\} action=\{action\}/.test(page)
+    : /active === "dept_plan_suppliers" && supplierPartnerScreenView !== "partner" && <SupplierManager data=\{data\} action=\{action\} view=\{supplierPartnerScreenView\}/.test(page));
   console.log(`   "${item.label}" → active=${active} · view=${view} · nhánh render có thật: ${branch}`);
   check(view === item.view, `«${item.label}» → \`supplierPartnerViewFor\` trả ĐÚNG "${item.view}"`);
-  check(branch === true, `«${item.label}» → \`app/page.tsx\` render \`SupplierManager\` (kèm \`view\`)`);
+  check(branch === true, `«${item.label}» → \`app/page.tsx\` render màn ĐÚNG (kèm \`view\`)`);
 }
 check(!/active\.startsWith\("dept_plan_"\) && active !== "dept_plan_tasks" && <DepartmentTaskWorkspace/.test(page),
   "khoá cũ ĐÃ bị loại khỏi nhánh chung `dept_plan_*` (không render 2 màn cùng lúc)");

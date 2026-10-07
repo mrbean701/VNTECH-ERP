@@ -448,7 +448,9 @@ public final class StockManagementUseCase {
         // Dòng số riêng `GRN-PX` (không dùng chung `GRN:project:year` của chuỗi mua hàng) để số phiếu nhập
         // sinh từ phiếu xuất KHÔNG đụng độ số của GRN mua hàng.
         long seq = store.nextSequenceNo("GRN-PX:" + projectId + ":" + year, "GRN-PX", projectId, year, now);
-        String receiptNo = "GRN-PX-" + year + "-" + String.format("%04d", seq);
+        // Kèm mã dự án: `goods_receipts_no_uidx` unique TOÀN CỤC, sequence lại đếm theo (project, year)
+        // ⇒ không kèm mã dự án thì dự án thứ hai trong cùng năm sẽ đụng số phiếu đã có (L-06).
+        String receiptNo = "GRN-PX-" + sv(issue, "projectCode").toUpperCase() + "-" + year + "-" + String.format("%04d", seq);
         String receiptId = idGenerator.next("GRN");
         String purchaseOrderId = sv(selected.get(0), "purchaseOrderId");
         List<Map<String, Object>> items = new ArrayList<>();
@@ -873,6 +875,9 @@ public final class StockManagementUseCase {
             if (qty > physical + 1e-9 || qty > ownerQty + 1e-9)
                 throw Api("Tồn vật lý/Contract nguồn không đủ; dừng duyệt để tránh sai sổ.");
             Map<String, Object> item = new LinkedHashMap<>();
+            // ⛔ VÁ 05/10/2026 (BUG-20261005-005): bổ sung `itemId` để `contract_stock_ledger`
+            //    ghi được `reference_item_id` — trước đây thiếu nên không truy vết được dòng nào.
+            item.put("itemId", sv(it, "id"));
             item.put("materialId", sv(it, "materialId"));
             item.put("contractId", sv(it, "contractId"));
             item.put("quantity", qty);

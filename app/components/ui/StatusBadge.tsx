@@ -16,6 +16,8 @@
 
 import type { ReactNode } from "react";
 
+import { statusLabel } from "@/lib/status-labels";
+
 export type Tone = "green" | "red" | "amber" | "blue" | "grey";
 
 /**
@@ -57,10 +59,18 @@ export function StatusBadge({ value, label, tone, title }: {
   title?: string;
 }) {
   const resolved = tone ?? toneOf(value);
+  // MT3 §IV.6 / ma trận #5 — 1 BẢNG ÁNH XẠ DÙNG CHUNG: nếu người gọi KHÔNG truyền `label`
+  //   thì tự tra `lib/status-labels.ts` thay vì in mã thô (`pending_approval`) ra màn hình.
+  // ⚠️ CHỐT AN TOÀN: CHỈ tra khi giá trị **trông như mã thô** (chữ thường + số + `_`, KHÔNG dấu cách).
+  //   Lý do: `statusLabel` có `humanize()` cho giá trị lạ ⇒ nếu `value` **đã là tiếng Việt**
+  //   (vd «Đang hoạt động») thì việc đổi hoa/thường là **hồi quy giao diện** ⛔ không mong muốn.
+  //   ⛔ Nhờ chốt này, nhãn đã đúng tiếng Việt được **giữ NGUYÊN**, chỉ mã thô mới được dịch.
+  const rawText = String(value ?? "");
+  const looksLikeRawCode = rawText.length > 0 && /^[a-z0-9_.-]+$/.test(rawText);
   return (
     <span className={`pill ${resolved}`} title={title}>
       <i />
-      {label ?? String(value ?? "")}
+      {label ?? (looksLikeRawCode ? statusLabel(value) : rawText)}
     </span>
   );
 }

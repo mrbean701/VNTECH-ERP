@@ -4,9 +4,23 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const cssPath = join(root, "app/globals.css");
+const canonicalPath = join(root, "app/styles/canonical.css");
+const fontFloorPath = join(root, "app/styles/font-floor.css");
 const pagePath = join(root, "app/page.tsx");
 const css = readFileSync(cssPath, "utf8");
+const canonicalCss = readFileSync(canonicalPath, "utf8");
+const fontFloorCss = readFileSync(fontFloorPath, "utf8");
 const page = readFileSync(pagePath, "utf8");
+// MỐC 121 — phải BÓC CHÚ THÍCH trước khi dò. Bình thường dò trong cả comment vẫn "đúng", nhưng ở đây
+// banner của khối CSS mới LIỆT KÊ TÊN CÁC SELECTOR dưới dạng văn xuôi ⇒ nếu quét cả comment thì
+// xoá sạch rule thật, chỉ để lại dòng chú thích, cổng vẫn báo ĐẠT — tức bỏ lọt đúng lỗi mà
+// cổng sinh ra để chặn. Đo được: `.purchase-tabbar` xuất hiện 2 lần, 1 trong số đó nằm ở DÒNG 1325
+// thuộc comment.
+const stripCssComments = (text) => text.replace(/\/\*[\s\S]*?\*\//g, "");
+const cssCode = stripCssComments(css);
+const canonicalCode = stripCssComments(canonicalCss);
+const fontFloorCode = stripCssComments(fontFloorCss);
+const allCssCode = `${cssCode}\n${canonicalCode}\n${fontFloorCode}`;
 const byteCount = Buffer.byteLength(css, "utf8");
 const lineCount = css.split(/\r?\n/).length;
 const importantCount = (css.match(/!important/g) || []).length;
@@ -40,16 +54,36 @@ walkUi(join(root, "app"));
 walkUi(join(root, "lib"));
 const source = sourceParts.join("\n");
 const dynamicPrefixes = new Set([...source.matchAll(/([A-Za-z_][\w-]*-)\$\{/g)].map((match) => match[1]));
-const cssClasses = new Set([...css.matchAll(/(?<![\w-])\.([A-Za-z_][\w-]*)/g)].map((match) => match[1]));
+// MỐC 121 (01/10/2026) — ĐÓNG ĐIỂM MÙ CỔNG CSS: trước đây cổng này CHỈ đọc `app/globals.css`,
+// trong khi `app/layout.tsx` nạp 4 tệp theo thứ tự tokens → globals → canonical → font-floor
+// ⇒ `app/styles/canonical.css` (nơi CSS mới đặt, và THẮNG điểm cùng cấp độ vì nạp sau) hoàn toàn
+// vô hình với cổng. Đó chính là lý do lỗi "tab PR/PO dính chữ thành PR74PO28" đã lọt qua: JSX có
+// `.purchase-tabbar` mà KHÔNG stylesheet nào nào định nghĩa ⇒ button rơi về `display:inline`.
+// Nay quét HỢP NHẤT cả 3 tệp. Các ngưỡng byte/`!important` bên dưới VẪN áp cho `globals.css`
+// riêng (đúng baseline R1.1.1 gốc) — không nới lỏng điều kiện cũ, chỉ MỞ RỘNG tầng nhìn.
+const allCss = allCssCode;
+const cssClasses = new Set([...allCss.matchAll(/(?<![\w-])\.([A-Za-z_][\w-]*)/g)].map((match) => match[1]));
 const deadClasses = [...cssClasses].filter((name) => !source.includes(name) && ![...dynamicPrefixes].some((prefix) => name.startsWith(prefix))).sort();
-const definedVars = new Set([...css.matchAll(/(--[\w-]+)\s*:/g)].map((match) => match[1]));
-const usedVars = new Set([...css.matchAll(/var\(\s*(--[\w-]+)/g)].map((match) => match[1]));
+// NỢ CŨ ĐÃ BIẾT trong `canonical.css` (MỐC 121): 11 lớp không còn tệp mã nào nhắc tới, 5 lớp chỉ
+// còn sót trong CÔNG CỤ DÒ CŨ (`tools/probe-*.mjs`, `tests/mt3-ui-14-admin-notification.test.mjs`)
+// ⇒ UI đã bỏ chúng nhưng công cụ chưa cập nhật. ⛔ KHÔNG xoá trong MỐC 121 (ngoài phạm vi yêu cầu
+// của anh theo D-022) — chỉ ĐĂNG KÝ tên để nợ MỚI vẫn bị chặn đúng.
+const KNOWN_DEAD_CANONICAL = new Set([
+  "admin-overview-grid", "approval-comment-row", "approval-comments", "approval-supplement",
+  "approval-supplement-actions", "delivery-timeline", "embedded-account-permissions",
+  "notification-target-chip", "notification-target-chips", "notification-target-chosen",
+  "notify-group-head", "notify-unread-dot", "staff-directory-head", "staff-toolbar",
+  "task-notify-overflow", "three-col",
+]);
+const deadClassesNew = deadClasses.filter((name) => !KNOWN_DEAD_CANONICAL.has(name));
+const definedVars = new Set([...allCss.matchAll(/(--[\w-]+)\s*:/g)].map((match) => match[1]));
+const usedVars = new Set([...allCss.matchAll(/var\(\s*(--[\w-]+)/g)].map((match) => match[1]));
 for (const name of definedVars) if (source.includes(name)) usedVars.add(name);
 const deadVars = [...definedVars].filter((name) => !usedVars.has(name)).sort();
 
 const failures = [];
 const requireClass = (name, reason) => {
-  if (!new RegExp(`\\.${name}(?![A-Za-z0-9_-])`).test(css)) failures.push(`${reason}: thiếu .${name}`);
+  if (!new RegExp(`\\.${name}(?![A-Za-z0-9_-])`).test(allCss)) failures.push(`${reason}: thiếu .${name}`);
 };
 const requireCssProp = (block, prop, reason) => {
   if (!new RegExp(`(?:^|;)\\s*${prop}\\s*:`).test(block)) failures.push(`${reason}: thiếu ${prop}`);
@@ -59,7 +93,7 @@ if (beginCount !== 1 || endCount !== 1) failures.push(`canonical markers ${begin
 if (historicalMarkers.length) failures.push(`historical markers remain: ${historicalMarkers.join(", ")}`);
 if (byteCount > 400653) failures.push(`CSS size ${byteCount} > 400653 bytes (safe-clean R1.1.1 baseline)`);
 if (importantCount > 4950) failures.push(`!important ${importantCount} > 4950 (safe-clean R1.1.1 baseline)`);
-if (deadClasses.length) failures.push(`dead CSS classes remain: ${deadClasses.slice(0, 25).join(", ")}`);
+if (deadClasses.length && deadClassesNew.length) failures.push(`dead CSS classes remain: ${deadClassesNew.slice(0, 25).join(", ")}`);
 if (deadVars.length) failures.push(`dead CSS variables remain: ${deadVars.slice(0, 25).join(", ")}`);
 if (/@media\s*\([^{}]+\)\s*\{\s*\}/.test(css)) failures.push("còn @media rỗng");
 const endIndex = css.indexOf(endMarker);
@@ -98,8 +132,40 @@ for (const requiredRole of ["material", "component", "section", "system", "group
   if (!boqRoles.has(requiredRole)) failures.push(`backend BOQ role contract thiếu ${requiredRole}`);
 }
 
+// MỐC 121 (01/10/2026) — HỢP ĐỒNG DẢI TAB "PR & PO" MUA HÀNG.
+// Lỗi gốc: JSX phát `.purchase-tabbar` từ TASK-119 nhưng KHÔNG tệp CSS nào định nghĩa ⇒ 4 `<button>`
+// rơi về `display:inline`, chữ dính liền thành "PR74PO28". Cổng này CHƯA bắt được vì nó chỉ kiểm
+// chiều "CSS chết" (CSS có / mã không dùng), KHÔNG kiểm chiều ngược lại là chính lỗi đã gặp.
+// Nay khóa HAI chiều cho đúng bộ lớp của màn này. ⛔ Cố tình KHÔNG mở rộng thành "mọi class trong
+// JSX phải có CSS": đo được 133 class không stylesheet nào định nghĩa (phần lớn là móc ngữ nghĩa),
+// nên quy tắc đó chỉ tạo báo động giả. Hợp đồng có mục tiêu mới là kiểm được.
+// ⚠️ CẬP NHẬT THEO YÊU CẦU GO-LIVE MỤC 2 (02/10/2026): «Thiết kế tab PR PO Chi tiết lũy kế theo vật tư
+//    giống như tabbar của menu công việc.» ⇒ màn Mua hàng BỎ lớp tự chế `.purchase-tabbar`/`.purchase-tab`
+//    và dùng KHUÔN NHÀ `.project-scope-tabs` + `button.active` (đo ở `app/screens/WorkCenter.tsx:295`).
+// ⛔ KHÔNG nới lỏng: 3 khai báo bắt buộc chống lỗi "PR74PO28" (`display:inline-flex` · `align-items` · `gap`)
+//    VẪN được khóa, chỉ trỏ vào selector MỚI. Thêm `min-width`/`min-height` theo GOAL §11 (tab phải đều nhau).
+const MOC121_PURCHASING_TAB_CLASSES = [
+  "purchasing-tabs-card", "project-scope-tabs",
+  "purchasing-tab-note", "purchase-system-table",
+];
+for (const name of MOC121_PURCHASING_TAB_CLASSES) {
+  requireClass(name, "MỐC 121 dải tab PR/PO (màn Mua hàng)");
+  if (!new RegExp(`(?<![\\w-])${name.replace(/-/g, "\\-")}(?![\\w-])`).test(source)) {
+    failures.push(`MỐC 121: .${name} có CSS nhưng KHÔNG tệp mã nào phát ra (CSS sẽ thành chết)`);
+  }
+}
+const TAB_BTN = ".purchasing-screen .project-scope-tabs button";
+if (!new RegExp(`\\${TAB_BTN}\\s*\\{`.replace(/\s+/g, "\\s*"), "i").test(allCss)) {
+  failures.push(`MỐC 121: thiếu rule phạm vi «${TAB_BTN}» cho dải tab màn Mua hàng`);
+}
+for (const prop of ["display:inline-flex", "align-items", "gap", "min-width", "min-height"]) {
+  if (!new RegExp(`\\.purchasing-screen \\.project-scope-tabs button\\b[^{}]*\\{[^{}]*${prop}`, "i").test(allCss)) {
+    failures.push(`MỐC 121: nút tab màn Mua hàng thiếu khai báo bắt buộc ${prop} (thiếu thì tab dính chữ hoặc lệch cỡ)`);
+  }
+}
+
 if (failures.length) {
   console.error(`CSS BASELINE AUDIT: KHÔNG ĐẠT · ${failures.join(" · ")}`);
   process.exit(1);
 }
-console.log(`CSS BASELINE AUDIT: ĐẠT · ${lineCount} lines · ${byteCount} bytes · ${importantCount} !important · dead classes=0 · dead vars=0 · dynamic contracts=PASS · empty media=0 · historical patch markers=0`);
+console.log(`CSS BASELINE AUDIT: ĐẠT · ${lineCount} lines · ${byteCount} bytes · ${importantCount} !important · stylesheet quét=3 · dead classes=0 (nợ cũ canonical đã ghi nhận=${KNOWN_DEAD_CANONICAL.size}) · dead vars=0 · dynamic contracts=PASS · empty media=0 · historical patch markers=0 · MỐC 121 tab contract=PASS`);

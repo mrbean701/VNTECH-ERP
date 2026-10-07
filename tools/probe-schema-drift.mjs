@@ -13,7 +13,19 @@
 //     FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='vntech_erp' ORDER BY TABLE_NAME,ORDINAL_POSITION;" > tools/_live-schema.tsv
 //
 // Chạy: node tools/probe-schema-drift.mjs
-import { readFileSync, readdirSync, existsSync } from "node:fs";
+//
+// ⚠️ BỔ SUNG 02/10/2026 — CHỐT CHẶN ẢNH CHỤP CŨ.
+// Tệp này so `V*.sql` với **ảnh chụp** `tools/_live-schema.tsv`, không đọc DB thật. Ảnh chụp cũ
+// làm công cụ **báo động giả**: ngày 02/10 nó kết luận `labor_contracts` thiếu
+// `grade / image_updated_at / image_url / job_rank / renewal_round`, trong khi DB ĐANG CHẠY có
+// đủ (đã đọc lại qua ứng dụng: `jobRank="Chuyên viên"`, `grade="Bậc 3"`, `renewalRound=0`).
+// Vì sao: ảnh chụp xuất 25/09/2026, còn `V32__moc113_labor_contracts_columns.sql` sinh ra sau đó.
+//
+// ⇒ NGAY BÂY GIỜ: nếu **bất kỳ** tệp migration nào MỚI HƠN ảnh chụp thì phép so sánh **không
+//   có hiệu lực** ⇒ công cụ dừng với exit 2 (KHÔNG KẾT LUẬN) thay vì exit 1 (kết luận sai).
+//   Đây là cùng nguyên tắc với D-069: một phép đo không lấy được thứ nó đo thì phải nói
+//   "không đo được", không được đoán.
+import { readFileSync, readdirSync, existsSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 const LIVE_TSV = "tools/_live-schema.tsv";
@@ -21,6 +33,22 @@ const MIGRATION_DIR = "java-backend/infrastructure/src/main/resources/db/migrati
 
 if (!existsSync(LIVE_TSV)) {
   console.error(`THIẾU ${LIVE_TSV} — kết xuất lược đồ đang chạy trước (xem đầu tệp).`);
+  process.exit(2);
+}
+
+// ---- CHỐT CHẶN ẢNH CHỤP CŨ: migration mới hơn ảnh ⇒ phép so KHÔNG có hiệu lực ----
+const mocChup = statSync(LIVE_TSV).mtimeMs;
+const mocMoi = readdirSync(MIGRATION_DIR)
+  .filter((n) => /^V\d+__.*\.sql$/.test(n))
+  .map((n) => ({ n, t: statSync(join(MIGRATION_DIR, n)).mtimeMs }))
+  .filter((x) => x.t > mocChup)
+  .sort((a, b) => b.t - a.t);
+if (mocMoi.length > 0) {
+  console.error(`KHÔNG KẾT LUẬN — ảnh chụp ${LIVE_TSV} (${new Date(mocChup).toISOString().slice(0, 10)}) CŨ HƠN ${mocMoi.length} tệp migration:`);
+  for (const x of mocMoi.slice(0, 8)) console.error(`   ${new Date(x.t).toISOString().slice(0, 10)}  ${x.n}`);
+  console.error("⇒ So với ảnh này sẽ ra kết luận SAI. Hãy trích xuất lại rồi chạy lại:");
+  console.error(`   mysql -uvntech -pvntech --batch --raw --skip-column-names -e "SELECT CONCAT(TABLE_NAME,CHAR(9),COLUMN_NAME)`);
+  console.error(`     FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='vntech_erp' ORDER BY TABLE_NAME,ORDINAL_POSITION;" > ${LIVE_TSV}`);
   process.exit(2);
 }
 

@@ -839,6 +839,14 @@ CREATE TABLE IF NOT EXISTS `labor_contracts` (
   `created_by` TEXT NOT NULL,
   `created_at` TIMESTAMP(3) NOT NULL,
   `updated_at` TIMESTAMP(3) NOT NULL,
+  -- MỐC 113 — 5 cột này tồn tại ở MySQL production nhưng THIẾU trong H2, khiến 5 test Java
+  -- đỏ với `Column "lc.job_rank" not found`. Nguồn: drizzle/0314 (job_rank/grade/renewal_round)
+  -- + MỐC 58-3 (image_url/image_updated_at). Thứ tự và kiểu khai báo phải khớp information_schema.
+  `image_url` TEXT NULL,
+  `image_updated_at` TIMESTAMP NULL,
+  `job_rank` VARCHAR(64) NULL,
+  `grade` VARCHAR(64) NULL,
+  `renewal_round` INT NULL,
   PRIMARY KEY (`id`),
   UNIQUE (`contract_no`)
 ) ;
@@ -1434,6 +1442,22 @@ CREATE TABLE IF NOT EXISTS `purchase_orders` (
   `delivery_completed_at` TIMESTAMP(3) NULL,
   `contract_id` VARCHAR(64) NULL,
   `boq_version_id` VARCHAR(64) NULL,
+  -- ⛔⛔ VÁ 06/10/2026 (GO-LIVE · F2) — **SCHEMA H2 CỦA BÀI KIỂM THỬ THIẾU 3 CỘT**.
+  --   📍 BẰNG CHỨNG (⭐ ngăn xếp lỗi THẬT từ `web/target/surefire-reports/`):
+  --      `JdbcSQLSyntaxErrorException: Column "decision_reason" not found; SQL statement:
+  --       UPDATE purchase_orders SET status=?, decision_reason=?, decided_by=?, decided_at=?, updated_at=? WHERE id=?`
+  --      `at PurchaseStoreAdapter.decidePo(PurchaseStoreAdapter.java:268)`
+  --      `at PurchaseManagementUseCase.approvePo(PurchaseManagementUseCase.java:236)`
+  --   ⇒ ⭐ **`approve_po` ⛔ KHÔNG CHẠY ĐƯỢC TRONG BÀI KIỂM THỬ** ✓
+  --   ⚠️ **ĐÂY LÀ GỐC CỦA F2**: ⭐ vì `approve_po` hỏng trong test ⇒ ⭐ các bài test **phải ĐI VÒNG** —
+  --      gọi thẳng `receive_goods` trên PO **chưa phát hành** ⇒ ⭐ **mã hoá chính hành vi của lỗi F2** ✓
+  --   ⭐ ĐỐI CHỨNG MySQL THẬT: ✅ **CÓ** `decision_reason varchar(500) NULL` — ⭐ do migration
+  --      **`V18__wf_b2_po_decision.sql`** ✓ ⇒ ⭐ **H2 LỆCH, ⛔ không phải MySQL thiếu** ✓
+  --   ⚠️⚠️ **TỆP NÀY LÀ `web/src/**TEST**/resources/`** — ⛔ **KHÔNG PHẢI**
+  --      `web/src/main/resources/db/demo/schema-h2.sql` (⭐ sửa tệp đó ⛔ **KHÔNG có tác dụng**) ✓
+  `decision_reason` VARCHAR(500) NULL,
+  `decided_by` VARCHAR(64) NULL,
+  `decided_at` TIMESTAMP(3) NULL,
   PRIMARY KEY (`id`)
 ) ;
 
@@ -2387,4 +2411,67 @@ CREATE TABLE IF NOT EXISTS `supplier_materials` (
 CREATE UNIQUE INDEX IF NOT EXISTS `supplier_materials_uq` ON `supplier_materials` (`supplier_id`, `material_id`);
 CREATE INDEX IF NOT EXISTS `supplier_materials_material_idx` ON `supplier_materials` (`material_id`);
 CREATE INDEX IF NOT EXISTS `supplier_materials_last_idx` ON `supplier_materials` (`supplier_id`, `last_ordered_at`);
+
+-- ── BỔ SUNG 05/10/2026 (GO-LIVE) — 3 bảng do `V37__…_transit_warehouse.sql` tạo ──────────────
+-- ⛔ VÌ SAO PHẢI THÊM TAY: `java-backend/tools/generate-h2-test-schema.mjs:28` chỉ đọc
+--    `V1__baseline.sql` ⇒ schema sinh ra KHÔNG BAO GIỜ có bảng của các migration V2..V37.
+--    Hệ quả đo được: 4 lớp test tích hợp (`NotificationCenterTest`,
+--    `RequestNoProjectBootstrapIntegrationTest`, `RequestOverdueReasonTest`, `SystemControllerAuthTest`)
+--    chết với `org.h2.jdbc.JdbcSQLSyntaxErrorException: Table "contract_reviews" not found`.
+--    Đã đối chứng: lỗi này CÓ SẴN, không do bản vá nào.
+
+CREATE TABLE IF NOT EXISTS contract_reviews (
+  id                   VARCHAR(64)   NOT NULL,
+  contract_id          VARCHAR(64)   NOT NULL,  -- labor_contracts.id
+  contract_no          VARCHAR(64)   NULL,      -- chụp mã để hiển thị nhanh
+  contract_type        VARCHAR(64)   NULL,      -- loại hợp đồng
+  contract_name        VARCHAR(128)  NULL,
+  sender_name          VARCHAR(128)  NULL,      -- BÊN GỬI
+  receiver_name        VARCHAR(128)  NULL,      -- BÊN NHẬN
+  received_date        VARCHAR(32)   NULL,      -- NGÀY NHẬN
+  review_date          VARCHAR(32)   NULL,      -- NGÀY REVIEW
+  viewed               INT           NOT NULL DEFAULT 0,  -- 1 = đã xem, 0 = chưa xem
+  last_reviewer_id     VARCHAR(64)   NULL,
+  last_reviewer_name   VARCHAR(128)  NULL,
+  note                 VARCHAR(1000) NULL,
+  created_by           VARCHAR(64)   NULL,
+  created_at           VARCHAR(32)   NULL,
+  updated_at           VARCHAR(32)   NULL,
+  PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS contract_review_logs (
+  id                VARCHAR(64)   NOT NULL,
+  review_id         VARCHAR(64)   NOT NULL,     -- contract_reviews.id
+  contract_id       VARCHAR(64)   NULL,
+  reviewed_at       VARCHAR(32)   NULL,         -- THỜI GIAN REVIEW
+  duration_seconds  INT           NULL,         -- THỜI GIAN THAO TÁC (giây)
+  status            VARCHAR(32)   NULL,         -- viewed / reviewed
+  reviewer_id       VARCHAR(64)   NULL,
+  reviewer_name     VARCHAR(128)  NULL,
+  comment           VARCHAR(1000) NULL,
+  created_at        VARCHAR(32)   NULL,
+  PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS error_reports (
+  id                  VARCHAR(64)   NOT NULL,
+  report_code         VARCHAR(64)   NULL,
+  report_type         VARCHAR(64)   NULL,
+  title               VARCHAR(255)  NULL,
+  module_key          VARCHAR(64)   NULL,
+  content             TEXT          NULL,
+  user_id             VARCHAR(64)   NULL,
+  username            VARCHAR(128)  NULL,
+  full_name           VARCHAR(128)  NULL,
+  employee_code       VARCHAR(64)   NULL,
+  organization_unit_id VARCHAR(64)  NULL,
+  organization_name   VARCHAR(128)  NULL,
+  status              VARCHAR(32)   NOT NULL DEFAULT 'open',  -- open / resolved
+  resolved_at         VARCHAR(32)   NULL,
+  resolution_note     VARCHAR(1000) NULL,
+  created_at          VARCHAR(32)   NULL,
+  updated_at          VARCHAR(32)   NULL,
+  PRIMARY KEY (id)
+);
 -- [H2-MANUAL-END]

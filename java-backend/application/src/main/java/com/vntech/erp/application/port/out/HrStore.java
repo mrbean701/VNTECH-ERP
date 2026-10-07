@@ -18,11 +18,16 @@ public interface HrStore {
                         String educationLevel, String joinedDate, String position, String note, Instant now);
     Optional<Map<String, Object>> findLaborContract(String id);
     String nextLaborContractNo();
+    // MỐC 102 (user 29/09) — thêm `jobRank` (NGẠCH) · `grade` (BẬC) · `renewalRound` (GIA HẠN lần N).
+    // ⛔ Cột tên `job_rank` chứ KHÔNG phải `rank`: `RANK` là từ khoá dự trùng của MySQL 8.0.
+    // ⛔ `renewalRound` là Integer (null được) chứ không phải int, để hợp đồng cũ giữ NULL.
     void insertLaborContract(String id, String contractNo, String userId, String contractType, String startDate,
-                             String endDate, String signingDate, double salary, String note, String createdBy,
-                             Instant now);
+                             String endDate, String signingDate, double salary, String note, String imageUrl,
+                             String createdBy, Instant now,
+                             String jobRank, String grade, Integer renewalRound);
     void updateLaborContract(String id, String userId, String contractType, String startDate, String endDate,
-                             String signingDate, double salary, String note, Instant now);
+                             String signingDate, double salary, String note, String imageUrl, boolean imageChanged, Instant now,
+                             String jobRank, String grade, Integer renewalRound);
     void setLaborContractStatus(String id, String status, Instant now);
     void deleteLaborContract(String id);
 

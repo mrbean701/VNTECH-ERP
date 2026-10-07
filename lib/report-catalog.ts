@@ -278,7 +278,7 @@ export function sourceRows(source: ReportSource, data: unknown): Row[] {
     //   nhap (to_warehouse_id) => +quantity ; xuat (from_warehouse_id) => -quantity
     //   => gop theo khoId + sum(soLuong) chinh la TON THEO KHO.
     const wh = Array.isArray((bag as Record<string, unknown>).warehouses) ? ((bag as Record<string, unknown>).warehouses as Row[]) : [];
-    const ten = (id: unknown) => { const w = wh.find((x) => String(x.id) === String(id)); return w ? String(w.name ?? w.code ?? id) : String(id ?? "(khong xac dinh)"); };
+    const ten = (id: unknown) => { const w = wh.find((x) => String(x.id) === String(id)); return w ? String(w.name ?? w.code ?? id) : String(id ?? "(không xác định)"); };
     const out: Row[] = [];
     for (const r of list) {
       const qty = Number(r.quantity ?? 0);
@@ -292,8 +292,8 @@ export function sourceRows(source: ReportSource, data: unknown): Row[] {
     return out;
   }
   if (source === "workItems") {
-    // LAM GIAU theo COT DA XAC MINH (work_items: due_at, status, progress, department_code, completed_at):
-    //   quaHan = due_at < hien tai VA chua hoan thanh/xong  ;  hoanThanh = status thuoc nhom xong
+    // LÀM GIẢM theo CỘT ĐÃ XÁC MINH (work_items: due_at, status, progress, department_code, completed_at):
+    //   quáHạn = due_at < hiện tại VÀ chưa hoàn thành/xong  ;  hoànThành = status thuộc nhóm xong
     const XONG = new Set(["done", "completed", "closed"]);
     const now = Date.now();
     return list.map((r) => {

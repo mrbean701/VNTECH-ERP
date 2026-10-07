@@ -30,9 +30,13 @@
 
 import { DataTable, ListToolbar, StatusBadge } from "@/app/components/ui";
 import { CardHead, Empty, Kpi, date } from "@/lib/ui-shared";
+// MT3 §IV.6 — trạng thái hiển thị bằng nguồn ánh xạ DÙNG CHUNG (⛔ không lộ mã thô ra UI).
+import { statusLabel } from "@/lib/status-labels";
 import { isAdminUser } from "@/lib/permissions";
 import type { AppData, Row } from "@/lib/ui-shared";
 import { useState } from "react";
+// MT3 §IV.7 + ma trận #6 — XUẤT dùng ĐÚNG thư viện dùng chung (§14), ⛔ không tự viết lại CSV/Blob.
+import { downloadCsv } from "@/lib/tabular-export";
 
 // -------------------------------------------------------------------------------------------------
 // TM-PURE-BEGIN
@@ -57,7 +61,11 @@ const TEAM_LIST_COLUMNS = [
 ];
 
 // `TM-03` — ĐÚNG 6 TAB theo nguyên văn yêu cầu (thứ tự nguyên văn: thông tin · nhân sự · dự án · kho · cấp phát · lịch sử).
-const TEAM_TABS = ["Thông tin", "Nhân sự", "Dự án", "Kho", "Cấp phát", "Lịch sử"];
+// MT3 §G — đúng 5 tab: Thông tin · Nhân sự · Dự án · Kho · Lịch sử.
+// ⛔ Tab «Cấp phát» cũ (index 4) ĐÃ GỘP vào tab «Lịch sử» vì §G yêu cầu «Lịch sử: TỔNG HỢP tất cả
+//    đơn/phiếu liên quan đến tổ đội, có Search · Sort · Filter theo loại đơn/phiếu» ⇒ chức năng
+//    cấp phát/hoàn trả KHÔNG bị mất, chỉ chuyển chỗ để lọc được theo loại.
+const TEAM_TABS = ["Thông tin", "Nhân sự", "Dự án", "Kho", "Lịch sử"];
 
 // `TM-02` — thứ tự ưu tiên nguyên văn: ĐANG HOẠT ĐỘNG (0) → hoạt động gần nhất ↓ → ngừng (1).
 const TEAM_RANK_ACTIVE = 0;
@@ -277,9 +285,10 @@ function teamDetailTabs(data: AppData, team: Row) {
     tab(TEAM_TABS[2], "teams.project_id → projects (1 dự án / 1 tổ đội theo mô hình hiện hành)", project ? 1 : 0, true),
     tab(TEAM_TABS[3], "teams.warehouse_id → warehouses + inventory[].balance/available/reserved của kho tổ đội", warehouse ? 1 : 0, Boolean(warehouse && inventory.length),
       warehouse ? (inventory.length ? "" : `kho có thật nhưng inventory[] không có dòng nào cho kho này — ${NO_SOURCE_TEXT}`) : `teams.warehouse_id không trỏ tới kho nào trong payload — ${NO_SOURCE_TEXT}`),
-    tab(TEAM_TABS[4], "stock_issues.team_id + material_returns.team_id (2 bảng logic cấp phát kho TÁI DÙNG)", issues.length + returns.length, true),
-    tab(TEAM_TABS[5], "audit_logs WHERE entity_type='team' (bootstrap :756 — CHỈ admin nhận khoá audits[])", teamAudits.length, teamAudits.length > 0,
-      `payload không có dòng audit_logs nào cho entity_type='team' (khoá audits[] chỉ admin nhận — scripts/system-route.mjs:756) — ${NO_SOURCE_TEXT}`),
+    // MT3 §G — tab 5 «Lịch sử» nay TỔNG HỢP mọi loại chứng từ của tổ đội:
+    // cấp phát (stock_issues) + hoàn trả (material_returns) + nhật ký (audit_logs).
+    tab(TEAM_TABS[4], "TỔNG HỢP: stock_issues.team_id + material_returns.team_id + audit_logs(entity_type='team')", issues.length + returns.length + teamAudits.length, true,
+      `payload không có chứng từ nào mang team_id của tổ đội, và audit_logs chỉ admin nhận khoá audits[] (scripts/system-route.mjs:756) — ${NO_SOURCE_TEXT}`),
   ];
 }
 
@@ -292,6 +301,36 @@ function teamAllocations(data: AppData, team: Row) {
     const rows = source.key === "issues" ? issues : returns;
     return { ...source, rows, total: rows.length };
   });
+}
+
+/**
+ * MT3 §G — TỔNG HỢP LỊCH SỬ TỔ ĐỘI (dùng cho tab «Lịch sử»).
+ * ⛔ TUYỆT ĐỐI KHÔNG nhân dòng bằng join: mỗi chứng từ sinh **đúng 1 dòng** từ nguồn của nó
+ *    (cấp phát / hoàn trả / nhật ký kiểm toán), rồi gộp bằng `concat` và sắp xếp ở tầng ảnh.
+ * ⛔ Không suy diễn thêm loại chứng từ nào ngoài dữ liệu đang có trong payload.
+ */
+type TeamHistoryRow = { kind: "Cấp phát" | "Hoàn trả" | "Nhật ký"; at: string; code: string; title: string; detail: string; status: string };
+
+function teamHistoryRows(data: AppData, team: Row, allocations: { key: string; label?: string; rows: Row[]; keyField?: string; whoField?: string; atField?: string; qtyField?: string }[]): TeamHistoryRow[] {
+  const teamId = String(team?.id ?? "");
+  const rows: TeamHistoryRow[] = [];
+  // ⛔ Dùng `allocations` (đã lọc theo team_id ở tầng dữ liệu) ⇒ KHÔNG đọc khoá payload không tồn tại.
+  for (const source of allocations) {
+    for (const item of source.rows) {
+      const kind: TeamHistoryRow["kind"] = source.key === "returns" ? "Hoàn trả" : "Cấp phát";
+      rows.push({ kind,
+        at: String(item[String(source.atField || "createdAt")] || item.createdAt || ""),
+        code: String(item[String(source.keyField || "id")] || item.id || ""),
+        title: String(item.materialName || item.materialCode || (kind === "Hoàn trả" ? "Phiếu hoàn trả" : "Phiếu cấp phát")),
+        detail: String(item[String(source.whoField || "")] || item.projectCode || "—"),
+        status: statusLabel(item.status) });
+    }
+  }
+  for (const item of (data.audits || []).filter((r: Row) => String(r.entityType) === "team" && String(r.entityId) === teamId)) {
+    rows.push({ kind: "Nhật ký", at: String(item.createdAt || item.occurredAt || ""), code: String(item.action || ""),
+      title: String(item.detail || item.entityType || "Thay đổi"), detail: String(item.userName || item.actorName || "—"), status: "—" });
+  }
+  return rows;
 }
 
 /** `TM-03` tab Lịch sử — đếm theo NGUỒN THẬT, nguồn nào vắng thì ghi rõ. */
@@ -324,6 +363,11 @@ function TeamDirectory({ data, action, permission }: TeamDirectoryProps) {
   const [view, setView] = useState<"list" | "detail">("list");
   const [detailId, setDetailId] = useState("");
   const [tab, setTab] = useState(0);
+  // ── MT3 §G — TAB «LỊCH SỬ» TỔNG HỢP: Search · Sort · Filter theo loại, mặc định MỚI NHẤT ──────
+  // ⛔ KHÔNG nhân dòng bằng join: mỗi chứng từ gộp thành **1 dòng** từ nguồn của nó rồi SÁP XẾP Ở TẦNG ẢNH.
+  const [histQuery, setHistQuery] = useState("");
+  const [histType, setHistType] = useState("ALL");
+  const [histSort, setHistSort] = useState("newest");
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState("");
   // MT2-P10-01 (§8) — «Filter theo dự án» của DANH SÁCH TỔ ĐỘI. §8 chỉ yêu cầu ĐÚNG 2 thứ:
@@ -374,6 +418,16 @@ function TeamDirectory({ data, action, permission }: TeamDirectoryProps) {
     const pastMembers = members.filter((member) => Number(member.active ?? 1) === 0 || Boolean(member.leftAt));
     const allocations = teamAllocations(data, detail);
     const history = teamHistory(data, detail);
+    // MT3 §G — CHỨNG TỪ TỔNG HỢP của tổ đội đang chọn. ⛔ Mỗi chứng từ = 1 dòng (không nhân dòng join).
+    const historyRows = teamHistoryRows(data, detail, allocations);
+    const visibleHistory = historyRows
+      .filter((r) => (histType === "ALL" || r.kind === histType)
+        && (!histQuery || `${r.code} ${r.title} ${r.detail} ${r.kind}`.toLocaleLowerCase("vi").includes(histQuery.toLocaleLowerCase("vi"))))
+      .sort((a, b) => {
+        if (histSort === "oldest") return String(a.at).localeCompare(String(b.at));
+        if (histSort === "kind") return a.kind.localeCompare(b.kind, "vi") || String(b.at).localeCompare(String(a.at));
+        return String(b.at).localeCompare(String(a.at));   // mặc định: MỚI NHẤT TRƯỚC (§G)
+      });
     const stockRows = (data.inventory || []).filter((item) => String(item.warehouseId) === String(detail.warehouseId));
 
     return <div className="stack team-management" data-team-detail={tid}>
@@ -401,13 +455,18 @@ function TeamDirectory({ data, action, permission }: TeamDirectoryProps) {
           <Kpi icon="TT" label="Trạng thái" value={Number(detail.active ?? 1) === 0 ? TEAM_STOPPED_LABEL : TEAM_ACTIVE_LABEL} note={Number(detail.active ?? 1) === 0 ? "Không còn nhận việc" : "Đang nhận cấp phát vật tư"} tone={Number(detail.active ?? 1) === 0 ? "red" : "green"} />
         </div>
         <section className="card">
-          <CardHead title="Thông tin tổ đội" note="Mọi dòng ghi rõ NGUỒN THẬT (bảng.cột) — không suy diễn" />
-          <div className="table-wrap"><table className="baseline-table"><thead><tr><th>Hạng mục</th><th>Giá trị</th><th>Nguồn</th></tr></thead><tbody>
-            <tr><td>Mã tổ đội</td><td><strong className="code">{detail.code}</strong></td><td><small>teams.code</small></td></tr>
-            <tr><td>Tên tổ đội</td><td>{detail.name}</td><td><small>teams.name</small></td></tr>
-            <tr><td>Hạng mục</td><td>{detail.trade || "—"}</td><td><small>teams.trade</small></td></tr>
-            <tr><td>Tổ trưởng</td><td>{leader?.fullName || <span className="muted">{NO_SOURCE_TEXT}<small> · teams.leader_user_id = {String(detail.leaderUserId || "NULL")} không tra được trong staffDirectory/users</small></span>}</td><td><small>teams.leader_user_id → users.full_name</small></td></tr>
-            <tr><td>Trạng thái</td><td><StatusBadge value={Number(detail.active ?? 1) === 0 ? TEAM_STOPPED_LABEL : TEAM_ACTIVE_LABEL} /></td><td><small>teams.active</small></td></tr>
+          {/* MỐC 116 (user 01/10) — BỎ CỘT «NGUỒN». Cột này in tên cột DB thô
+              (`teams.code`, `teams.trade`, `teams.leader_user_id → users.full_name`) — thứ CHỈ ĐỂ
+              DEV TEST, không phải thông tin nghiệp vụ ⇒ không hiện cho người dùng.
+              ⛔ KHÔNG đụng vào `teamDetailTabs()[].source`: đó là DỮ LIỆU, `tests/tm03-team-detail-tabs.test.mjs`
+              dòng 55-69 kiểm từng tab phải khai NGUỒN THẬT. Chỉ gỡ phần RENDER. */}
+          <CardHead title="Thông tin tổ đội" note="Thông tin lấy trực tiếp từ hồ sơ tổ đội đang được chọn." />
+          <div className="table-wrap"><table className="baseline-table"><thead><tr><th>Hạng mục</th><th>Giá trị</th></tr></thead><tbody>
+            <tr><td>Mã tổ đội</td><td><strong className="code">{detail.code}</strong></td></tr>
+            <tr><td>Tên tổ đội</td><td>{detail.name}</td></tr>
+            <tr><td>Hạng mục</td><td>{detail.trade || "—"}</td></tr>
+            <tr><td>Tổ trưởng</td><td>{leader?.fullName || <span className="muted">{NO_SOURCE_TEXT}</span>}</td></tr>
+            <tr><td>Trạng thái</td><td><StatusBadge value={Number(detail.active ?? 1) === 0 ? TEAM_STOPPED_LABEL : TEAM_ACTIVE_LABEL} /></td></tr>
           </tbody></table></div>
         </section>
         <section className="card">
@@ -483,13 +542,38 @@ function TeamDirectory({ data, action, permission }: TeamDirectoryProps) {
       </div>}
 
       {tab === 4 && <div className="stack">
+        {/* ══ MT3 §G — LỊCH SỬ TỔNG HỢP: Tìm · Sắp xếp · Lọc theo loại; mặc định MỚI NHẤT ══
+            ⛔ Mỗi chứng từ là 1 dòng — KHÔNG nhân dòng bằng join. Các bảng chi tiết bên dưới
+            vẫn giữ nguyên (⛔ không mất nghiệp vụ nào). */}
+        <section className="card" data-vntech="team-history-aggregate">
+          <CardHead title="TỔNG HỢP CHỨNG TỪ TỔ ĐỘI" note="MT3 §G — mọi đơn/phiếu liên quan: cấp phát · hoàn trả · nhật ký thao tác. Mỗi chứng từ 1 dòng, không nhân dòng."/>
+          <ListToolbar
+            title="CHỨNG TỪ CỦA TỔ ĐỘI" note="Tìm · Sắp xếp · Lọc theo loại chứng từ."
+            count={visibleHistory.length} total={historyRows.length} unit="chứng từ"
+            search={{ value: histQuery, onChange: setHistQuery, placeholder: "Tìm theo số chứng từ, nội dung, người..." }}
+            filters={[{ key:"kind", label:"Loại", value:histType, onChange:setHistType, options:[{value:"ALL",label:"Tất cả loại"},{value:"Cấp phát",label:"Cấp phát"},{value:"Hoàn trả",label:"Hoàn trả"},{value:"Nhật ký",label:"Nhật ký"}] }]}
+            sort={{ value: histSort, onChange: setHistSort, options:[{value:"newest",label:"Mới nhất trước"},{value:"oldest",label:"Cũ nhất trước"},{value:"kind",label:"Theo loại chứng từ"}] }}
+          />
+          <DataTable
+            rows={visibleHistory}
+            rowKey={(row, index) => `${row.kind}-${row.code}-${index}`}
+            emptyText="Tổ đội chưa có chứng từ nào trong phạm vi bạn được xem."
+            columns={[
+              { key: "h1", header: "Loại", render: (row) => <>{row.kind}</> },
+              { key: "h2", header: "Số chứng từ", render: (row) => <><strong className="code">{row.code || "—"}</strong></> },
+              { key: "h3", header: "Nội dung", render: (row) => <><strong>{row.title}</strong><small>{row.detail}</small></> },
+              { key: "h4", header: "Trạng thái", render: (row) => <>{row.status}</> },
+              { key: "h5", header: "Thời gian", render: (row) => <>{date(row.at)}</> },
+            ]}
+          />
+        </section>
         <section className="card">
           <CardHead title="TÁI DÙNG logic cấp phát kho" note={`Hai nguồn dưới đây CHÍNH LÀ hai bảng mà action ${allocations.map((item) => item.action).join(" / ")} ghi vào (mang team_id của tổ đội) — KHÔNG dựng sổ/bảng mới`} />
           {allocations.map((source) => <div key={source.key} className="stack">
             <CardHead title={`${source.label} — ${source.total} chứng từ`} note={`Nguồn: ${source.table} · action ghi dữ liệu: ${source.action}`} />
             <DataTable rows={source.rows} rowKey={(row, index) => String(row.id || index)} emptyText={`${NO_SOURCE_TEXT} — chưa có ${source.label.toLowerCase()} nào mang team_id của tổ đội này.`} columns={[
               { key: "c1", header: "Số chứng từ", render: (row) => <strong className="code">{String(row[source.keyField] || row.id || "—")}</strong> },
-              { key: "c2", header: "Trạng thái", render: (row) => <StatusBadge value={String(row.status || "—")} /> },
+              { key: "c2", header: "Trạng thái", render: (row) => <StatusBadge value={statusLabel(row.status)} /> },
               { key: "c3", header: "Người liên quan", render: (row) => String(row[source.whoField] || "—") },
               { key: "c4", header: "Thời điểm", render: (row) => date(row[source.atField] || row.createdAt) },
               { key: "c5", header: "Số lượng", render: (row) => (source.qtyField && row[source.qtyField] !== undefined ? String(row[source.qtyField]) : "—") },
@@ -501,14 +585,16 @@ function TeamDirectory({ data, action, permission }: TeamDirectoryProps) {
           <CardHead title="Phiếu đề nghị mua hàng của dự án" note="Không mang team_id — lọc theo DỰ ÁN của tổ đội (teamId trong payload luôn NULL ở dữ liệu thật: 0/4 phiếu có team_id)" />
           <DataTable rows={(data.requests || []).filter((row) => String(row.projectId) === String(detail.projectId))} rowKey={(row, index) => String(row.id || index)} emptyText={`${NO_SOURCE_TEXT} — dự án của tổ đội chưa có phiếu đề nghị nào trong payload.`} columns={[
             { key: "c1", header: "Số phiếu", render: (row) => <strong className="code">{String(row.requestNo || row.id || "—")}</strong> },
-            { key: "c2", header: "Trạng thái", render: (row) => <StatusBadge value={String(row.status || "—")} /> },
+            { key: "c2", header: "Trạng thái", render: (row) => <StatusBadge value={statusLabel(row.status)} /> },
             { key: "c3", header: "Người đề nghị", render: (row) => String(row.requestedBy || "—") },
             { key: "c4", header: "Thời điểm", render: (row) => date(row.requestedAt || row.createdAt) },
           ]} />
         </section>
       </div>}
 
-      {tab === 5 && <div className="stack">
+      {/* MT3 §G — nội dung «Lịch sử thao tác» + «Hợp đồng giao khoán & quyết toán» (tab 5 cũ)
+          ĐÃ GỘP vào tab «Lịch sử» (nay là tab 4) để giữ nguyên nghiệp vụ, không xoá gì. */}
+      {tab === 4 && <div className="stack">
         <section className="card">
           <CardHead title="Lịch sử thao tác trên tổ đội" note={history.source} />
           {history.auditRowsAvailable
@@ -525,7 +611,7 @@ function TeamDirectory({ data, action, permission }: TeamDirectoryProps) {
             { key: "c1", header: "Số HĐ", render: (row) => <strong className="code">{String(row.contractNo || "—")}</strong> },
             { key: "c2", header: "Tên/phạm vi", render: (row) => String(row.contractName || "—") },
             { key: "c3", header: "Giá trị", render: (row) => String(row.contractValue ?? "—") },
-            { key: "c4", header: "Trạng thái", render: (row) => <StatusBadge value={String(row.status || "—")} /> },
+            { key: "c4", header: "Trạng thái", render: (row) => <StatusBadge value={statusLabel(row.status)} /> },
             { key: "c5", header: "Quyết toán", render: (row) => (history.settlements.some((item) => String(item.subcontractId) === String(row.id)) ? "Đã quyết toán" : "Chưa quyết toán") },
           ]} />
         </section>
@@ -554,6 +640,25 @@ function TeamDirectory({ data, action, permission }: TeamDirectoryProps) {
         }]}
         actions={<>
           <button type="button" className="primary" disabled={!gates.canCreate || busy !== ""} title={gates.canCreate ? "Tạo tổ đội (action create_project_team)" : "Thiếu quyền: cần capability canUse của module site_command (ActionRbacRegistry :39/:233)"}>＋ TẠO TỔ ĐỘI</button>
+          {/* MT3 ma trận #6 — nút XUẤT THẬT. Cột lấy ĐÚNG từ `TEAM_LIST_COLUMNS` (⛔ không hard-code lại),
+              `status` đi qua bảng nhãn dùng chung `statusLabel`. Xuất đúng các tổ đội ĐANG hiển thị sau lọc. */}
+          <button type="button" className="secondary" data-vntech="team-export-csv"
+            title="Xuất danh sách tổ đội đang hiển thị ra CSV (UTF-8, có BOM — mở đúng tiếng Việt trong Excel)"
+            onClick={() => downloadCsv(
+              TEAM_LIST_COLUMNS.map((c) => c.header),
+              rows.map((row) => {
+                // ⚠️ Kiểu dòng đã có sẵn `statusLabel` (nhãn tiếng Việt) ⇒ ⛔ KHÔNG gọi lại `statusLabel(row.status)`.
+                //    Và ⛔ không index bằng chuỗi trên kiểu chặt ⇒ ép về `Record<string, unknown>` để tra theo `c.key`.
+                const loose = row as unknown as Record<string, unknown>;
+                return TEAM_LIST_COLUMNS.map((c) => {
+                  if (c.key === "status") return String(row.statusLabel ?? "");
+                  const v = loose[c.key];
+                  if (v === null || v === undefined) return "";
+                  return typeof v === "object" ? String(loose["projectName"] ?? "") : String(v);
+                });
+              }),
+              "danh-sach-to-doi",
+            )}>⤓ Xuất CSV</button>
         </>}
       />
       <p className="muted" data-team-sort-note="TM-02">Thứ tự ưu tiên: <strong>ĐANG HOẠT ĐỘNG</strong> → hoạt động gần nhất ↓ → ngừng.</p>

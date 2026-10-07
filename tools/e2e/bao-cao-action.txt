@@ -1,0 +1,230 @@
+════════════════════════════════════════════════════════════════════════════
+  BÁO CÁO ACTION API  POST http://127.0.0.1:9000/api/system
+  Nguồn: java-backend/web/src/main/java/com/vntech/erp/web/controller/SystemController.java
+         switch(action) tại dòng 232 · nhánh default tại dòng 1475
+════════════════════════════════════════════════════════════════════════════
+
+TỔNG SỐ ACTION: 220
+
+── SỐ ACTION THEO TỪNG NHÓM ─────────────────────────────────────────────────
+  quan-tri           54    ██████████  quản trị: tài khoản, phòng ban, nhóm quyền, vai trò, chức danh (cấp bậc), tổ chức, cấu hình hệ thống
+  workflow           10    ██  workflow: định nghĩa quy trình, bước, người duyệt, quyết định phê duyệt
+  nhan-su            7     █  nhân sự: hồ sơ nhân sự, hợp đồng lao động, bảo hiểm/phúc lợi
+  ke-toan-vat-tu     27    █████  kế toán & vật tư: nhóm hệ vật tư, mã vật tư, tên phụ (danh mục vật tư)
+  mua-hang           11    ██  mua hàng: phiếu đề nghị mua hàng (PR/MR), đơn mua hàng (PO), tách PO, đặt PO
+  kho                23    ████  kho: nhập GRN, xuất issue, trả về (return), điều chuyển (STO), kiểm kê
+  khac               88    ████████████████  khác: dự án, hợp đồng, BOQ, sản xuất, thi công, tài chính, pháp chế, nhiệm vụ, nhà cung cấp/đối tác, đăng nhập
+
+── NHÓM MUA-HANG (11 action) ────────────────────────────────────────────
+  preview_request_import                         dòng  534 · module requests
+  update_returned_request                        dòng  544 · module requests
+  resubmit_request                               dòng  549 · module requests
+  delete_request                                 dòng  554 · module requests
+  cancel_request                                 dòng  559 · module requests
+  create_request                                 dòng 1122 · module requests
+  create_po                                      dòng 1149 · module purchasing
+  update_po_price                                dòng 1156 · module purchasing
+  approve_po                                     dòng 1161 · module purchasing
+  reject_po                                      dòng 1166 · module purchasing
+  close_po_line                                  dòng 1170 · module purchasing
+
+── NHÓM KHO (23 action) ─────────────────────────────────────────────────
+  save_warehouse_location                        dòng  529 · module inventory,central_warehouse
+  receive_goods                                  dòng 1175 · module receiving,warehouse_receipt
+  confirm_delivery                               dòng 1182 · module receiving,warehouse_receipt
+  return_stock                                   dòng 1187 · module teams,stocktake
+  create_transfer_order                          dòng 1192 · module inventory
+  approve_transfer_order                         dòng 1197 · module inventory
+  ship_transfer_order                            dòng 1202 · module inventory
+  create_central_return                          dòng 1207 · module central_warehouse
+  approve_central_return                         dòng 1212 · module central_warehouse
+  receive_central_return                         dòng 1217 · module central_warehouse
+  create_stock_count                             dòng 1222 · module stocktake
+  reconcile_contract_stock                       dòng 1227 · module inventory
+  transfer_contract_ownership                    dòng 1232 · module inventory
+  reverse_stock_movement                         dòng 1237 · module inventory,stocktake
+  approve_stock_count                            dòng 1242 · module stocktake
+  receive_transfer_order                         dòng 1247 · module inventory
+  confirm_installation                           dòng 1252 · module teams
+  issue_stock                                    dòng 1257 · module teams,warehouse_issue
+  approve_stock_issue                            dòng 1271 · module approvals
+      ↳ Sinh bản ghi approvals (entity_type='stock_issue', entity_id=issueId, stage=1, status='approved') và chuyển stock_issues.status sang approved. BƯỚC ③④
+  issue_stock_confirm                            dòng 1284 · module warehouse_issue
+      ↳ stock_issues.status='approved'. Quyền: cổng VAI TRÒ requireRole(["warehouse","commander","admin"]) + phạm vi dự án/kho nguồn, cổng MODULE dùng lại kho
+  confirm_stock_issue                            dòng 1293 · module warehouse_issue
+      ↳ (requireRole(["warehouse","admin"]) trong use-case) ⇒ cha.ht (commander) bị 403 đúng đặc tả. issued → completed + đóng dấu signed_at. Cổng MODULE dùng
+  create_issue_grn                               dòng 1302 · module receiving
+      ↳ TẠO (đúng đặc tả): requireRole(["warehouse","engineer","admin"]) + phạm vi dự án, cổng MODULE dùng lại khoá SẴN CÓ receiving với canCreate (khuôn rece
+  create_transfer_grn                            dòng 1311 · module receiving
+      ↳ Cùng khuôn ⑤ create_issue_grn: ⛔ không cần duyệt, CHỈ cần QUYỀN TẠO (requireRole(["warehouse","engineer","admin"]) + phạm vi dự án + module receiving.
+
+── NHÓM WORKFLOW (10 action) ────────────────────────────────────────────
+  save_approval_stage                            dòng 1030 · (không gắn module)
+  set_approval_stage_status                      dòng 1035 · (không gắn module)
+  delete_approval_stage                          dòng 1040 · (không gắn module)
+  save_workflow                                  dòng 1045 · module admin
+  set_workflow_status                            dòng 1050 · module admin
+  delete_workflow                                dòng 1055 · module admin
+  decide_approval                                dòng 1130 · module approvals
+  request_supplement                             dòng 1141 · module approvals
+      ↳ MT3 §B.3 — «YÊU CẦU BỔ SUNG»: trả phiếu về cho người lập kèm lý do BẮT BUỘC. Cùng khuôn với decide_approval ⇒ cùng tầng, cùng kiểu Principal, cùng RBA
+  work_scope                                     dòng 1412 · (không gắn module)
+      ↳ §3.2:42 «Phó giám đốc trở lên → xem toàn bộ phòng ban · toàn bộ nhân viên công ty» ⇒ CHỈ ĐỌC (idempotent, ⛔ không mở quyền): trả SELF/DEPARTMENT/COMPA
+  director_pending_approvals                     dòng 1417 · module approvals
+
+── NHÓM QUAN-TRI (54 action) ────────────────────────────────────────────
+  revoke_session                                 dòng  266 · (không gắn module)
+  revoke_user_sessions                           dòng  271 · (không gắn module)
+  save_engine_role_profile                       dòng  329 · (không gắn module)
+  save_business_scope                            dòng  334 · (không gắn module)
+  set_business_scope_status                      dòng  339 · (không gắn module)
+  delete_business_scope                          dòng  344 · (không gắn module)
+  save_business_role_group                       dòng  349 · (không gắn module)
+  set_business_role_group_status                 dòng  354 · (không gắn module)
+  delete_business_role_group                     dòng  359 · (không gắn module)
+  reorder_menu_layout                            dòng  364 · (không gắn module)
+  reorder_form_fields                            dòng  369 · (không gắn module)
+  create_user                                    dòng  374 · (không gắn module)
+  update_user                                    dòng  379 · module admin_tab_01
+  set_user_status                                dòng  395 · (không gắn module)
+  reset_user_password                            dòng  400 · (không gắn module)
+  delete_user                                    dòng  408 · (không gắn module)
+  save_user_access                               dòng  413 · (không gắn module)
+  delete_user_module_override                    dòng  418 · (không gắn module)
+  save_department_permission                     dòng  424 · (không gắn module)
+      ↳ ---- P5: phân quyền phòng ban + cấp bậc hệ thống ----
+  delete_department_permission                   dòng  429 · (không gắn module)
+  rebuild_department_permissions                 dòng  434 · (không gắn module)
+  save_system_level                              dòng  439 · (không gắn module)
+  set_system_level_status                        dòng  444 · (không gắn module)
+  delete_system_level                            dòng  449 · (không gắn module)
+  set_user_system_level                          dòng  454 · (không gắn module)
+  system_level_impact                            dòng  459 · (không gắn module)
+  save_role_catalog                              dòng  464 · (không gắn module)
+  set_role_status                                dòng  469 · (không gắn module)
+  delete_role_catalog                            dòng  474 · (không gắn module)
+  save_organization_unit                         dòng  479 · (không gắn module)
+  set_organization_unit_status                   dòng  484 · (không gắn module)
+  set_organization_unit_member                   dòng  489 · module site_command
+  save_menu_group                                dòng  494 · (không gắn module)
+  set_menu_group_status                          dòng  499 · (không gắn module)
+  delete_menu_group                              dòng  504 · (không gắn module)
+  save_module_catalog                            dòng  509 · (không gắn module)
+  set_module_status                              dòng  514 · (không gắn module)
+  save_form_field_config                         dòng  519 · (không gắn module)
+  delete_form_field_config                       dòng  524 · (không gắn module)
+  bulk_import_users                              dòng 1070 · (không gắn module)
+  factory_reset_preview                          dòng 1075 · module admin
+  factory_reset_execute                          dòng 1080 · module admin
+  install_license_foundation                     dòng 1085 · module admin
+  request_license_transfer                       dòng 1102 · module admin
+  save_ui_display_settings                       dòng 1112 · (không gắn module)
+  save_trust_development_settings                dòng 1117 · (không gắn module)
+  save_notification_config                       dòng 1318 · module admin
+      ↳ MT2 §13.1/§13.2 — CẤU HÌNH THÔNG BÁO (tab Thông báo · màn Quản trị): module admin. ⛔ KHÔNG đụng task_notifications (hàng đợi in-app của luồng CÔNG VIỆ
+  set_notification_config_status                 dòng 1341 · module admin
+  notification_configs                           dòng 1350 · module admin
+      ↳ (xem cuối file) để ⛔ KHÔNG dịch số dòng các case mà hồ sơ F-03 gắn cứng. MT2-P3-02 §13.1 — **DANH SÁCH** cấu hình thông báo (chữ R của CRUD · tab Quản
+  delete_notification_config                     dòng 1356 · module admin
+      ↳ MT2-P3-02 §13.1 — **XOÁ** cấu hình (chữ D của CRUD) · ⛔ KHÔNG xoá lịch sử đọc của user.
+  notification_log                               dòng 1361 · module admin
+      ↳ MT2 §15.1 — LOG + DELIVERY STATUS tổng hợp từ các bảng sẵn có; ⛔ không tạo bảng trùng.
+  save_error_report                              dòng 1472 · (không gắn module) · công khai
+      ↳ mà hồ sơ F-03-TAI-CHINH-AUDIT-PHU-THUOC.md gắn số dòng ⇒ ⛔ không dịch dòng. ⛔ save_error_report KHÔNG gắc module ⇒ MỌI user đã đăng nhập đều gửi được 
+  error_reports                                  dòng 1473 · module admin
+  mark_error_report_resolved                     dòng 1474 · module admin
+
+── NHÓM KE-TOAN-VAT-TU (27 action) — chỉ liệt kê tên ────────
+  request_material_master_from_boq  compare_boq_materials  confirm_boq_material_mappings  
+  bulk_material_subcategory_action  check_material_alias_conflicts  delete_material  
+  delete_material_category  delete_material_norm  delete_material_subcategory  
+  delete_selected_materials  delete_unused_materials  estimate_material_norms  
+  import_material_catalog  merge_material_master  preview_material_dependencies  
+  reset_material_catalog_test  save_material  save_material_category  save_material_external_code  
+  save_material_norm  save_material_subcategory  save_material_uom_conversion  
+  set_material_category_status  set_material_norm_status  set_material_status  
+  set_material_subcategory_status  save_mar_approval  
+
+── NHÓM NHAN-SU (7 action) — chỉ liệt kê tên ────────
+  save_hr_record  save_labor_contract  set_labor_contract_status  save_benefit_record  
+  set_benefit_record_status  delete_benefit_record  delete_labor_contract  
+
+── NHÓM KHAC (88 action) — chỉ liệt kê tên ────────
+  setup  login  logout  change_password  update_profile_avatar  create_project  update_project  
+  set_project_status  delete_project  save_project_contract  set_project_contract_status  
+  delete_project_contract  save_email_settings  save_boq_version  save_boq_item  
+  set_boq_item_status  bulk_boq_item_action  delete_boq_item  replace_boq_items  
+  update_boq_contract_prices  clear_boq_version  save_production_report  approve_production_report  
+  save_capital_recovery  delete_capital_recovery  save_contract_payment  import_contract_payments  
+  save_team_subcontract  save_team_production  approve_team_production  save_team_payment  
+  save_construction_daily_log  approve_construction_daily_log  delete_construction_daily_log  
+  settle_team_subcontract  delete_contract_payment  save_payment_plan  set_payment_plan_status  
+  delete_payment_plan  save_advance_request  settle_advance_request  delete_advance_request  
+  save_site_expense_claim  approve_site_expense_claim  save_bank_account  save_cashbook_entry  
+  delete_cashbook_entry  save_accounting_voucher  delete_accounting_voucher  list_contract_review  
+  save_contract_review  open_contract_review  log_contract_review  delete_contract_review  
+  save_correspondence  set_correspondence_status  delete_correspondence  save_legal_document  
+  set_legal_document_status  delete_legal_document  save_seal  set_seal_status  delete_seal  
+  delete_site_expense_claim  create_work_item  create_self_work_item  update_work_item_progress  
+  update_work_item_status  reassign_work_item  mark_task_notification_read  create_project_team  
+  set_project_team_status  delete_project_team  bulk_import_projects  retry_email  
+  mark_notification_read  mark_notification_all_read  mark_notification_snooze  
+  update_profile_signature  supplier_materials  save_supplier_material  supplier_material_gaps  
+  save_supplier  set_supplier_status  delete_supplier  save_partner  set_partner_status  
+  delete_partner  
+
+── LƯU Ý QUAN TRỌNG (những action KHÔNG tồn tại trong mã nguồn) ──────────────
+  ▸ Tạo/sửa phòng ban (department)
+      action: save_organization_unit, set_organization_unit_status
+      KHÔNG có action tên `create_department`. Phòng ban là bản ghi `organization_units` có `unitType/unit_type = 'department'` (xem migration V10__dept_permissions_and_levels.sql:77). Tạo/sửa bằng `save_organization_unit`, bật/tắt bằng `set_organization_unit_status`. Quyền theo phòng ban: `save_department_permission` / `delete_department_permission` / `rebuild_department_permissions`.
+  ▸ Tạo user
+      action: create_user
+      Kèm `update_user` (sửa), `set_user_status`, `delete_user`, `reset_user_password`.
+  ▸ Gán quyền
+      action: save_user_access, delete_user_module_override
+      Gán quyền theo module cho tài khoản. Cấp quyền ở cấp vai trò/nhóm: `save_role_catalog`, `save_business_role_group`, `save_module_catalog`, `set_user_system_level`.
+  ▸ Tạo workflow + bước + người duyệt
+      action: save_workflow
+      MỘT action duy nhất tạo cả 3 tầng: payload `{ code, name, moduleKey?, isDefault?, sortOrder?, stages: [{ stepNo, name, description?, approvalMode: single|any_of|all_of, slaHours, allowSkipLevel?, approverUserIds: [...] }] }` (xem OpsTaskManagementUseCase.saveWorkflow:650). KHÔNG có action riêng cho bước hay người duyệt. Sửa/xoá quy trình: `set_workflow_status`, `delete_workflow`. Cấu hình bước duyệt dùng chung khác: `save_approval_stage` / `set_approval_stage_status` / `delete_approval_stage` (bảng `approval_stage_catalog`).
+  ▸ Duyệt / từ chối phiếu
+      action: decide_approval, request_supplement
+      `decide_approval` là quyết định duyệt/từ chối theo bước (approval engine). Ngoài ra có các duyệt riêng theo phiếu: `approve_po`/`reject_po`, `approve_stock_issue`, `approve_transfer_order`, `approve_central_return`, `approve_stock_count`.
+  ▸ Tạo phiếu đề nghị mua hàng (PR/MR)
+      action: create_request
+      Kèm `preview_request_import` (xem trước import), `resubmit_request`, `cancel_request`, `delete_request`, `update_returned_request`.
+  ▸ Chuyển PR sang PO / đặt PO
+      action: create_po
+      `create_po` vừa là lúc CHUYỂN PR SANG PO (tạo đơn mua hàng) vừa là lúc ĐẶT PO. Theo docs/agent-progress/PHASE2-GAP-ANALYSIS.md:316-317, 1 lần gọi `create_po` có thể tách ra nhiều PO theo nhà cung cấp.
+  ▸ Tách PO
+      action: create_po
+      KHÔNG tồn tại action tên `split_po` — tách PO thực hiện TRONG `create_po` ở mức DÒNG qua `purchase_order_items.request_item_id` (xem docs/agent-progress/PHASE2-GAP-ANALYSIS.md:327 và :174). Không có action riêng.
+  ▸ Tạo phiếu nhập GRN
+      action: receive_goods, create_issue_grn, create_transfer_grn
+      `receive_goods` tạo GRN từ PO; `create_issue_grn` sinh GRN nhập vào kho khác từ phiếu xuất; `create_transfer_grn` sinh GRN từ lệnh điều chuyển (STO). BCH xác nhận giao hàng: `confirm_delivery`.
+  ▸ Tạo phiếu điều chuyển STO
+      action: create_transfer_order
+      Vòng đầy đủ: `create_transfer_order` -> `approve_transfer_order` -> `ship_transfer_order` -> `create_transfer_grn` (sinh phiếu nhập) -> `receive_transfer_order`.
+  ▸ Tạo phiếu xuất issue
+      action: issue_stock
+      Vòng đầy đủ (WF-XUATKHO-01): `issue_stock` (tạo phiếu) -> `approve_stock_issue` (CHT duyệt) -> `issue_stock_confirm` (tiến hành xuất, ghi stock_movements) -> `confirm_stock_issue` (thủ kho xác nhận) -> `create_issue_grn` (sinh GRN nhập kho khác).
+  ▸ Tạo phiếu trả về (material return)
+      action: return_stock
+      `return_stock` tạo bản ghi `material_returns` (mã phiếu `RET-...`, xem StockManagementUseCase.returnStock:501). Nhóm trả về khác: `create_central_return` -> `approve_central_return` -> `receive_central_return` (phiếu trả về kho trung ương).
+
+── CHÊNH LỆCH SO VỚI BẢN NODE LEGACY scripts/system-route.mjs ─────────────────
+  Chỉ có ở JS, không có trong switch Java:
+      add_work_item_comment                    scripts/system-route.mjs:1286
+      set_work_item_participant                scripts/system-route.mjs:1297
+  Có trong ma trận RBAC nhưng không có nhánh case trong switch Java:
+      add_work_item_comment                    java-backend/application/src/main/java/com/vntech/erp/application/rbac/ActionRbacRegistry.java:16 · module dept_plan_tasks,dept_project_tasks,dept_plan_assign,dept_project_assign
+      manage_contract_review                   java-backend/application/src/main/java/com/vntech/erp/application/rbac/ActionRbacRegistry.java:212 · module dept_legal_contract_review
+      set_work_item_participant                java-backend/application/src/main/java/com/vntech/erp/application/rbac/ActionRbacRegistry.java:290 · module dept_plan_assign,dept_project_assign
+
+── NGUỒN ĐÃ DÙNG ───────────────────────────────────────────────────────────
+  • java-backend/web/src/main/java/com/vntech/erp/web/controller/SystemController.java:232 — câu lệnh `switch (action) {`: ĐÂY LÀ NƠI ĐĂNG KÝ / RẼ NHÁNH DUY NHẤT mà API POST /api/system chấp nhận action (đây là bản Java chạy thật trên cổng 9000). Đã đọc 220 nhánh `case "ten_action" ->`.
+  • java-backend/web/src/main/java/com/vntech/erp/web/controller/SystemController.java:1475 — nhánh `default ->` trả HTTP 400 «Action 'X' chưa được triển khai trên backend Java (Strangler Fig)» ⇒ danh sách lấy từ switch này là DANH SÁCH ĐẦY ĐỦ, không có nơi nào khác đăng ký thêm action.
+  • scripts/system-route.mjs — triển khai tham chiếu/legacy bằng Node, rẽ nhánh bằng `if (action === "ten_action")`. Đối chiếu được 182 action. KHÔNG dùng làm nguồn chính vì backend đang chạy là Java.
+  • java-backend/application/src/main/java/com/vntech/erp/application/rbac/ActionRbacRegistry.java — ma trận quyền `Map.entry("ten_action", List.of("module"))`. KHÔNG phải nơi đăng ký action; dùng để đối chiếu module RBAC của từng action. Đối chiếu được 214 action.
+  • KẾT QUẢ ĐỐI CHIẾU: 2 action chỉ có ở JS mà KHÔNG có trong switch Java; 3 action có trong ma trận RBAC mà không có trong switch Java (xem 2 khoá tương ứng bên dưới).
+  • LƯU Ý VỀ GET: `GET /api/system?action=template&kind=boq|material_catalog|projects|users|payments` là THAM SỐ TRUY VẤN của GET (tải file Excel mẫu), KHÔNG phải action POST — xem khoá `getKhongPhaiAction`.
+

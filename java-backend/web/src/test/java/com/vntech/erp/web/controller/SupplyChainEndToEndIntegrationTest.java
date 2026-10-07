@@ -156,6 +156,16 @@ class SupplyChainEndToEndIntegrationTest {
         assertTrue(!poId.isEmpty(), "create_po phải tạo PO trong DB");
         String poiId = jdbc.queryForObject(
                 "SELECT id FROM purchase_order_items WHERE purchase_order_id=? LIMIT 1", String.class, poId);
+        // ⛔⛔ SỬA 06/10/2026 (GO-LIVE · F2) — **PHẢI PHÁT HÀNH PO TRƯỚC KHI NHẬN HÀNG**.
+        //   ⭐ `create_po` ghi PO ở **`pending_approval`** ⇒ bài này trước đây gọi THẲNG
+        //      `receive_goods` ⇒ ⭐ **ĐANG MÃ HOÁ CHÍNH HÀNH VI CỦA LỖI F2** ✓
+        //   ⭐ `approve_po` trước đây ⛔ hỏng trong test ⇒ **NAY ĐÃ VÁ SCHEMA H2** ✓
+        //   ⭐ `postAction(..., 200)` **ĐÃ tự khẳng định HTTP 200**; ⭐ assert thêm chỉ để RÕ Ý,
+        //      ⭐ dùng `assertTrue` (⭐ chắc chắn có static-import) ⛔ không dùng `assertEquals` ✓
+        postAction(action("approve_po", "\"purchaseOrderId\":\"" + poId + "\""), 200);
+        assertTrue("waiting_delivery".equals(jdbc.queryForObject(
+                "SELECT status FROM purchase_orders WHERE id=?", String.class, poId)),
+                "⭐ sau approve_po, PO phải ở waiting_delivery thì mới nhận hàng được (F2)");
         // receive_goods
         String rgFields = "\"purchaseOrderId\":\"" + poId + "\",\"deliveryNoteNo\":\"DN-E2E\","
                 + "\"certificateStatus\":\"complete\",\"deliveryDocumentStatus\":\"complete\",\"qcOk\":true,"

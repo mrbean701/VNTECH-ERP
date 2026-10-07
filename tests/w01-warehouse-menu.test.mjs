@@ -30,12 +30,12 @@ const route = read("scripts/system-route.mjs");
 
 // ── BẢNG CHỐT `W-01` (nguyên văn yêu cầu của người dùng) ────────────────────────────────────────
 // # | Nhãn (ĐÚNG 5 mục) | Cổng quyền (khoá ĐÃ CÓ) | Đích đến THẬT
+// 📌 CẬP NHẬT **06/10/2026** (quyết định user · `ERP-SESSION-02` · `TASK-226`): GOM **7 mục → 1 MỤC «Kho vật tư»**
+//    (user chốt «Làm luôn»). 3 tab (KHO · XUẤT & NHẬP · CẤP PHÁT & HOÀN TRẢ) nay nằm **TRONG** màn `Inventory`.
+//    ⛔ **KHÔNG NỚI CỔNG** — cổng còn **MẠNH HƠN**: 1 mục dùng **CẢ 6 khoá kho ĐÃ CÓ** (⛔ vẫn 0 khoá module mới),
+//    và ⛔ **hết** va chạm `view: "dashboard"` giữa nhóm «Công việc» và nhóm «Kho» (xem `mt3-ui-29`).
 const EXPECTED = [
-  { key: "warehouse_hub", label: "Kho", permissionKeys: ["central_warehouse"], moduleKey: "central_warehouse" },
-  { key: "warehouse_inbound", label: "Nhập", permissionKeys: ["warehouse_receipt"], moduleKey: "warehouse_receipt" },
-  { key: "warehouse_outbound", label: "Xuất", permissionKeys: ["warehouse_issue"], moduleKey: "warehouse_issue" },
-  { key: "warehouse_transfer", label: "Điều chuyển", permissionKeys: ["inventory"], moduleKey: "inventory" },
-  { key: "warehouse_dashboard", label: "Dashboard tồn kho", permissionKeys: ["stocktake"], moduleKey: "inventory" },
+  { key: "warehouse_hub", label: "Kho vật tư", permissionKeys: ["central_warehouse", "warehouse_receipt", "warehouse_issue", "inventory", "stocktake", "material_norms"], moduleKey: "inventory" },
 ];
 // 6 khoá CŨ của nhóm KHO phải bị ẨN khỏi menu (nhưng KHÔNG xoá khỏi hệ thống).
 const LEGACY = ["warehouse_receipt", "warehouse_issue", "inventory", "stocktake", "material_norms", "central_warehouse"];
@@ -71,24 +71,25 @@ test("W-01 — ĐÚNG 5 mục, ĐÚNG nhãn, ĐÚNG nhóm «warehouse», mỗi m
     const literal = `{ key: "${item.key}", label: "${item.label}", groupKey: "warehouse", moduleKey: "${item.moduleKey}", permissionKeys: ["${item.permissionKeys.join('", "')}"]`;
     assert.ok(block.includes(literal), `Thiếu/sai mục menu: ${literal}`);
   }
-  assert.equal((block.match(/key: "warehouse_/g) || []).length, 5,
-    "Nhóm «KHO» phải khai báo ĐÚNG 5 mục");
-  // 5 NHÃN phải đúng nguyên văn và đúng thứ tự yêu cầu.
+  assert.equal((block.match(/key: "warehouse_/g) || []).length, 1,
+    "Nhóm «KHO» nay phải khai báo ĐÚNG **1 MỤC** «Kho vật tư» (gộp 7 mục cũ — quyết định user 06/10/2026)");
+  // NHÃN duy nhất phải đúng nguyên văn «Kho vật tư».
   const labels = [...block.matchAll(/label: "([^"]+)"/g)].map((m) => m[1]);
-  assert.deepEqual(labels, ["Kho", "Nhập", "Xuất", "Điều chuyển", "Dashboard tồn kho"],
-    "5 nhãn phải ĐÚNG thứ tự: Kho · Nhập · Xuất · Điều chuyển · Dashboard tồn kho");
+  assert.deepEqual(labels, ["Kho vật tư"],
+    "Nhãn DUY NHẤT phải là «Kho vật tư» (gộp 7 mục cũ — quyết định user 06/10/2026)");
 });
 
 test("W-01 — ĐỐI CHỨNG ÂM: 0 khoá module mới — mọi `permissionKeys` ∈ 6 khoá kho ĐÃ CÓ", () => {
   const block = menuItemsBlock();
   const used = [...block.matchAll(/permissionKeys: \[([^\]]+)\]/g)]
     .flatMap((m) => m[1].split(",").map((s) => s.trim().replace(/"/g, "")));
-  assert.equal(used.length, 5, "Mỗi mục phải khai ĐÚNG một khoá quyền (không dùng khoá mới gộp nhóm)");
+  assert.equal(used.length, 6, "Mục «Kho vật tư» phải gom ĐỦ **6 khoá kho ĐÃ CÓ** (⛔ không dùng khoá module mới)");
   const unknown = used.filter((key) => !EXISTING_WAREHOUSE_KEYS.includes(key));
   assert.deepEqual(unknown, [],
     `Phát hiện KHOÁ MỚI trong menu ⇒ vi phạm "KHÔNG thêm khoá module mới": ${unknown.join(", ")}`);
-  // Cổng quyền phải PHÂN BIỆT (không phải 5 mục cùng một khoá).
-  assert.equal(new Set(used).size, 5, "5 mục phải có 5 cổng quyền RIÊNG (không trùng nhau)");
+  // ⚠️ Sau khi GOM còn **1 mục** ⇒ phép «5 mục phải có 5 cổng quyền RIÊNG» ⛔ **KHÔNG còn nghĩa**.
+  //    Thay bằng khẳng định **MẠNH HƠN**: hợp các cổng quyền phải **PHỦ ĐỦ cả 6 khoá kho** (⛔ không sót khoá nào).
+  assert.equal(new Set(used).size, 6, "Cổng quyền của mục «Kho vật tư» phải PHỦ ĐỦ cả 6 khoá kho ĐÃ CÓ");
 });
 
 test("W-01 — ĐỐI CHỨNG ÂM: KHÔNG khoá module mới trong `ModuleKey` và KHÔNG `module_catalog` mới", () => {
@@ -183,13 +184,9 @@ test("W-01 — HUY HIỆU nhóm KHO không mất số: cộng theo CẢ CẶP kh
 
 test("W-01 — ĐÍCH ĐẾN THẬT: 4 mục mở màn CŨ đúng khoá; «Dashboard tồn kho» mở TAB dashboard của `Inventory`", () => {
   const block = menuItemsBlock();
-  // 4 mục đầu trỏ tới 4 khoá màn THẬT đã có.
-  assert.match(block, /key: "warehouse_hub", label: "Kho", groupKey: "warehouse", moduleKey: "central_warehouse"/);
-  assert.match(block, /key: "warehouse_inbound", label: "Nhập", groupKey: "warehouse", moduleKey: "warehouse_receipt"/);
-  assert.match(block, /key: "warehouse_outbound", label: "Xuất", groupKey: "warehouse", moduleKey: "warehouse_issue"/);
-  assert.match(block, /key: "warehouse_transfer", label: "Điều chuyển", groupKey: "warehouse", moduleKey: "inventory"/);
-  // «Dashboard tồn kho» = TAB của màn Tồn kho (không màn mới, không route mới) ⇒ cần `view` + ánh xạ tab.
-  assert.match(block, /key: "warehouse_dashboard", label: "Dashboard tồn kho", groupKey: "warehouse", moduleKey: "inventory", permissionKeys: \["stocktake"\], view: "dashboard"/);
+  // ⭐ GOM 7 → 1 (06/10/2026): mục DUY NHẤT trỏ tới khoá màn **HUB THẬT** `inventory` (⛔ không màn mới, ⛔ không route mới).
+  //    «Dashboard tồn kho» nay là **TAB ĐẦU của tab «KHO»** trong hub ⇒ ⛔ KHÔNG còn cần `view: "dashboard"`.
+  assert.match(block, /key: "warehouse_hub", label: "Kho vật tư", groupKey: "warehouse", moduleKey: "inventory"/);
   assert.match(menuHelpers, /type WarehouseMenuView = /, "Thiếu kiểu `WarehouseMenuView` cho đích đến của 5 mục");
   assert.match(menuHelpers, /warehouseMenuViewFor\(/, "Thiếu hàm định tuyến `warehouseMenuViewFor`");
   assert.match(page, /const warehouseView = warehouseMenuViewFor\(/,

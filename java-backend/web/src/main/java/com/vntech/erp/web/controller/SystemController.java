@@ -5,6 +5,7 @@ import com.vntech.erp.application.service.AdminSystemUseCase;
 import com.vntech.erp.application.service.AuthUseCase;
 import com.vntech.erp.application.service.BoqManagementUseCase;
 import com.vntech.erp.application.service.FinanceManagementUseCase;
+import com.vntech.erp.application.service.ContractReviewUseCase;
 import com.vntech.erp.application.service.HrManagementUseCase;
 import com.vntech.erp.application.service.BootstrapUseCase;
 import com.vntech.erp.application.service.ProjectContractUseCase;
@@ -54,6 +55,8 @@ public class SystemController {
     private final FinanceManagementUseCase financeManagementUseCase;
     private final MaterialCatalogManagementUseCase materialCatalogManagementUseCase;
     private final HrManagementUseCase hrManagementUseCase;
+    /** MỐC 103 — MENU «REVIEW HĐ». */
+    private final ContractReviewUseCase contractReviewUseCase;
     private final ProjectManagementUseCase projectManagementUseCase;
     private final ProjectContractUseCase projectContractUseCase;
     private final ProductionManagementUseCase productionManagementUseCase;
@@ -69,7 +72,7 @@ public class SystemController {
     private final StockManagementUseCase stockManagementUseCase;
     private final SystemSettingsUseCase systemSettingsUseCase;
     // MT2 §15.1 — NOTIFICATION ENGINE (Service · Rule · Resolver · Log). Bean ở `ApplicationBeansConfig`.
-    private final com.vntech.erp.application.service.NotificationManagementUseCase notificationManagementUseCase;
+    private final com.vntech.erp.application.service.NotificationManagementUseCase notificationManagementUseCase;  private final com.vntech.erp.application.service.ErrorReportUseCase errorReportUseCase; // USER 29/09/2026 (MỐC 42) BÁO LỖI tab 14
     private final com.vntech.erp.infrastructure.excel.ExcelTemplateService excelTemplateService;
     /**
      * PHASE 0B (S-02) — kiểm quyền ở tầng action.
@@ -90,6 +93,7 @@ public class SystemController {
                             FinanceManagementUseCase financeManagementUseCase,
                             MaterialCatalogManagementUseCase materialCatalogManagementUseCase,
                             HrManagementUseCase hrManagementUseCase,
+                            ContractReviewUseCase contractReviewUseCase,
                             ProjectManagementUseCase projectManagementUseCase,
                             ProjectContractUseCase projectContractUseCase,
                             com.vntech.erp.application.rbac.AccessScopeService accessScopeService,
@@ -106,7 +110,7 @@ public class SystemController {
                             SystemSettingsUseCase systemSettingsUseCase,
                             com.vntech.erp.infrastructure.excel.ExcelTemplateService excelTemplateService,
                             com.vntech.erp.application.rbac.RbacService rbacService,
-                            com.vntech.erp.application.service.NotificationManagementUseCase notificationManagementUseCase) {
+                            com.vntech.erp.application.service.NotificationManagementUseCase notificationManagementUseCase, com.vntech.erp.application.service.ErrorReportUseCase errorReportUseCase) { // MỐC 42
         this.authUseCase = authUseCase;
         this.sessionCookieFactory = sessionCookieFactory;
         this.bootstrapUseCase = bootstrapUseCase;
@@ -114,6 +118,7 @@ public class SystemController {
         this.financeManagementUseCase = financeManagementUseCase;
         this.materialCatalogManagementUseCase = materialCatalogManagementUseCase;
         this.hrManagementUseCase = hrManagementUseCase;
+        this.contractReviewUseCase = contractReviewUseCase;
         this.projectManagementUseCase = projectManagementUseCase;
         this.projectContractUseCase = projectContractUseCase;
         this.productionManagementUseCase = productionManagementUseCase;
@@ -127,7 +132,7 @@ public class SystemController {
         this.partnerManagementUseCase = partnerManagementUseCase;
         this.stockManagementUseCase = stockManagementUseCase;
         this.systemSettingsUseCase = systemSettingsUseCase;
-        this.notificationManagementUseCase = notificationManagementUseCase;
+        this.notificationManagementUseCase = notificationManagementUseCase; this.errorReportUseCase = errorReportUseCase; // MỐC 42
         this.excelTemplateService = excelTemplateService;
         this.rbacService = rbacService;
         this.accessScopeService = accessScopeService;
@@ -372,7 +377,18 @@ public class SystemController {
                     return ResponseEntity.ok(json(Map.of("ok", true, "message", message)));
                 }
                 case "update_user" -> {
-                    AuthUseCase.CurrentUser cu = requireRequireAdmin(request);
+                    // MỐC 109 (30/09/2026) — ⛔ TRƯỚC ĐÂY dùng `requireRequireAdmin(request)` (admin-only)
+                    // ⇒ mọi tài khoản KHÔNG phải admin LUÔN nhận 403 «Tài khoản không có quyền thực hiện
+                    // nghiệp vụ này.», DÙ đã được cấp `admin_tab_01` + `canEdit`. Hệ quả: thay đổi của
+                    // MỐC 103 ở `ActionRbacRegistry` (`update_user` → `admin_tab_01`, capability `canEdit`)
+                    // và ở `UserManagementUseCase.requireAccountUpdateRight` trở thành CODE CHẾT —
+                    // frontend mở khoá modal sửa tài khoản nhưng backend luôn chặn ở cổng này.
+                    // ĐO THẬT: probe `sec_probe_017830` (role `ksda`) có `admin_tab_01`
+                    // can_view/can_use/can_edit=1 vẫn nhận 403.
+                    // NAY: cổng quyền DUY NHẤT là `rbacService.requireActionModule(...)` ở ĐẦU `post()`
+                    // (xem dòng 228-231) — đã chạy TRƯỚC switch và fail-closed cho `update_user`.
+                    // Quyền ĐỔI VAI TRÒ vẫn admin-only nhờ `UserManagementUseCase.guardRoleChange`.
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request, false);
                     String message = userManagementUseCase.updateUser(asUserPrincipal(cu), payload);
                     return ResponseEntity.ok(json(Map.of("ok", true, "message", message)));
                 }
@@ -750,6 +766,32 @@ public class SystemController {
                     Map<String, Object> result = hrManagementUseCase.saveLaborContract(asHrPrincipal(cu), payload);
                     return ResponseEntity.ok(jsonResult(result));
                 }
+                // MỐC 103 (user 29/09) — MENU «REVIEW HĐ».
+                case "list_contract_review" -> {
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                    return ResponseEntity.ok(jsonResult(
+                            contractReviewUseCase.list(asHrPrincipal(cu))));
+                }
+                case "save_contract_review" -> {
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                    return ResponseEntity.ok(jsonResult(
+                            contractReviewUseCase.save(asHrPrincipal(cu), payload)));
+                }
+                case "open_contract_review" -> {
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                    return ResponseEntity.ok(jsonResult(
+                            contractReviewUseCase.open(asHrPrincipal(cu), payload)));
+                }
+                case "log_contract_review" -> {
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                    return ResponseEntity.ok(jsonResult(
+                            contractReviewUseCase.logReview(asHrPrincipal(cu), payload)));
+                }
+                case "delete_contract_review" -> {
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                    return ResponseEntity.ok(jsonResult(
+                            contractReviewUseCase.delete(asHrPrincipal(cu), payload)));
+                }
                 case "set_labor_contract_status" -> {
                     AuthUseCase.CurrentUser cu = requireCurrentUser(request);
                     Map<String, Object> result = hrManagementUseCase.setLaborContractStatus(asHrPrincipal(cu), payload);
@@ -1093,6 +1135,17 @@ public class SystemController {
                     resp.putAll(result);
                     return ResponseEntity.ok(resp);
                 }
+                // MT3 §B.3 — «YÊU CẦU BỔ SUNG»: trả phiếu về cho người lập kèm lý do BẮT BUỘC.
+                // Cùng khuôn với `decide_approval` ⇒ cùng tầng, cùng kiểu Principal, cùng RBAC.
+                // ⛔ KHÔNG hard-code quyền ở đây: cổng quyền nằm ở `ActionRbacRegistry` + `canApproveRequestStage`.
+                case "request_supplement" -> {
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                    Map<String, Object> result = requestManagementUseCase.requestSupplement(asReqPrincipal(cu), payload);
+                    Map<String, Object> resp = new LinkedHashMap<>();
+                    resp.put("ok", true);
+                    resp.putAll(result);
+                    return ResponseEntity.ok(resp);
+                }
                 case "create_po" -> {
                     AuthUseCase.CurrentUser cu = requireCurrentUser(request);
                     Map<String, Object> result = purchaseManagementUseCase.createPo(asPurchasePrincipal(cu), payload);
@@ -1263,13 +1316,35 @@ case "reject_po" -> {
                 // MT2 §13.1/§13.2 — CẤU HÌNH THÔNG BÁO (tab Thông báo · màn Quản trị): module `admin`.
                 //    ⛔ KHÔNG đụng `task_notifications` (hàng đợi in-app của luồng CÔNG VIỆC).
                 case "save_notification_config" -> {
-                    requireCurrentUser(request);
+                    // MT3 §I — ⛔ BACKEND PHẢI KIỂM «người tạo thông báo có quyền gửi tới PHẠM VI đã chọn».
+                    // TRƯỚC ĐÂY: `requireCurrentUser(request)` được gọi nhưng **VỨT BỎ kết quả** ⇒ ⛔ KHÔNG
+                    // kiểm được gì ⇒ ai vào được màn quản trị là gửi được tới BẤT KỲ phạm vi nào (kể cả `all`).
+                    // NAY: lấy `cu` ra và kiểm **từng dự án** trong `targets` bằng ĐÚNG hàm đang dùng ở dòng 303
+                    // (`accessScopeService.requireProjectAccess`) — ⛔ KHÔNG phát minh luật mới.
+                    // ⚠️ CHỈ áp cho `recipientMode = "project"` (luật dự án đã có sẵn).
+                    // ⛔ `department` / `all` CHƯA kiểm vì **chưa có luật** (cần user chốt cấp quyền) —
+                    //    ghi rõ ở `docs/agent-progress/TASK-MT3-BE-09.md`, ⛔ KHÔNG tự chọn.
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                    if ("project".equals(trim(payload.get("recipientMode")))
+                            && payload.get("targets") instanceof java.util.List<?> targets) {
+                        for (Object target : targets) {
+                            String targetId = target instanceof java.util.Map<?, ?> row
+                                    ? trim(row.get("targetId")) : "";
+                            if (!targetId.isEmpty()) {
+                                accessScopeService.requireProjectAccess(cu.id(), cu.role(), targetId, true,
+                                        "Không có quyền gửi thông báo tới dự án này.");
+                            }
+                        }
+                    }
                     return ResponseEntity.ok(jsonResult(notificationManagementUseCase.saveConfig(payload)));
                 }
                 case "set_notification_config_status" -> {
                     requireCurrentUser(request);
                     return ResponseEntity.ok(jsonResult(notificationManagementUseCase.setConfigActive(payload)));
                 }
+                // MT2-P3-02 §13.1 — **DANH SÁCH** cấu hình thông báo (chữ R của CRUD · tab Quản trị).
+                // USER 29/09/2026 (MỐC 42) — 3 action BÁO LỖI đặt CUỐI switch
+                // (xem cuối file) để ⛔ KHÔNG dịch số dòng các `case` mà hồ sơ F-03 gắn cứng.
                 // MT2-P3-02 §13.1 — **DANH SÁCH** cấu hình thông báo (chữ R của CRUD · tab Quản trị).
                 //   Search/Sort/Filter do UI lo trên danh sách này ✔.
                 case "notification_configs" -> {
@@ -1341,6 +1416,13 @@ case "reject_po" -> {
             }
             case "director_pending_approvals" -> {
                 AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                // MT3-A1 (quyết định user 27/09/2026 — nguyên văn: «Nếu như quá SLA mà không có ai duyệt
+                //   mặc định bị hệ thống từ chối. Từ chối khi quá SLA.»):
+                //   TRƯỚC khi trả danh sách chờ duyệt ⇒ QUÉT + TỰ TỪ CHỐI các bước đã quá SLA 72 giờ.
+                //   ⚠️ Chạy ở đây (⛔ KHÔNG dựng job nền) ⇒ không thêm hạ tầng mới; hàm IDEMPOTENT
+                //      (tầng store chỉ tác động bước còn `status='pending'`) nên gọi lặp là vô hại.
+                //   ⚠️ Đây là hành vi của HỆ THỐNG ⇒ ⛔ không kiểm quyền người gọi cho riêng bước quét.
+                requestManagementUseCase.sweepOverdueApprovals();
                 return ResponseEntity.ok(jsonResult(
                         opsTaskManagementUseCase.directorPendingApprovals(asOpsTaskPrincipal(cu))));
             }
@@ -1383,6 +1465,13 @@ case "reject_po" -> {
                     String m = partnerManagementUseCase.deletePartner(asPartnerPrincipal(cu), payload);
                     return ResponseEntity.ok(json(Map.of("ok", true, "message", m)));
                 }
+                // USER 29/09/2026 (MỐC 42) — BÁO LỖI (tab 14). Đặt CUỐI switch, SAU mọi `case`
+                // mà hồ sơ `F-03-TAI-CHINH-AUDIT-PHU-THUOC.md` gắn số dòng ⇒ ⛔ không dịch dòng.
+                // ⛔ `save_error_report` KHÔNG gắc module ⇒ MỌI user đã đăng nhập đều gửi được
+                //    (nút báo lỗi nằm cạnh nút đổi màu nền). Hai action kia gắn `admin`.
+                case "save_error_report" -> { requireCurrentUser(request); return ResponseEntity.ok(jsonResult(errorReportUseCase.save(payload))); }
+                case "error_reports" -> { requireCurrentUser(request); return ResponseEntity.ok(jsonResult(java.util.Map.of("reports", errorReportUseCase.list(payload)))); }
+                case "mark_error_report_resolved" -> { requireCurrentUser(request); return ResponseEntity.ok(jsonResult(errorReportUseCase.resolve(payload))); }
                 default -> {
                     return ResponseEntity.status(400).body(json(Map.of("ok", false,
                             "error", "Action '" + action + "' chưa được triển khai trên backend Java (Strangler Fig).")));

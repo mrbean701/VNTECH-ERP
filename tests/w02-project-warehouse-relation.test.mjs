@@ -193,8 +193,18 @@ dbTest("W-02 — CSDL THẬT: 0 dòng mồ côi (`project_id` không trỏ tới
   // ⚠️ CẬP NHẬT 23/09/2026 (MT2-P14-03c): ảnh chụp 20/09 ghi 4 kho / 3 kho gắn dự án; các task MT2 sau đó
   // đã tạo thêm kho công trường trên DB đang chạy ⇒ số ĐO LẠI là **6 kho · 2 dự án · 5 kho gắn dự án · 0 mồ côi**
   // (đã ghi vào mục «CẬP NHẬT SỐ ĐO — 23/09/2026» của tệp audit). ⛔ KHÔNG sửa DB để khớp tài liệu (GOAL §19).
-  assert.ok(audit.includes("**6**"), "Tệp audit phải ghi lại số kho ĐO LẠI (6)");
-  assert.match(audit, /`PRJ-DEMO-01 → 2`/, "Tệp audit phải ghi lại chiều N>1 đo được (PRJ-DEMO-01 → 2 kho)");
-  assert.ok(warehouses === 6 && projects === 2 && linked === 5
+  // ⚠️ CẬP NHẬT 28/09/2026 (TH-005): dự án mới `DA06` được tạo kèm kho công trường `KHO-DA06` theo luồng
+  // `create_project` + cờ `createWarehouse` ⇒ số ĐO LẠI là **7 kho · 3 dự án · 6 kho gắn dự án · 0 mồ côi**,
+  // và `PRJ-DEMO-01` nay có **4** kho. Đã ghi thêm mục «CẬP NHẬT SỐ ĐO — 28/09/2026» vào tệp audit.
+  // 📌 Đo lại bằng `node tools/mt3-measure-w02.mjs` (đọc MySQL thật, không ghi).
+  assert.ok(audit.includes("**12**"), "Tệp audit phải ghi lại số kho ĐO LẠI MỚI NHẤT (12)");
+  assert.match(audit, /`PRJ-DEMO-01 → 4`/, "Tệp audit phải ghi lại chiều N>1 đo được (PRJ-DEMO-01 → 4 kho)");
+  // ⚠️ CẬP NHẬT 05/10/2026 (GO-LIVE · áp `V37__…_transit_warehouse.sql`): V37 tạo **kho HỆ THỐNG**
+  // `WH-TRANSIT` (`code=TRANSIT`, `type=transit`, `project_id IS NULL`) — kho mà
+  // `StockManagementUseCase` BẮT BUỘC phải có: thiếu nó thì MỌI phiếu điều chuyển dừng ngay ở
+  // `Api("Thiếu kho Transit hệ thống.")` (đo được trên MySQL thật trước khi áp V37: `type='transit'` = **0**).
+  // Vì là kho hệ thống KHÔNG gắn dự án nên chỉ `warehouses` tăng, hai chỉ số kia KHÔNG đổi:
+  //   warehouses 11 → **12** · projects **5** (không đổi) · linked **10** (không đổi) · mồ côi **0**.
+  assert.ok(warehouses === 12 && projects === 5 && linked === 10
     , `Số đo lại khác con số đã chép trong audit (kho=${warehouses}, dự án=${projects}, kho gắn dự án=${linked}) ⇒ phải cập nhật lại tệp audit`);
 });

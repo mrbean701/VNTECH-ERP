@@ -18,12 +18,6 @@
 .app-shell.vntech-full-ui .vntech-app-header .header-user-avatar,
 .app-shell.vntech-full-ui .vntech-app-header .user-menu>button small,
 .app-shell.vntech-full-ui .vntech-app-header .user-menu>button strong,
-.approval-attachment-hint p,
-.approval-attachment-hint strong,
-.approval-card dt,
-.approval-card footer button,
-.approval-card footer span,
-.approval-card>div:first-child small,
 .approval-detail-head b,
 .approval-detail-head p,
 .approval-detail-head>div:first-child small,
@@ -35,7 +29,6 @@
 .approval-flow-step span,
 .approval-flow-step>b,
 .approval-flow>h3,
-.approval-history-mini strong,
 .approval-log p,
 .approval-meta-pane dd,
 .approval-meta-pane dt,
@@ -45,7 +38,6 @@
 .approval-queue-list button span,
 .approval-queue-list small,
 .approval-queue-list span,
-.approval-title p,
 .auth-brand em,
 .baseline-table td small,
 .business-group-row small,
@@ -144,12 +136,6 @@ th {
       8px  .app-shell.vntech-full-ui .vntech-app-header .header-user-avatar
     7.8px  .app-shell.vntech-full-ui .vntech-app-header .user-menu>button small
    8.25px  .app-shell.vntech-full-ui .vntech-app-header .user-menu>button strong
-    8.7px  .approval-attachment-hint p
-    8.5px  .approval-attachment-hint strong
-      8px  .approval-card dt
-      8px  .approval-card footer button
-      8px  .approval-card footer span
-      8px  .approval-card>div:first-child small
     8.5px  .approval-detail-head b
     8.5px  .approval-detail-head p
       8px  .approval-detail-head>div:first-child small
@@ -161,7 +147,6 @@ th {
       8px  .approval-flow-step span
     7.7px  .approval-flow-step>b
     8.5px  .approval-flow>h3
-    8.5px  .approval-history-mini strong
     8.5px  .approval-log p
     8.5px  .approval-meta-pane dd
     8.5px  .approval-meta-pane dt
@@ -171,7 +156,6 @@ th {
     8.5px  .approval-queue-list button span
     8.5px  .approval-queue-list small
     8.8px  .approval-queue-list span
-      8px  .approval-title p
       8px  .auth-brand em
     8.5px  .baseline-table td small
       8px  .business-group-row small

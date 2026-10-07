@@ -13,6 +13,8 @@
 
 import { DataTable, ListToolbar, StatusBadge } from "@/app/components/ui";
 import { format } from "@/lib/ui-shared";
+// MT3 §IV.6 — trạng thái hiển thị bằng nguồn ánh xạ DÙNG CHUNG (⛔ không lộ mã thô ra UI).
+import { statusLabel } from "@/lib/status-labels";
 import type { AppData, Row } from "@/lib/ui-shared";
 import { useState } from "react";
 
@@ -56,7 +58,7 @@ function AllocateReturn({ data, project }: { data: AppData; project: string }) {
             { key: "c6", header: "Kho nhập", render: () => <span className="muted">—</span> },
             { key: "c7", header: "Ngày trả", render: (row) => <>{row.returnedAt ? String(row.returnedAt).slice(0, 10) : "—"}</> },
             { key: "c8", header: "SL nhận", render: (row) => <><strong>{format.format(row.acceptedQty || 0)}</strong></> },
-            { key: "c9", header: "Trạng thái", render: (row) => <><StatusBadge value={String(row.status)} /></> },
+            { key: "c9", header: "Trạng thái", render: (row) => <><StatusBadge value={statusLabel(row.status)} /></> },
           ]} emptyText="Chưa có phiếu hoàn trả trong phạm vi." />
         )}
         <div className="table-pagination functional-summary"><span>{tab === 0 ? `Hiển thị ${scopeIssues.length} phiếu cấp phát.` : `Hiển thị ${scopeReturns.length} phiếu hoàn trả.`}</span></div>

@@ -245,11 +245,11 @@ public class WarehouseStockStoreAdapter implements WarehouseStockStore {
     @Override
     public Optional<Map<String, Object>> findStockIssueFull(String issueId) {
         List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
-                SELECT si.id,si.issue_no AS "issueNo",si.project_id AS "projectId",si.team_id AS "teamId",
+                SELECT si.id,si.issue_no AS "issueNo",si.project_id AS "projectId",si.team_id AS "teamId",p.code AS "projectCode",
                        si.request_id AS "requestId",si.status,si.approved_by AS "approvedBy",
                        si.issued_by AS "issuedBy",si.from_warehouse_id AS "fromWarehouseId",
                        t.warehouse_id AS "toWarehouseId"
-                FROM stock_issues si LEFT JOIN teams t ON t.id=si.team_id
+                FROM stock_issues si LEFT JOIN teams t ON t.id=si.team_id LEFT JOIN projects p ON p.id=si.project_id
                 WHERE si.id=?""", issueId);
         return rows.isEmpty() ? Optional.empty() : Optional.of(new LinkedHashMap<>(rows.get(0)));
     }
@@ -886,6 +886,35 @@ public class WarehouseStockStoreAdapter implements WarehouseStockStore {
                     item.get("contractId"), item.get("materialId"), sourceWarehouseId,
                     transitWarehouseId, "CENTRAL_RETURN_SHIP", item.get("quantity"), now,
                     "central_return", returnId, userId, now, now);
+            // ⛔⛔ VÁ 05/10/2026 (GO-LIVE · BUG-20261005-005) — THIẾU SỔ SỞ HỮU HỢP ĐỒNG.
+            //   Trước bản vá, hàm này CHỈ ghi `stock_movements` ⇒ hàng rời kho nguồn về mặt VẬT LÝ
+            //   nhưng `contract_stock_ledger` tại Transit vẫn **0** ⇒ `receiveCentralReturn` (chốt ở
+            //   `StockManagementUseCase:925`: `proposed > transitOwner` là chặn) **LUÔN** báo
+            //   «Số liệu Transit vật lý/Contract không đủ; dừng nhận để tránh sai tồn.»
+            //   ⇒ phiếu **KẸT VĨNH VIỄN** ở `in_transit` (không có action hủy/hoàn tác) và hàng kẹt ở Transit.
+            //   ĐO ĐƯỢC trước khi vá: `stock_movements` 4 lệnh CENTRAL_RETURN_SHIP + 9 đơn vị ở WH-TRANSIT,
+            //   trong khi `contract_stock_ledger` có **0** dòng loại đó và **0** dòng ở WH-TRANSIT.
+            //   KHUÔN ĐÚNG là `issueStock` (dòng ~318-337): ghi 2 dòng — giảm ở kho NGUỒN, tăng ở kho ĐÍCH.
+            jdbcTemplate.update("""
+                    INSERT INTO contract_stock_ledger (id,project_id,contract_id,warehouse_id,material_id,
+                                                       movement_type,quantity_delta,occurred_at,reference_type,
+                                                       reference_id,reference_item_id,counterparty_contract_id,
+                                                       actor_user_id,note,created_at)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,NULL,?,?,?)""",
+                    "CSL_" + java.util.UUID.randomUUID(), projectId, item.get("contractId"),
+                    sourceWarehouseId, item.get("materialId"), "CENTRAL_RETURN_SHIP",
+                    -((Number) item.get("quantity")).doubleValue(), now, "central_return", returnId,
+                    item.get("itemId"), userId, "Chuyển vật tư dư về Kho Tổng (rời kho nguồn)", now);
+            jdbcTemplate.update("""
+                    INSERT INTO contract_stock_ledger (id,project_id,contract_id,warehouse_id,material_id,
+                                                       movement_type,quantity_delta,occurred_at,reference_type,
+                                                       reference_id,reference_item_id,counterparty_contract_id,
+                                                       actor_user_id,note,created_at)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,NULL,?,?,?)""",
+                    "CSL_" + java.util.UUID.randomUUID(), projectId, item.get("contractId"),
+                    transitWarehouseId, item.get("materialId"), "CENTRAL_RETURN_SHIP",
+                    ((Number) item.get("quantity")).doubleValue(), now, "central_return", returnId,
+                    item.get("itemId"), userId, "Hàng đang vận chuyển về Kho Tổng", now);
         }
         jdbcTemplate.update("""
                 UPDATE central_returns SET status='in_transit',approved_by=?,approved_at=?,
@@ -925,6 +954,51 @@ public class WarehouseStockStoreAdapter implements WarehouseStockStore {
                         "MOV_" + java.util.UUID.randomUUID(), projectId, u.get("contractId"),
                         u.get("contractId"), u.get("materialId"), transitWarehouseId, sourceWarehouseId,
                         "CENTRAL_RETURN_REJECT", rejectedLost, now, "central_return", returnId, userId, now, now);
+            }
+            // ⛔⛔ VÁ 05/10/2026 (GO-LIVE · BUG-20261005-005) — CÙNG LỖI NHƯ Ở BƯỚC DUYỆT:
+            //   hàm này cũng CHỈ ghi `stock_movements`, KHÔNG ghi `contract_stock_ledger` ⇒ sổ sở hữu
+            //   tại Transit **không bao giờ giảm** sau khi nhận, và sổ tại Kho Tổng **không bao giờ tăng**
+            //   ⇒ hỏng sổ vĩnh viễn. Ghi 2 dòng cho phần NHẬN (Transit → Kho Tổng) và 2 dòng cho phần
+            //   LOẠI/MẤT (Transit → trả lại kho nguồn), đúng khuôn `issueStock`.
+            if (accepted > 0) {
+                jdbcTemplate.update("""
+                        INSERT INTO contract_stock_ledger (id,project_id,contract_id,warehouse_id,material_id,
+                                                           movement_type,quantity_delta,occurred_at,reference_type,
+                                                           reference_id,reference_item_id,counterparty_contract_id,
+                                                           actor_user_id,note,created_at)
+                        VALUES (?,?,?,?,?,?,?,?,?,?,?,NULL,?,?,?)""",
+                        "CSL_" + java.util.UUID.randomUUID(), projectId, u.get("contractId"),
+                        transitWarehouseId, u.get("materialId"), "CENTRAL_RETURN_RECEIVE", -accepted, now,
+                        "central_return", returnId, u.get("id"), userId, "Rời kho vận chuyển", now);
+                jdbcTemplate.update("""
+                        INSERT INTO contract_stock_ledger (id,project_id,contract_id,warehouse_id,material_id,
+                                                           movement_type,quantity_delta,occurred_at,reference_type,
+                                                           reference_id,reference_item_id,counterparty_contract_id,
+                                                           actor_user_id,note,created_at)
+                        VALUES (?,?,?,?,?,?,?,?,?,?,?,NULL,?,?,?)""",
+                        "CSL_" + java.util.UUID.randomUUID(), projectId, u.get("contractId"),
+                        centralWarehouseId, u.get("materialId"), "CENTRAL_RETURN_RECEIVE", accepted, now,
+                        "central_return", returnId, u.get("id"), userId, "Nhận tại Kho Tổng", now);
+            }
+            if (rejectedLost > 0) {
+                jdbcTemplate.update("""
+                        INSERT INTO contract_stock_ledger (id,project_id,contract_id,warehouse_id,material_id,
+                                                           movement_type,quantity_delta,occurred_at,reference_type,
+                                                           reference_id,reference_item_id,counterparty_contract_id,
+                                                           actor_user_id,note,created_at)
+                        VALUES (?,?,?,?,?,?,?,?,?,?,?,NULL,?,?,?)""",
+                        "CSL_" + java.util.UUID.randomUUID(), projectId, u.get("contractId"),
+                        transitWarehouseId, u.get("materialId"), "CENTRAL_RETURN_REJECT", -rejectedLost, now,
+                        "central_return", returnId, u.get("id"), userId, "Rời kho vận chuyển (loại/mất)", now);
+                jdbcTemplate.update("""
+                        INSERT INTO contract_stock_ledger (id,project_id,contract_id,warehouse_id,material_id,
+                                                           movement_type,quantity_delta,occurred_at,reference_type,
+                                                           reference_id,reference_item_id,counterparty_contract_id,
+                                                           actor_user_id,note,created_at)
+                        VALUES (?,?,?,?,?,?,?,?,?,?,?,NULL,?,?,?)""",
+                        "CSL_" + java.util.UUID.randomUUID(), projectId, u.get("contractId"),
+                        sourceWarehouseId, u.get("materialId"), "CENTRAL_RETURN_REJECT", rejectedLost, now,
+                        "central_return", returnId, u.get("id"), userId, "Trả lại kho nguồn (loại/mất)", now);
             }
             jdbcTemplate.update("""
                     UPDATE central_return_items SET counted_qty=?,accepted_qty=?,rejected_qty=?,updated_at=?

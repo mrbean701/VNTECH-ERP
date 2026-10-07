@@ -294,11 +294,62 @@ public final class MaterialCatalogManagementUseCase {
         return Map.of("message", active ? "Đã kích hoạt nhóm vật tư." : "Đã ẩn nhóm vật tư.");
     }
 
+    /**
+     * ⛔⛔ VÁ 05/10/2026 (GO-LIVE · BUG-20261005-014 — MEDIUM) — **LỖI CHUYỂN NGỮ, ⛔ KHÔNG PHẢI LỖI THIẾT KẾ**.
+     *
+     * BẢN JAVA CŨ (2 dòng) ⛔ **ĐÁNH MẤT CẢ HAI HÀNH VI** của JS gốc `scripts/system-route.mjs:2725-2735`:
+     * ```js
+     * const used = await first(`SELECT COUNT(*) AS count FROM materials WHERE category_id=?`, categoryId);
+     * if (Number(used?.count || 0) > 0)
+     *   throw new Error("Hệ M&E đang có vật tư. Hãy chuyển vật tư sang hệ khác hoặc ẩn hệ để giữ lịch sử.");
+     * await env.DB.batch([
+     *   env.DB.prepare(`DELETE FROM material_subcategories WHERE category_id=?`).bind(categoryId),  // ⭐ XOÁ NHÓM CON TRƯỚC
+     *   env.DB.prepare(`DELETE FROM material_categories WHERE id=?`).bind(categoryId),
+     * ]);
+     * return { message: "Đã xóa hệ M&E và các nhóm con trống." };
+     * ```
+     * ⇒ ① ⛔ **thiếu chốt chặn «hệ đang có vật tư»** · ② ⛔ **thiếu bước xoá nhóm con**.
+     *
+     * ⭐ HẬU QUẢ ĐÃ ĐO ĐƯỢC (TASK-196, bằng SQL trực tiếp): ⛔ **NHÓM CON MỒ CÔI** —
+     * `material_subcategories.category_id` trỏ tới một `material_categories.id` **đã bị xoá**
+     * (⭐ `SELECT COUNT(*) FROM material_categories WHERE id='MCAT_e28dcf33-…'` ⇒ **0**) ✓
+     * ⚠️ Và DB **⛔ KHÔNG có khoá ngoại** (131 bảng · 0 FK) ⇒ ⛔ **tầng DB ⛔ không chặn, ⛔ không cascade** ✓
+     * ⚠️ Tên hàm cũ là `deleteCategorySafe` — ⭐ **cái tên HỨA «an toàn»** mà ⛔ **không kiểm gì** ✓
+     *
+     * ⭐ CÁCH VÁ: **chuyển đúng JS** (⛔ không phải ý kiến của tôi) — ⭐ chốt chặn + xoá nhóm con + **đúng thông điệp** ✓
+     * ⛔ KHÔNG cascade ngầm: ⭐ **chặn trước, rồi mới xoá con** — ⭐ đúng thứ tự JS ✓
+     */
     public Map<String, Object> deleteMaterialCategory(Principal principal, Map<String, Object> payload) {
         String categoryId = trim(payload.get("categoryId"));
         store.findCategory(categoryId).orElseThrow(() -> Api("Không tìm thấy nhóm vật tư."));
+        // ⭐ CHỐT CHẶN (JS `:2728-2730`) — ⛔ KHÔNG xoá khi hệ còn vật tư
+        long used = store.allMaterials().stream().filter((m) -> categoryId.equals(cot(m, "category_id"))).count();
+        if (used > 0)
+            throw Api("Hệ M&E đang có vật tư. Hãy chuyển vật tư sang hệ khác hoặc ẩn hệ để giữ lịch sử.");
+        // ⭐ XOÁ NHÓM CON **TRƯỚC** (JS `:2732`) — ⛔ bỏ bước này sẽ sinh bản ghi MỒ CÔI
+        for (Map<String, Object> s : store.subcategories())
+            if (categoryId.equals(cot(s, "category_id"))) store.deleteSubcategorySafe(sv(s, "id"));
         store.deleteCategorySafe(categoryId);
-        return Map.of("message", "Đã xóa nhóm vật tư.");
+        return Map.of("message", "Đã xóa hệ M&E và các nhóm con trống.");   // ⭐ ĐÚNG THÔNG ĐIỆP JS
+    }
+
+    /**
+     * ⚠️ ĐỌC CỘT CHẤP NHẬN **CẢ HAI KIỂU TÊN** — ⭐ vì trong cùng store này hai hàm trả **hai kiểu khác nhau**:
+     * · `subcategories()` dùng `SELECT … category_id AS categoryId` ⇒ **camelCase**
+     * · `allMaterials()` dùng `SELECT *` ⇒ **snake_case** (`category_id`)
+     * ⛔ Đây đúng loại bẫy «đoán tên trường» đã gây lỗi nhiều lần trong phiên này ⇒ ⭐ đọc TOLERANT, ⛔ không đoán.
+     */
+    private static String cot(Map<String, Object> m, String snake) {
+        String v = sv(m, snake);
+        if (!v.isEmpty()) return v;
+        StringBuilder camel = new StringBuilder();
+        boolean hoa = false;
+        for (char c : snake.toCharArray()) {
+            if (c == '_') { hoa = true; continue; }
+            camel.append(hoa ? Character.toUpperCase(c) : c);
+            hoa = false;
+        }
+        return sv(m, camel.toString());
     }
 
     // ============ subcategories ============
@@ -359,11 +410,26 @@ public final class MaterialCatalogManagementUseCase {
         return Map.of("message", active ? "Đã kích hoạt nhóm con." : "Đã ẩn nhóm con.");
     }
 
+    /**
+     * ⛔ VÁ 05/10/2026 (cùng BUG-20261005-014 · MEDIUM) — JS gốc `scripts/system-route.mjs:2766-2773` có chốt chặn:
+     * ```js
+     * const used = await first(`SELECT COUNT(*) AS count FROM materials WHERE subcategory_id=?`, subcategoryId);
+     * if (Number(used?.count || 0) > 0)
+     *   throw new Error("Nhóm con đang có vật tư. Hãy chuyển vật tư sang nhóm khác trước khi xóa.");
+     * await env.DB.prepare(`DELETE FROM material_subcategories WHERE id=?`).bind(subcategoryId).run();
+     * return { message: "Đã xóa nhóm con chưa có vật tư." };
+     * ```
+     * Bản Java cũ ⛔ **đánh mất chốt chặn** ⇒ ⭐ chuyển lại đúng JS ✓ (⚠️ `materials.subcategory_id` **CÓ** trong lược đồ) ✓
+     */
     public Map<String, Object> deleteMaterialSubcategory(Principal principal, Map<String, Object> payload) {
         String subcategoryId = trim(payload.get("subcategoryId"));
         store.findSubcategory(subcategoryId).orElseThrow(() -> Api("Không tìm thấy nhóm con."));
+        // ⭐ CHỐT CHẶN (JS `:2769-2771`)
+        long used = store.allMaterials().stream().filter((m) -> subcategoryId.equals(cot(m, "subcategory_id"))).count();
+        if (used > 0)
+            throw Api("Nhóm con đang có vật tư. Hãy chuyển vật tư sang nhóm khác trước khi xóa.");
         store.deleteSubcategorySafe(subcategoryId);
-        return Map.of("message", "Đã xóa nhóm con vật tư.");
+        return Map.of("message", "Đã xóa nhóm con chưa có vật tư.");       // ⭐ ĐÚNG THÔNG ĐIỆP JS
     }
 
     public Map<String, Object> bulkMaterialSubcategoryAction(Principal principal, Map<String, Object> payload) {

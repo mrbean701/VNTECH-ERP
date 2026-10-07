@@ -51,6 +51,15 @@ public final class ActionRbacRegistry {
             // MT2-P3-02 §13.1 — CRUD: **Danh sách (R)** và **Xoá (D)** của tab Thông báo (màn Quản trị).
             Map.entry("notification_configs", List.of("admin")),
             Map.entry("notification_log", List.of("admin")),
+    // USER 29/09/2026 (MỐC 42) — chức năng BÁO LỖI (tab 14 «Báo lỗi» của màn Quản trị).
+    // ⛔ `save_error_report` KHÔNG gắc module ⇒ dùng mẫu `List.of()` như `mark_notification_read`
+    //    (xem L56-57) ⇒ **MỌI user đã đăng nhập đều gửi được** — đúng yêu cầu: nút báo lỗi nằm
+    //    cạnh nút đổi màu nền, ai cũng bấm được, kể cả khi chưa có quyền module nào.
+    Map.entry("save_error_report", List.of()),
+    // ⛔ `error_reports` + `mark_error_report_resolved` gắn module `admin` ⇒ **CHỈ quản trị viên**
+    //    xem danh sách + tick «đã xử lý» (tab 14 nằm trong `ADMIN_LOCKED_TABS`).
+    Map.entry("error_reports", List.of("admin")),
+    Map.entry("mark_error_report_resolved", List.of("admin")),
             Map.entry("delete_notification_config", List.of("admin")),
             Map.entry("set_notification_config_status", List.of("admin")),
             // MT2 §14 — «Login → Check notifications by userID»: MỌI user đã đăng nhập phải đánh dấu đọc
@@ -92,6 +101,9 @@ public final class ActionRbacRegistry {
             Map.entry("create_user", List.of()),
             Map.entry("create_work_item", List.of("dept_plan_assign", "dept_project_assign")),
             Map.entry("decide_approval", List.of("approvals")),
+            // MT3 §B.3 — «yêu cầu bổ sung» là HÀNH ĐỘNG CỦA NGƯỜI DUYỆT ⇒ cùng cổng module với `decide_approval`
+            // (⛔ 0 module mới, ⛔ không hard-code admin). Cổng owner-đúng-bước kiểm ở use-case.
+            Map.entry("request_supplement", List.of("approvals")),
             Map.entry("delete_accounting_voucher", List.of("dept_finance_documents")),
             Map.entry("delete_advance_request", List.of("dept_finance_advance")),
             Map.entry("delete_approval_stage", List.of()),
@@ -190,7 +202,14 @@ public final class ActionRbacRegistry {
             Map.entry("save_engine_role_profile", List.of()),
             Map.entry("save_form_field_config", List.of()),
             Map.entry("save_hr_record", List.of("dept_legal_hr")),
+            // MỐC 103 (user 29/09) — cập nhật tài khoản: admin_tab_01 + quyền SỬA.
+            // ⛔ KHÔNG gồm module `admin` ⇒ `requireActionModule` vẫn chặn non-admin nếu thiếu quyền
+            //    (fail-closed), còn `admin` đi qua nhánh `isAdmin` ở trên.
+
             Map.entry("save_labor_contract", List.of("dept_legal_labor")),
+            // MỐC 103 (user 29/09) — MENU «REVIEW HĐ».
+            // ⛔ KHÔNG dùng `List.of()` — `requireActionModule` coi map rỗng là TỪ CHỐI (403).
+            Map.entry("manage_contract_review", List.of("dept_legal_contract_review")),
             Map.entry("save_legal_document", List.of("dept_legal_documents")),
             Map.entry("save_mar_approval", List.of("boq", "purchasing")),
             Map.entry("save_material", List.of("material_catalog")),
@@ -282,7 +301,7 @@ public final class ActionRbacRegistry {
             Map.entry("update_profile_avatar", List.of()),
             Map.entry("update_project", List.of()),
             Map.entry("update_returned_request", List.of("requests")),
-            Map.entry("update_user", List.of()),
+            Map.entry("update_user", List.of("admin_tab_01")),
             Map.entry("update_work_item_progress", List.of("dept_plan_tasks", "dept_project_tasks")),
             Map.entry("update_work_item_status", List.of("dept_plan_tasks", "dept_project_tasks", "dept_plan_assign", "dept_project_assign"))
     );
@@ -326,6 +345,12 @@ public final class ActionRbacRegistry {
             // MT2 §13.1/§13.2 — tạo/sửa và bật/tắt cấu hình thông báo (tab Thông báo của màn Quản trị).
             Map.entry("save_notification_config", "canCreate"),
             Map.entry("notification_configs", "canView"),
+    // USER 29/09/2026 (MỐC 42) — capability của chức năng BÁO LỖI.
+    // ⛔ `save_error_report` KHÔNG gắc module ⇒ capability vô nghĩa về quyền module, nhưng vẫn
+    //    khai `canCreate` để nhất quán với các action tạo mới.
+    Map.entry("save_error_report", "canCreate"),
+    Map.entry("error_reports", "canView"),
+    Map.entry("mark_error_report_resolved", "canEdit"),
             // MT2-P4-05 VÁ THIẾU: `notification_log` khai module `admin` nhưng ⛔ THIẾU capability ⇒ rơi về
             // mặc định `canUse`, trong khi đây là thao tác ĐỌC (soi gương `notification_configs` = canView).
             Map.entry("notification_log", "canView"),
@@ -343,6 +368,8 @@ public final class ActionRbacRegistry {
             Map.entry("create_user", "canUse"),
             Map.entry("create_work_item", "canCreate"),
             Map.entry("decide_approval", "canApprove"),
+            // MT3 §B.3 — quyền cần để «yêu cầu bổ sung» = quyền DUYỆT (`canApprove`), y như `decide_approval`.
+            Map.entry("request_supplement", "canApprove"),
             Map.entry("delete_accounting_voucher", "canEdit"),
             Map.entry("delete_advance_request", "canEdit"),
             Map.entry("delete_approval_stage", "canUse"),
@@ -439,6 +466,8 @@ public final class ActionRbacRegistry {
             Map.entry("save_form_field_config", "canUse"),
             Map.entry("save_hr_record", "canCreate"),
             Map.entry("save_labor_contract", "canCreate"),
+            // MỐC 103 (user 29/09) — MENU «REVIEW HĐ» (xem + ghi nhận review).
+            Map.entry("manage_contract_review", "canEdit"),
             Map.entry("save_legal_document", "canCreate"),
             Map.entry("save_mar_approval", "canApprove"),
             Map.entry("save_material", "canEdit"),
@@ -523,7 +552,8 @@ public final class ActionRbacRegistry {
             Map.entry("update_profile_avatar", "canUse"),
             Map.entry("update_project", "canUse"),
             Map.entry("update_returned_request", "canEdit"),
-            Map.entry("update_user", "canUse"),
+            // MỐC 103 — sửa tài khoản cần quyền SỬA (trước đây là `canUse` ⇒ quá rộng).
+            Map.entry("update_user", "canEdit"),
             Map.entry("update_work_item_progress", "canEdit"),
             Map.entry("update_work_item_status", "canEdit")
     );

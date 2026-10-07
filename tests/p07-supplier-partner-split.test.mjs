@@ -131,8 +131,14 @@ test("P-07 — cổng quyền: CẢ 2 mục trỏ khoá ĐÃ CÓ `dept_plan_supp
 });
 
 test("P-07 — ẩn mục CŨ khỏi cây menu (khoá vẫn sống) + bộ định tuyến `view` cho 2 mục", () => {
-  assert.ok(menuHelpers.includes('const legacySupplierPartnerMenuKeys: ModuleKey[] = ["dept_plan_suppliers"];'),
-    "Thiếu/sai `legacySupplierPartnerMenuKeys` (đúng khuôn `legacyWorkMenuKeys` / `legacyWarehouseMenuKeys`)");
+  // ⚠️ CẬP NHẬT HỢP ĐỒNG (MT3 §E · QUYẾT ĐỊNH USER 26/09/2026): user chốt «Gộp thành 1 "Nhà cung cấp"».
+  //    Trước: `legacySupplierPartnerMenuKeys` chỉ ẩn `dept_plan_suppliers` ⇒ mục mã CŨ `supplier_catalog`
+  //      («Danh mục Nhà cung cấp» trong bảng `modules`) VẪN hiện ⇒ TRÙNG với mục «Nhà cung cấp».
+  //    Nay: ẩn THÊM `supplier_catalog` ⇒ mục menu DUY NHẤT còn lại là «Nhà cung cấp» (khai báo trong code).
+  //    ⛔ Khoá `supplier_catalog` VẪN SỐNG (quyền · tiêu đề màn · tìm kiếm · nhánh render) — chỉ ẨN khỏi menu.
+  //    Giữ nguyên MỌI phép kiểm khác của tệp này.
+  assert.ok(menuHelpers.includes('const legacySupplierPartnerMenuKeys: ModuleKey[] = ["dept_plan_suppliers", "supplier_catalog"];'),
+    "Thiếu/sai `legacySupplierPartnerMenuKeys` (đúng khuôn `legacyWorkMenuKeys` / `legacyWarehouseMenuKeys`) — MT3 §E yêu cầu ẩn CẢ khoá mã cũ `supplier_catalog` để hết mục TRÙNG");
   const router = functionOf(menuHelpers, "supplierPartnerViewFor");
   assert.match(router, /supplierPartnerViewFor\(view: SupplierPartnerMenuView \| null, active: ModuleKey\): SupplierPartnerMenuView \| null/,
     "Thiếu chữ ký hàm định tuyến `supplierPartnerViewFor`");

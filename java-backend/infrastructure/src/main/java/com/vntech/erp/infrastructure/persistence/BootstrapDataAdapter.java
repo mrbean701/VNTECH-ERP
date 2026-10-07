@@ -880,8 +880,14 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
             // ══════════════════════════════════════════════════════════════════════════════
             List<Map<String, Object>> perms = new ArrayList<>();
             for (Map<String, Object> mod : moduleCatalog) {
-                if (isActiveOne(mod.get("active"))
-                        && !"admin".equals(String.valueOf(mod.get("moduleKey")))) {
+                // USER 28/09/2026 (MỐC 28/29) — BỎ mệnh đề `&& !"admin".equals(moduleKey)`.
+                // LÝ DO: đây là chỗ KHỚI ĐẦU việc loại module `admin` khỏi quyền hiệu lực ⇒
+                //   người được cấp quyền quản trị hệ thống KHÔNG vào được menu ⇒ màn không mở.
+                //   Đã kiểm chứng thực nghiệm: CSDL có `admin`=1 nhưng bootstrap không có.
+                // ⛔ AN TOÀN GIỮ NGUYÊN: việc ẩn 3 tab nguy hiểm (12 Cấu hình hệ thống chứa
+                //   FactoryReset XÓA SẠCH DỮ LIỆU · 13 Thông báo · 14 Báo lỗi) KHÔNG nằm ở đây
+                //   mà nằm ở `ADMIN_ROLE_ONLY_STEPS` / `ADMIN_LOCKED_TABS` (tầng UI).
+                if (isActiveOne(mod.get("active"))) {
                     Map<String, Object> perm = new LinkedHashMap<>();
                     perm.put("userId", ctx.userId());
                     perm.put("moduleKey", mod.get("moduleKey"));
@@ -1459,9 +1465,37 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                 SELECT lc.id,lc.contract_no AS contractNo,lc.user_id AS userId,u.full_name AS fullName,
                        u.employee_code AS employeeCode,lc.contract_type AS contractType,
                        lc.start_date AS startDate,lc.end_date AS endDate,lc.signing_date AS signingDate,
-                       lc.salary,lc.status,lc.note
+                       lc.salary,lc.status,lc.note,
+                        lc.job_rank AS jobRank,lc.grade,lc.renewal_round AS renewalRound,
+                        lc.image_url AS imageUrl,lc.image_updated_at AS imageUpdatedAt
                 FROM labor_contracts lc LEFT JOIN users u ON u.id=lc.user_id
                 ORDER BY lc.start_date DESC"""));
+        // MỐC 103 (user 29/09) — MENU «REVIEW HĐ»: danh sách + lịch sử review gắn sẵn.
+        List<Map<String, Object>> reviewRows = query("""
+                SELECT r.id,r.contract_id AS contractId,r.contract_no AS contractNo,
+                       r.contract_type AS contractType,r.contract_name AS contractName,
+                       r.sender_name AS senderName,r.receiver_name AS receiverName,
+                       r.received_date AS receivedDate,r.review_date AS reviewDate,
+                       (r.viewed = 1) AS viewed,r.last_reviewer_name AS lastReviewerName,
+                       r.note,r.created_at AS createdAt,r.updated_at AS updatedAt
+                FROM contract_reviews r
+                ORDER BY (r.viewed = 1), IFNULL(r.received_date,'') DESC, IFNULL(r.created_at,'') DESC""");
+        List<Map<String, Object>> reviewLogs = query("""
+                SELECT l.id,l.review_id AS reviewId,l.contract_id AS contractId,
+                       l.reviewed_at AS reviewedAt,l.duration_seconds AS durationSeconds,
+                       l.status,l.reviewer_name AS reviewerName,l.comment,
+                       l.created_at AS createdAt
+                FROM contract_review_logs l
+                ORDER BY IFNULL(l.reviewed_at,'') DESC, IFNULL(l.created_at,'') DESC""");
+        for (Map<String, Object> r : reviewRows) {
+            List<Map<String, Object>> mine = new ArrayList<>();
+            for (Map<String, Object> l : reviewLogs) {
+                if (String.valueOf(r.get("id")).equals(String.valueOf(l.get("reviewId")))) mine.add(l);
+            }
+            r.put("logs", mine);
+            r.put("logCount", mine.size());
+        }
+        data.put("contractReviews", reviewRows);
         data.put("officialCorrespondence", query("""
                 SELECT c.id,c.doc_no AS docNo,c.direction,c.doc_type AS docType,c.issue_date AS issueDate,
                        c.sender_name AS senderName,c.receiver_name AS receiverName,c.summary,
@@ -1571,10 +1605,12 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
         data.put("workItems", workItems);
 
         // JS `:718` — sự kiện CHỈ của các công việc vừa trả về (trước đây Java trả SỰ KIỆN CỦA MỌI CÔNG VIỆC).
-        if (workItems.isEmpty()) {
+        List<String> workItemIds = workItems.stream().map(r -> String.valueOf(r.get("id"))).toList();
+        if (workItemIds.isEmpty()) {
             data.put("workItemEvents", List.of());
+            data.put("workItemComments", List.of());
+            data.put("workItemParticipants", List.of());
         } else {
-            List<String> workItemIds = workItems.stream().map(r -> String.valueOf(r.get("id"))).toList();
             data.put("workItemEvents", query("""
                     SELECT e.id,e.work_item_id AS workItemId,e.event_type AS eventType,
                            e.from_status AS fromStatus,e.to_status AS toStatus,
@@ -1583,6 +1619,28 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                            e.reason,e.detail_json AS detailJson,e.occurred_at AS occurredAt
                     FROM work_item_events e LEFT JOIN users u ON u.id=e.actor_user_id
                     WHERE e.work_item_id IN (%s) ORDER BY e.occurred_at DESC""".formatted(inClause(workItemIds)),
+                    params(workItemIds)));
+            // TASK-019 — JS `:812-815` (T-04) trả THÊM 2 khoá của ĐÚNG tập công việc vừa lọc:
+            // bình luận + người tham gia. Bản Java thiếu cả hai ⇒ `app/screens/WorkHierarchy.tsx:113`
+            // luôn đọc `data.workItemParticipants || []` ⇒ màn "Hỗ trợ liên phòng" CHẾT ÂM THẦM trên
+            // bản Java, trong khi `tests/work-item-comment-participant.test.ts:187` đòi đúng hợp đồng này.
+            // Không mở rộng phạm vi nhìn thấy: hai khoá bám `IN (workItemIds)` — cùng tập như `workItemEvents`.
+            data.put("workItemComments", query("""
+                    SELECT c.id,c.work_item_id AS workItemId,c.user_id AS userId,u.full_name AS userName,
+                           c.comment,c.visibility,c.created_at AS createdAt,c.updated_at AS updatedAt
+                    FROM work_item_comments c LEFT JOIN users u ON u.id=c.user_id
+                    WHERE c.work_item_id IN (%s) ORDER BY c.created_at""".formatted(inClause(workItemIds)),
+                    params(workItemIds)));
+            data.put("workItemParticipants", query("""
+                    SELECT p.id,p.work_item_id AS workItemId,p.user_id AS userId,u.full_name AS userName,
+                           u.employee_code AS employeeCode,u.role AS roleCode,COALESCE(rc.name,u.role) AS roleName,
+                           p.role_in_task AS roleInTask,p.notify,p.added_by AS addedBy,ub.full_name AS addedByName,
+                           p.created_at AS createdAt,p.updated_at AS updatedAt
+                    FROM work_item_participants p
+                    LEFT JOIN users u ON u.id=p.user_id
+                    LEFT JOIN role_catalog rc ON rc.code=u.role
+                    LEFT JOIN users ub ON ub.id=p.added_by
+                    WHERE p.work_item_id IN (%s) ORDER BY p.created_at""".formatted(inClause(workItemIds)),
                     params(workItemIds)));
         }
         // TASK-059 — JS `:719` trả `workItemId`/`channel`/`title`/`body`/`lastError` và sắp **chưa đọc TRƯỚC**
@@ -1856,7 +1914,8 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
             }
             if (!anyModule(view, "dept_plan_tasks", "dept_plan_assign", "dept_project_tasks",
                     "dept_project_assign", "site_command")) {
-                blank(data, "workItems", "workItemEvents", "taskNotifications");
+                blank(data, "workItems", "workItemEvents", "workItemComments", "workItemParticipants",
+                        "taskNotifications");
             }
             // TASK-065 — ba khoá `adminMaterial*` KHÔNG nằm trong danh sách xoá-trắng vô điều kiện nữa:
             // JS `:694-696` chỉ trả `[]`/danh sách rút gọn khi `!canEditCentral`, còn khi `canEditCentral`

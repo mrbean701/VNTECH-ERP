@@ -6,7 +6,13 @@
 // đúng cách cổng `tests/project-navigation-consolidation.test.mjs` đang làm — và cổng runtime
 // `tools/probe-project-screen.mjs` (đã cập nhật theo hợp đồng mới) sẽ đo khi có bản build mới.
 //
-// LƯU Ý: tệp này CỐ Ý không nằm trong `package.json` → `test:regression` giữ nguyên **61** ca.
+// ⛔ ĐÃ LỆCH SỰ THẬT — đừng tin dòng này nữa, nó còn mô tả trạng thái cũ:
+//   1. Tệp này **ĐÃ** nằm trong `package.json` → `test:regression` (xem mục `test:regression` trong đó).
+//   2. Con số ca kiểm thử đã tăng: hiện toàn bộ cổng là **72** ca, không phải 61.
+//   3. Bối cảnh "ứng dụng đang phục vụ bản build cũ hơn nguồn" là của thời điểm viết ban đầu.
+// ⛔ NGUYÊN TẮC KHI SỬA HỌC ĐỒNG NÀY (xem D-044 trong docs/dsh-state/DECISIONS.md):
+//   KHÔNG được quay lui bài kiểm thử về hợp đồng cũ để làm nó xanh. Chỉ được MỞ RỘNG danh sách tệp nguồn
+//   mà nó theo dõi (để bám theo code đã di chuyển), không được nới lỏng điều kiện khẳng định.
 // Chạy riêng:  node --test tests/pr01-project-tabs.test.mjs
 import test from "node:test";
 import assert from "node:assert/strict";

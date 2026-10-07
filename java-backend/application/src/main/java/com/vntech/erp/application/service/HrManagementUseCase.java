@@ -55,13 +55,23 @@ public final class HrManagementUseCase {
             throw Api("Hợp đồng lao động cần nhân sự và loại hợp đồng.");
         if (store.findUser(userId).isEmpty()) throw Api("Nhân sự không tồn tại.");
         double salary = strictNonNegative(payload.get("salary"), "Mức lương");
+        // MỐC 55 — ẢNH HỢP ĐỒNG: data-URL như chữ ký (`users.signature_url`).
+        // ⛔ chỉ nhận data-URL ảnh; quá 2,8 MB hoặc sai định dạng ⇒ báo lỗi rõ ràng (không ghi rác).
+        String imageUrl = laborContractImage(payload.get("imageUrl"));
+        // MỐC 102 (user 29/09) — NGẠCH · BẬC · GIA HẠN HĐ lần N. Rỗng ⇒ NULL (không ép giá trị).
+        String jobRank = nvl(payload.get("jobRank"));
+        String grade = nvl(payload.get("grade"));
+        Integer renewalRound = renewalRound(payload.get("renewalRound"));
         Instant now = Instant.now();
         if (!contractId.isEmpty()) {
             Map<String, Object> old = store.findLaborContract(contractId)
                     .orElseThrow(() -> Api("Không tìm thấy hợp đồng."));
+            // MỐC 58-3 — chỉ ghi mốc thời gian khi ảnh THẬT SỰ đổi (so ở Java, không so trong SQL).
+            String oldImage = nvl(old.get("image_url"));
+            boolean imageChanged = !String.valueOf(oldImage).equals(String.valueOf(imageUrl));
             store.updateLaborContract(contractId, userId, contractType, nvl(payload.get("startDate")),
                     nvl(payload.get("endDate")), nvl(payload.get("signingDate")), salary,
-                    nvl(payload.get("note")), now);
+                    nvl(payload.get("note")), imageUrl, imageChanged, now, jobRank, grade, renewalRound);
             return Map.of("message", "Đã cập nhật hợp đồng lao động.");
         }
         long n = 1;
@@ -69,8 +79,31 @@ public final class HrManagementUseCase {
         String contractNo = "HĐLĐ-" + String.format("%05d", n);
         store.insertLaborContract(idGenerator.next("LBC"), contractNo, userId, contractType,
                 nvl(payload.get("startDate")), nvl(payload.get("endDate")), nvl(payload.get("signingDate")),
-                salary, nvl(payload.get("note")), principal.userId(), now);
+                salary, nvl(payload.get("note")), imageUrl, principal.userId(), now, jobRank, grade, renewalRound);
         return Map.of("message", "Đã lập hợp đồng lao động.");
+    }
+
+    // MỐC 102 — chuẩn hoá «gia hạn lần N». Rỗng ⇒ null; không phải số ⇒ 400 (KHÔNG nuốt im lặng).
+    private static Integer renewalRound(Object raw) {
+        String v = raw == null ? "" : String.valueOf(raw).trim();
+        if (v.isEmpty()) return null;
+        try {
+            int n = Integer.parseInt(v);
+            if (n < 0) throw new NumberFormatException();
+            return n;
+        } catch (NumberFormatException ex) {
+            throw Api("Gia hạn HĐ phải là số không âm: 0 = hợp đồng gốc, 1 = gia hạn lần 1, 2 = lần 2…");
+        }
+    }
+
+    // MỐC 55 — chuẩn hoá ảnh hợp đồng. Rỗng ⇒ NULL (xoá ảnh). Sai định dạng / quá lớn ⇒ lỗi 400.
+    private static final int LABOR_IMAGE_MAX_CHARS = 3_800_000; // ~2,8 MB base64
+    private static String laborContractImage(Object raw) {
+        String value = raw == null ? "" : String.valueOf(raw).trim();
+        if (value.isEmpty()) return null;
+        if (!value.startsWith("data:image/")) throw Api("Ảnh hợp đồng phải là ảnh JPG, PNG hoặc WebP.");
+        if (value.length() > LABOR_IMAGE_MAX_CHARS) throw Api("Ảnh hợp đồng vượt quá 2,8 MB.");
+        return value;
     }
 
     public Map<String, Object> setLaborContractStatus(Principal principal, Map<String, Object> payload) {

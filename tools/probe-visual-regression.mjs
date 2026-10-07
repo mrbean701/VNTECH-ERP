@@ -37,6 +37,9 @@ const argValue = (f) => { const a = args.find((x) => x.startsWith(f + "=")); ret
 
 const MODE_UPDATE = hasFlag("--update");
 const MODE_SELFTEST = hasFlag("--selftest");
+// ⭐ 06/10/2026 (ERP-SESSION-01) — `--dump-nav`: in thứ tự `.nav-child` THẬT của mọi nhóm menu rồi thoát.
+//   Dùng để CHỌN `child` đúng khi `sort_order` CSDL không khớp thứ tự DOM (đã sai ở 16 và 19).
+const MODE_DUMP_NAV = hasFlag("--dump-nav");
 // Ngưỡng mặc định = 8 điểm ảnh — ĐÃ ĐO, không phỏng đoán. Trần này vẫn cách xa hồi quy THẬT
 // nhỏ nhất từng gặp trong dự án (405 px) khoảng 50 lần, nên không che được lỗi có ý nghĩa.
 //
@@ -193,10 +196,35 @@ const SCREENS = [
   // 11/12: KIỂM BẤT BIẾN "KHUNG KHÔNG VƯỢT VIEWPORT" (U-10). Bước `{ click: "<selector>" }` mở khung rồi mới chụp;
   // cổng tự đo `getBoundingClientRect()` của `.modal`/`.drawer` và TỪ CHỐI ĐẠT nếu khung tràn khung nhìn,
   // hoặc nếu nội dung cao hơn thân khung mà thân khung KHÔNG cuộn được (⇒ mất nội dung).
-  { id: "11-modal-request", label: "Phiếu đề nghị — modal lập phiếu (rộng nhất)", steps: [{ group: "purchasing", child: 0 }, { click: ".list-toolbar-actions button.primary" }] },
+  { id: "11-modal-request", label: "Phiếu đề nghị — modal lập phiếu (rộng nhất)", steps: [{ group: "purchasing", child: 0 }, { clickText: "tao phieu" }] },
   { id: "12-drawer-request-detail", label: "Phiếu đề nghị — drawer chi tiết", steps: [{ group: "purchasing", child: 0 }, { click: ".request-list-card .icon-mini" }] },
   { id: "13-modal-material", label: "Danh mục vật tư — modal thêm/sửa vật tư", steps: [{ group: "material_master", child: 0 }, { click: ".material-list-filters button.primary" }] },
-  { id: "16-modal-receipt", label: "Nhập kho — modal tạo phiếu nhập", steps: [{ group: "warehouse", child: 0 }, { click: ".list-toolbar-actions button.primary" }] },
+  // ⭐ 06/10/2026 (ERP-SESSION-01) — SỬA THEO BẰNG CHỨNG ẢNH + MÃ THẬT:
+//   ⚠️ `app/screens/Inventory.tsx:372` — nhãn nút ĐỔI THEO `ioTab`:
+//      `{ioTab==="issue" ? "⭳ Tạo phiếu xuất kho" : "⭱ Tạo phiếu nhập kho"}`
+//   ⚠️ `ioTab` mặc định = `"issue"` (dòng 66-70: chọn theo quyền warehouse_issue/warehouse_receipt)
+//      ⇒ `clickText: "tao phieu nhap kho"` ⛔ KHÔNG BAO GIỜ KHỚP ⇒ nav=NO_CLICK_TARGET.
+//   ✅ BẰNG CHỨNG ẢNH: `16-modal-receipt__desktop.png` (chụp 06/10) hiện màn «KHO TỔNG»
+//      với 2 tab «Xuất kho» / «Nhập kho» (Inventory.tsx:368-369) — ⛔ KHÔNG có nút nhập.
+//   ✅ BẰNG CHỨNG ẢNH: `16-modal-receipt__desktop.png` (chụp 06/10) hiện màn «KHO TỔNG»
+//      với 2 tab «Xuất kho» / «Nhập kho» (Inventory.tsx:368-369) — ⛔ KHÔNG có nút nhập.
+//   ✅ BẰNG CHỨNG MÃ: `Inventory.tsx:174` — tab 1 có `data-warehouse-tab="dashboard"` và
+//      `onClick={()=>setTab(index)}`; các khung `tab===1` mới render (dòng 365/454/457/481).
+//   ⇒ SỬA: điều hướng tới màn ĐÚNG + bấm tab «Nhập kho» + bấm nút tạo.
+//   ⭐ BẰNG CHỨNG CSDL (`module_catalog WHERE group_key='warehouse'`): sort 10 warehouse_receipt
+//     «Nhập kho» · 20 warehouse_issue · 30 inventory · 40 stocktake · 50 material_norms
+//     · 60 central_warehouse «Kho Tổng & mã vật tư gốc».
+//     ⇒ `child: 0` điều hướng tới màn «KHO TỔNG» (dashboard), ⛔ KHÔNG phải `Inventory.tsx`.
+//   ⭐ BẰNG CHỨNG ẢNH (`16-modal-receipt__desktop.png`): tiêu đề «KHO TỔNG» + bảng
+//     «Tồn vật lý Kho Tổng» ⇒ ⛔ KHÔNG có dải tab ⇒ `[data-warehouse-tab]` không tồn tại ở màn đó.
+// ⭐⭐ SỬA CUỐI — ĐO TỪ DOM THẬT QUA `browser_evaluate` (06/10, ERP-SESSION-01):
+//   `[data-nav-group="warehouse"]` CHỈ CÓ **1** `.nav-child` ⇒ `child:0` DUY NHẤT hợp lệ.
+//   ⛔ `child:5` (thử trước đó) là BỎA — suy ra từ `sort_order` CSDL, mà probe đếm theo THỨ TỰ DOM.
+//   ⭐ Nhãn con đo được: `<span>Kho vật tư</span>` ⇒ CHÍNH LÀ màn có dải tab «KHO / XUẤT & NHẬP / CẤP PHÁT…».
+//   ⭐ `lib/warehouse-hub.ts:27` ⇒ `WAREHOUSE_HUB_TABS = ["KHO","XUẤT & NHẬP","CẤP PHÁT & HOÀN TRẢ"]`.
+//   ⇒ SỬA: `child: 0` → bấm tab «XUẤT & NHẬP» → bấm nút «Tạo phiếu nhập kho».
+//   ⛔ KHÔNG SỬA `Inventory.tsx` — tệp thuộc ERP-SESSION-02 (§7 ownership).
+{ id: "16-modal-receipt", label: "Nhập kho — modal tạo phiếu nhập", steps: [{ group: "warehouse", child: 0 }, { clickText: "xuat n hap" }, { clickText: "tao phieu nhap kho" }] },
   // Q7 (18/09/2026) — ĐÃ KHẢO SÁT NÚT THẬT cho 2 khung còn thiếu (trước đây cổng báo NO_CLICK_TARGET):
   //   • PO: nút thật nằm ở `.purchase-action-bar` của `app/screens/Purchasing.tsx:28` — `＋ PHÁT HÀNH PO`
   //     (`<button className="primary" … onClick={()=>requests[0]&&open("po",requests[0])}>`), KHÔNG phải toolbar danh sách.
@@ -205,8 +233,25 @@ const SCREENS = [
   //     (`.permission-steps button:nth-child(2)`).
   { id: "17-modal-po", label: "Mua hàng & PO — modal phát hành PO", settleMs: 6000, steps: [{ group: "purchasing", child: 1 }, { click: ".purchase-action-bar button.primary" }] },
   // R-01 (20/09) — MÀN BÁO CÁO DÙNG CHUNG (nav nhóm reports). Bằng chứng RUNTIME cho R-01.
-  { id: "19-report-center", label: "Báo cáo tổng hợp — màn dùng chung (R-01)", settleMs: 3000, steps: [{ group: "reports", child: 4 }], fullPage: true },
-  { id: "18-modal-team-create", label: "Quản trị — modal tạo tổ đội dự án (bước 2)", steps: [{ group: "system_admin", child: 0 }, { click: ".permission-steps button:nth-child(2)" }, { clickText: "Thêm tổ đội" }] },
+  // ⭐ 06/10/2026 (ERP-SESSION-01) — SỬA THEO CSDL THẬT (`module_catalog` WHERE group_key='reports'):
+//   sort 10 reports «Báo cáo & cảnh báo» · 20 dept_plan_alerts · 30 dept_project_alerts
+//   · 40 dept_plan_kpi «KPI & hiệu suất nhân viên» · 50 dept_project_kpi
+//   ⚠️ Probe cũ dùng `child: 4` ⇒ chọn `dept_project_kpi` (KPI) — ⛔ SAI MÀN.
+//   ⚠️ Ngoài ra probe chỉ thấy 3 `.nav-child` (2 con bị lọc theo quyền/active) ⇒ `child: 4`
+//      còn báo `NO_CHILD(3)` nữa. ⇒ SỬA: `child: 0` = màn «Báo cáo & cảnh báo» (R-01).
+{ id: "19-report-center", label: "Báo cáo tổng hợp — màn dùng chung (R-01)", settleMs: 3000, steps: [{ group: "reports", child: 0 }], fullPage: true },
+  // ⭐ 06/10/2026 (ERP-SESSION-01) — SỬA THEO MÃ THẬT `app/page.tsx:2831`:
+//   ⚠️ Nút «＋ Thêm tổ đội» (do `CardHead` render) CHỈ hiện khi `orgTab===1` — tức là phải bấm
+//      tab thứ 2 của `.project-scope-tabs.admin-subtabs` (dòng 2831: `ORG_SUB_TABS.map(...)`).
+//   ⚠️ Probe cũ bấm `.permission-steps button:nth-child(2)` rồi `clickText: "Thêm tổ đội"`
+//      ⇒ nav=NO_CLICK_TARGET vì nút chưa tồn tại trong DOM.
+//   ⇒ SỬA: bấm tab thứ 2 của `.project-scope-tabs.admin-subtabs` (`app/page.tsx:2831`) theo VỊ TRÍ
+//      (`:nth-child(2)`), rồi bấm nút «＋ Thêm tổ đội» theo NHÃN.
+//   ⛔ KHÔNG dùng `clickText: "to doi"` — chữ «tổ đội» xuất hiện ở NHIỀU chỗ (sidebar, tiêu đề card,
+//      cả dòng gợi ý) ⇒ dễ bấm trúng nhầm. Nhãn tab đo được ở `app/screens/admin-governance-pure.ts:171`
+//      ⇒ `ORG_SUB_TABS = ["Cơ cấu tổ chức", "Tổ đội theo dự án"]`.
+//   ⛔ KHÔNG SỬA `app/page.tsx` — tệp thuộc ERP-SESSION-02 (§7 ownership).
+{ id: "18-modal-team-create", label: "Quản trị — modal tạo tổ đội dự án (bước 2)", steps: [{ group: "system_admin", child: 0 }, { click: ".permission-steps button:nth-child(2)" }, { click: '[data-org-subtabs="AD-05"] button:nth-child(2)' }, { clickText: "Thêm tổ đội" }] },
 ];
 
 const SCREENS_TO_RUN = ONLY ? SCREENS.filter((s) => s.id.includes(ONLY)) : SCREENS;
@@ -434,6 +479,33 @@ await sleep(2000);
 const loginStatus = await evaluate(`(async()=>{const r=await fetch('/api/system',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'login',username:${JSON.stringify(USER)},password:${JSON.stringify(PASS)}})});return r.status;})()`);
 console.log(`  Đăng nhập ${USER}: HTTP ${loginStatus}`);
 
+// ⭐ 06/10/2026 (ERP-SESSION-01) — CỜ CHẨN ĐOÁN `--dump-nav` (CHỈ ĐỌC, ⛔ không ghi ảnh).
+//   BẰNG CHỨNG: `child:N` của probe là THỨ TỰ `.nav-child` TRONG DOM ⛔ KHÔNG phải `sort_order`
+//   của `module_catalog` ⇒ KHÔNG thể suy index từ CSDL (đã sai 2 lần: màn 16 và 19).
+//   Cờ này in từng nhóm + từng con theo ĐÚNG thứ tự DOM để chọn `child` chính xác.
+if (MODE_DUMP_NAV) {
+  await send("Emulation.setDeviceMetricsOverride", { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false });
+  await send("Page.navigate", { url: BASE });
+  await sleep(5200);
+  // ⭐ BẰNG CHỨNG: lần chạy đầu in ra `warehouse: 0 con` TRONG KHI `nuphus` đo được 1 con ⇒
+  //   nhóm menu PHẢI MỞ RỘNG mới render `.nav-child` (`page.tsx:682` chỉ vẽ khi `opened`).
+  //   ⇒ cờ này tự bấm `.nav-parent` của TỪNG nhóm rồi mới đếm — không đoán số thứ tự nữa.
+  await evaluate(`(()=>{const b=document.querySelector('.sidebar-collapse-toggle');if(b)b.click();return 1;})()`);
+  await sleep(500);
+  const dump = await evaluate(`(()=>{const out=[];document.querySelectorAll('[data-nav-group]').forEach(g=>{const b=g.querySelector('.nav-parent');if(b)b.click();});return document.querySelectorAll('[data-nav-group]').length;})()`);
+  await sleep(1200);
+  const danhSach = await evaluate(`(()=>{const out=[];document.querySelectorAll('[data-nav-group]').forEach(g=>{const kids=[...g.querySelectorAll('.nav-child')].map((k,i)=>({i,text:(k.textContent||'').replace(/\\s+/g,' ').trim().slice(0,44)}));out.push({group:g.getAttribute('data-nav-group'),kids});});return out;})()`);
+  console.log("╔══ THỨ TỰ .nav-child THẬT (đo từ DOM — KHÔNG phải sort_order CSDL) ══");
+  for (const g of danhSach || []) {
+    console.log(`║ [${g.group}] (${g.kids.length} con)`);
+    for (const k of g.kids) console.log(`║    child:${k.i}  ${k.text}`);
+  }
+  console.log("╚══ hết ══");
+  try { ws.close(); } catch { /* bỏ qua */ }
+  child.kill();
+  process.exit(0);
+}
+
 // Chế độ soi vùng: chụp 2 lần CÙNG một vùng rồi ghi ảnh phóng to để xem bằng mắt.
 // Dùng khi cổng so ảnh báo lệch mà không rõ phần tử nào gây ra.
 if (CROP) {
@@ -446,7 +518,11 @@ if (CROP) {
   for (let i = 0; i < 2; i++) {
     await send("Page.navigate", { url: BASE });
     await sleep(5200);
-    if (screen) { const nav = await clickSteps(screen.steps); if (i === 0) console.log(`  nav ${screen.id}: ${nav}`); await sleep(2200 + (screen?.settleMs || 0)); }
+    // ⭐ 06/10/2026 (ERP-SESSION-01) — ⛔ SỬA LỖI IM LẶNG. Trước đây `nav` CHỈ in khi `i === 0`
+    //   ⇒ 16/17 màn × 3 viewport kia im lặng ⇒ ⭐ nếu selector chết (NO_CLICK_TARGET) thì cổng vẫn
+    //   chạy tiếp và so ảnh MÀN NỀN thay vì màn cần kiểm ⇒ ⭐ kết luận SAI mà không ai thấy.
+    //   ⇒ Nay: viewport đầu in như cũ (để đối chiếu), còn lại ⭐ CHỈ báo KHI THẬT SỰ HỎNG.
+    if (screen) { const nav = await clickSteps(screen.steps); if (i === 0) console.log(`  nav ${screen.id}: ${nav}`); else if (nav !== "CLICKED_UI") console.log(`  ⚠️ nav ${screen.id} [${vp.id}] HỎNG: ${nav} — cảnh này so MÀN NỀN, KHÔNG phải màn cần kiểm`); await sleep(2200 + (screen?.settleMs || 0)); }
     await freeze();
     const s = await send("Page.captureScreenshot", {
       format: "png", clip: { x: cx, y: cy, width: cw, height: ch, scale: 3 }, captureBeyondViewport: false,
@@ -525,6 +601,7 @@ if (LOCATE) {
   process.exit(0);
 }
 
+// Vòng lặp chính: mỗi màn × mỗi kích thước ⇒ chụp rồi so với ảnh chuẩn (hoặc ghi lại nếu --update).
 for (const screen of SCREENS_TO_RUN) {
   console.log(`\n▸ ${screen.id}  —  ${screen.label}`);
   for (const vp of VIEWPORTS) {

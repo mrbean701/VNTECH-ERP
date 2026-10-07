@@ -63,11 +63,13 @@ const DEFAULTS = { status: "ALL", managerUserId: "ALL", organizationUnitId: "ALL
 const ctxOf = (pid) => projectFilterContext(pid, userScopes, staff);
 const keep = (filter) => projects.filter((row) => projectMatchesFilters(row, { ...DEFAULTS, ...filter }, ctxOf(row.id))).map((row) => row.id);
 
-test("PR-02 — toolbar DANH SÁCH có ĐỦ 4 CHIỀU lọc (Trạng thái · Quản lý dự án · Phòng ban · Ngày)", () => {
+test("PR-02 — toolbar DANH SÁCH có 3 CHIỀU lọc (Trạng thái · Quản lý dự án · Ngày) — ĐÃ BỎ «Phòng ban» theo yêu cầu user 28/09/2026", () => {
   assert.match(listBranch, /filters=\{\[/, "Danh sách dự án chưa có nhóm LỌC của ListToolbar");
-  for (const label of ["Trạng thái", "Quản lý dự án", "Phòng ban"]) {
+  for (const label of ["Trạng thái", "Quản lý dự án"]) {
     assert.match(listBranch, new RegExp(`label: "${label}"`), `Thiếu chiều lọc "${label}" trong filters của ListToolbar`);
   }
+  // ĐỐI CHỨNG ÂM (user 28/09/2026): đã BỎ chiều lọc «Phòng ban» ⇒ KHÔNG được xuất hiện nữa trong toolbar.
+  assert.doesNotMatch(listBranch, /label: "Phòng ban"/, "Chiều lọc «Phòng ban» đã bị user yêu cầu bỏ nhưng vẫn còn trong toolbar");
   assert.match(listBranch, /type="date"/, "Thiếu chiều lọc NGÀY (ô nhập ngày)");
   assert.match(listBranch, /startFrom/, "Chiều NGÀY chưa nối vào state `startFrom` (mốc `start_date`)");
   assert.match(listBranch, /endTo/, "Chiều NGÀY chưa nối vào state `endTo` (mốc `planned_end_date`)");

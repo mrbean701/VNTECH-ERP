@@ -45,7 +45,17 @@ public final class RbacService {
             "mark_notification_read", "mark_notification_snooze", "mark_notification_all_read",
             // MT2 §13.4 — chữ ký là dữ liệu TỰ PHỤC VỤ của chính user (cùng nhóm `update_profile_avatar`).
             // ⚠️ Phải nằm ở ĐÂY (⛔ KHÔNG phải `List.of()` ở map module — map rỗng = NÉM 403).
-            "update_profile_signature");
+            "update_profile_signature",
+            // MỐC 110 (30/09/2026) — GỬI «BÁO LỖI / GÓP Ý» là việc TỰ PHỤC VỤ của MỌI user đã đăng nhập.
+            // Ý định thiết kế đã ghi rõ ở `app/screens/ErrorReportModal.tsx:14`: «MọI user đã đăng nhập
+            // đều gửi được — action `save_error_report` KHÔNG gắc module».
+            // ⛔ Nhưng registry khai `Map.entry("save_error_report", List.of())`, mà PHASE 0B đã đổi
+            // ngữ nghĩa map rỗng từ «không gác» thành TỪ CHỐI (xem nhánh `required.isEmpty()` bên dưới)
+            // ⇒ MỌI tài khoản không phải admin nhận 403 «Thao tác chưa được khai báo quyền trong hệ thống.»
+            // khi bấm nút «Báo lỗi / Góp ý». ĐO THẬT: probe `sec_probe_017830` ⇒ 403; admin ⇒ 200.
+            // ⚠️ An toàn: `SystemController.java:1472` vẫn gọi `requireCurrentUser(request)` cho action này
+            // ⇒ BẮT BUỘC đăng nhập, chỉ bỏ qua cổng MODULE (đúng như ý định ban đầu).
+            "save_error_report");
 
     public boolean isCompanyLeadership(AuthUseCase.CurrentUser user) {
         return List.of("director", "accountant").contains(user.role());
@@ -61,9 +71,14 @@ public final class RbacService {
             // PHASE 0B (S-03) — MẶC ĐỊNH TỪ CHỐI.
             // Trước đây nhánh này CHO QUA (return) nên mọi action chưa khai module đều hở.
             // Nay: action chưa khai module thì KHÔNG có cơ sở nào để kiểm quyền ⇒ từ chối.
-            // An toàn vì 46 action còn khai rỗng đều nằm trong 2 nhóm đã được xử lý:
-            //   41 action đã bị SystemController chặn bằng requireRequireAdmin
-            //    5 action là hành động công khai (đã miễn ở đầu hàm)
+            // ⛔ MỐC 110 (30/09/2026) — SỐ LIỆU TỪNG GHI Ở ĐÂY ĐÃ SAI; ĐÃ ĐO LẠI BẰNG SCRIPT:
+            //    bản cũ ghi «46 action còn khai rỗng … 41 bị requireRequireAdmin + 5 công khai».
+            //    ĐO THẬT: **65** action khai rỗng = **38** bị requireRequireAdmin + **8** công khai
+            //    + **19** action KHÔNG thuộc nhóm nào ⇒ 403 với MỌI tài khoản không phải admin.
+            //    Trong 19 đó có `save_error_report` — nút «Báo lỗi / Góp ý» mà user yêu cầu MỌI user
+            //    dùng được ⇒ đã chuyển sang PUBLIC_ACTIONS (MỐC 110).
+            //    18 action còn lại ghi ở CHECKLIST mục «MỐC 110» dạng FOLLOW-UP: trạng thái 403 hiện
+            //    tại là AN TOÀN (fail-closed), chỉ cần quyết định nghiệp vụ mỗi thao tác thuộc module nào.
             throw new AuthUseCase.ApiError(
                     "Thao tác chưa được khai báo quyền trong hệ thống. Liên hệ quản trị viên.", 403);
         }

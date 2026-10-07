@@ -1,0 +1,1529 @@
+{
+  "giaiDoan": 3,
+  "chayLuc": "2026-10-04T21:26:36.916Z",
+  "ghiBang": {
+    "save_hr_record": "e2e.ns (lần chay trước)",
+    "save_labor_contract": "e2e.ns (lần chay trước)",
+    "save_benefit_record": "e2e.ns (lần chay trước)",
+    "set_labor_contract_status": "e2e.ns",
+    "set_benefit_record_status": "e2e.ns"
+  },
+  "nguoiDaGhiTheoNhatKy": {
+    "save_hr_record": "e2e.ns",
+    "save_labor_contract": "e2e.ns",
+    "set_labor_contract_status": "e2e.ns",
+    "save_benefit_record": "e2e.ns",
+    "set_benefit_record_status": "e2e.ns",
+    "delete_labor_contract": "",
+    "delete_benefit_record": "",
+    "delete_hr_record": ""
+  },
+  "truoc": {
+    "taiKhoan": 28,
+    "staffDirectory": 28,
+    "hrRecords": 26,
+    "laborContracts": 26,
+    "benefitRecords": 52
+  },
+  "sau": {
+    "taiKhoan": 28,
+    "staffDirectory": 28,
+    "hrRecords": 26,
+    "laborContracts": 26,
+    "benefitRecords": 52
+  },
+  "taoMoiLanNay": {
+    "hoSo": 0,
+    "hopDong": 0,
+    "baoHiem": 0
+  },
+  "tongBanGhiE2ETrenMayChu": {
+    "hoSo": 23,
+    "hopDong": 24,
+    "baoHiem": 51
+  },
+  "lichSuTao": {
+    "hoSo": 23,
+    "hopDong": 24,
+    "baoHiem": 51,
+    "lanChay": 7,
+    "nguon": "đếm trực tiếp từ máy chủ theo dấu E2E trong `note` (không cộng dồn cục bộ)"
+  },
+  "mucTieu": {
+    "soNguoi": 26,
+    "danhSach": [
+      {
+        "username": "e2e.diag",
+        "ten": "Chẩn đoán",
+        "vai": "ksda",
+        "id": "USR_15b62026-049e-4eaf-9736-1e7d01e3c119"
+      },
+      {
+        "username": "cha.ht",
+        "ten": "Chỉ huy trưởng A",
+        "vai": "cht",
+        "id": "USR_911a47b2-3f2a-4a81-9ca3-891dd492b18b"
+      },
+      {
+        "username": "e2e.cht",
+        "ten": "E2E Chỉ huy trưởng",
+        "vai": "cht",
+        "id": "USR_d3dce944-4b07-49c5-88a7-a5c4305687f8"
+      },
+      {
+        "username": "e2e.chtsa",
+        "ten": "E2E Chỉ Huy Trưởng SA",
+        "vai": "cht",
+        "id": "USR_ee14609c-f681-4b20-a639-ac7498dea678"
+      },
+      {
+        "username": "e2e.bgd",
+        "ten": "E2E Giám đốc",
+        "vai": "director",
+        "id": "USR_e66f85ff-96ad-40d5-a632-10be87ab10d5"
+      },
+      {
+        "username": "e2e.kt",
+        "ten": "E2E Kế toán",
+        "vai": "accountant",
+        "id": "USR_f47a166f-0d39-440f-b796-08a5527de3f4"
+      },
+      {
+        "username": "e2e.ksda",
+        "ten": "E2E Kỹ sư Dự án",
+        "vai": "ksda",
+        "id": "USR_7ae68731-da43-4dc1-922d-a03b6a2ee9c9"
+      },
+      {
+        "username": "e2e.ns",
+        "ten": "E2E Nhân sự",
+        "vai": "hr",
+        "id": "USR_dda7f31c-b907-4fd3-95d8-a9513e6a86f0"
+      },
+      {
+        "username": "e2e.khnv",
+        "ten": "E2E Nhân viên Kế hoạch",
+        "vai": "kh_nv",
+        "id": "USR_1489da18-e042-424b-aef8-2964fcebd323"
+      },
+      {
+        "username": "e2e.project",
+        "ten": "E2E project",
+        "vai": "da_nv",
+        "id": "USR_bed00dc5-39ac-4dac-b89b-16f54f45e9f2"
+      },
+      {
+        "username": "e2e.tk",
+        "ten": "E2E Thủ kho",
+        "vai": "thu_kho",
+        "id": "USR_9bf366bf-0e6b-4cd1-9e9e-47725034cdb1"
+      },
+      {
+        "username": "e2e.thukysa",
+        "ten": "E2E Thư ký SA",
+        "vai": "thuky",
+        "id": "USR_c8765a28-9318-4ee9-926b-1f889599ecc9"
+      },
+      {
+        "username": "e2e.thuky",
+        "ten": "E2E Thư ký Tổng giám đốc",
+        "vai": "thuky",
+        "id": "USR_61e13947-4c36-4977-8214-41ec00edc6da"
+      },
+      {
+        "username": "e2e.to",
+        "ten": "E2E Tổ Trưởng",
+        "vai": "team",
+        "id": "USR_e723b85e-0240-4c60-9be6-30b2dbb51a2f"
+      },
+      {
+        "username": "e2e.kh",
+        "ten": "E2E Trưởng phòng Kế hoạch",
+        "vai": "kh_truong",
+        "id": "USR_9021140a-3cb4-4a01-a958-d88a3bc8c722"
+      },
+      {
+        "username": "giamdoc.demo",
+        "ten": "Giám đốc Demo",
+        "vai": "director",
+        "id": "USR_p2_giamdoc_demo"
+      },
+      {
+        "username": "kttdemo",
+        "ten": "Kế toán trưởng H",
+        "vai": "accountant",
+        "id": "USR_8f44eaed-4466-4a7d-a0a8-b5e1bd04e0e7"
+      },
+      {
+        "username": "ksda.demo",
+        "ten": "Kỹ sư dự án (đề nghị mua)",
+        "vai": "ksda",
+        "id": "USR_4a1c4fd5-dd0f-4ca6-80ff-feda3f3ed881"
+      },
+      {
+        "username": "engineer.demo",
+        "ten": "Kỹ sư hiện trường",
+        "vai": "ksda",
+        "id": "USR_38e49f49-9d2a-40e9-8109-4bdf346ea62c"
+      },
+      {
+        "username": "hrm",
+        "ten": "Ngọc Mai",
+        "vai": "hr",
+        "id": "USR_dad70ae8-62f6-41e2-a29d-dadceadfdbfe"
+      },
+      {
+        "username": "nvdademo",
+        "ten": "Nhân viên Dự án E",
+        "vai": "da_nv",
+        "id": "USR_76575c08-4d16-49fc-8cd8-bde8ae204003"
+      },
+      {
+        "username": "nvkhdemo",
+        "ten": "Nhân viên Kế hoạch F",
+        "vai": "kh_nv",
+        "id": "USR_8869ca60-7c6a-4e7f-bebd-0547f38bcdb8"
+      },
+      {
+        "username": "tkhodemo",
+        "ten": "Thủ kho G",
+        "vai": "thu_kho",
+        "id": "USR_8984cf69-c2d7-4162-bb4f-03ab51427e1e"
+      },
+      {
+        "username": "thukydemo",
+        "ten": "Thư ký TGĐ D",
+        "vai": "thuky",
+        "id": "USR_8011a197-261a-4288-91d6-1d62a233cedb"
+      },
+      {
+        "username": "trdademo",
+        "ten": "Trưởng phòng Dự án C",
+        "vai": "da_truong",
+        "id": "USR_c51d95b2-8f98-4f01-9daa-0b64d0037b7d"
+      },
+      {
+        "username": "trinhtrench",
+        "ten": "Trưởng phòng Kế hoạch B",
+        "vai": "kh_truong",
+        "id": "USR_a5cd3bc6-f7b4-468f-af3b-103170fc0b2c"
+      }
+    ]
+  },
+  "biLoai": [
+    {
+      "username": "testuser86661",
+      "ten": "Người dùng kiểm chứng",
+      "role": "ksda",
+      "lydo": "Tai khoan kiem chung bao mat tu sinh: ho ten 'Nguoi dung kiem chung', email @test.local, ma NV SEC-866610 — KHONG phai nguoi that."
+    },
+    {
+      "username": "admin",
+      "ten": "Quản trị viên VNTECH",
+      "role": "admin",
+      "lydo": "Tai khoan quan tri he thong (role=admin) — khong phai nhan su lao dong."
+    }
+  ],
+  "khongDungLai": {
+    "hoSo": [
+      {
+        "username": "e2e.diag",
+        "ten": "Chẩn đoán"
+      },
+      {
+        "username": "cha.ht",
+        "ten": "Chỉ huy trưởng A"
+      },
+      {
+        "username": "e2e.cht",
+        "ten": "E2E Chỉ huy trưởng"
+      },
+      {
+        "username": "e2e.chtsa",
+        "ten": "E2E Chỉ Huy Trưởng SA"
+      },
+      {
+        "username": "e2e.bgd",
+        "ten": "E2E Giám đốc"
+      },
+      {
+        "username": "e2e.kt",
+        "ten": "E2E Kế toán"
+      },
+      {
+        "username": "e2e.ksda",
+        "ten": "E2E Kỹ sư Dự án"
+      },
+      {
+        "username": "e2e.ns",
+        "ten": "E2E Nhân sự"
+      },
+      {
+        "username": "e2e.khnv",
+        "ten": "E2E Nhân viên Kế hoạch"
+      },
+      {
+        "username": "e2e.project",
+        "ten": "E2E project"
+      },
+      {
+        "username": "e2e.tk",
+        "ten": "E2E Thủ kho"
+      },
+      {
+        "username": "e2e.thukysa",
+        "ten": "E2E Thư ký SA"
+      },
+      {
+        "username": "e2e.thuky",
+        "ten": "E2E Thư ký Tổng giám đốc"
+      },
+      {
+        "username": "e2e.to",
+        "ten": "E2E Tổ Trưởng"
+      },
+      {
+        "username": "e2e.kh",
+        "ten": "E2E Trưởng phòng Kế hoạch"
+      },
+      {
+        "username": "giamdoc.demo",
+        "ten": "Giám đốc Demo"
+      },
+      {
+        "username": "kttdemo",
+        "ten": "Kế toán trưởng H"
+      },
+      {
+        "username": "ksda.demo",
+        "ten": "Kỹ sư dự án (đề nghị mua)"
+      },
+      {
+        "username": "engineer.demo",
+        "ten": "Kỹ sư hiện trường"
+      },
+      {
+        "username": "hrm",
+        "ten": "Ngọc Mai"
+      },
+      {
+        "username": "nvdademo",
+        "ten": "Nhân viên Dự án E"
+      },
+      {
+        "username": "nvkhdemo",
+        "ten": "Nhân viên Kế hoạch F"
+      },
+      {
+        "username": "tkhodemo",
+        "ten": "Thủ kho G"
+      },
+      {
+        "username": "thukydemo",
+        "ten": "Thư ký TGĐ D"
+      },
+      {
+        "username": "trdademo",
+        "ten": "Trưởng phòng Dự án C"
+      },
+      {
+        "username": "trinhtrench",
+        "ten": "Trưởng phòng Kế hoạch B"
+      }
+    ],
+    "hopDong": [
+      {
+        "username": "e2e.diag",
+        "ten": "Chẩn đoán",
+        "so": "HĐLĐ-00003"
+      },
+      {
+        "username": "cha.ht",
+        "ten": "Chỉ huy trưởng A",
+        "so": "HĐLĐ-00001"
+      },
+      {
+        "username": "e2e.cht",
+        "ten": "E2E Chỉ huy trưởng",
+        "so": "HĐLĐ-00004"
+      },
+      {
+        "username": "e2e.chtsa",
+        "ten": "E2E Chỉ Huy Trưởng SA",
+        "so": "HĐLĐ-00023"
+      },
+      {
+        "username": "e2e.bgd",
+        "ten": "E2E Giám đốc",
+        "so": "HĐLĐ-00005"
+      },
+      {
+        "username": "e2e.kt",
+        "ten": "E2E Kế toán",
+        "so": "HĐLĐ-00006"
+      },
+      {
+        "username": "e2e.ksda",
+        "ten": "E2E Kỹ sư Dự án",
+        "so": "HĐLĐ-00007"
+      },
+      {
+        "username": "e2e.ns",
+        "ten": "E2E Nhân sự",
+        "so": "HĐLĐ-00008"
+      },
+      {
+        "username": "e2e.khnv",
+        "ten": "E2E Nhân viên Kế hoạch",
+        "so": "HĐLĐ-00021"
+      },
+      {
+        "username": "e2e.project",
+        "ten": "E2E project",
+        "so": "HĐLĐ-00024"
+      },
+      {
+        "username": "e2e.tk",
+        "ten": "E2E Thủ kho",
+        "so": "HĐLĐ-00009"
+      },
+      {
+        "username": "e2e.thukysa",
+        "ten": "E2E Thư ký SA",
+        "so": "HĐLĐ-00025"
+      },
+      {
+        "username": "e2e.thuky",
+        "ten": "E2E Thư ký Tổng giám đốc",
+        "so": "HĐLĐ-00022"
+      },
+      {
+        "username": "e2e.to",
+        "ten": "E2E Tổ Trưởng",
+        "so": "HĐLĐ-00026"
+      },
+      {
+        "username": "e2e.kh",
+        "ten": "E2E Trưởng phòng Kế hoạch",
+        "so": "HĐLĐ-00010"
+      },
+      {
+        "username": "giamdoc.demo",
+        "ten": "Giám đốc Demo",
+        "so": "HĐLĐ-00011"
+      },
+      {
+        "username": "kttdemo",
+        "ten": "Kế toán trưởng H",
+        "so": "HĐLĐ-00012"
+      },
+      {
+        "username": "ksda.demo",
+        "ten": "Kỹ sư dự án (đề nghị mua)",
+        "so": "HĐLĐ-00013"
+      },
+      {
+        "username": "engineer.demo",
+        "ten": "Kỹ sư hiện trường",
+        "so": "HĐLĐ-00014"
+      },
+      {
+        "username": "hrm",
+        "ten": "Ngọc Mai",
+        "so": "HĐLĐ-00015"
+      },
+      {
+        "username": "nvdademo",
+        "ten": "Nhân viên Dự án E",
+        "so": "HĐLĐ-00002"
+      },
+      {
+        "username": "nvkhdemo",
+        "ten": "Nhân viên Kế hoạch F",
+        "so": "HĐLĐ-00016"
+      },
+      {
+        "username": "tkhodemo",
+        "ten": "Thủ kho G",
+        "so": "HĐLĐ-00017"
+      },
+      {
+        "username": "thukydemo",
+        "ten": "Thư ký TGĐ D",
+        "so": "HĐLĐ-00018"
+      },
+      {
+        "username": "trdademo",
+        "ten": "Trưởng phòng Dự án C",
+        "so": "HĐLĐ-00019"
+      },
+      {
+        "username": "trinhtrench",
+        "ten": "Trưởng phòng Kế hoạch B",
+        "so": "HĐLĐ-00020"
+      }
+    ]
+  },
+  "buoc": [
+    {
+      "ten": "trang thai HD · Giám đốc Demo",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai HD · E2E Nhân viên Kế hoạch",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai HD · Kỹ sư dự án (đề nghị mua)",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai HD · E2E Thủ kho",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai HD · E2E Thư ký Tổng giám đốc",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai HD · E2E Nhân sự",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai HD · E2E Chỉ huy trưởng",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai HD · Nhân viên Kế hoạch F",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai HD · E2E Kế toán",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai HD · Trưởng phòng Kế hoạch B",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai HD · E2E Kỹ sư Dự án",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai HD · Ngọc Mai",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai HD · E2E Chỉ Huy Trưởng SA",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai HD · E2E project",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai HD · Kế toán trưởng H",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai HD · Thủ kho G",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai HD · Thư ký TGĐ D",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai HD · E2E Trưởng phòng Kế hoạch",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai HD · Trưởng phòng Dự án C",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai HD · Chẩn đoán",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai HD · E2E Giám đốc",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai HD · Kỹ sư hiện trường",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai HD · E2E Tổ Trưởng",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai HD · E2E Thư ký SA",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · Kỹ sư dự án (đề nghị mua) · BHXH",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · E2E project · BHYT",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · Thư ký TGĐ D · BHYT",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · Kỹ sư dự án (đề nghị mua) · BHYT",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · Kỹ sư hiện trường · BHYT",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · E2E Thủ kho · BHYT",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · E2E Nhân sự · BHYT",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · Nhân viên Kế hoạch F · BHXH",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · E2E Trưởng phòng Kế hoạch · BHYT",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · E2E Thủ kho · BHXH",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · Nhân viên Dự án E · BHXH",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · Chẩn đoán · BHXH",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · Chẩn đoán · BHYT",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · Kế toán trưởng H · BHXH",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · Thủ kho G · BHXH",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · E2E Tổ Trưởng · BHXH",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · E2E Thư ký Tổng giám đốc · BHYT",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · E2E Kế toán · BHXH",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · E2E Giám đốc · BHXH",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · Giám đốc Demo · BHYT",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · Giám đốc Demo · BHXH",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · E2E Chỉ Huy Trưởng SA · BHXH",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · E2E Chỉ huy trưởng · BHYT",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · Trưởng phòng Kế hoạch B · BHYT",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · E2E Thư ký Tổng giám đốc · BHXH",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · Thư ký TGĐ D · BHXH",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · Trưởng phòng Dự án C · BHXH",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · Trưởng phòng Kế hoạch B · BHXH",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · E2E Tổ Trưởng · BHYT",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · Ngọc Mai · BHXH",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · E2E Kế toán · BHYT",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · Nhân viên Dự án E · BHYT",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · Thủ kho G · BHYT",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · E2E Nhân sự · BHXH",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · Kỹ sư hiện trường · BHXH",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · Nhân viên Kế hoạch F · BHYT",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · E2E Chỉ Huy Trưởng SA · BHYT",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · E2E Trưởng phòng Kế hoạch · BHXH",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · E2E Kỹ sư Dự án · BHXH",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · Ngọc Mai · BHYT",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · E2E Giám đốc · BHYT",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · Kế toán trưởng H · BHYT",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · E2E Nhân viên Kế hoạch · BHYT",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · E2E Kỹ sư Dự án · BHYT",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · Trưởng phòng Dự án C · BHYT",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · E2E Chỉ huy trưởng · BHXH",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · E2E Nhân viên Kế hoạch · BHXH",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · E2E project · BHXH",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · E2E Thư ký SA · BHXH",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · E2E Thư ký SA · BHYT",
+      "ok": true,
+      "loi": null
+    },
+    {
+      "ten": "trang thai BH · Chỉ huy trưởng A · BHYT",
+      "ok": true,
+      "loi": null
+    }
+  ],
+  "loiChiTiet": [],
+  "tuDocTaiKhoan": [
+    {
+      "username": "e2e.diag",
+      "hoTen": "Chẩn đoán",
+      "userId": "USR_15b62026-049e-4eaf-9736-1e7d01e3c119",
+      "vai": "ksda",
+      "dangNhap": true,
+      "thayToiDungDangNhap": true,
+      "soKhoaBootstrap": 104,
+      "hoSo": {
+        "id": "HR_821b9bd0-a757-46a9-8380-a7377cd1b831",
+        "hoTen": "Chẩn đoán",
+        "chucDanh": "Kỹ sư dự án",
+        "cccd": "079927446318",
+        "ngayVao": "2023-10-18",
+        "e2e": true
+      },
+      "hopDong": {
+        "so": "HĐLĐ-00003",
+        "loai": "Hợp đồng xác định thời hạn",
+        "tu": "2026-02-01",
+        "den": "2029-01-31",
+        "luong": 19000000,
+        "trangThai": "active",
+        "e2e": true
+      },
+      "baoHiem": [
+        {
+          "so": "BH-00002",
+          "loai": "BHXH",
+          "muc": 4085000,
+          "trangThai": "active",
+          "e2e": true
+        },
+        {
+          "so": "BH-00003",
+          "loai": "BHYT",
+          "muc": 570000,
+          "trangThai": "active",
+          "e2e": true
+        }
+      ],
+      "tongNhinThay": {
+        "hoSo": 26,
+        "hopDong": 26,
+        "baoHiem": 52
+      },
+      "dat": true
+    },
+    {
+      "username": "e2e.cht",
+      "hoTen": "E2E Chỉ huy trưởng",
+      "userId": "USR_d3dce944-4b07-49c5-88a7-a5c4305687f8",
+      "vai": "cht",
+      "dangNhap": true,
+      "thayToiDungDangNhap": true,
+      "soKhoaBootstrap": 104,
+      "hoSo": {
+        "id": "HR_c2c92aaf-e71f-45bf-9587-c63606bb38b6",
+        "hoTen": "E2E Chỉ huy trưởng",
+        "chucDanh": "Chỉ huy trưởng",
+        "cccd": "079916975598",
+        "ngayVao": "2023-06-09",
+        "e2e": true
+      },
+      "hopDong": {
+        "so": "HĐLĐ-00004",
+        "loai": "Hợp đồng không xác định thời hạn",
+        "tu": "2026-02-01",
+        "den": "2029-01-31",
+        "luong": 28000000,
+        "trangThai": "active",
+        "e2e": true
+      },
+      "baoHiem": [
+        {
+          "so": "BH-00006",
+          "loai": "BHYT",
+          "muc": 840000,
+          "trangThai": "active",
+          "e2e": true
+        },
+        {
+          "so": "BH-00005",
+          "loai": "BHXH",
+          "muc": 6020000,
+          "trangThai": "active",
+          "e2e": true
+        }
+      ],
+      "tongNhinThay": {
+        "hoSo": 26,
+        "hopDong": 26,
+        "baoHiem": 52
+      },
+      "dat": true
+    },
+    {
+      "username": "e2e.chtsa",
+      "hoTen": "E2E Chỉ Huy Trưởng SA",
+      "userId": "USR_ee14609c-f681-4b20-a639-ac7498dea678",
+      "vai": "cht",
+      "dangNhap": true,
+      "thayToiDungDangNhap": true,
+      "soKhoaBootstrap": 104,
+      "hoSo": {
+        "id": "HR_498cd375-4325-47c1-bc2c-1bd49a0f9614",
+        "hoTen": "E2E Chỉ Huy Trưởng SA",
+        "chucDanh": "Chỉ huy trưởng",
+        "cccd": "079943134514",
+        "ngayVao": "2024-01-24",
+        "e2e": true
+      },
+      "hopDong": {
+        "so": "HĐLĐ-00023",
+        "loai": "Hợp đồng không xác định thời hạn",
+        "tu": "2026-02-01",
+        "den": "2029-01-31",
+        "luong": 29000000,
+        "trangThai": "active",
+        "e2e": true
+      },
+      "baoHiem": [
+        {
+          "so": "BH-00045",
+          "loai": "BHXH",
+          "muc": 6235000,
+          "trangThai": "active",
+          "e2e": true
+        },
+        {
+          "so": "BH-00046",
+          "loai": "BHYT",
+          "muc": 870000,
+          "trangThai": "active",
+          "e2e": true
+        }
+      ],
+      "tongNhinThay": {
+        "hoSo": 26,
+        "hopDong": 26,
+        "baoHiem": 52
+      },
+      "dat": true
+    },
+    {
+      "username": "e2e.bgd",
+      "hoTen": "E2E Giám đốc",
+      "userId": "USR_e66f85ff-96ad-40d5-a632-10be87ab10d5",
+      "vai": "director",
+      "dangNhap": true,
+      "thayToiDungDangNhap": true,
+      "soKhoaBootstrap": 104,
+      "hoSo": {
+        "id": "HR_62d89657-dc1d-4db0-8911-9e772349e857",
+        "hoTen": "E2E Giám đốc",
+        "chucDanh": "Ban giám đốc",
+        "cccd": "079936578566",
+        "ngayVao": "2023-10-08",
+        "e2e": true
+      },
+      "hopDong": {
+        "so": "HĐLĐ-00005",
+        "loai": "Hợp đồng không xác định thời hạn",
+        "tu": "2026-02-01",
+        "den": "2029-01-31",
+        "luong": 46000000,
+        "trangThai": "active",
+        "e2e": true
+      },
+      "baoHiem": [
+        {
+          "so": "BH-00007",
+          "loai": "BHXH",
+          "muc": 9890000,
+          "trangThai": "active",
+          "e2e": true
+        },
+        {
+          "so": "BH-00008",
+          "loai": "BHYT",
+          "muc": 1380000,
+          "trangThai": "active",
+          "e2e": true
+        }
+      ],
+      "tongNhinThay": {
+        "hoSo": 26,
+        "hopDong": 26,
+        "baoHiem": 52
+      },
+      "dat": true
+    },
+    {
+      "username": "e2e.kt",
+      "hoTen": "E2E Kế toán",
+      "userId": "USR_f47a166f-0d39-440f-b796-08a5527de3f4",
+      "vai": "accountant",
+      "dangNhap": true,
+      "thayToiDungDangNhap": true,
+      "soKhoaBootstrap": 104,
+      "hoSo": {
+        "id": "HR_c077882f-ed88-40ae-908f-f48a2028b9a0",
+        "hoTen": "E2E Kế toán",
+        "chucDanh": "Tài chính Kế toán",
+        "cccd": "079941600218",
+        "ngayVao": "2024-09-04",
+        "e2e": true
+      },
+      "hopDong": {
+        "so": "HĐLĐ-00006",
+        "loai": "Hợp đồng xác định thời hạn",
+        "tu": "2026-02-01",
+        "den": "2029-01-31",
+        "luong": 25000000,
+        "trangThai": "active",
+        "e2e": true
+      },
+      "baoHiem": [
+        {
+          "so": "BH-00009",
+          "loai": "BHXH",
+          "muc": 5375000,
+          "trangThai": "active",
+          "e2e": true
+        },
+        {
+          "so": "BH-00010",
+          "loai": "BHYT",
+          "muc": 750000,
+          "trangThai": "active",
+          "e2e": true
+        }
+      ],
+      "tongNhinThay": {
+        "hoSo": 26,
+        "hopDong": 26,
+        "baoHiem": 52
+      },
+      "dat": true
+    },
+    {
+      "username": "e2e.ksda",
+      "hoTen": "E2E Kỹ sư Dự án",
+      "userId": "USR_7ae68731-da43-4dc1-922d-a03b6a2ee9c9",
+      "vai": "ksda",
+      "dangNhap": true,
+      "thayToiDungDangNhap": true,
+      "soKhoaBootstrap": 104,
+      "hoSo": {
+        "id": "HR_ce2385ac-c2af-49eb-a64f-96550259c6b3",
+        "hoTen": "E2E Kỹ sư Dự án",
+        "chucDanh": "Kỹ sư dự án",
+        "cccd": "079980307524",
+        "ngayVao": "2021-02-07",
+        "e2e": true
+      },
+      "hopDong": {
+        "so": "HĐLĐ-00007",
+        "loai": "Hợp đồng xác định thời hạn",
+        "tu": "2026-02-01",
+        "den": "2029-01-31",
+        "luong": 20000000,
+        "trangThai": "active",
+        "e2e": true
+      },
+      "baoHiem": [
+        {
+          "so": "BH-00011",
+          "loai": "BHXH",
+          "muc": 4300000,
+          "trangThai": "active",
+          "e2e": true
+        },
+        {
+          "so": "BH-00012",
+          "loai": "BHYT",
+          "muc": 600000,
+          "trangThai": "active",
+          "e2e": true
+        }
+      ],
+      "tongNhinThay": {
+        "hoSo": 26,
+        "hopDong": 26,
+        "baoHiem": 52
+      },
+      "dat": true
+    },
+    {
+      "username": "e2e.ns",
+      "hoTen": "E2E Nhân sự",
+      "userId": "USR_dda7f31c-b907-4fd3-95d8-a9513e6a86f0",
+      "vai": "hr",
+      "dangNhap": true,
+      "thayToiDungDangNhap": true,
+      "soKhoaBootstrap": 104,
+      "hoSo": {
+        "id": "HR_5052a238-cd81-4851-a0f7-370c0c2c5f4d",
+        "hoTen": "E2E Nhân sự",
+        "chucDanh": "Nhân sự",
+        "cccd": "079988725766",
+        "ngayVao": "2020-09-22",
+        "e2e": true
+      },
+      "hopDong": {
+        "so": "HĐLĐ-00008",
+        "loai": "Hợp đồng không xác định thời hạn",
+        "tu": "2026-02-01",
+        "den": "2029-01-31",
+        "luong": 19000000,
+        "trangThai": "active",
+        "e2e": true
+      },
+      "baoHiem": [
+        {
+          "so": "BH-00014",
+          "loai": "BHYT",
+          "muc": 570000,
+          "trangThai": "active",
+          "e2e": true
+        },
+        {
+          "so": "BH-00013",
+          "loai": "BHXH",
+          "muc": 4085000,
+          "trangThai": "active",
+          "e2e": true
+        }
+      ],
+      "tongNhinThay": {
+        "hoSo": 26,
+        "hopDong": 26,
+        "baoHiem": 52
+      },
+      "dat": true
+    },
+    {
+      "username": "e2e.khnv",
+      "hoTen": "E2E Nhân viên Kế hoạch",
+      "userId": "USR_1489da18-e042-424b-aef8-2964fcebd323",
+      "vai": "kh_nv",
+      "dangNhap": true,
+      "thayToiDungDangNhap": true,
+      "soKhoaBootstrap": 104,
+      "hoSo": {
+        "id": "HR_c9bd05e7-cee0-406c-990f-67ce26010432",
+        "hoTen": "E2E Nhân viên Kế hoạch",
+        "chucDanh": "Nhân viên Phòng Kế hoạch",
+        "cccd": "079935778570",
+        "ngayVao": "2020-01-21",
+        "e2e": true
+      },
+      "hopDong": {
+        "so": "HĐLĐ-00021",
+        "loai": "Hợp đồng xác định thời hạn",
+        "tu": "2026-02-01",
+        "den": "2029-01-31",
+        "luong": 11000000,
+        "trangThai": "active",
+        "e2e": true
+      },
+      "baoHiem": [
+        {
+          "so": "BH-00042",
+          "loai": "BHYT",
+          "muc": 330000,
+          "trangThai": "active",
+          "e2e": true
+        },
+        {
+          "so": "BH-00041",
+          "loai": "BHXH",
+          "muc": 2365000,
+          "trangThai": "active",
+          "e2e": true
+        }
+      ],
+      "tongNhinThay": {
+        "hoSo": 26,
+        "hopDong": 26,
+        "baoHiem": 52
+      },
+      "dat": true
+    },
+    {
+      "username": "e2e.project",
+      "hoTen": "E2E project",
+      "userId": "USR_bed00dc5-39ac-4dac-b89b-16f54f45e9f2",
+      "vai": "da_nv",
+      "dangNhap": true,
+      "thayToiDungDangNhap": true,
+      "soKhoaBootstrap": 104,
+      "hoSo": {
+        "id": "HR_a131d98c-56c8-4748-b7cb-b2e643783115",
+        "hoTen": "E2E project",
+        "chucDanh": "Nhân viên Phòng Dự án",
+        "cccd": "079978792030",
+        "ngayVao": "2024-05-24",
+        "e2e": true
+      },
+      "hopDong": {
+        "so": "HĐLĐ-00024",
+        "loai": "Hợp đồng xác định thời hạn",
+        "tu": "2026-02-01",
+        "den": "2029-01-31",
+        "luong": 10000000,
+        "trangThai": "active",
+        "e2e": true
+      },
+      "baoHiem": [
+        {
+          "so": "BH-00048",
+          "loai": "BHYT",
+          "muc": 300000,
+          "trangThai": "active",
+          "e2e": true
+        },
+        {
+          "so": "BH-00047",
+          "loai": "BHXH",
+          "muc": 2150000,
+          "trangThai": "active",
+          "e2e": true
+        }
+      ],
+      "tongNhinThay": {
+        "hoSo": 26,
+        "hopDong": 26,
+        "baoHiem": 52
+      },
+      "dat": true
+    },
+    {
+      "username": "e2e.tk",
+      "hoTen": "E2E Thủ kho",
+      "userId": "USR_9bf366bf-0e6b-4cd1-9e9e-47725034cdb1",
+      "vai": "thu_kho",
+      "dangNhap": true,
+      "thayToiDungDangNhap": true,
+      "soKhoaBootstrap": 104,
+      "hoSo": {
+        "id": "HR_c1957480-553a-4edc-ba2f-cba6f53409b8",
+        "hoTen": "E2E Thủ kho",
+        "chucDanh": "Thủ kho dự án",
+        "cccd": "079955490552",
+        "ngayVao": "2022-05-16",
+        "e2e": true
+      },
+      "hopDong": {
+        "so": "HĐLĐ-00009",
+        "loai": "Hợp đồng xác định thời hạn",
+        "tu": "2026-02-01",
+        "den": "2029-01-31",
+        "luong": 14000000,
+        "trangThai": "active",
+        "e2e": true
+      },
+      "baoHiem": [
+        {
+          "so": "BH-00016",
+          "loai": "BHYT",
+          "muc": 420000,
+          "trangThai": "active",
+          "e2e": true
+        },
+        {
+          "so": "BH-00015",
+          "loai": "BHXH",
+          "muc": 3010000,
+          "trangThai": "active",
+          "e2e": true
+        }
+      ],
+      "tongNhinThay": {
+        "hoSo": 26,
+        "hopDong": 26,
+        "baoHiem": 52
+      },
+      "dat": true
+    },
+    {
+      "username": "e2e.thukysa",
+      "hoTen": "E2E Thư ký SA",
+      "userId": "USR_c8765a28-9318-4ee9-926b-1f889599ecc9",
+      "vai": "thuky",
+      "dangNhap": true,
+      "thayToiDungDangNhap": true,
+      "soKhoaBootstrap": 104,
+      "hoSo": {
+        "id": "HR_aba52e56-0283-4e1f-b109-4a47da58c256",
+        "hoTen": "E2E Thư ký SA",
+        "chucDanh": "Thư ký Tổng giám đốc",
+        "cccd": "079993027660",
+        "ngayVao": "2024-03-23",
+        "e2e": true
+      },
+      "hopDong": {
+        "so": "HĐLĐ-00025",
+        "loai": "Hợp đồng xác định thời hạn",
+        "tu": "2026-02-01",
+        "den": "2029-01-31",
+        "luong": 13000000,
+        "trangThai": "active",
+        "e2e": true
+      },
+      "baoHiem": [
+        {
+          "so": "BH-00049",
+          "loai": "BHXH",
+          "muc": 2795000,
+          "trangThai": "active",
+          "e2e": true
+        },
+        {
+          "so": "BH-00050",
+          "loai": "BHYT",
+          "muc": 390000,
+          "trangThai": "active",
+          "e2e": true
+        }
+      ],
+      "tongNhinThay": {
+        "hoSo": 26,
+        "hopDong": 26,
+        "baoHiem": 52
+      },
+      "dat": true
+    },
+    {
+      "username": "e2e.thuky",
+      "hoTen": "E2E Thư ký Tổng giám đốc",
+      "userId": "USR_61e13947-4c36-4977-8214-41ec00edc6da",
+      "vai": "thuky",
+      "dangNhap": true,
+      "thayToiDungDangNhap": true,
+      "soKhoaBootstrap": 104,
+      "hoSo": {
+        "id": "HR_45824527-375f-4821-b976-e6aa81a6c1e5",
+        "hoTen": "E2E Thư ký Tổng giám đốc",
+        "chucDanh": "Thư ký Tổng giám đốc",
+        "cccd": "079922589012",
+        "ngayVao": "2023-12-08",
+        "e2e": true
+      },
+      "hopDong": {
+        "so": "HĐLĐ-00022",
+        "loai": "Hợp đồng xác định thời hạn",
+        "tu": "2026-02-01",
+        "den": "2029-01-31",
+        "luong": 15000000,
+        "trangThai": "active",
+        "e2e": true
+      },
+      "baoHiem": [
+        {
+          "so": "BH-00044",
+          "loai": "BHYT",
+          "muc": 450000,
+          "trangThai": "active",
+          "e2e": true
+        },
+        {
+          "so": "BH-00043",
+          "loai": "BHXH",
+          "muc": 3225000,
+          "trangThai": "active",
+          "e2e": true
+        }
+      ],
+      "tongNhinThay": {
+        "hoSo": 26,
+        "hopDong": 26,
+        "baoHiem": 52
+      },
+      "dat": true
+    },
+    {
+      "username": "e2e.to",
+      "hoTen": "E2E Tổ Trưởng",
+      "userId": "USR_e723b85e-0240-4c60-9be6-30b2dbb51a2f",
+      "vai": "team",
+      "dangNhap": true,
+      "thayToiDungDangNhap": true,
+      "soKhoaBootstrap": 104,
+      "hoSo": {
+        "id": "HR_25c7058e-cb6a-413a-b7a5-e6df7ee5368f",
+        "hoTen": "E2E Tổ Trưởng",
+        "chucDanh": "Tổ đội",
+        "cccd": "079922601028",
+        "ngayVao": "2022-05-03",
+        "e2e": true
+      },
+      "hopDong": {
+        "so": "HĐLĐ-00026",
+        "loai": "Hợp đồng xác định thời hạn",
+        "tu": "2026-02-01",
+        "den": "2029-01-31",
+        "luong": 15000000,
+        "trangThai": "active",
+        "e2e": true
+      },
+      "baoHiem": [
+        {
+          "so": "BH-00051",
+          "loai": "BHXH",
+          "muc": 3225000,
+          "trangThai": "active",
+          "e2e": true
+        },
+        {
+          "so": "BH-00052",
+          "loai": "BHYT",
+          "muc": 450000,
+          "trangThai": "active",
+          "e2e": true
+        }
+      ],
+      "tongNhinThay": {
+        "hoSo": 26,
+        "hopDong": 26,
+        "baoHiem": 52
+      },
+      "dat": true
+    },
+    {
+      "username": "e2e.kh",
+      "hoTen": "E2E Trưởng phòng Kế hoạch",
+      "userId": "USR_9021140a-3cb4-4a01-a958-d88a3bc8c722",
+      "vai": "kh_truong",
+      "dangNhap": true,
+      "thayToiDungDangNhap": true,
+      "soKhoaBootstrap": 104,
+      "hoSo": {
+        "id": "HR_22cc61eb-1328-4eb3-be6a-9aa4ac1d208e",
+        "hoTen": "E2E Trưởng phòng Kế hoạch",
+        "chucDanh": "Trưởng phòng Kế hoạch",
+        "cccd": "079971826886",
+        "ngayVao": "2020-01-04",
+        "e2e": true
+      },
+      "hopDong": {
+        "so": "HĐLĐ-00010",
+        "loai": "Hợp đồng xác định thời hạn",
+        "tu": "2026-02-01",
+        "den": "2029-01-31",
+        "luong": 25000000,
+        "trangThai": "active",
+        "e2e": true
+      },
+      "baoHiem": [
+        {
+          "so": "BH-00018",
+          "loai": "BHYT",
+          "muc": 750000,
+          "trangThai": "active",
+          "e2e": true
+        },
+        {
+          "so": "BH-00017",
+          "loai": "BHXH",
+          "muc": 5375000,
+          "trangThai": "active",
+          "e2e": true
+        }
+      ],
+      "tongNhinThay": {
+        "hoSo": 26,
+        "hopDong": 26,
+        "baoHiem": 52
+      },
+      "dat": true
+    }
+  ],
+  "ghiChu": [
+    "save_hr_record là UPSERT theo userId: lần chạy sau nếu hồ sơ đã có thì taoHoSo rỗng ⇒ không tạo trùng.",
+    "save_labor_contract không có khóa tự nhiên theo người; script BỎ QUA người đã có BẤT KỲ hợp đồng nào ⇒ chạy lại không tạo trùng.",
+    "save_benefit_record: script bỏ qua cặp (userId, benefitType) đã có ⇒ chạy lại không tạo trùng.",
+    "Mọi bản ghi mới mang dấu E2E trong `note` (E2E-HS-03 / E2E-HD-03 / E2E-BH-03).",
+    "Số hợp đồng (HĐLĐ-xxxxx) và mã bảo hiểm (BH-xxxxx) do SERVER sinh, client không tự đặt được ⇒ dấu E2E nằm ở `note`.",
+    "bootstrap() trả về TOÀN BỘ dữ liệu hệ thống cho mọi tài khoản ⇒ bước 8 tự lọc theo userId của chính mình.",
+    "set_labor_contract_status / set_benefit_record_status được gọi ngay sau khi tạo: server ném 'Không tìm thấy...' nếu bản ghi không tồn tại ⇒ đây là bằng chứng ghi thật.",
+    "`taoMoiLanNay` = số bản ghi tạo ra ở lần chạy này; `lichSuTao` = tích luỹ qua các lần chạy (không bị ghi đè khi chạy lại)."
+  ]
+}

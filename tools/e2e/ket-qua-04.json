@@ -1,0 +1,63 @@
+{
+  "giaiDoan": 4,
+  "moTa": "Cấu hình hệ thống nhóm vật tư và tạo 200 mã vật tư kèm tên phụ",
+  "chayLuc": "2026-10-04T21:26:39.175Z",
+  "tienTo": "E2E-",
+  "actionDung": {
+    "taoHeNhom": "save_material_category { code*, name*, description?, sortOrder? }",
+    "taoNhomCon": "save_material_subcategory { categoryId*, name*, code?, description?, reviewStatus?, sortOrder? }",
+    "taoMaVatTu": "save_material { code*, name*, unit*, categoryId*, subcategoryId?, brand?, specification?, standardPrice?, minStock?, active?, aliasText? }",
+    "tenPhu": "KHÔNG có action riêng — tên phụ nhập qua trường aliasText của save_material (tách bằng dấu ';' hoặc xuống dòng); máy chủ tự chuẩn hoá, chặn trùng và ghi vào bảng material_aliases."
+  },
+  "truoc": {
+    "materials": 237,
+    "adminMaterials": 237,
+    "materialCategories": 16,
+    "adminMaterialCategories": 16,
+    "materialSubcategories": 50,
+    "adminMaterialSubcategories": 50,
+    "materialAliases": 243,
+    "suppliers": 7,
+    "inventory": 1185
+  },
+  "sau": {
+    "materials": 237,
+    "adminMaterials": 237,
+    "materialCategories": 16,
+    "adminMaterialCategories": 16,
+    "materialSubcategories": 50,
+    "adminMaterialSubcategories": 50,
+    "materialAliases": 243,
+    "suppliers": 7,
+    "inventory": 1185
+  },
+  "soLenhGhiThucTe": 0,
+  "soLenhTaoMoi": 0,
+  "soLenhBoSungTenPhu": 0,
+  "soLoi": 0,
+  "danhSachLoi": [],
+  "ketQuaDoLaiTuMayChu": {
+    "maVatTuE2E": 200,
+    "maVatTuE2ECoTenPhu": 200,
+    "dongAliasE2E": 200,
+    "heNhomE2E": 9,
+    "nhomConE2E": 33,
+    "coDonViTinh": 200,
+    "coDonGia": 200,
+    "tenPhuTrungTenChinh": 0,
+    "heME": {
+      "KHAC": 200
+    }
+  },
+  "luuYPhatHien": [
+    "PHÁT HIỆN (không sửa, chỉ báo cáo): MaterialSystemCodes.canonicalMeCode() dùng helper `private static boolean contains(List<String> list, String v) { return list.contains(v); }` — tức là so BẰNG TOÀN BỘ chuỗi, KHÔNG phải substring, dù Javadoc của TASK-040 ghi đã vá để so tiền tố. Hệ quả: mã hệ M&E chỉ đúng khi mã danh mục BẰNG ĐÚNG 'DIEN'/'CTN'/'ELV'/'PCCC'/'HVAC'/'DNHE' hoặc BẮT ĐẦU bằng chúng. 9 hệ E2E đều bắt đầu bằng 'E2E-' nên canonicalMeCode trả 'KHAC' cho tất cả 200 mã — kể cả 'E2E-CTN-ONGNUOC' và 'E2E-DIEN-THIETBI'."
+  ],
+  "buoc": [
+    {
+      "ten": "Ghi 0 lệnh save_material",
+      "ok": true,
+      "loi": null
+    }
+  ],
+  "duDieuKhongDat": false
+}

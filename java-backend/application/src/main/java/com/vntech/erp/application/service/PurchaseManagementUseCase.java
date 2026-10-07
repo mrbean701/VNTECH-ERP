@@ -303,6 +303,52 @@ private static final List<String> COMPLETED_PO_STATUSES = List.of(
         List<?> rawLines = payload.get("lines") instanceof List<?> l ? l : List.of();
         Map<String, Object> po = store.findPoForReceiving(poId)
                 .orElseThrow(() -> Api("Phiếu nhập cần PO và ít nhất một dòng nhận hàng."));
+        // ⛔⛔ VÁ 05/10/2026 (GO-LIVE) — **F2: `receive_goods` ⛔ KHÔNG kiểm trạng thái PO**.
+        //   📍 BẰNG CHỨNG ĐO ĐƯỢC (báo cáo `docs/agent-progress/BAO-CAO-LUONG-DUYET-WF-MUAHANG-01.md` §F2):
+        //     lúc `receive_goods`, PO `PO-PRJ-DEMO-01-2026-0017` đang **`status='pending_approval'`
+        //     (CHƯA ĐƯỢC PHÁT HÀNH)** mà vẫn nhận hàng **HTTP 200** ✓
+        //   ⚠️ HỆ QUẢ: ⭐ cổng «Lập & **PHÁT HÀNH** PO» (bước 101) bị **VÔ HIỆU** ⇒ bước 102/103 vẫn
+        //     «xanh» dù 101 chưa xong ⇒ ⭐ **hệ thống trông đúng nhưng THIẾU một cổng kiểm soát** ✓
+        //     (⭐ và chính F2 **che** hậu quả của F1 `approve_po` 403) ✓
+        //   ⭐ MÁY TRẠNG THÁI PO — đọc từ mã, ⛔ không suy đoán:
+        //     `createPo` (dòng 185) ghi `pending_approval`
+        //       → `decidePo` (dòng 250) đòi ĐÚNG `pending_approval` rồi đặt `waiting_delivery` (duyệt)
+        //         hoặc `cancelled` (từ chối)
+        //       → nhận hàng ⇒ `partial_delivery` / `awaiting_bch_confirmation` → `completed` ✓
+        //     📊 DỮ LIỆU THẬT: 18 `completed` · 9 `waiting_delivery` · 4 `pending_approval` ✓
+        //   ⇒ ⭐ **CHỈ nhận hàng khi PO ∈ {`waiting_delivery`, `partial_delivery`}** ✓
+        //     · `pending_approval` ⇒ ⛔ chưa phát hành ⇒ **phải chặn** (⭐ đây là lỗi F2)
+        //     · `partial_delivery` ⇒ đã nhận một phần ⇒ ⭐ **vẫn được nhận tiếp** ✓
+        //     · `cancelled` / `completed` / `awaiting_bch_confirmation` ⇒ ⛔ chặn ✓
+        //   ⚠️⚠️ VÌ SAO ĐẶT CHỐT **Ở ĐÂY** MÀ ⛔ KHÔNG Ở `findPoForReceiving`:
+        //     `findPoForReceiving` còn phục vụ **`decidePo` (dòng 248)** và một hàm khác (dòng 270) —
+        //     ⭐ `decidePo` **CẦN** PO ở `pending_approval` ⇒ nếu lọc `status` trong hàm store thì
+        //     ⭐ **KHOÁ CHẾT đúng đường phát hành PO** ✓ (⭐ đã kiểm **3 nơi gọi** trước khi sửa) ✓
+        //   ⚠️⚠️ ĐÃ THỬ ĐẶT CHỐT Ở ĐÂY NGÀY 06/10/2026 — ⛔ **PHẢI TẠM HOÃN**:
+        //     đặt chốt làm **3 test tích hợp ĐỎ** (`mvn -o test`: 86 test, **3 failures**, BUILD FAILURE):
+        //       · `StockChainIntegrationTest` — **2/2 fail**
+        //       · `SupplyChainEndToEndIntegrationTest` — **1/1 fail**
+        //     ⭐ VÌ SAO: 3 test đó gọi `receive_goods` trên PO **CHƯA ĐƯỢC PHÁT HÀNH** — ⭐ tức chúng
+        //       **ĐANG MÃ HOÁ CHÍNH HÀNH VI CỦA LỖI F2** ⚠️ (rất có thể vì `approve_po` từng trả 403
+        //       do lỗi F1 nên test phải đi vòng, ⛔ không qua bước phát hành PO) ✓
+        //     ⇒ ⭐ **MUỐN VÁ F2 ĐÚNG CÁCH PHẢI SỬA LUÔN 3 TEST ĐÓ**: cho chúng gọi `decide_po`
+        //       (phát hành PO) **TRƯỚC** khi nhận hàng ✓ — ⛔ **không chỉ thêm một dòng chốt** ✓
+        //     ⛔ TẠM THỜI GIỮ HÀNH VI CŨ để cây mã nguồn **XANH 156/156** (⭐ ⛔ không để BUILD FAILURE) ✓
+        //   ⭐ THÔNG ĐIỆP DỰ KIẾN KHI VÁ: «PO chưa được phát hành nên chưa thể giao nhận.
+        //     Hãy phát hành PO ở bước “Lập & phát hành PO” trước.» ✓
+        //
+        //   ✅✅ ĐÃ VÁ NGÀY 06/10/2026 (⭐ sau khi VÁ SCHEMA H2 — ⭐ đó mới là điều kiện tiên quyết):
+        //     · ⭐ NGUYÊN NHÂN GỐC THẬT của F2: `web/src/test/resources/schema-h2.sql` **THIẾU 3 cột**
+        //       `decision_reason` · `decided_by` · `decided_at` (⭐ MySQL thật CÓ, do migration
+        //       `V18__wf_b2_po_decision.sql`) ⇒ ⭐ **`approve_po` ⛔ KHÔNG CHẠY ĐƯỢC TRONG TEST**
+        //       ⇒ ⭐ các bài test **phải ĐI VÒNG** — gọi thẳng `receive_goods` trên PO chưa phát hành
+        //       ⇒ ⭐ **vô tình mã hoá chính hành vi của lỗi F2** ✓
+        //     · ① `StockChainIntegrationTest` — đã chèn `approve_po` giữa `create_po` và `receive_goods` ✓
+        //     · ② `SupplyChainEndToEndIntegrationTest` — đã chèn `approve_po` + assert `waiting_delivery` ✓
+        //     ⇒ ⭐ hai bài nay đi **ĐÚNG ĐƯỜNG**: phát hành PO **TRƯỚC** khi nhận hàng ✓
+        if (!List.of("waiting_delivery", "partial_delivery").contains(sv(po, "status")))
+            throw Api("PO chưa được phát hành nên chưa thể giao nhận. "
+                    + "Hãy phát hành PO ở bước “Lập & phát hành PO” trước.");
         if (rawLines.isEmpty()) throw Api("Phiếu nhập cần PO và ít nhất một dòng nhận hàng.");
         // JS 1319/1321: phạm vi dự án rồi phạm vi kho — đều lấy từ CHÍNH phiếu PO.
         accessScope.requireProjectAccess(principal.userId(), principal.role(), sv(po, "projectId"), true,

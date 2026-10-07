@@ -1,0 +1,111 @@
+/* ============================================================================
+   USER 28/09/2026 — TOOLBAR / NHÓM NÚT: NẰM NGANG *BÊN TRONG* THANH, NHƯNG LABEL
+   PHẢI NẰM Ở TRÊN (⛔ KHÔNG được chen ngang giữa label và mô tả).
+   ----------------------------------------------------------------------------
+   ⛔ SỬA SAI LẦN TRƯỚC: tôi ép `.list-toolbar{flex-wrap:nowrap}` ⇒ `.list-toolbar-title`
+      (LABEL) và `.list-toolbar-controls` (TOOLBAR) rơi về CÙNG MỘT HÀNG ⇒ ảnh người dùng
+      chụp: «DANH SÁCH DỰ ÁN» + mô tả dài bị ô «Tìm» chen vào giữa.
+   ⇒ `ListToolbar` là CẤU TRÚC 2 TẦNG (`app/components/ui/ListToolbar.tsx` L66-79):
+        <div class="table-toolbar list-toolbar">
+          <div class="list-toolbar-title">    ← LABEL (title + note + count)
+          <div class="list-toolbar-controls"> ← TOOLBAR (Tìm + bộ lọc + sắp xếp + nút)
+      ⇒ `.list-toolbar` PHẢI là `flex-direction:column` (label trên, toolbar dưới);
+        CHỈ `.list-toolbar-controls` mới `flex-wrap:nowrap` (các nút nằm ngang, tràn thì cuộn).
+
+   ĐO THẬT TRƯỚC KHI SỬA (Edge headless 1605×761, đăng nhập admin):
+     · `.row-actions`            × 112 chỗ · flex-wrap:wrap ⇒ VỠ 2 HÀNG · 142×80
+     · `.material-list-filters`  × 3       · 6 điều khiển ⇒ 2 HÀNG · 1190×88
+     · `.supplier-admin-row`     × 2       · 12 điều khiển ⇒ 3 HÀNG · 1182×85
+   SAU LẦN SỬA ĐẦU: `.row-actions` × 112 → 0 ✔ ; `.material-list-filters` 88 → 44 ✔ ;
+                        `.supplier-admin-row` 85 → 59 ✔ ; 0 khối nhiều hàng ở 4 màn đo được ✔
+   ⚠️ NHƯNG ảnh người dùng chụp cho thấy LABEL bị chen ⇒ sửa tiếp cấu trúc 2 tầng ở dưới.
+
+   ⚠️ `overflow:hidden` là SHORTHAND, viết sau sẽ ĐÈ `overflow-x` ⇒ luôn tách `overflow-x` + `overflow-y`.
+   ⚠️ Mọi luật ở đây có `!important` — chỉ luật có `!important` mới đè được luật cũng có `!important`.
+   ============================================================================ */
+
+/* --- 1. KHUNG 2 TẦNG: LABEL Ở TRÊN, THANH CÔNG CỤ Ở DƯỚI ------------------ */
+.table-toolbar.list-toolbar,
+.list-toolbar{
+  display:flex!important;
+  flex-direction:column!important;   /* ⛔ KHÔNG được để `row` — sẽ chen toolbar vào label */
+  align-items:stretch!important;
+  gap:8px!important;
+  overflow:visible!important;
+}
+.list-toolbar-title{
+  display:flex!important;
+  flex-direction:row!important;
+  flex-wrap:wrap!important;          /* label + mô tả + số đếm: xuống dòng thoải mái, ⛔ không phải hàng cứng */
+  align-items:baseline!important;
+  gap:6px 12px!important;
+  min-width:0!important; flex:0 0 auto!important; width:100%!important;
+}
+/* --- 2. THANH CÔNG CỤ: TÌM + LỌC + SẮP XẾP + NÚT — NẰM NGANG 1 HÀNG -------- */
+.list-toolbar-controls{
+  display:flex!important;
+  flex-direction:row!important;
+  flex-wrap:nowrap!important;         /* ⛔ chính là hàng ngang; tràn thì CUỘN, ⛔ không mất nút */
+  align-items:center!important;
+  gap:10px!important;
+  width:100%!important; min-width:0!important;
+  overflow-x:auto!important; overflow-y:hidden!important; -webkit-overflow-scrolling:touch!important;
+  padding-bottom:2px!important;
+}
+.list-toolbar-controls>*,.list-toolbar-controls>.list-toolbar-field{ flex:0 0 auto!important; }
+.list-toolbar-field{ display:flex!important; flex-direction:row!important; align-items:center!important; gap:6px!important; }
+
+/* --- 3. NHÓM NÚT HÀNH ĐỘNG TRONG BẢNG / THẺ --------------------------------- */
+.row-actions,.list-toolbar-actions,.screen-actions,.purchase-action-bar,.drawer-export-group{
+  display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;
+  align-items:center!important;gap:8px!important;
+  overflow-x:auto!important;overflow-y:hidden!important;-webkit-overflow-scrolling:touch!important;
+}
+.row-actions>*,.list-toolbar-actions>*,.screen-actions>*,.purchase-action-bar>*,.drawer-export-group>*{
+  flex:0 0 auto!important;min-width:0!important;white-space:nowrap!important;
+}
+
+/* --- 4. THANH LỌC / TÌM KIẾM / SẮP XẾP CỦA CÁC MÀN KHÁC ------------------- */
+.material-list-filters,.material-master-toolbar,.material-subgroup-toolbar,.material-matching-toolbar,
+.matching-toolbar,.comparison-view-toolbar,.report-export-toolbar,.screen-toolbar,.table-toolbar,
+.toolbar-inline,.po-bulk-toolbar,.menu-layout-toolbar{
+  display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;
+  align-items:center!important;gap:10px!important;
+  overflow-x:auto!important;overflow-y:hidden!important;-webkit-overflow-scrolling:touch!important;
+}
+.material-list-filters>*,.material-master-toolbar>*,.material-subgroup-toolbar>*,.material-matching-toolbar>*,
+.matching-toolbar>*,.comparison-view-toolbar>*,.report-export-toolbar>*,.screen-toolbar>*,
+.table-toolbar>*,.toolbar-inline>*,.po-bulk-toolbar>*,.menu-layout-toolbar>*{ flex:0 0 auto!important; min-width:0!important; }
+.list-toolbar-search,.material-list-filters>label{
+  display:flex!important;flex-direction:row!important;align-items:center!important;gap:6px!important;min-width:0!important;
+}
+
+/* --- 5. DÒNG QUẢN TRỊ NHÀ CUNG CẤP: lưới N CỘT, ⛔ không xuống nhiều hàng ------- */
+.supplier-admin-row,.supplier-new-grid{
+  grid-auto-flow:column!important;grid-template-columns:none!important;
+  grid-auto-columns:minmax(96px,auto)!important;
+  align-items:center!important;gap:8px!important;
+  overflow-x:auto!important;overflow-y:hidden!important;-webkit-overflow-scrolling:touch!important;
+}
+.supplier-admin-row>*,.supplier-new-grid>*{ min-width:0!important; }
+
+/* --- 6. CHÂN HỘP THOẠI / NGĂN KÉO: nút nằm ngang, chân được đẩy xuống đáy --- */
+.modal-footer,.drawer>footer,.approval-actions,.boq-column-panel footer,.reset-credential-panel>.row-actions{
+  display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;
+  align-items:center!important;justify-content:flex-end!important;gap:8px!important;
+  overflow-x:auto!important;overflow-y:hidden!important;-webkit-overflow-scrolling:touch!important;
+}
+.modal-footer>*,.drawer>footer>*,.approval-actions>*,.boq-column-panel footer>*{
+  flex:0 0 auto!important;min-width:auto!important;width:auto!important;max-width:none!important;
+}
+.baseline-approval-workbench .approval-actions{
+  display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;
+  grid-template-columns:none!important;justify-content:flex-start!important;
+}
+
+/* --- 7. KHỐI KPI / THỐNG KÊ NHANH: 1 HÀNG ----------------------------------- */
+.personal-summary-metrics,.kpi-grid{
+  display:grid!important;grid-auto-flow:column!important;grid-template-columns:none!important;
+  grid-auto-columns:minmax(120px,1fr)!important;
+  gap:8px!important;overflow-x:auto!important;overflow-y:hidden!important;
+}

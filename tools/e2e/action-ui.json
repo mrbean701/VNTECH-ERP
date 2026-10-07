@@ -1,0 +1,975 @@
+{
+  "mark_notification_read": {
+    "nhom": "khac",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "mark_task_notification_read": {
+    "nhom": "khac",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "create_work_item": {
+    "nhom": "khac",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "update_work_item_status": {
+    "nhom": "khac",
+    "trong": [
+      "app\\page.tsx",
+      "app\\screens\\WorkCenter.tsx"
+    ]
+  },
+  "approve_central_return": {
+    "nhom": "workflow",
+    "trong": [
+      "app\\page.tsx",
+      "app\\screens\\Inventory.tsx"
+    ]
+  },
+  "update_boq_contract_prices": {
+    "nhom": "nhan-su",
+    "trong": [
+      "app\\page.tsx",
+      "app\\screens\\Purchasing.tsx"
+    ]
+  },
+  "save_production_report": {
+    "nhom": "khac",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "approve_production_report": {
+    "nhom": "workflow",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "save_capital_recovery": {
+    "nhom": "khac",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "delete_capital_recovery": {
+    "nhom": "khac",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "reorder_menu_layout": {
+    "nhom": "mua-hang",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "set_module_status": {
+    "nhom": "khac",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "set_menu_group_status": {
+    "nhom": "khac",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "delete_menu_group": {
+    "nhom": "khac",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "import_material_catalog": {
+    "nhom": "ke-toan-vat-tu",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "delete_unused_materials": {
+    "nhom": "ke-toan-vat-tu",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "delete_selected_materials": {
+    "nhom": "ke-toan-vat-tu",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "bulk_material_subcategory_action": {
+    "nhom": "ke-toan-vat-tu",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "reset_material_catalog_test": {
+    "nhom": "ke-toan-vat-tu",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "set_material_subcategory_status": {
+    "nhom": "ke-toan-vat-tu",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "delete_material_subcategory": {
+    "nhom": "ke-toan-vat-tu",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "set_material_status": {
+    "nhom": "ke-toan-vat-tu",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "delete_material": {
+    "nhom": "ke-toan-vat-tu",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "reorder_form_fields": {
+    "nhom": "mua-hang",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "delete_form_field_config": {
+    "nhom": "khac",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "save_ui_display_settings": {
+    "nhom": "khac",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "save_business_role_group": {
+    "nhom": "quan-tri",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "save_engine_role_profile": {
+    "nhom": "khac",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "save_business_scope": {
+    "nhom": "khac",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "set_business_scope_status": {
+    "nhom": "khac",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "delete_business_scope": {
+    "nhom": "khac",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "set_business_role_group_status": {
+    "nhom": "khac",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "delete_business_role_group": {
+    "nhom": "quan-tri",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "save_advance_request": {
+    "nhom": "mua-hang",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "delete_advance_request": {
+    "nhom": "mua-hang",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "settle_advance_request": {
+    "nhom": "mua-hang",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "save_payment_plan": {
+    "nhom": "khac",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "set_payment_plan_status": {
+    "nhom": "khac",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "delete_payment_plan": {
+    "nhom": "khac",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "save_material_norm": {
+    "nhom": "ke-toan-vat-tu",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "set_material_norm_status": {
+    "nhom": "ke-toan-vat-tu",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "delete_material_norm": {
+    "nhom": "ke-toan-vat-tu",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "save_contract_payment": {
+    "nhom": "nhan-su",
+    "trong": [
+      "app\\page.tsx",
+      "app\\screens\\Payments.tsx"
+    ]
+  },
+  "save_organization_unit": {
+    "nhom": "quan-tri",
+    "trong": [
+      "app\\page.tsx",
+      "app\\screens\\SiteCommandCreateModal.tsx"
+    ]
+  },
+  "set_organization_unit_status": {
+    "nhom": "khac",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "set_organization_unit_member": {
+    "nhom": "khac",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "delete_user_module_override": {
+    "nhom": "quan-tri",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "save_trust_development_settings": {
+    "nhom": "khac",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "install_license_foundation": {
+    "nhom": "khac",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "request_license_transfer": {
+    "nhom": "mua-hang",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "save_department_permission": {
+    "nhom": "quan-tri",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "delete_department_permission": {
+    "nhom": "quan-tri",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "save_user_access": {
+    "nhom": "quan-tri",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "set_user_system_level": {
+    "nhom": "khac",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "set_system_level_status": {
+    "nhom": "khac",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "delete_system_level": {
+    "nhom": "khac",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "save_notification_config": {
+    "nhom": "khac",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "save_system_level": {
+    "nhom": "khac",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "set_workflow_status": {
+    "nhom": "workflow",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "delete_workflow": {
+    "nhom": "workflow",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "delete_approval_stage": {
+    "nhom": "workflow",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "bulk_import_users": {
+    "nhom": "khac",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "bulk_import_projects": {
+    "nhom": "khac",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "set_project_status": {
+    "nhom": "khac",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "delete_project": {
+    "nhom": "quan-tri",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "set_notification_config_status": {
+    "nhom": "khac",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "delete_notification_config": {
+    "nhom": "khac",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "create_request": {
+    "nhom": "mua-hang",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "create_po": {
+    "nhom": "mua-hang",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "receive_goods": {
+    "nhom": "kho",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "create_project_team": {
+    "nhom": "quan-tri",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "confirm_installation": {
+    "nhom": "khac",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "issue_stock": {
+    "nhom": "kho",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "create_stock_count": {
+    "nhom": "kho",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "return_stock": {
+    "nhom": "kho",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "save_email_settings": {
+    "nhom": "khac",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "save_material_category": {
+    "nhom": "ke-toan-vat-tu",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "save_material_subcategory": {
+    "nhom": "ke-toan-vat-tu",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "save_material": {
+    "nhom": "ke-toan-vat-tu",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "merge_material_master": {
+    "nhom": "ke-toan-vat-tu",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "save_project_contract": {
+    "nhom": "quan-tri",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "save_boq_version": {
+    "nhom": "khac",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "save_boq_item": {
+    "nhom": "khac",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "save_menu_group": {
+    "nhom": "khac",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "save_module_catalog": {
+    "nhom": "khac",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "save_role_catalog": {
+    "nhom": "quan-tri",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "save_approval_stage": {
+    "nhom": "workflow",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "update_user": {
+    "nhom": "quan-tri",
+    "trong": [
+      "app\\page.tsx",
+      "app\\screens\\HrProfileEditModal.tsx"
+    ]
+  },
+  "set_user_status": {
+    "nhom": "khac",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "delete_user": {
+    "nhom": "quan-tri",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "mark_notification_snooze": {
+    "nhom": "khac",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "mark_notification_all_read": {
+    "nhom": "khac",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "create_user": {
+    "nhom": "quan-tri",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "change_password": {
+    "nhom": "khac",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "update_profile_avatar": {
+    "nhom": "khac",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "create_transfer_order": {
+    "nhom": "mua-hang",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "create_central_return": {
+    "nhom": "kho",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "receive_central_return": {
+    "nhom": "kho",
+    "trong": [
+      "app\\page.tsx"
+    ]
+  },
+  "save_benefit_record": {
+    "nhom": "nhan-su",
+    "trong": [
+      "app\\screens\\BenefitsScreen.tsx"
+    ]
+  },
+  "set_benefit_record_status": {
+    "nhom": "nhan-su",
+    "trong": [
+      "app\\screens\\BenefitsScreen.tsx"
+    ]
+  },
+  "delete_benefit_record": {
+    "nhom": "nhan-su",
+    "trong": [
+      "app\\screens\\BenefitsScreen.tsx"
+    ]
+  },
+  "replace_boq_items": {
+    "nhom": "khac",
+    "trong": [
+      "app\\screens\\BoqControl.tsx"
+    ]
+  },
+  "bulk_boq_item_action": {
+    "nhom": "khac",
+    "trong": [
+      "app\\screens\\BoqControl.tsx"
+    ]
+  },
+  "clear_boq_version": {
+    "nhom": "khac",
+    "trong": [
+      "app\\screens\\BoqControl.tsx"
+    ]
+  },
+  "delete_project_contract": {
+    "nhom": "quan-tri",
+    "trong": [
+      "app\\screens\\BoqControl.tsx"
+    ]
+  },
+  "set_project_contract_status": {
+    "nhom": "nhan-su",
+    "trong": [
+      "app\\screens\\BoqControl.tsx"
+    ]
+  },
+  "delete_boq_item": {
+    "nhom": "khac",
+    "trong": [
+      "app\\screens\\BoqControl.tsx"
+    ]
+  },
+  "set_boq_item_status": {
+    "nhom": "khac",
+    "trong": [
+      "app\\screens\\BoqControl.tsx"
+    ]
+  },
+  "save_bank_account": {
+    "nhom": "kho",
+    "trong": [
+      "app\\screens\\CashbankScreen.tsx"
+    ]
+  },
+  "save_cashbook_entry": {
+    "nhom": "khac",
+    "trong": [
+      "app\\screens\\CashbankScreen.tsx"
+    ]
+  },
+  "delete_cashbook_entry": {
+    "nhom": "khac",
+    "trong": [
+      "app\\screens\\CashbankScreen.tsx"
+    ]
+  },
+  "save_construction_daily_log": {
+    "nhom": "khac",
+    "trong": [
+      "app\\screens\\ConstructionScreen.tsx"
+    ]
+  },
+  "approve_construction_daily_log": {
+    "nhom": "workflow",
+    "trong": [
+      "app\\screens\\ConstructionScreen.tsx"
+    ]
+  },
+  "delete_construction_daily_log": {
+    "nhom": "khac",
+    "trong": [
+      "app\\screens\\ConstructionScreen.tsx"
+    ]
+  },
+  "open_contract_review": {
+    "nhom": "nhan-su",
+    "trong": [
+      "app\\screens\\ContractReviewScreen.tsx"
+    ]
+  },
+  "log_contract_review": {
+    "nhom": "nhan-su",
+    "trong": [
+      "app\\screens\\ContractReviewScreen.tsx"
+    ]
+  },
+  "save_correspondence": {
+    "nhom": "khac",
+    "trong": [
+      "app\\screens\\CorrespondenceScreen.tsx"
+    ]
+  },
+  "set_correspondence_status": {
+    "nhom": "khac",
+    "trong": [
+      "app\\screens\\CorrespondenceScreen.tsx"
+    ]
+  },
+  "delete_correspondence": {
+    "nhom": "khac",
+    "trong": [
+      "app\\screens\\CorrespondenceScreen.tsx"
+    ]
+  },
+  "save_accounting_voucher": {
+    "nhom": "kho",
+    "trong": [
+      "app\\screens\\DocumentsScreen.tsx"
+    ]
+  },
+  "delete_accounting_voucher": {
+    "nhom": "kho",
+    "trong": [
+      "app\\screens\\DocumentsScreen.tsx"
+    ]
+  },
+  "error_reports": {
+    "nhom": "khac",
+    "trong": [
+      "app\\screens\\ErrorReportAdminPanel.tsx"
+    ]
+  },
+  "mark_error_report_resolved": {
+    "nhom": "khac",
+    "trong": [
+      "app\\screens\\ErrorReportAdminPanel.tsx"
+    ]
+  },
+  "save_error_report": {
+    "nhom": "khac",
+    "trong": [
+      "app\\screens\\ErrorReportModal.tsx"
+    ]
+  },
+  "save_hr_record": {
+    "nhom": "nhan-su",
+    "trong": [
+      "app\\screens\\HrProfileEditModal.tsx",
+      "app\\screens\\HrScreen.tsx"
+    ]
+  },
+  "delete_warehouse": {
+    "nhom": "quan-tri",
+    "trong": [
+      "app\\screens\\Inventory.tsx"
+    ]
+  },
+  "save_labor_contract": {
+    "nhom": "nhan-su",
+    "trong": [
+      "app\\screens\\LaborScreen.tsx"
+    ]
+  },
+  "set_labor_contract_status": {
+    "nhom": "nhan-su",
+    "trong": [
+      "app\\screens\\LaborScreen.tsx"
+    ]
+  },
+  "delete_labor_contract": {
+    "nhom": "nhan-su",
+    "trong": [
+      "app\\screens\\LaborScreen.tsx"
+    ]
+  },
+  "save_legal_document": {
+    "nhom": "khac",
+    "trong": [
+      "app\\screens\\LegalDocsScreen.tsx"
+    ]
+  },
+  "set_legal_document_status": {
+    "nhom": "khac",
+    "trong": [
+      "app\\screens\\LegalDocsScreen.tsx"
+    ]
+  },
+  "delete_legal_document": {
+    "nhom": "khac",
+    "trong": [
+      "app\\screens\\LegalDocsScreen.tsx"
+    ]
+  },
+  "save_partner": {
+    "nhom": "ke-toan-vat-tu",
+    "trong": [
+      "app\\screens\\PartnerManager.tsx"
+    ]
+  },
+  "set_partner_status": {
+    "nhom": "ke-toan-vat-tu",
+    "trong": [
+      "app\\screens\\PartnerManager.tsx"
+    ]
+  },
+  "delete_partner": {
+    "nhom": "ke-toan-vat-tu",
+    "trong": [
+      "app\\screens\\PartnerManager.tsx"
+    ]
+  },
+  "import_contract_payments": {
+    "nhom": "nhan-su",
+    "trong": [
+      "app\\screens\\Payments.tsx"
+    ]
+  },
+  "delete_contract_payment": {
+    "nhom": "nhan-su",
+    "trong": [
+      "app\\screens\\Payments.tsx"
+    ]
+  },
+  "save_team_subcontract": {
+    "nhom": "quan-tri",
+    "trong": [
+      "app\\screens\\ProjectTeams.tsx"
+    ]
+  },
+  "save_team_production": {
+    "nhom": "quan-tri",
+    "trong": [
+      "app\\screens\\ProjectTeams.tsx"
+    ]
+  },
+  "save_team_payment": {
+    "nhom": "quan-tri",
+    "trong": [
+      "app\\screens\\ProjectTeams.tsx"
+    ]
+  },
+  "settle_team_subcontract": {
+    "nhom": "nhan-su",
+    "trong": [
+      "app\\screens\\ProjectTeams.tsx"
+    ]
+  },
+  "approve_team_production": {
+    "nhom": "workflow",
+    "trong": [
+      "app\\screens\\ProjectTeams.tsx"
+    ]
+  },
+  "confirm_delivery": {
+    "nhom": "khac",
+    "trong": [
+      "app\\screens\\ReceiptDrawer.tsx"
+    ]
+  },
+  "update_returned_request": {
+    "nhom": "mua-hang",
+    "trong": [
+      "app\\screens\\RequestDrawer.tsx"
+    ]
+  },
+  "resubmit_request": {
+    "nhom": "mua-hang",
+    "trong": [
+      "app\\screens\\RequestDrawer.tsx"
+    ]
+  },
+  "delete_request": {
+    "nhom": "mua-hang",
+    "trong": [
+      "app\\screens\\RequestDrawer.tsx"
+    ]
+  },
+  "save_seal": {
+    "nhom": "khac",
+    "trong": [
+      "app\\screens\\SealScreen.tsx"
+    ]
+  },
+  "set_seal_status": {
+    "nhom": "khac",
+    "trong": [
+      "app\\screens\\SealScreen.tsx"
+    ]
+  },
+  "delete_seal": {
+    "nhom": "khac",
+    "trong": [
+      "app\\screens\\SealScreen.tsx"
+    ]
+  },
+  "save_site_expense_claim": {
+    "nhom": "khac",
+    "trong": [
+      "app\\screens\\SiteCostScreen.tsx"
+    ]
+  },
+  "approve_site_expense_claim": {
+    "nhom": "workflow",
+    "trong": [
+      "app\\screens\\SiteCostScreen.tsx"
+    ]
+  },
+  "delete_site_expense_claim": {
+    "nhom": "khac",
+    "trong": [
+      "app\\screens\\SiteCostScreen.tsx"
+    ]
+  },
+  "approve_stock_count": {
+    "nhom": "workflow",
+    "trong": [
+      "app\\screens\\Stocktake.tsx"
+    ]
+  },
+  "save_supplier_material": {
+    "nhom": "ke-toan-vat-tu",
+    "trong": [
+      "app\\screens\\SupplierDetailModal.tsx"
+    ]
+  },
+  "save_supplier": {
+    "nhom": "ke-toan-vat-tu",
+    "trong": [
+      "app\\screens\\SupplierManager.tsx"
+    ]
+  },
+  "set_supplier_status": {
+    "nhom": "ke-toan-vat-tu",
+    "trong": [
+      "app\\screens\\SupplierManager.tsx"
+    ]
+  },
+  "delete_supplier": {
+    "nhom": "ke-toan-vat-tu",
+    "trong": [
+      "app\\screens\\SupplierManager.tsx"
+    ]
+  },
+  "set_project_team_status": {
+    "nhom": "khac",
+    "trong": [
+      "app\\screens\\TeamDirectory.tsx"
+    ]
+  },
+  "update_project": {
+    "nhom": "quan-tri",
+    "trong": [
+      "app\\screens\\WarehouseCreateModal.tsx"
+    ]
+  },
+  "save_workflow": {
+    "nhom": "workflow",
+    "trong": [
+      "app\\screens\\WorkflowModal.tsx"
+    ]
+  },
+  "decide_approval": {
+    "nhom": "workflow",
+    "trong": [
+      "lib\\request-actions.ts"
+    ]
+  }
+}

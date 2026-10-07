@@ -51,6 +51,19 @@
 | **BỊ CHẶN** (`**BLOCKED**` = F-01) | 1 | 0,9 % |
 | TODO | 1 | 0,9 % |
 
+> ⛔ **CẢNH BÁO TIẾN ĐỘ (vòng 196, 01/10/2026) — con số trên đang THỔI PHỒNG, CHƯA CHỐT.**
+> Nhánh làm việc `unity` **chưa từng có phần UI của đợt MT3**, nhưng `TASK_INDEX.md:158` và `MASTER_STATUS.md:395` vẫn ghi MT3 là DONE.
+> Bằng chứng đo được (không phải suy đoán): `tests/` có **119 tệp** nhưng `test:regression` chỉ chạy **14 tệp**;
+> sau khi rà toàn bộ, **8 tệp / 23 case đỏ ngoài cổng thì ĐỀU là tính năng MT3 đã rollback**
+> (tồn tại ở `backup/mt3-head-20260908` = `7fdf71d`, `backup/mt3-worktree-20260928` = `73ff69d`).
+> ⚠️ Cổng xanh **KHÔNG phải** bằng chứng sản phẩm đúng — 105 tệp ngoài cổng chạy ở BẤT KỲ đâu (D-063).
+> **Hai lựa chọn, chờ người dùng chốt:** (a) đánh lại các mục MT3 là CHƯA LÀM cho đúng thực tế;
+> (b) khôi phục UI MT3 từ nhánh backup — rủi ro hồi quy cao vì mã đã tiến xa ~1 tháng (MỐC 117–126)
+> và ~~máy này **không có Maven** để biên dịch phần Java (D-044)~~ ⛔ **ĐÍNH CHÍNH 05/10/2026 — CÂU NÀY SAI**:
+> máy này **CÓ** JDK 21 + **Maven 3.9.16** và **build offline được** (`mvn -o compile` BUILD SUCCESS 5/5 module) —
+> xem **D-110**. Ngoài ra số `D-044` ở đây là **gán nhầm**: D-044 nói về việc không hạ phiên bản test để làm xanh.
+> **Số liệu ở bảng trên giữ nguyên, chưa sửa.**
+
 | Phase | DONE / tổng | Ghi chú |
 |---|---|---|
 | PHASE 0 — AUDIT | **16 / 16 — ĐÓNG ✅** | A-01…A-16; A-13…A-16 còn TODO |
@@ -163,7 +176,9 @@ Mặc định của interface là `return role()` = **mã chuẩn** ⇒ thiếu 
 
 ## Thay đổi trong phiên gần nhất
 
-**TASK-072 (17/09 — mới nhất):** `DATABASE` **không đổi** · `API` **không đổi** (không thêm/bớt action, không đổi bootstrap) · `WORKFLOW` **không đổi** · `PERMISSION` **không đổi** · **UI: ÁP DỤNG THẬT `ApprovalTimeline`** vào chi tiết phiếu (§8.1) — thay khối tự viết 1467 ký tự bằng component dùng chung; cổng áp dụng **0 → 1 lần**. *(Bảng dưới ghi phiên TASK-040/041 trước đó.)*
+**TASK-142 (02/10 — mới nhất):** kiểm thử **hành vi toàn hệ thống** trên dữ liệu thật, 8 giai đoạn nghiệp vụ + **chống ghi cứng quy trình** (đổi người duyệt từng bước ⇒ người cũ bị từ chối; đảo thứ tự phòng ban ⇒ chuỗi mới đúng thứ tự đã hoán) ⇒ **quy trình KHÔNG bị ghi cứng**. `DATABASE` **không đổi lược đồ** nhưng **có ghi dữ liệu kiểm thử** (tiền tố `E2E-`) · `API` **không đổi** · `WORKFLOW` **đã đổi rồi khôi phục** · `PERMISSION` **không đổi quy tắc** (chỉ cấp quyền cho tài khoản `e2e.*`) · ⛔ **chưa commit**. Phát hiện **3 lỗi sản phẩm**: **L-09** không có kho trung chuyển trong bộ lướt bay ⇒ **điều chuyển kho không chạy được**; **L-10** 3 bảng máy chủ đọc ghi mà lướt bay chưa tạo; **L-11** 6 thao tác không có lớp cưỡng chế quyền. Chi tiết: `docs/agent-progress/TASK-142.md`.
+
+**TASK-072 (17/09):** `DATABASE` **không đổi** · `API` **không đổi** (không thêm/bớt action, không đổi bootstrap) · `WORKFLOW` **không đổi** · `PERMISSION` **không đổi** · **UI: ÁP DỤNG THẬT `ApprovalTimeline`** vào chi tiết phiếu (§8.1) — thay khối tự viết 1467 ký tự bằng component dùng chung; cổng áp dụng **0 → 1 lần**. *(Bảng dưới ghi phiên TASK-040/041 trước đó.)*
 
 | Loại | Nội dung |
 |---|---|
@@ -332,5 +347,478 @@ Mặc định của interface là `return role()` = **mã chuẩn** ⇒ thiếu 
 
 101. **MỚI (20/09 · TASK-095 · PHASE 4 `PR-01`) — "DANH SÁCH DỰ ÁN" NAY LÀ MỘT TAB, VÀ CỔNG TIẾN ĐỘ TỰ KHAI SAI TỪ VỰNG.** `docs/24 §15` mục 8 nói *"Danh sách dự án + Ban chỉ huy dự án chưa tách tab"*, nhưng **nửa sau đã CŨ**: tab "Ban chỉ huy" **đã tồn tại** trong chi tiết dự án (`app/page.tsx` `tab === 4` → `SiteCommandScreen`) và cổng `tools/probe-project-screen.mjs` **đang đòi đúng 5 tab** ⇒ trước khi làm `PR-05` phải **rà lại phạm vi thật**. Phần **còn thiếu thật** của `PR-01`: danh sách là một **CHẾ ĐỘ XEM** (`view: "list" | "detail"`) chứ **không phải tab**, và nhóm **HÀNH ĐỘNG** của toolbar danh sách **TRỐNG**. **Đã sửa:** một nguồn nhãn tab (`LIST_TAB`/`DETAIL_TABS`/`TAB_LABELS`), `view` **suy ra** từ tab, dải tab dùng chung render ở **cả hai** chế độ xem, chỉ số tab chi tiết dịch **1..5**, toolbar theo khuôn §5 có `count/total/unit` + `actions` (`⇩ XUẤT` CSV) và **QUYỀN=CHECK** (`permission={activePermission}`; nút xuất `disabled={!canExport}`; tab chi tiết `disabled` khi chưa chọn dự án). **Kỷ luật đỏ→xanh:** `tests/pr01-project-tabs.test.mjs` (mới, **7 ca**) **ĐỎ 7/7 trước khi sửa → XANH 7/7**; cố ý **không** thêm vào `package.json` để `test:regression` giữ nguyên **61** ca. **⚠️ CHƯA đóng `PR-01`:** bản build đang phục vụ **cũ hơn nguồn** — đo DOM lúc chạy trả `tabs = ["Tổng quan","Nhân sự","Tổ đội","Kho","Ban chỉ huy"]` (**5 mục**), `list-toolbar-count = 0`, **không có nút XUẤT** ⇒ `tools/probe-project-screen.mjs` (đã cập nhật hợp đồng 6 tab) **KHÔNG ĐẠT 5 mục**; phải **build lại** rồi mới đo được runtime. **Cảnh báo ảnh:** ảnh `02-project` của `probe-visual-regression.mjs` **SẼ LỆCH CÓ CHỦ Ý** (màn danh sách thêm dải tab) — cập nhật ảnh chuẩn kèm lý do nếu lệch đúng ở màn đó. **🔴 Lỗi cổng riêng phát hiện khi cập nhật SSOT:** `docs/25` dòng 15 khai báo từ vựng cột `TT` là `TODO · DOING · DONE · BLOCKED`, nhưng `tools/probe-roadmap-progress.mjs` **chỉ nhận `DANG-LAM`** ⇒ mọi ô ghi **đúng từ vựng tài liệu** (`DOING`) rơi vào **OTHER** (im lặng, không cảnh báo) — đã bổ sung nhánh `DOING` (trước khi thêm: **0** ô nào bắt đầu bằng `DOING` ⇒ không che mục nào) và ghi rõ lý do trong chính cổng. **UNKNOWN không tự chọn:** `projects` **KHÔNG có cột tiến độ** ⇒ màn `ProjectProgress` luôn ra **0 %**; nguồn % tiến độ dự án (BOQ/sản lượng/nhật ký hay nhập tay) **thuộc quyết định của người dùng** (ghi cho `PR-03`/`R-04`, không thuộc `PR-01`).
 
+102. **MỚI (02/10 · TASK-142) — KIỂM THỬ E2E TOÀN HỆ THỐNG: quy trình KHÔNG ghi cứng (đã chứng minh sống), nhưng lộ ra 3 lỗi cùng một hình dạng — «máy chủ có tính năng, lược đồ dựng mới không có bảng».** Chạy 8 giai đoạn nghiệp vụ liên tục trên dữ liệu thật (tổ chức → nhân sự → 200 mã kèm tên phụ → 3 phiếu đề nghị mua hàng → duyệt 5 bước → tách đơn → đặt đơn → kho nhận → xuất kho → trả vật tư). **① Quy trình KHÔNG ghi cứng:** đổi người duyệt bước 1–2 ⇒ phiếu mới chỉ nhận người mới và **người cũ bị máy chủ từ chối**; đảo thứ tự `ASTAGE-3` ↔ `ASTAGE-4` ⇒ phiếu mới ra chuỗi đúng thứ tự đã hoán (`1 CHT | 2 Thư ký | 3 P.Kế hoạch | 4 P.Dự án | 5 GĐ`); đánh số lại một bước **đã có phiếu duyệt** thì **bị chặn**. ⚠️ **Cần nói rõ trên giao diện:** cửa sổ «Quy trình phê duyệt» **không** dựng chuỗi nhưng người gán trong đó **vẫn có quyền duyệt** (máy chủ gộp `approval_stage_catalog` với `workflow_step_approvers`). **② Ba lỗi sản phẩm cùng hình dạng:** **L-09** bộ lướt bay dựng mới **không có kho trung chuyển** (lược đồ cũ có dòng seed ở `drizzle/0030…:147`) ⇒ `create_transfer_order` / `approve_central_return` / `receive_central_return` **không gọi được**, lại **không có thao tác tạo kho nào** để tự sửa; **L-10** **3 bảng** máy chủ đọc ghi mà lướt bay chưa tạo — `contract_reviews`, `contract_review_logs` (có ở `drizzle/0315`, **không** ở Flyway) và `error_reports` (**không** ở cả hai); **L-11** **6 thao tác mù quyền** (không public, không khai module, không admin-gated) — ⛔ **CÂU NÀY ĐÃ SAI, ĐÃ SỬA Ở VÒNG 199:** đo thật cho thấy `list_contract_review` trả **HTTP 200 với dữ liệu thật** cho **kế toán** lẫn **giám đốc** dù máy chủ xác nhận hai tài khoản đó **KHÔNG có** module `dept_legal_contract_review`; 6 tài khoản còn lại bị 403 (ranh giới 2/8). Nguyên nhân gốc: `RbacService.java:69` `if (isCompanyLeadership(user) && !required.contains("admin")) return;` ⇒ **vai trò `director` và `accountant` bỏ qua kiểm tra module** ⇒ ảnh hưởng **mọi** chức năng chỉ dựa vào lớp cửng ②, không chỉ 6 action này (xem `D-081`). ⛔ Hệ quả chung: **cài mới theo bộ lướt bay sẽ không chạy được các tính năng này** ⇒ đề xuất **gộp một đợt bổ sung lướt bay** (`V32…V35` đã có trong kho mã nhưng **chưa chạy**; `V36` còn bị giữ ⇒ chọn **`V37`**). **③ Ba lỗi của chính bộ đo, đã sửa và công khai:** bộ dò lệch lược đồ đọc **ảnh chụp CSDL 25/09** nên kết luận **thiếu 6 cột trong khi CSDL thật có đủ** ⇒ đã thêm chốt chặn «**KHÔNG KẾT LUẬN**»; bộ đối chiếu mã tách danh sách gán bằng `split(",")` nên hàm có dấu phẩy bị cắt vụn ⇒ **báo oan 3 cột** (`CURRENT_TIMESTAMP`, `NOT`, `EXISTS`) ⇒ đã thay bằng bộ tách nhận biết độ sâu ngoặc; ngoài ra `tests/w02-…` chuyển đỏ **vì chính dữ liệu kiểm thử** đổi số đo (kho 7→11, dự án 3→5) ⇒ đã cập nhật **tệp audit + tệp thử**, ⛔ **không** sửa dữ liệu cho khớp tài liệu. **④ Ba quyết định mới của công cụ:** một phép đo không lấy được thứ nó đo thì phải nói **không đo được**, không đoán (lần thứ 2 sau `probe-action-module-parity`); thông báo lỗi của `call()` nằm ở **`_loi`**, không phải `.loi`; `Map.has()` kiểm **sự tồn tại**, không kiểm **mức quyền**. **⑤ Ràng buộc đã giữ:** chỉ thêm/cập nhật, ⛔ không xoá dữ liệu có sẵn (CSDL **không rỗng**: 19 người dùng, 5 dự án, sổ kho) · dữ liệu mới đặt tiền tố `E2E-` · ⛔ **chưa commit**. Chi tiết: `docs/agent-progress/TASK-142.md` · báo cáo `docs/KiemThuE2E/*.md` + `.docx` · nhật ký `testlog.md` (29 dòng sự cố).
+
 - **[PHASE 8] WF-05 + WF-02/S-08**: snapshot người/vai trò/mode được ghi lúc tạo phiếu và **thắng** khi ra quyết định (Java `RequestStoreAdapter.java:255,293-294`; JS `system-route.mjs:489,1105`) · đo phủ **100/100** dòng có snapshot · cổng `probe-wf05-doi-quy-trinh` **5/5 ĐẠT** ⇒ đổi quy trình KHÔNG đổi luồng phiếu đang chờ.
 
+
+---
+
+## 🌟 MASTER TASK 3 — CHUẨN HÓA GIAO DIỆN, ĐIỀU HƯỚNG, NGHIỆP VỤ PHÊ DUYỆT (đang thực hiện)
+> Nguồn: yêu cầu MASTER TASK 3 (nhận 26/09/2026) · quy trình: `AGENTS.md` · ⛔ **KHÔNG COMMIT · KHÔNG PUSH**.
+> Ma trận audit đầy đủ: **`docs/dsh/MT3-UI-MATRIX.md`** (đo trực tiếp trên mã, ⛔ không giả định).
+
+| GĐ | Nội dung | Trạng thái |
+|---|---|---|
+| **GĐ1** | Frontend/UI (menu→tab · responsive · toggle · toolbar · modal · trạng thái · alias · notification · approval timeline) | ✅ **HOÀN TẤT** |
+| **GĐ2** | Backend & luật nghiệp vụ | ✅ **HOÀN TẤT PHẦN MÃ** — 3/9 task có việc thật, **cả 3 đã xong + chứng minh bằng test**; 5/9 đã đáp ứng sẵn; phần còn lại **chờ luật user** |
+| **GĐ3** | Database/migration | ✅ **⛔ KHÔNG CẦN MIGRATION** — cả 4 hạng mục **đã có sẵn** trong lược đồ |
+
+> 📌 **Đối chiếu nhanh với «VẤN ĐỀ CÒN MỞ» ghi ở khối dưới** (đã lỗi thời): ⛔ `request_supplement` **nay ĐÃ TỒN TẠI** ở backend + **4/4 test** (`TASK-MT3-BE-01.md`) · ✅ 68 ảnh **ĐÃ chụp lại, 0 px lệch**.
+
+### ĐÃ XONG (GĐ1)
+| Task | Nội dung | Bằng chứng |
+|---|---|---|
+| **MT3-F1** | §B.2 dải duyệt chỉ còn 4 thông tin (trạng thái · người · phòng ban · thời gian); bình luận chuyển vào vùng Chi tiết | DOM thật: `stepHasCommentLabel: 0` · `detailCommentsBlock: 1` (nội dung thật) |
+| **MT3-F1b** | §B.4 3 vùng cột cao bằng nhau; gỡ `align-items:start` + `max-height:650px` cứng → `stretch` + `clamp()` theo viewport; mỗi vùng cuộn riêng | DOM thật: `queue=detail=meta=658` · **`spread: 0`** · `listMaxHeight: none` |
+| **MT3-F1c** | §B.3 nút «Yêu cầu bổ sung» — nút thật (trước là **nút giả** chỉ mở modal) + vùng nhập + validate rỗng, ⛔ không `window.prompt` | DOM thật: `opensForm ✓ hasTextarea ✓ emptyBlocked ✓ formStillOpen ✓ noPromptUsed ✓` (lỗi thật: «Vui lòng nhập nội dung cần bổ sung.») |
+
+### CỔNG ĐANG XANH
+`tsc` **0** · contract **579 = 578 pass · 0 fail · 1 skip** · regression **69/69** · build **ĐẠT** · `gd-cycle` fingerprint **`VNTECH-FP-EA731C95DE0B4C1D`**.
+
+### VẤN ĐỀ CÒN MỞ (không che)
+- ⛔ Action `request_supplement` **chưa tồn tại** ở backend ⇒ nút «Gửi yêu cầu bổ sung» **báo lỗi** khi bấm. ⛔ **KHÔNG giả lập thành công**; thuộc **GĐ2**.
+- ⛔ Ảnh chuẩn visual (68 ảnh) **chưa chụp lại** sau các thay đổi layout ⇒ gom cuối (task **MT3-F14**).
+
+### KẾ TIẾP
+**MT3-F3** — toolbar CRUD dùng chung (ưu tiên §20: 1 component giải quyết nhiều màn): gom Tạo·Sửa·Xoá·Tìm·Sắp xếp·Lọc·Xuất Excel vào `ListToolbar`, dọn **64** `row-actions` + **91** `export-mini` rải rác.
+
+---
+
+## 📌 CẬP NHẬT MT3 — GĐ1 FRONTEND (mốc mới nhất)
+
+| | |
+|---|---|
+| **Trạng thái MT3** | **IN PROGRESS** — **21/29 task** đã xong · GĐ1 **còn 3 việc** (12d · 10d · 17) |
+| **Cổng kiểm** | `tsc` **0** · contract **620 = 619 pass / 0 fail / 1 skip** · regression **69/69** · build **ĐẠT** |
+| **Fingerprint** | `VNTECH-FP-A40ACA8D6F052D70` |
+
+### ✅ Đã xong ở GĐ1 (mỗi task có checkpoint + test)
+| Task | Nội dung | Checkpoint |
+|---|---|---|
+| UI-01 | Toolbar CRUD dùng chung | `TASK-MT3-UI-01.md` |
+| UI-02 | Bảng trạng thái tiếng Việt dùng chung (`lib/status-labels.ts`) | `TASK-MT3-UI-02.md` |
+| UI-03 | Trung tâm phê duyệt (§B.2/B.3/B.4) | `TASK-MT3-F1c.md` |
+| UI-04 | Bỏ khối «Chọn dự án» đầu trang | `TASK-MT3-UI-04.md` |
+| UI-05 | Ảnh & hồ sơ giao hàng | `TASK-MT3-UI-05.md` |
+| UI-06 | Responsive 5 mức rộng + toggle menu | `TASK-MT3-UI-06.md` |
+| UI-07 | Tab «Dự án» cho Công việc | `TASK-MT3-UI-07.md` |
+| UI-08 | Dự án: nhãn tab · cột Tổ đội · tên click được | `TASK-MT3-UI-08.md` |
+| UI-09 | Thi công: modal hạng mục + toolbar | `TASK-MT3-UI-09.md` |
+| UI-10/10b/10c | Kho: 4 tab · thẻ kho · modal chi tiết · chuyển «Luân chuyển vật tư dư» vào Cấp phát & hoàn trả | `TASK-MT3-UI-10*.md` |
+| UI-11 | Tổ đội: 5 tab + Lịch sử tổng hợp | `TASK-MT3-UI-11.md` |
+| UI-12/12b/12c | Mua hàng: bỏ nút «Xem chi tiết» · đổi tên «Giao nhận công trường» · **gộp 2 mục NCC thành 1** | `TASK-MT3-UI-12*.md` |
+| UI-13 | Danh mục vật tư: chuẩn hoá alias (bỏ rỗng/trùng) | `TASK-MT3-UI-13.md` |
+| UI-14 | Quản trị: bỏ nhãn thừa trên tab + modal thông báo có tìm/lọc + danh sách đã chọn | `TASK-MT3-UI-14.md` |
+| UI-15 | Trung tâm thông báo: 3 nhãn nhóm loại + nhóm thông báo hệ thống | `TASK-MT3-UI-15.md` |
+| UI-16/16b | Audit xuất Excel/CSV · CSV 1 đường duy nhất có BOM · **XLSX chứng minh bằng FILE THẬT** | `TASK-MT3-UI-16.md` |
+
+### 📋 QUYẾT ĐỊNH USER đã chốt (26/09/2026) — ⛔ không suy diễn lại
+Xem `docs/dsh/MT3_USER_DECISIONS.md`: ① Kho: «Tồn vật lý» là dashboard (giữ) · «Luân chuyển vật tư dư» thuộc Cấp phát & hoàn trả ② **Gộp thành 1 «Nhà cung cấp»** ③ «Xin giá vật tư» = **tab riêng** (chưa chốt nghiệp vụ) ④ «Giao nhận công trường» theo đề xuất (đổi tên, ⛔ không tách).
+
+### ⛔ TỒN ĐỌNG THẬT (⛔ không tự nhận là xong) — **CẬP NHẬT CUỐI**
+> ⚠️ **Đối chiếu lại ngày cập nhật cuối** (theo yêu cầu §23 điều 1 «đọc lại toàn bộ Master Task»). 3/5 mục cũ **đã ĐÓNG** bằng công việc thật + bằng chứng.
+
+| # | Mục | Trạng thái CUỐI | Bằng chứng |
+|---|---|---|---|
+| 1 | **P3-UI-12d** — thanh **10 tab** «Mua hàng & Cung ứng» | ✅ **ĐÃ ĐÓNG** | `lib/menu-helpers.ts` → `purchasingHubTabs` (10 tab) + `app/page.tsx` render `<nav className="switch-tabs" data-vntech="purchasing-hub-tabs" role="tablist">` + test `tests/mt3-ui-12d-purchasing-hub-tabs.test.mjs` (**6 ca**) |
+| 2 | **P3-UI-10d** — khối «Luân chuyển vật tư dư» **còn bản CŨ** (`CentralWarehouse` trong `page.tsx`) | 🟡 **CÒN — nhưng là DEAD CODE, ⛔ không sai nghiệp vụ** | **Đã đo lại**: `CentralWarehouse` xuất hiện **2 chỗ** (`:180511` định nghĩa · `:94440` gọi render). **⛔ Không truy cập được**: chính chú thích `page.tsx:1166` ghi *«màn `central_warehouse` đã bị ẨN KHỎI MENU»*. ⚠️ **Rủi ro khi xoá**: còn liên hệ routing (`app/.../route.ts:44`) + nhãn `page.tsx:162`/`:227` ⇒ mức ưu tiên **8 (cosmetic)**, **chưa xoá** (⛔ tránh phá routing) |
+| 3 | **P3-UI-17** — **68 ảnh chuẩn chưa chụp lại** | ✅ **ĐÃ ĐÓNG** | **68 ảnh chụp lại + đối chiếu 0 px lệch** · **thanh tra responsive 5 mức rộng ĐẠT (EXIT=0)** — ⚠️ nhưng **⛔ chưa soi bằng mắt**: model hiện tại **không đọc được ảnh**; theo ghi nhận tại **§26 tệp này**, việc soi bằng mắt là **«theo lựa chọn của user (đã miễn)»** ⇒ **cần user xác nhận lại cho MT3** |
+| 4 | **Probe cũ** `tests/p07-supplier-partner-split-probe.mjs` hỏng sẵn 2 phép kiểm | 🛑 **VẪN CHỜ USER** | ⛔ chưa xoá — chờ user cho phép |
+| 5 | **GĐ2 (9 task) + GĐ3 (2 task)** «chưa bắt đầu» | ✅ **ĐÃ ĐÓNG PHẦN MÃ** | **GĐ2**: **3/9 task có việc mã thật — CẢ 3 ĐÃ XONG + CHỨNG MINH BẰNG TEST** (`request_supplement` **ĐÃ TẠO** 4/4 · cưỡng chế quyền Thi công 4/4 · phạm vi gửi thông báo 3 ca); **5/9 đã đáp ứng sẵn**; phần còn lại **chờ luật user**. **GĐ3**: **⛔ 0 MIGRATION cần tạo** (cả 4 hạng mục đã có sẵn trong lược đồ) |
+
+### 📊 TRẠNG THÁI CUỐI MT3 — **CẬP NHẬT 27/09/2026** *(sau khi user gỡ toàn bộ điểm chặn)*
+| | |
+|---|---|
+| **Ma trận** | ✅ **12/12 hàng đã đối chiếu bằng MÃ THẬT** (ma trận `MT3-UI-MATRIX.md` **đã cập nhật lại** — bản cũ ghi sai) |
+| **🎯 Hạng mục user gọi QUAN TRỌNG NHẤT** | ✅ **XONG** — «đưa **tất cả** menu item vào trong menu, chuyển thành **tab**»: **thanh tab cho 8/8 nhóm** *(cơ chế dùng chung `hubTabsFor(active)`)*. ⚠️ **Thanh menu GIỮ NGUYÊN mục con** (nhóm cha bấm để mở) — xem dòng «SỬA NHẦM» bên dưới |
+| **GĐ1** frontend | ✅ **HOÀN TẤT** (kể cả **#4** `<aside>` màn Kho → hộp thoại · **#5** nhãn tiếng Việt · **#8** nút tự ẩn ≥1024px · **#9** `PermissionGuard` cho `Requests.tsx`) |
+| **GĐ2** backend | ✅ **HOÀN TẤT** — `request_supplement` · **A1① sắp xếp SLA** · **A1② tự TỪ CHỐI khi quá SLA 72h** *(+7 test biên)* · RBAC thi công · quyền gửi thông báo |
+| **GĐ3** database | ✅ **⛔ KHÔNG CẦN MIGRATION** |
+| **Cổng kiểm (chạy lại toàn bộ)** | `mvn test` **74/74** (`Failures: 0 · Errors: 0` · `BUILD SUCCESS`) · biên dịch Java **115 tệp · 0 lỗi** · `tsc` **EXIT=0** · contract **653 = 652 pass / 0 fail / 1 skip** · regression **69/0** · **`verify:css-baseline` ĐẠT** (`dead classes=0 · dead vars=0`) · **`verify:master-baseline` ĐẠT** · build **ĐẠT** `VNTECH-FP-0240EC6549A3B58F` · **566 tệp** · `BUILT ARTIFACT VALIDATION: ĐẠT` |
+| **🖥️ Đang phục vụ** | **`:9000`** (cổng vào chuẩn) **HTTP 200** + đăng nhập **200** → UI mới `:3000` + Java API `:18081`. ⚠️ `:8787` = **UI Node/JS CŨ**, ⛔ không chứa mã Next.js |
+| **⛔ Vì sao CHƯA tuyên bố COMPLETE** | **CHỈ CÒN 1 LÝ DO**: 👁️ **chờ USER xác nhận bằng mắt** trên giao diện. ⛔ Tôi **không đánh dấu xong khi user chưa xác nhận**. *(8 câu hỏi nghiệp vụ đã được user TRẢ LỜI đầy đủ ngày 27/09/2026 — xem `docs/dsh/MT3_USER_DECISIONS.md`)* |
+| **#3** — toolbar CRUD | ✅ **KHÔNG PHẢI LỖI** — 8 tệp nghi ngờ đều là **component con / modal / hộp trượt** được **màn cha** gọi *(cha đã có `ListToolbar`)* ⇒ ⛔ **không sửa mù** |
+| **Hồ sơ** | `TASK-MT3-UI-24.md` · `TASK-MT3-UI-26.md` · `TASK-MT3-UI-27.md` · `TASK-MT3-BE-22.md` · `TASK-MT3-BE-23.md` · `TASK-MT3-DB-02.md` (nghiệm thu + 16 tiêu chí) · `CURRENT_TASK.md` (bàn giao + **13 bài học chống kết luận sai**) |
+
+### 🔴🔴 **SUỐT SÁT LẦN THỨ HAI** — «GOM MỤC CON KHỎI THANH MENU» — **ĐÃ HOÀN TÁC**
+> Tôi **hiểu thêm 1 bước** so với yêu cầu của user *(bỏ hẳn mục con khỏi thanh menu)* — đây là **SUY ĐOÁN của tôi**, ⛔ user **chưa từng yêu cầu**.
+> Tôi sửa trong hàm `permissionMenuStructure` — **SAI CHỖ**: hàm đó dùng cho **BẢNG PHÂN QUYỀN** (`page.tsx:3175` phân quyền từng người · `page.tsx:3209` ma trận admin), **⛔ KHÔNG phải thanh menu** (`app/page.tsx:614-621` mới là thanh menu).
+> **Hậu quả nếu giữ:** gom mỗi nhóm thành 1 hàng ⇒ **quản trị viên KHÔNG còn cấp/tước được quyền cho mục con khác** ⇒ **vi phạm RULE 13 «không phá RBAC»**.
+> ✅ **ĐÃ HOÀN TÁC** + ghi chú trong mã chặn sửa lại + **dựng lại bản đúng** `VNTECH-FP-E75918D7574EAD55` · 567 tệp · `tsc` 0 · contract **659 = 658/0/1** · `:9000` HTTP 200.
+> ⏸️ **Còn chờ user chốt**: thanh menu nên **(a) giữ mục con** *(mẫu đang chạy ổn)* hay **(b) chỉ còn nhóm cha**? ⛔ tôi **không tự quyết** vì đổi cả điều hướng hệ thống.
+
+### 🔴 CÁCH TÔI KẾT LUẬN SAI TRONG PHIÊN NÀY (để phiên sau tin đúng)
+| Sai sót | Nguyên nhân | Đã sửa? |
+|---|---|---|
+| *«Sửa `permissionMenuStructure` ⇒ sidebar chỉ còn nhóm cha»* | ⛔ **không truy đường đi chức năng** tới nơi hàm **THẬT SỰ** được dùng (hàm dùng ở **3 nơi**, 2 nơi là **phân quyền**) | ✅ **hoàn tác** · ghi chú chặn sửa lại |
+| *«Ma trận còn `#5 ❌ · #8 ❌ · #11 ❌`»* | ⛔ tin **tài liệu cũ hơn mã** | ✅ đo lại mã · cập nhật ma trận |
+| *«0/40 màn có prop `permission` ⇒ #9 không thiếu sót»* | **mẫu `grep` quá hẹp** (`permission\??:\s*\(` bỏ sót `permission: Row`) | ✅ **15/40** ⇒ đã **SỬA #9** |
+| *«`PermissionGuard` không tồn tại»* | **`Get-ChildItem -Include` thiếu đường dẫn ⇒ TRẢ RỀNG** | ✅ nó **CÓ** |
+| *«`WorkKanban` còn nút «Gửi kiểm tra» phải xoá»* | ⛔ **khớp chuỗi ≠ chức năng** — đó là **tên quy trình thật** | ✅ giữ nguyên |
+| *«`WorkHierarchy` + 7 tệp khác vi phạm quy ước toolbar»* | ⛔ kết luận từ `row-actions` mà **không đọc tệp** | ✅ đọc từng tệp ⇒ **component con**, cha đã có toolbar |
+| *«UI không thay đổi ⇒ user thấy không đổi là do mã»* | ⛔ **quên build + khởi động lại server** ⇒ user xem **bản CŨ** | ✅ quy trình 3 bước, ghi ở `CURRENT_TASK.md` |
+
+### ⚠️ HAI SAI SÓT ƯỚC LƯỢNG CỦA TÔI (ghi để phiên sau tin đúng số liệu)
+1. **Phân rã GĐ2 đánh giá CAO khối lượng thật** — **5/9 task** khi đọc mã hoá ra **đã đáp ứng sẵn** *(BE-02 · BE-04 · BE-05 · BE-06 cốt lõi · BE-07)*.
+2. **Phân rã GĐ3 giả định THIẾU** những thứ thực tế **đã có** trong lược đồ *(cả 4 hạng mục)*.
+
+### 🔧 BÀI HỌC KỸ THUẬT (đã mắc, ghi để không lặp)
+- ⛔ **Không kết luận từ `grep`/`Select-String` khi dòng siêu dài**: cả `<header>` là 1 dòng ⇒ công cụ trả số dòng của cả dòng khổng lồ ⇒ tôi từng **kết luận SAI** «không có chuông thông báo» / «biến không được render». Phải **đọc trực tiếp bằng `IndexOf`/`Substring`**.
+- ⛔ **Không chèn chú thích vào GIỮA một dòng literal** mà hợp đồng test so khớp bằng `includes` ⇒ test HỎNG dù `tsc` vẫn xanh.
+- ⛔ **XLSX là ZIP nén DEFLATE** ⇒ tìm chuỗi UTF-8 thô trong gói cho **ÂM GIẢ 100%**; phải **sinh file → giải nén → đọc XML**.
+- ⛔ **Không viết tệp UTF-8 bằng PowerShell** (từng làm hỏng 3 tệp test, phải khôi phục từ git) ⇒ dùng công cụ sửa văn bản.
+- ⛔ **XLSX ⛔ không dùng BOM** (BOM chỉ cho CSV); BOM trong gói ZIP sẽ phá định dạng.
+- ⛔ **`grep -Include '*.tsx'` ĐÃ LOẠI TRỪ tệp `.ts`** (và `app/` loại trừ `lib/`) ⇒ tôi suýt **kết luận SAI lần thứ HAI** («duyệt trong modal chưa nối»). Khi kết luận **«có/không được gọi»**, **BẮT BUỘC** tìm trên **cả `*.ts` LẪN `*.tsx`** và **cả `app/` LẪN `lib/`**.
+- ⛔ **Không cộng dồn `target/surefire-reports/*.txt` mà bỏ qua THỜI GIAN** — `target/` giữ lại báo cáo của các test **đã bị xoá** ⇒ tôi từng thấy «67 bài · 1 THẤT BẠI» trong khi Maven báo `BUILD SUCCESS`. Phải **lọc theo thời gian** của lượt chạy hiện tại.
+- ⛔ **`tools/cutover-proxy.mjs` có cổng mặc định `8787` TRÙNG cổng Node UI** ⇒ chạy trần **⛔ không bind được :9000**. Phải **`--port 9000`**. Và **`probe-responsive-5widths` nhận THAM SỐ VỊ TRÍ**, ⛔ **không** dùng `PROBE_BASE` (khác `probe-visual-regression`).
+- ⛔ **Không dùng hàm «trông có vẻ sẵn có» mà chưa grep xác nhận** — tôi từng dùng `trimmedParam(...)` **không tồn tại**; phát hiện bằng **đếm số khớp** (chỉ đúng 2 = chỗ mình vừa thêm) trước khi biên dịch.
+
+### KẾ TIẾP *(cập nhật 27/09/2026)*
+✅ **8 câu hỏi nghiệp vụ ĐÃ ĐƯỢC USER TRẢ LỜI** (ngày 27/09/2026) ⇒ **không còn chặn vì chờ quyết định nghiệp vụ.** Xem `docs/dsh/MT3_USER_DECISIONS.md` (11 quyết định, nguyên văn).
+✅ Đã xử lý theo các quyết định đó: **A1** (luật SLA 72h + tự từ chối) · **A2** (tìm theo tên phụ) · **A4** (thông báo theo phòng ban) · **A5** (⛔ kho không xoá) · **A6** (⛔ chưa chốt nghiệp vụ ⇒ không xây) · **A7** (xoá probe) · **B1** (cho phép dừng tiến trình) · **B2** (user tự soi) · **C1** (`<aside>` → hộp thoại) · **C2** (ngưỡng **1024px**).
+
+**⛔ CHỈ CÒN 1 VIỆC — CẦN USER:**
+1. 👁️ **Xác nhận bằng mắt trên giao diện** tại `http://127.0.0.1:9000` (bấm **Ctrl+F5** để nạp bản mới).
+   ⛔ Tôi **không tuyên bố `MASTER TASK 3 = COMPLETE`** khi chưa có xác nhận này *(tiêu chí §23)*.
+
+**⏳ Việc tự phát (không chặn, làm khi tiện):**
+2. **Nợ CSS** `canonical.css` 1251/1076 *(⛔ **không** chặn cổng chính thức — `verify:css-baseline` ĐẠT)*.
+3. `CentralWarehouse` cũ trong `page.tsx` *(menu đã ẩn; ⛔ xoá có rủi ro vì `route.ts:44` + nhãn `:162`/`:227` còn tham chiếu)*.
+
+### 🔧 BÀI HỌC KỸ THUẬT (đã mắc, ghi để không lặp)
+- ⛔ **Không kết luận từ `grep`/`Select-String` khi dòng siêu dài**: cả `<header>` là 1 dòng ⇒ công cụ trả số dòng của cả dòng khổng lồ ⇒ tôi từng **kết luận SAI** «không có chuông thông báo» / «biến không được render». Phải **đọc trực tiếp bằng `IndexOf`/`Substring`**.
+- ⛔ **Không chèn chú thích vào GIỮA một dòng literal** mà hợp đồng test so khớp bằng `includes` ⇒ test HỎNG dù `tsc` vẫn xanh.
+- ⛔ **XLSX là ZIP nén DEFLATE** ⇒ tìm chuỗi UTF-8 thô trong gói cho **ÂM GIẢ 100%**; phải **sinh file → giải nén → đọc XML**.
+- ⛔ **Không viết tệp UTF-8 bằng PowerShell** (từng làm hỏng 3 tệp test, phải khôi phục từ git) ⇒ dùng công cụ sửa văn bản.
+- ⛔ **XLSX ⛔ không dùng BOM** (BOM chỉ cho CSV); BOM trong gói ZIP sẽ phá định dạng.
+
+### KẾ TIẾP
+**P3-UI-12d** (thanh 10 tab) → **P3-UI-10d** (dọn đường cũ) → **P3-UI-17** (ảnh chuẩn + xác minh bằng mắt) → **GĐ2**.
+
+---
+
+## 🔴 VÒNG 214 (02/10/2026) — SỬA LỖI GẤP TAB «PHÂN QUYỀN NGƯỜI DÙNG» · **TASK-143**
+
+**USER, nguyên văn:** «Lỗi phân quyền, không thể cấp quyền cho user từ tab Phân quyền người dùng: không sử dụng được copy quyền từ phòng ban, không lưu được quyền đã chọn cho user. Tiến hành bắt lỗi và xử lý gấp.»
+
+**ĐÃ SỬA TẬN GỐC** — nguyên nhân đo được, không suy đoán: `app/screens/PermissionAccessPanel.tsx` lấy khoá chức năng bằng `item.key`, nhưng cột CSDL là `module_key` (và cột khoá hoạt động là `active`, không phải `enabled`). Đo trên `GET /api/system`: **0/76** dòng `moduleCatalog` có `key`.
+⇒ cả 76 dòng có `key === undefined` ⇒ `Object.fromEntries` gộp thành **MỘT khoá `"undefined"`**. Hệ quả đo được: ô tick hiện **trống** dù tài khoản có quyền; nút hàng loạt dựng state toàn khoá `undefined` ⇒ payload `save_user_access` gửi **76 module TẤT CẢ `false`** ⇒ cổng P5.3 không chạy (`want == 0`) ⇒ `clearUserScopes()` **XÓA SẠCH toàn bộ quyền** rồi vẫn trả HTTP 200 «Đã lưu quyền hiệu lực». Kết quả «Sao chép từ phòng ban» cũng bị xoá ngay sau một lần bấm Lưu ⇒ nhìn như nút copy hỏng.
+
+**ĐÃ LOẠI TRỪ TRƯỚC KHI VÁ (4 giả thuyết sai):** `intOf(Boolean)` · `can_view` rắc vs camelCase · cổng P5.3 (đo 0/478 dòng vi phạm) · ngoại lệ `autogrant` (adapter alias `auto_grant_all` đúng). ⇒ **không sửa dòng Java nào** ⇒ sửa được ngay, không cần build (D-044).
+
+| Cổng | Kết quả |
+|---|---|
+| `tests/v214-phan-quyen-luu-quyen.test.mjs` (mới) | ✅ 6/6 · EXIT=0 |
+| **Đối chứng âm** (tháo bản vá trên tệp thật) | ✅ `fail 1` EXIT=1 · khôi phục **byte-identical** |
+| `npm test` | ✅ **666 pass · 0 fail** EXIT=0 (nền 660 + 6 vệ) |
+| `node scripts/verify-vntech-fingerprint.mjs` | ✅ `VNTECH-FP-E538CEA79AA2F9B7` · 698 files · EXIT=0 |
+| Nút «Sao chép từ phòng ban» (mô phỏng cả 28 tài khoản) | ✅ **27/28 thành công**, 1 (`admin`) không có cấu hình phòng ban — **không hỏng ở máy chủ** |
+
+**BẰNG CHỨNG:** [`docs/agent-progress/TASK-143.md`](TASK-143.md) · quyết định `D-090` · `testlog.md` mục 34–36.
+⛔ **Chưa commit, chưa push** — người dùng yêu cầu xem trước. Nhánh `unity`, không merge `main`.
+⏳ **CÒN LẠI:** (1) người dùng tải lại trang rồi thử lại trên dữ liệu thật — tôi **không** tự gọi `save_user_access` vì nó xoá thay thế toàn bộ; (2) lớp phòng vệ phía máy chủ (từ chối payload toàn-không-quyền) cần biên dịch Java — máy này không có Maven.
+ℹ️ Ghi chú cho người dùng: `giamdoc.demo` có **17 chức năng vượt quyền phòng ban** ⇒ bấm «Sao chép từ phòng ban» cho tài khoản này sẽ **gỡ** 17 quyền đó (đúng nghĩa của nút sao chép, nhưng cần biết trước).
+
+## 🔴 VÒNG 215 — MENU MỤC 1.4: TAB THỨ 3 «CHI TIẾT LŨY KẾ THEO VẬT TƯ» — KHUNG XONG
+═══════════════════════════════════════════════════════════════════════
+
+**Đã làm (TASK-027):** bảng lũy kế theo vật tư chuyển từ cuối màn Mua hàng thành **tab thứ 3** trên dải `PR · PO · Chi tiết lũy kế theo vật tư`. Đây là **chuyển vị trí**, không phải tính năng mới — dữ liệu vẫn là `data.boqItems`; chỉ thêm 2 cột có số liệu thật («Đã đặt chưa nhận» = `orderedNotReceivedQty`, «Đã xuất kho» = `issuedQty`).
+
+⛔ **CẦN USER XÁC NHẬN (xem `D-091`):** chỉ đạo 21/09 «chỉ còn PR và PO thôi» đã được mã hoá vào 2 tệp test; yêu cầu vòng 211 mục 1.4 MỚI HƠN nên tôi làm theo, **chỉ mở rộng chứ không nới luật**: tab 3 là bảng TỔNG HỢP từ BOQ (không phải chứng từ), nên số tab CHỨNG TỪ vẫn đúng 2 và **luật cấm `MR` giữ nguyên**. Lý do thay thế đã ghi ở đầu cả 2 tệp test, banner đầu `Purchasing.tsx`, và `DECISIONS.md`.
+
+- `npx tsc --noEmit --incremental false` ⇒ **0 lỗi** EXIT=0
+- `tests/v211-purchasing-mat-tab.test.mjs` (MỚI) — 7 vệ · `pass 7 · fail 0` EXIT=0 · **đối chứng âm × 2** đều EXIT=1
+- `npm test` ⇒ **`pass 673 · fail 0`** EXIT=0 (nền 666 + 7 vệ)
+- Fingerprint **`VNTECH-FP-C9BD271ECBE48601`** · source **699 files** · `verify-vntech-fingerprint.mjs` **ĐẠT** EXIT=0
+- **DATABASE:** ❌ KHÔNG thay đổi · **API:** ❌ KHÔNG thay đổi · **Java:** ❌ KHÔNG sửa
+- ⛔ **CHƯA COMMIT** (anh bảo «Chưa commit, để tôi xem trước»)
+
+**Còn lại vòng 211:** menu **1.2** (đổi tên «PR & PO» — code xong, `V35` đã viết, **CHƯA CHẠY** ⇒ TYPE 3 chờ anh duyệt V32–V35 + V37) · **PR 2.1–2.7** · **PO 3.2/3.3** · **báo cáo 4.1**
+
+## 🟢 VÒNG 216 (02/10/2026) — NHÓM PR 2.1–2.7: MÀN «PHIẾU ĐỀ NGHỊ MUA HÀNG» · **TASK-028**
+═══════════════════════════════════════════════════════════════════════
+
+**ĐÃ LÀM (TASK-028).** 7 mục nhóm PR trên `app/screens/Requests.tsx`: bỏ nhãn thừa · gom nút CRUD đúng khuôn `ListToolbar` · tìm kiếm + bộ lọc «Người tạo» · sắp xếp theo Ngày cần / Giá trị / Người tạo + bộ lọc «Bước duyệt» / «Ưu tiên» · thêm `title` cho nút ◉/✎ và nút «✎ Xem / Sửa phiếu» · nút «＋ Phát hành PO» · dịch nhãn trạng thái.
+
+**HAI LỖI IM LẶNG ĐÃ TÌM RA (quan trọng hơn phần thêm mới):**
+1. **D-093 — 3 nút phân quyền chưa từng hiện ra.** `Requests` khai prop `permission` nhưng `app/page.tsx` **không truyền** ⇒ `canCreate`/`canExport` = `false` vĩnh viễn ⇒ «Lập phiếu đề nghị», «Nhập Excel», «Xuất Excel» không bao giờ được vẽ. Đã vá.
+2. **D-094 — không thể xoá/huỷ phiếu nếu không phải admin.** `requested_by` lưu TÊN, backend so UUID. Có **40/84** phiếu `returned`. ⛔ Không ship nút Xoá/Huỷ; cần migration `requested_by_id` ⇒ **chờ USER**.
+
+| Cổng | Kết quả |
+|---|---|
+| `npx tsc --noEmit --incremental false` | ✅ **0 lỗi** EXIT=0 |
+| `tests/v215-phieu-de-nghi-muc-2-1-den-2-7.test.mjs` (mới) | ✅ **20 vệ** · EXIT=0 |
+| **Đối chứng âm × 3** | ✅ đúng **3 vệ đỏ** EXIT=1 · khôi phục **byte-identical** |
+| `npm test` | ✅ **693 pass · 0 fail** EXIT=0 (nền 673 + 20 vệ) |
+| `node scripts/verify-vntech-fingerprint.mjs` | ✅ `VNTECH-FP-500939DF111D533C` · 700 files · EXIT=0 |
+| Màn hình + API sống | ✅ UI HTTP 200 · API `ok=true` · 84 phiếu · **17** phiếu bật được nút Phát hành PO |
+
+**BẰNG CHỨNG:** [`docs/agent-progress/TASK-144.md`](TASK-144.md) · quyết định `D-094` · `D-095` · `D-096` · `testlog.md` mục 39–41.
+⛔ **Chưa commit, chưa push** — người dùng yêu cầu xem trước. Nhánh `unity`, không merge `main`.
+**Còn lại vòng 211:** menu **1.2** (chờ chạy V35) · **PO 3.2/3.3** · **báo cáo 4.1**.
+
+---
+
+## 🟢 VÒNG 216 (lần 2) — NHÓM PO mục 3.2 + 3.3 (TASK-029) — 02/10/2026
+
+**Nội dung:** dọn màn **Chi tiết Đơn mua** (`app/screens/PurchaseOrderDrawer.tsx`).
+
+| Mục | Nội dung | Trạng thái |
+|---|---|---|
+| **3.2** | Nút «← Quay lại»: chuyển từ thẻ `<header>` của tab sang `actions` của `EntityDetailModal` (khe đã tài liệu hoá «góc phải tiêu đề», có `.edm-head-actions{display:flex}`) + lớp nhà `.secondary`. **0 dòng CSS mới.** | ✅ |
+| **3.3** | Bỏ dòng rác «Mã kỹ thuật (request_id)». Đo trước: 31/31 PO có `requestNo` ⇒ mất 0 thông tin; giữ nguyên hợp đồng §21. | ✅ |
+
+**Vì sao nút nằm sai chỗ (đo được, không đoán):** `<header>` của tab **không có lớp** và **không quy tắc nào khớp** (`canonical.css` chỉ có `.entity-detail-modal > header`, là header **của modal**) ⇒ `<div>` + `<button>` xếp dọc; `.page-back` chỉ có CSS dưới `.project-detail-head` mà màn PO không nằm trong đó ⇒ nút trần. Phương án `.card-head` bị loại vì `.card-head>button` + `!important` sẽ **xoá viền/nền** của nút.
+
+**Kiểm chứng:** `tsc` EXIT=0 · test PO liên quan 34/0 · tệp mới `tests/v216-don-mua-muc-3-2-3-3.test.mjs` **8 vệ** · **đối chứng âm ×2** (fail 3 / fail 1; khôi phục byte-identical) · `npm test` **701 pass / 0 fail / skipped 1**, lint **0 error**, EXIT=0 · vân tay `VNTECH-FP-FDCBF492F4832A5A` · **701 files** · ĐẠT EXIT=0 · sống thật UI HTTP 200 + API `ok=True requests=84 purchaseOrders=31`.
+
+**Quyết định mới:** **D-097** (vân tay `brand` suy ra từ `source` ⇒ fixpoint 2 lượt) · **D-098** (hàm tiêm lỗi của đối chứng âm phải cộng dồn trên một bộ đệm).
+
+**BLOCKER:** không có blocker mới.
+
+**Còn lại vòng 211:** menu **1.2** (chờ chạy V35 — TYPE 3) · **báo cáo 4.1** (tài liệu điều hướng NCC ↔ PO ↔ vật tư).
+
+## 🟢 VÒNG 217 — CHỈNH SỬA ĐÃ LÊN THẬT TRÌNH DUYỆT (TASK-030) — 02/10/2026
+
+| # | Nội dung | Kết quả |
+|---|---|---|
+| 1 | Người dùng báo «không thấy thay đổi gì ở frontend» | ⛔ Tôi đã trả lời sai («Vite dev server, F5 là thấy») |
+| 2 | Đo lại hạ tầng | `:8787` là **bản build tĩnh**: HTML không có `/@vite/client`, vân tay `f0af3695…` ≠ `fdcbf492…` |
+| 3 | Cập nhật lớp vân tay runtime (SQLite) | `feb8cebf…` → `fdcbf492…`, 1 dòng, trigger giữ nguyên |
+| 4 | `npm run build` + khởi động lại đúng PID `:8787` | **EXIT 0** · HTML 7 456 byte |
+| 5 | Chứng minh bằng HTTP thật | Bundle **có** nhãn 3.2, **không** còn dòng rác 3.3 · 6/6 bundle đúng byte |
+| 6 | Thêm cổng chống tái phạm + test | `tools/verify-ui-build-applied.mjs` · `tests/v217-ban-chay-moi-nhat.test.mjs` **7/7** (2 đối chứng âm) |
+| 7 | Fixpoint vân tay | ⚠️ `tests/` thuộc `ROOT_DIRS` ⇒ 701 → **702 file**; fixpoint **3 lượt** |
+| 8 | SSOT mới | `VNTECH-FP-D6656E64B4DB591E` · source `d6656e64b4db591edad1e37b30080019392891b820e270eb532c67b90457b297` · brand `690ef8c7…` · release không đổi |
+| 9 | `npm test` lần cuối | **708 pass / 0 fail** · EXIT 0 · lint 0 error |
+| 10 | Cổng chạy thật | `✓ do-moi · ✓ van-tay · ✓ byte` ⇒ **ĐẠT** |
+
+**Quyết định:** `D-099` (UI là bản build tĩnh; build + khởi động lại `:8787`; quy trình 5 bước; D-097(a) mở rộng).
+
+**Lệnh chuẩn sau MỖI lần sửa mã nguồn frontend:** `node tools/verify-ui-build-applied.mjs`
+
+⛔ Chưa commit (anh dặn «Chưa commit, để tôi xem trước»).
+
+---
+
+## TASK-146 — VÒNG GO-LIVE 1 (02/10/2026) · 10 YÊU CẦU USER + 4 BUG
+
+| | |
+|---|---|
+| **Trạng thái** | ✅ **9/10 yêu cầu XONG** · ⛔ mục 9 **BLOCKED** (chờ USER duyệt chạy Flyway `V35`) |
+| **Nhật ký đầy đủ** | `docs/agent-progress/TASK-146.md` |
+| **Tệp mã sửa** | `app/screens/Purchasing.tsx` · `app/styles/canonical.css` |
+| **Cổng phải sửa theo thiết kế mới** | `scripts/css-baseline-audit.mjs` · `tests/moc121-purchasing-tabs.test.mjs` · `tests/v211-purchasing-mat-tab.test.mjs` |
+| **Test mới** | `tests/d105-jsx-comment-textnode.test.mjs` · `tests/d107-bang-pr-khop-so-o.test.mjs` · `tests/v1-muc3-…` · `tests/v1-muc4-…` |
+
+**10 yêu cầu GO-LIVE (USER gửi lại 02/10)**
+
+| # | Yêu cầu | Trạng thái |
+|---|---|---|
+| 1 | NCC & Đối tác vào **cuối** menu Mua hàng | ✅ không cần sửa mã (đã có sẵn) |
+| 2 | Tab PR/PO/Lũy kế theo **khuôn tabbar menu Công việc** | ✅ `.project-scope-tabs` (đo ở `WorkCenter.tsx:295`) |
+| 3 | Xoá **thông tin thừa** dưới nhóm nút | ✅ vệ 7/7 |
+| 4 | Nút sắp xếp → **«Mới nhất»/«Cũ nhất»** | ✅ vệ 5/5 |
+| 5 | Mỗi tab **chỉ hiện 1 danh sách** | ✅ vệ 7/7 |
+| 6 | Nút «xem phiếu đề nghị nguồn» trong modal PO | ✅ BUG-20261002-001 FIXED |
+| 7 | Xem **chi tiết PR** trong bảng PR | ✅ vệ 6/6 |
+| 8 | Tab-modal **phân quyền** lưu không được | ✅ BUG-20201002-002 FIXED |
+| 9 | Đổi tên menu «MUA HÀNG & PO» → **«PR & PO»** | ⛔ **BLOCKED** — mã + `V35` xong, thiếu build JAR + duyệt Flyway |
+| 10 | Cập nhật tiến độ vào checklist | ✅ `CHECKLIST.md` nhóm A–E · bảng tiến độ **13/14** |
+
+**4 BUG đã đóng**
+
+| BUG ID | Module | Severity | Root cause (đo được) |
+|---|---|---|---|
+| BUG-20261002-001 | Trung tâm phê duyệt / PO | HIGH | `window.alert` là **mã chết** + `title` hứa hư |
+| BUG-20201002-002 | Quản trị › Phân quyền | **CRITICAL** | backend chặn HTTP 400 **trước** `runAtomically`; lỗi bị `.overlay` z100 **che** |
+| BUG-20261002-003 | Mua hàng (mọi tab) | **CRITICAL** | comment `/* … */` **trần** trong JSX = **TEXT NODE** ⇒ vẽ nguyên khối chữ ra màn |
+| BUG-20261002-004 | Bảng PR (**thead**) | HIGH | dòng phát **12 ô `<td>`** / tiêu đề **11 ô `<th>`**; ô 3 **sao chép** ô 2 ⇒ lệch cột |
+
+**Kiểm chứng cuối vòng**
+
+| Phép đo | Kết quả |
+|---|---|
+| `tsc --noEmit` | **EXIT=0** |
+| `npm test` | **751 tests · 750 pass · 0 fail · EXIT=0** · lint **0 error** |
+| `npm run audit:tests` | 128/135 tệp xanh; 7 tệp đỏ **ngoài cổng** (nợ đã biết, 51 test case) |
+| `css-baseline-audit.mjs` | **ĐẠT** · dead classes=0 · MỐC 121 tab contract=PASS |
+| `verify-vntech-fingerprint.mjs` | **ĐẠT** · `VNTECH-FP-F5CCE656F23BD18E` · **710 tệp** |
+| `verify-ui-build-applied.mjs` | **3/3 ✓** ⇒ `:8787` đang chạy **đúng bản đã build** |
+
+**Quyết định mới:** **D-103** (exit code cổng UI không tất định) · **D-105** (comment JSX trần) ·
+**D-106** (vệ rỗng: bóc chú thích rồi đi tìm chú thích) · **D-107** (bảng phải có vệ ĐẾM CẤU TRÚC) ·
+**D-108** (cổng test là `regression-suite.mjs`, không phải mọi tệp `tests/`) · **D-109** (đổi thiết kế ⇒ cập nhật
+mọi cổng khoá thiết kế cũ, **không nới lỏng**).
+
+**Bài học:** ⛔ ESLint báo ở **đúng vùng vừa sửa** ⇒ lỗi thật, sửa trước. ⛔ **Đối chứng âm** là thứ duy nhất
+phân biệt «có bảo vệ» với «tưởng là có bảo vệ» (vệ D-105 phải viết lại **4 lần**). ⛔ **Đo sai tập ⇒ kết luận sai.**
+
+**BLOCKER:** ⛔ mục 9 cần USER quyết (build JAR + duyệt Flyway `V35`). Các việc TYPE 3 vòng trước giữ nguyên.
+⛔ **Chưa commit** (`AUTO_COMMIT = FALSE`, `AUTO_PUSH = FALSE`).
+
+---
+
+## TASK-147 → TASK-184 — VÒNG GO-LIVE 2→40 (05/10/2026) ⭐ ĐỌC MỤC NÀY TRƯỚC
+
+> ⛔ Mục «TASK-146 — VÒNG GO-LIVE 1» ở trên đã CŨ. **Mục này là trạng thái MỚI NHẤT.**
+> ⭐ Chi tiết đầy đủ ở `docs/dsh-state/CURRENT_STATE.md` §«VÒNG GO-LIVE 8→32» và 38 tệp `TASK-147…184`.
+
+### SỐ ĐO ĐƯỢC (05/10/2026 · TASK-184)
+
+| Mục | Giá trị |
+|---|---|
+| Vân tay nguồn | **`VNTECH-FP-27251D9B7F076176`** · **713 tệp** · ĐẠT |
+| Nhánh / **HEAD = điểm lùi ĐÚNG** | `unity` / ⭐ **`cae2815`** (01/10) — ⛔ **KHÔNG dùng `82d7ea8`**: commit đó có thật nhưng **CÁCH HEAD 8 COMMIT** ⇒ lùi về đó **mất 8 commit** |
+| Files chưa commit | **132 đường** (⭐ **HỖN HỢP 2 PHIÊN** — xem `docs/agent-progress/GO-LIVE-phan-nhom-commit.md`) |
+| ⛔ | **KHÔNG commit / KHÔNG push** (goal §18 + user «Chưa commit, để tôi xem trước») |
+
+### ⛔ 5 BẢN VÁ JAVA — **ĐÃ VIẾT + ĐÃ KIỂM CHỨNG NHƯNG CHƯA LÊN SÓNG**
+
+| BUG | Mức | Nội dung |
+|---|---|---|
+| **BUG-20261005-005** | HIGH | `WarehouseStockStoreAdapter` + `StockManagementUseCase` — `approveCentralReturnWithShip` / `receiveCentralReturn` nay **ghi `contract_stock_ledger`** (trước chỉ ghi `stock_movements` ⇒ phiếu trả kẹt `in_transit`) |
+| **BUG-20261005-008** | MEDIUM | `ErrorReportStoreAdapter` + `ErrorReportUseCase` + `ErrorReportStore` — `updated_at` lấy từ **tham số riêng** (trước là `resolvedAt` ⇒ NULL ⇒ vi phạm NOT NULL) |
+| **BUG-20261005-003** | MEDIUM | `UserManagementUseCase.saveUserAccess` — khôi phục **phép SO với mặc định phòng ban** để tính `permission_source` (trước: **100 % dòng thành `department_default`**) |
+| **BUG-20261010** | HIGH | `UserManagementUseCase.deleteDepartmentPermission` — nay **kiểm tồn tại trước**, ⛔ **không chạy `syncDepartmentUsers` vô điều kiện** (trước: viết lại quyền **27 tài khoản** mà vẫn trả 200) |
+| **BUG-20261011** | LOW | `deleteUserModuleOverride` — trả **400** khi ⛔ không có gì để xoá (trước trả 200 cho khoá bịa) |
+
+⭐ **TRIỂN KHAI CHỈ CÒN 1 LỆNH** (⛔ cần user cho phép):
+```text
+node tools/deploy-java-backend.mjs --dong-y-trien-khai
+```
+⭐ Công cụ `tools/deploy-java-backend.mjs`: **8 bước · 6 chốt an toàn** (kiểm vân tay · **cmdline PID phải khớp** · ⭐ **SAO LƯU JAR** — **bản lùi mà trước đây ⛔ KHÔNG có** · build · kiểm JAR có V35+V37 · dừng/khởi động · health-check · **nghiệm thu E2E**). Mặc định **CHẠY THỬ** (⛔ không đụng gì).
+⚠️ Chọn lúc **không ai thao tác** — UI `:9000` lỗi API vài chục giây khi thay JAR.
+
+### ✅ 5 BẢN VÁ CSS — **ĐÃ LÊN `:8787`**, ⛔ CHỜ MẮT NGƯỜI
+
+`app/styles/canonical.css`: `modal-head` · `receiving-kpi-button` · `requests-shortage-card` · `page-collapse` · `stack-form`
+⭐ **BUG-20261005-007 KHÉP HOÀN TOÀN** — **5 bản vá · 0 ca còn lại · 0 borderline**. ⭐ **CẢ 5 chép số đo từ khuôn nhà** (⛔ không phát minh con số nào).
+⭐ **TIÊU CHÍ ĐÚNG** (dùng cho mọi lần sau): lớp thiếu rule **CHỈ GÂY HẠI khi (A)** thẻ có **kiểu mặc định trình duyệt «xâm lấn»** (`button`·`input`·`select`·`table`) **hoặc (B)** phần tử **CẦN LAYOUT**; `<p>`·`<div>`·`<span>`·`<section>` đơn giản ⇒ **thường VÔ HẠI**.
+⭐ **§11 «tab trong modal» ĐÃ ĐÓNG**: **20/20** `role="tablist"` mang lớp **có rule** ⇒ ⛔ **không vi phạm**.
+
+### ⛔ SỰ CỐ QUYỀN TÀI KHOẢN TEST — **8 GIẢ THUYẾT ĐÃ BỊ BÁC BỎ** (⛔ ĐỪNG THỬ LẠI)
+
+**Triệu chứng**: `giai-doan-09` (từng 10/10) + `go-live-chuoi-kho` (từng 9/9) **tụt điểm** vì **lỗi QUYỀN**.
+**Điều CHẮC CHẮN duy nhất**: `e2e.tk` **theo ma trận CÓ `warehouse_issue: GHI`** nhưng **DB ghi `can_use = 0`** ⇒ **bước 8.2 của `tools/e2e/cap-quyen-chuc-nang.mjs` ⛔ chưa bao giờ ghi được cờ**.
+⛔ **ĐÃ BÁC BỎ** (kèm phép đo): ① backend ⛔ không lưu cờ (**1989** dòng `can_use=1`) · ② `assertDepartmentAllowsPermissions` kẹp cờ (**không** — chỉ đọc `can_view`) · ③ payload khai `department_default` (**backend TỰ TÍNH**, ⛔ bỏ qua payload) · ④ xoá trắng quyền (**726** vs **725** dòng `can_use=1`) · ⑤ hàm kiểm **throw 400** (**0** dòng `can_view=0`) · ⑥ đơn vị **59 module** (Phòng Dự án **đủ 60** mà vẫn `can_use=0`) · ⑦ lượt quét gọi `save_user` (**⛔ không tool nào gọi**) · ⑧ bước 8.2 ⛔ không phải `admin` (dòng **85** `login("admin", …)`).
+⭐ **CÁCH DUY NHẤT CÒN LẠI**: **1 phép thử GHI** (cấp 1 module cho 1 tài khoản `e2e.*` rồi đọc lại DB) — ⛔ **cần user cho phép**.
+✅ **Đã vá 1 lỗ hổng THẬT của ma trận** (khiếm khuyết B): thêm **`requests: { ...XEM, canCreate: 1 }`** cho `e2e.project` — vì `ActionRbacRegistry` gác `create_request` bằng **`requests` + `canCreate`** (dòng **98** + **365**) mà **⛔ không vai trò nào có** ⇒ `create_request` **bất khả thi**.
+⛔⛔ **CAM KẾT VẬN HÀNH — ⛔ KHÔNG chạy trên hệ thật** khi chưa có bản vá + mắt người: `delete_department_permission` · `save_user_access` · `save_department_permission`.
+
+### CỔNG XANH (đo cuối vòng 40)
+
+| Cổng | Kết quả |
+|---|---|
+| `mvn -o test` | ✅ **19 + 38 + 13 + 86 = 156 test · 0 fail · 0 error · EXIT=0** |
+| `npm test` | ✅ **fail 0 · skipped 1 · EXIT=0** |
+| Vân tay | ✅ `VNTECH-FP-27251D9B7F076176` · 713 tệp |
+| Cổng UI `verify-ui-build-applied.mjs --port=8787` | ✅ **3/3 ✓** |
+| `:8787` | ✅ HTTP 200 |
+| :18081 | Java **PID 3784** · JAR build **01/10 10:24:55** ⛔ **chưa có 5 bản vá** |
+
+### PHỦ TEST & GIỚI HẠN ĐÃ BIẾT
+
+- ⭐ **BAO PHỦ ACTION GHI — ĐO BẰNG CÁCH ĐẾM (TASK-186)**: hệ thống có **118 action ghi** (**`save_*` 50 · `delete_*` 38 · `set_*` 30**).
+  · `delete_*` (38): ✅ **38 đã kiểm** với id BỊA → kỳ vọng **400 «Không tìm thấy …»** (`tools/e2e/go-live-phu-toan-bo-delete.mjs` + `go-live-kiem-6-thuc-the.mjs`).
+  · `save_*` (50): ✅ **~38 đã kiểm** bằng **payload RỖNG → kỳ vọng 400** (`go-live-kiem-save-chung-tu.mjs` **24/24 ĐẠT · EXIT=0** + `go-live-kiem-6-thuc-the.mjs` **12/12 ĐẠT**) · ⛔ **12 LOẠI TRỪ CÓ LÝ DO** (cấu hình/bảo mật: `save_user_access` **REPLACE-ALL** · `save_department_permission` **đường đi BUG-20261010** · `save_email_settings` · `save_ui_display_settings` · `save_form_field_config` · `save_menu_group` · `save_module_catalog` · `save_role_catalog` · `save_system_level` · `save_workflow` · `save_approval_stage` · `save_notification_config` · nhóm `save_material*` · nhóm danh tính) ⇒ ⛔ **payload rỗng có thể PHÁ CẤU HÌNH** ⇒ chỉ thử khi **có mắt người**.
+  · ⭐ **13 ca CSS xác minh tay** · ⭐ **kiểm hậu quả HAI LỚP** cho mọi bài mới (**94 mảng bootstrap** trong bài + **131 bảng** ngoài bài).
+  · ⭐⭐ **BÀI HỌC**: **«hết việc» là một GIẢ ĐỊNH — phải ĐO mới biết** (tôi suýt kết luận «xong» khi còn **36 `save_*` chưa từng test**).
+- **131 bảng · 0 KHOÁ NGOẠI** ⇒ ⛔ không lưới an toàn tham chiếu ở tầng DB.
+- ⚠️ **H2 dễ dãi hơn MySQL** (`error_reports.updated_at` NULL-able ở H2, **NOT NULL** ở MySQL) ⇒ **cả một lớp lỗi NOT NULL ⛔ vô hình với test H2**.
+- ⛔ **KHÔNG test**: `delete_unused_materials` · `reorder_menu_layout` · `reset_material_catalog_test`.
+- ⛔ **ĐÍNH CHÍNH (TASK-187)**: ghi chép cũ nói «`manage_contract_review` là **đăng ký chết**» ⇒ ⛔ **SAI**. **ĐO ĐƯỢC**: `SystemController` có **5 `case`** (`save/open/log/list/delete_contract_review`) → đều qua `ContractReviewUseCase.guard()` → `rbac.requireActionModule(…, ACTION)` với **`private static final String ACTION = "manage_contract_review";`** ⇒ ⭐ **nó là CỔNG RBAC DÙNG CHUNG cho cả họ 5 action** (module `dept_legal_contract_review` · `canEdit`) — ⛔ không phải đăng ký chết, mà là **thiết kế MỘT cổng cho một họ hành động** ✓ ⭐ Và đó là lý do 5 tên kia ⛔ **không cần** có trong registry.
+- ⭐ **2 action ĐĂNG KÝ nhưng ⛔ CHƯA CÀI ở backend** (đo registry **214** ⇄ controller **259 `case`**): **`add_work_item_comment`** · **`set_work_item_participant`** — ⭐ **⛔ KHÔNG cái nào được UI gọi** ⇒ ⛔ **không tính năng nào hỏng** ⇒ mức **LOW**.
+- ⛔ **2 BÁO ĐỘNG GIẢ của tôi (TASK-187) — ⛔ đừng lặp lại**: ① «65 action khai `List.of()` ⇒ 403 với mọi người» ⇒ ⛔ **SAI**: danh sách gồm **`login`/`logout`/`change_password`/`update_profile_avatar`/`mark_notification_read` = `PUBLIC_ACTIONS`**, và RBAC kiểm **`PUBLIC_ACTIONS` TRƯỚC** ⇒ ⭐ **`List.of()` = dấu hiệu «CHỈ ADMIN» theo thiết kế**; ② «65 action ⛔ không thấy `requireRole`» ⇒ ⛔ **ĐO SAI TỆP** (tìm trong `SystemController`, lệnh nằm ở **lớp UseCase**) ⇒ **cả 65 dòng vô nghĩa** ✓ ⭐⭐ **MỘT PHÉP ĐO Ở SAI TỆP CÒN TỆ HƠN ⛔ KHÔNG ĐO.**
+- «Thêm thành viên tổ đội» **⛔ chưa có** (0 `INSERT INTO team_members`).
+- ⭐ `testlog.md` **604 dòng** · `docs/dsh-state/CHECKLIST.md` **7145 dòng** · `MASTER_STATUS.md` (tệp này) **751+ dòng**.
+
+### ⛔ CHỜ USER QUYẾT
+
+1. ⭐⭐ **Cho phép triển khai 5 bản vá Java** (1 lệnh ở trên).
+2. ⭐ **Xác nhận 5 bản vá CSS bằng mắt**.
+3. ⭐⭐ **Cho phép 1 phép thử GHI** để chốt cơ chế quyền.
+4. **`e2e.project` có đúng là vai trò LẬP PHIẾU ĐỀ NGHỊ MUA HÀNG không?**
+5. **Commit theo NHÓM hay gộp?** (khuyến nghị tách 2 phiên).
+6. **BUG-20261009** (`mark_notification_all_read` ⛔ không xoá thông báo công việc ⇒ chuông ⛔ không về 0) · **«ai nhận hàng ở kho đích»** · **4 phiếu trả Kho Tổng kẹt `in_transit` + 9 đơn vị kẹt `WH-TRANSIT`** · **bổ sung khoá ngoại cho 131 bảng?**
+
+### ⛔ BÀI HỌC LỚN NHẤT CỦA CẢ CHUỖI (⛔ đừng lặp lại)
+
+> **THỨ TỰ KIỂM ĐÚNG (rẻ → đắt): ĐỌC MÃ NGUỒN < ĐO TOÀN NHÓM < ĐỌC NHẬT KÝ KIỂM TOÁN < ĐO MẪU NHỎ.**
+> Phiên này **5 lần kết luận sai trong một chuỗi điều tra** (gán tội `delete_department_permission` ⇒ **gửi cảnh báo khẩn SAI** · suy «hỏng» từ thành phần module · suy «xoá trắng quyền» từ mẫu 2 tài khoản · «vá» 1 dòng dựa trên giả thuyết chưa kiểm · «hàm kiểm throw 400») — ⭐ **tất cả vì ĐOÁN TRƯỚC, ĐỌC SAU**.
+> ⭐ **«Không đủ dữ kiện để kết luận» HẦU NHƯ LUÔN là «CHƯA ĐỌC ĐỦ MÃ»** — **lần thứ BA** trong phiên.
+> ⭐ **Công cụ đo QUÁ LỎNG sẽ luôn nói «sạch»** — kiểu sai nguy hiểm nhất; **xác minh tay một mẫu đủ lớn** trước khi tin công cụ.
+> ⭐ **Cảnh báo khẩn cần mức bằng chứng CAO HƠN, ⛔ không thấp hơn** — một cảnh báo khẩn SAI còn tệ hơn một cảnh báo CHẬM.
+> ⭐ **Trích xuất theo DÒNG ⛔ không đáng tin với JSX** (một dòng có thể chứa nhiều thẻ · chú thích · nhiều `className`).
+> ⭐ **Kiểm «tài liệu ⇄ sự thật» là phép kiểm CÓ LÃI** — **2 lần** tìm ra lỗi thật (tài liệu lạc hậu 25 vòng · **điểm lùi sai 8 commit**).
+
+---
+
+## ⛔ PHƯƠNG PHÁP ĐÃ THỬ VÀ **THẤT BẠI** (TASK-190, 05/10/2026) — ⛔ ĐỪNG XÂY LẠI
+
+> ⭐ Ghi lại **phương pháp thất bại** quan trọng như ghi lại cái thành công: nó giúp phiên sau **không tốn công xây lại**.
+
+### ⛔ «Quét TĨNH mọi tham chiếu `bảng.cột` trong adapter ⇄ lược đồ MySQL» — ⛔ **KHÔNG DÙNG ĐƯỢC**
+
+**Mục đích đã thử**: sau khi tìm ra **BUG-20261005-013** (cột `materials.code_merge_into_id` **chưa bao giờ tồn tại**), tôi muốn **tìm các lỗi SQL cùng loại** ⇒ viết công cụ quét mọi `alias.cột` trong 30 adapter rồi đối chiếu `information_schema`.
+
+**SỐ ĐO**: **30 adapter** · **131 bảng · 679 cột phân biệt** · **3445 tham chiếu `X.Y`** ⇒ ⛔ **39 ứng viên** ⇒ ⛔⛔ **38 LÀ BÁO ĐỘNG GIẢ** (chỉ **1** là thật, và nó **đã biết**).
+
+**VÌ SAO THẤT BẠI — hai nhóm báo động giả:**
+| Nhóm | Ví dụ | Vì sao bị gắn cờ nhầm |
+|---|---|---|
+| Tên gói Java / tên tệp / lời gọi hàm (~20 ca) | `org.springframework` · `com.vntech` · `erp.domain` · `route.mjs` · `page.tsx` · `contains` · `resolve` | ⛔ **không phải SQL** |
+| ⭐ **ALIAS ĐẦU RA CỦA TRUY VẤN CON** (~9 ca «trông như cột thật») | `COALESCE(mv.balance,0)` · `COALESCE(ri.item_count,0)` · `COALESCE(gra.actual_delivered_qty,0)` · `COALESCE(physical.qty,0)` | ⭐ `mv` · `ri` · `gra` · `physical` là **alias của `(SELECT …) mv`** ⇒ `balance`/`item_count`/`qty` là **ĐẦU RA truy vấn con**, ⛔ **không phải cột bảng thật** |
+
+⭐⭐ **KẾT LUẬN**: quét tĩnh ⛔ **KHÔNG phân biệt được «cột bảng thật» với «alias đầu ra của truy vấn con»** nếu ⛔ **không phân tích cú pháp SQL đầy đủ** (biết mọi `FROM`/`JOIN`/truy vấn con). ⭐ **Một công cụ nửa vời sẽ cho hàng chục báo động giả** — ⛔ **tệ hơn ⛔ không có công cụ** vì nó **định hướng sai** người xử lý.
+
+### ✅ CÁCH ĐÚNG (đã chứng minh 2/2 lần trong phiên này)
+```text
+GỌI ACTION  →  500 ?  →  ĐỌC câu SQL của store  →  CHẠY ĐÚNG câu SQL đó trên MySQL
+                                                    ↓
+                                        mã lỗi KÈM TÊN CỘT/ BẢNG  ⇒  NGUYÊN NHÂN GỐC
+```
+⭐ Cả **BUG-20261005-012** (SQL 1055 — `ONLY_FULL_GROUP_BY`) và **BUG-20261005-013** (SQL 1054 — cột ⛔ không tồn tại) đều tìm ra bằng **đúng cách này** ✓
+⭐⭐ **⇒ PHỦ E2E LÀ LƯỚI AN TOÀN THẬT** (hiện **171/220 = 78%**) — ⛔ **không phải công cụ quét tĩnh** ✓
+
+
+---
+
+# 🔴 ĐÍNH CHÍNH — CỔNG ẢNH CHUẨN: «0 px LỆCH» LÀ **BÁO XANH GIẢ** (ERP-SESSION-02 · $homNay)
+
+> ⚠️ Khối này ghi bằng **APPEND** (Goal §28 — ⛔ không ghi đè nội dung cũ). Nó **sửa lại sự thật** cho các dòng
+> nói «68 ảnh chụp lại + đối chiếu **0 px lệch**» ở **dòng 26 · 367 · 426** của tệp này và `TASK_INDEX.md:160` (MT3-F14).
+
+**SỰ THẬT ĐÃ ĐO (⛔ không suy đoán) — `BUG-20261006-005` · `BUG-20261006-007`:**
+
+| Điều tài liệu cũ ghi | Đo thật (06–07/10/2026) |
+|---|---|
+| «68 ảnh chụp lại + đối chiếu **0 px lệch**» | 68 tệp PNG nhưng chỉ có **5 ẢNH DUY NHẤT** (SHA256) — 17 màn × 4 viewport đều là **cùng 1–2 ảnh** |
+| (ngụ ý: các màn đều đúng) | Cả 5 ảnh đều là **TRANG SETUP LẦN ĐẦU** «Thiết lập hệ thống của công ty» (`app/page.tsx` setup-card) |
+| ⇒ «cổng ĐẠT» | ⇒ cổng đang so **trang setup với chính nó** ⇒ «0 px lệch» là **HIỂN NHIÊN**, ⛔ **không chứng minh gì** |
+
+**NGUYÊN NHÂN GỐC:** commit `7fdf71d` (27/09/2026 · «MT3: menu items to tabs») **thay cả 68 ảnh chuẩn trong lúc
+CSDL CHƯA được khởi tạo** ⇒ app hiện trang setup. Trước đó (`4d1c129` · 26/09) mỗi viewport là **một blob khác nhau**.
+⇒ 2 dòng tài liệu (`MASTER_STATUS.md:426` · `TASK_INDEX.md:160`) ghi «0 px lệch» trong khi **chính chúng tự thú**
+là «⛔ chưa soi bằng mắt» ⇒ **báo xanh giả**, ⛔ không được coi là bằng chứng nghiệm thu.
+
+**TÌNH TRẠNG MỚI (đã tốt lên thật):**
+- Ảnh chuẩn **ĐÃ được chụp lại**: **56 ảnh duy nhất** (mốc `06/10 17:45:12` · `01-dashboard__desktop.png` = **426.503 byte**).
+- Cổng **giờ cho TÍN HIỆU THẬT** — chạy `node tools/probe-visual-regression.mjs` (⛔ không `--update`): **34/68 ảnh lệch**.
+  · ✅ **0 px**: `11-modal-request` · `12-drawer-request-detail` · `19-report-center`
+  · ⚠️ Lệch **lớn nhưng ĐÃ GIẢI THÍCH** (⛔ không phải hồi quy): `13-modal-material` 19,7% *(do TASK-227 bỏ khối
+    «CÔNG CỤ CHẨN LOẠN»)* · `16-modal-receipt` 25,7% *(ảnh chuẩn chụp lúc hub «Kho vật tư» CHƯA render —
+    `BUG-20261006-010`; nay điều hướng đúng ⇒ lệch là **tốt lên**)*
+  · ⚠️ Lệch **rất nhỏ** (nhiễu, ⛔ không phải hồi quy): `17-modal-po` 0,04% · `18-modal-team-create` 0,008%
+- ⚠️ **`tools/baseline` hiện ĐÃ CŨ** so với mã hiện tại ⇒ **CẦN CHỤP LẠI** (⛔ chưa được user cho phép chạy `--update`).
+- ⚠️ **2 màn KHÔNG BAO GIỜ điều hướng đúng** (còn mở): `11-modal-request` và `16-modal-receipt` từng báo
+  `NO_CLICK_TARGET` vì selector `.list-toolbar-actions button.primary` **đã chết** — nay `ListToolbar.tsx:90`
+  render `.row-actions.list-toolbar-primary`. `ERP-SESSION-01` **đã sửa** `clickText` (đo lại **0 px** ✅).
+
+**BÀI HỌC (ghi để ⛔ không lặp):** một cổng so sánh chỉ có giá trị khi **ảnh chuẩn KHÁC NHAU giữa các màn**.
+⇒ Phải kiểm **số ảnh DUY NHẤT** (SHA256), ⛔ không chỉ đếm **số tệp**. Và «0 px lệch» ⛔ **không** là bằng chứng
+nếu chưa chứng minh ảnh chuẩn là **ảnh thật của đúng màn đó**.
+
+**TRUY VẾT:** `BUG_HOTFIX_LOG.md` (SESSION_B) `BUG-20261006-005` · `BUG-20261006-006` · `BUG-20261006-007` ·
+`TEST-20261006-015` · `TEST-20261007-023`

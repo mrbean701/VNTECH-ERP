@@ -7,6 +7,7 @@ import com.vntech.erp.application.port.out.AdminOpsStore;
 import com.vntech.erp.application.port.out.BoqStore;
 import com.vntech.erp.application.port.out.BootstrapDataPort;
 import com.vntech.erp.application.port.out.FinanceStore;
+import com.vntech.erp.application.port.out.ContractReviewStore;
 import com.vntech.erp.application.port.out.HrStore;
 import com.vntech.erp.application.port.out.IdGenerator;
 import com.vntech.erp.application.port.out.LoginLockout;
@@ -36,6 +37,7 @@ import com.vntech.erp.application.service.AuthUseCase;
 import com.vntech.erp.application.service.BoqManagementUseCase;
 import com.vntech.erp.application.service.FinanceManagementUseCase;
 import com.vntech.erp.application.service.FileUseCase;
+import com.vntech.erp.application.service.ContractReviewUseCase;
 import com.vntech.erp.application.service.HrManagementUseCase;
 import com.vntech.erp.application.service.BootstrapUseCase;
 import com.vntech.erp.application.service.ListActiveProjectsUseCase;
@@ -122,6 +124,15 @@ public class ApplicationBeansConfig {
         return new com.vntech.erp.application.service.NotificationManagementUseCase(notificationStore, idGenerator);
     }
 
+    // USER 29/09/2026 (MỐC 42) — chức năng BÁO LỖI (tab 14 «Báo lỗi»).
+    // ⛔ Cùng lý do bean ở trên: module `application` KHÔNG dùng stereotype annotation ⇒
+    //    phải đăng ký `@Bean` ở đây, nếu không Spring không inject được vào `SystemController`.
+    @Bean
+    public com.vntech.erp.application.service.ErrorReportUseCase errorReportUseCase(
+            com.vntech.erp.application.port.out.ErrorReportStore errorReportStore) {
+        return new com.vntech.erp.application.service.ErrorReportUseCase(errorReportStore);
+    }
+
     @Bean
     public RequestManagementUseCase requestManagementUseCase(RequestStore requestStore,
                                                              IdGenerator idGenerator,
@@ -190,6 +201,14 @@ public class ApplicationBeansConfig {
     @Bean
     public HrManagementUseCase hrManagementUseCase(HrStore hrStore, IdGenerator idGenerator) {
         return new HrManagementUseCase(hrStore, idGenerator);
+    }
+
+    /** MỐC 103 (user 29/09) — MENU «REVIEW HĐ». */
+    @Bean
+    public ContractReviewUseCase contractReviewUseCase(ContractReviewStore contractReviewStore,
+                                                       RbacService rbacService,
+                                                       IdGenerator idGenerator) {
+        return new ContractReviewUseCase(contractReviewStore, rbacService, idGenerator);
     }
 
     @Bean

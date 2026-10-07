@@ -127,6 +127,13 @@ class StockChainIntegrationTest {
                         + "\"lines\":[{\"requestItemId\":\"" + mriId + "\",\"quantity\":10,\"supplierId\":\"sup_stk\",\"plannedDeliveryAt\":\"2026-10-05\"}]"), 200);
         String poId = jdbc.queryForObject(
                 "SELECT id FROM purchase_orders WHERE request_id=? LIMIT 1", String.class, requestId);
+        // ⛔⛔ SỬA 06/10/2026 (GO-LIVE · F2) — **PHẢI PHÁT HÀNH PO TRƯỚC KHI NHẬN HÀNG**.
+        //   ⭐ `create_po` ghi PO ở **`pending_approval`** ⇒ bài này trước đây gọi THẲNG
+        //      `receive_goods` ⇒ ⭐ **ĐANG MÃ HOÁ CHÍNH HÀNH VI CỦA LỖI F2** ✓
+        //   ⭐ Trước đây `approve_po` ⛔ hỏng trong test vì thiếu 3 cột trong
+        //      `web/src/test/resources/schema-h2.sql` ⇒ ⭐ **NAY ĐÃ VÁ SCHEMA** ✓
+        //   ⚠️ `postAction(..., 200)` **ĐÃ tự khẳng định HTTP 200** ⇒ ⛔ KHÔNG dùng `assertEquals` ✓
+        postAction(action("approve_po", "\"purchaseOrderId\":\"" + poId + "\""), 200);
         String poiId = jdbc.queryForObject(
                 "SELECT id FROM purchase_order_items WHERE purchase_order_id=? LIMIT 1", String.class, poId);
         postAction(action("receive_goods",
@@ -181,6 +188,74 @@ class StockChainIntegrationTest {
         Long rec = jdbc.queryForObject(
                 "SELECT COUNT(*) FROM contract_stock_reconciliations WHERE warehouse_id='wh_stk'", Long.class);
         assertTrue(rec != null && rec >= 1, "reconcile phải ghi phiếu đối soát: " + rec);
+    }
+
+    /**
+     * GO-LIVE 05/10/2026 — NGHIỆM THU BẢN VÁ **BUG-20261005-005** (HIGH).
+     *
+     * <p><b>LỖI ĐƯỢC VÁ.</b> `approveCentralReturnWithShip` và `receiveCentralReturn` **CHỈ ghi
+     * `stock_movements`**, KHÔNG ghi `contract_stock_ledger`. Nhưng `receiveCentralReturn` (chốt ở
+     * `StockManagementUseCase:925`) đòi **CẢ HAI**: `proposed > transitOwner` là chặn. Vì sổ sở hữu
+     * tại Transit luôn 0, phiếu **KẸT VĨNH VIỄN** ở `in_transit` (đo trên MySQL thật: 4 phiếu kẹt,
+     * 9 đơn vị hàng kẹt ở Transit, `contract_stock_ledger` có 0 dòng loại `CENTRAL_RETURN_SHIP`).
+     *
+     * <p><b>VỆ NÀY KIỂM GÌ.</b> Chạy trọn vòng đời và khẳng định **sổ sở hữu được ghi đủ ở cả 3 mốc**:
+     * duyệt ⇒ Transit **+2** · nhận ⇒ Transit **−2** và Kho Tổng **+2** ⇒ Transit về **0**.
+     * ⛔ Trước bản vá, khẳng định đầu tiên (Transit +2) **ĐỎ** và bước nhận **không thể chạy**.
+     */
+    @Test
+    void centralReturn_ghiDuSoSoHuuTaiTransit_vaNhanDuocVeKhoTong() throws Exception {
+        seed();
+        Instant now = Instant.now();
+        // Kho Tổng: `createCentralReturn` đòi có kho `type='central'` đang hoạt động.
+        jdbc.update("INSERT INTO warehouses (id,code,name,type,active,created_at,updated_at) "
+                + "VALUES (?,?,?,'central',1,?,?)", "wh_central", "KHO-TONG-T", "Kho Tổng (test)", now, now);
+
+        // 1) Lập phiếu trả 2 đơn vị từ kho dự án (đã có tồn vật lý + sổ sở hữu từ chuỗi PO→GRN ở `seed()`).
+        postAction(action("create_central_return",
+                "\"projectId\":\"p_stk\",\"sourceWarehouseId\":\"wh_stk\",\"note\":\"E2E trả Kho Tổng\","
+                        + "\"lines\":[{\"materialId\":\"m_stk\",\"quantity\":2,\"unitCost\":0}]"), 200);
+        String returnId = jdbc.queryForObject(
+                "SELECT id FROM central_returns ORDER BY created_at DESC LIMIT 1", String.class);
+        assertTrue(returnId != null && !returnId.isEmpty(), "create_central_return phải tạo phiếu");
+
+        // 2) DUYỆT ⇒ sổ sở hữu PHẢI sang Transit (đây chính là phần bị thiếu trước bản vá).
+        postAction(action("approve_central_return",
+                "\"centralReturnId\":\"" + returnId + "\",\"reason\":\"Duyệt E2E\""), 200);
+        Double transitLedger = jdbc.queryForObject(
+                "SELECT COALESCE(SUM(quantity_delta),0) FROM contract_stock_ledger "
+                        + "WHERE warehouse_id='wh_transit' AND material_id='m_stk'", Double.class);
+        assertTrue(transitLedger != null && transitLedger == 2.0,
+                "DUYỆT phải ghi sổ sở hữu +2 tại Transit (trước bản vá = 0 ⇒ phiếu kẹt vĩnh viễn): " + transitLedger);
+
+        // 3) Ảnh kiểm đếm là chốt bắt buộc trước khi Kho Tổng xác nhận.
+        jdbc.update("INSERT INTO attachments (id,entity_type,entity_id,file_name,storage_key,mime_type,uploaded_by,created_at,updated_at) "
+                        + "VALUES (?, 'central_return', ?, 'kiem-dem.png', 'k/cr', 'image/png', ?, ?, ?)",
+                "att_cr", returnId, adminId, now, now);
+
+        // 4) NHẬN ⇒ trước bản vá bước này KHÔNG THỂ chạy (Transit owner = 0).
+        String itemId = jdbc.queryForObject(
+                "SELECT id FROM central_return_items WHERE central_return_id=? LIMIT 1", String.class, returnId);
+        postAction(action("receive_central_return",
+                "\"centralReturnId\":\"" + returnId + "\",\"lines\":[{\"centralReturnItemId\":\"" + itemId
+                        + "\",\"countedQty\":2,\"acceptedQty\":2}]"), 200);
+
+        String status = jdbc.queryForObject("SELECT status FROM central_returns WHERE id=?", String.class, returnId);
+        assertTrue("received".equals(status), "phiếu trả Kho Tổng phải 'received': " + status);
+        // ⛔ ĐỌC KHO TỔNG TỪ CHÍNH PHIẾU, không đoán: `createCentralReturn` chọn kho bằng
+        //    `findCentralWarehouse()` = `type='central' ORDER BY code LIMIT 1`, mà `setup()` đã tạo
+        //    một kho Tổng của hệ thống ⇒ kho nhận KHÔNG nhất thiết là kho ta vừa thêm.
+        String centralWh = jdbc.queryForObject(
+                "SELECT central_warehouse_id FROM central_returns WHERE id=?", String.class, returnId);
+        Double centralLedger = jdbc.queryForObject(
+                "SELECT COALESCE(SUM(quantity_delta),0) FROM contract_stock_ledger "
+                        + "WHERE warehouse_id=? AND material_id='m_stk'", Double.class, centralWh);
+        assertTrue(centralLedger != null && centralLedger == 2.0,
+                "Kho Tổng (" + centralWh + ") phải nhận +2 vào sổ: " + centralLedger);
+        Double transitSau = jdbc.queryForObject(
+                "SELECT COALESCE(SUM(quantity_delta),0) FROM contract_stock_ledger "
+                        + "WHERE warehouse_id='wh_transit' AND material_id='m_stk'", Double.class);
+        assertTrue(transitSau != null && transitSau == 0.0, "Transit phải về 0 sau khi nhận: " + transitSau);
     }
 
     private void jsonOfSafe(MvcResult r) {

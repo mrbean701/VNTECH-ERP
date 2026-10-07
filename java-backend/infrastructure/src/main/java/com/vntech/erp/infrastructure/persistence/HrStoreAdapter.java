@@ -89,23 +89,34 @@ public class HrStoreAdapter implements HrStore {
     @Transactional
     public void insertLaborContract(String id, String contractNo, String userId, String contractType,
                                     String startDate, String endDate, String signingDate, double salary,
-                                    String note, String createdBy, Instant now) {
+                                    String note, String imageUrl, String createdBy, Instant now,
+                                    String jobRank, String grade, Integer renewalRound) {
         jdbcTemplate.update("""
                 INSERT INTO labor_contracts (id,contract_no,user_id,contract_type,start_date,end_date,signing_date,
-                                             salary,status,note,created_by,created_at,updated_at)
-                VALUES (?,?,?,?,?,?,?,?,'active',?,?,?,?)""",
-                id, contractNo, userId, contractType, startDate, endDate, signingDate, salary, note,
-                createdBy, now, now);
+                                             salary,status,note,image_url,created_by,created_at,updated_at,
+                                             job_rank,grade,renewal_round)
+                VALUES (?,?,?,?,?,?,?,?,'active',?,?,?,?,?,?,?,?)""",
+                id, contractNo, userId, contractType, startDate, endDate, signingDate, salary, note, imageUrl,
+                createdBy, now, now, jobRank, grade, renewalRound);
     }
 
     @Override
     @Transactional
     public void updateLaborContract(String id, String userId, String contractType, String startDate, String endDate,
-                                    String signingDate, double salary, String note, Instant now) {
+                                    String signingDate, double salary, String note, String imageUrl, boolean imageChanged, Instant now,
+                                    String jobRank, String grade, Integer renewalRound) {
         jdbcTemplate.update("""
                 UPDATE labor_contracts SET user_id=?,contract_type=?,start_date=?,end_date=?,signing_date=?,
-                       salary=?,note=?,updated_at=? WHERE id=?""",
-                userId, contractType, startDate, endDate, signingDate, salary, note, now, id);
+                       salary=?,note=?,image_url=?,
+                       -- MỐC 113 — đổi `IF(?,CURRENT_TIMESTAMP,image_updated_at)` sang `CASE WHEN`.
+                       --   `IF()` là hàm RIÊNG của MySQL; H2 (kể cả MODE=MySQL) **không có** ⇒ đo được:
+                       --   `Syntax error … expected "DEFAULT, INTERSECTS (, NOT, EXISTS, UNIQUE"` (42001-232).
+                       --   `CASE WHEN` là SQL chuẩn, chạy được trên CẢ HAI nên không phải hy sinh production.
+                       image_updated_at=CASE WHEN ?=TRUE THEN CURRENT_TIMESTAMP ELSE image_updated_at END,
+                       job_rank=?,grade=?,renewal_round=?,
+                       updated_at=? WHERE id=?""",
+                userId, contractType, startDate, endDate, signingDate, salary, note, imageUrl,
+                imageChanged, jobRank, grade, renewalRound, now, id);
     }
 
     @Override

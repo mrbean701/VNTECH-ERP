@@ -70,19 +70,30 @@ test("§19 — tầng hàm thuần: thời điểm duyệt + bình luận đọc
   assert.equal(approvalDecisionAtView({ status: "approved", decidedAt: "20/09/2026 19:28" }).value, "20/09/2026 19:28", "Chuỗi không parse được phải trả nguyên văn");
 });
 
-test("§19 — dải tự viết ở màn Phê duyệt (`app/page.tsx`) có ĐỦ thời điểm duyệt + bình luận", () => {
+// 📌 HỢP ĐỒNG CẬP NHẬT 26/09/2026 theo MASTER TASK 3 §B.2 («MT3 — Trung tâm phê duyệt»):
+//   «Không hiển thị bình luận trực tiếp trên tiến trình; chuyển bình luận vào “Chi tiết”.»
+//   ⇒ MỖI MỐC trên tiến trình chỉ còn: TRẠNG THÁI · NGƯỜI DUYỆT/PHỤ TRÁCH · PHÒNG BAN · THỜI GIAN DUYỆT.
+// ⚠️ Ca test này TRƯỚC đây bắt buộc `approval-step-comment` NẰM TRONG khối bước — đặc tả cũ đã bị
+//   thay bằng yêu cầu mới của user ⇒ cập nhật hợp đồng, KHÔNG phải "nới lỏng để xanh".
+test("§19 + MT3-B.2 — tiến trình CHỈ có thời điểm duyệt; bình luận chuyển sang vùng CHI TIẾT", () => {
   const step = block(page, "approval-flow-step");
   assert.match(step, /data-vntech="approval-step-decided-at"/, "Thiếu dấu đo được cho THỜI ĐIỂM DUYỆT (`approval-step-decided-at`)");
-  assert.match(step, /data-vntech="approval-step-comment"/, "Thiếu dấu đo được cho BÌNH LUẬN (`approval-step-comment`)");
   assert.match(step, /Thời điểm duyệt/, "Phải có NHÃN «Thời điểm duyệt» để người duyệt đọc được");
-  assert.match(step, /Bình luận/, "Phải có NHÃN «Bình luận»");
   assert.match(step, /atView\.value/, "Phải RENDER giá trị thời điểm duyệt đã tính (không tự nối chuỗi trong JSX)");
-  assert.match(step, /commentView\.value/, "Phải RENDER giá trị bình luận đã tính");
   assert.match(step, /!atView\.hasSource/, "Phải rẽ nhánh THIẾU NGUỒN cho thời điểm duyệt (kèm lý do), KHÔNG im lặng bỏ trống");
-  assert.match(step, /!commentView\.hasSource/, "Phải rẽ nhánh THIẾU NGUỒN cho bình luận (kèm lý do)");
+
+  // ⛔ MT3 §B.2: bình luận KHÔNG được nằm trên tiến trình nữa.
+  assert.doesNotMatch(step, /data-vntech="approval-step-comment"/, "⛔ MT3 §B.2: bình luận không được hiện trực tiếp trên tiến trình duyệt");
+  assert.doesNotMatch(step, /commentView/, "⛔ MT3 §B.2: tiến trình không render bình luận (chỉ 4 trường: trạng thái · người · phòng ban · thời gian)");
+
+  // ✅ Bình luận phải xuất hiện ở vùng CHI TIẾT, vẫn giữ cảnh báo thiếu nguồn.
+  assert.match(page, /data-vntech="approval-detail-comments"/, "Thiếu vùng bình luận ở phần CHI TIẾT (`approval-detail-comments`)");
+  assert.match(page, /Bình luận khi duyệt/, "Vùng chi tiết phải có nhãn «Bình luận khi duyệt»");
+  assert.match(page, /approvalDecisionCommentView\(/, "Bình luận vẫn phải đọc từ hàm thuần dùng chung (giữ lý do khi thiếu nguồn)");
+  assert.match(page, /!cv\.hasSource/, "Bình luận thiếu nguồn phải nói thẳng lý do, KHÔNG im lặng bỏ trống");
+
   assert.match(page, /import \{ approvalDecisionAtView, approvalDecisionCommentView \} from "@\/lib\/p2-approval-timeline"/, "page.tsx phải dùng hàm thuần dùng chung, KHÔNG tính chuỗi trong JSX");
   assert.match(page, /const atView=approvalDecisionAtView\(approval\);/, "Thời điểm duyệt phải đọc từ bản ghi `approval` THẬT của bước (payload `decidedAt`)");
-  assert.match(page, /const commentView=approvalDecisionCommentView\(approval\);/, "Bình luận phải đọc từ bản ghi `approval` THẬT của bước (payload `comment`)");
 
   // §19 yêu cầu trạng thái lấy từ dữ liệu thật, KHÔNG hard-code (đã có `state` từ `approval?.status`).
   assert.match(page, /const state=approval\?\.status/, "Trạng thái bước phải suy từ `approval.status` của payload");

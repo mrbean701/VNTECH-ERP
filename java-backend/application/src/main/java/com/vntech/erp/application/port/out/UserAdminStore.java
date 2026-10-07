@@ -41,7 +41,18 @@ public interface UserAdminStore {
     void insertProjectScope(String scopeId, String userId, String projectId, String permission, Instant now);
     void insertWarehouseScope(String scopeId, String userId, String warehouseId, String permission, Instant now);
     void clearUserScopes(String userId); // DELETE user_project_scopes + user_warehouse_scopes + user_module_permissions
-    void deleteModuleOverride(String userId, String moduleKey);
+    /**
+     * Xoá ngoại lệ cá nhân (chỉ dòng có {@code permission_source='manual_override'}).
+     *
+     * <p>⛔⛔ VÁ 05/10/2026 (GO-LIVE · BUG-20261011 — LOW): đổi {@code void} → {@code int} để use-case
+     * <b>biết được có dòng nào bị xoá hay không</b>. Trước bản vá, {@code delete_user_module_override}
+     * với {@code userId}/{@code moduleKey} <b>bịa</b> vẫn trả <b>HTTP 200</b> «Đã xóa ngoại lệ cá nhân…»
+     * ⇒ báo thành công cho việc ⛔ không tồn tại — trong khi <b>33/34</b> action {@code delete_*} khác
+     * đều trả 400 «Không tìm thấy …».
+     *
+     * @return số dòng đã xoá (0 ⇒ ⛔ không có ngoại lệ nào để xoá).
+     */
+    int deleteModuleOverride(String userId, String moduleKey);
 
     // ---- warehouse kiểm tra ----
     Optional<Map<String, Object>> findActiveWarehouse(String warehouseId);
@@ -53,9 +64,19 @@ public interface UserAdminStore {
     List<String> listActiveModuleKeys();
     List<String> activeUserIds();
     void deleteDepartmentDefaultPermissions(String userId);
+    // MỐC 112 — thêm `permissionSource` + `permissionExpiresAt`.
+    // TRƯỚC đây adapter hard-code `'department_default'` và `NULL` ⇒ cột «Hết hạn» LUÔN trống
+    // dù UI có ô nhập, và `deleteModuleOverride` (lọc `permission_source='manual_override'`)
+    // không bao giờ xoá được gì ⇒ nút «Xóa ngoại lệ cá nhân» là nút chết.
     void insertDepartmentDefaultPermission(String permissionId, String userId, String moduleKey,
                                            int canView, int canUse, int canCreate, int canEdit,
-                                           int canApprove, int canExport, Instant now);
+                                           int canApprove, int canExport,
+                                           String permissionSource, Instant permissionExpiresAt, Instant now);
+    // MỐC 112 — chạy một khối ghi trong MỘT transaction (adapter đánh dấu @Transactional).
+    // Dùng để `clearUserScopes()` + vòng chèn lại của `saveUserAccess` là NGUYÊN TỬ: trước đó mỗi
+    // lệnh là một transaction riêng ⇒ xoá xong rồi insert lỗi giữa chừng là mất trắng.
+    // KHÔNG thêm @Transactional vào use-case: module `application` cố ý không phụ thuộc Spring.
+    void runAtomically(Runnable work);
     void deleteSessionsByUser(String userId);
 
     // ---- P5: phân quyền phòng ban + cấp bậc hệ thống ----

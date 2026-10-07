@@ -130,9 +130,9 @@ export function EntityDetailModal({
                 className={t.key === active ? "is-active" : ""}
                 onClick={() => setSelectedTab(t.key)}
               >
-                {t.label}
-                {t.badge !== undefined && <b className="edm-tab-badge">{t.badge}</b>}
-              </button>
+                {/* MỐC 115 — bọc nhãn: cho phép xuống dòng khi tab bị co lại, để KHÔNG mất chữ. */}
+                <span className="edm-tab-label">{t.label}</span>
+                {t.badge !== undefined && <b className="edm-tab-badge">{t.badge}</b>}              </button>
             ))}
           </nav>
         )}

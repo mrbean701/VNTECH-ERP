@@ -153,6 +153,23 @@ thead th {
   gap: var(--vt-gap-3);
 }
 
+/* §11 — FORM XẾP DỌC (`.stack-form`). ⛔ VÁ 05/10/2026 (GO-LIVE · TASK-183 · ca borderline CUỐI
+   CÙNG của BUG-20261005-007): `app/screens/ProjectTeams.tsx:28` dựng
+     `<form className="stack-form" onSubmit={submitProduction}>` chứa **3 `<select>` + 9 `<input>`
+     + 3 `<button>` = 15 ô điều khiển**, ⛔ **không có `<label>`**, và lớp `stack-form` **KHÔNG có rule
+     nào** trong bất kỳ stylesheet nào.
+   ⛔ ĐÃ KIỂM: ⛔ **không rule nào** cấp `width:100%` cho `select`/`input` con của `.card`/`.two-col`
+   (2 kết quả dò được đều là `input[type=checkbox]` và `.dashboard-staff-search input` — ⛔ không áp)
+   ⇒ 15 ô giữ **kiểu mặc định trình duyệt** (`inline-block`) ⇒ **chen lên cùng dòng**, ⛔ không xếp dọc
+   như **tên lớp** `stack-form` nói ⇒ ⭐ **tiêu chí (B) «cần layout» ĐƯỢC THỎA** ⇒ **lỗ hổng THẬT**.
+   ⭐ Chỉ dùng **ĐÚNG 1 LẦN** (`ProjectTeams.tsx:28`) ⇒ phạm vi ảnh hưởng hẹp ✓
+   ⛔ KHÔNG phát minh số đo: **chép đúng định nghĩa `.stack` ngay trên** (`display:grid; gap:var(--vt-gap-3)`)
+   — ⭐ tên lớp đã nói rõ nó phải hành xử như `.stack`, và đây là mục «NHỊP DỌC» của stylesheet. */
+.stack-form {
+  display: grid;
+  gap: var(--vt-gap-3);
+}
+
 /* Không để hai khối lớn dính sát nhau mà không có khoảng thở */
 .stack > section + section,
 .stack > .card + .card,
@@ -167,6 +184,70 @@ thead th {
 
 .card-head {
   margin-bottom: var(--vt-gap-3);
+}
+
+/* §11 — ĐẦU MODAL DỰNG TAY (`.modal-head`). ⛔ VÁ 05/10/2026 (GO-LIVE · BUG-20261005-007 —
+   phần ĐÃ XÁC MINH là lỗ hổng THẬT): 2 màn dựng đầu modal bằng
+     `<div className="modal-head"><strong>…</strong><button …>✕</button></div>`
+   (`app/screens/ConstructionScreen.tsx:57` · `app/screens/Inventory.tsx:209`) nhưng lớp `modal-head`
+   **KHÔNG tồn tại trong BẤT KỲ stylesheet nào** ⇒ ⛔ không có layout/đệm/typography nào, trong khi
+   **mọi header khác** trong hệ thống đều dùng khuôn `.card-head`.
+   ⛔ KHÔNG phát minh số đo: `min-height:68px` · `padding:15px 18px` lấy **đúng** từ `.card-head`
+   (`app/globals.css`); màu/chữ dùng **token nhà** (`--vt-fs-sm` · `--vt-fw-bold` · `--vt-c-ink`). */
+.modal-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--vt-gap-2);
+  min-height: 68px; padding: 15px 18px;          /* ⛔ y như `.card-head` */
+  margin-bottom: var(--vt-gap-3);
+}
+.modal-head strong {
+  font-size: calc(var(--vt-fs-sm) * var(--user-font-scale, 1));
+  font-weight: var(--vt-fw-bold); color: var(--vt-c-ink);
+}
+.modal-head > button { border: 0; background: transparent; cursor: pointer; }
+
+/* §11 — THẺ KPI BẤM ĐƯỢC (`.receiving-kpi-button`). ⛔ VÁ 05/10/2026 (GO-LIVE · BUG-20261005-007 —
+   phần ĐÃ XÁC MINH là lỗ hổng THẬT): `app/screens/Receiving.tsx` dựng
+     `<button type="button" className="receiving-kpi-button" …><Kpi …/></button>`
+   trong `.kpi-grid.receiving-kpi-row`, nhưng lớp `receiving-kpi-button` **KHÔNG có rule nào** trong
+   bất kỳ stylesheet nào ⇒ `<button>` giữ **kiểu mặc định của trình duyệt** (viền/nền/đệm lạ) và
+   **`display:inline-block`** nên ⛔ **không giãn kín ô lưới** như các thẻ `<div>` KPI anh em
+   ⇒ **lệch căn chỉnh** — đúng thứ §11 yêu cầu đồng nhất.
+   ⛔ KHÔNG phát minh số đo: dùng **đúng khuôn reset nút của nhà**
+   (`.card-head>button` · `.user-menu>button`: `border:0; background:transparent`) và cho phần tử
+   **giãn kín ô lưới như anh em** (`display:block; width:100%`) để thẻ `.kpi` bên trong hiển thị
+   **y hệt** các thẻ KPI không bấm được. */
+.receiving-kpi-button {
+  border: 0; background: transparent; padding: 0;      /* ⛔ y như khuôn reset nút của nhà */
+  display: block; width: 100%;                          /* giãn kín ô lưới như <div> anh em */
+  text-align: left; cursor: pointer;
+}
+
+/* §11 — `requests-shortage-card` (nút bọc THẺ KPI, màn Yêu cầu). ⛔ VÁ 05/10/2026 (GO-LIVE ·
+   BUG-20261005-007 — phần ĐÃ XÁC MINH là lỗ hổng THẬT): `app/screens/Requests.tsx:133` dựng
+     `<button type="button" className="requests-shortage-card" …><Kpi icon="VT" label="VẬT TƯ ĐANG THIẾU" …/></button>`
+   Lớp này **KHÔNG có rule nào** trong bất kỳ stylesheet nào.
+   ⭐ **ĐÂY LÀ CA Y HỆT `receiving-kpi-button`** (nút bọc `<Kpi>` trong `.kpi-grid`) ⇒ dùng **ĐÚNG reset
+   đã kiểm chứng** cho ca đó, ⛔ KHÔNG phát minh dáng mới. */
+.requests-shortage-card {
+  border: 0; background: transparent; padding: 0;
+  display: block; width: 100%;
+  text-align: left; cursor: pointer;
+}
+
+/* §11 — `page-collapse` (nút Mở rộng/Thu gọn khối, `app/screens/RequestDrawer.tsx:50`).
+   ⛔ VÁ 05/10/2026 (GO-LIVE · BUG-20261005-007 — phần ĐÃ XÁC MINH là lỗ hổng THẬT):
+   nút là **anh em CÙNG `<header>`** với `.page-back`, nhưng lớp `page-collapse` **KHÔNG có rule nào**.
+   ⛔ ĐÃ KIỂM: tổ tiên **KHÔNG phải `.drawer`** (RequestDrawer chỉ dùng `drawer-section`/`drawer-body`)
+   ⇒ rule `.drawer>header>button` ⛔ **KHÔNG ÁP** ⇒ nút rơi về **kiểu mặc định trình duyệt**.
+   ⭐ Vá bằng cách **chép ĐÚNG số đo của ANH EM nó** là `.page-back` — ⛔ không phát minh:
+   `min-height:var(--vt-control-h)` · `padding:0 16px` · `border-radius:8px` · `border:1px solid var(--line)`
+   · `background:#eef3f8` · `color:#24507d` · `font-size:calc(10.5px × --user-font-scale)` · `font-weight:800`. */
+.page-collapse {
+  min-height: var(--vt-control-h); padding: 0 16px; border-radius: 8px;
+  border: 1px solid var(--line, #dbe4ee); background: #eef3f8; color: #24507d;
+  font-size: calc(10.5px * var(--user-font-scale, 1)); font-weight: 800;
+  cursor: pointer; white-space: nowrap;
 }
 
 /* Nút và ô nhập cùng hàng thì cao bằng nhau — sửa lỗi "nút không cân xứng" */
@@ -697,6 +778,10 @@ thead th {
 }
 .list-toolbar-search input { min-width: 220px; }
 .list-toolbar-actions { flex-wrap: wrap; }
+/* MT3 §IV.4 — thứ tự chuẩn trên toolbar: [Tạo·Sửa·Xóa] · Tìm · Sắp xếp · Lọc · [Xuất Excel · phụ]
+   (`.list-toolbar-title` đã có ở mục 14.1 — ⛔ không khai lại ở đây.) */
+.list-toolbar-primary { display: flex; flex-wrap: wrap; align-items: center; gap: var(--vt-space-2); flex: 0 0 auto; }
+.list-toolbar-secondary { display: flex; flex-wrap: wrap; align-items: center; gap: var(--vt-space-2); flex: 0 0 auto; }
 
 @media (max-width: 1024px) {
   .list-toolbar-controls { justify-content: flex-start; }
@@ -922,10 +1007,179 @@ thead th {
   .approval-flow-steps { padding-bottom: var(--vt-space-3); }
 }
 
+/* --- 14.7 MT3 §B.4 — ĐỒNG BỘ 3 VÙNG CỘT PHÊ DUYỆT (chiều cao như nhau, KHÔNG chiều cao cứng) ---
+   Yêu cầu: «Ba vùng … phải đồng bộ chiều dài/chiều cao hiển thị … Không dùng chiều cao cứng làm vỡ responsive;
+   sử dụng layout đồng bộ và vùng cuộn riêng.»
+   ⚠️ Sửa 2 nguyên nhân gốc đã đo được trong `globals.css`:
+     ① `align-items:start`  ⇒ mỗi vùng cao theo NỘI DUNG ⇒ 3 vùng lệch nhau   → đổi thành `stretch`.
+     ② `max-height:650px`  ⇒ CHIỀU CAO CỨNG, vỡ ở màn thấp / giãn rộng  → thay bằng `clamp()` theo viewport.
+   Mỗi vùng là cột FLEX; VÙNG NỘI DUNG cuộn riêng, đầu + chân vùng cố định (⛔ không cuộn mất nút bấm). */
+.approval-workbench {
+  --approval-pane-h: clamp(300px, calc(100vh - 250px), 760px);   /* ⛔ không dùng px cứng */
+  align-items: stretch;
+}
+/* Cả 3 vùng: cột flex, chiều cao đồng bộ, không vượt khung nhìn. */
+.approval-workbench > .approval-queue,
+.approval-workbench > .approval-detail-pane,
+.approval-workbench > .approval-meta-pane {
+  display: flex; flex-direction: column;
+  min-height: 0; max-height: var(--approval-pane-h);
+  overflow: hidden;
+}
+/* Vùng cuộn riêng của từng cột — nội dung dài cuộn trong cột, ⛔ không làm tràn cả trang. */
+.approval-queue-list { flex: 1 1 auto; min-height: 0; max-height: none; overflow: auto; }
+.approval-workbench > .approval-detail-pane > .approval-flow { flex: 1 1 auto; min-height: 0; overflow: auto; }
+.approval-workbench > .approval-meta-pane > dl { flex: 1 1 auto; min-height: 0; overflow: auto; margin: 0; }
+/* Đầu/cân vùng: cố định, không bị cuộn mất. */
+.approval-pane-head, .approval-detail-head, .approval-detail-pane > .approval-actions,
+.approval-queue > .queue-pagination { flex: 0 0 auto; }
+@media (max-width: 1100px) {
+  /* Ba cột xuống thành hàng dọc: bỏ giới hạn cao để nội dung tự giãn, không bị cắt. */
+  .approval-workbench { --approval-pane-h: none; }
+  .approval-workbench > .approval-queue,
+  .approval-workbench > .approval-detail-pane,
+  .approval-workbench > .approval-meta-pane { max-height: none; }
+}
+
+/* --- 14.15 MT3 §IV.9 TRUNG TÂM THÔNG BÁO + 14.14 MT3 §I Modal «Tạo thông báo» (nén dòng theo NGÂN SÁCH CSS) --- */
+.notify-group-head { margin: var(--vt-space-2) 0 2px; padding: 0 var(--vt-space-2); color: var(--vt-c-muted, #5b6e85); font-weight: var(--vt-fw-bold); font-size: calc(var(--vt-font-min) * (var(--user-font-scale, 1))); letter-spacing: .04em; text-transform: uppercase; }
+.notify-unread-dot { display: inline-block; width: 7px; height: 7px; margin-right: 6px; border-radius: 50%; background: var(--vt-c-blue, #1769e0); vertical-align: middle; }
+.task-notify-popover .system-notice { border-left: 3px solid #d9541f; }
+.task-notify-popover .task-notify-overflow { max-height: min(60vh, 520px); overflow: auto; }
+.notification-target-picker > .list-toolbar-field { margin: var(--vt-space-2) 0; }
+.notification-target-chosen { display: grid; gap: var(--vt-space-2); margin: var(--vt-space-2) 0; padding: var(--vt-space-2) var(--vt-space-3); border: 1px solid var(--vt-c-line, #e3eaf2); border-left: 3px solid var(--vt-c-blue, #1769e0); border-radius: var(--vt-radius-sm, 8px); background: #f7fbff; }
+.notification-target-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.notification-target-chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border: 1px solid var(--vt-c-line, #e3eaf2); border-radius: 999px; background: #fff; font-size: calc(var(--vt-font-min) * (var(--user-font-scale, 1))); }
+.notification-target-chip > button { border: 0; background: none; cursor: pointer; color: #b3411a; font: inherit; padding: 0 2px; }
+.notification-target-list { max-height: min(38vh, 320px); overflow: auto; }
+@media (max-width: 650px) { .notification-target-list { max-height: 46vh; } .notification-target-chip { max-width: 100%; overflow-wrap: anywhere; } }
+
+/* --- 14.13 MT3 §F — Danh sách KHO dạng THẺ (card) + vùng hành động tab Nhập/Xuất/Cấp phát --- */
+.warehouse-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--vt-space-3); }
+.warehouse-card { display: grid; gap: 4px; align-content: start; text-align: left; cursor: pointer; padding: var(--vt-space-3); border: 1px solid var(--vt-c-line, #e3eaf2); border-radius: var(--vt-radius-md, 10px); background: var(--vt-c-surface, #fff); font: inherit; color: inherit; }
+.warehouse-card:hover { border-color: #76a9ef; background: #f8fbff; }
+.warehouse-card:focus-visible { outline: 2px solid #1769e0; outline-offset: 2px; }
+.warehouse-card > b { color: var(--vt-c-navy, #203a5a); font-size: calc(var(--vt-fs-sm) * (var(--user-font-scale, 1))); }
+.warehouse-card > small { color: var(--vt-c-muted, #708298); }
+.warehouse-card.is-selected { border-color: #1769e0; box-shadow: 0 0 0 2px rgba(23,105,224,.16); }
+.warehouse-card-hint { font-style: normal; font-size: calc(var(--vt-font-min) * (var(--user-font-scale, 1))); color: var(--vt-c-blue, #1769e0); }
+.warehouse-io-actions { display: flex; flex-wrap: wrap; gap: var(--vt-space-2); margin-top: var(--vt-space-3); }
+@media (max-width: 650px) { .warehouse-card-grid { grid-template-columns: 1fr; } .warehouse-io-actions { flex-direction: column; align-items: stretch; } .warehouse-io-actions > button { width: 100%; } }
+
+/* --- 14.12 MT3 §D — Thi công: hạng mục dạng CHIP trước khi lưu + danh sách hạng mục trong bảng --- */
+.construction-items-chips { display: flex; flex-wrap: wrap; gap: var(--vt-space-2); margin: var(--vt-space-2) 0; }
+.construction-item-chip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px;
+  border: 1px solid var(--vt-c-line, #e3eaf2); border-radius: 999px; background: #f7fbff;
+  font-size: calc(var(--vt-font-min) * (var(--user-font-scale, 1)));
+}
+.construction-item-chip > b { color: var(--vt-c-navy, #203a5a); }
+.construction-item-chip > small { color: var(--vt-c-muted, #708298); }
+.construction-item-chip > button { border: 0; background: none; cursor: pointer; color: #b3411a; font: inherit; padding: 0 2px; }
+.construction-item-list { display: grid; gap: 2px; }
+.construction-item-list > small { display: block; overflow-wrap: anywhere; }
+
+/* --- 14.11 MT3 §C — Trường họ tên/liên kết BẤM ĐƯỢC trong bảng dự án + danh sách tổ đội --- */
+/* ⛔ MT3 §C: «Các trường họ tên phải click được và mở modal chi tiết nhân sự» ⇒ nút trong ô bảng. */
+.link-cell {
+  display: inline; padding: 0; border: 0; background: none; cursor: pointer;
+  color: var(--vt-c-blue, #1769e0); font: inherit; text-align: left;
+  text-decoration: underline; text-underline-offset: 2px;
+}
+.link-cell:hover { color: var(--vt-c-navy, #203a5a); }
+.link-cell:focus-visible { outline: 2px solid var(--vt-c-blue, #1769e0); outline-offset: 2px; border-radius: 3px; }
+.team-inline-list {
+  display: grid; gap: var(--vt-space-2); margin-top: var(--vt-space-3);
+  padding: var(--vt-space-3); border: 1px solid var(--vt-c-line, #e3eaf2);
+  border-left: 3px solid var(--vt-c-blue, #1769e0); border-radius: var(--vt-radius-sm, 8px); background: #f7fbff;
+}
+.team-inline-list > ul { margin: 0; padding-left: var(--vt-space-4); display: grid; gap: 4px; }
+.team-inline-list > button { justify-self: start; }
+
+/* --- 14.10 MT3 §IV.2 — HỖ TRỢ MÀN HẸP 375px / 320px (mốc nhỏ BẮT BUỘC của MT3) ---
+   Đo được trước khi sửa: có 110 khối @media nhưng ⛔ KHÔNG khối nào ở mốc 320/375.
+   Ở mức này nguyên nhân tràn viewport phổ biến: toolbar xuống dòc lệch phải · tab dài không cuộn ·
+   bảng tràn trang · modal vượt khung. */
+@media (max-width: 375px) {
+  /* TOOLBAR — MT3 §IV.4: trên màn hình nhỏ toolbar WRAP THEO HÀNG, ⛔ KHÔNG biến thành cột dọc lệch phải.
+     ⇒ giữ `flex-direction: row` + `flex-wrap: wrap`; chỉ cho từng nút chiếm trọn 1 hàng (100%). */
+  .table-toolbar, .list-toolbar { flex-direction: row; flex-wrap: wrap; align-items: stretch; gap: var(--vt-space-2); }
+  .list-toolbar-controls { flex-direction: row; flex-wrap: wrap; align-items: stretch; }
+  .list-toolbar-primary, .list-toolbar-secondary { flex-direction: row; flex-wrap: wrap; }
+  .list-toolbar-controls > *, .list-toolbar-primary > *, .list-toolbar-secondary > * { flex: 1 1 100%; min-width: 0; }
+  .list-toolbar-primary > button, .list-toolbar-secondary > button { width: 100%; }
+  /* TAB dài: ⛔ phải CUỘN NGANG trong vùng của nó, không làm tràn cả trang. */
+  .project-scope-tabs, .inventory-tabs, .switch-tabs, [role="tablist"] {
+    overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: thin;
+  }
+  .project-scope-tabs > *, .inventory-tabs > *, .switch-tabs > * { flex: 0 0 auto; }
+  /* BẢNG: cuộn trong vùng bảng (⛔ không tràn cả trang). */
+  .table-wrap { max-width: 100%; overflow-x: auto; }
+  .table-wrap table { min-width: 640px; }
+  /* MODAL: chừa lề nhỏ, nội dung cuộn, không vượt viewport. */
+  .modal, .drawer { width: 100vw !important; max-width: 100vw !important; max-height: 100dvh !important; }
+}
+@media (max-width: 320px) {
+  /* 320px: siết thêm — nhãn dài và nút hành động không được đẩy tắt màn. */
+  .list-toolbar-field > span, .approval-pane-head span { overflow-wrap: anywhere; }
+  .modal, .drawer { max-height: 100dvh !important; }
+  .attachment-panel { max-height: 58vh; }
+}
+
+/* --- 14.9 MT3 §E — «ẢNH VÀ HỒ SƠ GIAO HÀNG» hiển thị ĐẦY ĐỦ, có vùng cuộn, có trạng thái rỗng/lỗi --- */
+/* ⛔ Không được bị CẮT trong modal ⇒ vùng cuộn riêng + giới hạn cao theo viewport (không dùng px cứng). */
+.attachment-panel { display: grid; gap: var(--vt-space-2); max-height: min(46vh, 420px); overflow: auto; overflow-x: hidden; }
+.attachment-panel .attachment-photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: var(--vt-space-2); }
+.attachment-panel .attachment-photo.is-broken { border-style: dashed; background: #fff5f2; }
+.attachment-broken-mark { display: grid; place-content: center; gap: 2px; min-height: 64px; color: #b3411a; font-weight: var(--vt-fw-bold); text-align: center; }
+.attachment-broken-mark small { font-weight: var(--vt-fw-regular); font-size: calc(var(--vt-font-min) * (var(--user-font-scale, 1))); }
+.attachment-thumb.is-broken { display: grid; place-content: center; min-width: 40px; color: #b3411a; font-size: calc(var(--vt-font-min) * (var(--user-font-scale, 1))); font-weight: var(--vt-fw-bold); }
+.attachment-error { margin: 0; padding: var(--vt-space-2) var(--vt-space-3); border: 1px solid #f0b4a0; border-left: 3px solid #d9541f; border-radius: var(--vt-radius-sm, 8px); background: #fff5f2; color: #8c3312; }
+@media (max-width: 650px) {
+  .attachment-panel { max-height: 52vh; }              /* màn nhỏ: cuộn được trong modal, không tràn trang */
+  .attachment-panel .attachment-photos { grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); }
+}
+
+/* --- 14.8 MT3 §B.3 — VÙNG NHẬP «YÊU CẦU BỔ SUNG» (mở cạnh ô Bình luận, trước hàng nút) --- */
+.approval-supplement {
+  display: grid; gap: var(--vt-space-2);
+  margin-top: var(--vt-space-2); padding: var(--vt-space-3);
+  border: 1px solid var(--vt-c-line, #e3eaf2); border-left: 3px solid #ff8a3d;
+  border-radius: var(--vt-radius-md, 10px); background: #fffaf6;
+}
+.approval-supplement > .approval-comment { margin: 0; }
+.approval-supplement-actions { display: flex; flex-wrap: wrap; gap: var(--vt-space-2); justify-content: flex-end; }
+@media (max-width: 650px) {
+  /* Màn hẹp: nút hành động xếp dọc — ⛔ không để lệch về bên phải (MT3 §IV.2) */
+  .approval-supplement-actions { flex-direction: column; align-items: stretch; }
+  .approval-supplement-actions > button { width: 100%; }
+}
+
 @media (max-width: 768px) {
   /* Màn hẹp: mỗi mục xếp dọc, bỏ đường nối ngang cho gọn */
   .vt-timeline-step { gap: var(--vt-space-3); }
   .vt-timeline-meta { flex-direction: column; gap: 2px; }
+}
+
+/* --- 14.6 MT3 §B.2 — BÌNH LUẬN KHI DUYỆT nằm ở vùng CHI TIẾT (Lịch sử xử lý) ---
+   ⛔ ĐÃ BỎ khỏi tiến trình duyệt: mỗi mốc giờ chỉ còn 4 trường
+      (trạng thái · người duyệt/phụ trách · phòng ban · thời gian duyệt). */
+.approval-comments { margin-top: var(--vt-space-3); }
+.approval-comments > h4 {
+  margin: 0 0 var(--vt-space-2); color: var(--vt-c-muted, #5b6e85);
+  font-size: calc(var(--vt-font-min) * (var(--user-font-scale, 1)));
+  font-weight: var(--vt-fw-bold); letter-spacing: .04em; text-transform: uppercase;
+}
+.approval-comment-row {
+  display: grid; gap: 2px; padding: var(--vt-space-2) 0;
+  border-top: 1px solid var(--vt-c-line, #e3eaf2);
+}
+.approval-comment-row > b { color: var(--vt-c-navy, #203a5a); font-size: calc(var(--vt-fs-2xs) * (var(--user-font-scale, 1))); }
+.approval-comment-row > span { color: var(--vt-c-muted, #708298); font-size: calc(var(--vt-font-min) * (var(--user-font-scale, 1))); }
+.approval-comment-row > p {
+  margin: 2px 0 0; color: var(--vt-c-navy, #203a5a);
+  font-size: calc(var(--vt-font-min) * (var(--user-font-scale, 1)));
+  overflow-wrap: anywhere;   /* ⛔ MT3 §IV.2: bình luận dài không được tràn khung */
 }
 
 
@@ -954,15 +1208,94 @@ thead th {
   overflow-x: auto;
 }
 .edm-tabs button {
+  /* MỐC 115 — user 01/10: «chỉnh kích thước các tab sao cho cân đối và bằng nhau … nhưng vẫn
+     phải hiển thị đầy đủ thông tin».
+     Trước đây nút KHÔNG có width ⇒ mỗi tab co theo độ dài nhãn ⇒ «Dự án tham gia» (13 ký tự)
+     rộng hơn hẳn «Kho» (3 ký tự), nhìn lệch.
+     `flex: 1 1 auto` (KHÔNG phải `1 1 0`): basis `auto` vẫn giữ độ rộng tự nhiên nên flex-wrap
+     còn xuống hàng được khi màn hẹp, còn phần dư của hàng được chia ĐỀU cho các tab ⇒ bằng nhau. */
+  flex: 1 1 auto;
+  min-width: 0;
+  justify-content: center;
   border: 0; background: transparent; cursor: pointer;
-  padding: var(--vt-space-3) var(--vt-space-4);
+  padding: var(--vt-space-3) var(--vt-space-2);
   font-size: calc(var(--vt-fs-2xs) * var(--user-font-scale, 1));
   font-weight: var(--vt-fw-medium); color: var(--vt-c-muted);
-  border-bottom: 2px solid transparent; white-space: nowrap;
+  border-bottom: 2px solid transparent; white-space: normal;
+  text-align: center; line-height: 1.25; overflow-wrap: anywhere;
   display: inline-flex; align-items: center; gap: var(--vt-space-2);
 }
 .edm-tabs button:hover { color: var(--vt-c-accent); }
 .edm-tabs button.is-active { color: var(--vt-c-accent); border-bottom-color: var(--vt-c-accent); font-weight: var(--vt-fw-semibold); }
+/* Nhãn được bọc riêng nên có thể xuống dòng mà badge vẫn nằm giữa theo chiều dọc. */
+.edm-tab-label { min-width: 0; }
+
+/* MỐC 115 — dải 2 thẻ của modal *Sửa tài khoản* / *Phân quyền* (`AdminUserModalTabs`). ⛔ **ĐÃ HIỆU CHÍNH Ở MỐC 119b** (dải thẻ không còn giãn hết bề ngang).
+   Nhãn lệch dài quá đổi (13 vs 30 ký tự) nên phải chia đều hàng, không cắt chữ. */
+/* MỐC 119b — user 01/10/2026 (nguyên văn): «Thiết kế các tab trong modal giống như modal hồ sơ
+   nhân sự chi tiết của menu hồ sơ nhân sự các tab của modal có thể sắp xếp thành 1 dải ngang giống
+   như tabbar trong modal nhìn rất đẹp.»
+   ⛔ SỬA LẠI quyết định MỐC 115 cho riêng dải thẻ này: MỐC 115 cho `flex: 1 1 auto` + `white-space: normal`
+      nên 2 thẻ giãn hết bề ngang thành hai khối to (thẻ «Phân quyền công việc / Chức năng» chiếm ~2/3
+      bề ngang modal) — đúng cái anh gọi là xấu.
+   ✅ Nay về `flex: 0 0 auto` + `white-space: nowrap`: thẻ ôm sát nhãn, xếp thành MỘT dải ngang — y hệt
+      dải 5 thẻ của modal «Hồ sơ nhân sự chi tiết» (`app/page.tsx` `USER_PROFILE_TABS`, cùng class
+      `project-scope-tabs`) ⇒ KHÔNG phát minh giao diện mới, chỉ cho nó đồng nhất với tham chiếu.
+   ⛔ KHÔNG đụng `.edm-tabs` (dải thẻ modal chi tiết dự án): `flex: 1 1 auto` chia đều ở đó là CỐ Ý
+      theo yêu cầu MỐC 115 khác — giữ nguyên.
+   ✅ `overflow-x: auto` + `text-overflow: ellipsis` ⇒ màn hẹp vẫn cuộn ngang, không đẩy khung (MT3 §IV). */
+.user-admin-tabs { display: flex; flex-wrap: nowrap; gap: 4px; align-items: stretch; overflow-x: auto; }
+.user-admin-tabs > button {
+  flex: 0 0 auto;
+  max-width: 100%;
+  justify-content: center;
+  text-align: center;
+  white-space: nowrap;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* ⛔⛔ VÁ 05/10/2026 (GO-LIVE · goal §11 UI/UX) — **tab TRONG CÙNG MỘT MODAL phải ĐỒNG NHẤT kích thước**.
+   §11: «Các tab trong cùng một modal phải có kích thước đồng nhất… ⛔ **không để kích thước tab
+   thay đổi bất thường theo độ dài text**.» ✓
+   ⭐ LỖI ĐO ĐƯỢC (⭐ ⛔ không phải suy đoán): `app/screens/AdminUserModalTabs.tsx` — 2 tab trong
+     `<BaseModal>` («Sửa tài khoản» **13 ký tự** vs «Phân quyền công việc / Chức năng» **31 ký tự**) ⚠️
+     ⇒ nhận `.user-admin-tabs > button { flex: 0 0 auto }` ở trên ⇒ ⭐ **chiều rộng = ĐỘ DÀI CHỮ**
+     ⇒ ⭐ **LỆCH HƠN GẤP ĐÔI** ✓
+   📍 CHÍNH MÃ NGUỒN ĐÃ GHI LẠI: `AdminUserModalTabs.tsx` (chú thích «MỐC 115»):
+     «…**2 thẻ co theo độ dài chữ, lệch nhau rõ**.» ✓ — ⚠️ nhưng cách vá cũ **chỉ THÊM LỚP**,
+     ⛔ **chưa ĐẶT KÍCH THƯỚC** ⇒ **lỗi vẫn còn** ✓
+   ⭐ PHẠM VI **CHÍNH XÁC** (⭐ đã chứng minh selector trúng phần tử, ⛔ không đoán — TASK-212 §⑤):
+     · `BaseModal` (`lib/ui-blocks.tsx:22`) render `<section className="modal">` ⇒ ⭐ **`.modal` là lớp THẬT**
+     · ⇒ `.modal .user-admin-tabs` **trúng** dải tab trong `BaseModal` ✓
+     · ⛔ **KHÔNG** trúng dải tab **cấp trang** (`page.tsx:3081` `USER_PROFILE_TABS`, ⛔ không trong `.modal`)
+       ⇒ ⭐ **quyết định «thẻ ôm sát nhãn» của nhà cho dải cấp trang ĐƯỢC GIỮ NGUYÊN** ✓
+     · ⛔ **KHÔNG** trúng `.edm-tabs` (⭐ nhà đã cảnh báo rõ «⛔ KHÔNG đụng») ✓
+     · ⚠️ `ContractReviewScreen` nằm trong **cả** `.review-modal` **và** `.modal` — ⭐ nhưng ở đó tab
+       **ĐÃ có width cố định** bằng `style={{width,minWidth,maxWidth}}` (`REVIEW_TABS` = 240px/200px)
+       ⇒ ⭐ **hành vi ⛔ KHÔNG đổi** ✓
+   ⭐ CÁCH VÁ: `flex: 1 1 0` + `min-width: 0` ⇒ ⭐ **các tab CHIA ĐỀU bề ngang khung** ⇒ ⭐ **ĐỒNG NHẤT
+     tuyệt đối theo §11**, ⛔ **không bịa con số pixel nào**, ⭐ **tự thích ứng bề rộng modal** ✓
+   ⭐ GIỮ NGUYÊN `white-space:nowrap` + `overflow:hidden` + `text-overflow:ellipsis` (⭐ kế thừa quy tắc trên)
+     ⇒ ⚠️ nhãn dài có thể rút gọn «…» — ⭐ **đúng hành vi nhà đã chấp nhận** ở `.review-modal` ✓
+   ⭐ MỞ RỘNG 05/10/2026 (TASK-214) — ⭐ **quét CẢ HỌ dải tab TRONG MODAL** (⭐ ⛔ không đoán, đã ĐO):
+     · ⭐ **`HrProfileEditModal.tsx`** — `<div className="modal-body">` trong `BaseModal`, dải tab
+       `className="project-scope-tabs"` (2 tab «Thông tin user» 14 ký tự · «Thông tin cá nhân» 18 ký tự)
+       ⇒ ⚠️ **CŨNG là dải tab TRONG MODAL** ⇒ ⭐ **§11 áp dụng** ✓
+       ⇒ ⭐ **bổ sung `.modal .project-scope-tabs > button`** ✓
+     · ⛔ **CỐ Ý ⛔ KHÔNG dùng `[role="tablist"]`** — ⭐ vì `ProjectDetailTabs.tsx` (`edm-tabs`, **CŨNG trong modal**)
+       cũng mang `role="tablist"` ⚠️ ⇒ ⭐ **`[role="tablist"]` sẽ CHẠM `.edm-tabs`** ⇒ ⛔ **vi phạm cảnh báo
+       «⛔ KHÔNG đụng `.edm-tabs`» của nhà** ✓ ⇒ ⭐ **liệt kê RÕ 2 lớp, ⛔ không dùng selector bao trùm** ✓
+   ⭐ MỐC 115 — ⭐ **chính yêu cầu của user 01/10**: «chỉnh kích thước các tab sao cho **cân đối và bằng nhau**…
+     nhưng vẫn phải hiển thị đầy đủ thông tin» (⭐ `canonical.css` ghi ở `.edm-tabs button`) ⇒ ⭐ **§11 CHÍNH LÀ
+     yêu cầu đó** ✓ — ⭐ nhà dùng `flex:1 1 auto` cho `.edm-tabs` vì nó **`flex-wrap: wrap`** (⭐ basis `auto`
+     giữ độ rộng tự nhiên để wrap đẹp) ⚠️ — ⭐ còn `.user-admin-tabs`/`.project-scope-tabs` là **`flex-wrap: nowrap`**
+     ⇒ ⭐ **`flex: 1 1 0` mới cho BẰNG NHAU TUYỆT ĐỐI** ✓ (⭐ ⛔ không mâu thuẫn với ghi chú của nhà) ✓ */
+.modal .project-scope-tabs > button,
+.modal .user-admin-tabs > button {
+  flex: 1 1 0;
+  min-width: 0;
+}
 .edm-tab-badge {
   font-size: calc(var(--vt-font-min) * var(--user-font-scale, 1));
   background: var(--vt-c-surface-3); color: var(--vt-c-muted);
@@ -1008,7 +1341,9 @@ thead th {
    ⛔ KHÔNG dùng `overflow:hidden` che lỗi ⇒ chỉ ép `min-width:0` + trần 100% + cho phép wrap. */
 .attachment-panel, .approval-files, .real-attachment-panel { min-width: 0; max-width: 100%; }
 .file-upload, .attachment-pick { min-width: 0; max-width: 100%; }
-.attachment-panel { overflow-x: hidden; }
+/* MT3 §E — ⛔ ĐÃ GỘP: luật `.attachment-panel { overflow-x: hidden }` cũ được HỢP NHẤT vào khối 14.9
+   (mục «ẢNH VÀ HỒ SƠ GIAO HÀNG») để canonical.css còn ĐÚNG 1 định nghĩa `.attachment-panel` cấp cao nhất
+   — hết «khối trùng» (trần = 0). ⛔ Không mất thuộc tính nào. */
 .attachment-pick > input[type="file"]::file-selector-button { max-width: 55%; overflow: hidden; text-overflow: ellipsis; }
 @media (max-width: 1100px) {
   /* Khung hẹp: ô chọn tệp chiếm TRỌN dòng ⇒ ⛔ không chen với nút «TẢI LÊN» */
@@ -1074,3 +1409,63 @@ thead th {
 .attachment-row>a{overflow:hidden!important}
 .attachment-row>a>div{min-width:0!important}
 .attachment-row>a>div>strong{display:block!important;max-width:100%!important;overflow-wrap:anywhere!important;word-break:break-word!important}
+
+/* MỐC 120 — USER 01/10/2026 (nguyên văn):
+     1) «Xóa dòng note ghi mốc 39 ở modal sửa tài khoản»
+     2) «tab Phân quyền công việc / chức năng không cuộn được cả tab mà chỉ cuộn được mỗi
+        ma trận phân quyền nên rất khó xem được hết nội dung.»
+     3) «tab phân quyền công việc / chức năng của modal sửa tài khoản dùng chung với modal
+        phân quyền của tab 6. phân quyền người dùng, hay sửa lại giao diện cho 2 tab này giống
+        nhau hoặc có thể kế thừa - dùng chung giao diện.»
+
+   Nguyên nhân (1)-(3) KHÔNG nằm ở component: cả hai modal đã dùng chung
+   `PermissionAccessPanel` từ MỐC 117. Chúng lệch nhau vì CẤU TRÚC JSX:
+     · `UserAccessModal` (tab 6) bọc panel trong `<div className="modal-body">`;
+     · `UserEditModal`  (thẻ «Phân quyền công việc / chức năng») đặt panel NGOÀI nó.
+   ⇒ panel ngoài `modal-body` mất padding `18px 20px!important`, mất vùng cuộn của modal,
+     và mất luôn `.drawer-section h3, .modal-body h3 { color:#183451!important; font-weight:730!important }`
+     ⇒ tiêu đề hiện NHẠT, không đậm, sát mép trái (đúng như ảnh USER gửi).
+   Đã sửa cấu trúc trong `app/page.tsx` (MỐC 120). Block dưới đây chỉ xử lý (2). */
+
+/* (2) Nới `.table-wrap` của ma trận: `.modal .table-wrap` bị ép `max-height:min(58vh,640px)`
+   ⇒ lồng hai vùng cuộn (cuộn trong bảng + cuộn modal), rất khó xem hết. Ở đây bỏ giới hạn
+   chiều cao để `.modal-body` CUỘN TOÀN BỘ thẻ. Nhờ vậy tiêu đề cột vẫn dính khi cuộn vì
+   `.table-wrap > table > thead > tr > th { position:sticky; top:0 }` bám theo vùng cuộn
+   gần nhất, nay là `.modal-body`. Class `.embedded-permission-body` chỉ do
+   `PermissionAccessPanel` dùng ⇒ không ảnh hưởng bảng nào khác. */
+.embedded-permission-body .table-wrap {
+  max-height: none;
+  overflow: visible;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   MỐC 121 — DẢI TAB PR / PO (app/screens/Purchasing.tsx)
+   Vì sao thêm: markup + hàm đổi tab ĐÃ có sẵn từ TASK-119 (21/09/2026) nhưng
+   KHÔNG có rule CSS nào ⇒ 4 chữ "PR" "74" "PO" "28" dính liền thành "PR74PO28"
+   và người dùng không nhìn ra đó là tab. Đo đạc thật ngày 01/10/2026:
+   grep cả app/globals.css lẫn canonical.css ⇒ 0 kết quả cho
+   .purchase-tabbar / .purchase-tab / .purchasing-tabs-card.
+   Đặt ở canonical.css vì app/layout.tsx nạp theo thứ tự
+   globals.css → canonical.css → font-floor.css ⇒ file này thắng khi trùng đặc tính.
+   ═══════════════════════════════════════════════════════════════════════════════ */
+.purchasing-tabs-card{display:flex;flex-direction:column;gap:12px;padding:14px 16px;margin-bottom:14px}
+.purchasing-screen .project-scope-tabs{display:flex;flex-wrap:wrap;gap:10px;align-items:stretch;margin:0}
+.purchasing-screen .project-scope-tabs button{
+  display:inline-flex;align-items:center;gap:8px;min-width:196px;min-height:var(--vt-control-h);
+  padding:0 16px;border:1px solid var(--line,#dbe4ee);border-radius:8px;background:#fff;color:#35506e;
+  font-size:calc(var(--vt-font-min) * var(--user-font-scale, 1));font-weight:800;cursor:pointer;white-space:nowrap;
+  transition:background-color .15s ease,border-color .15s ease;
+}
+.purchasing-screen .project-scope-tabs button:hover{background:#f2f7fc}
+.purchasing-screen .project-scope-tabs button:focus-visible{outline:2px solid #1f5fa8;outline-offset:2px}
+.purchasing-screen .project-scope-tabs button.active,
+.purchasing-screen .project-scope-tabs button[aria-selected="true"]{background:#1f5fa8;border-color:#1f5fa8;color:#fff}
+.purchasing-screen .project-scope-tabs button span{
+  margin-left:auto;font-variant-numeric:tabular-nums;font-size:13px;font-weight:700;
+  background:#eef2f7;border-radius:999px;padding:1px 9px;color:#5a6a7d;
+}
+.purchasing-screen .project-scope-tabs button.active span,
+.purchasing-screen .project-scope-tabs button[aria-selected="true"] span{background:#fff;color:#1f5fa8}
+.purchasing-tabs-card .purchasing-tab-note{margin:0;color:#5a6a7d}
+.purchasing-tabs-card .purchasing-tab-note small{display:block;font-size:12px;line-height:1.55}
+.purchase-system-table .card-head{margin-bottom:10px}

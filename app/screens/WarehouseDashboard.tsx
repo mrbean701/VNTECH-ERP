@@ -32,6 +32,7 @@
 
 import { CardHead, Kpi, NavIcon } from "@/lib/ui-shared";
 import type { AppData, Row } from "@/lib/ui-shared";
+import { useState } from "react";
 
 // -------------------------------------------------------------------------------------------------
 // W04-PURE-BEGIN
@@ -163,12 +164,16 @@ function WarehouseDashboard({ data, project }: { data: AppData; project: string 
     : (data.projects || []).find((row) => String(row.id) === String(project))?.code || String(project);
   const money = (value: number | null) => value === null ? INVENTORY_NO_SOURCE : `${Math.round(value).toLocaleString("vi-VN")} đ`;
   const quantity = (value: number) => Math.round(value).toLocaleString("vi-VN");
+  // TASK-229 — 2 khối «giải thích» nay THU VÀO nút «?» (user chọn (b) 07/10).
+  const [showHelp, setShowHelp] = useState(false);
   const valueTone = metrics.value.ledgerValue === null ? "amber" : "green";
 
   return <div className="stack" data-dashboard-block="inventory">
     <section className="card">
       <CardHead title="DASHBOARD TỒN KHO"
-        note={`Phạm vi: ${scopeLabel} · ${metrics.warehouseCount} kho · ${metrics.rows.length} dòng tồn theo (kho × vật tư). Mọi số tính TRỰC TIẾP từ dữ liệu đang có trong payload — không gọi API mới.`}/>
+        note={`Phạm vi: ${scopeLabel} · ${metrics.warehouseCount} kho · ${metrics.rows.length} dòng tồn theo (kho × vật tư). Mọi số tính TRỰC TIẾP từ dữ liệu đang có trong payload — không gọi API mới.`}
+        action={showHelp ? "Ẩn giải thích chỉ số" : "Giải thích chỉ số"}
+        onClick={()=>setShowHelp((v)=>!v)}/>
       <div className="kpi-grid small">
         <div data-inventory-metric="total"><Kpi icon="TC" label="Tổng tồn" value={String(metrics.total)} note={`Σ balance trên ${metrics.rows.length} dòng tồn (On hand)`} tone="blue"/></div>
         <div data-inventory-metric="available"><Kpi icon="KD" label="Khả dụng" value={String(metrics.available)} note="Tồn trừ phần đã giữ chỗ — dùng được để cấp phát" tone="green"/></div>
@@ -183,6 +188,7 @@ function WarehouseDashboard({ data, project }: { data: AppData; project: string 
       <p className="muted" data-inventory-source="eight-metrics">Nguồn 8 chỉ số: tổng/khả dụng/giữ chỗ/sắp hết → `inventory[]`; nhập → `receipts[].acceptedQty`; xuất → `issues[].totalQty`; chờ chuyển → `transferOrders[].status`; giá trị kho → `stock_movements.unit_cost` ({metrics.value.source}).</p>
     </section>
 
+    {showHelp && (<>
     <section className="card">
       <CardHead title="Giá trị kho — vì sao có ô «chưa có nguồn»" note="Đối chứng âm: KHÔNG bịa số khi thiếu nguồn (đúng khuôn T-08)."/>
       <div className="simple-list">
@@ -196,6 +202,7 @@ function WarehouseDashboard({ data, project }: { data: AppData; project: string 
         </div></div>
       </div>
     </section>
+    </>)}
 
     <section className="card">
       <CardHead title="Tồn kho theo từng kho" note={`${metrics.byWarehouse.length} kho trong phạm vi — mỗi dự án có thể có NHIỀU kho (W-02 đã xác nhận quan hệ Project : Warehouse là 1:N).`}/>
@@ -230,6 +237,7 @@ function WarehouseDashboard({ data, project }: { data: AppData; project: string 
       </tbody></table></div>
     </section>
 
+    {showHelp && (<>
     <section className="card">
       <CardHead title="Nguồn dữ liệu của từng chỉ số" note="In rõ nguồn + số dòng THẬT: phân biệt «0 dòng» với «cột rỗng trong payload» — cả hai đều KHÔNG được hiện 0."/>
       <div className="simple-list">
@@ -243,6 +251,7 @@ function WarehouseDashboard({ data, project }: { data: AppData; project: string 
         <div><div><strong>Giá trị kho</strong><p>{metrics.value.source}</p></div></div>
       </div>
     </section>
+    </>)}
   </div>;
 }
 

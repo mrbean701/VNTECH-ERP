@@ -450,6 +450,41 @@ public class RequestStoreAdapter implements RequestStore {
                 "TRẢ LẠI BƯỚC " + stage + ": " + comment, "internal", now);
     }
 
+    /**
+     * MT3-A1 — TÁC NHÂN HỆ THỐNG cho việc TỰ ĐỘNG TỪ CHỐI khi quá SLA.
+     * ⚠️ Đã xác minh **toàn repo KHÔNG có khoá ngoại nào** (`FOREIGN KEY` = 0 kết quả) ⇒ dùng mã này
+     *    ⛔ KHÔNG vi phạm ràng buộc dữ liệu. ⛔ KHÔNG phải người dùng thật — cố ý để PHÂN BIỆT được
+     *    trong nhật ký giữa «người duyệt từ chối» và «hệ thống tự từ chối vì quá SLA».
+     */
+    private static final String SYSTEM_ACTOR = "system";
+
+    @Override
+    @Transactional
+    public int rejectOverdueApprovals(long graceHours, String reason, Instant now) {
+        // ⚠️ MỐC QUÁ SLA = `due_at` + `graceHours` giờ. Quyết định user 27/09/2026 (A1):
+        //    «Nếu như quá SLA mà không có ai duyệt mặc định bị hệ thống từ chối. Từ chối khi quá SLA.»
+        //    ⇒ `due_at <= now - graceHours`  ⇔  `now >= due_at + graceHours`.
+        Instant cutoff = now.minusSeconds(Math.max(0L, graceHours) * 3600L);
+        List<Map<String, Object>> overdue = jdbcTemplate.queryForList("""
+                SELECT request_id AS "requestId", stage FROM approvals
+                WHERE status='pending' AND due_at IS NOT NULL AND due_at <= ?
+                ORDER BY due_at ASC""", cutoff);
+        int rejected = 0;
+        for (Map<String, Object> row : overdue) {
+            String requestId = String.valueOf(row.get("requestId"));
+            int stage = ((Number) row.get("stage")).intValue();
+            String snapshot = "{\"auto\":true,\"reason\":\"over_sla\",\"graceHours\":" + graceHours
+                    + ",\"actor\":\"" + SYSTEM_ACTOR + "\",\"at\":\"" + now + "\"}";
+            // ① ĐI ĐÚNG ĐƯỜNG người duyệt từ chối (`RequestManagementUseCase:768`).
+            updateApprovalDecision(requestId, stage, "rejected", SYSTEM_ACTOR, reason, snapshot, now);
+            // ② Trả phiếu về người lập — ĐÚNG như người duyệt từ chối (`:773`), giữ nguyên `stage`.
+            returnRequestToRequester(requestId, stage, SYSTEM_ACTOR, reason, now);
+            rejected++;
+        }
+        // ⚠️ IDEMPOTENT: sau lần đầu, các bước này KHÔNG còn `status='pending'` ⇒ lần gọi sau ra 0.
+        return rejected;
+    }
+
     @Override
     public boolean stageDecisionRoleExists(String requestId, int stage, String roleCode) {
         Long n = jdbcTemplate.queryForObject("""
