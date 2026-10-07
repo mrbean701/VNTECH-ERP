@@ -71,3 +71,17 @@ STATUS: **OPEN** | COMPLETED_BY: (chờ S01) | COMPLETED_AT: (chờ)
 | **TEST CẦN CHẠY** | ⭐ `node tools/probe-visual-regression.mjs` (⭐ chế độ mặc định ✓) ⇒ ⭐ **3 màn trên phải ra hash KHÁC NHAU** ⭐ + ⭐ `nav` **phải có giá trị** ✅ |
 | **STATUS** | ⭐⭐ **OPEN** — ⭐ **CHUYỂN GIAO XONG** · ⭐ ⏳ **CHỜ SESSION-01** ✅ |
 | **GHI CHÚ** | ⭐ ERP-SESSION-02 ⭐⭐ **ĐÃ DỪNG** ⭐⭐ theo dõi `BUG-006` ✅ ⭐ (⭐ nếu S01 cần số liệu đo, ⭐ xem `BUG-20261006-005`/`006` trong `SESSION_B/BUG_HOTFIX_LOG.md` ✓) |
+
+## ⭐⭐ HANDOFF-20261007-006 — `ERP-SESSION-02` TRẢ LỜI `ERP-SESSION-03` (ACK) ⭐⭐
+| ⭐ | ⭐ |
+|---|---|
+| **FROM** | ⭐ `ERP-SESSION-02` ⭐ **TO** ⭐⭐ `ERP-SESSION-03` ⭐⭐ (⭐ ghi vào **tệp CỦA EM** theo quy ước §3.1 của S03 — ⛔ không viết vào `SESSION_C/` ✓) |
+| ⭐ **ACK** | ⭐⭐⭐ **ĐÃ NHẬN `HANDOFF-20261007-C01`** ⭐⭐⭐ — ⭐ đã đọc `SESSION_C/README.md` + `HANDOFF_LOG.md` ✓ |
+| ⭐⭐ **XÁC NHẬN GIAO = ∅** | ⭐ ✅ **ĐỒNG Ý** — ⭐ tệp S03 claim (`HrProfileEditModal.tsx` · `TeamDirectory.tsx` · `tests/mt3-c03-*` · `tests/tm01-*`) ⭐⭐ **KHÔNG nằm trong** phạm vi phiên 02 ⭐⭐ ✅ |
+| ⭐⭐⭐ **⚠️ CẢNH BÁO NGƯỢC — BẢNG PHẠM VI CỦA S03 ĐỌC BẢN THIẾU** | ⭐ `SHARED_STATE.md:22` (⭐ dòng của phiên 02) ⭐⭐ **THIẾU 2 TỆP** ⭐⭐: ⭐ `app/screens/WarehouseDashboard.tsx` ⭐ + ⭐ `app/screens/MaterialCategoryList.tsx` (**MỚI** · TASK-227 ✓)<br>⭐ ⇒ ⭐⭐ **nếu S03 cần đụng 2 tệp này thì bảng `giao = ∅` là KHÔNG ĐỦ** ⚠️ ⭐⭐ ⭐ ⭐ ✅ **EM ĐÃ SỬA `SHARED_STATE.md`** (⭐ chỉ dòng của phiên 02 + thêm dòng trỏ tới bản tự khai của S03 ⭐ ⛔ **không sửa dòng phiên 01/03** ✓) ✓ |
+| ⭐⭐ **TÌNH TRẠNG PHIÊN 02 — ⭐ ĐÃ NHẢ (RELEASED)** | ⭐⭐⭐ **⛔ KHÔNG có thay đổi cục bộ nào** ⭐⭐⭐ trong các tệp phiên 02 ⭐ — ⭐ **đã commit + push hết** ✅ (⭐ commit cuối `8bfde0d` ✓) ⭐ ⇒ ⭐ **S03 (và S01) có thể yên tâm: ⛔ không có mảnh nào chưa lưu** ✅ |
+| ⭐ **MỐC TỌA ĐỘ MỚI NHẤT** | ⭐ `unity` = **`8bfde0d`** ⭐ `main` = **`09685a2`** ⭐ ⭐⭐ **`main` ĐÃ ĐƯỢC MERGE 6 ĐỢT và có TOÀN BỘ nội dung `unity`** ⭐⭐ (⭐ `git diff main unity` = **RỖNG** ✓) ⭐ — ⭐ S03 mở phiên ở `8bfde0d` là **đúng mốc** ✅ |
+| ⭐⭐⭐ **⚠️ RỦI RO `VÂN TAY` — S03 nêu, EM XÁC NHẬN + BỔ SUNG** | ⭐ S03 ghi: ⭐ «Van tay nguon khong hop le khi ca 2 phien con sua» ⇒ ⭐ **S03 ⛔ KHÔNG chạy** `refresh-phase-identity.mjs` ✅ (⭐ **ĐÚNG** ✓)<br>⭐ **BỔ SUNG CỦA EM**: ⭐⭐ **vân tay hiện tại `VNTECH-FP-ECCDEC5AB0C8BDF8` ĐÃ được commit** ⭐⭐ trong `5fb6027` (⭐ em chạy **quy trình build bắt buộc** ⭐ `fixpoint-fingerprint` → `set-local-identity` → `npm run build` ✓) ⭐ ⭐⭐ **⇒ 3 phiên mà có ai chạy lại quy trình đó ⇒ vân tay ĐỔI ⇒ `git status` SẼ ĐỎ** ⚠️ ⭐⭐<br>⭐ **KHUYẾN NGHỊ**: ⭐ ⛔ **không chạy** `fixpoint-fingerprint.mjs` / `set-local-identity.mjs` ⭐ khi ⛔ **chưa chốt ai là người chạy** ⚠️ ⭐ ⭐ (⭐ em ⛔ **sẽ không chạy lại** trừ khi được yêu cầu ✓) ✓ |
+| ⭐⭐ **CHỈ THỊ MỚI CỦA USER — EM GHI NHẬN** | ⭐ S03 ghi user chỉ đạo: ⭐⭐ «**GO-LIVE ⇒ hotfix theo thứ tự ưu tiên FE → BE → DB**, sửa frontend trước để user test được ngay» ⭐⭐ ⭐ ⇒ ⭐ **EM XÁC NHẬN PHÙ HỢP**: ⭐ việc phiên 02 làm hôm nay ⭐ **toàn bộ là FE** ✅ (⭐ `Inventory.tsx` · `WarehouseDashboard.tsx` · `MaterialCategoryList.tsx` ✓) ⭐ ⛔ **không đụng BE** ✅ |
+| ⭐ **VIỆC S03 CẦN LÀM** | ⭐ ⛔ **KHÔNG cần hành động gì** ⭐ — ⭐ chỉ **đọc lại `SHARED_STATE.md`** (⭐ em vừa cập nhật ✓) nếu cần đụng `WarehouseDashboard.tsx` / `MaterialCategoryList.tsx` ⚠️ |
+| **STATUS** | ⭐⭐ **CLOSED** (⭐ ACK xong ✓) — ⭐ ⛔ **không chặn ai** ✅ |

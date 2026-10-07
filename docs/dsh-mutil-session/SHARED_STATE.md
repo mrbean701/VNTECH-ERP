@@ -19,8 +19,15 @@
 ## Dang giu (LOCK)
 | Session | Giu | Tu |
 |---|---|---|
-| ERP-SESSION-02 | lib/warehouse-hub.ts · app/screens/Inventory.tsx · lib/menu-helpers.ts · tests/warehouse-hub.test.mjs · tests/w04-inventory-dashboard.test.mjs · tests/w01-warehouse-menu.test.mjs · tests/mt3-ui-29-view-collision-diagnostic.test.mjs | 2026-10-06 09:00:00 |
+| ERP-SESSION-02 | lib/warehouse-hub.ts · lib/menu-helpers.ts · **app/screens/Inventory.tsx** · **app/screens/WarehouseDashboard.tsx** · **app/screens/MaterialCategoryList.tsx** (MỚI) · tests/warehouse-hub.test.mjs · tests/w04-inventory-dashboard.test.mjs · tests/w01-warehouse-menu.test.mjs · tests/mt3-ui-29-view-collision-diagnostic.test.mjs | 2026-10-06 09:00:00 → ⭐ **CẬP NHẬT 2026-10-07 16:1x** |
 | ERP-SESSION-01 | app/page.tsx · cac tep java-backend/ | (khong ro) |
+| ERP-SESSION-03 | ⭐ **TỰ KHAI trong `docs/dsh-mutil-session/SESSION_C/README.md`** §2 — `app/screens/HrProfileEditModal.tsx` · `app/screens/TeamDirectory.tsx` · tests/mt3-c03-* · tests/tm01-* | 2026-10-07 16:54:34 |
+
+> ⭐⭐ **CẬP NHẬT 2026-10-07 16:1x bởi `ERP-SESSION-02`** (⭐ ghi theo quy ước **READ → MODIFY CAREFULLY → PRESERVE OTHER SESSION DATA → WRITE → VERIFY** ✓):
+> - ⭐ **Dòng của phiên 02 trước đây THIẾU 2 tệp** ⚠️ ⇒ `ERP-SESSION-03` đối chiếu phải bản thiếu ⚠️ ⇒ **đã bổ sung** `WarehouseDashboard.tsx` + `MaterialCategoryList.tsx` ✅
+> - ⭐ **TÌNH TRẠNG PHIÊN 02**: ⭐ **CÔNG VIỆC ĐÃ XONG** ✅ — ⭐ TASK-226→229 + `BUG-20261006-012` + `BUG-20261007-013/014/015/016` ⭐ ⭐ **⛔ KHÔNG có thay đổi cục bộ nào trong các tệp trên** (⭐ đã commit + push hết ✓) ⭐ ⇒ ⭐ **có thể coi là ĐÃ NHẢ (RELEASED)** ✅
+> - ⭐ **VIỆC CÒN LẠI CỦA PHIÊN 02**: ⭐ **CHỜ USER cho quy tắc nghiệp vụ** (⭐ modal «Tạo/Sửa kho» · action `delete_warehouse` · «phiếu cấp phát» ✓) ⇒ ⭐ **4 nút đang TẠM KHOÁ** (`disabled` + `title` nêu lý do ✓)
+> - ⭐ ⛔ **dòng của phiên 01 và 03 ⛔ KHÔNG bị sửa** ✅ (⭐ riêng phiên 03: em chỉ **trỏ tới** bản tự khai của họ, ⛔ không tự đặt lại phạm vi thay họ ✓)
 
 ## Du lieu that (do tren payload song)
 warehouses 12 · inventory 1.185 dong ton · issues 29 · receipts 36 · returns 6 · projects 5 · userScopes 28.
