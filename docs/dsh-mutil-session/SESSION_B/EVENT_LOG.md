@@ -317,3 +317,13 @@ Description: **BUG-20261006-007 DA SUA (dinh chinh bao xanh gia)** — ghi khoi 
 | ⭐⭐ **NEO **THẬT** ĐÃ ĐO ĐƯỢC** | ⭐ `warehouse-cards` ⭐ (**KHỐI LƯỚI THẺ KHO** ✓) ⭐ `warehouse-card` (×n) ⭐ `inv-transfer-btn` ⭐ `inv-ledger-btn` ⇒ ⭐⭐ **bàn giao tên neo CHÍNH XÁC cho lần sau** ⭐⭐ ✅ |
 | ⭐ **BÀI HỌC (§33)** | ⭐ ⭐⭐ **BƯỚC 0 BẮT BUỘC: LIỆT KÊ `[data-vntech]` CÓ THẬT TRƯỚC KHI CHỌN NEO** ⭐ ⭐⭐ ⭐ ⭐ (⭐ **lần thứ 9** trong phiên: giả định ⛔ không kiểm ⚠️) ✓ |
 | **TRUY VẾT** | ⭐ `TEST-20261007-030` · `TEST-20261007-032` ✓ |
+
+## ⭐⭐⭐ EVT-20261007-044 — §22 «EMPTY STATE» **ĐẠT** sau 3 LẦN ĐO (2 lần đầu INCONCLUSIVE) ⭐⭐⭐
+| ⭐ | ⭐ |
+|---|---|
+| **SỰ KIỆN** | ⭐ `TEST_COMPLETE` + ⭐ `VERIFICATION` — ⭐ lần 3 đo empty state ⭐ **theo đủ 2 luật** đã rút ra từ 2 lần hỏng ✓ |
+| ⭐⭐ **KẾT QUẢ** | ⭐⭐ **ĐẠT** ⭐⭐ — ⭐ khối `[data-vntech="warehouse-cards"]` ⭐ **12 thẻ → 0 thẻ** ⭐ ⇒ ⭐⭐ **hiện «Không có kho nào khớp từ khoá tìm kiếm»** ⭐⭐ ✅ |
+| ⭐ **Ý NGHĨA** | ⭐ UI ⭐⭐ **có EMPTY STATE rõ ràng** ⭐⭐ ⛔ không để **lưới trống trơn** ⚠️ ⇒ ⭐ **§22 ĐẠT** cho mục «Empty state» ✅ |
+| ⭐⭐⭐ **BÀI HỌC LỚN NHẤT (§33) — QUY TRÌNH 3 BƯỚC ĐỂ ĐO ĐÚNG** | ⭐⭐⭐ **① CÔ LẬP ĐÚNG KHỐI** ⭐ (⭐ ⛔ không selector toàn trang ✓) ⭐ **② BƯỚC 0: LIỆT KÊ `[data-vntech]` CÓ THẬT** ⭐ (⭐ ⛔ không giả định tên ✓) ⭐ **③ CHỌN ĐƠN VỊ ĐẾM ĐÚNG LOẠI** ⭐ (⭐ lưới thẻ ⇒ đếm **THẺ**, ⛔ không đếm `tr` ✓) ⭐ ⭐ ⭐ ⭐⭐⭐ **⇒ 2 LẦN ĐẦU HỎNG VÌ THIẾU ② VÀ ③; LẦN 3 ĐỦ CẢ 3 ⇒ ĐẠT** ⭐⭐⭐ ✓ |
+| ⭐ **GIÁ TRỊ CỦA 2 LẦN HỎNG** | ⭐ ⭐⭐ **2 lần INCONCLUSIVE ⛔ KHÔNG vô ích** ⭐⭐ — ⭐ chính chúng **sinh ra 2 LUẬT** ⭐ mà lần 3 **áp vào ⇒ ĐẠT** ✅ ⭐ ⭐ ⇒ ⭐ **«ghi đúng cái mình ⛔ làm sai» có giá trị kỹ thuật thật** ✅ |
+| **TRUY VẾT** | ⭐ `TEST-20261007-033` · `TEST-20261007-030` · `TEST-20261007-032` ✓ |
