@@ -585,3 +585,15 @@ Notes: ⭐ **CÒN LẠI 2 KHỐI «GIẢI THÍCH» trong tab KHO** (⛔ không t
 | **GHI CHÚ PHÂN VAI** | ⭐ Màn `TeamDirectory.tsx` ⭐ **thuộc `ERP-SESSION-03`** ⭐ ⇒ ⭐ phiên 02 ⭐⭐ **CHỈ ĐỌC, ⛔ KHÔNG SỬA** ⭐⭐ ✅ (§7 ✓) |
 | **STATUS** | ⭐⭐ **PASS** ⭐⭐ |
 | **RELATED** | ⭐ `TEST-20261007-027` (hồi quy 54/54) · `HANDOFF-20261007-006` ✓ |
+
+## ⭐ TEST-20261007-032 — §22 «empty state» LẦN 2: ⛔ VẪN KHÔNG KẾT LUẬN — **NEO SAI TÊN** ⭐
+| ⭐ | ⭐ |
+|---|---|
+| **DATE** | 2026-10-07 · **SESSION_ID** `ERP-SESSION-02` · **TEST_TYPE** `UI` |
+| **Ý ĐỊNH** | ⭐ Áp **luật rút ra từ `TEST-030`** («neo vào `[data-vntech]` của khối mục tiêu») ⭐ ⇒ ⭐ em neo `[data-vntech="inventory-table-card"]` ✓ |
+| ⭐⭐ **KẾT QUẢ (⛔ THẤT BẠI)** | ⭐ `!!document.querySelector('[data-vntech="inventory-table-card"]')` ⇒ ⭐⭐ **`false`** ⭐⭐ ⇒ ⭐ ⛔ **KHỐI NEO KHÔNG TỒN TẠI** ⇒ ⭐ **⛔ không đo được** ⚠️ ✓ |
+| ⭐⭐⭐ **DANH SÁCH NEO **THẬT** ĐO ĐƯỢC TRÊN MÀN HUB KHO** (⭐ bàn giao cho lần sau ✓) | ⭐ `inv-transfer-btn` · `inv-ledger-btn` (**của em** — TASK-228) ⭐ ⭐⭐ `warehouse-cards` (⭐ KHỐI LƯỚI THẺ KHO ✓) ⭐⭐ · ⭐ `warehouse-card` (× nhiều — ⭐ từng thẻ ✓) ⭐ ⭐ ⇒ ⭐⭐ **neo ĐÚNG cho tab «KHO» là `[data-vntech="warehouse-cards"]`** ⭐⭐ ⛔ **KHÔNG phải `inventory-table-card`** ⚠️ ✓ |
+| ⭐ **PHÁT HIỆN PHỤ (⭐ quan trọng)** | ⭐⭐ **Tab «KHO» dùng LƯỚI THẺ (`warehouse-cards`) ⛔ KHÔNG dùng BẢNG** ⭐⭐ ⚠️ ⇒ ⭐ «empty state» ở đây là ⭐ **lưới thẻ RỖNG** ⛔ không phải **bảng rỗng** ⚠️ ⇒ ⭐ **cách đo phải KHÁC** (⭐ đếm `[data-vntech="warehouse-card"]` thay vì `tbody tr` ✓) ✓ |
+| ⭐⭐⭐ **SAI LẦM ĐÃ SỬA (§22) — LẦN 9** | ⭐⭐ **EM GIẢ ĐỊNH TÊN NEO ⛔ KHÔNG ĐO TRƯỚC** ⭐⭐ ⚠️ ⭐ ⭐ (⭐ `TEST-030` nói «neo vào `[data-vntech]`» ⭐ nhưng ⭐⛔ **em KHÔNG kiểm tên đó có tồn tại** ⚠️ ✓) ⭐ ⇒ ⭐⭐ **LUẬT: TRƯỚC KHI ĐO BẰNG NEO ⇒ PHẢI LIỆT KÊ `[data-vntech]` CÓ THẬT TRÊN MÀN** ⭐⭐ ✓ |
+| **STATUS** | ⭐⭐ **INCONCLUSIVE** ⭐⭐ (⭐ lần 2 ✓) — ⭐ **⛔ vẫn chưa kết luận được empty state** ⚠️ ⭐ ⛔ **không sửa gì** (⭐ ⛔ không phải bug ✓) ✓ |
+| ⭐ **BÀI HỌC (§33)** | ⭐ ⭐⭐ **«NEO ĐÚNG KHỐI» CHƯA ĐỦ — PHẢI «NEO ĐÚNG TÊN CÓ THẬT»** ⭐ ⭐⭐ ⭐ ⭐ Cách làm đúng: ⭐ **BƯỚC 0 = LIỆT KÊ `document.querySelectorAll('[data-vntech]')` TRƯỚC** ⭐ rồi mới chọn neo ✓ ✓ |
