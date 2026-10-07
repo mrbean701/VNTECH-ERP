@@ -132,3 +132,21 @@ IMPACT: ⛔ KHÔNG mất dữ liệu/chức năng nghiệp vụ: 2 khối giải
 COMPATIBILITY: không đổi API/schema. Dùng ĐÚNG khuôn `CardHead` có sẵn (`action: string` + `onClick`).
 TEST: `npx tsc --noEmit` **EXIT=0** · `npm run test:regression` **803·802pass·0fail** · E2E thật trên :9000
 STATUS: **VERIFIED**
+
+## ⭐⭐ CHG-20261007-006 — TẠM KHOÁ 4 NÚT CHẾT Ở HUB «KHO VẬT TƯ» + GHI RÕ LÝ DO ⭐⭐
+| ⭐ | ⭐ |
+|---|---|
+| **SESSION** | ⭐ `ERP-SESSION-02` ⭐ (⭐ `app/screens/Inventory.tsx` **thuộc phiên 02** ✓) |
+| ⭐ **CATEGORY** | ⭐ **UI_UX** + ⭐ **BUGFIX** (⭐ chuyển «im lặng» ⚠️ → «nói rõ lý do» ✅ ✓) |
+| **MODULE** | ⭐ Hub «Kho vật tư» → tab «KHO» + tab «CẤP PHÁT & HOÀN TRẢ» ✓ |
+| ⭐⭐ **BEFORE** | ⭐ 4 nút **BẤM ĐƯỢC nhưng ⛔ KHÔNG CÓ GÌ XẢY RA** (⭐ im lặng ⚠️) ⭐ — ⭐ đo thật: `dai` **107.793 → 107.793**, `modal 0` ✓ |
+| ⭐⭐ **AFTER** | ⭐ 4 nút ⭐⭐ **BỊ KHOÁ (`disabled`)** ⭐⭐ + ⭐ mỗi nút có **`title`** nêu **mã bug + lý do** ✅ ⭐ + ⭐ **ghi chú trên thanh công cụ** nêu lý do ✅ ✓ |
+| **4 NÚT** | ⭐ ① «＋ Tạo kho» ⭐ ② «✎ Sửa» ⭐ ③ «🗑 Xóa» ⭐ ④ «＋ Tạo phiếu cấp phát» ✓ |
+| **REASON** | ⭐⭐⭐ `open("warehouse")` / `open("allocate")` ⇒ ⛔ **`app/page.tsx` đủ 40 modal nhưng ⛔ KHÔNG có 2 tên đó** ⭐ `action("delete_warehouse")` ⇒ ⛔ **không tồn tại ở CẢ JS lẫn Java** ⭐⭐⭐ ⇒ ⭐⭐ **chờ backend bổ sung — ⛔ không được bịa nghiệp vụ (§14)** ⭐⭐ ✓ |
+| **FILES** | ⭐ `app/screens/Inventory.tsx` ⭐ — ⭐ **14 thêm / 7 xoá** ⭐ ⭐ (⭐ **⛔ GIỮ NGUYÊN `onClick`** ⇒ ⭐ **hoàn nguyên = chỉ bỏ `disabled`** ✓) ✓ |
+| ⭐ **IMPACT** | ⭐ Người dùng ⭐⭐ **BIẾT VÌ SAO ⛔ KHÔNG BẤM ĐƯỢC** ⭐⭐ (⛔ hết hiểu nhầm «hệ thống treo») ✅ · ⭐ ✅ **⛔ KHÔNG ảnh hưởng** nút còn lại ✓ |
+| **COMPATIBILITY** | ⭐ ✅ **Tương thích ngược** — ⛔ không đổi API · ⛔ không đổi dữ liệu · ⛔ không đổi quyền ✓ |
+| ⭐⭐ **TEST** | ⭐ `tsc EXIT=0` ✅ ⭐ `npm run BUILD_EXIT=0` ⭐ `BUILT ARTIFACT VALIDATION: ĐẠT` ✅ ⭐ vân tay `VNTECH-FP-ECCDEC5AB0C8BDF8` ✅ ⭐ server `:8787` PID **1368** ⭐ `:9000` **HTTP 200** ✅<br>⭐⭐ **ĐO TRÊN UI (có ĐỐI CHỨNG DƯƠNG)**: ⭐ **4/4 nút KHOÁ** ✅ ⭐ **3/3 đối chứng dương VẪN CHẠY** ✅ — ⭐ «⇩ Xuất Excel» `disabled=false` ✅ ⭐ «◉ Xem chi tiết kho» `disabled=false` ⭐ **VÀ ĐỔI MÀN THẬT** ✅ ⭐ «＋ Tạo phiếu hoàn trả» `disabled=false` ⭐ **MỞ MODAL THẬT** (`modal 0 → 1`) ✅ ✓ |
+| ⭐⭐ **SAI LẦM ĐÃ SỬA (§22) — LẦN 6** | ⭐ Bản đo đầu báo ⭐ **«2/3 đối chứng»** ⚠️ và ⭐ **«ghi chú ⛔ KHÔNG có»** ⚠️ ⇒ ⭐⭐ **CẢ 2 ĐỀU LÀ LỖI PHÉP ĐO** ⭐⭐:<br>⭐ **①** «◉ Xem chi tiết kho» `disabled=true` ⭐ vì ⭐⭐ **nút cần `selectedWhId` — probe ⛔ CHƯA CHỌN thẻ kho** ⭐⭐ ⇒ ⭐ ✅ **chọn thẻ xong ⇒ `disabled=false`** ⭐ ⭐ (⭐ **⛔ không phải lỗi** ✓)<br>⭐ **②** «ghi chú ⛔ KHÔNG có» ⭐ vì ⭐⭐ **chuỗi bị CẮT ở 150 ký tự** — ⭐ phần «TẠM KHOÁ» nằm ở **CUỐI** ⭐⭐ ⇒ ⭐ ✅ **tìm toàn bộ ⇒ CÓ** ⭐ ✓<br>⭐⭐ ⭐ ⇒ ⭐⭐ **PHÉP ĐO PHẢI: (a) ĐỦ ĐIỀU KIỆN TIÊN QUYẾT của đối tượng · (b) ⛔ KHÔNG CẮT DỮ LIỆU** ⭐⭐ ✓ |
+| **STATUS** | ⭐⭐ **DONE** ⭐⭐ — ⭐ `tsc` + build + đo UI **đều ĐẠT** ✅ ⭐ (⭐ **nhưng 4 chức năng vẫn ⛔ CHƯA HOẠT ĐỘNG** — ⭐ đây là **giảm thiệt hại UX**, ⛔ không phải đã sửa xong bug ⚠️ ✓) ✓ |
+| **RELATED** | ⭐ `BUG-20261007-013` · `-014` · `-015` ⭐ `DEC-20261007-010` ✓ |
