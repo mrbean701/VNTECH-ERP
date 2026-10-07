@@ -291,3 +291,12 @@ Description: **BUG-20261006-007 DA SUA (dinh chinh bao xanh gia)** — ghi khoi 
 | ⭐ **PHÁT HIỆN PHỤ** | ⭐ ⭐⭐ **GHI CHÚ TRONG MÃ ĐÃ LỖI THỜI** ⭐⭐ (`AdminUserModalTabs.tsx:39-41` mô tả trạng thái ⛔ không còn đúng) ⚠️ ⭐ ⛔ **KHÔNG tự sửa** — ⭐ cần kiểm **phân vai tệp** trước (§7) ✓ |
 | ⭐⭐ **BÀI HỌC (§33)** | ⭐ ⭐⭐ **GHI CHÚ TRONG MÃ ⛔ KHÔNG PHẢI BẰNG CHỨNG** ⭐ ⭐⭐ — ⭐ phải **ĐO LẠI** ⭐ ⭐ nếu tin ghi chú ⇒ ⭐ **đi sửa thứ ⛔ không hỏng** ⚠️ ⭐ (⭐ lần thứ **7** trong phiên nguồn tin ⛔ không khớp thực tế ✓) ✓ |
 | **KẾT LUẬN** | ⭐ **§22 ĐẠT** ✅ ⭐ ⛔ **không cần thay đổi mã** ✅ ⭐ ⇒ ⭐⭐ **KẾT QUẢ ÂM CÓ GIÁ TRỊ: xác nhận hệ thống ⛔ không vi phạm §22** ⭐⭐ ✓ |
+
+## ⭐ EVT-20261007-041 — §22 «empty state»: ⛔ PHÉP ĐO THIẾU CÔ LẬP ⇒ TỰ DỪNG, ⛔ KHÔNG KẾT LUẬN ⭐
+| ⭐ | ⭐ |
+|---|---|
+| **SỰ KIỆN** | ⭐ `TEST_COMPLETE` — ⭐ kiểm «Empty state» (§22) trên 3 màn **thuộc phiên 02** ✓ |
+| **KẾT QUẢ** | ⭐⭐ **INCONCLUSIVE** ⚠️ — ⭐ selector `table tbody tr` ⭐ **đếm TẤT CẢ bảng** ⇒ ⭐ **⛔ không cô lập được bảng mục tiêu** ⚠️ ✓ |
+| ⭐⭐ **QUYẾT ĐỊNH (§22 · thà ⛔ không báo còn hơn báo SAI)** | ⭐⛔ **KHÔNG báo kết luận** ⭐ ⛔ **không sửa gì** ⭐ ⭐ ghi rõ **hướng làm đúng** cho lần sau: ⭐ dùng `[data-vntech="inventory-table-card"]` / `[data-vntech^="ar-"]` ⭐ + ⭐ `khối.querySelector('input')` ✓ |
+| ⭐ **BÀI HỌC (§33)** | ⭐ ⭐⭐ **PHÉP ĐO PHẢI CÔ LẬP ĐÚNG KHỐI — ⛔ KHÔNG DÙNG SELECTOR TOÀN TRANG** ⭐ ⭐⭐ ⭐ (⭐ lần thứ **8** trong phiên ⚠️ — ⭐ **cùng một loại lỗi: THIẾU điều kiện cô lập** ✓) ⭐ ⭐ **⇒ luật rút ra: MỌI selector phải NEO vào `[data-vntech="…"]` của khối mục tiêu** ⭐ ✓ |
+| **TRUY VẾT** | ⭐ `TEST-20261007-030` ✓ |

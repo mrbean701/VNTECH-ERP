@@ -560,3 +560,16 @@ Notes: ⭐ **CÒN LẠI 2 KHỐI «GIẢI THÍCH» trong tab KHO** (⛔ không t
 | ⭐ **BÀI HỌC (§33)** | ⭐ ⭐⭐ **GHI CHÚ TRONG MÃ ⛔ KHÔNG PHẢI BẰNG CHỨNG — PHẢI ĐO LẠI** ⭐ ⭐⭐ — ⭐ nếu tin ghi chú «lệch nhau rõ» ⭐ thì đã **đi sửa một thứ ⛔ không hỏng** ⚠️ ⇒ ⭐⭐ **mất thời gian + rủi ro tạo lỗi mới** ⭐⭐ ⭐ ⭐ (⭐ đây là lần thứ 7 trong phiên một «nguồn tin» hoá ra ⛔ không khớp thực tế ⚠️ ✓) ✓ |
 | **TRẠNG THÁI** | ⭐⭐ **PASS** ⭐⭐ — ⭐ **§22 ĐẠT cho tab trong modal** ✅ ⭐ ⛔ **KHÔNG cần sửa gì** ✓ |
 | **RELATED** | ⭐ `EVT-20261007-040` ✓ |
+
+## ⭐ TEST-20261007-030 — §22 «EMPTY STATE» TRÊN 3 MÀN PHIÊN 02 — ⛔ **KHÔNG KẾT LUẬN** (phép đo thiếu) ⭐
+| ⭐ | ⭐ |
+|---|---|
+| **DATE** | 2026-10-07 · **SESSION_ID** `ERP-SESSION-02` · **TEST_TYPE** `UI` |
+| **MỤC ĐÍCH** | ⭐ §22 liệt kê «**Empty state** · Error state · Loading» ⭐ ⇒ ⭐ kiểm khi tập dữ liệu **RỖNG** thì UI có **thông báo rõ** ⛔ hay **bảng trống trơn** ⚠️ ✓ |
+| **CÁCH ĐO** | ⭐ Gõ từ khoá **⛔ không tồn tại** (`ZZZ_KHONG_TON_TAI_ZZZ`) vào ô tìm kiếm ⭐ ⇒ ⭐ đếm `table tbody tr` ⭐ ⇒ ⭐ tìm chuỗi «không có/chưa có/không tìm thấy/trống» ✓ |
+| ⭐⭐ **KẾT QUẢ ĐO** | ⭐ Tab «KHO»: **1.198 → 14** dòng ⚠️ ⭐ Tab «XUẤT & NHẬP»: **30 → 1** ⚠️ ⭐ Tab «CẤP PHÁT & HOÀN TRẢ»: **48 → 19** ⚠️ ⭐ ⇒ ⭐ **⛔ KHÔNG lần nào về 0** ⇒ ⭐ **⛔ không quan sát được empty state** ✓ |
+| ⭐⭐⭐ **VÌ SAO ⛔ KHÔNG KẾT LUẬN ĐƯỢC (tự phát hiện)** | ⭐ `document.querySelectorAll('table tbody tr')` ⭐⭐ **đếm TẤT CẢ bảng trên màn** ⭐⭐ ⚠️ — ⭐ màn hub Kho có **NHIỀU bảng** (bảng kho · bảng tồn · bảng phiếu…) ⚠️ ⇒ ⭐⭐ **con số giảm là do BẢNG KHÁC co lại, ⛔ KHÔNG phải bảng mục tiêu** ⭐⭐ ⇒ ⭐⭐ **phép đo ⛔ KHÔNG CÔ LẬP ĐƯỢC ĐỐI TƯỢNG** ⚠️ ⭐⭐<br>⭐ Thêm nữa: ⭐ `document.querySelector('.list-toolbar input')` ⭐ có thể **bắt nhầm ô tìm kiếm của thanh khác** (⭐ trang có nhiều `ListToolbar`) ✓ |
+| ⭐⭐ **QUYẾT ĐỊNH** | ⭐⭐ **⛔ KHÔNG báo kết luận** ⭐⭐ ⭐ ⛔ **không sửa gì** ⭐ ⭐ lý do: ⭐ **«thà ⛔ không báo còn hơn báo SAI»** ⭐ (⭐ đúng bài học `TEST-20261007-028` ✓) ✓ |
+| **HƯỚNG LÀM ĐÚNG (⭐ cho lần sau)** | ⭐ Phải ⭐ **cô lập đúng khối**: ⭐ dùng `[data-vntech="inventory-table-card"]` (⭐ có sẵn ✓) ⭐ hoặc `[data-vntech^="ar-"]` ⭐ ⇒ ⭐ đếm `tr` **trong khối đó** ⭐ ⭐ + ⭐ dùng **đúng ô tìm kiếm của khối đó** (⭐ `khối.querySelector('input')` ✓) ✓ |
+| **STATUS** | ⭐⭐ **INCONCLUSIVE** ⭐⭐ — ⭐ **⛔ chưa kết luận được có/không có empty state** ⚠️ ⭐ (⭐ ⛔ không phải bug, ⛔ không phải PASS ✓) |
+| ⭐ **BÀI HỌC (§33)** | ⭐ ⭐⭐ **PHÉP ĐO PHẢI CÔ LẬP ĐÚNG KHỐI — ⛔ KHÔNG DÙNG SELECTOR TOÀN TRANG** ⭐ ⭐⭐ ⭐ (⭐ lần thứ **8** trong phiên một phép đo thiếu điều kiện ⚠️ ✓) |
