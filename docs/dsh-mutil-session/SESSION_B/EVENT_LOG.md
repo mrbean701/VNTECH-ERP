@@ -230,3 +230,16 @@ Description: **BUG-20261006-007 DA SUA (dinh chinh bao xanh gia)** — ghi khoi 
 | ⭐ **SAI LẦM ĐÃ SỬA (§22)** | ⭐ Bản đo đầu **chỉ đếm `modal`** ⚠️ ⇒ **đối chứng dương cũng ra «0»** (⭐ vì nó mở **MÀN** ⛔ không mở modal) ⇒ ⭐⭐ **tiêu chí đo THIẾU, suýt kết luận sai** ⚠️ ⭐⭐ ⇒ ✅ sửa: đo thêm `h1` + `dai` + `manChiTiet` ✓ |
 | ⭐ **BÀI HỌC (§33)** | ⭐ ⭐⭐ **PHÉP ĐO PHẢI CÓ «ĐỐI CHỨNG DƯƠNG» — ⭐ một đối tượng BIẾT CHẮC là hoạt động** ⭐ ⭐⭐ — ⭐ nếu không ⭐ **«0 thay đổi» ở mọi đối tượng» ⛔ không phân biệt được «tất cả đều chết» với «phép đo hỏng»** ⚠️ ⭐ ⭐ (⭐ trong phiên này em **sai 3 lần** vì thiếu đối chứng: ⭐ menu 2/2 giả · `innerText` rỗng · `modal` thiếu ⚠️) ✓ |
 | **TRUY VẾT** | ⭐ `BUG-20261007-014` ✓ |
+
+## ⭐⭐⭐ EVT-20261007-036 — COMMIT + PUSH THEO CHỈ THỊ USER ⭐⭐⭐
+| ⭐ | ⭐ |
+|---|---|
+| **SỰ KIỆN** | ⭐ `SESSION_PAUSE` + **COMMIT + PUSH** ⭐ — ⭐ user chỉ thị (07/10): «**dừng việc đang làm lại, commit và push sau đó merge vào unity**» ✓ |
+| **ĐÃ DỪNG** | ⭐ dừng việc **kiểm `action()` gửi request** (⭐ nhánh điều tra `BUG-20261007-015`) ⭐ ⛔ dở dang — ⭐ ghi lại để tiếp sau ✓ |
+| **NHÁNH** | ⭐⭐ **ĐANG Ở `unity`** ⭐⭐ (⭐ đo `git branch --show-current` ✓) ⇒ ⭐ **commit thẳng lên unity = đúng yêu cầu «merge vào unity»** ✓ |
+| **COMMIT** | ⭐⭐⭐ `7a033a0` ⭐⭐⭐ · 07/10 **11:16:42** · ⭐⭐ **116 tệp** ⭐⭐ · ⭐ `git add -A` ⇒ ⭐ **0 tệp còn ngoài stage** ✓ |
+| **PUSH** | ⭐ **LẦN 1 THẤT BẠI**: ⭐ `fatal: unable to access … Could not resolve host: github.com` (⭐ exit `128` ⚠️)<br>⭐ **CHẨN ĐOÁN MẠNG**: ⭐ `Resolve-DnsName github.com` ⇒ **20.205.243.166** ✅ · ⭐ `Test-NetConnection -Port 443` ⇒ **TcpTestSucceeded = True** ✅ · ⭐ `api.github.com` ⇒ **HTTP 200** ✅ · ⭐ `http.proxy`/`https.proxy` = **rỗng** ✓ ⇒ ⭐⭐ **LỖI DNS TẠM THỜI, ⛔ không phải lỗi cấu hình** ⭐⭐<br>⭐ **LẦN 2 THÀNH CÔNG**: ⭐⭐ `3dd2431..7a033a0  unity -> unity` ⭐⭐ · exit **0** ✅ |
+| **XÁC MINH SAU PUSH** | ⭐ `HEAD` = **`7a033a0`** ⭐ `origin/unity` = **`7a033a0`** ⇒ ⭐⭐ **KHỚP** ⭐⭐ · ⭐ **AHEAD 0 / BEHIND 0** ✅ · ⭐ cây làm việc **SẠCH** ✅ · ⭐ 4 tệp then chốt **có trên `origin/unity`**: `MaterialCategoryList.tsx` · `Inventory.tsx` · `01-dashboard__desktop.png` · `BUG_HOTFIX_LOG.md` ✅ |
+| ⭐ **ĐỐI CHIẾU `unity` ↔ `main`** | ⭐⭐ **`unity` TRƯỚC `main` 34 commit** ⚠️ ⭐ **`main` trước `unity` 2 commit** ⚠️ ⇒ ⭐ ⛔ **CHƯA merge `unity` → `main`** ⭐ ⭐ **(⭐ user chỉ nói «merge vào unity» — ⭐ đã đạt; ⭐ chưa được yêu cầu merge sang `main` ⇒ ⏳ CHỜ USER ✓)** |
+| ⭐ **BÀI HỌC (§33)** | ⭐ ⭐ **LỖI DNS CÓ THỂ CHỈ LÀ TẠM THỜI — ⭐ PHẢI CHẨN ĐOÁN TRƯỚC KHI KẾT LUẬN «MẤT MẠNG»** ⭐ ⭐ — ⭐ DNS resolve được · TCP 443 mở · HTTP 200 ⭐ ⇒ ⭐ **thử lại 1 lần** là xong ✓ ⭐ ⛔ **đừng sửa cấu hình git/proxy khi chưa đo** ✓ |
+| ⭐ **TRUY VẾT** | ⭐ commit `7a033a0` ✓ |
