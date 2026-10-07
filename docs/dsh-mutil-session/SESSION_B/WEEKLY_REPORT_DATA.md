@@ -159,3 +159,91 @@ BUG-20261006-011 (khoi dong lai `:8787` dung PID) · BUG-20261006-012 (them `ope
 - Chờ user quyết chỗ đặt 2 công cụ «So sánh BOQ» + «Soát trùng alias».
 - Chờ user quyết 2 khối «giải thích» trong tab KHO (giữ / thu vào nút «?» / bỏ).
 - **BUG-20261006-006 còn OPEN**: cổng ảnh ⛔ không kiểm `nav` ⇒ màn điều hướng sai vẫn báo PASS.
+
+---
+
+# ⭐⭐⭐ CẬP NHẬT 2026-10-07 (buổi chiều) — `ERP-SESSION-02` ⭐⭐⭐
+
+> ⭐ Ghi **APPEND** (Goal §25 `NO_LOG_OVERWRITE = TRUE`) ⭐ ⛔ **không sửa khối cũ** ✓
+> ⭐ Tuần ISO: **2026-W41** · ⭐ 2026-10-05 → 2026-10-11 · ⭐ Phiên: **`ERP-SESSION-02`**
+
+## Session
+`ERP-SESSION-02` (⭐ đăng ký tại `docs/dsh-state/SESSION_REGISTRY.md` ✓)
+
+## Completed Tasks (bổ sung sau 10:25)
+| TASK | Tên | Kết quả |
+|---|---|---|
+| **TASK-229** | Theo **2 quyết định user** | ⭐ **(c) BỎ HẲN** 2 công cụ «So sánh BOQ» + «Soát trùng alias» (⭐ xoá `MaterialMatchingWorkspace` 28 dòng ✓) · ⭐ **(b) THU** 2 khối «giải thích» vào **nút «?»** (⭐ `WarehouseDashboard.tsx` ✓) · ⭐ **(1) chụp lại ảnh chuẩn** ✓ |
+
+## UI/UX
+- ⭐ Tab «KHO» hub Kho vật tư: **6.202px → 4.949px** (TASK-228) → ⭐⭐ **4.052px** mặc định khi thu «?» (TASK-229) ⇒ ⭐ **giảm 35%** ⭐ (⭐ bấm «?» ⇒ 4.949px · bấm lại ⇒ 4.052px ✓)
+- ⭐ **§22 KIỂM TAB TRONG MODAL**: ⭐⭐⭐ **ĐẠT** ⭐⭐⭐ — ⭐ modal «Sửa tài khoản» ⭐ 2 tab ⭐⭐ **609px / 609px · lệch 0px** ⭐⭐ · `flex=1 1 0px` ✅
+- ⭐ **TẠM KHOÁ 4 NÚT CHẾT** + ghi rõ lý do (`disabled` + `title`) ⭐ 3/3 **đối chứng dương vẫn chạy** ✅
+
+## Frontend
+- ⭐ `app/screens/MaterialCategoryList.tsx` (**MỚI** · 116 dòng · TASK-227 ✅)
+- ⭐ `app/screens/Inventory.tsx` (TASK-228 **6 thêm/10 xoá** · BUG-014/015 **14 thêm/7 xoá** ✓)
+- ⭐ `app/screens/WarehouseDashboard.tsx` (TASK-229 ✓)
+- ⭐ `app/page.tsx` (TASK-227: bỏ khối trồng tréo · 3 tab · S01 sửa `moduleKey` ✓)
+
+## Backend/API
+- ⭐ ⛔ **KHÔNG sửa backend** trong phiên này ⚠️
+- ⭐ **PHÁT HIỆN (kiểm chứng độc lập cho S01)**: ⭐⭐ **LỆCH RBAC 2 PHÍA** ⭐⭐ — ⭐ frontend `lib/approval-helpers.ts:15` `stageAllowedForUser` **chỉ kiểm `allowedRoleCodes` + admin bypass** ⚠️ ⭐ backend `RequestManagementUseCase.java:902-914` `canApproveRequestStage` **đòi user nằm trong `stageApproverUserIds(projectId,stage)` ∪ `ownerUserId`** ✓ ⇒ ⭐ **giải thích CHÍNH XÁC bug `decide_approval` của S01** ✅
+
+## RBAC/Workflow
+- ⭐ ⭐ **RBAC MISMATCH (phát hiện lớn)** ⭐: ⭐ **`admin` ⛔ KHÔNG bypass ở backend** ⚠️ nhưng **frontend bypass** ⇒ ⭐ **nút bật cho người ⛔ không có quyền duyệt bước đó** ⚠️ ⇒ ⭐ **bấm ⇒ backend 403 ⇒ UI ⛔ không đổi** ✓
+- ⭐ **3 hướng sửa** đã ghi cho S01: ⭐ (a) frontend kiểm thêm pool ⭐ (b) UI **hiện lỗi backend** ⭐ (c) **kiểm DỮ LIỆU** phân công ⚠️
+
+## Bugs (bổ sung)
+| BUG_ID | Severity | Status | Nội dung ngắn |
+|---|---|---|---|
+| `BUG-20261007-013` | **HIGH** | **OPEN** (⭐ nút đã khoá ✓) | «＋ Tạo phiếu cấp phát» gọi `open("allocate")` — **⛔ không có modal `allocate`** |
+| `BUG-20261007-014` | **HIGH** | **OPEN** (⭐ nút đã khoá ✓) | «＋ Tạo kho» + «✎ Sửa» gọi `open("warehouse")` — ⛔ **không có modal `warehouse`** ⭐ + ⛔ **không có `WarehouseModal`** ⭐ + ⛔ **không có action `save_warehouse`** |
+| `BUG-20261007-015` | **HIGH** | **OPEN** (⭐ nút đã khoá ✓) | «🗑 Xóa kho» gọi `action("delete_warehouse")` — ⛔ **không tồn tại ở CẢ JS lẫn Java** (⭐ đo 2 chiều ✓) |
+| `BUG-20261007-016` | **LOW** | **OPEN** | Ghi chú `AdminUserModalTabs.tsx:39-41` **LỖI THỜI** (⭐ ⛔ không sửa — §7 ✓) |
+| `BUG-20261006-012` | HIGH | **FIXED** ✅ | Tab 1+2 màn «Danh mục vật tư» **TRẮNG** do `<details>` thiếu `open` (⭐ đo `h=0px → 947px` ✓) |
+
+## Testing (bổ sung)
+- ⭐ `TEST-20261007-027` — ⭐ **hồi quy rộng §25**: ⭐ **54/54 mục menu render OK · 0 màn trống · 0 không bấm** (11 nhóm) ✅ + ⭐ **chứng minh ⛔ không hồi quy** ✓
+- ⭐ `TEST-20261007-028` — **phương pháp quét lớp lỗi + GIỚI HẠN** (⭐ quét ③ `<button>` **⛔ KHÔNG đáng tin** ⇒ **tự dừng, ⛔ không báo số** ✓)
+- ⭐ `TEST-20261007-029` — ⭐ **§22 tab trong modal: ĐẠT** (609/609px ✓)
+- ⭐ **HỒI QUY `npm test`**: ⭐⭐ **803 test · 802 pass · 0 fail · 1 skip** ⭐⭐ ✅ `TEST_EXIT=0` ✅
+- ⭐ **BUILD**: ⭐ `tsc EXIT=0` ✅ ⭐ `npm run build` **thành công** ✅ ⭐ `BUILT ARTIFACT VALIDATION: ĐẠT` ✅ ⭐ vân tay **`VNTECH-FP-ECCDEC5AB0C8BDF8`** ✓
+
+## Important Changes
+| CHANGE_ID | Category | Before → After |
+|---|---|---|
+| `CHG-20261007-006` | **UI_UX + BUGFIX** | ⭐ 4 nút bấm mà **⛔ im lặng** → ⭐ **bị KHOÁ + có `title` nêu lý do** + ghi chú thanh công cụ ⭐ (⛔ giữ `onClick` ⇒ hoàn nguyên 1 bước ✓) |
+| ⭐ **MERGE `unity` → `main`** | **DEVOPS** | ⭐ **5 ĐỢT** · ⭐⭐ **0 XUNG ĐỘT** mọi đợt ⭐⭐ · ⭐ `main` **nay có TOÀN BỘ nội dung `unity`** ✅ · `3bf6af2` → `044deb1` → `666c4cb` → `f38294e` → **`a908782`** ✓ |
+
+## Decisions
+| DEC_ID | Quyết định |
+|---|---|
+| `DEC-20261007-008` | ⭐ **USER QUYẾT**: ⭐⭐ **merge `unity` → `main` NGAY** ⭐⭐ |
+| `DEC-20261007-009` | ⭐ **USER QUYẾT**: ⭐ **`BUG-006` GIAO `ERP-SESSION-01`** ⭐ |
+| `DEC-20261007-010` | ⭐ **4 nút chết** ⇒ ⭐ **phương án (b) TẠM KHOÁ + GHI RÕ LÝ DO** ⭐ (⭐ user ⛔ chưa trả lời ⇒ ⭐ **ghi rõ giả định** ✓) |
+
+## Handoffs
+| HANDOFF_ID | From → To | Nội dung |
+|---|---|---|
+| `HANDOFF-20261007-005` | ⭐ `02` → `01` | ⭐ `BUG-006`: ⭐ **3 màn ảnh chuẩn chụp SAI MÀN** ⚠️ (`11` **trùng byte** `08` · `16` `NO_CLICK_TARGET` · `19` `NO_GROUP()`) + ⚠️ **`nav` ⛔ không được kiểm** (L428) ⇒ ⭐ **cổng ảnh vẫn có thể báo XANH GIẢ** ⚠️ |
+| ⭐ **Khối phối hợp trong `SESSION_REGISTRY.md`** | ⭐ `02` → `01` | ⭐ ① `BUG-20261007-003` **đổi trạng thái** ⇒ ⭐ **đề nghị đóng** ✓ ⭐ ② ⭐ **kiểm chứng độc lập `decide_approval`**: ⭐⭐ **RBAC MISMATCH** ⭐⭐ (⭐ kèm 3 hướng sửa ✓) |
+
+## Blockers/Risks (cập nhật — ⭐ 2 mục cũ ĐÃ GIẢI QUYẾT ✅)
+| Risk | Severity | Detail |
+|---|---|---|
+| ⭐ ~~`tools/baseline` **ĐÃ CŨ**~~ | ✅ **ĐÃ GIẢI QUYẾT** | ⭐ **ĐÃ chụp lại**: **68 ảnh · 60 ẢNH DUY NHẤT** ⭐ (⭐ trước: 5 ✓) — ⭐ **ĐÃ COMMIT + PUSH** ✅ |
+| ⭐ ~~S01 **CHƯA COMMIT**~~ | ✅ **ĐÃ GIẢI QUYẾT** | ⭐ **ĐÃ commit + push** trong `7a033a0` (**116 tệp**) ✅ |
+| ⭐⭐ **4 chức năng kho ⛔ CHƯA HOẠT ĐỘNG** | **CAO** ⚠️ | ⭐ đã tạm khoá nhưng ⛔ **chưa có chức năng thật** ⚠️ ⇒ ⭐⛔ **CẦN QUY TẮC NGHIỆP VỤ TỪ USER** ⭐ |
+| ⭐⭐ **RBAC MISMATCH** (`decide_approval`) | **CAO** ⚠️ | ⭐ frontend kiểm **role** ⭐ backend đòi **pool phân công** ⚠️ ⭐ **thuộc `ERP-SESSION-01`** ⇒ ⭐ **đã giao qua state CHUNG** ✅ |
+| `BUG-006` — cổng ảnh ⛔ không kiểm `nav` | **CAO** ⚠️ | ⭐ **vẫn OPEN** ⭐ ⭐ **đã giao `ERP-SESSION-01`** ✅ |
+
+## Remaining Work (cập nhật)
+- ⭐ 🔴 **CHỜ USER**: ⭐ **quy tắc nghiệp vụ** cho ⭐ ① modal **«Tạo/Sửa kho»** ⭐ ② action **`delete_warehouse`** ⭐ ③ **«phiếu cấp phát»** ⚠️
+- ⭐ ⏳ **CHỜ `ERP-SESSION-01`**: ⭐ `BUG-006` ⭐ + **RBAC mismatch `decide_approval`** ✓
+- ⭐ **`BUG-20261007-016`** — ⭐ chờ **xác minh phân vai** tệp `AdminUserModalTabs.tsx` ⏳
+
+## Next Week
+- ⭐ Hoàn thiện **CRUD kho** sau khi có quy tắc nghiệp vụ ⭐ (⭐ modal + API + kiểm quyền ✓)
+- ⭐ Xử lý **RBAC mismatch** toàn hệ (⭐ rà chỗ khác có cùng kiểu lệch frontend/backend ⚠️)
+- ⭐ Sửa **cổng ảnh hồi quy** để ⛔ hết **báo xanh giả** ⚠️
