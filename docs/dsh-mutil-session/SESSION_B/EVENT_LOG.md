@@ -327,3 +327,13 @@ Description: **BUG-20261006-007 DA SUA (dinh chinh bao xanh gia)** — ghi khoi 
 | ⭐⭐⭐ **BÀI HỌC LỚN NHẤT (§33) — QUY TRÌNH 3 BƯỚC ĐỂ ĐO ĐÚNG** | ⭐⭐⭐ **① CÔ LẬP ĐÚNG KHỐI** ⭐ (⭐ ⛔ không selector toàn trang ✓) ⭐ **② BƯỚC 0: LIỆT KÊ `[data-vntech]` CÓ THẬT** ⭐ (⭐ ⛔ không giả định tên ✓) ⭐ **③ CHỌN ĐƠN VỊ ĐẾM ĐÚNG LOẠI** ⭐ (⭐ lưới thẻ ⇒ đếm **THẺ**, ⛔ không đếm `tr` ✓) ⭐ ⭐ ⭐ ⭐⭐⭐ **⇒ 2 LẦN ĐẦU HỎNG VÌ THIẾU ② VÀ ③; LẦN 3 ĐỦ CẢ 3 ⇒ ĐẠT** ⭐⭐⭐ ✓ |
 | ⭐ **GIÁ TRỊ CỦA 2 LẦN HỎNG** | ⭐ ⭐⭐ **2 lần INCONCLUSIVE ⛔ KHÔNG vô ích** ⭐⭐ — ⭐ chính chúng **sinh ra 2 LUẬT** ⭐ mà lần 3 **áp vào ⇒ ĐẠT** ✅ ⭐ ⭐ ⇒ ⭐ **«ghi đúng cái mình ⛔ làm sai» có giá trị kỹ thuật thật** ✅ |
 | **TRUY VẾT** | ⭐ `TEST-20261007-033` · `TEST-20261007-030` · `TEST-20261007-032` ✓ |
+
+## ⭐⭐⭐ EVT-20261007-045 — §22 «UI/UX FOCUS» KIỂM ĐỦ **4/4 MỤC — TẤT CẢ ĐẠT** ⭐⭐⭐
+| ⭐ | ⭐ |
+|---|---|
+| **SỰ KIỆN** | ⭐ `TEST_COMPLETE` + ⭐ `VERIFICATION` — ⭐ hoàn tất kiểm **toàn bộ** các mục §22 nêu ✓ |
+| ⭐⭐⭐ **KẾT QUẢ TỔNG** | ⭐ **① Tabs trong modal** ⇒ **ĐẠT** ✅ (⭐ `TEST-029`: 2 tab **609px/609px · lệch 0px** ✓)<br>⭐ **② Empty state** ⇒ **ĐẠT** ✅ (⭐ `TEST-033`: **12 thẻ → 0** + «Không có kho nào khớp từ khoá tìm kiếm» ✓)<br>⭐ **③ Error state** ⇒ **ĐẠT** ✅ (⭐ `DataTable:91` «Lỗi tải dữ liệu: …» + `AppErrorBoundary` ✓)<br>⭐ **④ Loading** ⇒ **ĐẠT** ✅ (⭐ `DataTable:110` «Đang tải dữ liệu…» ✓) ⭐ ⭐⭐⭐ **⇒ 4/4 ĐẠT** ⭐⭐⭐ ✓ |
+| ⭐ **GIÁ TRỊ** | ⭐ ⭐⭐ **KẾT QUẢ ÂM/KHẲNG ĐỊNH CÓ GIÁ TRỊ** ⭐⭐ — ⭐ ⛔ **không tìm ra bug §22 nào** ✅ ⭐ ⇒ ⭐ chứng minh **hệ thống ⛔ KHÔNG vi phạm §22** ⭐ ⭐ (⭐ ⛔ không phải phiên nào cũng phải «tìm ra bug» mới có giá trị ✓) ✓ |
+| ⭐ **GHI NHẬN ĐỂ LẠI** | ⭐ Màn con ⭐ **chỉ truyền `emptyText`** ⚠️ (⛔ không `error`/`loading`) ⭐ vì ⭐ dữ liệu từ **bootstrap của `page.tsx`** (⭐ **tệp S01** ✓) ⇒ ⭐ **lựa chọn thiết kế** ⭐ ⛔ không phải lỗi ✅ ⭐ ⭐ nếu muốn thêm ⭐ phải sửa `page.tsx` ⇒ ⭐ **thuộc S01** ⚠️ ⇒ ⭐ đã ghi nhận, ⛔ **không tự làm** ✓ |
+| ⭐ **CÁCH LÀM NÊN (⭐ 3 bước đo đúng — rút từ 3 lần đo empty state)** | ⭐ **① CÔ LẬP ĐÚNG KHỐI** ⭐ **② BƯỚC 0: LIỆT KÊ `[data-vntech]` CÓ THẬT** ⭐ **③ CHỌN ĐÚNG ĐƠN VỊ ĐẾM** ✓ |
+| **TRUY VẾT** | ⭐ `TEST-20261007-034` · `TEST-20261007-029` · `TEST-20261007-033` ✓ |

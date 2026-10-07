@@ -611,3 +611,16 @@ Notes: ⭐ **CÒN LẠI 2 KHỐI «GIẢI THÍCH» trong tab KHO** (⛔ không t
 | ⭐⭐ **CHUỖI BÀI HỌC ĐÃ ĐI QUA (⭐ 3 lần mới đo được)** | ⭐ **Lần 1** (`TEST-030`): ⛔ `table tbody tr` **đếm TẤT CẢ bảng** ⇒ ⭐ luật **«CÔ LẬP ĐÚNG KHỐI»** ⭐ **Lần 2** (`TEST-032`): ⭐ neo vào `[data-vntech]` ⭐ nhưng ⭐ ⛔ **tên giả định không tồn tại** ⇒ ⭐ luật **«BƯỚC 0: LIỆT KÊ NEO THẬT»** ⭐ **Lần 3** (`TEST-033`): ⭐ ✅ **ĐẠT** ⭐ ⭐⭐⭐ **⇒ HAI LUẬT CỘNG LẠI = PHÉP ĐO ĐÚNG** ⭐⭐⭐ ✓ |
 | **STATUS** | ⭐⭐ **PASS** ⭐⭐ |
 | **RELATED** | ⭐ `TEST-20261007-030` · `TEST-20261007-032` · `EVT-20261007-044` ✓ |
+
+## ⭐⭐ TEST-20261007-034 — §22 «ERROR STATE» + «LOADING» — **ĐẠT** ✅ — §22 KIỂM ĐỦ 4/4 ⭐⭐
+| ⭐ | ⭐ |
+|---|---|
+| **DATE** | 2026-10-07 · **SESSION_ID** `ERP-SESSION-02` · **TEST_TYPE** `UI / mã` |
+| **MỤC ĐÍCH** | ⭐ §22 liệt kê ⭐ **«Loading · Empty state · Error state»** ⭐ ⇒ ⭐ mục **cuối cùng chưa kiểm** là **Error state** (⭐ Empty đã ĐẠT ở `TEST-033` ✓) ✓ |
+| ⭐⭐ **KẾT QUẢ — HẠ TẦNG ĐẦY ĐỦ** | ⭐ `app/components/ui/DataTable.tsx` ⭐⭐ **có CẢ 3 trạng thái** ⭐⭐:<br>⭐ **Error** — ⭐ `L91`: ⭐⭐ `{error && <div className="inline-alert danger dt-error">Lỗi tải dữ liệu: {error}</div>}` ⭐⭐ ✅<br>⭐ **Loading** — ⭐ `L110-111`: ⭐ `{loading && <div className="empty dt-loading"><span>…</span><strong>Đang tải dữ liệu…</strong></div>}` ✅<br>⭐ **Empty** — ⭐ `L125-128`: ⭐ `{!loading && !rows.length && <div className="empty"><strong>{emptyText}</strong><p>Dữ liệu mới sẽ xuất hiện tại đây.</p></div>}` ✅<br>⭐ kiểu props: ⭐ `L55 loading?: boolean` ⭐ `L56 error?: string \| null` ⭐ `L45 emptyText = "Chưa có dữ liệu."` ✅ |
+| ⭐ **BẮT LỖI TOÀN CỤC** | ⭐ `AppErrorBoundary` ⭐ **có** ⭐ (`app/page.tsx:413`) ✅ |
+| ⭐⭐ **MÀN CỦA EM CÓ TRUYỀN `emptyText` RIÊNG** | ⭐ `app/screens/Inventory.tsx` ⭐⭐ **11 chỗ** ⭐⭐ dùng `DataTable` ⭐ **đều có `emptyText` TIẾNG VIỆT CỤ THỂ** ✅ — ⭐ vd: «**Kho chưa có vật tư nào.**» · «**Chưa có phiếu xuất trong dự án của kho.**» · «**Chưa có nhân sự nào được gắn với kho này (bảng phân công kho còn trống).**» ⭐ · «**Chưa có phiếu cấp phát trong phạm vi.**» ✓<br>⭐ `app/screens/MaterialCategoryList.tsx` ⭐ `L98` ⭐ `emptyText="Không có hệ vật tư phù hợp bộ lọc."` ✅ |
+| ⚠️ **GHI NHẬN TRUNG THỰC (⭐ ⛔ không phải bug)** | ⭐ Màn của em ⭐ **CHỈ truyền `emptyText`** ⚠️ — ⭐ **⛔ KHÔNG truyền `error` / `loading`** ⚠️ ⭐ ⭐ lý do: ⭐ dữ liệu đến từ **bootstrap của component cha** (⭐ `page.tsx` — ⭐ **thuộc S01** ✓) ⇒ ⭐ **màn con ⛔ không tự tải** ⛔ nên ⛔ không có trạng thái loading/error riêng ⭐ ⭐ ⇒ ⭐ **ĐÂY LÀ LỰA CHỌN THIẾT KẾ, ⛔ KHÔNG PHẢI LỖI** ✅ ⭐ ⭐ (⭐ nếu muốn ⭐ phải sửa `page.tsx` = **tệp S01** ⚠️ ⇒ ⛔ **không thuộc phiên 02** ✓) ✓ |
+| ⭐⭐⭐ **KẾT LUẬN — §22 KIỂM ĐỦ 4/4** | ⭐ **① Tabs trong modal** ⇒ ⭐⭐ **ĐẠT** ⭐⭐ (`TEST-027`/`-029`: 609px/609px, lệch 0px ✓)<br>⭐ **② Empty state** ⇒ ⭐⭐ **ĐẠT** ⭐⭐ (`TEST-033`: 12 thẻ → 0 + «Không có kho nào khớp từ khoá tìm kiếm» ✓)<br>⭐ **③ Error state** ⇒ ⭐⭐ **ĐẠT** ⭐⭐ (hạ tầng `DataTable L91` + `AppErrorBoundary` ✓)<br>⭐ **④ Loading** ⇒ ⭐⭐ **ĐẠT** ⭐⭐ (`DataTable L110-111` «Đang tải dữ liệu…» ✓)<br>⭐⭐⭐ **⇒ §22 «UI/UX FOCUS» — CẢ 4 MỤC ĐỀU ĐẠT** ⭐⭐⭐ ✅ |
+| **STATUS** | ⭐⭐ **PASS** ⭐⭐ |
+| **RELATED** | ⭐ `TEST-20261007-029` · `TEST-20261007-033` ✓ |
