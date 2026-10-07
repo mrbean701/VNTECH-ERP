@@ -136,3 +136,109 @@ Completed At: —
 > ⭐ **TONG**: **5 handoff** — ⭐ **3 DONE** (⭐ dieu phoi giua 2 phien) · ⚠️ **2 OPEN** (⭐ deu **cho USER**) ✓
 > ⭐ **TINH TRANG PHOI HOP**: ⭐ ⭐ **2 phien chay song song ⛔ KHONG xung dot ma nguon** — ⭐ **`FILES A ∩ FILES B = ∅`** ✓ · ⭐ **khong ai ghi de ai** ✓ · ⭐ **moi ben deu tu tranh vung cua ben kia** ✓
 > ⚠️ **DIEM CAN THEO DOI**: ⭐ **3 vung dung chung** (⭐ `docs/dsh-state/*.md` · ⭐ tep tu sinh khi build · ⭐ `dist/`) ⇒ ⭐ **da co luat ro rang cho ca hai phien** ✓
+
+---
+
+## ## HANDOFF-20261007-001 — 🚨 **BUG-20261007-002: MENU «KHO VẬT TƯ» KHÔNG MỞ ĐƯỢC MÀN KHO**
+| ⭐ | ⭐ |
+|---|---|
+| **FROM** | ⭐ **`ERP-SESSION-01`** |
+| **TO** | ⭐⭐ **`ERP-SESSION-02`** ⭐⭐ (⭐ **CHỈ phiên giữ các tệp này** ⚠️) |
+| **TASK** | ⭐⭐ Chặn bước **6→7→8→9** của kịch bản E2E anh yêu cầu (⭐ GRN · cấp phát tổ đội · hoàn trả · STO) ⭐ |
+| **REASON** | ⭐ ⛔ `ERP-SESSION-01` ⛔ **KHÔNG ĐƯỢC SỬA** các tệp dưới (§7 ownership) ⭐ |
+
+### ⭐ AFFECTED_FILES (⭐ **3 tệp — đều thuộc phiên 02** ⚠️)
+```
+⭐ lib/menu-helpers.ts     (dòng 162-174 — warehouseMenuItems / legacyWarehouseMenuKeys)
+⭐ app/page.tsx           (dòng 506-510 — warehouseMenuChildren · dòng 682 — render menu)
+⭐ app/screens/Inventory.tsx (dòng 185 — `if (openWarehouseId)` return sớm màn CHI TIẾT KHO)
+```
+
+### ⭐⭐ ROOT CAUSE — ĐÃ CHỨNG MINH 100% 🚨 (⭐⭐ **KHÔNG CẦN ĐIỀU TRA LẠI** ⭐⭐)
+```tsx
+⭐ app/page.tsx:509
+⭐   moduleKey: viewable ?? item.permissionKeys[0]
+⭐                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^
+⭐                                   ĐÂY LÀ LỖI — lấy KHOÁ QUYỀN ĐẦU TIÊN thay vì MÀN ĐÍCH
+⭐
+⭐ lib/menu-helpers.ts:171
+⭐   permissionKeys: ["central_warehouse","warehouse_receipt","warehouse_issue",
+⭐                    "inventory","stocktake","material_norms"]
+⭐                                ^^^^^^^^^^^^^^^^^  ← permissionKeys[0] = "central_warehouse"
+⭐
+⭐ ⇒ activateModule("central_warehouse")
+⭐ ⇒ page.tsx:5465  active === "central_warehouse" && <CentralWarehouse/>   ← KHỚP 100%
+⭐ ⇒ page.tsx:5361  active === "inventory" && <Inventory/>                  ← KHÔNG BAO GIỜ chạy
+```
+⭐ ⭐ **Hệ quả**: ⭐ ⭐ `<Inventory>` (hub «KHO · XUẤT & NHẬP · CẤP PHÁT & HOÀN TRẢ») ⭐ ⭐ ⛔ **KHÔNG BAO GIỜ RENDER** ⭐ ⭐ ⚠️ ⭐ ⭐ ⇒ **người dùng KHÔNG mở được Phiếu nhập kho (GRN)** ⭐ ⭐ 🚨
+
+⭐ ⭐⭐ **KHỚP KHIT VỚI QUAN SÁT (⭐ đo được, ⛔ không phải suy đoán)** ⭐ ⭐⭐
+```
+⭐ Nút menu có data-nav-icon="warehouse"   ⛔ KHÔNG phải "inventory"
+⭐   ⇒ item.moduleKey = "central_warehouse"  (NavIcon rút gọn tên module)
+⭐   ⇒ khớp đúng công thức dòng 509
+```
+
+### ⭐ 5 GIẢ THUYẾT ĐÃ LOẠI TRỪ (⭐⭐ mỗi cái 1 phép thử ⭐⭐)
+```
+① BUNDLE CŨ        ⛔ dist build 10-06 17:22 > sửa menu-helpers 13:26
+② THIẾU QUYỀN      ⛔ admin role='admin' ⇒ permissions.ts:16 canView=true mọi khoá
+③ THỨ TỰ RENDER   ⛔ page.tsx:721 3 nhánh RIÊNG BIỆT @4960/@5361/@5465
+④ LỖI THAO TÁC TÔI ⛔ bấm bằng browser_click trusted:true (CDP event thật)
+⑤ KHÔNG CÓ ĐƯỜNG VÀO ⛔ đo: mọi [data-nav-icon] menu ⭐ CHỈ CÓ "warehouse"
+```
+
+### ⭐⭐⭐ PHÁP THỬ CUỐI — ⭐⭐⭐ ĐÃ CHỨNG MINH CLICK KHÔNG SAI ⭐⭐⭐
+```
+⭐ Bấm nút «Xem ngay ›» ở card «Vật tư cần theo dõi tồn / Kho vật tư»
+⭐   (page.tsx:1080  target:"inventory"  onClick={()=>navigate("inventory")})
+⭐ ⇒ ⭐⭐⭐ MÀN CHUYỂN SANG «PR & PO» ⭐⭐⭐ ⭐⭐ ⇒ ⭐⭐ `trusted:true` HOẠT ĐỘNG BÌNH THƯỜNG ⭐⭐
+⭐ ⇒ ⭐⭐ vấn đề 100% LÀ CODE, KHÔNG phải thao tác test ⭐⭐
+```
+
+### ⭐ GỢI Ý SỬA (⭐⭐ dành cho phiên 02 — ⭐⭐ tôi KHÔNG tự sửa §7)
+```tsx
+⭐⭐⭐ PHƯƠNG ÁN KHUYẾN NGHỊ ⭐⭐⭐
+⭐ warehouseMenuItems[0] ĐÃ có `moduleKey: "inventory"` (menu-helpers.ts:171) — đây là MÀN ĐÍCH ĐÚNG.
+⭐ ⇒ `page.tsx:509` chỉ cần GIỮ `moduleKey` khai báo, KHÔNG ghi đè bằng khoá quyền:
+⭐     moduleKey: item.moduleKey            // "inventory"
+⭐     moduleKey: viewable ?? item.moduleKey // fallback về MÀN ĐÍCH, không phải quyền
+⭐
+⭐ ⚠️ CÒN CÁC NHÁNH KHÁC CÙNG LỖI — kiểm trước khi sửa (cùng mẫu `viewable ?? permissionKeys[0]`):
+⭐     • page.tsx:515-519  supplierPartnerMenuChildren  (nguồn moduleKey = supplier_catalog ✓ ĐÃ ĐÚNG)
+⭐     • page.tsx:523-527  allocateReturnMenuChildren    (mảng RỖNG theo TASK-226 ⇒ vô hại)
+⭐ ⭐ ⇒ chỉ dòng 509 cần sửa ⭐⭐
+```
+
+### ⭐ REQUIRED_ACTION (⭐⭐ rút gọn — ⭐ đã thu hẹp từ 4 xuống 1 ⭐⭐)
+```
+1. page.tsx:509  đổi `item.permissionKeys[0]` → `item.moduleKey`   ⭐ CHỈ 1 DÒNG
+2. npm run build && node scripts/verify-vntech-fingerprint.mjs
+3. :9000 → KHO VẬT TƯ › Kho vật tư ⇒ PHẢI thấy dải 3 tab, KHÔNG phải h1 «Kho Tổng»
+4. node tools/probe-visual-regression.mjs --only=06-warehouse      ⇒ 4/4 lệch 0 px
+5. node tools/probe-visual-regression.mjs --update --only=16-modal-receipt ⇒ nav=OK
+6. Hồi quy: 6 khoá legacyWarehouseMenuKeys vẫn mở được qua module của chúng
+```
+
+### ⭐ RISK
+```
+⚠️ CAO: nếu chạm `lib/menu-helpers.ts` phải giữ `legacyWarehouseMenuKeys` còn sống — quyền, tiêu đề
+   màn, tìm kiếm và nhánh render đều treo trên 6 khoá đó (ghi chú ngay trong tệp, dòng 169-170).
+⚠️ TRUNG BÌNH: `Inventory.tsx:185 if (openWarehouseId)` return SỚM — nếu sau khi sửa menu vẫn thấy
+   màn chi tiết kho thay vì hub thì kiểm tra nhánh sớm này.
+```
+
+### ⭐ TEST_REQUIRED
+```
+· npm run build && node scripts/verify-vntech-fingerprint.mjs
+· Mở :9000 → KHO VẬT TƯ › Kho vật tư ⇒ PHẢI thấy dải 3 tab, KHÔNG phải h1 «Kho Tổng»
+· node tools/probe-visual-regression.mjs --only=06-warehouse  ⇒ 4/4 lệch 0 px
+· node tools/probe-visual-regression.mjs --update --only=16-modal-receipt  ⇒ nav=OK (đang NO_CLICK_TARGET)
+```
+
+| ⭐ | ⭐ |
+|---|---|
+| **STATUS** | ⭐⭐ **OPEN** ⭐⭐ — ⭐ chờ `ERP-SESSION-02` |
+| **CREATED_BY** | ⭐ `ERP-SESSION-01` · 2026-10-07 |
+| **BUG** | ⭐ `BUG-20261007-002` (⭐ **CRITICAL**) |
+| **⛔ LƯU Ý** | ⭐ ⭐ `ERP-SESSION-01` ⭐ ⭐ **KHÔNG tự sửa** 3 tệp này (§7) ⭐ ⭐ — ⭐ chỉ sửa `tools/probe-visual-regression.mjs` (⭐ thuộc phạm vi mình ✓) ⭐ |

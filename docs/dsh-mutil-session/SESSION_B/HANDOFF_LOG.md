@@ -41,3 +41,19 @@ Risk: Neu chi sua (1) ma khong sua (2) ⇒ cung van im lang khi selector chet la
 Test Required: `node tools/probe-visual-regression.mjs --only=11-modal-request --locate=1` ⇒ can `nav 11-modal-request: CLICKED_UI`
   (⛔ KHONG chay `--update` — anh chuan con cu; xem HANDOFF-20261006-002).
 Status: OPEN | Completed By: — | Completed At: —
+
+## HANDOFF-20261006-004
+Date: 2026-10-06 | FROM: ERP-SESSION-02 | TO: ERP-SESSION-01
+TASK: Commit bản sửa `moduleKey: item.moduleKey` trong `app/page.tsx:509`
+REASON: Bản sửa `BUG-20261007-002` (hub «Kho vật tư» không render) **đang nằm ở working tree, CHƯA COMMIT**
+  (commit cuối của S01 vẫn là `3dd2431` lúc 06/10 17:23:51). ⛔ Nếu máy chủ khởi động lại hoặc có ai
+  `git checkout` thì **mất bản sửa** và lỗi quay lại.
+AFFECTED FILES: `app/page.tsx` (1 dòng) — cùng với các tệp chưa commit khác của S01
+  (`lib/vntech-identity-data.mjs`, `VNTECH_FINGERPRINT.json`, `tools/probe-visual-regression.mjs`,
+   63 tệp `tools/baseline/*.png` đã chụp lại)
+CURRENT STATE: ✅ **ĐÃ XÁC MINH BẰNG ĐO THẬT** — `TEST-20261006-020`: hub render đúng 3 tab, 12 cards kho,
+  màn chi tiết 5 tab, nút quay lại OK.
+REQUIRED ACTION: `ERP-SESSION-01` commit + push (⛔ ERP-SESSION-02 không tự commit — luật 25 AUTO_COMMIT=FALSE)
+RISK: **CAO** — mất bản sửa ⇒ chặn lại toàn bộ luồng Kho (GRN → cấp phát → hoàn trả → STO)
+TEST REQUIRED: đã có (TEST-20261006-020) — ⛔ không cần test lại
+STATUS: **OPEN** | COMPLETED_BY: (chờ S01) | COMPLETED_AT: (chờ)

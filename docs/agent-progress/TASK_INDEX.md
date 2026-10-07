@@ -176,3 +176,15 @@ Trạng thái hợp lệ: `PENDING` · `IN PROGRESS` · `DONE` · `BLOCKED` · `
 
 > Chi tiết từng task: `TASK-MT3-F1.md` … `TASK-MT3-UI-16.md` · **vòng 27/09:** `TASK-MT3-UI-24.md` · `TASK-MT3-UI-26.md` · `TASK-MT3-UI-27.md` · `TASK-MT3-BE-22.md` · `TASK-MT3-BE-23.md` · bàn giao: `CURRENT_TASK.md` · Ma trận audit (đã cập nhật 27/09): `docs/dsh/MT3-UI-MATRIX.md`.
 > ⛔ Quy tắc MT3: **không commit · không push**.
+
+
+---
+
+> 🔴 **ĐÍNH CHÍNH dòng 160 (MT3-F14) — ERP-SESSION-02 · $homNay**: cụm «**68 ảnh đã chụp lại + đối chiếu 0px lệch**»
+> là **BÁO XANH GIẢ**. Đo thật: 68 tệp PNG nhưng chỉ **5 ẢNH DUY NHẤT** (SHA256) và cả 5 là **trang setup lần đầu**
+> «Thiết lập hệ thống của công ty» (do commit `7fdf71d` 27/09 thay ảnh chuẩn lúc **CSDL chưa khởi tạo**).
+> ⇒ cổng đang **so trang setup với chính nó** ⇒ «0 px lệch» ⛔ **không chứng minh gì**.
+> **Nay đã tốt lên thật:** ảnh chuẩn **chụp lại = 56 ảnh duy nhất**; cổng cho **tín hiệu thật (34/68 lệch)**;
+> 3 màn **0 px**; 2 màn lệch lớn **đã giải thích** (TASK-227 đổi màn · hub Kho nay render đúng).
+> ⚠️ `tools/baseline` nay **ĐÃ CŨ** ⇒ cần chụp lại. Chi tiết đầy đủ: xem khối **«ĐÍNH CHÍNH — CỔNG ẢNH CHUẨN»**
+> ở cuối `MASTER_STATUS.md`. Truy vết: `BUG-20261006-005/006/007` · `TEST-20261006-015` · `TEST-20261007-023`.

@@ -614,3 +614,44 @@ node -e "import('./lib/vntech-identity-data.mjs').then(m=>console.log(JSON.strin
 ⭐ Log: 9/9 tệp SESSION_A + 2 tệp dùng chung ✓
 ⭐ HEAD = dfc189d (đã push `unity`, chưa commit = 0 đường) ✓
 ```
+
+---
+
+## 🔄 ERP-SESSION-02 — CẬP NHẬT 07/10/2026 (sau vòng 45 · TASK-227 + 2 HOTFIX + NGHIỆM THU)
+
+> ⚠️ Ghi bằng **APPEND** (§28 — ⛔ không ghi đè khối cũ). Khối này là bản **MỚI NHẤT** của ERP-SESSION-02.
+
+```text
+SESSION_ID    : ERP-SESSION-02
+TASK          : TASK-227 — Cấu trúc 3 tab màn «Danh mục vật tư» (yêu cầu user 06/10)
+              + TASK-226 — NGHIỆM THU THẬT hub «Kho vật tư» (đã xong, VERIFIED)
+STATUS        : ✅ TASK-227 DONE (mã + build + nghiệm thu thật) · ✅ TASK-226 VERIFIED
+OWNED SCOPE   : app/screens/MaterialCategoryList.tsx (MỚI — chỉ em) ·
+                app/screens/MaterialListTable.tsx · lib/warehouse-hub.ts · app/screens/Inventory.tsx ·
+                lib/menu-helpers.ts
+⛔ KHÔNG SỞ HỮU: tools/probe-visual-regression.mjs (ERP-SESSION-01 ĐANG LÀM — 76 dòng chưa commit,
+                có `--dump-nav` + sửa `child` index) · tools/baseline/** · app/page.tsx nay ⛔ không claim
+                (đã sửa xong 2 việc nhỏ theo yêu cầu user + §20, xem ghi chú bên dưới)
+TEST RESULT   : tsc EXIT=0 · test:regression 803·802 pass·0 fail·1 skip ·
+                E2E thật trên :9000: TEST-20261006-018/019/020/021 PASS
+BUILD         : fingerprint VNTECH-FP-B7D4A52E0EFD921C (718 tệp · fixpoint 1 vòng) ·
+                BUILD EXIT=0 · BUILT ARTIFACT VALIDATION ĐẠT
+FILES CHANGED : app/screens/MaterialCategoryList.tsx (MỚI, 116d) · app/page.tsx (MATERIAL_TABS 3 tab mới ·
+                xoá 8 dòng khối trồng tréo · thêm `open` cho 2 details · dọn 3 dòng thừa) ·
+                app/styles/canonical.css (⛔ ĐÃ HOÀN NGUYÊN — thử `!important` không hiệu quả)
+DEPENDENCY    : ⛔ không chờ ai để LÀM VIỆC. ⚠️ CHỜ user quyết chỗ đặt 2 công cụ
+                «So sánh/Đối chiếu BOQ» + «Soát trùng alias» (a/b/c) — ⛔ chưa xoá code.
+NEXT STEP     : ① chờ user trả lời (a/b/c) ② ⛔ chờ ERP-SESSION-01 COMMIT (xem HANDOFF-20261006-004)
+```
+
+**⭐ GHI CHÚ VỀ `app/page.tsx` (tệp tranh chấp):** ERP-SESSION-02 sửa **2 việc nhỏ, có căn cứ**:
+· ① cấu trúc tab màn «Danh mục vật tư» — **do user yêu cầu trực tiếp** (ảnh chụp chỉ rõ phần trồng tréo);
+· ② thêm `open` cho `details[data-tab="1"|"2"]` — **BUG-20261006-012**, đo thật `h=0px` (tab trắng).
+Cả 2 đều **nhỏ + cô lập + có test**; ERP-SESSION-01 đã **RELEASE OWNERSHIP** `app/page.tsx` (khối 417-428).
+Ngoài 2 việc đó ⛔ em không đụng gì khác trong tệp.
+
+**⚠️ RỦI RO CAO CẦN S01 XỬ LÝ NGAY:** hiện có **93 tệp chưa commit** —
+· bản sửa `moduleKey: item.moduleKey` của S01 (hub Kho) — **đã xác minh PASS nhưng CHƯA COMMIT**
+· **68 tệp `tools/baseline/*.png`** (56 ảnh duy nhất — đã chụp lại, ✅ tốt)
+· toàn bộ log + mã của TASK-227
+⇒ ⛔ reset/checkout ⇒ **MẤT HẾT**. Đã ghi `HANDOFF-20261006-004`.

@@ -490,3 +490,55 @@ TELEGRAM: START đã gửi ✓
 📤 COMMIT dfc189d đã push `unity` (5 tệp) — chưa commit = 0 đường ✓
 ⏳ CHỜ USER: Ctrl+F5 :9000 → Quản trị hệ thống → tab «Báo lỗi» → bấm «Chi tiết»
 ```
+
+---
+
+## ## EVT-20261006-032 — 🚨 **XÁC MINH FALSE GREEN CỦA VISUAL-REGRESSION BASELINE**
+| ⭐ | ⭐ |
+|---|---|
+| **SỰ KIỆN** | ⭐⭐ **BUG_FOUND** — ⭐ **baseline 68 ảnh ĐÃ HỎNG** ⚠️ |
+| **BẰNG CHỨNG ĐO ĐƯỢC** | ⭐ `--selftest` nhiễu nền: desktop 0px · **laptop 10px (0.0010%)** · tablet 0 · phone 0 ⇒ ⭐ **ngưỡng mặc định 8px QUÁ THẤP** ⚠️ ⭐ phải ≥10 |
+| | ⭐ So ảnh CŨ vs hiện tại: **lệch 48,93 % (phone) → 85,38 % (desktop)** ⇒ ⭐ hệ thống **ĐÃ khởi tạo** ⭐ còn ảnh cũ chụp lúc DB còn trống ⚠️ |
+| | ⭐ **68 ảnh CŨ = 5 ẢNH DUY NHẤT** (desktop/laptop/tablet 1 mỗi loại, phone 2) ⇒ ⭐⭐ **toàn bộ là màn «Thiết lập hệ thống của công ty»** ⚠️⚠️ |
+| **ROOT CAUSE** | ⭐ commit `7fdf71d` (27/09) thay 68 ảnh **khi CSDL chưa khởi tạo** ⚠️ ⇒ ⭐ `MASTER_STATUS.md:426` + `TASK_INDEX.md` (MT3-F14) ghi «0 px lệch» ⇒ ⭐⭐ **FALSE GREEN** ⚠️⚠️ (chính docs nói **chưa từng soi mắt ảnh**) |
+| **HÀNH ĐỘNG** | ⭐ `--update` chụp lại **68 ảnh** ✔ EXIT=0 ⭐ ⭐ nền tảng đã khởi tạo, **KHÔNG còn màn setup** ⚠️⚠️ |
+
+---
+
+## ## EVT-20261006-033 — 🔧 **SỬA 3 NAV DEAD TRONG PROBE (⭐ bằng chứng ảnh + CSDL ⭐)**
+| ⭐ Màn | ⭐ **BẰNG CHỨNG** | ⭐ Sửa | ⭐ KẾT QUẢ ĐO ĐƯỢC |
+|---|---|---|---|
+| ⭐ **19-report-center** | ⭐ `module_catalog` `group_key='reports'`: sort **10** `reports` · 20 `dept_plan_alerts` · 30 `dept_project_alerts` · 40 `dept_plan_kpi` · 50 `dept_project_kpi` ⇒ ⭐ `child:4` chọn **KPI** ⛔ SAI MÀN ⭐ + probe chỉ thấy **3** `.nav-child` ⇒ `NO_CHILD(3)` ⚠️ | ⭐ `child: 4` → **`child: 0`** ⭐ | ⭐✅ **`nav=OK` 4/4 viewport** ⭐ |
+| ⭐ **18-modal-team-create** | ⭐ `admin-governance-pure.ts:171` ⇒ `ORG_SUB_TABS = ["Cơ cấu tổ chức","Tổ đội theo dự án"]` ⭐ ⭐ ⇒ ⭐ nút «＋ Thêm tổ đội» ⭐ ⭐ **CHỈ hiện khi `orgTab===1`** ⚠️ ⇒ ⭐ thử `clickText:"to doi"` ⭐ ⭐ **LẠC CHỖ** ⚠️ (chữ «tổ đội» ở sidebar + tiêu đề card) | ⭐ thêm `[data-org-subtabs="AD-05"] button:nth-child(2)` ⭐ (⭐ **theo VỊ TRÍ, không mò chữ** ✓) | ⭐✅ **`nav=OK` 4/4** ⭐ ⭐ **modal MỞ** ⭐ `desktop 340,332→1580,748` ⭐⭐ ⛔ **KHÔNG tràn viewport** ✓ |
+| ⭐ **16-modal-receipt** | ⭐ ảnh `16-modal-receipt__desktop.png` cho thấy màn **«KHO TỔNG»** (tiêu đề + bảng «Tồn vật lý Kho Tổng» + «Luân chuyển vật tư dự án → Kho Tổng») ⇒ ⭐⭐ **KHÔNG có dải tab** ⭐⭐ ⇒ ⭐ **KHÔNG phải `Inventory.tsx`** ⚠️ | ⭐ thử `child: 5` (`central_warehouse`) ⚠️ | ⭐ ⚠️ **VẪN HỎNG** — ảnh y hệt (364 363 B) ⇒ ⭐ `child:5` ⭐ **KHÔNG phải** `Inventory.tsx` ⚠️ ⇒ ⭐ **phải ĐO thứ tự `.nav-child` THẬT** ⭐ |
+
+⭐ ⭐ **BÀ HỌC (§33 · ĐO THAY ĐOÁN)** ⭐ ⭐
+```
+⭐ ① ⛔ KHÔNG suy ra index từ `sort_order` CSDL — probe đếm `.nav-child` theo THỨ TỰ DOM ⚠️
+⭐ ② ⛔ KHÔNG dùng `clickText` với chữ xuất hiện NHIỀU NƠI (sidebar + tiêu đề + gợi ý) ⇒ dùng SELECTOR theo vị trí ✓
+⭐ ③ ⛔ KHÔNG tin log ghi «đã xong» — phải ĐỌC ẢNH bằng mắt (chính MT3-F14 đã ghi «0 px lệch» mà ảnh toàn là màn setup ⚠️)
+⭐ ④ ✅ Nav hỏng ⇔ ảnh chụp SAI MÀN (không phải ảnh "hỏng") ⇒ phải coi nav là lỗi CỐT LÕI, không phải ghi chú
+```
+
+---
+
+## ## EVT-20261006-034 — 🔌 **ĐÁNH GIÁ PLUGIN NUPHUS-MCP (⭐ anh hỏi «test được như user thật không»)**
+| ⭐ Công cụ | ⭐ KẾT QUẢ ĐO ĐƯỢC | ⭐ Bằng chứng |
+|---|---|---|
+| ⭐ `desktop_windows_list` | ⭐ ✅ **ĐẠT** | ⭐ 17 cửa sổ · ⭐ **2 cửa sổ ERP Opera** (`hwnd 4983852` / `132474`) ✓ |
+| ⭐ `desktop_window_screenshot` | ⭐ ✅ **ĐẠT** | ⭐ 1899×1032 · ⭐ đọc được tiếng Việt ✓ |
+| ⭐ `desktop_screenshot(region)` | ⭐ ✅ **ĐẠT** | ⭐ vùng 390×120 ⭐ ⭐ **tâm nút đo được** ✓ |
+| ⭐ ⭐ `desktop_mouse` click | ⭐ ✅ ⭐ **ĐẠT** | ⭐ ⭐ bấm «Chi tiết» ⇒ nút **đổi thành «Thu gọn»** ⇒ **FRONTEND THẬT ĐÃ PHẢN HỒI** ✓ |
+| ⭐ ⭐ `desktop_input` hotkey | ⭐ ✅ ⭐ **ĐẠT** | ⭐ ⭐ `Ctrl`+`F5` **nạp lại trang** ⭐ ⭐ (thấy ô «TÌM NHANH DỰ ÁN…» = **bundle MỚI**) ✓ |
+| ⭐ `browser_navigate` localhost | ⭐ ❌ **BỊ CHẶN** | ⭐ **SSRF guard**: «navigation to private/loopback host '127.0.0.1' is refused by default» ⇒ cần `NUPHUS_MCP_ALLOW_PRIVATE_NAV=1` |
+| ⭐ `desktop_perceive` (OCR) | ⭐ ❌ **BỊ CHẶN** | ⭐ ⛔ tải model fail (mạng chặn `gitee.com`) |
+| ⭐ `desktop_semantic_observe` (UIA) | ⭐ ⚠️ **CHỈ CHỈ THẤY CHROME** | ⭐ 266 ứng viên ⭐ ⭐ **toàn bookmark/địa chỉ/tab** ⭐ ⭐ ⛔ **KHÔNG nút web nào** ⚠️ (Opera ⛔ không phơi DOM qua UIA) |
+
+⭐ ⭐ **PHÁT HIỆN QUAN TRỌNG CHO VIỆC ĐANG DỞ** ⭐ ⭐
+```
+⭐ Tab ERP của anh ĐANG CHẠY BUNDLE CŨ — bằng chứng: nút hiện «Thu gọn» (NHÃN CŨ)
+⭐ chứ không phải «✕ Đóng» (nhãn mới), và modal KHÔNG mở ⚠️
+⭐ ⇒ phải Ctrl+F5. Tôi ĐÃ ÉP Ctrl+F5 ⇒ tab nay đã nạp bundle mới ✓
+⭐ ⇒ mọi lần anh thử «Chọn tất cả»/«Chi tiết» TRƯỚC lúc đó đã thấy HÀNH VI CŨ ⚠️
+```
+⭐ ⭐ **HẠN CHẾ THỰC TẾ** ⭐ ⭐ — ⭐ ⭐ plugin **«MÙ»**: ⛔ không đọc DOM ⇒ phải **đo toạ độ bằng mắt** ⇒ ⭐ ⭐ **nguy hiểm khi bấm trượt lên nút SỬA/XOÁ dữ liệu thật** ⚠️ ⭐ ⭐ cửa sổ khác + toast DSH ⭐ **CHE** mục tiêu (⭐ đã gặp thật: `hwnd 14158148` che ERP ✓)

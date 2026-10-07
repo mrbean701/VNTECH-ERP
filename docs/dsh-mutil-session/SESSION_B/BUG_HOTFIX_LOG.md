@@ -98,3 +98,170 @@ Fix: ⛔ **CHUA sua** — thuoc ERP-SESSION-01/van hanh may chu (Goal §7/§28).
 Files Changed: ⛔ (chua)
 Test: TEST-20261006-013 | Regression: N/A | Verification: bat console trinh duyet that · doi chieu hash HTML vs dist
 Status: **OPEN** | Related Task: TASK-20261006-226 | Related Bug: BUG-20261006-005 · BUG-20261006-006
+
+## BUG-20261006-009
+Date: 2026-10-06 | Session: ERP-SESSION-02 | Module: Auth / Session | Feature: Dang nhap he thong | Severity: **CRITICAL** | Source: INTERNAL_TEST
+Problem: Login qua `/api/system` tra **401** (truoc do 200) → trang ket o man «Dang nhap he thong», khong boot duoc.
+  ⇒ khong truy cap duoc menu «Kho vật tư», khong the nghiem thu TASK-226.
+Impact: ⛔ CHAN TOAN BO nghiem thu · cong anh hoi quy thi giac cung khong chay duoc (khong co phien).
+Root Cause: **CHUA XAC DINH** — nhung co su lien he thoi diem manh me: ERP-SESSION-01 commit `3dd2431` (17:23:51)
+  "chore: bo migration 0330 (ghi van tay cua chinh no => **vong lap vo han**); van tay e7195a48 · **718 files** · verify DAT"
+  xay ra DUNG TRUOC khi login chuyen 200 → 401. Kiem tra khac: 5 tai nguyen HTML deu 200, `dist/` khong doi tu 17:22:47.
+Fix: ⛔ CHUA sua — can ERP-SESSION-01 kiem tra/rollback commit `3dd2431`.
+Files Changed: ⛔ (chua)
+Test: TEST-20261006-014 | Regression: N/A | Verification: do login that bang CDP, doi chieu thoi diem voi git log
+Status: **OPEN** | Related Task: TASK-226 | Related Bug: BUG-20261006-008
+
+## BUG-20261006-010
+Date: 2026-10-06 | Session: ERP-SESSION-02 | Module: Menu (Warehouse) | Feature: Hub «Kho vật tư» | Severity: **HIGH** | Source: INTERNAL_TEST
+Problem: Bam menu «Kho vật tư» KHONG BAO GIO chuyen sang man hub — van o dashboard. Do that 12 giay van
+  `manInventory: false · warehouseCards: false · tabbarHub: 0 · cardsKho: 0`.
+  ⭐ Bang chung phu: bundle client `dist/client/assets/page-DFsU9Xvb.js` **CO** chua `warehouse_hub` ⇒ code da build dung.
+Impact: ⛔ **CHAN TOAN BO yêu cầu cua user** — hub 3 tab, cards kho, man chi tiet 5 tab DEU chua the nghiem thu.
+Root Cause: **NGHI VAN** — `app/page.tsx:506-510`:
+  ```js
+  const viewable = item.permissionKeys.find((key) => modulePermission(data, key).canView);
+  if (permissionConfigured && !viewable) return [];
+  return [{ ..., moduleKey: viewable ?? item.permissionKeys[0], ... }];
+  ```
+  · `permissionConfigured` (dong 463) = `isAdminUser(data.user) || (data.modulePermissions||[]).length > 0` → admin = true.
+  · `viewable` = permissionKey DAU TIEN co canView. `warehouseMenuItems[0].moduleKey = "inventory"` nhung
+    `permissionKeys = ["central_warehouse","warehouse_receipt","warehouse_issue","inventory","stocktake","material_norms"]`
+    → neu `central_warehouse` co canView ⇒ `moduleKey` = "central_warehouse" (SAI, phai la "inventory").
+  · Hoac neu khong key nao co canView ⇒ `return []` ⇒ `warehouseMenuChildren = []` ⇒ nut menu khong render.
+Fix: ⛔ CHUA sua — can ERP-SESSION-01 kiem tra. De xuat: dung `item.moduleKey` (da khai bao dung) thay vi `viewable`,
+  hoac dung `viewable` chi de kiem tra ton tai, KHONG de dinh nghia `moduleKey`.
+Files Changed: ⛔ (chua)
+Test: TEST-20261006-016 | Regression: N/A | Verification: do that 12 giay + grep bundle + doc ma nguon
+Status: **OPEN** | Related Task: TASK-226 | Related Bug: BUG-20261006-006
+
+## BUG-20261006-011
+Date: 2026-10-06 | Session: ERP-SESSION-02 | Module: DevOps | Feature: Build & phục vụ | Severity: **HIGH** | Source: INTERNAL_TEST
+Problem: Sau `npm run build`, HTML do server `:8787` trả về vẫn trỏ bundle **CŨ** ⇒ 404 tài nguyên ⇒ app **không boot**.
+  (`index-CKA0Et7W.js` yêu cầu, trên đĩa chỉ có `index-Dyg1xiQf.js`)
+Impact: ⛔ mọi thay đổi vừa build **không thấy được** trên :9000 — dễ tưởng code sai.
+Root Cause: `scripts/local-server.mjs` **cache HTML ở RAM**; tiến trình cũ khởi động **09:05:03**,
+  `dist/` build **09:34:14** ⇒ server phục vụ bản HTML cũ ⇒ hash asset không tồn tại trên đĩa.
+Fix: dừng **đúng PID** (xác minh `CommandLine` = `scripts/local-server.mjs`) rồi khởi động lại ⇒ 200.
+  ⛔ KHÔNG dùng `Stop-Process node` (Goal §36 — có thể giết DSH runner/session khác).
+Files Changed: ⛔ (không đổi mã nguồn — lỗi vận hành)
+Test: TEST-20261006-018 | Regression: N/A | Verification: bundle trên đĩa == HTML server trả ⇒ HTTP 200
+Status: **FIXED** (đã xác minh) | Related Bug: BUG-20261006-008 (cùng dấu hiệu 404 bundle)
+Notes: ⚠️ Đây là lỗi **tái diễn** ⇒ mọi session sau khi `npm run build` đều phải khởi động lại `:8787`.
+
+## BUG-20261006-012
+Date: 2026-10-06 | Session: ERP-SESSION-02 | Module: Danh mục vật tư | Feature: Tab (chế độ tab) | Severity: **HIGH** | Source: INTERNAL_TEST
+Problem: **Tab 1 và tab 2 của màn «Danh mục vật tư gốc» KHÔNG BAO GIỜ HIỆN NỘI DUNG** — chỉ thấy khung trắng.
+Impact: ⛔ 2/3 tab của màn này vô dụng từ trước tới nay (bug CÓ SẴN, ⛔ không phải do TASK-227).
+  ⛔ Đây là lý do thật khiến user nói tab «trồng tréo» — tab 0 thì quá nhiều khối, còn tab 1/2 thì TRẮNG.
+Root Cause: **`<details>` thiếu thuộc tính `open`** ⇒ trạng thái `closed` ⇒ nội dung bên trong bị ẩn.
+  CSS `canonical.css:557-559` chỉ đặt `display: block` cho **chính thẻ `<details>`**, ⛔ KHÔNG mở được
+  nội dung bên trong khi thiếu `open` (Blink ẩn nội dung `<details>` đóng bằng cơ chế nội bộ, `display`
+  của phần tử con ⛔ không thắng được).
+  **BẰNG CHỨNG ĐO THẬT trên :9000** (`getBoundingClientRect`):
+  ```
+  TRƯỚC:  tab 0 (CÓ open)  → details h = 947px  ✅ hiện   (tbody 237 dòng)
+          tab 1 (THIẾU open)→ details h =   0px  ⛔ TRẮNG
+          tab 2 (THIẾU open)→ details h =   0px  ⛔ TRẮNG  (dù tbody có 17 dòng!)
+  SAU :   tab 0 → 947px ✅ · tab 1 → 947px ✅ · tab 2 → 947px ✅
+  ```
+Fix: thêm `open` cho `details[data-tab="1"]` và `details[data-tab="2"]` trong `app/page.tsx`
+  (tab 0 đã có sẵn ⇒ đó là bằng chứng cách sửa ĐÚNG). Trong chế độ TAB, `summary` đã bị CSS ẩn
+  (`.material-catalog-screen details[data-tab] > summary { display:none }`) nên ⛔ không cần thu gọn được.
+Files Changed: `app/page.tsx` (2 dòng — thêm ` open` vào thẻ mở `<details>`)
+Test: TEST-20261006-019 | Regression: 802/803 | Verification: đo lại chiều cao 3 tab = 947px + ảnh chụp
+Status: **FIXED** | Related Task: TASK-227 | Related Change: CHG-20261006-001
+Notes:
+  · ⚠️ **BẪY khi kiểm tra**: regex `/\bopen\b/` khớp NHẦM prop `open={open}` truyền cho component con
+    (khác hoàn toàn nghĩa với thuộc tính `open` của `<details>`) ⇒ lần sửa đầu **báo sai là "đã có open"**.
+    Cách đúng: chỉ xét phần **THẺ MỞ** (`line.slice(0, line.indexOf(">")+1)`).
+  · ⚠️ **BẪY 2**: đã thử sửa bằng CSS `details[data-tab] > .module-section-collapse-body { display:block !important }`
+    ⇒ ⛔ **KHÔNG hiệu quả** trong Blink. Đã **hoàn nguyên** dòng CSS đó, ⛔ không để lại `!important` thừa (§41).
+
+## BUG-20261006-007 — CẬP NHẬT (07/10/2026): ĐÃ SỬA ĐÍNH CHÍNH
+Date: 2026-10-07 | Session: ERP-SESSION-02 | Severity: **MEDIUM** | Status: **FIXED**
+Vấn đề (đã nêu 06/10): `docs/agent-progress/MASTER_STATUS.md` (dòng 26 · 367 · 426) và `TASK_INDEX.md` (dòng 160)
+  ghi «**68 ảnh chụp lại + đối chiếu 0 px lệch**» — **BÁO XANH GIẢ**.
+Bằng chứng (đo 06/10): 68 tệp PNG nhưng chỉ **5 ẢNH DUY NHẤT** (SHA256) và cả 5 là **trang setup lần đầu**
+  «Thiết lập hệ thống của công ty»; commit `7fdf71f`… chính xác là **`7fdf71d` (27/09/2026)** thay ảnh chuẩn
+  lúc **CSDL chưa khởi tạo** ⇒ cổng so **setup với chính nó**.
+FIX (07/10/2026): ghi khối **«🔴 ĐÍNH CHÍNH — CỔNG ẢNH CHUẨN»** bằng **APPEND** (⛔ không ghi đè) vào:
+  · `docs/agent-progress/MASTER_STATUS.md` (cuối tệp — nêu rõ sửa dòng 26/367/426)
+  · `docs/agent-progress/TASK_INDEX.md` (cuối tệp — nêu rõ sửa dòng 160 / MT3-F14)
+  Nội dung: sự thật đã đo · nguyên nhân gốc · **tình trạng mới** (56 ảnh duy nhất · cổng 34/68 lệch = tín hiệu THẬT ·
+  3 màn 0 px · 2 màn lệch lớn ĐÃ GIẢI THÍCH) · **bài học** («phải kiểm SỐ ẢNH DUY NHẤT, ⛔ không chỉ đếm số tệp»).
+Test: TEST-20261006-015 (đo 56 ảnh duy nhất) · TEST-20261007-023 (chạy cổng: 34/68) | Verification: đọc lại 2 tệp
+Status: **FIXED** | Related Bug: BUG-20261006-005 (FIXED) · BUG-20261006-006 (OPEN)
+## ⭐⭐⭐ TASK-229 — 2 QUYẾT ĐỊNH CỦA USER + CHỤP LẠI ẢNH CHUẨN ⭐⭐⭐
+
+> ⭐ **ĐỔI CÁCH GHI LOG (07/10/2026)** — user chỉ thị: «**không đếm task theo master task và master task 2 nữa,
+> bây giờ là giai đoạn golive, hãy bám sát theo goal và xem cách thức mà session 1 ghi log rồi làm theo**».
+> ⇒ Từ mốc này SESSION_B ghi log **theo khuôn `SESSION_A`** (bảng `| ⭐ | ⭐ |` · dày bằng chứng · dẫn **§ của GOAL** ·
+> có mục **«SAI LẦM ĐÃ SỬA»** + **«BÀI HỌC»**), ⛔ **KHÔNG** đếm theo `MASTER TASK 1/2/3` và ⛔ **KHÔNG** ghi `TASK_INDEX.md`.
+
+| ⭐ | ⭐ |
+|---|---|
+| **SESSION** | ⭐ `ERP-SESSION-02` |
+| **YÊU CẦU** *(nguyên văn, 07/10)* | ⭐⭐ «**1. cho phép chụp lại ảnh. 2. c 3. b**» ⭐⭐ — trả lời 3 câu em hỏi: ① **cho phép** chụp lại ảnh chuẩn · ② chọn **(c) BỎ HẲN** 2 công cụ BOQ/soát-trùng-alias · ③ chọn **(b) THU** 2 khối «giải thích» vào **nút «?»** |
+| **PHẠM VI** | ⭐ `app/page.tsx` (**thuộc SESSION-02** sau khi S01 đã release — xem `SESSION_REGISTRY.md:417`) · ⭐ `app/screens/WarehouseDashboard.tsx` · ⭐ `tools/baseline/*.png` |
+| **② BỎ HẲN 2 CÔNG CỤ** | ⭐ Xoá hàm `MaterialMatchingWorkspace` ⭐⭐ **28 dòng** ⭐ — ⭐ **TRƯỚC KHI XOÁ đã tự kiểm «mồ côi»**: quét cả tệp, bỏ qua dòng chú thích ⇒ ⛔ không còn chỗ dùng thật ✓ |
+| | ⭐ **BẰNG CHỨNG ĐO TRÊN UI THẬT** (`:9000`, login `200`): ⭐ `conSoSanhBOQ` = **false** ⭐ `conSoatTrungAlias` = **false** ⭐ `conCongCuChanLoan` = **false** ✓ ⭐ tabbar vẫn đủ **3 tab** ✓ |
+| **③ THU VÀO NÚT «?»** | ⭐ Thêm `import { useState }` + state `showHelp` + nút ⭐ **«Giải thích chỉ số →» / «Ẩn giải thích chỉ số →»** ⭐ cạnh tiêu đề **DASHBOARD TỒN KHO**; bọc 2 khối bằng `{showHelp && (<>…</>)}` ✓ |
+| | ⭐ **BẰNG CHỨNG ĐO TRÊN UI THẬT — TOGGLE 3 TRẠNG THÁI** ✓<br>· **TRƯỚC** : nút «Giải thích chỉ số →» · `khoiGiaTriKho`=**false** · `khoiNguonDuLieu`=**false** · trang **4.052px** ✓<br>· **SAU bấm** : nút «Ẩn giải thích chỉ số →» · `khoiGiaTriKho`=**true** · `khoiNguonDuLieu`=**true** · trang **4.949px** ✓<br>· **BẤM LẠI** : về **4.052px** ✓ ⇒ ⭐ **toggle hoạt động đúng cả 2 chiều** ✓ |
+| | ⭐ **KẾT QUẢ TỔNG**: tab «KHO» ⭐⭐ **6.202px → 4.052px** ⭐⭐ (⭐ giảm **2.150px ≈ 35 %** ⭐ so với TASK-228) ✓ |
+| **① CHỤP LẠI ẢNH CHUẨN** | ⭐ `node tools/probe-visual-regression.mjs --update` ⭐ (⛔ **KHÔNG** tự chạy trước đây vì chưa được phép — chỉ chạy **sau khi user cho phép** ✓) |
+| | ⭐ **KẾT QUẢ**: **68 ảnh** ⭐⭐ **60 ẢNH DUY NHẤT** ⭐⭐ (⭐ trước: **5** ⚠️) ⇒ ⭐ **cổng có giá trị phân biệt** ✓ |
+| ⭐⭐ **🚨 PHÁT HIỆN TRONG LÚC CHỤP — `BUG-006` LỘ RA Ở CHÍNH ẢNH MỚI** | ⭐⭐⭐ **3 màn CHỤP SAI MÀN** ⭐⭐⭐ vì `nav` **thất bại** mà cổng **VẪN GHI ảnh** ⚠️<br>· ⭐ `11-modal-request` — ⭐⭐ **hash GIỐNG HỆT `08-requests`** ⭐⭐ = `497158D6415958FA` ⇒ ⭐ **chụp MÀN GỐC, ⛔ không phải modal** ✓<br>· ⭐ `16-modal-receipt` — ⭐ `nav=NO_CLICK_TARGET` (4/4 viewport) ✓<br>· ⭐ `19-report-center` — ⭐ `nav=NO_GROUP()` (desktop + laptop) ✓<br>⭐⭐ ⇒ **ảnh chuẩn 3 màn này VẪN là BÁO XANH GIẢ** ⚠️ — cổng sẽ **mãi báo «0 px»** dù màn sai ⭐⭐ |
+| **⛔ PHÂN VAI (RỦI RO XUNG ĐỘT)** | ⭐ ⭐ **`tools/probe-visual-regression.mjs` thuộc `ERP-SESSION-01`** ⚠️ (⭐ họ vừa sửa lúc **07/10 08:52** — ⭐ thêm `--dump-nav` + sửa `child:N` ⭐ **76 dòng chưa commit** ✓) ⇒ ⭐⭐ **SESSION-02 ⛔ KHÔNG TỰ SỬA** (§7) ⭐⭐ ⇒ ⭐ **ĐÃ HỎI USER**: em sửa hay để S01? ⏳ chờ trả lời ✓ |
+| **⭐ SAI LẦM ĐÃ SỬA (§22)** | ⭐ **① Truyền `action={<button…/>}` cho `CardHead`** ⇒ ⭐⭐ `tsc` **LỖI `TS2322`** ⭐⭐ vì ⭐ `CardHead.action` khai báo **`action?: string`** ⭐ (`lib/ui-shared.tsx:230`) ⭐ ⛔ **không phải ReactNode** ⚠️ ⇒ ✅ sửa đúng khuôn: `action={showHelp ? "Ẩn…" : "Giải thích chỉ số"}` + `onClick={…}` ✓ |
+| | ⭐ **② Script sinh dòng đóng `}</>)}`** (⭐ **thừa 1 dấu `}`**) ⇒ ⭐ `tsc` **LỖI `TS1381`** ⚠️ ⇒ ✅ sửa còn `</>)}` ✓ ⭐ *(⭐ lần sửa đầu em `Replace("}}</>)}", …)` ⭐ **KHÔNG khớp** vì văn bản thật chỉ có **MỘT** `}` ⚠️ — ⭐ đã **đọc lại tệp** để lấy chuỗi đúng thay vì đoán ✓)* |
+| | ⭐ **③ `useState` chưa được import** trong `WarehouseDashboard.tsx` ⚠️ ⇒ ✅ thêm `import { useState } from "react";` **sau dòng `import` cuối** để giữ thứ tự ✓ |
+| **⭐⭐ BÀI HỌC (§33) — «đổi cách ghi log»** | ⭐ ⭐⭐ **ĐẾM THEO MASTER TASK LÀ SAI Ở GIAI ĐOẠN GO-LIVE** ⭐ ⭐⭐ — ⭐ user chỉ thị rõ ⚠️ ⇒ ⭐⭐ bám **§ của GOAL** + **khuôn `SESSION_A`** ⭐ ⭐⭐ ⛔ **KHÔNG** báo `DONE/110` nữa ✓ |
+| | ⭐ ⭐⭐ **MỘT CỔNG GHI ẢNH CHUẨN PHẢI ⛔ TỪ CHỐI GHI KHI `nav` THẤT BẠI** ⭐ ⭐⭐ — ⭐ nếu không ⭐ nó **biến lỗi điều hướng thành «ảnh chuẩn»** ⚠️ ⭐ ⇒ ⭐⭐ **báo xanh giả VĨNH VIỄN** ⭐ ⭐⭐ (⭐ đúng loại lỗi của `BUG-20261006-007` ⚠️) ✓ |
+| | ⭐ ⭐ **Kiểm «ảnh chuẩn có giá trị» = đếm ẢNH DUY NHẤT (SHA256), ⛔ KHÔNG đếm SỐ TỆP** ⭐ ⭐ — ⭐ 68 tệp mà chỉ **5 ảnh** ⚠️ · ⭐ 68 tệp mà **60 ảnh** ✓ ⭐ ⭐ (⭐ hoặc 68 tệp mà `11` **trùng byte** `08` ⚠️) ✓ |
+| | ⭐ ⭐ **`taskkill /F /PID` THAY ĐƯỢC `Stop-Process`** ⭐ ⭐ — ⭐ `Stop-Process` trong pwsh của DSH ⭐⭐ **làm CHẾT job runner** ⭐⭐ (⭐ exit `4294967295` ⭐ **gặp 2 lần** ⚠️) ⭐ còn `taskkill` (⭐ **tiến trình ngoài** ✓) **an toàn** ✓ ⭐ ⛔ vẫn phải **xác minh `CommandLine`** trước khi kill (§36) ✓ |
+| ⭐ **KIỂM THỬ (§24 · §25)** | ⭐ `npx tsc --noEmit` ⭐⭐ **EXIT=0** ✓ ⭐ `npm run test:regression` ⭐⭐ **803 test · 802 pass · 0 fail · 1 skip** ✓ |
+| ⭐ **QUY TRÌNH TRIỂN KHAI** | ⭐ `fixpoint-fingerprint` → ⭐⭐ `VNTECH-FP-C55438BF8585733C` ✓ → ⭐ `set-local-identity` **KHỚP** ✓ → ⭐ `npm run build` ⭐⭐ **EXIT=0** ✓ + ⭐ **BUILT ARTIFACT VALIDATION ĐẠT** ✓ → ⭐ `taskkill` PID `16648` (⭐ **đã xác minh cmdline `scripts/local-server.mjs`** ✓) → ⭐ restart PID `15716` → ⭐ `:8787` **listen** ✓ → ⭐ bundle ⭐ **khớp** `index-CwSaGWwu.js` ✓ |
+| **STATUS** | ⭐⭐⭐ **FIXED** ⭐⭐⭐ *(⭐ = **CODE + TEST PASS** theo §24 ✓ — ⚠️ **TRỪ** 3 màn ảnh chuẩn ⛔ **CHƯA đạt** vì `BUG-006` ⚠️)* |
+| ⭐ **TRUY VẾT** | ⭐ `CHG-20261007-003` · `DEV-20261007-006` · `TEST-20261007-026` · `EVT-20261007-031` |
+
+---
+
+## ⭐⭐ BUG-20261007-013 — NÚT «＋ TẠO PHIẾU CẤP PHÁT» LÀ **NÚT CHẾT** (bấm ⛔ không có gì xảy ra) ⭐⭐
+
+| ⭐ | ⭐ |
+|---|---|
+| **SESSION** | ⭐ `ERP-SESSION-02` *(⭐ tệp `app/screens/Inventory.tsx` **thuộc phiên 02** ✓)* |
+| **SEVERITY** | ⭐⭐ **HIGH** ⚠️ (⭐ **chặn người dùng tạo phiếu cấp phát** + ⭐ **im lặng** ⇒ user tưởng hệ thống treo ✓) |
+| **SOURCE** | ⭐ `ERP-SESSION-01` phát hiện (`BUG-20261007-003`) ⭐ ⭐ **SESSION-02 KIỂM CHỨNG LẠI ĐỘC LẬP** theo §16 (⛔ không tin state cũ) ✓ |
+| **PHẠM VI KIỂM** | ⭐ `app/screens/Inventory.tsx:389` ⭐ `app/page.tsx` (⭐ **đếm đủ 40 modal** ✓) ⭐ `app/screens/AllocateReturn.tsx:1-10` ✓ |
+| **BẰNG CHỨNG MÃ** | ⭐ `Inventory.tsx:389` → ⭐⭐ `onClick={()=>open("allocate")}` ⭐⭐<br>⭐ `page.tsx` **đủ 40 modal**: `access · accountSettings · approvalStageMaster · boqItem · boqVersion · businessGroupMaster · categoryMaster · centralReceive · centralReturn · count · detail · email · errorReport · forcePassword · hrProfileEdit · install · issue · materialMaster · materialMerge · materialSubcategoryMaster · menuGroupMaster · moduleMaster · notificationConfig · po · poDetail · projectContract · projectMaster · receipt · receiptDetail · request · return · roleMaster · systemLevelMaster · teamCreate · transfer · user · userEdit · userProfile · userProfileHr · workflowMaster` ⭐⭐⭐ ⛔ **KHÔNG CÓ `allocate`** ⭐⭐⭐ ✓<br>⭐ grep `allocate` toàn `app/page.tsx`: ⭐ **chỉ** ra `import { AllocateReturn }` · `allocateReturnMenuItems` · `useState allocateReturnView` — ⭐⭐ **toàn bộ là MÀN (screen), ⛔ KHÔNG phải modal** ⭐⭐ ✓ |
+| ⭐⭐ **BẰNG CHỨNG ĐO TRÊN UI THẬT** (`:9000`) | ⭐ login `200` · boot OK ⇒ hub Kho → tab **«CẤP PHÁT & HOÀN TRẢ»** (⭐ subtab đo được: `["Cấp phát","Hoàn trả"]` ✓)<br>⭐ **① «＋ Tạo phiếu cấp phát»**: `có nút = true` · `TRƯỚC bấm {overlay:0, modal:0, dialog:0}` · `bấm = DA_BAM` (⭐ **KHÔNG disabled** ✓) · ⭐⭐ `SAU bấm {overlay:0, modal:0, dialog:0}` ⭐⭐ ⇒ ⛔ **KHÔNG MỞ GÌ CẢ** ✓<br>⭐ **② «＋ Tạo phiếu hoàn trả»**: `bấm = DA_BAM` ⇒ ⭐⭐ `SAU bấm {overlay:1, modal:1}` ⭐⭐ + modal **«Hoàn trả vật tư dư — Không cho hoàn vượt tồn đội; hàng hỏng không cộng lại tồn sử dụng…»** ⇒ ✅ **CHẠY ĐƯỢC** ✓ |
+| **ROOT CAUSE — ĐÃ CHỨNG MINH** | ⭐⭐⭐ `open("allocate")` ⇒ `setModal("allocate")` ⭐ ⇒ ⭐⭐ **không có nhánh `modal === "allocate"` nào** ⇒ **render RỖNG** ⭐⭐ ⇒ ⭐⭐ nút bấm **thành công về mặt kỹ thuật** nhưng ⛔ **không có tác dụng gì** ⚠️ ⭐⭐⭐ ⭐ *(⭐ đối chứng DƯƠNG: `open("return")` ⇒ **CÓ** modal ⇒ mở thật ✓ ⇒ ⭐ chứng minh cơ chế `open()` **hoạt động tốt**, ⛔ không phải lỗi `open`)* ✓ |
+| ⭐ **ĐÃ LOẠI TRỪ** | ⭐ ① ⛔ **không phải nút bị khoá** — đo `disabled = false` ✓ ⭐ ② ⛔ **không phải `onClick` không chạy** — ⭐ nút **anh em cùng chỗ** `open("return")` **mở được modal** ✓ ⭐ ③ ⛔ **không phải thiếu quyền** — `admin` ✓ ⭐ ④ ⛔ **không phải sai tab/subtab** — đo được đang ở subtab «Cấp phát» ✓ ⭐ ⑤ ⛔ **không phải tên modal viết khác kiểu** — grep bỏ khoảng trắng vẫn ⛔ **0 kết quả** ✓ |
+| ⛔ **VÌ SAO ⛔ CHƯA TỰ SỬA** | ⭐⭐ `app/screens/AllocateReturn.tsx:5-6` **NGUYÊN VĂN TRONG MÃ**: ⭐ «⚠️ Logic nghiệp vụ + workflow + quyền sẽ triển khai **SAU khi business rule được xác định** ⇒ hiện tại **CHỈ triển khai cấu trúc UI/list/tab/data foundation**. ⛔ **Không tự suy diễn nghiệp vụ** (§14)» ⭐⭐ ⇒ ⭐ ⛔ **tự tạo modal cấp phát = BỊA NGHIỆP VỤ** ⇒ ⭐ ⭐ **PHẢI CÓ QUY TẮC TỪ USER** ⚠️ ✓ |
+| ⭐ **ĐỀ XUẤT (chờ user quyết)** | ⭐ **(a)** trỏ nút sang **màn đã có** «Cấp phát cho tổ đội» (⭐ `teams` group) ⭐ **(b)** làm **modal tạo phiếu cấp phát mới** — ⭐ **cần user cho quy tắc nghiệp vụ** ⭐ **(c)** ⭐⭐ **TẠM KHOÁ nút + ghi rõ «chờ quy tắc nghiệp vụ»** ⭐⭐ (⭐ ⛔ không để bấm mà **im lặng** ⚠️) ⭐ **(d)** giữ nguyên ✓ |
+| **ẢNH HƯỞNG** | ⭐ Hub «Kho vật tư» → tab «CẤP PHÁT & HOÀN TRẢ» → subtab «Cấp phát» ⭐ ⚠️ (⭐ ⛔ **không** ảnh hưởng subtab «Hoàn trả» — nút đó chạy đúng ✓) |
+| **STATUS** | ⭐⭐ **OPEN** ⚠️ — ⭐ **ĐÃ CHỨNG MINH ROOT CAUSE** ✓ · ⛔ **CHƯA SỬA** (⭐ chờ user cho quy tắc nghiệp vụ ✓) |
+| **RELATED** | ⭐ `BUG-20261007-003` (S01 ghi) · `TASK-228` (⭐ em sửa `Inventory.tsx` nhưng ⛔ **không đụng 2 nút này** ✓) |
+
+---
+
+## ⭐⭐⭐ BUG-20261007-014 — **LỚP LỖI**: 3 NÚT CRUD KHO ⛔ KHÔNG LÀM GÌ (quét hệ thống mới thấy) ⭐⭐⭐
+
+| ⭐ | ⭐ |
+|---|---|
+| **SESSION** | ⭐ `ERP-SESSION-02` *(⭐ `app/screens/Inventory.tsx` **thuộc phiên 02** ✓)* |
+| **SEVERITY** | ⭐⭐⭐ **HIGH** ⚠️ (⭐ **CRUD kho ⛔ không dùng được** + ⭐ **im lặng** ⇒ user tưởng hệ thống treo ✓) |
+| **SOURCE** | ⭐ **ERP-SESSION-02 tự quét hệ thống** ⭐ — ⭐ nảy ra từ `BUG-20261007-013`: ⭐ **đối chiếu MỌI `open("X")` với 40 modal thật** ✓ |
+| ⭐ **PHƯƠNG PHÁP QUÉT (⭐ tái dùng được)** | ⭐ `①` trích **40 tên modal** từ `modal === "…"` trong `app/page.tsx` ⭐ `②` quét MỌI `open("…")` trong **`app/**`** ⭐ `③` **đối chiếu 2 tập** ⭐ ⭐ ⇒ ⭐ **tự động phát hiện nút gọi modal không tồn tại** ✓ |
+| **KẾT QUẢ QUÉT** | ⭐ **39 tên** được truyền vào `open("…")` ⭐ ⇒ ⭐ **37 tên CÓ modal** ✅ ⭐ ⭐ **2 tên ⛔ KHÔNG CÓ modal**: ⭐⭐ `"allocate"` (1 chỗ) ⭐ + ⭐⭐ `"warehouse"` (**2 chỗ**) ⭐⭐ ✓ |
+| **BẰNG CHỨNG MÃ** | ⭐ `Inventory.tsx:326` → `onClick={()=>open("warehouse")}` ⭐ «＋ Tạo kho» ✓<br>⭐ `Inventory.tsx:327` → `if(w)open("warehouse",w)` ⭐ «✎ Sửa» ✓<br>⭐ `Inventory.tsx:389` → `open("allocate")` ⭐ «＋ Tạo phiếu cấp phát» ✓<br>⭐⭐ `page.tsx` **40 modal** — ⛔ **KHÔNG có `warehouse`** · ⛔ **KHÔNG có `allocate`** ⭐⭐ ✓<br>⭐ grep hàm `*Warehouse*` trong `page.tsx`: ⭐ chỉ ra **MÀN** (`WarehouseApp` · `WarehouseReceipt` · `CentralWarehouse` · `WarehouseIssueTeams`) ⛔ **không có modal nào** ✓ |
+| ⭐⭐ **BẰNG CHỨNG ĐO TRÊN UI THẬT** — **ĐO ĐỦ** | ⭐⭐ **ĐO 4 CHỈ SỐ** (⭐ không chỉ `modal` ⚠️): ⭐ `h1` · ⭐ `dai` (độ dài nội dung màn) · ⭐ `modal` · ⭐ `manChiTiet` ✓<br>⭐ **① «＋ Tạo kho»** : `dai` **107.793 → 107.793** ⛔ **KHÔNG ĐỔI** · `hub` vẫn `true` · `modal 0` ⇒ ❌ **NÚT CHẾT** ✓<br>⭐ **② «✎ Sửa»** (⭐ đã chọn card trước ✓) : `dai` **107.793 → 107.793** ⇒ ❌ **NÚT CHẾT** ✓<br>⭐ **③ ✅ ĐỐI CHỨNG DƯƠNG — «◉ Xem chi tiết kho đang chọn»** : ⭐⭐ `dai 107.793 → 898` · `hub true → false` · `manChiTiet false → true` ⭐⭐ ⇒ ✅ **ĐỔI MÀN THẬT** ⇒ ⭐⭐⭐ **CHỨNG MINH PHÉP ĐO PHÁT HIỆN ĐƯỢC THAY ĐỔI** ⭐⭐⭐ ✓ |
+| **ROOT CAUSE — ĐÃ CHỨNG MINH** | ⭐⭐⭐ `open("warehouse")` / `open("allocate")` ⇒ `setModal("warehouse"/"allocate")` ⭐ ⇒ ⛔ **không có nhánh `modal === …` nào** ⇒ **render RỖNG** ⭐⭐⭐ ⭐ *(⭐ cùng một nguyên nhân với `BUG-20261007-013` ⇒ ⭐⭐ **ĐÂY LÀ MỘT LỚP LỖI, ⛔ không phải lỗi lẻ** ⭐⭐)* ✓ |
+| **ĐÃ LOẠI TRỪ** | ⭐ ① ⛔ **không phải nút bị khoá** — đo `disabled = false` ✓ ⭐ ② ⛔ **không phải `onClick` không chạy** — ⭐ **đối chứng dương cùng màn ĐỔI MÀN được** ✓ ⭐ ③ ⛔ **không phải thiếu quyền** — `admin` ✓ ⭐ ④ ⛔ **không phải màn không re-render** — ⭐ `dai` **đo được thay đổi** ở đối chứng ✓ |
+| ⭐⭐ **SAI LẦM ĐÃ SỬA (§22) — LẦN 3 TRONG PHIÊN** | ⭐⭐ Bản đo đầu chỉ đếm **`modal`** ⚠️ ⇒ ⭐ nút **«◉ Xem chi tiết kho đang chọn»** (⭐ **biết chắc CHẠY ĐƯỢC** — ⭐ mở **MÀN** chi tiết, ⛔ không phải modal) ⭐⭐ **cũng ra «modal=0»** ⭐⭐ ⇒ ⭐⭐⭐ **TIÊU CHÍ ĐO THIẾU ⇒ suýt kết luận SAI rằng nút đó cũng chết** ⚠️ ⭐⭐⭐ ⭐ ✅ **SỬA: đo THÊM `h1` + `dai` + `manChiTiet`** ⇒ ⭐ mới phân biệt được «mở modal» / «đổi màn» / «không gì» ✓ |
+| **VÌ SAO ⛔ CHƯA TỰ SỬA** | ⭐ ⛔ **KHÔNG có `WarehouseModal` nào trong mã** ⭐ và ⭐ ⛔ **KHÔNG có action `save_warehouse`** trong `scripts/system-route.mjs` ⭐ (⭐ chỉ có `save_warehouse_location` — ⭐ là **vị trí trong kho**, ⛔ khác việc) ⇒ ⭐⭐ **làm nút chạy được = PHẢI VIẾT MỚI cả modal + API** ⭐⭐ ⇒ ⭐ **cần user quyết** ⚠️ (⭐ §14: ⛔ không tự suy diễn nghiệp vụ ✓) |
+| **ẢNH HƯỞNG** | ⭐ Hub «Kho vật tư» → tab «KHO»: ⭐⭐ **toàn bộ CRUD kho ⛔ không dùng được** ⭐⭐ (⭐ Tạo · Sửa ⭐) ⚠️ · ⭐ tab «CẤP PHÁT & HOÀN TRẢ» → «Tạo phiếu cấp phát» ⚠️<br>⭐ ✅ **KHÔNG ảnh hưởng**: 12 cards kho (⭐ chọn được ✓) · nút «Xem chi tiết» ✓ · «Xuất Excel» ✓ · tab «XUẤT & NHẬP» ✓ · «Tạo phiếu hoàn trả» ✓ |
+| **STATUS** | ⭐⭐ **OPEN** ⚠️ — ⭐ **ĐÃ CHỨNG MINH ROOT CAUSE + ĐÃ ĐO** ✓ · ⛔ **CHƯA SỬA** (⭐ chờ user ✓) |
+| **RELATED** | ⭐ `BUG-20261007-013` (⭐ cùng lớp) · `TASK-228` ✓ |

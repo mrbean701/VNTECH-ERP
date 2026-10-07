@@ -103,3 +103,130 @@ Description: **PHAT HIEN CRITICAL** — app `:9000` khong boot: 3 tai nguyen **4
 `layout-segment-context-CfvhuIcI.js`) vi HTML tro hash CU con `dist/` da build lai 17:22 (`index-BVZQBH_9.js` · `page-DFsU9Xvb.js`).
 Do 30.774 ms lien tuc van o `.auth-page`. ⇒ cong anh hoi quy thi giac dang **so so mot build KHONG TON TAI** ⇒ chan toan bo.
 Ghi TEST-20261006-013 + BUG-20261006-008 (CRITICAL). ⛔ KHONG sua tep cua ERP-SESSION-01.
+
+## EVT-20261006-020
+Timestamp: 2026-10-06 17:30:00 | Event: BUG_FOUND | Status: OPEN
+Description: **LOGIN 401** — script do luong «Kho vật tư» (chay TOT o vong 37) gio tra 401, trang ket o man dang nhap.
+Lien he thoi diem manh me voi commit `3dd2431` cua ERP-SESSION-01 (17:23:51, bo migration 0330, 718 file).
+Ghi TEST-20261006-014 + BUG-20261006-009 (CRITICAL). ⛔ KHONG sua tep cua ERP-SESSION-01.
+
+## EVT-20261006-021
+Timestamp: 2026-10-06 17:46:00 | Event: TEST_COMPLETE | Status: OPEN
+Description: **ANH CHUAN DA CHUP LAI** — 56 anh duy nhut (truoc 5), moc 06/10 17:45:12, kich thuoc that (426KB).
+Cong anh hoi quy thi giac **GIO CO GIA TRI PHAN BIET**. Login da 200 (BUG-009 het).
+Ghi TEST-20261006-015. ⚠️ 63 tep anh chuan CHUA COMMIT.
+
+## EVT-20261006-022
+Timestamp: 2026-10-06 17:50:00 | Event: BUG_FOUND | Status: OPEN
+Description: **HUB «KHO VẬT TƯ» CHUA BAO GIO RENDER** — do that 12 giay sau bam muc con van o dashboard.
+  Bang chung phu: bundle client CO chua `warehouse_hub` (code da build dung) nhung `active` khong thanh "inventory".
+  Nghi van tai `app/page.tsx:506-510` (moduleKey lay tu `viewable` thay vi `item.moduleKey`).
+  Ghi TEST-20261006-016 + BUG-20261006-010 (HIGH). ⛔ KHONG sua tep cua ERP-SESSION-01.
+
+## EVT-20261006-023
+Timestamp: 2026-10-06 18:15:00 | Event: TASK_START | Status: IN_PROGRESS
+Description: **TASK-227** — Chỉnh hub «Danh mục vật tư» theo yêu cầu user 06/10/2026:
+  bỏ phần trồng tréo ở tab Danh sách vật tư · đổi tên tab nhóm · thêm tab «Danh mục hệ vật tư» · bỏ tab Mã vật tư gốc.
+  Sửa: `app/page.tsx` + tạo `app/screens/MaterialCategoryList.tsx`. tsc EXIT=0 · regression 802/803 ✅
+  Ghi CHG-20261006-001 · DEV-20261006-004 · TEST-20261006-017.
+
+## EVT-20261006-024
+Timestamp: 2026-10-06 09:45:00 | Event: TASK_COMPLETE | Status: VERIFIED
+Description: **TASK-227 NGHIỆM THU PASS 4/4** trên :9000 (Edge headless, login 200):
+  tabbar đúng 3 tên mới · tab 0 sạch (không còn BOQ/soát trùng alias) · tab hệ render 8 cột/17 dòng
+  + CRUD/S/S/F · nút Xóa disable đúng quy tắc (hệ có vật tư ⇒ chặn, có lý do hiển thị).
+  Build: fingerprint `VNTECH-FP-A825448766298FB9` (718 tệp, fixpoint 1 vòng) · BUILD EXIT=0 ·
+  BUILT ARTIFACT VALIDATION ĐẠT. Ghi TEST-018 + BUG-011 (đã FIXED).
+
+## EVT-20261006-025
+Timestamp: 2026-10-06 10:20:00 | Event: HOTFIX_COMPLETE | Status: VERIFIED
+Description: **BUG-20261006-012 đã sửa + xác minh** — tab 1 & tab 2 màn «Danh mục vật tư» TRƯỚC ĐÂY TRẮNG
+  (details h=0px) vì thiếu thuộc tính `open`; nay cả 3 tab h=947px. Đã hoàn nguyên dòng CSS `!important`
+  thử sai (⛔ không hiệu quả trong Blink). Ghi BUG-012 + TEST-019. Vân tay `VNTECH-FP-B7D4A52E0EFD921C`.
+
+## EVT-20261006-026
+Timestamp: 2026-10-06 10:40:00 | Event: VERIFICATION | Status: VERIFIED
+Description: **TASK-226 NGHIỆM THU PASS 100%** trên :9000 — hub «Kho vật tư» render đúng: tabbar 3 tab
+  (KHO · XUẤT & NHẬP · CẤP PHÁT & HOÀN TRẢ), DASHBOARD TỒN KHO ngay đầu tab KHO, 12 cards kho đủ 4 thông tin,
+  màn chi tiết 5 tab + nút «← Quay lại màn KHO» hoạt động. ⇒ `BUG-20261006-010` (hub không render) **ĐÃ HẾT**
+  nhờ bản sửa `moduleKey: item.moduleKey` của ERP-SESSION-01. Ghi TEST-20261006-020.
+  ⚠️ S01 CHƯA COMMIT bản sửa ⇒ cần commit gấp.
+
+## EVT-20261006-027
+Timestamp: 2026-10-06 11:05:00 | Event: VERIFICATION | Status: VERIFIED
+Description: **TASK-226 NGHIEM THU HOAN TOAN** — them TEST-20261006-021: tab «XUAT & NHAP» co
+  subtabbar that (Xuat kho 30 dong · Nhap kho 36 dong · mac dinh theo quyen) va tab «CAP PHAT & HOAN TRA»
+  co 2 bang 46 dong + subtab Hoan tra 23 dong; deu co nut tao phieu. Ra soat toan repo: lop BUG-012
+  (details thieu `open`) **da het** — chi 3 cho co `data-tab`, ca 3 da co `open`.
+
+## EVT-20261007-028
+Timestamp: 2026-10-07 10:40:00 | Event: TASK_COMPLETE | Status: VERIFIED
+Description: **TASK-228 DONE** — don gon tab «KHO» hub «Kho vat tu»: 6.202px → 4.949px; bo 3 khoi trung lap
+  (3 KPI · danh sach kho thu 2 · dai tab la) + 2 nhan «Pham vi du an» trung; CHUYEN 2 nut vao toolbar.
+  tsc EXIT=0 · regression 803/802/0 · da build + khoi dong lai :8787 + chup anh truoc/sau. Ghi CHG-20261007-002
+  + DEV-20261007-005 + TEST-20261007-022.
+  Them: **TEST-20261007-023** — cong anh hoi quy nay cho **TIN HIEU THAT** (34/68 anh lech), ⛔ khong con
+  «0 px lech» gia; 2 anh lech LON duoc giai thich la do THAY DOI CO CHU DICH (TASK-227 + hub render dung),
+  ⛔ khong phai hoi quy ⇒ `tools/baseline` da CU, can chup lai (⛔ chua duoc phep).
+
+## EVT-20261007-029
+Timestamp: 2026-10-07 11:00:00 | Event: VERIFICATION | Status: VERIFIED
+Description: **TASK-228 kiem chung chuc nang sau khi don** — bo loc «Chon du an» con tac dung (KPI 1.235 → 0 khi
+  chon DA-MAU-01) · 2 nut «⇄ Chuyen kho» + «▤ The kho» con nguyen va bam duoc (panel dieu chuyen MO) ·
+  bo loc «Kho» trong toolbar con (tu dieu chinh theo du an) ⇒ ⛔ khong hong chuc nang nao. Ghi TEST-20261007-024.
+
+## EVT-20261007-030
+Timestamp: 2026-10-07 11:10:00 | Event: TEST_COMPLETE | Status: VERIFIED
+Description: **Kiem 2 tab con lai cua hub** — TAB 2 «XUAT & NHAP» (2.040px · 3 khoi · 1 bang · 30 dong) va
+  TAB 3 «CAP PHAT & HOAN TRA» (2.953px · 3 khoi · 3 bang · 48 dong) **SACH**, ⛔ khong trung lap.
+  Tab 1 «KHO» sau khi don con 2 khoi GIAI THICH (van ban tai lieu) — da neu trong TEST-20261007-025,
+  ⛔ chua bo, cho user quyet (a) giu · (b) thu vao nut «?» · (c) bo.
+
+## EVT-20261007-031
+Timestamp: 2026-10-07 11:30:00 | Event: VERIFICATION | Status: FIXED
+Description: **BUG-20261006-007 DA SUA (dinh chinh bao xanh gia)** — ghi khoi «🔴 DINH CHINH — CONG ANH CHUAN»
+  bang APPEND vao `docs/agent-progress/MASTER_STATUS.md` (sua dung dong 26/367/426) va
+  `docs/agent-progress/TASK_INDEX.md` (sua dung dong 160 / MT3-F14). ⛔ KHONG ghi de noi dung cu (§28).
+  XAC MINH BANG CHUNG: `git log -1 7fdf71d` = «MT3: menu items to tabs…» **co that**;
+  `git show --name-only 7fdf71d` = **dung 68 tep `tools/baseline/`** bi doi ⇒ khang dinh trong dinh chinh la DUNG.
+  Ghi BUG_HOTFIX_LOG (BUG-007 → FIXED) + WEEKLY_REPORT_DATA Revision 3.
+
+## ⭐⭐⭐ EVT-20261007-032 — ĐỔI CÁCH GHI LOG SANG KHUÔN `SESSION_A` ⭐⭐⭐
+| ⭐ | ⭐ |
+|---|---|
+| **SỰ KIỆN** | ⭐ user chỉ thị (07/10): «**không đếm task theo master task và master task 2 nữa, bây giờ là giai đoạn golive, hãy bám sát theo goal và xem cách thức mà session 1 ghi log rồi làm theo**» |
+| **ĐÃ ĐỌC ĐỂ HỌC** | ⭐ `docs/dsh-mutil-session/SESSION_A/BUG_HOTFIX_LOG.md` (287d) ⭐ `TEST_LOG.md` (318d) ⭐ `HANDOFF_LOG.md` (212d) ⭐ `EVENT_LOG.md` (466d) ✓ |
+| ⭐ **KHUÔN RÚT RA** | ⭐ **①** bảng `\| ⭐ \| ⭐ \|` dày bằng chứng ⭐ **②** **ROOT CAUSE loại trừ TỪNG giả thuyết bằng phép thử** ⭐ **③** mục **«SAI LẦM ĐÃ SỬA (§22)»** — tự nhận kết luận sai ⭐ **④** mục **«BÀI HỌC (§33)»** đánh số ⭐ **⑤** `STATUS = FIXED` chỉ khi **CODE + TEST** (§24) ⭐ **⑥** mục **«HỒI QUY (§25)»** ⭐ **⑦** **PHÂN VAI** — ghi rõ tệp thuộc phiên nào (§7) ⭐ **⑧** dẫn **§ của GOAL**, ⛔ KHÔNG dẫn master task ✓ |
+| ⭐ **ĐÃ ÁP DỤNG** | ⭐ ghi lại **TASK-229** vào `BUG_HOTFIX_LOG.md` theo **khuôn mới** (⭐ kèm **3 sai lầm đã sửa** + **4 bài học** + phân vai + quy trình triển khai) ✓ |
+| ⛔ **DỪNG** | ⭐ **KHÔNG** đếm/báo `MASTER TASK 1 (110 mục)` ⭐ **KHÔNG** báo `MT2` ⭐ **KHÔNG** thêm dòng vào `docs/agent-progress/TASK_INDEX.md` ✓ |
+| ⚠️ **TỆP ĐÃ TẠO TRƯỚC CHỈ THỊ** | ⭐ `docs/agent-progress/TASK-227.md` + `TASK-228.md` (⭐ tạo **trước** khi user chỉ thị đổi cách) ⚠️ ⇒ ⭐ **GIỮ LẠI làm vết** (⛔ không xoá — `NO_LOG_DELETION`) nhưng ⛔ **không** tiếp tục mở rộng loạt này ✓ |
+
+## ⭐⭐⭐ EVT-20261007-033 — HỒI QUY RỘNG (§25) PASS 54/54 ⭐⭐⭐
+| ⭐ | ⭐ |
+|---|---|
+| **SỰ KIỆN** | ⭐ `TEST_COMPLETE` — ⭐ quét **11 nhóm menu · 54 mục con** trên `:9000` (⭐ login `200` · boot OK) ✓ |
+| **KẾT QUẢ** | ⭐⭐⭐ **✅ 54 render OK · ⚠️ 0 màn trống · ❌ 0 không bấm** ⭐⭐⭐ |
+| **CHỨNG MINH KHÔNG HỒI QUY** | ⭐ `warehouse` = **1 mục** → h1 «Tồn kho & điều chuyển» ⇒ **TASK-226 còn nguyên** ✓ ⭐ `material_master` đi thẳng → h1 «Danh mục vật tư gốc» (dai **41.242**) ⇒ **TASK-227 còn nguyên** ✓ ⭐ **11/11 nhóm mở được** ⇒ ⭐ sửa menu ⛔ **không phá nhóm nào** ✓ |
+| ⭐ **SAI LẦM ĐÃ SỬA (§22)** | ⭐⭐ Bản quét 1 đọc `.nav-child` **TRƯỚC khi mở nhóm** ⇒ chỉ thấy **2 mục** (⭐ của nhóm đang mở sẵn) ⇒ in **«OK 2 · trống 0»** ⚠️ ⭐⭐ **TRÔNG NHƯ ĐẠT NHƯNG CHƯA QUÉT GÌ** ⛔ ⇒ ⭐ **bản 2 mở nhóm trước** mới ra **54 mục** ✓ |
+| ⭐ **BÀI HỌC (§33)** | ⭐ ⭐⭐ **ĐẾM ĐƯỢC «0» KHÔNG CÓ NGHĨA LÀ «KHÔNG CÓ LỖI»** ⭐ ⭐⭐ — ⭐ **PHẢI KIỂM MẪU SỐ có hợp lý không** trước khi tin kết quả ✓ |
+| ⭐ **TRUY VẾT** | ⭐ `TEST-20261007-027` ✓ |
+
+## ⭐⭐ EVT-20261007-034 — KIỂM CHỨNG ĐỘC LẬP NÚT CHẾT (`BUG-20261007-013`) ⭐⭐
+| ⭐ | ⭐ |
+|---|---|
+| **SỰ KIỆN** | ⭐ `BUG_FOUND` — ⭐ **SESSION-02 kiểm chứng lại** phát hiện của S01 (`BUG-20261007-003`) theo **§16** (⛔ không tin state cũ) ✓ |
+| **KẾT QUẢ KIỂM CHỨNG** | ⭐ ⭐ **S01 ĐÚNG MỘT PHẦN**: ⭐ ① nút «＋ Tạo phiếu cấp phát» ⭐⭐ **CHẾT THẬT** ⭐⭐ (⭐ đo: bấm ⇒ `overlay 0 · modal 0` ✓) ⭐ ② nút «＋ Tạo phiếu hoàn trả» ⭐⭐ **CHẠY ĐƯỢC** ⭐⭐ (⭐ đo: bấm ⇒ `overlay 1 · modal 1` + modal «Hoàn trả vật tư dư…» ✓) ⇒ ⭐ **S01 gộp 2 nút làm một** ⚠️ ✓ |
+| **ROOT CAUSE** | ⭐ `Inventory.tsx:389` gọi `open("allocate")` ⭐ nhưng `page.tsx` ⭐⭐ **đủ 40 modal, ⛔ KHÔNG có `allocate`** ⭐⭐ ⇒ render rỗng ✓ |
+| ⭐ **ĐỐI CHỨNG DƯƠNG** | ⭐ nút anh em `open("return")` ⭐ **mở được modal thật** ⇒ ⭐ chứng minh ⭐ **cơ chế `open()` hoạt động tốt** · ⛔ **không phải lỗi `open`** ✓ |
+| **TRẠNG THÁI** | ⭐⭐ **OPEN** — ⛔ **chưa sửa**: `AllocateReturn.tsx:5-6` ghi «⛔ **Không tự suy diễn nghiệp vụ**» ⇒ ⭐ cần **quy tắc từ user** ✓ |
+| ⭐ **BÀI HỌC (§33)** | ⭐ ⭐⭐ **BÁO CÁO CỦA PHIÊN KHÁC PHẢI TỰ ĐO LẠI** ⭐ ⭐⭐ — ⭐ S01 ghi «**2 nút** đều không mở được» ⚠️ nhưng ⭐ đo thật: ⭐ **1 chết · 1 chạy** ✓ ⭐ ⭐⭐ **⛔ KHÔNG gộp nhiều đối tượng vào 1 kết luận khi chưa đo từng cái** ⭐ ⭐⭐ ✓ |
+
+## ⭐⭐⭐ EVT-20261007-035 — QUÉT HỆ THỐNG PHÁT HIỆN **LỚP LỖI** (⛔ không phải lỗi lẻ) ⭐⭐⭐
+| ⭐ | ⭐ |
+|---|---|
+| **SỰ KIỆN** | ⭐ `BUG_FOUND` — ⭐ từ `BUG-20261007-013`, ERP-SESSION-02 **quét hệ thống**: ⭐ đối chiếu **MỌI `open("…")`** trong `app/**` với **40 modal thật** ✓ |
+| **KẾT QUẢ QUÉT** | ⭐ 39 tên gọi `open("…")` ⭐ ⇒ ⭐ **37 CÓ modal** ✅ ⭐ ⭐ **2 ⛔ KHÔNG CÓ**: `allocate` (1) ⭐ `warehouse` (**2**) ⭐⭐ |
+| **ĐO THẬT** | ⭐ «＋ Tạo kho» ❌ · «✎ Sửa» ❌ · «＋ Tạo phiếu cấp phát» ❌ ⭐ ⭐ **ĐỐI CHỨNG DƯƠNG** «◉ Xem chi tiết kho đang chọn» ✅ **đổi màn** (`dai 107.793→898`) ⇒ ⭐ **phép đo ĐÚNG** ✓ |
+| ⭐ **SAI LẦM ĐÃ SỬA (§22)** | ⭐ Bản đo đầu **chỉ đếm `modal`** ⚠️ ⇒ **đối chứng dương cũng ra «0»** (⭐ vì nó mở **MÀN** ⛔ không mở modal) ⇒ ⭐⭐ **tiêu chí đo THIẾU, suýt kết luận sai** ⚠️ ⭐⭐ ⇒ ✅ sửa: đo thêm `h1` + `dai` + `manChiTiet` ✓ |
+| ⭐ **BÀI HỌC (§33)** | ⭐ ⭐⭐ **PHÉP ĐO PHẢI CÓ «ĐỐI CHỨNG DƯƠNG» — ⭐ một đối tượng BIẾT CHẮC là hoạt động** ⭐ ⭐⭐ — ⭐ nếu không ⭐ **«0 thay đổi» ở mọi đối tượng» ⛔ không phân biệt được «tất cả đều chết» với «phép đo hỏng»** ⚠️ ⭐ ⭐ (⭐ trong phiên này em **sai 3 lần** vì thiếu đối chứng: ⭐ menu 2/2 giả · `innerText` rỗng · `modal` thiếu ⚠️) ✓ |
+| **TRUY VẾT** | ⭐ `BUG-20261007-014` ✓ |

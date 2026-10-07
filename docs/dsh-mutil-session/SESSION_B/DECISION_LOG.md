@@ -49,3 +49,13 @@ Selected Solution: (c) — va GHI RO GIOI HAN TREN UI o cho KHONG loc chinh xac 
 Impact: An toan, KHONG dung database dung chung (Goal §18/§22) => KHONG xung dot schema voi phien khac.
 Related Task: TASK-20261006-226 | Related Change: CHG-20261006-002
 Verification: do tren payload song — 12 kho · 1.185 dong ton.
+
+## DEC-20261006-004
+Date: 2026-10-06 | Session: ERP-SESSION-02 | Category: TESTING / UI_UX | Module: Kho vat tu
+Decision: Khi do luong tab co NHIEU KHOI ANH EM (khong long trong 1 section), phai kiem TUNG selector
+  cua tung khoi (`[data-vntech="issue-list-screen"]`, `[data-vntech="receipt-list-screen"]`),
+  ⛔ KHONG chi do ben trong section cha.
+Reason: Do that thuc te: section cha `[data-vntech="warehouse-io-tab"]` chi cao **234px** va co
+  `soBang=0 · soDong=0` ⇒ neu chi nhin con so nay se **ket luan sai la tab «XUAT & NHAP» TRONG**,
+  trong khi 2 danh sach that (30 dong + 36 dong) nam NGOAI no (`Inventory.tsx:454`, `:481`).
+Impact: ⛔ Tranh bao loi gia (false RED) va tranh bo sot bug that (false GREEN) khi nghiem thu.

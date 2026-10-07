@@ -331,3 +331,50 @@ Notes: ⭐ **BAI HOC**: ⭐ **phat hien phien khac bang `git status`** — ⛔ *
 
 ---
 
+## TEST-20261007-001
+
+Date: 2026-10-07
+Session: ERP-SESSION-01
+Task: BUG-20261007-002 · E2E bước 6 (GRN)
+Module: Kho vật tư (`app/screens/Inventory.tsx`)
+Test type: UI / E2E
+
+| ⭐ | ⭐ |
+|---|---|
+| **SCENARIO** | ⭐ Mở menu `KHO VẬT TƯ › Kho vật tư` ⇒ tab `XUẤT & NHẬP` ⇒ sub-tab `Nhập kho` ⇒ bấm `⭱ Tạo phiếu nhập kho` ⭐ |
+| **EXPECTED** | ⭐ màn `<Inventory>` có dải 3 tab + mở được modal GRN |
+| **ACTUAL** (trước fix) | ⭐ ⛔ `h1` = «Kho Tổng» ⇒ `<CentralWarehouse>`; `role=tab` = 0; ⛔ không có nút tạo phiếu |
+| **ACTUAL** (sau fix) | ⭐ ✅ `h1` = «Tồn kho & điều chuyển»; dải tab **[KHO][XUẤT & NHẬP][CẤP PHÁT & HOÀN TRẢ]**; sub-tab **[Xuất kho][Nhập kho]**; ✅ nút `⭱ Tạo phiếu nhập kho`; ✅ bấm ⇒ **modal «Ghi nhận số lượng giao thực tế» MỞ** với PO thật `PO-PRJ-DEMO-01-2026-0021` + 2 dòng `KHAC-VLXD-004` (25) / `KHAC-VLXD-005` (60) |
+| **RESULT** | ⭐⭐⭐ **PASS** ⭐⭐⭐ |
+| **REGRESSION** | ⭐ ✅ `workMenuChildren` (dòng 500) **không đụng** ⇒ đo `lib/menu-helpers.ts:125-131` xác nhận `workMenuItems` không khai `moduleKey` ⇒ `permissionKeys[0]` là cách duy nhất ở đó ✓ ⭐ ✅ `supplierPartnerMenuChildren` (`:515`) đã dùng `item.moduleKey` sẵn ✓ ⭐ ✅ build EXIT=0 · fingerprint `3adad55db6517d69` ĐẠT · 4 trường SQLite khớp ✓ |
+| **ENVIRONMENT** | ⭐ `:9000` (cutover-proxy) → `:8787` (local-server) → Java `:18081` → MySQL `vntech_erp` · Edge CDP · plugin `nuphus-mcp` · admin `Admin123456@` |
+| **RELATED_BUG** | `BUG-20261007-002` (CRITICAL → FIXED) |
+| **RELATED_CHANGE** | `CHG-20261007-001` |
+| **NOTES** | ⭐⭐ **SỬA 2 LẦN** ⭐⭐ lần 1 `viewable ?? item.moduleKey` ⭐ ⭐ **KHÔNG ĐỦ** ⭐ ⭐ vì ⭐ admin xem được `central_warehouse` ⭐⭐ ⇒ `viewable` luôn có giá trị ⭐⭐ ⇒ toán tử `??` ⭐ ⭐ **không bao giờ chạy** ⭐⭐ ⭐ ⭐ **BÀI HỌC:** sửa xong phải **đo lại trên UI**, không tin `??` là sẽ chạy ⚠️ ⭐ ⭐ Ảnh: `docs/dsh-state/bug002-grn-modal.png` |
+
+---
+
+## TEST-20261007-002
+
+Date: 2026-10-07
+Session: ERP-SESSION-01
+Task: E2E bước 1–2 (phiếu đề nghị mua hàng → chuỗi 5 bước duyệt)
+Module: Mua hàng (`app/screens/RequestDrawer.tsx`)
+Test type: E2E / UI / RBAC
+
+| ⭐ | ⭐ |
+|---|---|
+| **SCENARIO** | ⭐ Chọn dự án `E2E-DA-01` ⇒ màn `PHIẾU ĐỀ NGHỊ MUA HÀNG` ⇒ mở phiếu `DNMH-E2E-DA-01-2026-0029` bằng nút `◉` (title «Xem chi tiết phiếu») ⇒ đọc `request-status-strip` ⇒ bấm `✓ Duyệt bước 1` |
+| **EXPECTED** | ⭐ bước 1 chuyển từ «Chờ duyệt» → «Đã duyệt», chuỗi 5 bước chạy tiếp |
+| **ACTUAL — dữ liệu & giao diện** | ⭐ ✅ 19 phiếu E2E trong phạm vi dự án · trạng thái: `Chờ duyệt` / `Trả lại` / `Xuất một phần` / `Giao một phần` ⭐ ✅ drawer mở, hiện đủ 3 khối: **Đơn mua (PO) sinh từ phiếu này** · **Tiến trình phê duyệt & thời gian xử lý** · **DẢI PHÊ DUYỆT** 5 mục ⭐ ✅ dải duyệt **khớp 100%** `approval_stage_catalog`: ① CHT xác nhận nhu cầu · ② Thư ký Tổng giám đốc · ③ Phòng Dự án · ④ Phòng Kế hoạch · ⑤ Giám đốc |
+| **ACTUAL — hành động duyệt (⭐⭐ ĐÃ SỬA LẠI — bản đầu tôi kết luận SAI ⚠️)** | ⭐⭐⭐ **`element.click()` (JS thuần) KHÔNG kích hoạt handler duyệt** ⭐ ⭐ ⭐⭐ ⭐ **DÙNG `browser_click trusted:true` ⇒ `✓ Duyệt bước 1` CHẠY THẬT** ⭐⭐⭐ bằng chứng đo được: `Đã duyệt` **1/5 → 2/5** ✓ · `Bước đang xử lý` chuyển **Bước 1 → Bước 2 · Thư ký Tổng giám đốc** ✓ · `Người xử lý` chuyển **E2E Chỉ huy trưởng → E2E Thư ký SA** ✓ ⭐⭐⭐⭐⭐ ⭐⭐ **⇒ ADMIN DUYỆT ĐƯỢC BƯỚC 1** ⭐⭐ ⭐ ⭐⭐ ⭐⭐⭐ **BẤM 2 LẦN `trusted` Ở BƯỚC 2 VẪN KHÔNG ĐỔI** ⭐⭐ (`2/5` giữ nguyên) ⭐⭐⭐ ⭐⭐⭐ **ROOT CAUSE CHỐT TỪ MÃ + CSDL:** ⭐ `RequestDrawer.tsx` ⭐ `const stageRule = currentApproval?.allowedRoleCodes ? currentApproval : stageConfig;` ⭐ `const canDecide = request.status==="pending_approval" && Number(request.itemCount||0)===Number(request.items?.length||0) && stageAllowedForUser(stageRule, user);` ⭐⭐⭐ ⭐⭐ ⭐⭐ **ĐO 3 ĐIỀU KIỆN:** ⭐ ① `status` = `pending_approval` ✓ ⭐ ② đo `material_requests` × `material_request_items` ⇒ phiếu `0028` **2 dòng thật** ⇒ **OK** ✓ (⭐ cột `item_count` **không tồn tại** trong CSDL ⇒ `itemCount` do bootstrap tính ⚠️) ⭐ ③ ⛔ **`stageAllowedForUser(stageRule, user)` — điều kiện CHẶN** ⭐⭐ ⭐ |
+| **⭐⭐ BẢNG `allowed_role_codes` ĐO ĐƯỢC (`approval_stage_catalog`, `stage_kind='approval'`)** | ⭐ ① `CHT xác nhận nhu cầu` ⇒ `commander,cht` ⭐ ② `Thư ký Tổng giám đốc` ⇒ `thuky,thu_ky_tgd` ⭐ ③ `Phòng Dự án` ⇒ `project,da_nv` ⭐ ④ `Phòng Kế hoạch` ⇒ `procurement,kh_nv` ⭐ ⑤ `Giám đốc` ⇒ `director,tgd,giam_doc` ⭐⭐⭐⭐⭐ ⭐⭐⭐ **⇒ BƯỚC 1 CÓ `cht` ⇒ admin đi qua ✓ (khớp quan sát)** ⭐⭐⭐ ⭐⭐⭐ **⇒ BƯỚC 2 KHÔNG có role admin ⇒ admin KHÔNG duyệt được ✓ (khớp quan sát)** ⭐⭐ ⭐⭐⭐ **ĐỦ 5 USER E2E KHỚP TỪNG ROLE:** ⭐ `e2e.cht`(`cht`) · `e2e.thuky`(`thuky`) · `e2e.project`(`da_nv`) · `e2e.khnv`(`kh_nv`) · `e2e.bgd`(`director`) ⭐ ✓ |
+| **RESULT** | ⭐⭐ **PARTIAL** ⭐⭐ (⭐ giao diện + dữ liệu + dải duyệt + **bước 1 đã duyệt thật** **PASS** ✓ ⭐⭐ bước 2+ **BLOCKED đúng thiết kế RBAC theo `allowed_role_codes`** ✓ ⭐ ⭐ ⭐ ⇒ **đủ 5 user E2E để chạy trọn chuỗi** — xem `TEST-20261007-003` ⭐) |
+| **REGRESSION** | ⭐ ✅ không phát sinh lỗi mới ⭐ ✅ `✎ Sửa / gửi lại phiếu` · `◉ Xem chi tiết` vẫn hoạt động ⭐ ⚠️ ghi nhận UI: **`<strong class="link">` của mã phiếu KHÔNG có `onClick`** ⇒ bấm mã phiếu không mở gì ⭐ ⇒ phải bấm nút `◉`/`✎` trong cột *Hành động* (tệp thuộc phiên 02 ⇒ **chỉ ghi log**) |
+| **ENVIRONMENT** | ⭐ như TEST-001 · dữ liệu thật trong MySQL `vntech_erp` |
+| **RELATED_BUG** | ⭐ `BUG-20261007-003` (nút tạo phiếu cấp phát / hoàn trả chưa có modal — **⛔ quyết định có chủ đích** của phiên 02, `AllocateReturn.tsx:5-6`) |
+| **RELATED_CHANGE** | `CHG-20261007-001` |
+| **NOTES** | ⭐⭐⭐ **KẾT LUẬN E2E 9 BƯỚC** ⭐⭐⭐ bước **6 (GRN)** ✅ FIXED + mở được · bước **7–8 (cấp phát · hoàn trả)** ⛔ cần business rule · bước **9 (STO)** ✅ **có dữ liệu thật** để kiểm chứng (`TRF-2026-00007/00008` `KHO-E2E-01 → TD-E2E-DA-01-E2E-TD01/02`) ⭐⭐⭐ ⭐⭐⭐ **BÀI HỌC LỚN NHẤT VỀ CÔNG CỤ:** ⭐⭐⭐ `element.click()` trong `browser_evaluate` ⭐⭐⭐ **KHÔNG tạo `user-activation`** ⭐⭐⭐ ⇒ ⭐⭐ nút nào cần activation ⭐ (duyệt · phát hành PO · lưu phiếu) ⭐⭐⭐ **phải dùng `browser_click trusted:true`** ⭐ ⭐ ⭐ và ⭐⭐ **`browser_snapshot` CÓ THỂ TRẢ RỘNG HƠN `querySelector`** ⭐ ⭐ ⚠️ ⭐⭐ (một lần `thead th` gom cả 3 bảng ⇒ tôi kết luận sai «3 bảng chồng nhau» ⇒ ảnh đã bác bỏ ✓ §22) |
+
+---
+

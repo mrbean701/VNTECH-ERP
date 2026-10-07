@@ -193,3 +193,340 @@ Notes: ⭐ **KET LUAN CHINH XAC:** cong anh hoi quy thi giac **DANG SO SO MOT BU
   ⇒ **Moi phat hien truoc day ve "3 man khong mo duoc" deu co the la HUU QUA cua loi nay**, khong phai loi selector don le.
   ⇒ ⛔ `tools/baseline` van SACH (khong dung anh chuan). ⛔ ERP-SESSION-02 KHONG sua tep cua ERP-SESSION-01 (Goal §7/§28).
   ⇒ CAN: dung server UI phai phuc vu `dist/` **cung thu muc voi HTML** (hoac khoi dong lai server sau moi lan build).
+
+## TEST-20261006-014
+Date: 2026-10-06 | Task: TASK-226 | Module: Auth / Session | Test Type: E2E (do that bang trinh duyet that)
+Scenario: Chay lai script do luong «Kho vật tư» (da chay TOT o vong 37) de xac minh tabbar 3 tab + cards + man chi tiet 5 tab.
+Expected: nhu vong 37 — login 200, boot <2s, menu «Kho vật tư» xuat hien, tabbar 3 tab doc duoc.
+Actual: **LOGIN TRA 401** → trang ket o man «Dang nhap he thong» (authPage=true, navGroup=false) trong 25s.
+  Bang chung: `fetch('/api/system',{action:'login',username:'admin',password:'Admin123456@'})` → status 401, setCookie rong.
+  Doi chieu THOI DIEM (manh me):
+    · 17:21 (vong 37)  : login **200**, boot 912ms, menu «Kho vật tư» CO, cards «Kho Tổng» hien
+    · 17:23:51         : ERP-SESSION-01 commit `3dd2431` — "chore: bo migration 0330 (ghi van tay cua chinh no
+                         => **vong lap vo han**); van tay e7195a48 · **718 files** · verify DAT"
+    · 17:25+ (vong 38-39): login **401**, khong boot duoc
+  Kiem tra khong co gi khac: 5 tai nguyen HTML deu **HTTP 200** · `dist/` khong doi tu 17:22:47 · server UI con song.
+Result: **FAIL — login hong** | Regression: N/A | Environment: Edge headless + CDP, base :9000
+Related Bug: BUG-20261006-009 (moi)
+Notes: ⭐ **KET LUAN TAM THOI:** co su lien he thoi diem manh me giua commit `3dd2431` (S01) va viec login chuyen tu 200 → 401.
+  ⛔ CHUA KHANG DINH nguyen nhan — can ERP-SESSION-01 kiem tra commit `3dd2431` (bo migration 0330 + 718 file) co pha
+  session/auth khong. Neu dung → rollback hoac sua ngay.
+  ⛔ ERP-SESSION-02 KHONG sua tep cua ERP-SESSION-01 (Goal §7/§28) — chi do va bao.
+  ⚠️ Hieu qua: **KHONG THE nghiem thu TASK-226** cho toi khi login hoat dong tro lai.
+
+## TEST-20261006-015
+Date: 2026-10-06 | Task: TASK-226 | Module: DevOps — Cong chan hoi quy thi giac | Test Type: UNIT (doi chieu file)
+Scenario: Kiem tra lai `tools/baseline/` sau khi thay 66 tep chua commit — anh chuan co that su duoc chup lai khong.
+Expected: nhieu hon 5 anh duy nhat, moc sua hom nay, dung la man that (khong phai trang setup).
+Actual: **DA CHUP LAI — CONG ANH GIO CO GIA TRI PHAN BIET.**
+  · So anh duy nhat: **56** (truoc: **5**) — tang 11 lan
+  · Moc sua moi nhat: **06/10 17:45:12** (truoc: 01/10 16:53:14)
+  · Kich thuoc mau: 01-dashboard__desktop.png = **426.503 byte** · 07-admin__desktop.png = **425.103 byte** ·
+    17-modal-po__desktop.png = **268.104 byte** (truoc day chi ~100KB vi la trang setup)
+  · 3 mau khac nhau hash: D08B088FDBED · B81B2CE93D22 · 4A28465A1926 ⇒ **KHAC NHAU THAT SU**
+  · 63 tep `tools/baseline/*.png` dang o trang thai **M (chua commit)** — chua len GitHub.
+  · Login da tro lai **HTTP 200** (BUG-20261006-009 da het).
+Result: **PASS** | Regression: N/A | Environment: Get-FileHash SHA256 tren 68 tep
+Related Bug: BUG-20261006-005 (da khac phuc phan nguyen nhan) · BUG-20261006-009 (da het)
+Notes: ⭐ **TIN TOT:** cong anh hoi quy thi giac **GIO DUNG CHUC NANG** — co the dung de nghiem thu.
+  ⚠️ 63 tep anh chuan **CHUA COMMIT** — can ERP-SESSION-01 commit de khoi mat khi may chu khoi dong lai.
+  ⛔ ERP-SESSION-02 KHONG commit (luat 25 AUTO_COMMIT = FALSE).
+
+## TEST-20261006-016
+Date: 2026-10-06 | Task: TASK-226 | Module: Menu (Warehouse) | Test Type: E2E (do that bang trinh duyet that)
+Scenario: Xac minh yêu cuu cua user — bam menu «Kho vật tư» → hub 3 tab (KHO · XUẤT & NHẬP · CẤP PHÁT & HOÀN TRẢ) → cards kho → man chi tiet 5 tab.
+Expected: sau khi bam muc con, man hien thi `.approved-inventory-screen` + tabbar 3 tab + cards kho.
+Actual: **HUB CHUA BAO GIO RENDER** — do that 12 giay sau bam muc con van o man dashboard:
+  `manInventory: false · manDashboard: false · warehouseCards: false · tabbarHub: 0 · cardsKho: 0 · nutTaoKho: false`
+  body van: "TỔNG QUAN ĐIỀU HÀNH CÔNG VIỆC ⌄ TRUNG TÂM PHÊ DUYỆT 7 ..."
+  ⭐ Bang chung phu: text trang CO «KHO VẬT TƯ ⌃» (mui ten LEN = nhom DANG MO) va CO noi dung «Kho Tổng»
+  — nhung do la noi dung DASHBOARD (muc Kho Tổng trong dashboard), KHONG PHAI hub.
+  ⭐ Bang chung phu 2: bundle client `dist/client/assets/page-DFsU9Xvb.js` **CO** chua `warehouse_hub`
+  ⇒ code DA build dung, nhung `active` KHONG BAO GIO thanh "inventory".
+Result: **FAIL — hub chua render** | Regression: N/A | Environment: Edge headless + CDP, base :9000
+Related Bug: BUG-20261006-010 (moi)
+Notes: ⭐ **NGUYEN NHAN NGHI VAN (can ERP-SESSION-01 kiem tra):** `app/page.tsx:506-510`
+  ```js
+  const warehouseMenuChildren = warehouseMenuItems.flatMap((item) => {
+    const viewable = item.permissionKeys.find((key) => modulePermission(data, key).canView);
+    if (permissionConfigured && !viewable) return [];
+    return [{ ..., moduleKey: viewable ?? item.permissionKeys[0], ... }];
+  });
+  ```
+  · `permissionConfigured` (dong 463) = `isAdminUser(data.user) || (data.modulePermissions||[]).length > 0`
+    → voi admin = **true**.
+  · `viewable` = permissionKey DAU TIEN co `canView` — vi `warehouseMenuItems[0].moduleKey = "inventory"` nhung
+    `permissionKeys = ["central_warehouse","warehouse_receipt","warehouse_issue","inventory",...]`
+    → neu `central_warehouse` co canView thi `moduleKey` thanh **"central_warehouse"** (sai!) thay vi "inventory".
+  · Hoac neu KHONG permissionKey nao co canView → `return []` → `warehouseMenuChildren = []` → nut menu khong render.
+  ⭐ **CAN KIEM TRA:** goi API `/api/system` (sau login) → doc `modulePermissions` + `user.role` → tinh lai
+  `permissionConfigured` va `viewable` → xac dinh `warehouseMenuChildren` co rong khong / moduleKey la gi.
+  ⛔ ERP-SESSION-02 KHONG sua tep cua ERP-SESSION-01 (Goal §7/§28) — chi do va bao.
+  ⚠️ Hieu qua: **KHONG THE nghiem thu TASK-226** cho toi khi hub render duoc.
+
+## TEST-20261006-017
+Date: 2026-10-06 | Task: TASK-227 | Module: Danh mục vật tư | Test Type: REGRESSION + STATIC
+Scenario: Kiểm tra 3 yêu cầu của user — bỏ trồng tréo tab 0 · đổi tên tab nhóm · thêm tab hệ · bỏ tab mã gốc.
+Expected: `tsc` sạch · 803 test pass · không còn khối trồng tréo · đúng 3 tab.
+Actual: **PASS** — `npx tsc --noEmit` **EXIT=0**; `npm run test:regression` **803 test / 802 pass / 0 fail / 1 skip**
+  Xác minh bằng script đọc tệp sau khi sửa:
+  · «CÔNG CỤ CHẨN LOẠN»          → KHÔNG còn ✅
+  · «SOÁT TRÙNG ALIAS»           → KHÔNG còn ✅
+  · «SO SÁNH / ĐỐI CHIẾU BOQ»    → KHÔNG còn ✅
+  · `<MaterialCategoryList>`      → CÓ ✅
+  · «DANH MỤC HỆ VẬT TƯ»          → CÓ ✅
+  · tab «MÃ VẬT TƯ GỐC» cũ        → KHÔNG còn ✅
+  · `MaterialMatchingWorkspace`   → CÒN ✅ (đúng cam kết ⛔ không xoá chức năng)
+Result: **PASS** | Regression: **PASS (802/803)** | Related Change: CHG-20261006-001
+Notes: ⛔ CHƯA nghiệm thu thật trên :9000 — cần build lại trước (bundle `dist/` còn từ 17:22).
+  ⛔ `tools/baseline` **KHÔNG đụng** · ⛔ không `--update`.
+
+## TEST-20261006-018
+Date: 2026-10-06 | Task: TASK-227 | Module: Danh mục vật tư | Test Type: **E2E (nghiệm thu thật trên :9000)**
+Scenario: Build lại + nghiệm thu đủ 4 yêu cầu của user 06/10/2026 trên trình duyệt thật.
+Expected: 3 tab đúng tên · tab 0 sạch (không khối trồng tréo) · tab hệ có bảng + CRUD/S/S/F · Xóa đúng quy tắc.
+Actual: **PASS 100% — 4/4 yêu cầu đạt.**
+```
+LOGIN: 200 · BOOT: OK
+[1] mo menu      : DA_BAM: DANH MỤC VẬT TƯ GỐC
+[2] TABBAR       : ["Danh sách vật tư","Danh mục nhóm vật tư","Danh mục hệ vật tư"]   ✅ đúng tên
+[3] TAB 0        : coBang=true · conCongCuChanLoan=FALSE · conDoiChieuBOQ=FALSE · conSoatTrungAlias=FALSE  ✅ SẠCH
+[4] TAB 1        : summary="DANH MỤC NHÓM VẬT TƯ" · coBang=true   ✅ đã đổi tên
+[5] TAB 2        : 8 cột · 17 dòng                                            ✅ TAB MỚI render thật
+      cot: Mã hệ | Tên hệ vật tư | Mô tả | Thứ tự | Số nhóm | Số vật tư | Trạng thái | Thao tác
+      nut: ＋ Thêm hệ vật tư · ⤓ Xuất CSV · Sửa · Ẩn · Xóa
+      dieuKien: Tìm hệ vật tư · Lọc trạng thái · Sắp xếp             ✅ CRUD + Search/Sort/Filter
+[6] QUY TẮC NGHIỆP VỤ NÚT XÓA (đo thật):
+      E2E-MALFORM-name · 0 vật tư  → xoaDisabled=FALSE  (cho xóa)          ✅
+      Điện            · 9 vật tư  → xoaDisabled=TRUE  ⛔
+      Điện nhẹ        · 3 vật tư  → xoaDisabled=TRUE  ⛔
+      HVAC            · 4 vật tư  → xoaDisabled=TRUE  ⛔
+      Cấp thoát nước  · 7 vật tư  → xoaDisabled=TRUE  ⛔
+      Xi măng & bê tông · 25     → xoaDisabled=TRUE  ⛔
+      Thép            · 30 vật tư → xoaDisabled=TRUE  ⛔
+      title của nút Xóa: "Hệ đang có vật tư — hãy chuyển vật tư sang hệ khác hoặc Ẩn hệ để giữ lịch sử"
+```
+Result: **PASS** | Regression: **PASS (802/803)** | Related Change: CHG-20261006-001
+Notes:
+· ⭐ `innerText` trả **RỖNG** ở Edge headless (layout chưa flush) ⇒ script đầu tiên báo `cot:[]` SAI.
+  Đổi sang `textContent` ⇒ đọc đúng. Bài học: probe DOM phải dùng `textContent`, ⛔ không tin `innerText`.
+· ⭐ Server UI phải **khởi động lại** sau mỗi lần build: HTML được cache trong RAM ⇒ 404 bundle
+  (cùng dấu hiệu với BUG-20261006-008). Đã dừng đúng PID 6444 (`scripts/local-server.mjs`) rồi
+  khởi động lại PID 3768 ⇒ `index-Dyg1xiQf.js` HTTP 200. ⛔ KHÔNG dùng `Stop-Process node` (§36).
+
+## TEST-20261006-019
+Date: 2026-10-06 | Task: TASK-227 | Module: Danh mục vật tư | Test Type: **E2E (nghiệm thu lại sau khi sửa BUG-012)**
+Scenario: Sau khi thêm `open` cho tab 1+2, xác minh nội dung 3 tab thật sự HIỆN (đo kích thước, không chỉ đọc DOM).
+Expected: cả 3 tab có `details` height > 0 và bảng hiển thị; ảnh chụp có nội dung (không trắng).
+Actual: **PASS.**
+```
+ĐO getBoundingClientRect trên :9000:
+  tab 0: details h = 947px · body h = 947px · table h = 13084px · 237 dòng   ✅
+  tab 2: details h = 947px · body h = 947px · table h =   977px ·  17 dòng   ✅ (trước: 0px)
+Kích thước ảnh chụp (proxy cho "có nội dung"):
+  tab-0-danh-sach-vat-tu.png        : 420KB
+  tab-1-danh-muc-nhom-vat-tu.png    : 285KB → 405KB   ✅ tăng mạnh = đã render
+  tab-2-danh-muc-he-vat-tu-MOI.png  : 285KB → 394KB   ✅ tăng mạnh = đã render
+Ảnh tab 0 (mắt thường): CHỈ có tiêu đề + 6 ô lọc/sắp xếp + nút Thêm vật tư/Xuất CSV + bảng 11 cột
+  + dòng "237/237 vật tư" ⇒ ⛔ KHÔNG còn khối «CÔNG CỤ CHẨN LOẠN» (BOQ + soát trùng alias) — ĐÚNG yêu cầu user.
+Ảnh tab 2: 8 cột (Mã hệ·Tên hệ vật tư·Mô tả·Thứ tự·Số nhóm·Số vật tư·Trạng thái·Thao tác), 17 dòng,
+  nút Sửa/Ẩn/Xóa; Xóa MỜ ở hệ có vật tư, Xóa SÁNG ở E2E-MALFORM-CODE (0 vật tư) ⇒ đúng quy tắc nghiệp vụ.
+```
+Result: **PASS** | Regression: **802/803 (0 fail)** | Related Bug: BUG-20261006-012 | Related Change: CHG-20261006-001
+Notes: ⛔ `innerText` trả RỖNG ở Edge headless ⇒ phải dùng `textContent` (đã ghi ở TEST-018).
+
+## TEST-20261006-020
+Date: 2026-10-06 | Task: **TASK-226** | Module: Kho vật tư (hub) | Test Type: **E2E (nghiệm thu thật trên :9000)**
+Scenario: Nghiệm thu ĐẦY ĐỦ yêu cầu gốc của user (06/10): «click menu Kho vật tư ⇒ hiện luôn dashboard tồn kho;
+  trên đầu có tabbar KHO · XUẤT & NHẬP · CẤP PHÁT & HOÀN TRẢ; click card kho ⇒ màn chi tiết 5 tab + nút quay lại».
+Expected: màn <Inventory> render (⛔ không phải «KHO TỔNG»); tabbar đúng 3 tab; cards kho đủ 4 thông tin;
+  màn chi tiết đúng 5 tab; nút quay lại hoạt động.
+Actual: **PASS 100% — TASK-226 ĐÃ ĐƯỢC NGHIỆM THU.**
+```
+LOGIN: 200 · BOOT: OK
+[2] MÀN RENDER : manInventory=TRUE · manCentralWarehouse=FALSE · tiêu đề "Tồn kho & điều chuyển"  ✅
+[3] TABBAR HUB : ["KHO","XUẤT & NHẬP","CẤP PHÁT & HOÀN TRẢ"]                                    ✅ ĐÚNG 3 TAB
+[4] CARDS KHO  : 12 cards · "Hàng đang vận chuyển/TRANSIT · Kho trung chuyển/Tồn hiện tại: 0"
+                 · "Kho chẩn đoán/KHO-DIAG · Kho dự án/Dự án: Dự án chẩn đoán/Tồn hiện tại: 0"
+                 ⇒ đủ 4 thông tin user yêu cầu: TÊN KHO · MÃ KHO · DỰ ÁN (kho dự án) · TỒN KHO HIỆN TẠI  ✅
+[5] chon card = DA_CHON · mo chi tiet = DA_BAM                                                     ✅
+[6] MÀN CHI TIẾT: manChiTiet=TRUE · nútQuayLai="← Quay lại màn KHO" · soTab=5
+      tab = ["Dashboard kho","Tồn kho","Xuất - Nhập","Cấp phát - Hoàn trả","Nhân sự"]             ✅ ĐÚNG 5 TAB
+[7] bam tab 3 «Xuất - Nhập» ⇒ panelXuatNhap=TRUE                                                   ✅
+[8] bam «Quay lại» ⇒ manChiTietCon=FALSE · cardsKho=12 (về đúng màn KHO)                          ✅
+ẢNH (mắt thường) hub-kho-3-tab.png: tabbar 3 tab · DASHBOARD TỒN KHO 8 chỉ số NGAY ĐẦU tab KHO
+   · bảng 12 kho · 12 cards kho · KPI Tồn khả dụng 1.235 / Chờ xuất 30
+```
+Result: **PASS** | Regression: **802/803** | Environment: Edge headless + CDP, base :9000
+Related Bug: BUG-20261006-010 (đã FIXED bởi ERP-SESSION-01 — xem ghi chú) | Related Task: TASK-226
+Notes: ⭐ **BUG-20261006-010 ĐÃ ĐƯỢC SỬA** bởi `ERP-SESSION-01` (ghi là `BUG-20261007-002`) — ĐÚNG chẩn đoán
+  em nêu ở round 40: `app/page.tsx:509` trả `moduleKey: viewable` (= khoá quyền `central_warehouse`)
+  thay vì **màn đích** `item.moduleKey` (= `inventory`) ⇒ bấm menu mở <CentralWarehouse> («KHO TỔNG»),
+  màn <Inventory> (hub 3 tab) ⛔ không bao giờ render.
+  Nay mã là `moduleKey: item.moduleKey` ⇒ `viewable` chỉ còn vai trò CỔNG QUYỀN. ✅ XÁC MINH BẰNG ĐO THẬT.
+  ⚠️ S01 **CHƯA COMMIT** bản sửa này (commit cuối vẫn `3dd2431` 06/10 17:23:51) — bản build của
+  ERP-SESSION-02 (09:34) đã chứa nó. ⇒ **CẦN S01 COMMIT** để không mất khi máy chủ khởi động lại.
+
+## TEST-20261006-021
+Date: 2026-10-06 | Task: **TASK-226** | Module: Kho vat tu (hub) | Test Type: **E2E (nghiem thu 2 tab con lai)**
+Scenario: Hoan tat nghiem thu TASK-226 — kiem 2 tab con lai cua hub «Kho vat tu» (user yeu cau:
+  subtabbar XUAT/NHAP + mac dinh theo quyen + moi subtab 1 danh sach + nhom nut CRUD/search/sort/filter;
+  tab CAP PHAT & HOAN TRA logic tuong tu).
+Expected: moi tab co subtabbar that · moi subtab 1 danh sach that (co bang + so dong) · co nut tao phieu · chuyen subtab an/hien dung.
+Actual: **PASS 100%.**
+```
+[Kiem mau data-tab] toan repo: CHI 3 cho co `data-tab=`, CA 3 DA co `open` (sua o BUG-012) => khong con cho nao dinh
+  => lop BUG-20261006-012 DA HET trong repo.
+
+=== TAB HUB 1 «XUAT & NHAP» ===
+  subtabbar      : «Xuat kho» · «Nhap kho»                                  ✅
+  MAC DINH       : «Xuat kho» (dung quy tac «mac dinh theo quyen user»)     ✅
+  Danh sach XUAT : hien=true · cao 1093px · **30 dong**                     ✅
+  nut            : «⭳ Tao phieu xuat kho» · «＋ TAO PHIEU NHAP / XUAT / DIEU CHUYEN»  ✅
+  bam «Nhap kho» : DS Xuat AN · DS Nhap HIEN · cao 1072px · **36 dong**
+                   nut «⭱ Tao phieu nhap kho» · «＋ Tao phieu nhap kho»       ✅ (an/hien dung)
+  bam «Xuat kho» : quay lai 30 dong                                         ✅
+
+=== TAB HUB 2 «CAP PHAT & HOAN TRA» ===
+  panel          : hien=true · cao 2068px · **2 bang · 46 dong**            ✅
+  subtabbar      : «Cap phat» · «Hoan tra»                                  ✅
+  bam «Hoan tra» : **23 dong** · nut «＋ Tao phieu hoan tra»                 ✅
+```
+Result: **PASS** | Regression: 802/803 | Environment: Edge headless + CDP, base :9000
+Related Task: TASK-226 | Related Bug: BUG-20261006-010 (da FIXED)
+Notes:
+  · ⚠️ BAY DO LUONG: 2 danh sach cua tab «XUAT & NHAP» nam NGOAI section `[data-vntech="warehouse-io-tab"]`
+    (la phan tu ANH EM — `Inventory.tsx:454` va `:481`) ⇒ neu chi do ben trong section do se thay
+    `soBang=0 · soDong=0` va **ket luan sai la tab trong**. Phai do theo `[data-vntech="issue-list-screen"]`
+    va `[data-vntech="receipt-list-screen"]`.
+  · ⭐ Lop `BUG-20261006-012` (details thieu `open`) **da het trong repo** — chi man «Danh muc vat tu»
+    dung mau `data-tab`, ca 3 da co `open`.
+
+## TEST-20261007-022
+Date: 2026-10-07 | Task: **TASK-228** | Module: Kho vat tu (hub) | Test Type: **E2E + REGRESSION**
+Scenario: Don gon tab «KHO» cua hub «Kho vat tu» theo yeu cau user 07/10 («sap xep qua lon xon»).
+Expected: giam khoi trung lap · ⛔ khong mat chuc nang · tsc sach · regression pass · do lai tren :9000.
+Actual: **PASS.**
+```
+DO THAT TRUOC/SAU (cung selector, cung :9000):
+  tab «KHO»  : chieu cao trang 6.202px → **4.949px**  (giam 1.253px ≈ 20%)
+  tab «XUAT & NHAP» : 2.065px → 2.040px (⛔ khong doi dang ke)
+  tab «CAP PHAT & HOAN TRA» : 2.977px → 2.953px
+KIEM CHUNG GIAO DIEN (anh khung nhin):
+  · Nhan «Pham vi du an» TRUNG: 3 cho → **1 cho** (thanh chon du an dau trang)   ✅
+  · Dai tab LA «TON KHO|CHUYEN KHO|THE KHO»: **DA BO**                            ✅
+  · 2 nut «⇄ CHUYEN KHO» + «▤ THE KHO»: **DA CHUYEN vao toolbar**                 ✅ (⛔ khong xoa)
+  · Hang 3 KPI trung («So kho/Vat tu dang co/Phieu xuat»): **DA BO**              ✅
+  · Danh sach kho THU 2 («Gia tri ton kho theo kho», 13 nut): **DA BO**           ✅
+  · GIU: 4 KPI · DASHBOARD TON KHO · 12 cards kho · bang ton kho · «Canh bao ton kho» ✅
+```
+Result: **PASS** | Regression: **803 test · 802 pass · 0 fail · 1 skip** | Environment: Edge headless + CDP, base :9000
+Related Change: CHG-20261007-002 | Related Task: TASK-226
+Notes: `npx tsc --noEmit` **EXIT=0** · bundle `page-RIK3wkRf.js` **CO** chua `inv-transfer-btn` (xac minh build that).
+
+## TEST-20261007-023
+Date: 2026-10-07 | Task: (ngoai task) | Module: DevOps — Cong chan hoi quy thi giac | Test Type: **REGRESSION**
+Scenario: Chay `node tools/probe-visual-regression.mjs` (che do so sanh, ⛔ KHONG `--update`) de kiem tra cong anh
+  sau khi (a) anh chuan duoc chup lai (56 anh duy nhat) va (b) ERP-SESSION-01 sua dieu huong 3 man.
+Expected: cong cho ra tin hieu THAT (co the co anh lech that su), ⛔ khong con báo «0 px lech» gia.
+Actual: **CONG DA CHO TIN HIEU THAT — 34/68 anh lech.**
+```
+  ✅ 11-modal-request  : 4/4 viewport **0 px** (S01 sua `clickText` => dieu huong DUNG)   ✅
+  ✅ 12-drawer-request-detail : 4/4 **0 px**                                              ✅
+  ✅ 19-report-center  : 4/4 **0 px**                                                     ✅
+  ❌ 13-modal-material : desktop 19,69% · laptop 10,52% · tablet 13,26% (phone 0 px)
+  ❌ 16-modal-receipt  : desktop 25,73% · laptop 26,33% · tablet 34,89% · phone 34,78%
+  ❌ 17-modal-po       : 0,04–0,09% (RAT NHO = nhieu do phan giai/chu)
+  ❌ 18-modal-team-create: 0,008–0,021% (RAT NHO)
+  KET LUAN CONG: KHONG DAT ❌ — 34/68 anh lech
+```
+Result: **CONG DO DUNG** (⛔ khong phai loi cong) | Related Bug: BUG-20261006-005 (da FIXED) · BUG-20261006-006
+Notes: ⭐ **GIAI THICH 2 ANH LECH LON — ⛔ KHONG phai hoi quy that:**
+  · **13-modal-material**: ERP-SESSION-02 **vua bo khoi «CONG CU CHAN LOAN»** khoi man «Danh muc vat tu»
+    (TASK-227) ⇒ man DOI THAT ⇒ anh chuan (chup 06/10 17:45, TRUOC khi sua) tat nhien lech.
+  · **16-modal-receipt**: anh chuan chup luc **hub «Kho vat tu» CHUA render** (BUG-20261006-010, chi het
+    khi S01 sua `moduleKey`) ⇒ anh cu ghi man SAI; nay dieu huong dung ⇒ lech la **DA TOT LEN**.
+  ⇒ ⛔ **KET LUAN: `tools/baseline` da CU** — can **chup lai** sau khi (1) hub render dung, (2) TASK-227 doi man.
+  ⛔ ERP-SESSION-02 **KHONG chay `--update`** (chua duoc phep) — cho user quyet.
+  ⚠️ 2 anh lech NHO (17-modal-po 0,04% · 18-modal-team-create 0,008%) la **nhieu**, ⛔ khong phai hoi quy.
+
+## TEST-20261007-024
+Date: 2026-10-07 | Task: TASK-228 | Module: Kho vat tu (hub) | Test Type: **E2E (kiểm chức năng sau khi dọn)**
+Scenario: ⚠️ «dọn xong làm hỏng» — kiểm bộ lọc dự án + 2 nút vừa chuyển chỗ + bộ lọc kho (thay danh sách kho đã bỏ).
+Expected: mọi chức năng CÒN nguyên; bộ lọc còn tác dụng; 2 nút còn bấm được.
+Actual: **PASS — ⛔ KHÔNG hỏng chức năng nào.**
+```
+① KPI khi «Tất cả dự án» : Tồn khả dụng **1.235** · Chờ xuất 30 · Tổng tồn 1.235 · Nhập 2.329 · Xuất 237
+② Chọn «DA-MAU-01 · Dự án mẫu kiểm chứng cutover» ⇒ KPI **TẤT CẢ VỀ 0**
+   ⇒ ✅ **BỘ LỌC «CHỌN DỰ ÁN» CÒN TÁC DỤNG** (thanh đầu trang đã thay 3 nhãn trùng — vẫn lọc đúng)
+③ Nút mới: «⇄ Chuyển kho» ✅ · «▤ Thẻ kho» ✅
+   Bấm «⇄ Chuyển kho» ⇒ panel **«Tạo phiếu điều chuyển — Hàng xuất khỏi nguồn sẽ chuyển vào Tran…» MỞ** ✅
+   Bộ lọc «Kho» trong toolbar: **CÓ** (tự co còn 3 lựa chọn theo dự án — đúng hành vi `allowedWarehouses`) ✅
+   Bảng dữ liệu: **3 bảng** ✅
+```
+Result: **PASS** | Regression: 803·802·0 ở TEST-20261007-022 | Environment: Edge headless + CDP, base :9000
+Related Change: CHG-20261007-002 | Related Task: TASK-226
+Notes: ⭐ Chứng minh việc BỎ danh sách kho thứ 2 ⛔ **không mất khả năng lọc theo kho** — toolbar đã có ô «Tất cả kho»
+  và nó **tự điều chỉnh theo dự án** (12 kho → 2 kho khi chọn 1 dự án). ⭐ 2 nút chỉ **đổi chỗ**, chức năng nguyên vẹn.
+
+## TEST-20261007-025
+Date: 2026-10-07 | Task: TASK-228 | Module: Kho vat tu (hub) | Test Type: **UI (liệt kê khối từng tab)**
+Scenario: Sau khi dọn tab «KHO», kiểm 2 tab còn lại có cùng lỗi trùng lặp/lộn xộn không.
+Expected: mỗi tab chỉ có khối CỦA CHÍNH NÓ, ⛔ không trùng.
+Actual: **PASS — 2 tab kia SẠCH.**
+```
+TAB 1 «KHO» (sau khi dọn) : cao 4.949px · 9 khối · 3 bảng · **1.198 dòng** · 12 KPI
+   tiêu đề khối: DASHBOARD TỒN KHO · Giá trị kho — vì sao có ô «chưa có nguồn» ·
+                 Tồn kho theo từng kho · Vật tư dưới mức tồn tối thiểu (0) ·
+                 Nguồn dữ liệu của từng chỉ số · Cảnh báo tồn kho
+TAB 2 «XUẤT & NHẬP»       : cao 2.040px · 3 khối · 1 bảng ·   30 dòng · 4 KPI   ✅ SẠCH
+   tiêu đề khối: NHẬP KHO & XUẤT KHO
+TAB 3 «CẤP PHÁT & HOÀN TRẢ»: cao 2.953px · 3 khối · 3 bảng · 48 dòng · 4 KPI    ✅ SẠCH
+   tiêu đề khối: CẤP PHÁT & HOÀN TRẢ · LUÂN CHUYỂN VẬT TƯ DƯ DỰ ÁN → KHO ·
+                 Phiếu điều chuyển đang xử lý
+```
+Result: **PASS** | Regression: N/A | Environment: Edge headless + CDP, base :9000
+Related Change: CHG-20261007-002
+Notes: ⭐ **CÒN LẠI 2 KHỐI «GIẢI THÍCH» trong tab KHO** (⛔ không trùng, nhưng là **văn bản tài liệu** giữa màn
+  vận hành): «*Giá trị kho — vì sao có ô «chưa có nguồn»*» và «*Nguồn dữ liệu của từng chỉ số*».
+  ⇒ ⛔ **CHƯA BỎ** vì chúng có mục đích (giải thích giới hạn dữ liệu) — **cần user quyết**:
+  (a) giữ nguyên · (b) thu vào nút «?» cạnh tiêu đề · (c) bỏ hẳn.
+  ⭐ 1.198 dòng ở tab KHO chủ yếu là **bảng tồn kho** (237 dòng) + dashboard — ⛔ không phải khối thừa.
+
+---
+
+## ⭐⭐⭐ HỒI QUY RỘNG (§25) — QUÉT MỌI NHÓM MENU ⭐⭐⭐
+
+> ⭐ **ĐỔI CÁCH GHI LOG (07/10/2026)** theo chỉ thị user: bám **GOAL** + khuôn **`SESSION_A`**.
+> ⛔ Không đếm theo `MASTER TASK 1/2/3`.
+
+| ⭐ | ⭐ |
+|---|---|
+| **SESSION** | ⭐ `ERP-SESSION-02` |
+| **MỤC ĐÍCH** | ⭐ **§25** — «⛔ không chỉ test đúng một dòng code vừa sửa» ⇒ quét **MỌI màn** vì thay đổi của em chạm **`app/page.tsx`** (⭐ menu dùng chung cho **cả 11 nhóm**) ✓ |
+| **PHẠM VI ĐÃ XÁC ĐỊNH BẰNG ĐO** | ⭐ `app/page.tsx` → ⭐⭐ **menu của MỌI nhóm** + màn «Danh mục vật tư» + xoá `MaterialMatchingWorkspace` ✓<br>⭐ `app/screens/Inventory.tsx` → hub Kho 3 tab + màn chi tiết 5 tab ✓<br>⭐ `app/screens/WarehouseDashboard.tsx` → ⭐ **ĐO ĐƯỢC: chỉ dùng ở ĐÚNG 1 CHỖ** (`Inventory.tsx:316`) ⇒ ⭐⭐ **thay đổi `showHelp` là CÔ LẬP** ✓<br>⭐ `app/screens/MaterialCategoryList.tsx` → tab hệ vật tư (mới) ✓ |
+| ⭐⭐ **SAI LẦM ĐÃ SỬA (§22) — BẢN QUÉT 1 CHO «PASS 2/2» GIẢ** | ⭐⭐⭐ Bản 1 đọc sơ đồ menu **TRƯỚC khi mở nhóm** ⚠️ ⇒ ⭐ `.nav-child` **CHƯA render** (⭐ chỉ render khi `opened \|\| sidebarCollapsed` — ⭐ đo ở `app/page.tsx:682`) ⭐ ⇒ ⭐⭐ chỉ thấy **2 mục** (⭐ của nhóm `purchasing` **đang mở sẵn**) ⭐⭐ ⇒ ⭐⭐⭐ in ra **«✅ render OK: 2 · màn trống: 0»** ⭐⭐⭐ ⭐ ⭐ **TRÔNG NHƯ ĐẠT NHƯNG THỰC CHẤT CHƯA QUÉT GÌ** ⚠️ ⚠️<br>⭐⭐ **CÁCH ĐÚNG (đã sửa ở bản 2)**: ⭐ **MỞ NHÓM trước → RỒI đọc `.nav-child` → RỒI bấm từng con** ✓ ⭐ (⭐ cùng họ với bài học của SESSION-01: ⭐ «đo sai ⇒ kết luận sai» ✓) |
+| ⭐ **CÁCH ĐO (theo đúng đúc kết của SESSION-01)** | ⭐ dùng selector **ỔN ĐỊNH** `[data-nav-group="<key>"] .nav-child` ✓ ⭐ ⛔ **KHÔNG** bấm `@N` mù ⭐ ⛔ **KHÔNG** suy `child:N` từ `sort_order` CSDL ✓ ⭐ đọc DOM thật để lấy **số mục con mỗi nhóm** ✓ |
+| **TIÊU CHÍ ĐẠT** | ⭐ mỗi mục con: **bấm được** ✓ · màn render **h1 khác rỗng** ✓ · nội dung **≥ 120 ký tự** (⛔ không màn trắng) ✓ |
+| **KẾT QUẢ** | ⭐ xem `TEST-20261007-027` (ghi ngay sau khi quét xong) |
+
+⛔ **GHI CHÚ PHÂN VAI (§7)**: ⭐ `tools/probe-visual-regression.mjs` **thuộc `ERP-SESSION-01`** — ⭐ **⛔ em KHÔNG sửa** ✓ ⇒ ⭐ đã hỏi user, ⏳ **chờ trả lời** ✓
+
+## ⭐⭐⭐ TEST-20261007-027 — HỒI QUY RỘNG (§25): QUÉT MỌI NHÓM MENU ⭐⭐⭐
+
+| ⭐ | ⭐ |
+|---|---|
+| **DATE** | 2026-10-07 · **SESSION_ID** `ERP-SESSION-02` · **TEST TYPE** `REGRESSION` + `UI` + `E2E` |
+| **MODULE** | ⭐ **Menu dùng chung (11 nhóm)** + màn «Danh mục vật tư» + hub «Kho vật tư» — ⭐ **mọi thứ `app/page.tsx` chạm tới** ✓ |
+| **SCENARIO** | ⭐ login `admin` ⇒ **mở TỪNG nhóm** ⇒ đọc `.nav-child` **từ DOM thật** ⇒ **bấm từng mục con** ⇒ đọc `h1` + độ dài nội dung ✓ |
+| **EXPECTED** | ⭐ mọi mục con **bấm được** · màn render **h1 khác rỗng** · nội dung **≥ 120 ký tự** ✓ |
+| **ACTUAL** | ⭐⭐⭐ **PASS 54/54** ⭐⭐⭐<br>`✅ render OK : 54` · `⚠️ màn trống : 0` · `❌ không bấm : 0` · `TỔNG : 54` ✓ |
+| **SƠ ĐỒ MENU ĐO TỪ DOM** | ⭐ `my_work` 5 · `site_command` 5 · `mep` 9 · `purchasing` 13 · ⭐ **`warehouse` 1** («Kho vật tư» → h1 **«Tồn kho & điều chuyển»** ✓ ⭐ = **TASK-226 còn nguyên** ✓) · `teams` 1 · `finance` 8 · `hr_legal` 7 · `reports` 3 · ⭐ **`material_master` 0 con — đi thẳng** → h1 **«Danh mục vật tư gốc»** (⭐ dai **41.242** — = **TASK-227 còn nguyên** ✓) · `system_admin` 1 ✓ |
+| ⭐ **ĐỐI CHIẾU THAY ĐỔI CỦA EM** | ⭐ **`warehouse` = 1 mục** ⇒ ⭐⭐ **gom 7→1 (TASK-226) CÒN NGUYÊN** ✓<br>⭐ **`material_master` vào được** ⇒ ⭐⭐ **3 tab (TASK-227) CÒN NGUYÊN** ✓<br>⭐ **11/11 nhóm mở được** ⇒ ⭐⭐ **sửa menu ⛔ không phá nhóm nào** ✓ |
+| ⚠️ **GHI NHẬN (⛔ KHÔNG PHẢI BUG)** | ⭐ `purchasing[12] «Đối tác»` → h1 **«Nhà cung cấp»** ⭐⭐ **GIỐNG `[11]`** ⚠️ — ⭐ **ĐÚNG THIẾT KẾ**: ⭐ `page.tsx:511-518` ghi rõ ⭐ «`moduleKey` là MÀN ĐÍCH `supplier_catalog`; **`view` quyết định TIÊU ĐỀ/bộ lọc của CÙNG màn đó**» ✓ ⇒ ⭐ ⛔ **không sửa** ✓ |
+| **REGRESSION** | ⭐ ✅ **0 màn trống** · ✅ **0 lỗi bấm** · ✅ ⛔ không phát sinh lỗi mới sau toàn bộ thay đổi (TASK-226 · 227 · 228 · 229) ✓ |
+| **ENVIRONMENT** | ⭐ Edge headless + CDP · base `:9000` (⭐ proxy HTTP **200** ✓) · MySQL `vntech_erp` (dữ liệu thật) ✓ |
+| **RELATED_BUG** | ⭐ `BUG-20261006-010` (FIXED) · `BUG-20261006-012` (FIXED) |
+| **RELATED_CHANGE** | ⭐ `CHG-20261006-001` · `CHG-20261007-002` · `CHG-20261007-003` |
+| ⭐ **BÀI HỌC (§33)** | ⭐ ⭐⭐ **ĐO MENU PHẢI MỞ NHÓM TRƯỚC KHI ĐẾM CON** ⭐ ⭐⭐ — ⭐ `.nav-child` chỉ render khi nhóm **đang mở** ⇒ ⭐ đếm trước khi mở = **luôn ra 0** ⚠️ ⭐ ⭐⭐ **và nếu nhóm nào đó ĐANG mở sẵn thì ra vài mục ⇒ KẾT LUẬN «ĐẠT» GIẢ** ⭐ ⭐⭐ (⭐ bản 1 của em in **«OK 2 · trống 0»** ⚠️ — ⭐ trông như đạt nhưng **thực chất chưa quét gì** ✓) ⭐ ⭐ ⭐ **⇒ ĐẾM ĐƯỢC «0» KHÔNG CÓ NGHĨA LÀ «KHÔNG CÓ LỖI» — ⭐ PHẢI KIỂM MẪU SỐ có hợp lý không** ✓ |
+| **STATUS** | ⭐⭐⭐ **PASS** ⭐⭐⭐ *(⭐ §24: có **mã + test** ✓ · ⭐ §25: **hồi quy rộng** ✓)* |

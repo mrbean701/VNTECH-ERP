@@ -244,3 +244,30 @@ Related Change: CHG-20261006-009
 > ④ ⭐ **«Cổng trống» ⛔ KHÔNG bảo đảm JAR đã nhả khoá ⇒ PHẢI kiểm bằng PHÉP THỬ RENAME** (`-012`) ✓
 > ⑤ ⭐ **⛔ KHÔNG gộp «dừng + build + start» vào MỘT lệnh dài** ⇒ ⭐ **tách lệnh NGẮN** hoặc ⭐ **`run_in_background`** (`-014`) ✓
 > ⑥ ⭐ **⛔ KHÔNG kill `java.exe` theo TÊN** — ⭐ **chỉ dừng PID đã xác minh `cmdline`** (`-013`) ✓
+
+---
+
+## ## DEC-20261006-015 — ⛔ **KHÔNG BAO GIỜ GHI VÂN TAY VÀO MIGRATION** (⭐ bẫy vòng lặp vô hạn)
+| ⭐ | ⭐ |
+|---|---|
+| **CATEGORY** | ⭐ `DEVOPS` + ⭐ **Technical Direction** |
+| **BỐI CẢNH** | ⭐ Tôi tạo `drizzle/0330_…_identity.sql` để đồng bộ `vntech_product_identity` sau khi sửa mã ⇒ ⭐ **build ĐẠT** ✓ |
+| **BẪY** | ⚠️ ⭐ Migration **ghi vân tay của CHÍNH NÓ** ⇒ ⭐ sửa dòng ghi chú trong migration ⇒ ⭐ `drizzle` nằm trong `ROOT_DIRS` ⇒ ⭐ **VÂN TAY ĐỔI** ⇒ ⭐ phải sửa lại migration ⇒ ⭐ **VÒNG LẶP VÔ HẠN** ⚠️ |
+| **BẰNG CHỨNG ĐO ĐƯỢC** | ⭐ Chạy `fixpoint-fingerprint` sau khi **xoá** 0330 ⇒ ⭐ vân tay về đúng `e7195a489f98ef32…` (**717 files**) ⭐ ⭐ ⇒ ⭐ ⭐ **CHÍNH LÀ GIÁ TRỊ SAU KHI SỬA MODAL** ⭐ ⭐ ⇒ ⭐ **0330 HOÀN TOÀN KHÔNG CẦN THIẾT** ✓ |
+| **QUYẾT ĐỊNH** | ⭐ ⭐ **XOÁ 0330** ⭐ — ⭐ **user chọn** (⭐ hỏi qua `ask_user_question` ✓) ⭐ ⭐ vì CSDL đã đồng bộ đúng (⭐ 4/4 trường KHỚP ✓) ⭐ và `verify-vntech-fingerprint` ĐẠT ✓ |
+| **VÌ SAO ĐÚNG** | ⭐ ⭐ **VÂN TAY SAU KHI SỬA MÃ ĐÃ LÀ `e7195a48…`** ⭐ ⭐ ⇒ ⭐ **KHÔNG CẦN** migration nào cả ✓ ⭐ ⭐ Migration chỉ cần khi **CSDL LỆCH** ⭐ ⭐ — ⭐ và khi đó ⭐ **chỉ cần UPDATE 2 bảng metadata** ⭐ ⭐ ⛔ **không cần tệp SQL** ✓ |
+| **LUẬT MỚI** | ⭐ ⭐ **⛔ KHÔNG ghi vân tay vào migration** ⭐ ⭐ ⇒ ⭐ **chỉ UPDATE trực tiếp CSDL** (⭐ có BACKUP ✓) ⭐ ⭐ ⇒ ⭐ **tránh vòng lặp vô hạn** ✓ |
+| **LIÊN QUAN** | ⭐ `EVT-20261006-032` · ⭐ `CHG-20261006-013` ✓ |
+
+---
+
+## ## Cập nhật bảng đếm CATEGORY (⭐ thay bảng ở dòng 238–240)
+| ⭐ Category | ⭐ Số lượng | ⭐ Mã |
+|---|---|---|
+| ⭐ **DEVOPS** | ⭐ **6** | ⭐ `-001` · `-008` · `-012` · `-013` · `-014` · ⭐ **`-015`** ✓ |
+| ⭐ **Technical Direction** | ⭐ **11** | ⭐ `-001` · `-002` · `-005` · `-006` · `-007` · `-008` · `-009` · `-011` · `-012` · `-013` · `-014` · ⭐ **`-015`** ✓ |
+| ⭐ `BACKEND` · `FRONTEND` · `RBAC` · `WORKFLOW` · `DATABASE` · `Business Logic` | ⭐ không đổi ✓ |
+
+> ⭐ ⭐ **TỔNG CUỐI: 15 quyết định** ✓
+> ⭐ ⭐ **LUẬT MỚI NHẤT**:
+> ⑦ ⭐ **⛔ KHÔNG ghi vân tay vào migration** — ⭐ **chỉ UPDATE trực tiếp CSDL** (⭐ có BACKUP ✓) ⇒ ⭐ **tránh vòng lặp vô hạn** (`-015`) ✓

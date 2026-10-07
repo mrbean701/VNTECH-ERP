@@ -781,3 +781,44 @@ GỌI ACTION  →  500 ?  →  ĐỌC câu SQL của store  →  CHẠY ĐÚNG c
 ```
 ⭐ Cả **BUG-20261005-012** (SQL 1055 — `ONLY_FULL_GROUP_BY`) và **BUG-20261005-013** (SQL 1054 — cột ⛔ không tồn tại) đều tìm ra bằng **đúng cách này** ✓
 ⭐⭐ **⇒ PHỦ E2E LÀ LƯỚI AN TOÀN THẬT** (hiện **171/220 = 78%**) — ⛔ **không phải công cụ quét tĩnh** ✓
+
+
+---
+
+# 🔴 ĐÍNH CHÍNH — CỔNG ẢNH CHUẨN: «0 px LỆCH» LÀ **BÁO XANH GIẢ** (ERP-SESSION-02 · $homNay)
+
+> ⚠️ Khối này ghi bằng **APPEND** (Goal §28 — ⛔ không ghi đè nội dung cũ). Nó **sửa lại sự thật** cho các dòng
+> nói «68 ảnh chụp lại + đối chiếu **0 px lệch**» ở **dòng 26 · 367 · 426** của tệp này và `TASK_INDEX.md:160` (MT3-F14).
+
+**SỰ THẬT ĐÃ ĐO (⛔ không suy đoán) — `BUG-20261006-005` · `BUG-20261006-007`:**
+
+| Điều tài liệu cũ ghi | Đo thật (06–07/10/2026) |
+|---|---|
+| «68 ảnh chụp lại + đối chiếu **0 px lệch**» | 68 tệp PNG nhưng chỉ có **5 ẢNH DUY NHẤT** (SHA256) — 17 màn × 4 viewport đều là **cùng 1–2 ảnh** |
+| (ngụ ý: các màn đều đúng) | Cả 5 ảnh đều là **TRANG SETUP LẦN ĐẦU** «Thiết lập hệ thống của công ty» (`app/page.tsx` setup-card) |
+| ⇒ «cổng ĐẠT» | ⇒ cổng đang so **trang setup với chính nó** ⇒ «0 px lệch» là **HIỂN NHIÊN**, ⛔ **không chứng minh gì** |
+
+**NGUYÊN NHÂN GỐC:** commit `7fdf71d` (27/09/2026 · «MT3: menu items to tabs») **thay cả 68 ảnh chuẩn trong lúc
+CSDL CHƯA được khởi tạo** ⇒ app hiện trang setup. Trước đó (`4d1c129` · 26/09) mỗi viewport là **một blob khác nhau**.
+⇒ 2 dòng tài liệu (`MASTER_STATUS.md:426` · `TASK_INDEX.md:160`) ghi «0 px lệch» trong khi **chính chúng tự thú**
+là «⛔ chưa soi bằng mắt» ⇒ **báo xanh giả**, ⛔ không được coi là bằng chứng nghiệm thu.
+
+**TÌNH TRẠNG MỚI (đã tốt lên thật):**
+- Ảnh chuẩn **ĐÃ được chụp lại**: **56 ảnh duy nhất** (mốc `06/10 17:45:12` · `01-dashboard__desktop.png` = **426.503 byte**).
+- Cổng **giờ cho TÍN HIỆU THẬT** — chạy `node tools/probe-visual-regression.mjs` (⛔ không `--update`): **34/68 ảnh lệch**.
+  · ✅ **0 px**: `11-modal-request` · `12-drawer-request-detail` · `19-report-center`
+  · ⚠️ Lệch **lớn nhưng ĐÃ GIẢI THÍCH** (⛔ không phải hồi quy): `13-modal-material` 19,7% *(do TASK-227 bỏ khối
+    «CÔNG CỤ CHẨN LOẠN»)* · `16-modal-receipt` 25,7% *(ảnh chuẩn chụp lúc hub «Kho vật tư» CHƯA render —
+    `BUG-20261006-010`; nay điều hướng đúng ⇒ lệch là **tốt lên**)*
+  · ⚠️ Lệch **rất nhỏ** (nhiễu, ⛔ không phải hồi quy): `17-modal-po` 0,04% · `18-modal-team-create` 0,008%
+- ⚠️ **`tools/baseline` hiện ĐÃ CŨ** so với mã hiện tại ⇒ **CẦN CHỤP LẠI** (⛔ chưa được user cho phép chạy `--update`).
+- ⚠️ **2 màn KHÔNG BAO GIỜ điều hướng đúng** (còn mở): `11-modal-request` và `16-modal-receipt` từng báo
+  `NO_CLICK_TARGET` vì selector `.list-toolbar-actions button.primary` **đã chết** — nay `ListToolbar.tsx:90`
+  render `.row-actions.list-toolbar-primary`. `ERP-SESSION-01` **đã sửa** `clickText` (đo lại **0 px** ✅).
+
+**BÀI HỌC (ghi để ⛔ không lặp):** một cổng so sánh chỉ có giá trị khi **ảnh chuẩn KHÁC NHAU giữa các màn**.
+⇒ Phải kiểm **số ảnh DUY NHẤT** (SHA256), ⛔ không chỉ đếm **số tệp**. Và «0 px lệch» ⛔ **không** là bằng chứng
+nếu chưa chứng minh ảnh chuẩn là **ảnh thật của đúng màn đó**.
+
+**TRUY VẾT:** `BUG_HOTFIX_LOG.md` (SESSION_B) `BUG-20261006-005` · `BUG-20261006-006` · `BUG-20261006-007` ·
+`TEST-20261006-015` · `TEST-20261007-023`
