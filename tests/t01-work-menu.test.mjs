@@ -20,12 +20,13 @@ const workCenter = read("app/screens/WorkCenter.tsx");
 // ⚠️ CẬP NHẬT 23/09/2026 (MT2 §3.1 + P5-01): `work_dashboard.view` PHẢI là **`dashboard`** —
 // trước đây bảng này ghi `view: "kpi"` (SAI: trỏ vào tab KPI). Nay theo MT2 §3.1 «click menu Công việc
 // ⇒ hiển thị Dashboard NGAY» và `lib/menu-helpers.ts:110-122` (chính mã ghi rõ `view: "kpi"` là SAI).
+// ⭐ CẬP NHẬT 08/10/2026 (USER — VIỆC 1, chốt qua thẻ quyết định): **GOM 5 MỤC RỜI ⇒ 1 MỤC HUB `work_hub`**
+//   · nhãn «Công việc» · nhóm `my_work` · `view: "dashboard"` (bấm ⇒ mở tab Dashboard — đã đưa LÊN ĐẦU)
+//   · `permissionKeys` = **HỢP 8 khoá** của 5 mục cũ (⚠️ thiếu khoá nào ⇒ người chỉ có khoá đó MẤT mục menu).
 const EXPECTED = [
-  { key: "work_personal", label: "Cá nhân", view: "personal", permissionKeys: ["dept_plan_tasks", "dept_project_tasks"] },
-  { key: "work_department", label: "Phòng ban", view: "department", permissionKeys: ["dept_plan_assign", "dept_project_assign"] },
-  { key: "work_assign", label: "Giao việc", view: "assign", permissionKeys: ["dept_plan_assign", "dept_project_assign"] },
-  { key: "work_dashboard", label: "Dashboard", view: "dashboard", permissionKeys: ["dept_plan_kpi", "dept_project_kpi"] },
-  { key: "work_reports", label: "Báo cáo", view: "reports", permissionKeys: ["dept_plan_alerts", "dept_project_alerts"] },
+  { key: "work_hub", label: "Công việc", view: "dashboard",
+    permissionKeys: ["dept_plan_kpi", "dept_project_kpi", "dept_plan_tasks", "dept_project_tasks",
+      "dept_plan_assign", "dept_project_assign", "dept_plan_alerts", "dept_project_alerts"] },
 ];
 const LEGACY = ["dept_plan_tasks", "dept_project_tasks", "dept_plan_assign", "dept_project_assign"];
 
@@ -53,13 +54,16 @@ const workChildrenBlock = () => {
   return page.slice(start, end);
 };
 
-test("T-01 — 5 mục menu ĐÚNG nhãn · ĐÚNG nhóm · ĐÚNG đích đến (tab) · cổng quyền RIÊNG từng mục", () => {
+test("T-01 — MỘT MỤC HUB «Công việc» (VIỆC 1): đúng nhãn · đúng nhóm · đích đến tab «Dashboard» · hợp đủ khoá quyền", () => {
   const block = workMenuBlock();
-  for (const item of EXPECTED) {
-    const literal = `key: "${item.key}", label: "${item.label}", groupKey: "my_work", view: "${item.view}", permissionKeys: ["${item.permissionKeys[0]}", "${item.permissionKeys[1]}"]`;
-    assert.ok(block.includes(literal), `Thiếu/sai mục menu: ${literal}`);
+  assert.match(block, /key: "work_hub", label: "Công việc", groupKey: "my_work", view: "dashboard"/,
+    "Mục hub phải là: key `work_hub` · label «Công việc» · nhóm `my_work` · `view: \"dashboard\"`");
+  assert.equal((block.match(/key: "work_/g) || []).length, 1, "Nhóm «Công việc» phải chỉ còn ĐÚNG 1 MỤC HUB");
+  // ⚠️ HỢP KHOÁ QUYỀN: thiếu khoá nào ⇒ người CHỈ có khoá đó MẤT mục menu
+  //    (`app/page.tsx` → `item.permissionKeys.find((key) => modulePermission(data, key).canView)`).
+  for (const item of EXPECTED) for (const key of item.permissionKeys) {
+    assert.ok(block.includes(`"${key}"`), `Mục hub THIẾU khoá quyền ${key} ⇒ người chỉ có khoá này MẤT mục «Công việc»`);
   }
-  assert.equal((block.match(/key: "work_/g) || []).length, 5, "Nhóm «Công việc» phải khai báo ĐÚNG 5 mục");
 });
 
 test("T-01 — cổng quyền THẬT: mỗi mục lọc bằng `modulePermission(data, permissionKey).canView` (KHÔNG hardcode admin)", () => {
@@ -69,12 +73,14 @@ test("T-01 — cổng quyền THẬT: mỗi mục lọc bằng `modulePermission
   assert.doesNotMatch(block, /isAdminUser\(/, "Cổng quyền mục menu KHÔNG được hardcode «chỉ admin»");
 });
 
-test("T-01 — «Cá nhân» và «Phòng ban» KHÔNG dùng chung cổng quyền", () => {
-  const personal = EXPECTED[0].permissionKeys.join("|");
-  const department = EXPECTED[1].permissionKeys.join("|");
-  assert.notEqual(personal, department, "Hai mục phải có cặp khoá quyền KHÁC nhau");
-  assert.equal(new Set(EXPECTED.map((item) => item.permissionKeys.join("|"))).size, 4,
-    "Phải có 4 cặp khoá quyền phân biệt (Giao việc dùng chung cổng với Phòng ban là CHỦ Ý)");
+test("T-01 — MỤC HUB hợp ĐỦ 8 khoá quyền của 5 mục cũ (⛔ không bỏ sót nhóm quyền nào)", () => {
+  const keys = EXPECTED[0].permissionKeys;
+  // 5 mục cũ dùng 4 CẶP khoá phân biệt (tasks · assign ×2 · kpi · alerts) ⇒ hợp lại = 8 khoá.
+  for (const pair of [["dept_plan_tasks", "dept_project_tasks"], ["dept_plan_assign", "dept_project_assign"],
+    ["dept_plan_kpi", "dept_project_kpi"], ["dept_plan_alerts", "dept_project_alerts"]]) {
+    for (const key of pair) assert.ok(keys.includes(key), `Thiếu khoá ${key} trong hợp quyền của mục hub`);
+  }
+  assert.equal(new Set(keys).size, keys.length, "⛔ không được trùng khoá trong hợp quyền của mục hub");
 });
 
 test("T-01 — 4 mục `dept_*` CŨ bị ẨN khỏi menu, nhưng khoá vẫn sống cho quyền/tiêu đề/điều hướng", () => {
@@ -92,17 +98,16 @@ test("T-01 — menu (sidebar + mobile) dựng 5 mục MỚI của nhóm «CÔNG 
 });
 
 test("T-01 — ĐÍCH ĐẾN: 4 mục → `WorkCenter` đúng tab; «Giao việc» → `DepartmentTaskWorkspace` (GIỮ NGUYÊN)", () => {
-  // 📌 CẬP NHẬT 26/09/2026 theo MASTER TASK 3 §A.2: «Dự án — TẠO MỚI tab này».
-  // Thứ tự mới (6 tab): Cá nhân · **Dự án** · Phòng ban · Giao việc · Dashboard · Báo cáo.
-  // ⛔ KHÔNG xoá tab cũ nào («Giao việc» · «Dashboard» vẫn là chức năng THẬT) ⇒ chỉ CHÈN và DỜI index.
-  assert.ok(workCenter.includes('const WORK_TABS = ["Cá nhân", "Dự án", "Phòng ban", "Giao việc", "Dashboard", "Báo cáo"];'),
-    "WorkCenter chưa có 6 tab theo thứ tự MT3 §A: Cá nhân · Dự án · Phòng ban · Giao việc · Dashboard · Báo cáo");
-  // ⚠️ CẬP NHẬT 23/09/2026 (MT2-P5-01 §3.1) + 26/09/2026 (MT3 §A.2): bảng ánh xạ có khoá `dashboard`
-  // (trỏ tab «Dashboard») và GIỮ `kpi` để tương thích ngược. ⛔ Sau khi chèn «Dự án» ở index 1,
-  // các index cũ DỜI LÙI 1: Phòng ban 1→2 · Giao việc 2→3 · Dashboard 3→4 · Báo cáo 4→5.
-  assert.ok(workCenter.includes('const WORK_TAB_OF_VIEW: Record<WorkMenuView, number> = { personal: 0, department: 2, assign: 3, kpi: 4, dashboard: 4, reports: 5 };'),
-    "Thiếu bảng ánh xạ view → tab trong WorkCenter (đúng thứ tự 6 tab của MT3 §A)");
-  for (const index of [0, 1, 2, 3, 4, 5]) assert.match(workCenter, new RegExp(`\\{tab === ${index} &&`), `Thiếu nhánh render tab ${index}`);
+  // ⭐ CẬP NHẬT 08/10/2026 (USER chốt qua thẻ quyết định) — DẢI **7 TAB**, «Dashboard» ĐẦU TIÊN:
+  //   0 Dashboard · 1 Danh sách công việc · 2 Được giao · 3 Phòng ban/ Tổ đội · 4 Giao việc · 5 Dự án · 6 Báo cáo
+  //   (VIỆC 1 Dashboard lên đầu · VIỆC 2 «Cá nhân»→«Danh sách công việc» · VIỆC 6 thêm tab «Được giao»
+  //    · VIỆC 7 «Phòng ban»→«Phòng ban/ Tổ đội»). ⛔ Vẫn KHÔNG xoá chức năng nào.
+  assert.ok(workCenter.includes('const WORK_TABS = ["Dashboard", "Danh sách công việc", "Được giao", "Phòng ban/ Tổ đội", "Giao việc", "Dự án", "Báo cáo"];'),
+    "WorkCenter chưa có 7 tab theo thứ tự đã chốt 08/10/2026 (Dashboard ĐẦU)");
+  // ⭐ Ánh xạ view → tab mới: `personal`=«Danh sách công việc»(1) · `department`=3 · `assign`=4 · `dashboard`/`kpi`=0 · `reports`=6.
+  assert.ok(workCenter.includes('const WORK_TAB_OF_VIEW: Record<WorkMenuView, number> = { personal: 1, department: 3, assign: 4, kpi: 0, dashboard: 0, reports: 6 };'),
+    "Thiếu bảng ánh xạ view → tab trong WorkCenter (đúng dải 7 tab, Dashboard = 0)");
+  for (const index of [0, 1, 2, 3, 4, 5, 6]) assert.match(workCenter, new RegExp(`\\{tab === ${index} &&`), `Thiếu nhánh render tab ${index}`);
 
   const start = page.indexOf("function workCenterViewFor(");
   const end = page.indexOf("function WarehouseApp(", start);
@@ -135,30 +140,39 @@ test("T-01 — huy hiệu (badge) nhóm «CÔNG VIỆC» KHÔNG mất số việ
     "Huy hiệu phải tính bằng `workMenuBadge` ở CẢ badge nhóm lẫn mục con (desktop + mobile)");
 });
 
-// 📌 CẬP NHẬT 26/09/2026 (MT3 §A.2): thêm tab «Dự án» ở index 1 ⇒ các tab cũ DỜI LÙI 1 chỗ.
-// ⛔ Mọi khẳng định về NỘI DUNG tab cũ được GIỮ NGUYÊN, chỉ dời chỉ số.
-test("T-01 — giữ nguyên hành vi các tab cũ (Cá nhân · Phòng ban · Giao việc · Dashboard · Báo cáo) + tab MỚI «Dự án» (MT3 §A.2)", () => {
-  const i0 = workCenter.indexOf("{tab === 0 &&");
-  const i1 = workCenter.indexOf("{tab === 1 &&");
-  const i2 = workCenter.indexOf("{tab === 2 &&");
-  const i3 = workCenter.indexOf("{tab === 3 &&");
-  const i4 = workCenter.indexOf("{tab === 4 &&");
-  const i5 = workCenter.indexOf("{tab === 5 &&");
-  assert.ok(i0 > 0 && i1 > i0 && i2 > i1 && i3 > i2 && i4 > i3 && i5 > i4, "6 nhánh tab phải theo đúng thứ tự trong nguồn");
-  const tab0 = workCenter.slice(i0, i1);
-  const tab1 = workCenter.slice(i1, i2);   // MT3: tab MỚI «Dự án»
-  const tab2 = workCenter.slice(i2, i3);   // «Phòng ban» (trước là tab 1)
-  const tab3 = workCenter.slice(i3, i4);   // «Giao việc» (trước là tab 2)
-  const tab5 = workCenter.slice(i5);        // «Báo cáo» (trước là tab 4)
-  assert.match(tab0, /create_self_work_item/, "Tab «Cá nhân» phải giữ form tự tạo việc");
-  assert.match(tab0, /Danh sách việc của tôi/);
-  // MT3 §A.2 — tab «Dự án» phải có dashboard dự án thật, KHÔNG rỗng.
-  assert.match(tab1, /data-vntech="work-project-tab"/, "Tab «Dự án» (MT3 §A.2) phải render khối riêng");
-  assert.match(tab1, /CÔNG VIỆC THEO DỰ ÁN/, "Tab «Dự án» phải có bảng công việc theo dự án");
-  assert.match(tab2, /Việc phòng ban của tôi/);
-  assert.match(tab2, /Việc của tổ đội tôi tham gia/);
-  assert.doesNotMatch(tab2, /create_work_item/, "Form giao việc phải được TÁCH sang tab «Giao việc» (nay là số 3)");
-  assert.match(tab3, /create_work_item/, "Tab «Giao việc» là nơi đặt form giao việc");
-  assert.match(tab5, /Tỉ lệ hoàn thành theo nhân viên/, "Tab «Báo cáo» phải giữ phần KPI/báo cáo đang có");
-  assert.match(tab5, /<ReportView/);
+// ⭐ CẬP NHẬT 08/10/2026 (USER chốt qua thẻ quyết định) — DẢI **7 TAB**:
+//   0 Dashboard · 1 Danh sách công việc · 2 Được giao · 3 Phòng ban/ Tổ đội · 4 Giao việc · 5 Dự án · 6 Báo cáo
+//   (VIỆC 1 Dashboard lên đầu · VIỆC 2 «Danh sách công việc» · VIỆC 6 tab «Được giao» RIÊNG · VIỆC 7 «Phòng ban/ Tổ đội»)
+//   ⚠️ Thay cho khẳng định cũ «6 nhánh tab theo đúng thứ tự trong nguồn» — bài học: THỨ TỰ TAB ⇎ THỨ TỰ TRONG NGUỒN.
+test("T-01 — dải 7 TAB đúng thứ tự đã chốt + mỗi tab render ĐÚNG nội dung", () => {
+  assert.match(workCenter,
+    /const WORK_TABS = \["Dashboard", "Danh sách công việc", "Được giao", "Phòng ban\/ Tổ đội", "Giao việc", "Dự án", "Báo cáo"\];/,
+    "Dải tab phải đúng 7 tab theo thứ tự đã chốt (Dashboard ĐẦU)");
+  // Bất biến ĐÚNG phải kiểm: có ĐỦ 7 nhánh `{tab === n &&}` và mỗi chỉ số 0..6 xuất hiện ĐÚNG MỘT LẦN
+  // (thứ tự các nhánh trong NGUỒN là chuyện trình bày, ⛔ không phải hợp đồng hành vi).
+  const branches = [...workCenter.matchAll(/\{tab === (\d) &&/g)].map((m) => Number(m[1]));
+  assert.deepEqual([...branches].sort((a, b) => a - b), [0, 1, 2, 3, 4, 5, 6],
+    "Phải có ĐỦ 7 nhánh tab (0..6), mỗi chỉ số xuất hiện đúng một lần");
+  const slice = (n) => {
+    const start = workCenter.indexOf(`{tab === ${n} &&`);
+    const nexts = [0, 1, 2, 3, 4, 5, 6].map((k) => workCenter.indexOf(`{tab === ${k} &&`, start + 1)).filter((v) => v > start);
+    return workCenter.slice(start, nexts.length ? Math.min(...nexts) : undefined);
+  };
+  assert.match(slice(0), /Dashboard công việc/, "Tab 0 «Dashboard» phải có khối Dashboard (VIỆC 1: tab đầu)");
+  assert.match(slice(0), /Việc của tôi \(Dashboard\)/, "Tab 0 phải hiển thị VIỆC CỦA CHÍNH USER (VIỆC 3)");
+  assert.match(slice(1), /Danh sách công việc/, "Tab 1 phải là «Danh sách công việc» (VIỆC 2)");
+  assert.match(slice(1), /data-vntech="work-create-open"/, "Tab 1 phải có nút mở MODAL «Tạo công việc» (VIỆC 4)");
+  assert.match(slice(1), /data-vntech="work-create-modal"/, "MODAL «Tạo công việc» phải nằm trong tab 1");
+  assert.match(slice(2), /data-vntech="work-assigned-tab"/, "Tab 2 «Được giao» phải là tab RIÊNG (VIỆC 6)");
+  assert.match(slice(3), /Việc phòng ban của tôi/, "Tab 3 «Phòng ban/ Tổ đội» phải giữ bảng việc phòng ban");
+  assert.match(slice(3), /Việc của tổ đội tôi tham gia/);
+  assert.match(slice(4), /create_work_item/, "Tab 4 «Giao việc» là nơi đặt form giao việc");
+  assert.match(slice(5), /data-vntech="work-project-tab"/, "Tab 5 «Dự án» (MT3 §A.2) phải render khối riêng");
+  assert.match(slice(5), /CÔNG VIỆC THEO DỰ ÁN/, "Tab 5 «Dự án» phải có bảng công việc theo dự án");
+  assert.match(slice(6), /Tỉ lệ hoàn thành theo nhân viên/, "Tab 6 «Báo cáo» phải giữ phần KPI/báo cáo");
+  assert.match(slice(6), /<ReportView/);
+  assert.match(workCenter, /create_self_work_item/, "Hành động `create_self_work_item` vẫn phải được gọi (nay ở `submitSelfWork`)");
+  // ⛔ form giao việc KHÔNG được lẫn sang tab «Được giao» / «Phòng ban/ Tổ đội»
+  assert.doesNotMatch(slice(2), /create_work_item/, "Tab «Được giao» ⛔ không chứa form giao việc");
+  assert.doesNotMatch(slice(3), /create_work_item/, "Tab «Phòng ban/ Tổ đội» ⛔ không chứa form giao việc");
 });

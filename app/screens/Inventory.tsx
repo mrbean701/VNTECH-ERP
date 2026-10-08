@@ -91,6 +91,14 @@ function Inventory({ data, project, open, action, view = null }: { data: AppData
   const [whQuery, setWhQuery] = useState("");
   const [whSortKey, setWhSortKey] = useState("name_asc");
   const [selectedWhId, setSelectedWhId] = useState<string>("");
+  // ⭐⭐ TASK-230 (07/10/2026 · yêu cầu user ⑥) — TOOLBAR SEARCH/SORT/FILTER CHO **5 TAB MÀN CHI TIẾT KHO**
+  //   · Tab «Tồn kho» (wdTab 1): tìm / sắp xếp / lọc mức tồn + nút «＋ Tạo phiếu đề nghị».
+  //   · Tab «Xuất - Nhập» (wdTab 2) và «Cấp phát - Hoàn trả» (wdTab 3): tìm / sắp xếp / lọc trạng thái + nút tạo phiếu.
+  //   · Tab «Nhân sự» (wdTab 4): nút «＋ Thêm nhân sự» ⇒ MODAL thêm nhân sự kho (state ở dưới).
+  const [wdInvQuery,setWdInvQuery]=useState(""); const [wdInvSortKey,setWdInvSortKey]=useState("code"); const [wdInvLowOnly,setWdInvLowOnly]=useState(false);
+  const [wdIoQuery,setWdIoQuery]=useState(""); const [wdIoSortKey,setWdIoSortKey]=useState("date"); const [wdIoStatus,setWdIoStatus]=useState("ALL");
+  const [wdArQuery,setWdArQuery]=useState(""); const [wdArSortKey,setWdArSortKey]=useState("date"); const [wdArStatus,setWdArStatus]=useState("ALL");
+  const [staffModalOpen,setStaffModalOpen]=useState(false); const [staffQuery,setStaffQuery]=useState(""); const [staffPickId,setStaffPickId]=useState(""); const [staffRole,setStaffRole]=useState("");
   // ⛔ `showDashboard` ĐÃ XOÁ: dashboard nay nằm trong tab «KHO» (xem khối `tabBar` bên dưới).
   const [query,setQuery]=useState(""); const [lowOnly,setLowOnly]=useState(false);
   // MT2-P9-01 (§7.1) — «Chưa chọn kho ⇒ dashboard TỔNG HỢP. Click kho ⇒ dashboard chuyển sang dữ liệu
@@ -145,6 +153,39 @@ function Inventory({ data, project, open, action, view = null }: { data: AppData
   // ⭐ Tra cứu card theo id: `visibleWarehouses` lo THỨ TỰ/LỌC (theo `whQuery`/`whSortKey`),
   //   còn `cardById` cấp ĐỦ 4 thông tin user yêu cầu (Tên · Mã · Dự án · Tồn hiện tại).
   const cardById = new Map(warehouseCardRows.map((c) => [c.id, c]));
+  // ⭐⭐ TASK-230 (07/10/2026) — DỮ LIỆU THÊM CHO CARD KHO (yêu cầu user ①):
+  //   card phải có: TÊN · MÃ · SỐ LƯỢNG TỒN KHO · **SỐ LƯỢNG MÃ ĐANG THIẾU** · **TRẠNG THÁI HOẠT ĐỘNG** · **THỦ KHO**.
+  //   ⚠️ NGUỒN ĐÃ ĐO (⛔ KHÔNG BỊA — đọc `BootstrapDataAdapter.java`):
+  //     · `inventory[]` = …·`minStock`·`balance`·`available`… ⇒ «mã đang thiếu» = đếm dòng `balance < minStock`.
+  //     · `userWarehouseScopes[]` = `userId`·`warehouseId`·`permission`·`warehouseCode`·`warehouseName`·`type`·`projectId`
+  //       ⇒ ⭐ ĐÂY mới là nguồn ĐÚNG cho «ai phụ trách kho».
+  //       ⛔ SỬA LỖI CÓ SẴN: trước đây lọc `data.staffDirectory` theo `u.warehouseId` — trường đó
+  //       **⛔ KHÔNG TỒN TẠI** trong `staffDirectory` (đo SQL: id·employeeCode·fullName·email·role·roleName·
+  //       department·organizationUnitId·organizationCode·organizationName·avatarUrl·signatureUrl·systemLevelCode)
+  //       ⇒ tab «Nhân sự» của màn chi tiết kho **LUÔN RỖNG**.
+  //     · `warehouses[]` ⛔ KHÔNG có trường `active` (SQL chỉ `WHERE active=1`) ⇒ mọi kho trong payload
+  //       **đều đang hoạt động** ⇒ hiển thị «Đang hoạt động» là ĐÚNG dữ liệu, ⛔ không bịa.
+  const nameById = new Map<string, string>();
+  for (const u of data.staffDirectory || []) if (u?.id != null) nameById.set(String(u.id), String(u.fullName || u.employeeCode || ""));
+  for (const u of data.users || []) if (u?.id != null && !nameById.has(String(u.id))) nameById.set(String(u.id), String(u.fullName || u.username || ""));
+  /** Số mã vật tư ĐANG THIẾU (tồn < mức tối thiểu) của từng kho — nguồn `inventory[].balance/minStock`. */
+  const shortageByWarehouse = new Map<string, number>();
+  for (const r of data.inventory || []) {
+    const wid = String(r.warehouseId || "");
+    if (!wid) continue;
+    if (Number(r.balance || 0) < Number(r.minStock || 0)) shortageByWarehouse.set(wid, (shortageByWarehouse.get(wid) || 0) + 1);
+  }
+  /** Người phụ trách / thủ kho của từng kho — nguồn `userWarehouseScopes[]` ∪ tên từ `staffDirectory`/`users`. */
+  const keepersByWarehouse = new Map<string, string[]>();
+  for (const s of data.userWarehouseScopes || []) {
+    const wid = String(s.warehouseId || "");
+    if (!wid) continue;
+    const ten = nameById.get(String(s.userId)) || "";
+    if (!ten) continue;
+    const ds = keepersByWarehouse.get(wid) || [];
+    if (!ds.includes(ten)) ds.push(ten);
+    keepersByWarehouse.set(wid, ds);
+  }
   const warehouseVisibility = visibleWarehouseCards(warehouseCardRows, data.user, data.userScopes || []);
   const allowedWarehouseIds = new Set(warehouseVisibility.visible.map((c) => c.id));
   const allowedWarehouses = (data.warehouses || []).filter((row) =>
@@ -167,8 +208,10 @@ function Inventory({ data, project, open, action, view = null }: { data: AppData
   //   (0 KHO · 1 XUẤT & NHẬP · 2 CẤP PHÁT & HOÀN TRẢ) ⇒ nếu giữ `tab === 2` thì **tab CẤP PHÁT sẽ hiện nhầm
   //   dashboard** (LỖI LOGIC, `tsc` ⛔ không bắt được). Dashboard nay được đặt **NGAY ĐẦU TAB «KHO»** — đúng
   //   yêu cầu user «click vào menu nó sẽ hiển thị luôn ra màn dashboard tồn kho».
+  // ⭐ TASK-230 (07/10/2026 · yêu cầu user ②): ĐÃ XOÁ dòng note
+  //   «Ba tab của cùng một màn: «KHO» (dashboard tồn kho + danh sách kho) · «XUẤT & NHẬP» · «CẤP PHÁT & HOÀN TRẢ».»
+  //   ⇒ ListToolbar nay CHỈ còn tiêu đề «KHO VẬT TƯ» (⛔ không còn dòng mô tả 3 tab).
   const tabBar = <section className="card inventory-tabs-card"><ListToolbar title="KHO VẬT TƯ"
-    note="Ba tab của cùng một màn: «KHO» (dashboard tồn kho + danh sách kho) · «XUẤT & NHẬP» · «CẤP PHÁT & HOÀN TRẢ»."
     />
     <div className="project-scope-tabs" role="tablist" aria-label="Kho vật tư">
       {WAREHOUSE_TABS.map((label,index)=><button type="button" key={label} role="tab" aria-selected={tab===index} className={tab===index?"active":""} data-warehouse-tab={index===0?"inventory":"dashboard"} onClick={()=>setTab(index)}>{label}</button>)}
@@ -191,7 +234,56 @@ function Inventory({ data, project, open, action, view = null }: { data: AppData
     const projIssues = (data.issues || []).filter((r:Row)=>wProjectId && String(r.projectId || "")===wProjectId);
     const projReturns = (data.returns || []).filter((r:Row)=>wProjectId && String(r.projectId || "")===wProjectId);
     const projReceipts = (data.receipts || []).filter((r:Row)=>wProjectId && String(r.projectId || "")===wProjectId);
-    const keeperRows = (data.staffDirectory || []).filter((u:Row)=>String(u.warehouseId || "")===String(openWarehouseId));
+    // ⭐⭐ TASK-230 (07/10/2026) — SỬA **LỖI NGUỒN DỮ LIỆU**: bản cũ lọc `data.staffDirectory`
+    //   theo `u.warehouseId` — ⛔ **TRƯỜNG NÀY KHÔNG TỒN TẠI** trong `staffDirectory`
+    //   (đo SQL `BootstrapDataAdapter.java:921`: id·employeeCode·fullName·email·role·roleName·department·
+    //    organizationUnitId·organizationCode·organizationName·avatarUrl·signatureUrl·systemLevelCode)
+    //   ⇒ tab «Nhân sự» của màn chi tiết kho **LUÔN RỖNG** (bug thật, user báo ở yêu cầu ⑥).
+    //   NGUỒN ĐÚNG: `userWarehouseScopes[]` = `userId`·`warehouseId`·`permission`·… (có `warehouseId` THẬT)
+    //   ⇒ nối sang tên/chức danh qua `staffDirectory` → `users` (theo `id`).
+    const staffById = new Map<string, Row>();
+    for (const u of data.staffDirectory || []) if (u?.id != null) staffById.set(String(u.id), u);
+    for (const u of data.users || []) if (u?.id != null && !staffById.has(String(u.id))) staffById.set(String(u.id), u);
+    const keeperRows:Row[] = (data.userWarehouseScopes || [])
+      .filter((s:Row)=>String(s.warehouseId || "")===String(openWarehouseId))
+      .map((s:Row)=>({ ...(staffById.get(String(s.userId)) || { id:s.userId, fullName:String(s.userId) }),
+        warehouseRole:String(s.permission || ""), warehouseId:String(s.warehouseId || ""), warehouseName:String(s.warehouseName || "") }));
+    // ⭐ TASK-230 ⑥ — nhân sự ỨNG VIÊN để thêm vào kho (⛔ chưa gán kho này) + đã gán (tránh trùng).
+    const daGanIds = new Set(keeperRows.map((r:Row)=>String(r.id)));
+    const staffUngVien = (data.staffDirectory || [])
+      .filter((u:Row)=>u?.id != null && !daGanIds.has(String(u.id)))
+      .filter((u:Row)=>!staffQuery || `${u.fullName||""} ${u.employeeCode||""} ${u.department||""}`
+        .toLocaleLowerCase("vi").includes(staffQuery.toLocaleLowerCase("vi")))
+      .slice(0, 60);
+    const nguoiChon:Row = staffPickId ? (staffById.get(staffPickId) || {}) : {};
+    // ⭐ TASK-230 ⑥ — «Admin hoặc user có perm»: backend `saveUserAccess` = `requireRole(…, List.of("admin"))`
+    //   (đo `UserManagementUseCase.java:259`) ⇒ ⭐ điều kiện ĐÚNG là **role admin** (⛔ không phải đoán perm khác).
+    const isAdmin = String((data.user as Row | undefined)?.role || "") === "admin";
+    /** Nhãn tiếng Việt cho `user_warehouse_scopes.permission` — tập giá trị ĐO từ `AccessScopeService:31`. */
+    const warehouseRoleLabel = (p: string) =>
+      p === "admin" ? "Quản trị kho" : p === "approve" ? "Được duyệt" : p === "write" ? "Thủ kho (ghi)" : p === "read" ? "Chỉ xem" : (p || "—");
+
+    // ⭐ TASK-230 ⑥ — LỌC/SẮP XẾP cho 3 tab danh sách của màn chi tiết kho.
+    const whRowsLoc = whRows
+      .filter((r:Row)=>!wdInvQuery || `${r.materialCode||""} ${r.materialName||""}`.toLocaleLowerCase("vi").includes(wdInvQuery.toLocaleLowerCase("vi")))
+      .filter((r:Row)=>!wdInvLowOnly || Number(r.balance||0) < Number(r.minStock||0))
+      .sort((a:Row,b:Row)=>{
+        if (wdInvSortKey==="avail_desc") return Number((b.available??b.balance)||0)-Number((a.available??a.balance)||0);
+        if (wdInvSortKey==="avail_asc")  return Number((a.available??a.balance)||0)-Number((b.available??b.balance)||0);
+        if (wdInvSortKey==="name")       return String(a.materialName||"").localeCompare(String(b.materialName||""),"vi");
+        return String(a.materialCode||"").localeCompare(String(b.materialCode||""),"vi");});
+    const sortPhieu = (rows:Row[], key:string, nhan:(r:Row)=>string)=>{
+      const ds=[...rows];
+      if (key==="qty_desc") ds.sort((a,b)=>Number(b.totalQty||b.acceptedQty||0)-Number(a.totalQty||a.acceptedQty||0));
+      else if (key==="no") ds.sort((a,b)=>String(nhan(a)).localeCompare(String(nhan(b)),"vi"));
+      else ds.sort((a,b)=>String(nhan(b)).localeCompare(String(nhan(a))));
+      return ds;};
+    const locTrangThai = (rows:Row[])=>wdIoStatus==="ALL"?rows:rows.filter((r:Row)=>String(r.status||"")===wdIoStatus);
+    const projIssuesLoc = sortPhieu(locTrangThai(projIssues).filter((r:Row)=>!wdIoQuery || `${r.issueNo||""} ${r.teamName||""} ${r.receivedByName||""}`.toLocaleLowerCase("vi").includes(wdIoQuery.toLocaleLowerCase("vi"))), wdIoSortKey, (r)=>String(r.issuedAt||""));
+    const projReceiptsLoc = sortPhieu(locTrangThai(projReceipts).filter((r:Row)=>!wdIoQuery || `${r.receiptNo||""} ${r.poNo||""} ${r.supplierName||""}`.toLocaleLowerCase("vi").includes(wdIoQuery.toLocaleLowerCase("vi"))), wdIoSortKey, (r)=>String(r.receivedAt||""));
+    const projIssuesArLoc = sortPhieu(locTrangThai(projIssues).filter((r:Row)=>!wdArQuery || `${r.issueNo||""} ${r.teamName||""} ${r.receivedByName||""}`.toLocaleLowerCase("vi").includes(wdArQuery.toLocaleLowerCase("vi"))), wdArSortKey, (r)=>String(r.issuedAt||""));
+    const projReturnsLoc = sortPhieu(locTrangThai(projReturns).filter((r:Row)=>!wdArQuery || `${r.returnNo||""} ${r.returnedByName||""}`.toLocaleLowerCase("vi").includes(wdArQuery.toLocaleLowerCase("vi"))), wdArSortKey, (r)=>String(r.returnedAt||""));
+
     return <div className="stack baseline-screen" data-vntech="warehouse-detail-screen">
       <section className="card inventory-tabs-card">
         <ListToolbar
@@ -222,8 +314,24 @@ function Inventory({ data, project, open, action, view = null }: { data: AppData
       </section>}
 
       {wdTab===1&&<section className="card" data-vntech="wd-inventory">
-        <CardHead title="TỒN KHO CỦA KHO NÀY" note="Nguồn: `data.inventory` lọc theo `warehouseId` (⭐ liên kết CHÍNH XÁC)."/>
-        <DataTable rows={whRows} rowKey={(row,index)=>String(`${row.materialId}-${index}`)} columns={[
+        {/* ⭐ TASK-230 ⑥ — yêu cầu user: «tab Tồn kho của kho cần thêm search sort filter, thêm nút tạo phiếu
+            đề nghị ở trong danh sách tồn kho». Nút dùng modal `request` CÓ THẬT trong app/page.tsx (đủ 40 modal). */}
+        <ListToolbar title="TỒN KHO CỦA KHO NÀY"
+          note="Vật tư đang có trong kho này."
+          count={whRowsLoc.length} total={whRows.length} unit="mặt hàng"
+          search={{ value: wdInvQuery, onChange: setWdInvQuery, placeholder: "Tìm theo mã hoặc tên vật tư..." }}
+          sort={{ value: wdInvSortKey, onChange: setWdInvSortKey, options: [
+            { value: "code", label: "Mã vật tư" }, { value: "name", label: "Tên vật tư" },
+            { value: "avail_desc", label: "Tồn khả dụng — cao nhất" }, { value: "avail_asc", label: "Tồn khả dụng — thấp nhất" }] }}
+          filters={[{ key: "low", label: "Mức tồn", value: wdInvLowOnly ? "low" : "ALL",
+            onChange: (v: string) => setWdInvLowOnly(v === "low"),
+            options: [{ value: "ALL", label: "Tất cả mức tồn" }, { value: "low", label: `Chỉ dưới mức tối thiểu (${whTotals.belowMinCount})` }] }]}
+          actions={<>
+            <button type="button" className="secondary" disabled={!whRowsLoc.length} onClick={()=>exportInventoryXlsx(whRowsLoc)}>⇩ Xuất Excel</button>
+            <button type="button" className="primary" data-vntech="wd-inv-create-request" onClick={()=>open("request")}>＋ Tạo phiếu đề nghị</button>
+          </>}
+        />
+        <DataTable rows={whRowsLoc} rowKey={(row,index)=>String(`${row.materialId}-${index}`)} columns={[
           { key: "c1", header: "#", render: (row,index) => <>{index+1}</> },
           { key: "c2", header: "Mã vật tư", render: (row) => <><strong className="link">{row.materialCode}</strong></> },
           { key: "c3", header: "Tên vật tư", render: (row) => <>{row.materialName}</> },
@@ -232,21 +340,36 @@ function Inventory({ data, project, open, action, view = null }: { data: AppData
           { key: "c6", header: "Đã giữ", render: (row) => <>{format.format(row.reserved||0)}</> },
           { key: "c7", header: "Khả dụng", render: (row) => <><strong>{format.format((row.available??row.balance)||0)}</strong></> },
           { key: "c8", header: "Tối thiểu", render: (row) => <>{format.format(row.minStock||0)}</> },
-        ]} emptyText="Kho chưa có vật tư nào." />
+          { key: "c9", header: "Trạng thái", render: (row) => <><StatusBadge value={Number(row.balance||0)<Number(row.minStock||0)?"Sắp hết":"Bình thường"}/></> },
+        ]} emptyText={wdInvQuery||wdInvLowOnly?"Không có vật tư nào khớp bộ lọc.":"Kho chưa có vật tư nào."} />
       </section>}
 
       {wdTab===2&&<section className="card" data-vntech="wd-io">
-        <CardHead title="XUẤT - NHẬP CỦA KHO" note={wProjectId?`⚠️ Phiếu xuất/nhập ⛔ KHÔNG có trường kho ⇒ lọc theo DỰ ÁN của kho (${projName}) — ⛔ KHÔNG phải «phiếu của riêng kho».`:"Kho Tổng ⛔ không thuộc dự án ⇒ ⛔ không lọc được phiếu theo kho (dữ liệu ⛔ không có trường kho)."}/>
-        <h3 className="section-subhead">PHIẾU XUẤT ({projIssues.length})</h3>
-        <DataTable rows={projIssues} rowKey={(row,index)=>String(`${row.id}-o-${index}`)} columns={[
+        {/* ⭐ TASK-230 ⑥ — yêu cầu user: «các tab Xuất - Nhập và Cấp phát - hoàn trả cần có thêm nút tạo phiếu
+            cùng nhóm nút chức năng search sort filter». Nút dùng modal `issue` / `receipt` CÓ THẬT (40 modal). */}
+        <ListToolbar title="XUẤT - NHẬP CỦA KHO"
+          note={wProjectId?`⚠️ Phiếu xuất/nhập ⛔ KHÔNG có trường kho ⇒ lọc theo DỰ ÁN của kho (${projName}) — ⛔ KHÔNG phải «phiếu của riêng kho».`:"Kho Tổng ⛔ không thuộc dự án ⇒ ⛔ không lọc được phiếu theo kho (dữ liệu ⛔ không có trường kho)."}
+          count={projIssuesLoc.length + projReceiptsLoc.length} total={projIssues.length + projReceipts.length} unit="phiếu"
+          search={{ value: wdIoQuery, onChange: setWdIoQuery, placeholder: "Tìm số phiếu · PO · tổ đội · NCC..." }}
+          sort={{ value: wdIoSortKey, onChange: setWdIoSortKey, options: [
+            { value: "date", label: "Ngày" }, { value: "no", label: "Số phiếu" }, { value: "qty_desc", label: "Số lượng — cao nhất" }] }}
+          filters={[{ key: "status", label: "Trạng thái", value: wdIoStatus, onChange: setWdIoStatus,
+            options: [{ value: "ALL", label: "Tất cả trạng thái" }, ...Array.from(new Set((projIssues||[]).map((r:Row)=>String(r.status||"")).filter(Boolean))).map((s)=>({ value: s, label: statusLabel(s) }))] }]}
+          actions={<>
+            <button type="button" className="secondary" data-vntech="wd-io-create-receipt" onClick={()=>open("receipt")}>⭳ Tạo phiếu nhập</button>
+            <button type="button" className="primary" data-vntech="wd-io-create-issue" onClick={()=>open("issue")}>⭱ Tạo phiếu xuất</button>
+          </>}
+        />
+        <h3 className="section-subhead">PHIẾU XUẤT ({projIssuesLoc.length})</h3>
+        <DataTable rows={projIssuesLoc} rowKey={(row,index)=>String(`${row.id}-o-${index}`)} columns={[
           { key: "c1", header: "Số phiếu", render: (row) => <><strong className="link">{row.issueNo}</strong></> },
           { key: "c2", header: "Tổ đội", render: (row) => <>{row.teamName}</> },
           { key: "c3", header: "Ngày", render: (row) => <>{row.issuedAt?String(row.issuedAt).slice(0,10):"—"}</> },
           { key: "c4", header: "SL xuất", render: (row) => <>{format.format(row.totalQty||0)}</> },
           { key: "c5", header: "Trạng thái", render: (row) => <><StatusBadge value={statusLabel(row.status)}/></> },
         ]} emptyText="Chưa có phiếu xuất trong dự án của kho." />
-        <h3 className="section-subhead">PHIẾU NHẬP ({projReceipts.length})</h3>
-        <DataTable rows={projReceipts} rowKey={(row,index)=>String(`${row.id}-i-${index}`)} columns={[
+        <h3 className="section-subhead">PHIẾU NHẬP ({projReceiptsLoc.length})</h3>
+        <DataTable rows={projReceiptsLoc} rowKey={(row,index)=>String(`${row.id}-i-${index}`)} columns={[
           { key: "c1", header: "Số phiếu", render: (row) => <><strong className="link">{row.receiptNo}</strong></> },
           { key: "c2", header: "PO", render: (row) => <>{row.poNo||"—"}</> },
           { key: "c3", header: "NCC", render: (row) => <>{row.supplierName||"—"}</> },
@@ -256,31 +379,120 @@ function Inventory({ data, project, open, action, view = null }: { data: AppData
       </section>}
 
       {wdTab===3&&<section className="card" data-vntech="wd-allocate-return">
-        <CardHead title="CẤP PHÁT - HOÀN TRẢ CỦA KHO" note={wProjectId?`⚠️ Lọc theo DỰ ÁN của kho (${projName}) — dữ liệu ⛔ không có trường kho.`:"Kho Tổng ⛔ không thuộc dự án ⇒ ⛔ không lọc được."}/>
-        <h3 className="section-subhead">CẤP PHÁT ({projIssues.length})</h3>
-        <DataTable rows={projIssues} rowKey={(row,index)=>String(`${row.id}-a-${index}`)} columns={[
+        {/* ⭐ TASK-230 ⑥ — search/sort/filter + nút tạo phiếu (yêu cầu user).
+            ⚠️ «Tạo phiếu cấp phát» GIỮ TẠM KHOÁ: `open("allocate")` ⛔ không có modal (BUG-20261007-013). */}
+        <ListToolbar title="CẤP PHÁT - HOÀN TRẢ CỦA KHO"
+          note={wProjectId?`⚠️ Lọc theo DỰ ÁN của kho (${projName}) — dữ liệu ⛔ không có trường kho.`:"Kho Tổng ⛔ không thuộc dự án ⇒ ⛔ không lọc được."}
+          count={projIssuesArLoc.length + projReturnsLoc.length} total={projIssues.length + projReturns.length} unit="phiếu"
+          search={{ value: wdArQuery, onChange: setWdArQuery, placeholder: "Tìm mã đơn · tổ đội · người nhận/trả..." }}
+          sort={{ value: wdArSortKey, onChange: setWdArSortKey, options: [
+            { value: "date", label: "Ngày" }, { value: "no", label: "Mã đơn" }, { value: "qty_desc", label: "Số lượng — cao nhất" }] }}
+          filters={[{ key: "status", label: "Trạng thái", value: wdArStatus, onChange: setWdArStatus,
+            options: [{ value: "ALL", label: "Tất cả trạng thái" }, ...Array.from(new Set([...(projIssues||[]), ...(projReturns||[])].map((r:Row)=>String(r.status||"")).filter(Boolean))).map((s)=>({ value: s, label: statusLabel(s) }))] }]}
+          actions={<>
+            <button type="button" className="secondary" disabled title="TẠM KHOÁ (BUG-20261007-013): app/page.tsx chưa có modal «allocate» ⇒ bấm ⛔ không mở gì. Chờ backend bổ sung.">＋ Tạo phiếu cấp phát</button>
+            <button type="button" className="primary" data-vntech="wd-ar-create-return" onClick={()=>open("return")}>＋ Tạo phiếu hoàn trả</button>
+          </>}
+        />
+        <h3 className="section-subhead">CẤP PHÁT ({projIssuesArLoc.length})</h3>
+        <DataTable rows={projIssuesArLoc} rowKey={(row,index)=>String(`${row.id}-a-${index}`)} columns={[
           { key: "c1", header: "Mã đơn", render: (row) => <><strong className="link">{row.issueNo}</strong></> },
           { key: "c2", header: "Tổ đội / người nhận", render: (row) => <>{row.teamName} · {row.receivedByName||"—"}</> },
           { key: "c3", header: "Ngày", render: (row) => <>{row.issuedAt?String(row.issuedAt).slice(0,10):"—"}</> },
           { key: "c4", header: "SL", render: (row) => <>{format.format(row.totalQty||0)}</> },
+          { key: "c5", header: "Trạng thái", render: (row) => <><StatusBadge value={statusLabel(row.status)}/></> },
         ]} emptyText="Chưa có phiếu cấp phát trong dự án của kho." />
-        <h3 className="section-subhead">HOÀN TRẢ ({projReturns.length})</h3>
-        <DataTable rows={projReturns} rowKey={(row,index)=>String(`${row.id}-r-${index}`)} columns={[
+        <h3 className="section-subhead">HOÀN TRẢ ({projReturnsLoc.length})</h3>
+        <DataTable rows={projReturnsLoc} rowKey={(row,index)=>String(`${row.id}-r-${index}`)} columns={[
           { key: "c1", header: "Mã đơn", render: (row) => <><strong className="link">{row.returnNo}</strong></> },
           { key: "c2", header: "Người trả", render: (row) => <>{row.returnedByName||"—"}</> },
           { key: "c3", header: "Ngày", render: (row) => <>{row.returnedAt?String(row.returnedAt).slice(0,10):"—"}</> },
           { key: "c4", header: "SL nhận", render: (row) => <>{format.format(row.acceptedQty||0)}</> },
+          { key: "c5", header: "Trạng thái", render: (row) => <><StatusBadge value={statusLabel(row.status)}/></> },
         ]} emptyText="Chưa có phiếu hoàn trả trong dự án của kho." />
       </section>}
 
       {wdTab===4&&<section className="card" data-vntech="wd-staff">
-        <CardHead title="NHÂN SỰ LIÊN QUAN ĐẾN KHO" note="Nguồn: `data.staffDirectory` lọc theo `warehouseId` của kho này."/>
-        <DataTable rows={keeperRows} rowKey={(row,index)=>String(`${row.id}-${index}`)} columns={[
+        {/* ⭐⭐ TASK-230 ⑥ — yêu cầu user: «tab Nhân sự cần có thêm nút thêm nhân sự, khi click thêm sẽ hiển thị ra
+            modal thêm nhân sự kho (cho phép tìm theo tên nhân sự, khi chọn nhân sự sẽ hiển thị ra chức danh,
+            phòng ban và các thông tin liên quan. Sau đó có thể chọn được chức danh hoặc nhiệm vụ của nhân sự đó
+            đối với kho) Admin hoặc user có perm có thể sử dụng được chức năng này.»
+            ⚠️ NGUỒN GHI (đã ĐỌC MÃ, ⛔ không bịa): action THẬT duy nhất ghi `user_warehouse_scopes` là
+            **`save_user_access`** (`UserManagementUseCase:258`) và backend **`requireRole(…, List.of("admin"))`**
+            ⇒ ⭐ **ADMIN-ONLY** ⇒ UI ẩn nút với người ⛔ không phải admin (⛔ không tạo nút chết như BUG-013/014).
+            ⚠️ `saveUserAccess` là **FULL-REPLACE** (`clearUserScopes()` xoá cứng 3 bảng rồi ghi lại)
+            ⇒ ⛔ BẮT BUỘC gửi **đủ** `projectScopes` + `warehouseScopes` + `modulePermissions` hiện có,
+            nếu gửi thiếu sẽ **XOÁ mất phạm vi khác** của tài khoản. */}
+        <ListToolbar title="NHÂN SỰ CỦA KHO"
+          note="Nhân sự được gán vào kho này."
+          count={keeperRows.length} total={keeperRows.length} unit="nhân sự"
+          search={{ value: staffQuery, onChange: setStaffQuery, placeholder: "Tìm theo tên · mã NV · phòng ban..." }}
+          actions={isAdmin?<button type="button" className="primary" data-vntech="wd-staff-add" onClick={()=>{setStaffModalOpen(true);setStaffPickId("");setStaffRole("write");}}>＋ Thêm nhân sự</button>:undefined}
+        />
+        <DataTable rows={keeperRows.filter((r:Row)=>!staffQuery || `${r.fullName||""} ${r.employeeCode||""} ${r.department||""} ${r.organizationName||""}`.toLocaleLowerCase("vi").includes(staffQuery.toLocaleLowerCase("vi")))}
+          rowKey={(row,index)=>String(`${row.id}-${index}`)} columns={[
           { key: "c1", header: "#", render: (row,index) => <>{index+1}</> },
           { key: "c2", header: "Họ tên", render: (row) => <><strong>{row.fullName||row.username||"—"}</strong></> },
-          { key: "c3", header: "Tên đăng nhập", render: (row) => <>{row.username||"—"}</> },
-          { key: "c4", header: "Vai trò", render: (row) => <>{row.role||"—"}</> },
-        ]} emptyText="Chưa có nhân sự nào được gắn với kho này (bảng phân công kho còn trống)." />
+          { key: "c3", header: "Mã NV", render: (row) => <>{row.employeeCode||"—"}</> },
+          { key: "c4", header: "Chức danh", render: (row) => <>{row.roleName||row.role||"—"}</> },
+          { key: "c5", header: "Phòng ban", render: (row) => <>{row.organizationName||row.department||"—"}</> },
+          { key: "c6", header: "Nhiệm vụ với kho", render: (row) => <><StatusBadge value={warehouseRoleLabel(String(row.warehouseRole||""))}/></> },
+        ]} emptyText={isAdmin?"Chưa có nhân sự nào được gán vào kho này. Bấm «＋ Thêm nhân sự» để gán.":"Chưa có nhân sự nào được gán vào kho này."} />
+
+        {staffModalOpen&&<div className="overlay" onMouseDown={(event)=>{if(event.target===event.currentTarget)setStaffModalOpen(false);}}>
+          <div className="modal" role="dialog" aria-modal="true" aria-label="Thêm nhân sự vào kho">
+            <h2>THÊM NHÂN SỰ VÀO KHO · {String(w.name || w.code || "")}</h2>
+            <p className="scope-lock-note">Tìm theo tên / mã nhân viên ⇒ chọn nhân sự ⇒ chọn <strong>chức danh (nhiệm vụ) của nhân sự đó đối với kho</strong>. 🔒 Chỉ <strong>admin</strong> dùng được (backend yêu cầu role admin).</p>
+            <label className="list-toolbar-field">Tìm nhân sự
+              <input type="text" data-vntech="wd-staff-search" value={staffQuery} onChange={(e)=>setStaffQuery(e.target.value)} placeholder="Nhập tên · mã NV · phòng ban..."/>
+            </label>
+            <div className="table-wrap" style={{maxHeight:260,overflow:"auto"}}><table><thead><tr><th>Chọn</th><th>Họ tên</th><th>Mã NV</th><th>Chức danh</th><th>Phòng ban</th></tr></thead><tbody>
+              {staffUngVien.map((u:Row)=><tr key={String(u.id)} data-vntech="wd-staff-candidate" onClick={()=>setStaffPickId(String(u.id))}
+                  style={staffPickId===String(u.id)?{background:"rgba(11,102,246,.10)"}:undefined}>
+                  <td><input type="radio" name="staffPick" checked={staffPickId===String(u.id)} onChange={()=>setStaffPickId(String(u.id))}/></td>
+                  <td><strong>{u.fullName||"—"}</strong></td><td>{u.employeeCode||"—"}</td>
+                  <td>{u.roleName||u.role||"—"}</td><td>{u.organizationName||u.department||"—"}</td></tr>)}
+              {!staffUngVien.length&&<tr><td colSpan={5}><Empty text={staffQuery?"Không có nhân sự nào khớp từ khoá.":"⛔ Không còn nhân sự nào để thêm (tất cả đã được gán vào kho này)."}/></td></tr>}
+            </tbody></table></div>
+            {staffPickId&&<div className="card" data-vntech="wd-staff-picked" style={{marginTop:12}}>
+              <CardHead title="NHÂN SỰ ĐÃ CHỌN" note="Thông tin lấy từ `staffDirectory` theo `id` — ⛔ không bịa trường."/>
+              <dl className="kv">
+                <div><dt>Họ tên</dt><dd><strong>{String(nguoiChon.fullName||"—")}</strong></dd></div>
+                <div><dt>Mã nhân viên</dt><dd>{String(nguoiChon.employeeCode||"—")}</dd></div>
+                <div><dt>Chức danh</dt><dd>{String(nguoiChon.roleName||nguoiChon.role||"—")}</dd></div>
+                <div><dt>Phòng ban</dt><dd>{String(nguoiChon.organizationName||nguoiChon.department||"—")}</dd></div>
+                <div><dt>Email</dt><dd>{String(nguoiChon.email||"—")}</dd></div>
+              </dl>
+              <label className="list-toolbar-field" style={{marginTop:10,display:"block"}}>Nhiệm vụ của nhân sự này đối với kho
+                <select data-vntech="wd-staff-role" value={staffRole} onChange={(e)=>setStaffRole(e.target.value)}>
+                  <option value="read">Chỉ xem (read)</option>
+                  <option value="write">Được ghi (write) — thủ kho</option>
+                  <option value="approve">Được duyệt (approve)</option>
+                  <option value="admin">Quản trị kho (admin)</option>
+                </select>
+              </label>
+              <p className="scope-lock-note">⚠️ Giá trị nhiệm vụ dùng ĐÚNG tập của CSDL `user_warehouse_scopes.permission` (đo `AccessScopeService:31`: mức `write` ⇒ thuộc nhóm write · approve · admin).</p>
+            </div>}
+            <footer className="modal-actions">
+              <button type="button" className="secondary" data-vntech="wd-staff-cancel" onClick={()=>setStaffModalOpen(false)}>Huỷ</button>
+              <button type="button" className="primary" data-vntech="wd-staff-save" disabled={!staffPickId||!action}
+                onClick={async ()=>{
+                  if(!action||!staffPickId) return;
+                  const uid=staffPickId;
+                  // ⚠️ FULL-REPLACE: gửi ĐỦ 3 nhóm, ⛔ nếu thiếu sẽ xoá mất phạm vi khác của tài khoản.
+                  const projectScopes=(data.userScopes||[]).filter((s:Row)=>String(s.userId)===uid)
+                    .map((s:Row)=>({projectId:String(s.projectId||""),permission:String(s.permission||"none")})).filter((s)=>s.projectId);
+                  const whCu=(data.userWarehouseScopes||[]).filter((s:Row)=>String(s.userId)===uid)
+                    .map((s:Row)=>({warehouseId:String(s.warehouseId||""),permission:String(s.permission||"read")})).filter((s)=>s.warehouseId&&s.warehouseId!==String(openWarehouseId));
+                  const modulePermissions=(data.allModulePermissions||[]).filter((m:Row)=>String(m.userId)===uid)
+                    .map((m:Row)=>({moduleKey:String(m.moduleKey||""),canView:Boolean(m.canView),canUse:Boolean(m.canUse),canCreate:Boolean(m.canCreate),canEdit:Boolean(m.canEdit),canApprove:Boolean(m.canApprove),canExport:Boolean(m.canExport)}));
+                  const ok=await action("save_user_access",{userId:uid,projectScopes,
+                    warehouseScopes:[...whCu,{warehouseId:String(openWarehouseId),permission:staffRole}],modulePermissions});
+                  if(ok){setStaffModalOpen(false);}}
+                }>Lưu phân công</button>
+            </footer>
+          </div>
+        </div>}
       </section>}
     </div>;
   }
@@ -289,7 +501,7 @@ function Inventory({ data, project, open, action, view = null }: { data: AppData
     {tabBar}
     {tab===0&&<ListToolbar
       title="TỒN KHO & ĐIỀU CHUYỂN"
-      note="Theo dõi tồn theo đúng dự án/kho được phân quyền; điều chuyển phải có xác nhận kho đích."
+      note="Tồn kho theo phạm vi bạn được phân quyền."
       count={filtered.length} total={scopedInventory.length} unit="mã vật tư"
       search={{ value: query, onChange: setQuery, placeholder: "Tìm kiếm theo mã vật tư, tên vật tư..." }}
       sort={{ value: sortKey, onChange: setSortKey, options: [{ value: "code", label: "Mã vật tư" }, { value: "name", label: "Tên vật tư" }, { value: "avail_desc", label: "Tồn khả dụng — cao nhất" }, { value: "avail_asc", label: "Tồn khả dụng — thấp nhất" }, { value: "min_desc", label: "Tồn tối thiểu — cao nhất" }, { value: "wh", label: "Kho / vị trí" }] }}
@@ -325,14 +537,19 @@ function Inventory({ data, project, open, action, view = null }: { data: AppData
             `action("delete_warehouse")` ⛔ không tồn tại ở CẢ JS lẫn Java backend.
             ⇒ ⛔ Không để nút bấm mà IM LẶNG (§22 — error state). Mở lại khi backend bổ sung modal + action.
             ⛔ GIỮ NGUYÊN onClick để hoàn nguyên chỉ bằng cách bỏ `disabled`. */}
-        <ListToolbar title="KHO" note="Danh sách kho trong phạm vi dự án bạn được phân quyền. Bấm một thẻ để xem thủ kho, lịch sử xuất/nhập, lịch sử cấp phát/hoàn trả và danh mục vật tư trong kho. ⚠️ Ba nút «Tạo kho / Sửa / Xóa» đang TẠM KHOÁ: backend chưa khai báo modal «warehouse» và action «delete_warehouse» (§14/§20 — chờ bổ sung)."
+        <ListToolbar title="KHO" note="Bấm một thẻ để mở chi tiết kho."
           count={visibleWarehouses.length} total={allowedWarehouses.length} unit="kho"
           search={{value:whQuery,onChange:setWhQuery,placeholder:"Tìm theo tên hoặc mã kho..."}}
           sort={{value:whSortKey,onChange:setWhSortKey,options:[{value:"name_asc",label:"Tên A→Z"},{value:"name_desc",label:"Tên Z→A"},{value:"items_desc",label:"Nhiều vật tư trước"}]}}
           actions={<>
-            <button type="button" className="primary" disabled title="TẠM KHOÁ (BUG-20261007-014): app/page.tsx chưa có modal «warehouse» ⇒ bấm ⛔ không mở gì. Chờ backend bổ sung." onClick={()=>open("warehouse")}>＋ Tạo kho</button>
-            <button type="button" className="secondary" disabled title="TẠM KHOÁ (BUG-20261007-014): modal «warehouse» chưa tồn tại ⇒ ⛔ không sửa được. Chờ backend bổ sung." onClick={()=>{const w=allowedWarehouses.find((x:Row)=>String(x.id)===selectedWhId);if(w)open("warehouse",w);}}>✎ Sửa</button>
-            <button type="button" className="secondary" disabled title="TẠM KHOÁ (BUG-20261007-015): action «delete_warehouse» ⛔ không tồn tại ở cả JS lẫn Java backend ⇒ ⛔ không xoá được." onClick={()=>{const w=allowedWarehouses.find((x:Row)=>String(x.id)===selectedWhId);if(w&&action&&window.confirm(`Xóa kho ${String(w.warehouseName||w.warehouseCode)}?`))void action("delete_warehouse",{warehouseId:w.id});}}>🗑 Xóa</button>
+            <button type="button" className="primary" data-vntech="open-warehouse" onClick={()=>open("warehouse")}>＋ Tạo kho</button>
+            <button type="button" className="secondary" data-vntech="edit-warehouse" disabled={!selectedWhId} onClick={()=>{const w=allowedWarehouses.find((x:Row)=>String(x.id)===selectedWhId);if(w)open("warehouse",w);}}>✎ Sửa</button>
+            {/* ⭐ TASK-240 (08/10/2026) — ĐỔI «🗑 Xóa» ⇒ «⏹ Ngừng hoạt động».
+                QUY TẮC ③ USER CHỐT (`DEC-20261008-013`): «Xóa kho: KHÔNG cho phép nhưng cho phép ẩn kho
+                hoặc set trạng thái ngừng hoạt động» ⇒ ⛔ TUYỆT ĐỐI KHÔNG gọi `delete_warehouse`
+                (⭐ hằng `ALLOW_DELETE_WAREHOUSE = false` ở `lib/warehouse-hub.ts` — có test kiểm ✓).
+                API (S01 thi hành, `HANDOFF-20261008-009`): `set_warehouse_status { warehouseId, active }`. */}
+            <button type="button" className="secondary" data-vntech="deactivate-warehouse" disabled={!selectedWhId} onClick={()=>{const w=allowedWarehouses.find((x:Row)=>String(x.id)===selectedWhId);if(w&&action&&window.confirm(`Ngừng hoạt động kho ${String(w.warehouseName||w.warehouseCode||w.code)}? Phiếu kho cũ vẫn giữ nguyên.`))void action("set_warehouse_status",{warehouseId:w.id,active:false});}}>⏹ Ngừng hoạt động</button>
           </>}
           secondaryActions={<button type="button" className="secondary" onClick={()=>exportWarehousesCsv(visibleWarehouses)}>⇩ Xuất Excel</button>}
         />
@@ -347,15 +564,30 @@ function Inventory({ data, project, open, action, view = null }: { data: AppData
             // ⚠️ SỬA LỖI CÓ SẴN: bản cũ đọc `w.warehouseName`/`w.warehouseCode`/`w.warehouseType` — 3 trường
             //    ⛔ KHÔNG tồn tại trong payload (đo thật: `id`·`code`·`name`·`type`·`projectId`) ⇒ card hiện
             //    **UUID thay vì tên kho** và nhãn loại luôn sai. Nay đọc qua `card` (nguồn ĐÚNG) + fallback `w.name`/`w.code`.
-            return <button type="button" className={selectedWhId===String(w.id)?"warehouse-card is-selected":"warehouse-card"} key={String(w.id)} data-vntech="warehouse-card"
-              aria-pressed={selectedWhId===String(w.id)}
-              onClick={()=>setSelectedWhId(String(w.id))}
-              onDoubleClick={()=>setOpenWarehouseId(String(w.id))}>
+            const wid = String(w.id);
+            const thieu = shortageByWarehouse.get(wid) || 0;
+            const keepers = keepersByWarehouse.get(wid) || [];
+            const keeperText = keepers.length ? (keepers.length > 1 ? `${keepers[0]} (+${keepers.length - 1})` : keepers[0]) : "— chưa gán —";
+            // ⭐ HUB «KHO VẬT TƯ» — CARD KHO (yêu cầu user ①): TÊN · MÃ · TỒN KHO · MÃ ĐANG THIẾU · TRẠNG THÁI · THỦ KHO.
+            // ⭐⭐ TASK-230 (yêu cầu user ⑤): «Khi click vào kho ở tab dashboard không hiển thị thông tin của kho»
+            //    ⇒ NAY **BẤM 1 LẦN = MỞ MÀN CHI TIẾT KHO** (trước đây 1 lần chỉ CHỌN, phải bấm đúp mới mở ⇒ user ⛔ không thấy gì).
+            //    Vẫn ĐỒNG THỜI chọn kho (để nút «Xem chi tiết kho đang chọn» + Sửa/Xóa vẫn dùng được).
+            const cardClass = ["warehouse-card", selectedWhId === wid ? "is-selected" : "", thieu > 0 ? "is-low" : ""].filter(Boolean).join(" ");
+            return <button type="button" className={cardClass} key={wid} data-vntech="warehouse-card"
+              aria-pressed={selectedWhId === wid}
+              title={`Mở chi tiết kho ${card?.name || String(w.name || "")}`}
+              onClick={()=>{setSelectedWhId(wid);setOpenWarehouseId(wid);}}>
               <b>{card?.name||String(w.name||w.id)}</b>
-              <span className="muted">{card?.code||String(w.code||"")} · {card?.type==="central"?"Kho Tổng":card?.type==="site"?"Kho dự án":card?.type==="transit"?"Kho trung chuyển":String(card?.type||"—")}</span>
-              {card?.isProjectWarehouse?<span className="muted">Dự án: {card.projectName||card.projectCode||"—"}</span>:null}
-              <small>Tồn hiện tại: <strong>{format.format(card?.totals.balance||0)}</strong> · {whRows.length} vật tư</small>
-              <em className="warehouse-card-hint">Bấm để chọn · bấm đúp để xem chi tiết</em>
+              <span className="wc-code">{card?.code||String(w.code||"")} · {card?.type==="central"?"Kho Tổng":card?.type==="site"?"Kho dự án":card?.type==="transit"?"Kho trung chuyển":String(card?.type||"—")}</span>
+              {card?.isProjectWarehouse?<span className="wc-sub">Dự án: {card.projectName||card.projectCode||"—"}</span>:null}
+              <div className="wc-rows">
+                <div className="wc-row"><span>Tồn kho</span><strong>{format.format(card?.totals.balance||0)}</strong></div>
+                <div className="wc-row"><span>Số mã đang thiếu</span>
+                  <span className={thieu>0?"wc-chip low":"wc-chip ok"}>{thieu>0?`${thieu} mã`:"Đủ tồn"}</span></div>
+                <div className="wc-row"><span>Thủ kho</span><span className="wc-keeper" title={keepers.join(", ")||"Chưa gán người phụ trách kho"}>{keeperText}</span></div>
+                <div className="wc-row"><span>Trạng thái</span><span className="wc-chip ok">Đang hoạt động</span></div>
+              </div>
+              <em className="warehouse-card-hint">{whRows.length} vật tư · bấm để mở</em>
             </button>;
           })}
           {!visibleWarehouses.length&&<Empty text={whQuery?"Không có kho nào khớp từ khoá tìm kiếm.":"Chưa có kho nào trong phạm vi bạn được phân quyền."}/>}
@@ -366,7 +598,7 @@ function Inventory({ data, project, open, action, view = null }: { data: AppData
 
       {/* ── MT3 §F — TAB 2 «NHẬP KHO & XUẤT KHO»: gộp 2 mục cũ, có 2 sub-tab ── */}
       {tab===1&&<section className="card" data-vntech="warehouse-io-tab">
-        <CardHead title="NHẬP KHO & XUẤT KHO" note="Gộp hai mục cũ theo MT3 §F; chọn sub-tab bên dưới."/>
+        <CardHead title="NHẬP KHO & XUẤT KHO" note="Chọn loại phiếu bên dưới."/>
         <div className="project-scope-tabs" role="tablist" aria-label="Nhập kho và Xuất kho">
           <button type="button" role="tab" aria-selected={ioTab==="issue"} className={ioTab==="issue"?"active":""} onClick={()=>setIoTab("issue")}>Xuất kho</button>
           <button type="button" role="tab" aria-selected={ioTab==="receipt"} className={ioTab==="receipt"?"active":""} onClick={()=>setIoTab("receipt")}>Nhập kho</button>
@@ -387,13 +619,13 @@ function Inventory({ data, project, open, action, view = null }: { data: AppData
         </div>
         <ListToolbar
           title={arTab==="allocate"?"DANH SÁCH PHIẾU CẤP PHÁT":"DANH SÁCH PHIẾU HOÀN TRẢ"}
-          note="Nguồn: phiếu xuất kho cấp cho tổ đội (cấp phát) · phiếu hoàn trả về kho. ⛔ Chưa có sửa/xoá: backend chưa khai báo action (§14/§20). ⚠️ Nút «Tạo phiếu cấp phát» đang TẠM KHOÁ: app/page.tsx chưa có modal «allocate» (BUG-20261007-013)."
+          note="Phiếu cấp phát vật tư cho tổ đội · phiếu hoàn trả về kho."
           count={arRows.length} total={arSource.length} unit={arTab==="allocate"?"phiếu cấp phát":"phiếu hoàn trả"}
           search={{ value: arQuery, onChange: setArQuery, placeholder: "Tìm mã đơn · dự án · tổ đội · người nhận..." }}
           sort={{ value: arSortKey, onChange: setArSortKey, options: [{ value: "date", label: "Ngày" }, { value: "no", label: "Mã đơn" }, { value: "project", label: "Dự án" }, { value: "qty_desc", label: "Số lượng — cao nhất" }] }}
           filters={[{ key: "status", label: "Trạng thái", value: arStatus, onChange: setArStatus, options: [{ value: "ALL", label: "Tất cả trạng thái" }, ...arStatusOptions.map((s) => ({ value: s, label: s }))] }]}
           actions={arTab==="allocate"
-            ? <button type="button" className="primary" data-vntech="open-allocate" disabled title="TẠM KHOÁ (BUG-20261007-013): app/page.tsx chưa có modal «allocate» ⇒ bấm ⛔ không mở gì. Nút «Tạo phiếu hoàn trả» vẫn dùng được." onClick={()=>open("allocate")}>＋ Tạo phiếu cấp phát</button>
+            ? <button type="button" className="primary" data-vntech="open-allocate" disabled title="TẠM KHOÁ (BUG-20261007-013) — ⚠️ CÒN LẠI 1 NÚT DUY NHẤT: `app/page.tsx` ⛔ CHƯA có modal «allocate». ⇒ `ERP-SESSION-01` cần: (1) thêm case modal «allocate» + (2) backend ghi `stock_reservations` cho phiếu CẤP PHÁT (quy tắc ④ — `HANDOFF-20261008-009`). Nút «Tạo phiếu hoàn trả» vẫn dùng được." onClick={()=>open("allocate")}>＋ Tạo phiếu cấp phát</button>
             : <button type="button" className="primary" data-vntech="open-return" onClick={()=>open("return")}>＋ Tạo phiếu hoàn trả</button>}
         />
         {arTab==="allocate"
@@ -457,7 +689,7 @@ function Inventory({ data, project, open, action, view = null }: { data: AppData
     {tab===1&&ioTab==="issue"&&<section className="card" data-vntech="issue-list-screen">
       <ListToolbar
         title="DANH SÁCH PHIẾU XUẤT · ĐƠN XUẤT KHO"
-        note="§7.5 — phiếu xuất kho cho tổ đội (nguồn: stock_issues + stock_issue_items). Tạo mới qua nút «XUẤT KHO» phía trên. ⛔ Không có sửa/xoá phiếu xuất: backend chưa khai báo action — không bịa nghiệp vụ (§14/§20)."
+        note="Phiếu xuất kho cấp cho tổ đội. Tạo mới bằng nút bên phải."
         count={issueRows.length} total={scopeIssues.length} unit="phiếu"
         search={{ value: issueQuery, onChange: setIssueQuery, placeholder: "Tìm phiếu xuất · dự án · tổ đội · người nhận..." }}
         sort={{ value: issueSortKey, onChange: setIssueSortKey, options: [{ value: "issuedAt", label: "Ngày xuất" }, { value: "issueNo", label: "Số phiếu" }, { value: "project", label: "Dự án" }, { value: "qty_desc", label: "Số lượng — cao nhất" }] }}

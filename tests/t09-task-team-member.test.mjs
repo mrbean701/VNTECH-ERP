@@ -154,17 +154,13 @@ test("T-09 — LIÊN KẾT mở `EntityDetailModal` cho Team và Nhân sự (qua
   assert.match(hierarchy, /setEntity\(\{ kind: "user", row: \{ id: person\.userId, fullName: person\.name \} \}\)/, "Bấm người hỗ trợ chưa mở modal thực thể «user»");
 });
 
-test("T-09 — GẮN vào màn Công việc: WorkCenter import + render, KHÔNG đổi 5 tab đã chốt ở T-01", () => {
+test("T-09 — GẮN vào màn Công việc: WorkCenter import + render, dải tab nay 7 mục (T-01 08/10/2026)", () => {
   assert.match(workCenter, /import \{[^}]*WorkHierarchy[^}]*\} from "@\/app\/screens\/WorkHierarchy";/, "WorkCenter chưa import khối phân cấp");
   assert.match(workCenter, /<WorkHierarchy\b/, "WorkCenter chưa render khối phân cấp");
   assert.match(workCenter, /scopeNote=\{/, "Khối phân cấp chưa nhận ghi chú phạm vi (T-06)");
   assert.match(workCenter, /permission=\{modulePermission\(data, "dept_plan_assign"\)\}/, "Khối phân cấp chưa nhận cổng quyền THẬT của tab «Phòng ban»");
-  // 📌 CẬP NHẬT 26/09/2026 (MT3 §A.2): dải tab nay 6 tab (thêm «Dự án» ở index 1) — ⛔ không được đổi.
-  assert.equal((workCenter.match(/const WORK_TABS = \["Cá nhân", "Dự án", "Phòng ban", "Giao việc", "Dashboard", "Báo cáo"\];/g) || []).length, 1, "Không được đổi dải 6 tab (MT3 §A.2)");
-  // ⚠️ CẬP NHẬT 23/09/2026 (MT2-P5-01 §3.1): ánh xạ nay có THÊM khoá `dashboard: 3` (cùng tab «Dashboard»)
-  // và GIỮ `kpi: 3` để tương thích ngược — xem `app/screens/WorkCenter.tsx:84-88`. ⛔ 5 tab KHÔNG đổi (dòng trên).
-  // 📌 CẬP NHẬT 26/09/2026 (MT3 §A.2): chèn tab «Dự án» ở index 1 ⇒ ánh xạ view → tab DỜI LÙI 1
-  // cho các view phía sau (Phòng ban 1→2 · Giao việc 2→3 · KPI/Dashboard 3→4 · Báo cáo 4→5).
-  // ⛔ Mỗi view vẫn trỏ ĐÚNG tab của nó — chỉ đổi số thứ tự, không đổi hành vi.
-  assert.match(workCenter, /const WORK_TAB_OF_VIEW: Record<WorkMenuView, number> = \{ personal: 0, department: 2, assign: 3, kpi: 4, dashboard: 4, reports: 5 \};/, "Không được đổi ánh xạ view → tab (đúng thứ tự 6 tab của MT3 §A.2)");
+  // ⭐ CẬP NHẬT 08/10/2026 (USER — VIỆC 1/2/6/7): dải **7 tab** (Dashboard ĐẦU) — ⛔ khối phân cấp vẫn không đổi chỗ.
+  assert.equal((workCenter.match(/const WORK_TABS = \["Dashboard", "Danh sách công việc", "Được giao", "Phòng ban\/ Tổ đội", "Giao việc", "Dự án", "Báo cáo"\];/g) || []).length, 1, "Dải tab phải đúng 7 tab đã chốt 08/10/2026");
+  // ⭐ Ánh xạ view → tab MỚI: `personal`=«Danh sách công việc»(1) · `department`=3 · `assign`=4 · `dashboard`/`kpi`=0 (Dashboard ĐẦU) · `reports`=6.
+  assert.match(workCenter, /const WORK_TAB_OF_VIEW: Record<WorkMenuView, number> = \{ personal: 1, department: 3, assign: 4, kpi: 0, dashboard: 0, reports: 6 \};/, "Ánh xạ view → tab phải khớp dải 7 tab (Dashboard = 0)");
 });

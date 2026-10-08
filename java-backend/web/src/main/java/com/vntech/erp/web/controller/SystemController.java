@@ -411,7 +411,23 @@ public class SystemController {
                     return ResponseEntity.ok(json(Map.of("ok", true, "message", message)));
                 }
                 case "save_user_access" -> {
-                    AuthUseCase.CurrentUser cu = requireRequireAdmin(request);
+                    // ⭐ PA-1 (USER 08/10/2026 — `DEC-20261008-001`) — ĐÚNG LỖI ĐÃ VÁ CHO `update_user`
+                    //    Ở MỐC 109 (xem chú thích đầy đủ ở `case "update_user"` ngay trên), ⛔ nhưng SÓT action này.
+                    //   🔎 ĐO ĐƯỢC (`tools/probe-permission-save-api.mjs`, ⛔ không suy đoán): có **3 TẦNG** chặn
+                    //      `save_user_access`, và tầng này là tầng CUỐI còn lại:
+                    //        ① `ActionRbacRegistry` khai `List.of()` (rỗng) ⇒ default-DENY — ĐÃ SỬA (`admin_tab_06`).
+                    //        ② `UserManagementUseCase.saveUserAccess` `requireRole(…, List.of("admin"))` — ĐÃ SỬA.
+                    //        ③ ⛔ **dòng này** `requireRequireAdmin` ⇒ role ≠ admin LUÔN 403
+                    //           «Tài khoản không có quyền thực hiện nghiệp vụ này.» ⇒ hai sửa trên thành CODE CHẾT.
+                    //      📏 Bằng chứng: sau khi sửa ①+②, probe vẫn nhận **403 thông điệp THỨ BA** (chuỗi của
+                    //         `requireRequireAdmin`) ⇒ chính là dòng này. Sửa nốt ⇒ 200.
+                    //   ✅ NAY: cổng quyền DUY NHẤT là `rbacService.requireActionModule(...)` ở ĐẦU `post()`
+                    //      (dòng ~228-231) — đã chạy TRƯỚC switch và **fail-closed** cho `save_user_access`
+                    //      (`admin_tab_06` + `canView`; admin đi qua nhánh `isAdmin`).
+                    //   ⚠️ GIỮ NGUYÊN mọi chốt an toàn phía sau: MỐC 111 (chặn payload rỗng) · MỐC 112 (nguyên tử)
+                    //      · `UserManagementUseCase` (guard quyền lần nữa). Quyền ĐỔI `role` ⛔ KHÔNG đi qua action
+                    //      này (chỉ `update_user` + `guardRoleChange`, vẫn admin-only).
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request, false);
                     String message = userManagementUseCase.saveUserAccess(asUserPrincipal(cu), payload);
                     return ResponseEntity.ok(json(Map.of("ok", true, "message", message)));
                 }
@@ -529,6 +545,20 @@ public class SystemController {
                 case "save_warehouse_location" -> {
                     AuthUseCase.CurrentUser cu = requireCurrentUser(request);
                     String m = adminSystemUseCase.saveWarehouseLocation(asAdminPrincipal(cu), payload);
+                    return ResponseEntity.ok(json(Map.of("ok", true, "message", m)));
+                }
+                // ⭐ HANDOFF-20261008-009 (yêu cầu `ERP-SESSION-02`) — TẠO/SỬA KHO + ĐỔI TRẠNG THÁI KHO.
+                // ⚠️⚠️ Dùng `requireCurrentUser(request)` (đúng khuôn action anh em `save_warehouse_location`)
+                //   ⛔ **KHÔNG** `requireRequireAdmin` — bài học 3 tầng ở `BUG-20261008-002`: tầng ② cứng
+                //   `role=admin` sẽ chặn oan người được cấp quyền qua CẤU HÌNH ✓
+                case "save_warehouse" -> {
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                    String m = adminSystemUseCase.saveWarehouse(asAdminPrincipal(cu), payload);
+                    return ResponseEntity.ok(json(Map.of("ok", true, "message", m)));
+                }
+                case "set_warehouse_status" -> {
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                    String m = adminSystemUseCase.setWarehouseStatus(asAdminPrincipal(cu), payload);
                     return ResponseEntity.ok(json(Map.of("ok", true, "message", m)));
                 }
                 case "preview_request_import" -> {

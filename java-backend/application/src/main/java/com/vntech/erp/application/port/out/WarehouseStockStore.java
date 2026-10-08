@@ -35,6 +35,33 @@ public interface WarehouseStockStore {
     void updateIssueItemInstalled(String issueItemId, double installedQty, Instant now);
     void updateRequestItemIssued(String requestItemId, double qty, double installedQty, Instant now);
     void releaseReservationsForRequest(String requestId, String materialId, String warehouseId, Instant now);
+
+    // ⭐ TASK-243 (08/10/2026) — QUY TẮC ④ «GIỮ CHỖ KHI PHIẾU XUẤT ĐANG XỬ LÝ» (`DEC-20261008-013`).
+    //   NGUYÊN VĂN USER: «Trong thời gian TẠO PHIẾU hoặc CHỜ DUYỆT thì số lượng vật tư trong phiếu đó ở
+    //   trong trạng thái ĐANG XỬ LÝ (không cho user khác thao tác vào những mã vật tư đó), ví dụ như
+    //   dây diện cadivi 1.5 tồn 100 - phiếu xuất 70 (đang xử lý) thì những user khác không được thao tác
+    //   xuất quá số lượng đang trạng thái bình thường»
+    //
+    //   ⚠️⚠️ VÌ SAO PHẢI CÓ 2 HÀM MỚI (⭐ đo được): `releaseReservationsForRequest` nhả theo **`request_id`**
+    //   ⇒ ⛔ KHÔNG nhả được giữ chỗ của PHIẾU XUẤT. Còn `reservedBalance` thì ⛔ không phân biệt nguồn
+    //   (nó SUM mọi `status='active'`) ⇒ ⭐ chỉ cần GHI được reservation theo `issue_id` là
+    //   `available = physical − reserved` tự động đúng cho MỌI phiếu — ⛔ không phải sửa công thức.
+    //   ⇒ Thêm cột `issue_id` (migration `V39`) + 2 hàm dưới đây.
+
+    /**
+     * ⭐ TẠO giữ chỗ cho <b>PHIẾU XUẤT</b> — gọi khi phiếu vừa được tạo (đang {@code draft}/chờ duyệt).
+     * <p>Mỗi dòng {@code stock_issue_items} của phiếu ⇒ 1 dòng {@code stock_reservations}
+     * ({@code status='active'}, {@code issue_id}=id phiếu, {@code request_id}=NULL).
+     * <p>⚠️ CHỈ giữ chỗ phần <b>CHƯA xuất</b> ({@code quantity - installed_qty}) ⇒ ⛔ không giữ chỗ phần đã giao.
+     */
+    void createIssueReservations(String issueId, Instant now);
+
+    /**
+     * ⭐ NHẢ giữ chỗ của <b>PHIẾU XUẤT</b> — gọi khi phiếu {@code completed} (⭐ lúc đó tồn kho đã trừ THẬT).
+     * <p>⚠️ ⛔ NẾU KHÔNG GỌI ⇒ giữ chỗ 2 lần (vừa trừ tồn vừa còn reserved) ⇒
+     * {@code available} bị trừ oan ⇒ ⛔ CHẶN XUẤT SAI.
+     */
+    void releaseReservationsForIssue(String issueId, Instant now);
     void insertSupplyWorkflowStepIssued(String requestId, String issueId, Instant now, long dueHours);
     String postingStatusOf(String issueId);
 

@@ -21,8 +21,8 @@ import java.util.Set;
 public final class OpsTaskManagementUseCase {
 
     private static final Set<String> TASK_STATUSES = Set.of("NEW", "IN_PROGRESS", "SUBMITTED", "COMPLETED",
-            "BLOCKED", "WAITING", "ON_HOLD", "CANCELLED");
-    private static final Set<String> TASK_WAITING = Set.of("BLOCKED", "WAITING", "ON_HOLD");
+            "BLOCKED", "WAITING", "WAITING_SUPPLIER", "WAITING_CLIENT", "WAITING_APPROVAL", "WAITING_PROJECT", "REWORK", "ON_HOLD", "CANCELLED");
+    private static final Set<String> TASK_WAITING = Set.of("BLOCKED", "WAITING", "WAITING_SUPPLIER", "WAITING_CLIENT", "WAITING_APPROVAL", "WAITING_PROJECT", "ON_HOLD");
 
     private final OpsTaskStore store;
     private final IdGenerator idGenerator;
@@ -255,7 +255,7 @@ public final class OpsTaskManagementUseCase {
                 + "Mã: " + taskNo + "\n"
                 + "Công việc: " + taskTitle + "\n"
                 + "Dự án: " + projectText + "\n"
-                + "Người giao: " + sv(contact, "fullName") + "\n"
+                + "Người giao: " + actor.fullName() + "\n"
                 + "Thời điểm giao: " + now + "\n"
                 + "Hạn hoàn thành: " + dueText + "\n"
                 + "Ưu tiên: " + sv(task, "priority") + "\n"
@@ -382,7 +382,7 @@ public final class OpsTaskManagementUseCase {
         store.updateWorkItemStatus(u, now);
         store.insertWorkItemEvent(idGenerator.next("EVT"), taskId, "STATUS", currentStatus, next,
                 principal.userId(), null, null, reason.isEmpty() ? null : reason, null, now);
-        notifySafely("COMPLETED".equals(next) ? "TASK_COMPLETED" : "TASK_STATUS_CHANGED");
+        notifySafely("COMPLETED".equals(next) ? "TASK_COMPLETED" : "TASK_STATUS_CHANGED"); if ("COMPLETED".equals(next)) queueCompletionNotice(task, principal, now);
         return Map.of("message", "Đã chuyển " + sv(task, "task_no") + " sang " + next
                 + ". SLA gốc vẫn tính từ assigned_at; thời gian chờ hợp lệ được tách khỏi lỗi công việc.");
     }
@@ -808,4 +808,61 @@ public final class OpsTaskManagementUseCase {
     private static String nvl(Object o) { String s = trim(o); return s.isEmpty() ? null : s; }
     private static String blankDefault(String s, String fallback) { return s.isEmpty() ? fallback : s; }
     private static AuthUseCase.ApiError Api(String message) { return new AuthUseCase.ApiError(message, 400); }
+
+    /**
+     * ⭐ `BUG-20261008-D12` (USER UỶ QUYỀN 08/10/2026) — YÊU CẦU **6c**: *«người giao nhận thông báo khi việc hoàn thành»*.
+     * ⚠️ TRƯỚC ĐÂY đường Java chỉ phát `notifySafely("TASK_COMPLETED")` = **THEO CẤU HÌNH**
+     * (`notification_configs`) ⇒ ⛔ **không đảm bảo gửi cho ĐÚNG NGƯỜI GIAO** (và ⛔ không phát nếu chưa cấu hình).
+     * ⭐ NAY: ghi **TRỰC TIẾP** 1 hàng `task_notifications` (`channel="in_app"`) cho **NGƯỜI GIAO** + 1 hàng
+     * `email_outbox` (event `task_completed`) — ⛔ **không phụ thuộc cấu hình** (giống đường Node:
+     * `queueCompletionNotice` trong `scripts/system-route.mjs`).
+     * ⚠️ BỎ QUA 2 ca: ① việc ⛔ **không có người giao** (`assigned_by` rỗng = việc TỰ TẠO)
+     * ② **người xác nhận CHÍNH LÀ người giao** (⛔ không tự báo cho chính mình).
+     * ⚠️ ĐẶT Ở **CUỐI LỚP** (⛔ không chèn vào giữa): tài liệu/gate của dự án có thể khoá **SỐ DÒNG**
+     * của các phần phía trên ⇒ chèn giữa sẽ **dịch số dòng** và làm đỏ gate (bài học `BUG-D08`/`F-03`).
+     */
+    private void queueCompletionNotice(Map<String, Object> task, Principal actor, Instant now) {
+        String assignerId = sv(task, "assigned_by");
+        if (assignerId.isEmpty()) return;
+        if (assignerId.equals(actor.userId())) return;
+        Map<String, Object> contact = store.findUserContact(assignerId).orElse(null);
+        if (contact == null) return;
+        String taskNo = sv(task, "taskNo");
+        String taskTitle = sv(task, "title");
+        String projectId = sv(task, "projectId");
+        Map<String, Object> project = projectId.isEmpty() ? null : store.findActiveProject(projectId).orElse(null);
+        String projectText = project == null ? "Không gắn dự án"
+                : sv(project, "code") + " - " + sv(project, "name");
+        Map<String, Object> notice = new LinkedHashMap<>();
+        notice.put("id", idGenerator.next("NTF"));
+        notice.put("workItemId", sv(task, "id"));
+        notice.put("userId", assignerId);
+        notice.put("channel", "in_app");
+        notice.put("title", "Công việc đã hoàn thành: " + taskTitle);
+        notice.put("body", taskNo + " · " + actor.fullName() + " đã xác nhận HOÀN THÀNH · " + projectText);
+        store.insertTaskNotification(notice, now);
+
+        String email = sv(contact, "email");
+        if (email.isEmpty()) return;
+        String base = trim(store.emailBaseUrl()).replaceAll("/+$", "");
+        String link = base + "/?task=" + sv(task, "id");
+        String textBody = "Công việc bạn giao đã được xác nhận HOÀN THÀNH.\n"
+                + "Mã: " + taskNo + "\n"
+                + "Công việc: " + taskTitle + "\n"
+                + "Người xác nhận: " + actor.fullName() + "\n"
+                + "Thời điểm: " + now + "\n"
+                + "Mở nhiệm vụ: " + link;
+        String htmlBody = "<div style=\"font-family:Arial,sans-serif;max-width:680px;color:#173f58\">"
+                + "<h2>" + html(taskTitle) + "</h2><p><b>" + html(taskNo) + "</b></p>"
+                + "<p>Người xác nhận: " + html(actor.fullName()) + "</p>"
+                + "<p><a href=\"" + html(link) + "\" style=\"background:#0b78be;color:white;text-decoration:none;"
+                + "padding:10px 16px;border-radius:6px\">Mở nhiệm vụ</a></p></div>";
+        Map<String, Object> mail = new LinkedHashMap<>();
+        mail.put("id", idGenerator.next("MAIL"));
+        mail.put("recipients", email);
+        mail.put("subject", "[VNTECH ERP] " + taskNo + " - " + taskTitle);
+        mail.put("textBody", textBody);
+        mail.put("htmlBody", htmlBody);
+        store.insertEmailOutbox(mail, now);
+    }
 }

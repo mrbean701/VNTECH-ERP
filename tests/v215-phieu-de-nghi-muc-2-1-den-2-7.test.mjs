@@ -17,6 +17,11 @@ const read = (p) => readFileSync(new URL(p, root), "utf8");
 const REQ = read("app/screens/Requests.tsx").replaceAll("\r\n", "\n");
 const PAGE = read("app/page.tsx").replaceAll("\r\n", "\n");
 const LABELS = read("lib/labels.ts").replaceAll("\r\n", "\n");
+// ⭐ 07/10/2026 (ERP-SESSION-03) — BẢNG NHÃN ĐÃ HỢP NHẤT: `lib/labels.ts` ⛔ **không còn** bảng riêng
+// (bản cũ có fallback `row.supplyStatus || row.status` ⇒ **RÒ MÃ THÔ TIẾNG ANH**). Nhãn chuỗi cung ứng nay
+// nằm ở **nguồn DUY NHẤT** `lib/status-labels.ts` (domain `supply`). ⇒ Các ca dưới soi ĐÚNG nơi nhãn đang sống,
+// ⛔ KHÔNG hạ chuẩn: điều cần chứng minh (mã `returned`/`issued`/`partial_issued` PHẢI có nhãn tiếng Việt) giữ nguyên.
+const SHARED_LABELS = read("lib/status-labels.ts").replaceAll("\r\n", "\n");
 const SHARED = read("lib/ui-shared.tsx").replaceAll("\r\n", "\n");
 const REGISTRY = read("java-backend/application/src/main/java/com/vntech/erp/application/rbac/ActionRbacRegistry.java").replaceAll("\r\n", "\n");
 const count = (hay, needle) => hay.split(needle).length - 1;
@@ -119,7 +124,16 @@ test("2.4 — nhãn «Bước duyệt» dùng `approvalStage` (0 = chưa vào du
   assert.match(REQ, /const priorityOptions=Array\.from\(new Set\(requestRows\.map\(\(row\)=>String\(row\.priority\|\|""\)\)\)/,
     "phải lấy `priority` từ dữ liệu");
   assert.match(REQ, /n === "0" \? "Chưa vào duyệt" : `Bước \$\{n\}`/, "bước 0 phải hiện «Chưa vào duyệt», không phải «Bước 0»");
-  assert.match(REQ, /n === "high" \? "Cao" : n === "normal" \? "Bình thường"/, "phải dịch `high`/`normal` sang tiếng Việt");
+  // ⭐ 07/10/2026 (ERP-SESSION-03) — ĐỔI YÊU CẦU **CÓ CHỦ Ý** (`BUG-20261007-C04`): ternary cũ
+  // `n === "high" ? "Cao" : n === "normal" ? … : n` **rơi về MÃ THÔ** với `low`/`urgent`/`critical`
+  // ⇒ nay đi qua bảng nhãn DÙNG CHUNG. ⛔ ĐIỀU CẦN CHỨNG MINH KHÔNG ĐỔI:
+  // bộ lọc «Ưu tiên» PHẢI hiện tiếng Việt cho `high`/`normal` (và nay cả `low`/`urgent`/`critical`).
+  assert.match(REQ, /priorityOptions\.map\(\(n\) => \(\{ value: n, label: priorityLabel\(n, "priority"\) \}\)\)/,
+    "bộ lọc Ưu tiên phải đi qua bảng nhãn DÙNG CHUNG (domain `priority`)");
+  assert.match(REQ, /import \{ statusLabel as priorityLabel \} from "@\/lib\/status-labels"/,
+    "phải import bảng nhãn dùng chung cho Ưu tiên");
+  assert.doesNotMatch(REQ, /n === "high" \? "Cao" : n === "normal" \? "Bình thường" : n/,
+    "⛔ ternary tự dịch (rơi về mã thô) đã quay lại");
 });
 
 // ── MỤC 2.5 · vá D-093 (capability phải được TRUYỀN tới, không chỉ khai) ───────────
@@ -170,11 +184,16 @@ test("2.6 — ⛔ KHÔNG ship nút Xóa/Hủy phiếu (D-094: `requested_by` lư
 // ── MỤC 2.7 · dịch nhãn trạng thái ──────────────────────────────────────────────
 test("2.7 — `statusLabel` dịch được `returned` · `issued` · `partial_issued` (trước đây lộ RAW)", () => {
   for (const [key, label] of [["returned", "Trả lại"], ["issued", "Đã xuất kho"], ["partial_issued", "Xuất một phần"]]) {
-    assert.ok(LABELS.includes(`${key}: "${label}"`), `thiếu nhãn \`${key}: "${label}"\``);
+    assert.ok(SHARED_LABELS.includes(`${key}: "${label}"`), `thiếu nhãn \`${key}: "${label}"\` trong bảng nhãn DÙNG CHUNG`);
   }
-  assert.ok(LABELS.includes('returned_to_requester: "Trả lại"'), "«Trả lại CHT» phải đổi thành «Trả lại»");
+  assert.ok(SHARED_LABELS.includes('returned_to_requester: "Trả lại"'), "«Trả lại CHT» phải đổi thành «Trả lại»");
   // ⛔ thứ tự ưu tiên phải giữ nguyên (supplyStatus > status > postingStatus) — không được đụng.
-  assert.match(LABELS, /labels\[row\.supplyStatus\] \|\| labels\[row\.status\] \|\| labels\[row\.postingStatus\]/);
+  // (07/10/2026: bảng nhãn đã chuyển sang `lib/status-labels.ts` ⇒ soi THỨ TỰ ở `lib/labels.ts` theo dạng mới.)
+  const order = LABELS.indexOf("row?.supplyStatus");
+  assert.ok(order > 0, "`lib/labels.ts` phải thử `supplyStatus` TRƯỚC");
+  assert.ok(LABELS.indexOf("row?.status", order) > order, "`status` phải sau `supplyStatus`");
+  assert.ok(LABELS.indexOf("row?.postingStatus", order) > order, "`postingStatus` phải sau `status`");
+  assert.match(LABELS, /knownStatusLabel\(raw, "supply"\)/, "phải tra qua bảng nhãn DÙNG CHUNG (domain supply)");
 });
 
 test("2.7 — không còn chuỗi «Trả lại CHT» ở bất kỳ đâu trong `app/` và `lib/`", () => {
@@ -192,7 +211,7 @@ test("2.7 — mọi trạng thái mà BỘ LỌC của Requests dùng đều CÓ
   assert.deepEqual(values, ["pending_approval", "returned_to_requester", "approved", "completed"],
     "bộ lọc trạng thái phải đúng 4 trạng thái tính được của phiếu đề nghị");
   for (const v of values) {
-    assert.ok(LABELS.includes(`${v}: "`), `⛔ trạng thái \`${v}\` không có nhãn trong \`statusLabel\` ⇒ màn hàng sẽ lộ RAW STRING`);
+    assert.ok(SHARED_LABELS.includes(`${v}: "`), `⛔ trạng thái \`${v}\` không có nhãn trong bảng nhãn DÙNG CHUNG ⇒ màn hàng sẽ lộ RAW STRING`);
   }
 });
 

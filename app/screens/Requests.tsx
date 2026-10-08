@@ -11,6 +11,10 @@
 
 import { DataTable, ListToolbar, PermissionGuard, StatusBadge } from "@/app/components/ui";
 import { statusLabel } from "@/lib/labels";
+// ERP-SESSION-03 (07/10/2026) — `BUG-20261007-C04`: bộ lọc «Ưu tiên» trước đây tự dịch bằng ternary và
+// **rơi về MÃ THÔ** với mọi mã ngoài `high`/`normal` (`low` · `urgent` · `critical`) ⇒ dùng bảng nhãn DÙNG CHUNG.
+// ⚠️ Đặt BÍ DANH vì `statusLabel` ở trên là bản theo DÒNG (`@/lib/labels`) — ⛔ khác chữ ký.
+import { statusLabel as priorityLabel } from "@/lib/status-labels";
 import { Empty, Kpi, UI_NOW_MS, date, format } from "@/lib/ui-shared";
 import type { Row } from "@/lib/ui-shared";
 import { useState } from "react";
@@ -77,7 +81,7 @@ function Requests({ rows, projects, project, onProject, open, inventory, exportR
         ] },
         { key: "requester", label: "Người tạo", value: requester, onChange: setRequester, options: [{ value: "ALL", label: "Tất cả" }, ...requesterOptions.map((name) => ({ value: name, label: name }))] },
         { key: "stage", label: "Bước duyệt", value: stage, onChange: setStage, options: [{ value: "ALL", label: "Tất cả" }, ...stageOptions.map((n) => ({ value: n, label: n === "0" ? "Chưa vào duyệt" : `Bước ${n}` }))] },
-        { key: "priority", label: "Ưu tiên", value: priority, onChange: setPriority, options: [{ value: "ALL", label: "Tất cả" }, ...priorityOptions.map((n) => ({ value: n, label: n === "high" ? "Cao" : n === "normal" ? "Bình thường" : n }))] },
+        { key: "priority", label: "Ưu tiên", value: priority, onChange: setPriority, options: [{ value: "ALL", label: "Tất cả" }, ...priorityOptions.map((n) => ({ value: n, label: priorityLabel(n, "priority") }))] },
       ]}
       sort={{ value: sortKey, onChange: setSortKey, options: [
         { value: "requestedAt", label: "Ngày đề nghị (mới nhất)" },

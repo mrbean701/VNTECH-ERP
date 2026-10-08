@@ -103,8 +103,14 @@ test("TM-05 — ĐỐI CHỨNG ÂM: tổ đội không có phiếu nào ⇒ «ch
     assert.equal(source.rows.length, 0);
   }
   // UI phải dùng `available`/`emptyText` chứa «chưa có nguồn» ⇒ người dùng phân biệt được "0 phiếu" với "không đọc được".
-  assert.match(screen, /emptyText=\{`\$\{NO_SOURCE_TEXT\} — chưa có \$\{source\.label\.toLowerCase\(\)\} nào mang team_id của tổ đội này\.`\}/,
-    "Bảng cấp phát rỗng phải ghi «chưa có nguồn» + lý do");
+  // ⭐ 07/10/2026 (ERP-SESSION-03) — ĐỔI YÊU CẦU **CÓ CHỦ Ý**: empty-state cũ in `mang team_id của tổ đội này`
+  // (TÊN CỘT CSDL) = rác với người dùng cuối (user: «lược bỏ thông tin thừa - rác»). Nay là câu tiếng Việt
+  // nghiệp vụ. ⛔ ĐIỀU CẦN CHỨNG MINH KHÔNG ĐỔI: bảng rỗng phải có empty-state NÓI RÕ chưa có chứng từ
+  // (⛔ không hiện số 0 trần, ⛔ không im lặng ⇒ vẫn phân biệt được "0 phiếu" với "không đọc được").
+  assert.match(screen, /emptyText=\{`Chưa có \$\{source\.label\.toLowerCase\(\)\} nào của tổ đội này\.`\}/,
+    "Bảng cấp phát rỗng phải có empty-state nói rõ chưa có chứng từ");
+  assert.doesNotMatch(screen, /mang team_id của tổ đội này/,
+    "⛔ Không được in tên cột CSDL `team_id` cho người dùng");
   // Đối chứng DƯƠNG: phiếu của tổ đội KHÁC không được tính sang tổ đội này.
   const other = teamAllocations(DATA, { ...TEAM, id: "T2" });
   assert.equal(other.find((source) => source.key === "issues").total, 1);
@@ -122,6 +128,9 @@ test("TM-05 — cấp phát/hoàn trả nay NẰM TRONG tab số 4 «Lịch sử
   assert.match(tabs[4].source, /stock_issues\.team_id/, "nguồn cấp phát VẪN phải được khai trong tab Lịch sử");
   assert.match(tabs[4].source, /material_returns\.team_id/, "nguồn hoàn trả VẪN phải được khai trong tab Lịch sử");
   assert.equal(tabs[4].count, 2);
-  assert.match(screen, /TÁI DÙNG logic cấp phát kho/, "UI phải nói rõ đây là TÁI DÙNG logic cấp phát kho");
+  // ⭐ 07/10/2026 (ERP-SESSION-03) — tiêu đề card cũ «TÁI DÙNG logic cấp phát kho» là ngôn ngữ **KỸ THUẬT**
+  // ⇒ đổi sang tiêu đề nghiệp vụ. ⛔ ĐIỀU CẦN CHỨNG MINH KHÔNG ĐỔI: tab «Lịch sử» VẪN render bảng
+  // cấp phát/hoàn trả từ chính nguồn tái dùng (`allocations`).
+  assert.match(screen, /Phiếu cấp phát & hoàn trả của tổ đội/, "UI phải có khối phiếu cấp phát/hoàn trả của tổ đội");
   assert.match(screen, /allocations\.map\(\(source\) =>/, "UI phải render bảng cấp phát từ nguồn tái dùng");
 });

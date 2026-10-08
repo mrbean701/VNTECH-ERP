@@ -258,8 +258,28 @@ public final class ActionRbacRegistry {
             Map.entry("save_team_subcontract", List.of("teams")),
             Map.entry("save_trust_development_settings", List.of()),
             Map.entry("save_ui_display_settings", List.of()),
-            Map.entry("save_user_access", List.of()),
+            // ⭐ PA-1 (USER 08/10/2026 — `DEC-20261008-001`) — PHÂN QUYỀN NGƯỜI DÙNG ⇒ `admin_tab_06`.
+            // USER nguyên văn: «role === admin thì có nghĩa là user đó có toàn quyền và override toàn bộ
+            // phân quyền, là user có khả năng vượt qua mọi quyền mà không cần cấu hình, user có
+            // role === admin là quản trị hệ thống chỉ được sử dụng trong trường hợp đặc biệt ngoài ra khi
+            // không có việc gì quan trọng thì quản trị hệ thống sẽ sử dụng tài khoản ITM hoặc tài khoản
+            // tương tự được cấp full quyền.»
+            //   ⇒ ⭐ QUYỀN PHẢI ĐẾN TỪ **CẤU HÌNH**, ⛔ không chỉ từ `role`.
+            // ⚠️ TRƯỚC ĐÂY `List.of()` = RỖNG ⇒ `requireActionModule` **MẶC ĐỊNH TỪ CHỐI** (PHASE 0B S-03,
+            //    xem nhánh `required.isEmpty()`) ⇒ user role ≠ admin **LUÔN 403**
+            //    «Thao tác chưa được khai báo quyền trong hệ thống» dù ĐÃ được cấp quyền ở ma trận.
+            // ✅ KHỚP UI (đo, ⛔ không suy đoán):
+            //    · `app/screens/AdminUserModalTabs.tsx:22` — `hasAdminTab` kiểm `canView === 1`;
+            //    · `app/screens/AdminUserModalTabs.tsx:36` — `canAccess = isAdmin || hasAdminTab(… USER_TAB_06)`;
+            //    · `app/page.tsx:3433` — `canManageUserPermissions = isAdminUser || admin_tab_06 + canView`.
+            //    ↳ tài liệu thiết kế: `docs/dsh-state/CHECKLIST.md:1318`
+            //      «"Phân quyền công việc / Chức năng" ⇒ `admin_tab_06` (Tab 06) hoặc `role=admin`».
+            Map.entry("save_user_access", List.of("admin_tab_06")),
             Map.entry("save_warehouse_location", List.of("inventory", "central_warehouse")),
+            // ⭐ HANDOFF-20261008-009 (yêu cầu `ERP-SESSION-02`, phiên 01 thi hành) — TẠO/SỬA KHO + ĐỔI TRẠNG THÁI KHO
+            // ⚠️ Dùng ĐÚNG nhóm module của action anh em `save_warehouse_location` ⇒ ⛔ 0 khoá mới trong `module_catalog` ✓
+            Map.entry("save_warehouse", List.of("inventory", "central_warehouse")),
+            Map.entry("set_warehouse_status", List.of("inventory", "central_warehouse")),
             Map.entry("set_approval_stage_status", List.of()),
             Map.entry("set_benefit_record_status", List.of("dept_legal_benefits")),
             Map.entry("set_boq_item_status", List.of("boq")),
@@ -502,8 +522,16 @@ public final class ActionRbacRegistry {
             Map.entry("save_team_subcontract", "canUse"),
             Map.entry("save_trust_development_settings", "canUse"),
             Map.entry("save_ui_display_settings", "canUse"),
-            Map.entry("save_user_access", "canUse"),
+            // ⭐ PA-1 (USER 08/10/2026) — capability `canView` cho KHỚP UI.
+            // `hasAdminTab` (`AdminUserModalTabs.tsx:22`) và `canManageUserPermissions`
+            // (`app/page.tsx:3433`) đều kiểm `Number(p.canView) === 1` ⇒ «được dùng tab NN» = `canView`.
+            // ⛔ Nếu để `canUse`: tài khoản chỉ được tick cột «Xem» ở Tab 06 vẫn **403** ⇒ LẶP LẠI ĐÚNG
+            //    triệu chứng user báo («mở được modal, tick được, bấm Lưu ⛔ không lưu»).
+            Map.entry("save_user_access", "canView"),
             Map.entry("save_warehouse_location", "canEdit"),
+            // ⭐ HANDOFF-20261008-009 — cùng capability với action anh em (Ghi = sửa cấu hình kho)
+            Map.entry("save_warehouse", "canEdit"),
+            Map.entry("set_warehouse_status", "canEdit"),
             Map.entry("set_approval_stage_status", "canUse"),
             Map.entry("set_benefit_record_status", "canEdit"),
             Map.entry("set_boq_item_status", "canEdit"),

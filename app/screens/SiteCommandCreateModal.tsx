@@ -1,3 +1,6 @@
+// ⚠️ MT3-S03 (08/10/2026) — TỆP NÀY HIỆN ⛔ KHÔNG ĐƯỢC DÙNG Ở ĐÂU (đo được: **0 tham chiếu** trong `app/**` + `lib/**`).
+//    ⛔ ĐỪNG tốn công kiểm thử/DOM-verify modal này (bài học `SESSION_C/TEST_LOG.md §C42`).
+//    ⚠️ Cần quyết (nối lại menu · xoá · giữ kèm ghi chú): `SESSION_C/HANDOFF_LOG.md` §`HANDOFF-20261007-C15`.
 // USER 28/09/2026 — MODAL TÁI DÙNG: 「＋ Tạo Ban chỉ huy」.
 //   ⚠️ KHÔNG tạo nghiệp vụ mới — dùng ĐÚNG payload và ĐÚNG cổng quyền đã có:
 //     · action  : save_organization_unit  { code, name, unitType:"site_command", projectId, description }

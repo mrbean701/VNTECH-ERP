@@ -142,6 +142,14 @@ public final class StockManagementUseCase {
         header.put("signedAt", now);
         header.put("note", nvl(payload.get("note")));
         store.insertStockIssue(header, items, now);
+        // ⭐ TASK-243 (08/10/2026) — QUY TẮC ④ BƯỚC ①: GIỮ CHỖ CHO **PHIẾU XUẤT** (`DEC-20261008-013`).
+        //   NGUYÊN VĂN USER: «Trong thời gian TẠO PHIẾU hoặc CHỜ DUYỆT thì số lượng vật tư trong phiếu đó ở
+        //   trong trạng thái ĐANG XỬ LÝ (không cho user khác thao tác vào những mã vật tư đó) …»
+        //   ⚠️⚠️ LỖ HỔNG ĐÃ ĐO: vòng lặp dưới CHỈ `releaseReservationsForRequest` (nhả giữ chỗ của phiếu
+        //   ĐỀ NGHỊ) mà ⛔ KHÔNG tạo giữ chỗ nào cho PHIẾU XUẤT ⇒ từ lúc tạo phiếu tới lúc `completed`,
+        //   số lượng đó ⛔ KHÔNG bị giữ ⇒ 2 phiếu xuất cùng chờ duyệt VẪN xuất quá `available` được.
+        //   ⚠️ Đặt SAU `insertStockIssue` + ⛔ NGOÀI vòng lặp (⛔ nếu trong vòng lặp sẽ tạo TRÙNG reservation).
+        store.createIssueReservations(issueId, now);
         for (Map<String, Object> item : items) {
             // ⛔ BƯỚC ③ (TASK-133) — ĐÃ DỜI `updateRequestItemIssued` RA KHỎI ĐƯỜNG TẠO PHIẾU.
             // Bản TASK-130/132 cộng `material_request_items.issued_qty` NGAY khi tạo phiếu ⇒ cùng một lỗi
@@ -299,6 +307,13 @@ public final class StockManagementUseCase {
         if (!store.confirmStockIssue(issueId, principal.userId(), nvl(payload.get("comment")), now))
             throw Api("Phiếu xuất kho " + sv(issue, "issueNo")
                     + " đã được xác nhận hoặc chưa xuất đủ số lượng.");
+        // ⭐ TASK-243 (08/10/2026) — QUY TẮC ④ BƯỚC ②: NHẢ GIỮ CHỖ của PHIẾU XUẤT khi phiếu HOÀN THÀNH.
+        //   NGUYÊN VĂN USER: «khi phiếu ở trạng thái HOÀN THÀNH thì mới được thay đổi tồn kho trong kho
+        //   đích và nguồn» ⇒ ⭐ ngay tại đây tồn kho ĐÃ TRỪ THẬT (movement đã ghi) ⇒ phải NHẢ giữ chỗ.
+        //   ⚠️⚠️ NẾU ⛔ KHÔNG NHẢ ⇒ GIỮ CHỖ 2 LẦN (vừa trừ tồn thật, vừa còn `reserved`) ⇒
+        //   `available = physical − reserved` bị trừ OAN ⇒ ⛔ CHẶN XUẤT SAI các phiếu sau.
+        //   ⚠️ Đặt SAU khi `confirmStockIssue` thành công (⛔ không đặt trước, kẻo nhả rồi mà xác nhận lỗi).
+        store.releaseReservationsForIssue(issueId, now);
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("message", "Đã xác nhận xuất đủ theo phiếu " + sv(issue, "issueNo") + ".");
         result.put("issueId", issueId);

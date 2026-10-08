@@ -112,7 +112,14 @@ test("TM-01 — ĐỐI CHỨNG ÂM: VẮNG `teamMembers` ⇒ «chưa có nguồn
   }
   // UI phải đọc cờ `membersKnown` trước khi in số — không được in thẳng `activeMembers`.
   assert.match(screen, /row\.membersKnown\s*\?\s*<>\{row\.activeMembers\}/, "UI phải rẽ nhánh theo `membersKnown` trước khi hiện số thành viên");
-  assert.match(screen, /data-team-source-notes="TM-01"/, "UI phải in khối GHI NGUỒN của danh sách");
+  // ⭐ 07/10/2026 (ERP-SESSION-03) — ĐỔI YÊU CẦU **CÓ CHỦ Ý** (user: «lược bỏ các thông tin bị thừa - rác»).
+  // Khẳng định CŨ «UI phải in khối GHI NGUỒN của danh sách» ⛔ nay bị ĐẢO THÀNH KHẲNG ĐỊNH ÂM, vì khối đó in
+  // NGUYÊN VĂN tên bảng/cột CSDL (`team_members`, `stock_issues`, `teams WHERE active=1`) = rác với người dùng.
+  // ⛔ DỮ LIỆU `teamListSourceNotes()` vẫn PHẢI TỒN TẠI: chính test này còn gọi hàm ở dưới ⇒ chỉ gỡ RENDER.
+  // (Soi trên `render` = phần SAU khối TM-PURE và ĐÃ GỠ CHÚ THÍCH: chú thích giải thích việc gỡ ⛔ không được tự làm test đỏ.)
+  const renderOnly = screen.slice(screen.search(END_LINE)).replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  assert.doesNotMatch(renderOnly, /data-team-source-notes/, "⛔ UI KHÔNG được in khối ghi nguồn CSDL cho người dùng (yêu cầu 07/10/2026)");
+  assert.match(screen, /function teamListSourceNotes\(data: AppData\)/, "⛔ KHÔNG được xoá hàm `teamListSourceNotes` — đó là DỮ LIỆU hợp đồng, chỉ gỡ phần render");
   const notes = teamListSourceNotes({ ...BASE, teamMembers: undefined });
   assert.match(notes.members, new RegExp(NO_SOURCE_TEXT));
   assert.match(notes.stoppedTeams, new RegExp(NO_SOURCE_TEXT), "phải nói rõ «đã ngừng» cũng chưa có nguồn vì bootstrap lọc active=1");

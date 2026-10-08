@@ -1,3 +1,6 @@
+// ⚠️ MT3-S03 (08/10/2026) — TỆP NÀY HIỆN ⛔ KHÔNG ĐƯỢC DÙNG Ở ĐÂU (đo được: **0 tham chiếu** trong `app/**` + `lib/**`; chỉ có 2 tệp TEST nhắc tên).
+//    ⛔ ĐỪNG tốn công kiểm thử/DOM-verify màn này (bài học `SESSION_C/TEST_LOG.md §C42`).
+//    ⚠️ Cần quyết (nối lại menu · xoá · giữ kèm ghi chú): `SESSION_C/HANDOFF_LOG.md` §`HANDOFF-20261007-C15`.
 // PHASE 1 (U-11) — MODULE DÙNG CHUNG TÁCH KHỎI `app/page.tsx`.
 //
 // ⚠️ ĐÃ NGỪNG DÙNG TỪ PHASE 6 (`TM-01`…`TM-05`) — 2026-09-20.
@@ -19,6 +22,8 @@
 
 import { DataTable, ListToolbar, StatusBadge } from "@/app/components/ui";
 import { CardHead, Kpi, PROJECT_STATUS_LABELS, date } from "@/lib/ui-shared";
+// MT3-S03 (08/10/2026) — ⛔ KHÔNG phơi MÃ THÔ: thẻ trạng thái ⛔ không rơi xuống `String(status)` khi bảng nhãn cục bộ thiếu khoá.
+import { statusLabel } from "@/lib/status-labels";
 import type { AppData, Row } from "@/lib/ui-shared";
 import { useState } from "react";
 // =============================================================================
@@ -85,7 +90,7 @@ function TeamManagement({ data, open }: { data: AppData; open: (name: string, ro
         </div>
         <section className="card">
           <CardHead title="Dự án tổ đội đang tham gia" note="Theo quy tắc nghiệp vụ hiện hành, mỗi tổ đội thuộc đúng một dự án"/>
-          <DataTable rows={proj ? [proj] : []} rowKey={(row) => String(row.id)} emptyText="Tổ đội chưa gắn dự án nào." columns={[{ key: "c1", header: "Mã dự án", render: (row) => <strong className="code">{row.code}</strong> }, { key: "c2", header: "Tên dự án", render: (row) => row.name }, { key: "c3", header: "Trạng thái", render: (row) => <StatusBadge value={PROJECT_STATUS_LABELS[String(row.status || "active")] || String(row.status || "—")} /> }, { key: "c4", header: "Bắt đầu", render: (row) => date(row.startDate) }, { key: "c5", header: "Kết thúc dự kiến", render: (row) => date(row.plannedEndDate) }, { key: "c6", header: "Vai trò tổ đội", render: () => "Thi công / cấp phát vật tư" }]} />
+          <DataTable rows={proj ? [proj] : []} rowKey={(row) => String(row.id)} emptyText="Tổ đội chưa gắn dự án nào." columns={[{ key: "c1", header: "Mã dự án", render: (row) => <strong className="code">{row.code}</strong> }, { key: "c2", header: "Tên dự án", render: (row) => row.name }, { key: "c3", header: "Trạng thái", render: (row) => <StatusBadge value={PROJECT_STATUS_LABELS[String(row.status || "active")] || statusLabel(row.status || "active", "project")} /> }, { key: "c4", header: "Bắt đầu", render: (row) => date(row.startDate) }, { key: "c5", header: "Kết thúc dự kiến", render: (row) => date(row.plannedEndDate) }, { key: "c6", header: "Vai trò tổ đội", render: () => "Thi công / cấp phát vật tư" }]} />
         </section>
       </div>}
 

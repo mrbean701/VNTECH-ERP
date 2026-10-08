@@ -83,6 +83,40 @@ export function countChangedPermissions(data: AppData, userId: string, next: Per
   return changed;
 }
 
+/**
+ * KHOÁ CỦA MỌI Ô TICK TRONG MA TRẬN PHÂN QUYỀN — **NGUỒN DUY NHẤT** cho cả hai phía:
+ * panel VẼ ô tick (`moduleKeys`) và hai modal DỰNG payload `save_user_access`.
+ *
+ * ⛔ VÌ SAO PHẢI DÙNG CHUNG — lỗi user báo 07/10/2026: «tôi vừa thực hiện cấu hình phân quyền
+ *    cho 1 user nhưng gặp lỗi, khi bấm lưu thì nó không lưu phân quyền tôi vừa chọn cho user».
+ *   Ma trận được vẽ theo `permissionMenuStructure(data)` = `configuredModules(data)` ∪ 14 khoá
+ *   `admin_tab_NN` (`app/page.tsx:269-280`) ⇒ ma trận CÓ ô tick cho `admin_tab_01..14`.
+ *   Nhưng payload ở `UserEditModal`/`UserAccessModal` map qua `configuredModules(data)`
+ *   ⇒ **tập khoá GỬI ĐI nhỏ hơn tập khoá VẼ RA** ⇒ tick vào ô ngoài payload bị BỎ QUA.
+ *   📏 ĐO THẬT (`tools/probe-permission-save-keyset.mjs`, bootstrap 76 dòng):
+ *      · panel vẽ **77** khoá · payload gửi **61** khoá · **MẤT 16 khoá**
+ *      · 16 khoá đó = `admin_tab_01..14` + `admin` + `reports`
+ *   ✅ Backend **CHẤP NHẬN** đúng các khoá đó — đo `tools/probe-permission-save-api.mjs`:
+ *      admin lưu `admin_tab_01` ⇒ HTTP 200 và đọc lại thấy persisted
+ *      ⇒ nguyên nhân gốc nằm ở **FRONTEND**, ⛔ KHÔNG phải API.
+ *
+ * ⚠️ Hàm này là HỢP của HAI nguồn — giữ nguyên cả hai (⛔ đừng "dọn cho gọn" một nguồn):
+ *   1. `data.moduleCatalog` (cột `module_key`) — gồm cả khoá KHÔNG có trong menu như
+ *      `admin_tab_NN` và `admin`.
+ *   2. `entries` = `permissionMenuStructure(data)` — dòng ma trận THẬT SỰ được vẽ.
+ *   `save_user_access` là **FULL-REPLACE** (`clearUserScopes()` xoá cứng 3 bảng rồi ghi lại)
+ *   ⇒ khoá nào ⛔ KHÔNG gửi lên sẽ bị XOÁ. Dùng hợp này để ⛔ không âm thầm mất quyền cũ.
+ */
+export function permissionMatrixKeys(data: AppData, entries: PermissionEntry[]): string[] {
+  const catalogKeys = (data.moduleCatalog || [])
+    .filter((item) => item.active !== false)
+    .map((item) => String(item.moduleKey));
+  const entryKeys = entries
+    .map((entry) => String(entry.module?.key ?? ""))
+    .filter((key) => key !== "");
+  return Array.from(new Set<string>([...catalogKeys, ...entryKeys]));
+}
+
 /** `2026-06-30T00:00:00` → `2026-06-30` cho `<input type="date">`. */
 function toDateInputValue(value: unknown): string {
   const raw = String(value ?? "").trim();
@@ -132,20 +166,11 @@ export default function PermissionAccessPanel({
   //   2. Mọi nút hàng loạt («Chọn tất cả», «Bỏ chọn tất cả», checkbox đầu cột) dựng state
   //      bằng khoá `undefined` ⇒ payload `save_user_access` gửi 76 module TẤT CẢ `false` ⇒
   //      `clearUserScopes()` XOÁ SẠCH toàn bộ quyền và KHÔNG lưu quyền vừa chọn.
-  const assignableModules = (data.moduleCatalog || [])
-    .filter((item) => item.active !== false)
-    .map((item) => ({ ...item, key: String(item.moduleKey) }));
-
-  // Khoá của MỌI dòng ma trận thật sự được vẽ (`entries`) ∪ khoá từ danh mục module.
-  // Bản cũ dựng state chỉ từ `assignableModules` ⇒ chức năng có trong `entries` mà không có
-  // trong `moduleCatalog` không có ô trạng thái ⇒ hiện tick trống và bị gửi `false` khi Lưu.
-  const moduleKeys = Array.from(
-    new Set<string>(
-      assignableModules
-        .map((item) => item.key)
-        .concat(entries.map((entry) => String(entry.module?.key ?? "")).filter((key) => key !== "")),
-    ),
-  );
+  // ⭐ BUG-20261007-005 — DÙNG CHUNG `permissionMatrixKeys` với payload của hai modal.
+  // Trước đây panel tự dựng tập khoá riêng còn modal map qua `configuredModules(data)`
+  // ⇒ hai tập LỆCH 16 khoá (`admin_tab_01..14` + `admin` + `reports`) ⇒ tick vào ô ngoài
+  // payload bị BỎ QUA khi bấm Lưu. Một hàm, hai phía, ⛔ không còn đường lệch.
+  const moduleKeys = permissionMatrixKeys(data, entries);
   const activeProjects = (data.adminProjects || []).filter((row) => row.status === "active");
 
   const permissionFor = (moduleKey: string): Row =>

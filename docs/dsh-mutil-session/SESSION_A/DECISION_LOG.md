@@ -271,3 +271,336 @@ Related Change: CHG-20261006-009
 > ⭐ ⭐ **TỔNG CUỐI: 15 quyết định** ✓
 > ⭐ ⭐ **LUẬT MỚI NHẤT**:
 > ⑦ ⭐ **⛔ KHÔNG ghi vân tay vào migration** — ⭐ **chỉ UPDATE trực tiếp CSDL** (⭐ có BACKUP ✓) ⇒ ⭐ **tránh vòng lặp vô hạn** (`-015`) ✓
+
+---
+
+## DEC-20261007-016
+
+Date: 2026-10-07
+Session: ERP-SESSION-01
+Category: RBAC / Phân quyền
+
+**Quyết định:** Xác nhận phân quyền hệ thống hoạt động đúng qua 2 kịch bản test API.
+
+**Ngữ cảnh:**
+- Kịch bản 1: Cấp full quyền admin (`module_key=admin`) cho user `e2e.kh` (role=`kh_truong`) → bootstrap trả `admin: canView=1`, 60 modules
+- Kịch bản 2: Chỉ cấp 1 tab (`module_key=admin_tab_01`) → bootstrap trả `admin: NOT FOUND`, `admin_tab_01: canView=1`
+- Cả 2 đều PASS
+
+**Hệ quả:**
+- Phân quyền module-level trong `user_module_permissions` hoạt động đúng
+- Bootstrap API trả đúng danh sách module theo quyền đã cấp
+- Quyền admin_tab_XX cho phép truy cập từng tab riêng biệt trong Quản trị hệ thống
+- Cần phân biệt rõ: `module_key=admin` = toàn quyền admin, `module_key=admin_tab_NN` = quyền 1 tab cụ thể
+
+**Rủi ro:** KHÔNG — phân quyền đã được verify qua CSDL + API
+
+---
+
+## DEC-20261007-018
+
+Date: 2026-10-07
+Session: ERP-SESSION-01
+Category: RBAC
+
+**Quyết định:** Phát hiện mâu thuẫn phân quyền QTHS qua test UI thật.
+
+**Ngữ cảnh:**
+- Kịch 1: Cấp `admin` module perm cho user role=`kh_trường` → nav group hiện nhưng nội dung "CHƯA ĐƯỢC PHÂN QUYỀN"
+- Kịch 2: Chỉ cấp `admin_tab_01` → nav group không hiện (đúng hành vi)
+- Root cause: `page.tsx:625` dùng `isAdminUser(data.user)` kiểm `role === "admin"`, KHÔNG kiểm `modulePermissions`
+
+**Hệ quả:**
+- Phân quyền module-level (`user_module_permissions`) chỉ mở nav group, không mở nội dung
+- Nội dung QTHS bị chặn bởi hardcode `isAdminUser` (role-based)
+- Cần user quyết định: sửa hay giữ nguyên
+
+**Rủi ro:** User được cấp admin perm nhưng không thể sử dụng ⇒ UX confusion
+
+---
+
+## DEC-20261008-001 — ⏸ CHỜ USER: ai được quyền LƯU bảng phân quyền? (backend chặn theo `role`, UI cho theo quyền module)
+
+| ⭐ | ⭐ |
+|---|---|
+| **DEC_ID** | DEC-20261008-001 |
+| **DATE** | 2026-10-08 10:35:00 |
+| **SESSION_ID** | ERP-SESSION-01 (SESSION_A) |
+| **LĨNH VỰC** | RBAC · Authorization |
+| **TRẠNG THÁI** | ⏸ **CHỜ USER QUYẾT** — ⛔ DSH ⛔ không tự chọn phương án |
+
+### BỐI CẢNH (đo được, ⛔ không suy đoán)
+`tools/probe-permission-save-api.mjs` — tạo user probe role `engineer`, admin cấp cho họ quyền
+module **`admin`** (bootstrap của chính họ xác nhận CÓ), rồi chính họ gọi `save_user_access`:
+
+```
+[B2] User (role≠admin, có quyền «admin») gọi save_user_access:
+     HTTP 403 · Thao tác chưa được khai báo quyền trong hệ thống. Liên hệ quản trị viên.
+```
+
+### MÂU THUẪN
+| Phía | Luật hiện tại | Hệ quả |
+|---|---|---|
+| **UI** (`app/page.tsx`) | cho MỞ modal phân quyền nếu `isAdminUser` **HOẶC** có `admin_tab_01` **HOẶC** quyền module `admin` | người dùng **thấy** modal, **tick được** |
+| **Backend** (`UserManagementUseCase.saveUserAccess:259`) | `rbac.requireRole(principalAsCurrent(principal), List.of("admin"))` — **chỉ role `admin`** | bấm Lưu ⇒ **403**, ⛔ không lưu gì |
+
+⇒ Trải nghiệm: mở được, tick được, bấm Lưu **không lưu** (đúng triệu chứng user báo).
+⚠️ Liên quan `BUG-20261007-004` (đang OPEN) — cùng gốc «quyền module vs role» ở `isAdminUser`.
+
+### CÁC PHƯƠNG ÁN (user chọn — DSH ⛔ không tự áp mặc định)
+
+**PA-1 — Nới backend theo QUYỀN MODULE (khớp UI)**
+Cho phép ai có quyền module `admin` **hoặc** `admin_tab_01` được gọi `save_user_access`.
+✅ Khớp với thứ UI đang cho phép ⇒ hết mâu thuẫn, hết 403.
+⚠️ Mở rộng quyền hạn ở tầng nguy hiểm (ghi quyền người khác) ⇒ cần cân nhắc audit.
+
+**PA-2 — Siết UI theo ROLE (khớp backend)**
+Chỉ `role === "admin"` mới thấy nút «Lưu»/mở modal phân quyền; người chỉ có quyền module
+`admin` chỉ **xem**, ⛔ không sửa.
+✅ An toàn nhất, giữ nguyên luật backend. ⚠️ Có thể chặn đúng người user muốn giao việc.
+
+**PA-3 — Giữ nguyên + báo lỗi rõ ràng ở UI**
+⛔ Không đổi luật; chỉ đổi UX: nếu role ≠ `admin` thì ẩn/disable nút «Lưu» kèm thông báo
+«Chỉ tài khoản có vai trò Quản trị viên được lưu bảng phân quyền».
+✅ Rủi ro thấp nhất, ⛔ không đụng authorization. ⚠️ Triệu chứng «không lưu được» vẫn còn.
+
+### KHUYẾN NGHỊ KỸ THUẬT (⛔ không phải quyết định — user vẫn phải chốt)
+PA-3 an toàn nhất để ⛔ không mở rộng quyền trong giai đoạn GO-LIVE; PA-1 đúng với ý định UI
+hiện tại nhưng là **thay đổi authorization** nên cần user phê duyệt tường minh.
+
+### LIÊN QUAN
+- BUG-20261008-001 (nguyên nhân (B)) · BUG-20261007-004 (OPEN, cùng gốc)
+- Ghi chú cũ đã có trong mã: `app/screens/Inventory.tsx:259` «backend `saveUserAccess` =
+  `requireRole(…, List.of("admin"))`» — ⚠️ nay đã thành mâu thuẫn thật, ⛔ không chỉ là ghi chú.
+
+### HÀNH ĐỘNG CỦA DSH
+⛔ **DỪNG** — ⛔ không tự vá (B). Đã ghi log + báo user. Khi user chốt ⇒ thi hành đúng phương án.
+
+## DEC-20261008-001 (KẾT THÚC) — ✅ USER CHỌN **PA-1** + CHỐT NGỮ NGHĨA `role === admin`
+
+| ⭐ | ⭐ |
+|---|---|
+| **DEC_ID** | DEC-20261008-001 |
+| **DATE** | 2026-10-08 11:40:00 |
+| **SESSION_ID** | ERP-SESSION-01 (SESSION_A) |
+| **TRẠNG THÁI** | ✅ **ĐÃ CÓ QUYẾT ĐỊNH — đã thi hành** (trước đó ⏸ chờ user) |
+| **LĨNH VỰC** | RBAC · Authorization |
+
+### USER CHỌN: **PA-1** — nới backend theo QUYỀN MODULE (khớp UI hiện tại)
+
+### 📍 USER CHỐT NGỮ NGHĨA `role === "admin"` (nguyên văn — dùng làm chuẩn cho mọi việc sau)
+> «role === admin thì có nghĩa là user đó có **toàn quyền và override toàn bộ phân quyền**, là user có
+> khả năng **vượt qua mọi quyền mà không cần cấu hình**, user có role === admin là **quản trị hệ thống
+> chỉ được sử dụng trong trường hợp đặc biệt** ngoài ra khi không có việc gì quan trọng thì quản trị hệ
+> thống sẽ sử dụng tài khoản **ITM** hoặc tài khoản tương tự **được cấp full quyền**.»
+
+⇒ **HỆ QUẢ THIẾT KẾ (chuẩn để tra cứu về sau):**
+| | `role === "admin"` | Tài khoản thường được cấp quyền (vd **ITM**) |
+|---|---|---|
+| Bản chất | **Break-glass** — toàn quyền, override, ⛔ không cần cấu hình | Quyền đến **TỪ CẤU HÌNH** (`user_module_permissions`) |
+| Khi nào dùng | **Trường hợp đặc biệt** | **Việc thường ngày** |
+| Cách cấp | Có sẵn theo role | Cấp qua ma trận phân quyền |
+
+✅ **PA-1 khớp đúng mô hình này**: quyền phải đến từ **CẤU HÌNH**, ⛔ không chỉ từ `role`
+⇒ một tài khoản kiểu ITM được cấp `admin_tab_06` **PHẢI** lưu được bảng phân quyền.
+✅ Đúng với tài liệu thiết kế đã có: `docs/dsh-state/CHECKLIST.md:1318` — «"Phân quyền công việc /
+Chức năng" ⇒ `admin_tab_06` (Tab 06) **hoặc** `role=admin`».
+
+### ĐÃ THI HÀNH
+`CHG-20261008-002` — sửa **3 tầng** (registry · use-case · controller) theo đúng khuôn `update_user`
+(MỐC 103/109). Đo: **EXIT 0** (`TEST-20261008-003`). ⛔ Không migration, ⛔ không đổi hợp đồng API.
+
+---
+
+## DEC-20261008-002 — ⏸ **CHỜ USER**: PA-1 mở đường **tự leo thang tới `factory_reset_execute`** — có chặn không?
+
+| ⭐ | ⭐ |
+|---|---|
+| **DEC_ID** | DEC-20261008-002 |
+| **DATE** | 2026-10-08 11:50:00 |
+| **SESSION_ID** | ERP-SESSION-01 (SESSION_A) |
+| **TRẠNG THÁI** | ⏸ **CHỜ USER QUYẾT** — ⛔ DSH ⛔ không tự chọn |
+| **LĨNH VỰC** | RBAC · BẢO MẬT |
+
+### VẤN ĐỀ (chi tiết + bằng chứng mã: `BUG-20261008-002`)
+Người có `admin_tab_06` (sau PA-1) **tự cấp cho mình module `admin`** ⇒ gọi được
+`factory_reset_execute` (**XOÁ SẠCH DỮ LIỆU**), ⛔ không cần admin can thiệp.
+
+### PHƯƠNG ÁN (user chọn)
+| PA | Nội dung |
+|---|---|
+| **S-1** | Chặn **tự** nâng quyền: non-admin ⛔ không được gửi khoá `admin` (+ `admin_tab_12/13/14`) khi lưu quyền |
+| **S-2** | ⛔ Không chặn — coi `admin_tab_06` là quyền quản trị cấp cao (khớp mô hình ITM full quyền) |
+| **S-3** | Siết ở ĐÍCH: `factory_reset_execute/preview` đổi cổng sang **`role = admin`** (thêm `requireRequireAdmin`) |
+
+### ⛔ HÀNH ĐỘNG CỦA DSH
+🚨 Đã **BÁO ĐỘNG Telegram CRITICAL** + ghi `BUG-20261008-002` + dòng 9 bảng điều khiển `SESSION_C/README.md`.
+⛔ **DỪNG** — ⛔ không tự thêm guard (là **chính sách phân quyền**, có thể xung đột mô hình ITM của user).
+Khi user chốt ⇒ thi hành đúng phương án + đo lại + hồi quy.
+
+## DEC-20261008-003 — ⏸ CHỜ USER: có cho **uỷ quyền khu «Quản lý hệ thống» từ giao diện** không?
+
+| ⭐ | ⭐ |
+|---|---|
+| **DEC_ID** | DEC-20261008-003 |
+| **DATE** | 2026-10-08 12:25:00 |
+| **SESSION_ID** | ERP-SESSION-01 (SESSION_A) |
+| **LĨNH VỰC** | RBAC · UI/UX · Chính sách cấp quyền |
+| **TRẠNG THÁI** | ⏸ **CHỜ USER QUYẾT** — ⛔ DSH ⛔ không tự chọn |
+| **PHÁT SINH TỪ** | Yêu cầu test E2E của user 08/10/2026 → `TEST-20261008-004` · `BUG-20261008-003` |
+
+### CÂU HỎI
+User yêu cầu: «cấp 1 quyền cho user bất kì thông qua modal Phân quyền công việc / chức năng sau đó
+vào tài khoản của user đó thực hiện **truy cập vào quản lý hệ thống**».
+📏 **ĐO ĐƯỢC: hiện ⛔ KHÔNG THỂ** — ma trận **75 dòng** (14 `admin_tab_NN` + 61 module nghiệp vụ)
+**⛔ KHÔNG có dòng cho module `admin`**, mà menu «QUẢN TRỊ HỆ THỐNG» lại **chỉ** hiện khi có
+**module `admin`** (`app/page.tsx:486-487`).
+⇒ **Cần user quyết**: khu quản trị có được **uỷ quyền bằng cấu hình** hay ⛔ chỉ role `admin`?
+
+### 3 PHƯƠNG ÁN
+| PA | Nội dung |
+|---|---|
+| **M-1** | **Thêm dòng module `admin` («Danh mục & phân quyền») vào ma trận** ⇒ cấp được quyền vào khu quản trị |
+| **M-2** | **Đổi luật MENU**: cho `admin_tab_NN` cũng làm hiện nhóm «QUẢN TRỊ HỆ THỐNG» (cấp Tab 06 là vào được) |
+| **M-3** | **Giữ nguyên**: khu quản trị ⛔ chỉ `role = admin`; ⛔ không uỷ quyền qua UI |
+
+### ⚠️ QUAN TRỌNG — QUYẾT **CÙNG LÚC** VỚI `DEC-20261008-002`
+`BUG-20261008-002` (🚨 CRITICAL): người có `admin_tab_06` **tự cấp module `admin`** ⇒ gọi được
+`factory_reset_execute` (**XOÁ DỮ LIỆU**). Chọn **M-1** mà ⛔ không xử lý `BUG-20261008-002` thì
+**mở rộng** đường leo thang đó ra giao diện. ⇒ ⭐ **nên quyết 2 việc này cùng nhau.**
+
+### HÀNH ĐỘNG CỦA DSH
+⛔ **DỪNG** — đã ghi `BUG-20261008-003` + dòng 10 bảng điều khiển + báo user kèm bằng chứng đo.
+Khi user chốt ⇒ thi hành đúng phương án + đo lại E2E + hồi quy.
+
+## DEC-20261008-002 (KẾT THÚC) — ✅ USER CHỌN **S-1**: chặn TỰ NÂNG QUYỀN (⛔ trừ `role=admin`)
+
+| ⭐ | ⭐ |
+|---|---|
+| **DEC_ID** | DEC-20261008-002 |
+| **DATE** | 2026-10-08 14:00:00 |
+| **SESSION_ID** | ERP-SESSION-01 (SESSION_A) |
+| **TRẠNG THÁI** | ✅ **ĐÃ CÓ QUYẾT ĐỊNH — đã thi hành + VERIFIED** |
+| **LĨNH VỰC** | RBAC · BẢO MẬT |
+
+### 📍 USER CHỐT (nguyên văn)
+> «1. chặn tự nâng quyền cho mình, ngoại lệ chỉ có tài khoản ADMIN thích làm gì thì làm.»
+
+⇒ **LUẬT**: người gọi ⛔ **KHÔNG** phải `role = admin` thì ⛔ **không được CẤP THÊM** quyền cho **CHÍNH MÌNH**.
+⭐ VẪN CHO PHÉP: sửa quyền người KHÁC · **thu hồi** quyền của mình · **giữ nguyên** quyền đang có
+⇒ chỉ chặn chiều **ĐI LÊN**, ⛔ không chặn chiều đi xuống ✓
+⭐ **NGOẠI LỆ**: `role = admin` ⛔ không bị ràng buộc gì (đúng mô hình break-glass ở `DEC-20261008-001`).
+
+### ĐÃ THI HÀNH
+`CHG-20261008-003` — 2 tệp backend, đặt chốt **TRƯỚC** `clearUserScopes()` (bài học MỐC 111).
+📏 Đo 3 chiều (`TEST-20261008-005`): B4 tự cấp `admin` ⇒ **403** · B5 giữ nguyên ⇒ **200** · B6 cấp người khác ⇒ **200**.
+
+---
+
+## DEC-20261008-003 (KẾT THÚC) — ✅ USER CHỌN **M-2**: ≥1 quyền trong nhóm quản trị ⇒ HIỆN menu
+
+| ⭐ | ⭐ |
+|---|---|
+| **DEC_ID** | DEC-20261008-003 |
+| **DATE** | 2026-10-08 14:00:00 |
+| **SESSION_ID** | ERP-SESSION-01 (SESSION_A) |
+| **TRẠNG THÁI** | ✅ **ĐÃ CÓ QUYẾT ĐỊNH — đã thi hành + VERIFIED** |
+| **LĨNH VỰC** | RBAC · UI/UX menu |
+
+### 📍 USER CHỐT (nguyên văn)
+> «2. check xem user chỉ cần có 1 quyền trong nhóm quản trị thì sẽ hiện menu quản trị»
+
+### ⭐ ĐÂY ⛔ KHÔNG PHẢI LUẬT MỚI — LÀ **Ý ĐỊNH GỐC MỐC 118** (user 01/10/2026, nguyên văn):
+> «ẩn menu quản trị hệ thống đối với tất cả các user không được cấp bất cứ 1 quyền nào trong nhóm phân
+>  quyền hệ thống … **kể cả 1 quyền cũng hiển thị menu**.»
+📌 Bản cũ làm **CHƯA ĐỦ**: `systemAdminMenuVisible` chỉ xét `configuredModules(data)` = **MẢNG MENU TĨNH**,
+mà 14 khoá `admin_tab_NN` ⛔ **KHÔNG** nằm trong đó (MỐC 31 đã bỏ 14 menu con khỏi menu) ⇒ cấp bao nhiêu
+`admin_tab_NN` cũng ⛔ không hiện menu. 📏 ĐO: `TEST-20261008-004` (`nav groups` thiếu `system_admin`).
+
+### ĐÃ THI HÀNH — **3 CỔNG** (⛔ phải đủ cả 3 mới dùng được, đo từng cổng một)
+| # | Vị trí | BEFORE | AFTER |
+|---|---|---|---|
+| ① | `page.tsx` `systemAdminMenuVisible` | chỉ `configuredModules` (thiếu `admin_tab_NN`) | ➕ bộ đếm `hasAnyAdminGroupPermission` (nhận `admin` **VÀ** `admin_tab_NN`) |
+| ② | `page.tsx` `accessDenied` (nhánh `admin`) | `!isAdminUser(...)` = **CHỈ role** | `!isAdminUser && !hasAnyAdminGroupPermission` |
+| ③ | `page.tsx` render `<Admin …/>` | `active==="admin" && isAdminUser(...)` = **CHỈ role** | ➕ `\|\| hasAnyAdminGroupPermission` |
+
+⚠️ Sửa ① mà ⛔ không sửa ②③ ⇒ **menu hiện nhưng thân màn TRỐNG** (⭐ đã ĐO THẬT: 0 tab · 238 ký tự · không
+có `.permission-steps`) ⇒ ghi lại làm bài học (D-096).
+
+### ⛔ GIỮ NGUYÊN (⛔ không nới)
+`ADMIN_LOCKED_TABS` / tab **12 · 13 · 14** vẫn **CHỈ `role = admin`** — trong đó tab 12 có
+`FactoryResetAdmin` (**XOÁ DỮ LIỆU**) ⇒ ⛔ không hạ rào ✓
+
+## DEC-20261008-004 — ⏸ CHỜ USER QUYẾT: có áp **chính sách PA-1** cho **33 chốt quyền** còn lại ở backend không?
+
+| ⭐ | ⭐ |
+|---|---|
+| **DEC_ID** | DEC-20261008-004 · **DATE** 2026-10-08 19:50 |
+| **TRẠNG THÁI** | ⏸ **CHỜ USER** — ⛔ DSH không tự đổi (là **chính sách phân quyền**) |
+| **LĨNH VỰC** | RBAC · BACKEND · mô hình «uỷ nhiệm bằng cấu hình» |
+
+### 📏 ĐO ĐƯỢC — cùng lớp bug với `BUG-006/008/009` nhưng ở **TẦNG API**
+Quét `java-backend/**` (⛔ trừ `target/`): có **~60 chỗ** `rbac.requireRole(principal, List.of("admin"))`.
+Trong **nhóm S01**, hai use-case chiếm **33 chỗ**:
+| Use-case | Số hàm | Danh sách |
+|---|---|---|
+| **`UserManagementUseCase`** | **15** | `createUser` · `deleteUser` · `resetUserPassword` · `setUserStatus` · `setUserSystemLevel` · `saveRoleCatalog` · `setRoleStatus` · `deleteRoleCatalog` · `saveSystemLevel` · `setSystemLevelStatus` · `deleteSystemLevel` · `saveDepartmentPermission` · `deleteDepartmentPermission` · `rebuildDepartmentPermissions` · `deleteUserModuleOverride` |
+| **`AdminSystemUseCase`** | **18** | `saveOrganizationUnit` · `setOrganizationUnitStatus` · `saveMenuGroup` · `setMenuGroupStatus` · `deleteMenuGroup` · `saveModuleCatalog` · `setModuleStatus` · `saveFormFieldConfig` · `deleteFormFieldConfig` · `reorderFormFields` · `reorderMenuLayout` · `saveBusinessScope` · `setBusinessScopeStatus` · `deleteBusinessScope` · `saveBusinessRoleGroup` · `setBusinessRoleGroupStatus` · `deleteBusinessRoleGroup` · `saveEngineRoleProfile` |
+
+⚠️ **HỆ QUẢ** (⭐ cùng một họ với 5 bug FE đã vá): người được uỷ nhiệm `admin_tab_01` (Tài khoản) ·
+`admin_tab_02` (Tổ chức) · `admin_tab_03` (Chức danh/vai trò) … vẫn nhận **HTTP 403** vì tầng use-case
+**khoá cứng `role = admin`** ⇒ ⭐ **mô hình «uỷ nhiệm bằng cấu hình» bị chặn ở API**, ⛔ dù UI đã cho vào ✓
+
+### 🔎 ĐỐI CHIẾU TIỀN LỆ (⭐ chính user đã quyết ca này rồi)
+`DEC-20261008-001` ⇒ **USER CHỐT PA-1**: «`role === admin` … chỉ dùng trong **trường hợp đặc biệt**; việc
+thường ngày dùng tài khoản ITM **được cấp full quyền**» ⇒ đã bỏ `requireRole(List.of("admin"))` ở
+`saveUserAccess` và thay bằng **quyền cấu hình** (`admin_tab_06` + `canView`) ✓
+`SystemController:419` ghi rõ: «② `UserManagementUseCase.saveUserAccess` `requireRole(…, List.of("admin"))` — **ĐÃ SỬA**»
+⇒ ⭐ **33 chỗ còn lại là CÙNG một lớp** — hiện **chưa ai xử lý** ✓
+
+### 3 PHƯƠNG ÁN
+| PA | Nội dung |
+|---|---|
+| **B-1** | ⭐ **Áp PA-1 cho cả 33 hàm**: bỏ `requireRole(admin)`, để tầng ① (`ActionRbacRegistry` — đã khai module/`admin_tab_NN`) quyết định. ⚠️ Kèm rà từng action xem registry đã khai module CHƯA (⛔ chỗ nào `List.of()`/`List.of("admin")` thì phải khai bổ sung) |
+| **B-2** | **Áp có chọn lọc**: chỉ 5 hàm thuộc 3 tab đang dùng thật (`admin_tab_01/02/03`) — ⛔ giữ admin-only cho các hàm còn lại |
+| **B-3** | **Giữ nguyên 33 chốt** — ⭐ mọi thao tác cấu hình hệ thống vẫn **chỉ `role=admin`**, ⛔ không uỷ nhiệm được |
+
+### ⚠️ RỦI RO NẾU CHỌN B-1 (⭐ phải nói rõ)
+33 thao tác này gồm cả **`deleteUser` · `resetUserPassword` · `deleteRoleCatalog`** ⚠️ ⇒ mở theo cấu hình nghĩa là
+**người có tab tương ứng XOÁ được tài khoản / đổi mật khẩu người khác** ⇒ ⭐ phải chắc `admin_tab_01` chỉ cấp cho
+người thật sự tin cậy (⭐ đúng tinh thần «ITM được cấp full quyền» của user, ⚠️ nhưng cần user xác nhận) ✓
+
+### HÀNH ĐỘNG CỦA S01
+⛔ **DỪNG** — đã đo, đã liệt kê đủ 33 hàm, ⛔ **không tự đổi** (bài học `BUG-20261008-002`: tự thêm/bỏ chốt quyền
+mà không hỏi là **vượt quyền quyết định**). Chờ user chốt B-1/B-2/B-3 ⇒ thi hành + viết cổng hợp đồng như PA-1.
+
+## DEC-20261008-004 (ĐÍNH CHÍNH) — ❌ **RÚT LẠI**: 33 chốt quyền backend **NHẤT QUÁN**, ⛔ **KHÔNG phải bug**, ⛔ **không cần quyết**
+
+| ⭐ | ⭐ |
+|---|---|
+| **DEC_ID** | DEC-20261008-004 · **TRẠNG THÁI** ❌ **WITHDRAWN (rút lại)** — thay bằng kết luận đo được dưới đây |
+| **DATE** | 2026-10-08 20:10 · **SESSION** ERP-SESSION-01 |
+| **NGUYÊN NHÂN RÚT** | ⭐ **S01 ĐÃ BÁO ĐỘNG SAI** — đếm số cổng mà ⛔ chưa đối chiếu **tầng đối diện** |
+
+### ⚠️ SAI Ở ĐÂU (⭐ ghi để ⛔ không lặp)
+Tôi thấy **~60 chỗ** `requireRole(…, List.of("admin"))` và **kết luận vội** rằng «33 chốt ở nhóm tôi là cùng lớp `PA-1` ⇒ uỷ nhiệm bị chặn ở API» ⛔
+⇒ ⭐ **THIẾU BƯỚC ĐỐI CHIẾU**: phải xem `ActionRbacRegistry` khai gì cho **cùng action**, vì
+**mảng rỗng `List.of()` = default-DENY** (PHASE 0B) ⇒ ⭐ **tầng ① cũng đã chặn y hệt** ⇒ hai tầng **NHẤT QUÁN** ✓
+
+### 📏 ĐO LẠI — bảng ánh xạ đầy đủ 33 hàm → action → registry
+| Kết luận | Số hàm | Ý nghĩa |
+|---|---|---|
+| ✅ **NHẤT QUÁN** (`registry = []` ⇒ default-DENY, khớp `requireRole(admin)`) | **31** | `create_user` · `delete_user` · `reset_user_password` · `set_user_status` · `save_role_catalog` · `save_system_level` · `save_organization_unit` · `save_menu_group` · `save_module_catalog` · `save_form_field_config` · `save_business_scope` · `save_business_role_group` · `save_engine_role_profile` … ⭐ **cố ý admin-only ✅** |
+| ✅ **NHẤT QUÁN ở CẢ 3 TẦNG** | **2** | `save_department_permission` · `rebuild_department_permissions` — 📏 kiểm trực tiếp: `SystemController:440/:450` dùng **`requireRequireAdmin`** (tầng ②) + use-case `requireRole(admin)` (tầng ③) + **⛔ không khai registry** ⇒ tầng ① default-DENY ⇒ ⭐ admin-only **cả 3 tầng** ✓ |
+| ⚠️ Lệch thật | **0** | 🎯 **⛔ KHÔNG có** |
+
+⇒ ⭐ **B-3 («giữ nguyên») CHÍNH LÀ HIỆN TRẠNG** ⇒ ⛔ **không cần user quyết gì**, ⛔ **không sửa gì** ✓
+
+### 📌 LUẬT RÚT RA (D-099) — ⭐ QUAN TRỌNG
+> **Một chốt quyền chỉ là «THỪA/LỆCH» khi tầng ĐỐI DIỆN sẽ CHO PHÉP lời gọi đó.**
+> ⭐ **ĐẾM SỐ CỔNG ⛔ không đủ** — phải **đối chiếu TỪNG CẶP** (chốt role ⇄ khai báo module của cùng action) ✓
+> ⚠️ Ngược lại với `PA-1`: ở đó registry khai **`admin_tab_06`** (⇒ tầng ① **CHO PHÉP**) mà use-case vẫn `requireRole(admin)` ⇒ ⭐ **mới thật sự chặn oan** ✓
+
+### ✅ VIỆC ĐÃ LÀM ĐÚNG (⛔ không uổng)
+⭐ **S01 ⛔ đã KHÔNG tự sửa 33 chốt quyền** khi chưa đủ căn cứ ⇒ ⭐ nếu đã sửa thì **đã hạ rào 31 thao tác quản trị hệ thống** (⚠️ `delete_user` · `reset_user_password` · `delete_role_catalog`) ⛔ mà ⛔ không có căn cứ nào ✓
+📌 Tinh thần §41 («SAFE · SMALL · ISOLATED») + bài học `BUG-20261008-002` đã giữ đúng ✓

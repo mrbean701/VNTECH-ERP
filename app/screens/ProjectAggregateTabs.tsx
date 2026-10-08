@@ -1,5 +1,8 @@
 "use client";
 
+// ⚠️ MT3-S03 (08/10/2026) — TỆP NÀY HIỆN ⛔ KHÔNG ĐƯỢC DÙNG Ở ĐÂU (đo được: **0 tham chiếu** trong `app/**` + `lib/**`).
+//    ⚠️ LƯU Ý: tệp này TỪNG nằm trong «bản kiểm kê modal» (`SESSION_C/TEST_LOG.md §C38.1`, khoá `teamCreate`) ⇒ ⛔ dễ TƯỞNG NHẦM là «đã phủ».
+//    ⚠️ Cần quyết (nối lại menu · xoá · giữ kèm ghi chú): `SESSION_C/HANDOFF_LOG.md` §`HANDOFF-20261007-C15`.
 // USER 28/09/2026 — DANH SÁCH TỔNG HỢP TRÊN NHIỀU DỰ ÁN cho 4 thẻ của màn «DANH SÁCH DỮ ÁN».
 //
 // YÊU CẦU CỦA USER (nguyên văn):

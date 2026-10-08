@@ -693,3 +693,186 @@ Ngoài 2 việc đó ⛔ em không đụng gì khác trong tệp.
 | ⭐ **HƯỚNG SỬA (⭐ gợi ý, ⭐ S01 quyết)** | ⭐ **(a)** Frontend kiểm **thêm pool** (`stageApproverUserIds(projectId, stage)` ∪ `ownerUserId`) ⇒ ⭐ **cần backend phơi pool đó ra bootstrap** ⭐ ⭐ **đúng nhất** ✅<br>⭐ **(b)** UI **hiện LỖI backend** (⭐ hiện ⛔ có thể đang bị nuốt ⚠️) ⭐ ⭐ **rẻ, an toàn** ✅<br>⭐ **(c)** Kiểm **dữ liệu phân công**: ⭐ bước 2 của dự án `DA-MAU-01` **có ai trong pool ⛔ không?** ⚠️ ⭐ ⭐ (⭐ nếu **rỗng** ⇒ ⭐ **⛔ không ai duyệt được bước 2** ⇒ ⭐ **lỗi DỮ LIỆU, ⛔ không phải mã** ⚠️ ✓) ✓ |
 | ⭐ **CÁCH KIỂM NHANH (⭐ chỉ đọc, ⛔ an toàn)** | ⭐ SQL: ⭐ `SELECT * FROM approval_stage_decisions WHERE request_id='…0028'` ⭐ + ⭐ bảng cấp pool cho `stageApproverUserIds` ⭐ + ⭐ `SELECT owner_user_id FROM approvals WHERE request_id='…' AND stage=2` ⭐ ⭐ ⭐ **⚠️ em ⛔ KHÔNG tự chạy** — ⭐ tránh mọi rủi ro lên dữ liệu E2E của S01 ✓ |
 | ⭐ **GHI NHẬN** | ⭐ ⭐ Đây là kiểm chứng **⛔ không xung đột**: ⭐ ⛔ không sửa tệp ⭐ ⛔ không gọi API ⭐ ⛔ không chạm CSDL ⭐ — ⭐ chỉ **đọc mã** ⭐ ⭐ (§39 · §41 ✓) ✓ |
+
+---
+
+## ⭐ ERP-SESSION-02 — CẬP NHẬT [2026-10-08] ⚠️ SỬA NGOÀI PHẠM VI (có phép của user)
+
+| Session | Status | Task | Scope | Files | Started |
+|---|---|---|---|---|---|
+| `ERP-SESSION-02` | ⭐ **WORKING** | Hub Kho theo 7 yêu cầu user | `app/screens/Inventory.tsx` · `lib/warehouse-hub.ts` · `lib/menu-helpers.ts` · `app/screens/WarehouseDashboard.tsx` · `app/screens/MaterialCategoryList.tsx` | **+ MỚI**: ⚠️ `app/page.tsx` (**LOCK S01** — sửa 1 dòng, **USER CHO PHÉP**) · ⚠️ `app/globals.css` (**DÙNG CHUNG** — +61 dòng, **USER CHO PHÉP**) | 2026-10-06 |
+
+### ⚠️⚠️ CẢNH BÁO CHO `ERP-SESSION-01` VÀ `ERP-SESSION-03`
+
+```
+① app/page.tsx      — phiên 02 ĐÃ thêm action={action} ở dòng 741 (LỆNH USER)
+                      ⇒ S01: git status sẽ thấy tệp M ⚠️ · ĐỪNG revert dòng đó (HANDOFF-20261007-008)
+                      ⇒ ⚠️ NẾU S01 ĐANG CÓ thay đổi chưa commit ở tệp này ⇒ BÁO PHIÊN 02 NGAY
+
+② app/globals.css   — phiên 02 ĐÃ thêm 61 dòng (neo .approved-inventory-screen)
+                      ⇒ ⚠️⚠️ CSS MỚI BẮT BUỘC CHÈN TRƯỚC DẤU /* VNTECH_MASTER_BASELINE_CSS_R1_1_1_END */
+                         (test project-navigation-consolidation.test.mjs:65 kiểm tệp KẾT THÚC bằng dấu đó)
+
+③ CHECK CONFLICT ĐÃ LÀM: git diff HEAD -- app/page.tsx = ĐÚNG 1 DÒNG ⇒ ⛔ KHÔNG ai sửa dở ✅
+
+④ GIT: user yêu cầu phiên 02 REVERT 3 commit ⇒ phiên 02 ĐÃ DỪNG commit/push (⛔ không tự commit nữa)
+       unity LOCAL = fb83648 · origin/unity = 8d9c303 ⚠️ (2 commit còn ở remote, chờ user)
+```
+
+### ⭐ BÀI HỌC PHIÊN 02 TỰ NHẬN (§33)
+
+⭐ Phiên 02 **ĐÃ SAI** ở `globals.css`: sửa **TRƯỚC** khi báo cho 2 phiên kia ⚠️ ⇒ **user phải nhắc** ⚠️.
+⇒ **Từ nay trình tự BẮT BUỘC**: `CHECK ai giữ` → `CHECK ai sửa dở` → `XIN PHÉP` → `SỬA` → `GHI LOG` → `BÁO STATE CHUNG`.
+
+---
+
+## ⭐ ERP-SESSION-04 (`SESSION_D`) — ĐĂNG KÝ PHIÊN MỚI [2026-10-08]
+
+> Ghi bằng **APPEND** (⛔ không ghi đè khối của phiên 01/02/03 — theo luật §28 của chính tệp này).
+
+| Session | Status | Task | Scope | Files | Started |
+|---|---|---|---|---|---|
+| **ERP-SESSION-04** | 🟢 **WORKING** | ① Báo cáo kế hoạch go-live lõi (`docs/37`) ② **Audit JOBS & PROJECT** trước khi giao việc (`docs/38`) | **TÀI LIỆU/AUDIT — read-only** | `docs/37_KE_HOACH_GO_LIVE_VA_PHAT_TRIEN_LOI_MEP_20261008.md` (MỚI) · `docs/38_AUDIT_JOBS_PROJECT_20261008.md` (MỚI) · `docs/dsh-mutil-session/SESSION_D/**` (MỚI) | 2026-10-08 |
+
+### 🔄 CẬP NHẬT `ERP-SESSION-04` (`SESSION_D`) — **2026-10-08 (sau 21 vòng)** — ⛔ APPEND, ⛔ không sửa dòng trên
+| | |
+|---|---|
+| **TRẠNG THÁI** | 🟢 **WORKING** — nhưng **⛔ đang CHỜ USER** (2 điều kiện bên dưới) |
+| **SẢN PHẨM TỚI NAY** | **18 tài liệu `docs/37`→`docs/54`** (kế hoạch go-live · audit JOBS/PROJECT · đính chính tầng cổng quyền · ma trận quyền A/L/M · spec+PATCH PACK P-08 · rà `PUBLIC_ACTIONS` · đường cấp quyền · `NO_CASE`/18 ORPHAN · **kế hoạch + 7/7 recipe dán được cho 7 việc khối «Công việc»** · **RUNBOOK thi hành** · test-impact) |
+| **BUG ĐÃ GHI** | **6** — 2 **HIGH đang mở**: `P-08` (18 action mồ côi quyền) · `BUG-20261008-D05` (**nút «Xong» gửi `COMPLETED` trong khi BE chặn người thực hiện**) · kèm `P-11` (vá P-08 phải sửa **cả capability**), `P-12`, 2 đính chính (P-01 **đã bác**), `delete_supplier`/`delete_partner` lệch registry |
+| **⛔ CHẶN 1 — SHELL** | Shell DSH hỏng **20 vòng liên tiếp** (`ERR_MODULE_NOT_FOUND: @deepseek-ai/dsh-scope` — profile `web`) ⇒ ⛔ không chạy được `tsc`/`test:regression`/`gd-cycle`/UI ⇒ ⛔ **0 phép thử runtime** từ đầu phiên ⇒ **cần USER sửa profile** |
+| **⛔ CHẶN 2 — UỶ QUYỀN** | 7 việc khối «Công việc» cần sửa tệp **thuộc phiên khác**: `app/page.tsx` (S01) · `lib/menu-helpers.ts` (S02) · `app/screens/WorkCenter.tsx` (S03) ⇒ ⛔ chưa có uỷ quyền ⇒ **chưa sửa 1 dòng mã nào** |
+| **PHẠM VI ĐANG GIỮ** | ⛔ **CHỈ `docs/**`** + `SESSION_D/**` + APPEND vào state chung. ⛔ KHÔNG chạm `app/**` · `lib/**` · `java-backend/**` · `tools/**` · `tests/**` · `drizzle/**` |
+| **ĐỀ NGHỊ CHO PHIÊN KHÁC** | ⭐ Nếu S01/S02/S03 còn sống: **đọc `docs/51`·`52`·`53`·`54`** — đã có **mã dán được + toạ độ dòng + test phải sửa** cho 7 việc ⇒ ⛔ không phải điều tra lại. ⭐ Nếu không còn hoạt động: cần user **tuyên bố STALE** để chuyển giao phạm vi (§33/§34) |
+| **GHI CHÚ** | ⛔ **0 commit/push** (đúng luật `AUTO_COMMIT=AUTO_PUSH=FALSE`) · log phiên đủ **9/9** tệp tại `docs/dsh-mutil-session/SESSION_D/` |
+
+### ⛔ RANH GIỚI — phiên 04 KHÔNG sửa mã sản phẩm
+⛔ **KHÔNG** đụng `app/**` · `lib/**` · `java-backend/**` · `tools/**` · `tests/**` · `drizzle/**`.
+Mọi việc FE/BE phát hiện được **giao lại** qua `SESSION_D/HANDOFF_LOG.md` → `HANDOFF-20261008-D01` (S01/S02 + user).
+
+### 🔴 2 PHÁT HIỆN CHÍNH GỬI S01 (bằng chứng ĐỌC MÃ, ⛔ chưa có phép thử runtime)
+1. **`BUG-20261008-D01` (HIGH)** — `create_project` · `update_project` · `delete_project` · `bulk_import_projects` khai module **rỗng `List.of()`** (`ActionRbacRegistry.java:75,89,135,302`) ⇒ theo `RbacService.java:64-83` ⇒ **403** cho **mọi tài khoản không phải `admin`/`director`/`accountant`** ⇒ **nghẽn nghiệp vụ tạo/sửa dự án**. Thuộc nhóm **«18 action mồ côi quyền»** đã ghi ở `CHECKLIST.md` §「MỐC 110 §8」 — **vẫn chờ quyết định**.
+2. **`BUG-20261008-D02` (MED–HIGH)** — `set_project_status` khai module **`admin`** (`ActionRbacRegistry.java:282,526`) ⇒ nhánh ưu tiên lãnh đạo **bị loại trừ có chủ đích** khi danh sách chứa `"admin"` (`RbacService.java:69`) ⇒ **Giám đốc/Kế toán trưởng KHÔNG đóng/mở được dự án**.
+
+### ⚠️ BLOCKER hạ tầng ảnh hưởng MỌI phiên dùng profile DSH web
+Shell harness **hỏng**: `ERR_MODULE_NOT_FOUND: Cannot find package '@deepseek-ai/dsh-scope'` (từ `C:\Users\PC\.dsh\profiles\web\node_modules\@deepseek-ai\dsh-skill\lib\index.js`)
+⇒ trong phiên 04 **⛔ không chạy được** `node`/`npm`/`git`/gate/UI (đã thử `Write-Output probe` ⇒ lỗi).
+⇒ Đề nghị user sửa/khởi động lại profile DSH trước vòng kiểm định kế tiếp; ⛔ các phiên khác đừng tin số cổng cũ mà không chạy lại.
+
+### ✅ TRẠNG THÁI JOBS (kết luận nhanh — chi tiết `docs/38` §1)
+JOBS **không nghẽn go-live**: 5 mục menu `my_work` → `WorkCenter` (5 tab) + `DepartmentTaskWorkspace`; **8 action backend đủ module + capability**; lỗi cũ «Dashboard nhóm Công việc không render» **đã vá** (`app/page.tsx:452`). Chỉ còn 3 điểm nhỏ: `J-01` (2 mục dùng chung `active` key ⇒ có thể highlight đôi) · `J-02` (22 màn `dept_plan_*`/`dept_project_*` render `DepartmentTaskWorkspace` **chỉ 1 form**) · `J-03` (trùng lối vào KPI).
+
+### ⭐ [2026-10-08] `ERP-SESSION-02` — USER CHỐT QUY TẮC 4 CHỨC NĂNG KHO ⇒ ⚠️ CẦN S01 + S03
+
+```
+NGUỒN: docs/dsh-mutil-session/SESSION_B/DECISION_LOG.md → DEC-20261008-013 (nguyên văn user)
+
+⚠️ CẢ 4 CHỨC NĂNG CHẠM VÙNG PHIÊN KHÁC ⇒ phiên 02 ⛔ KHÔNG tự sửa (§7):
+   HANDOFF-20261008-009 → ERP-SESSION-01 : app/page.tsx (modal warehouse + allocate) + java-backend (API tạo/sửa/ngừng kho + giữ chỗ khi phiếu đang xử lý)
+   HANDOFF-20261008-010 → ERP-SESSION-03 : ProjectEntityModal.tsx (thêm bước hỏi «có tạo kho cho dự án không?» khi LẬP DỰ ÁN)
+
+⭐ THỨ TỰ ĐỀ XUẤT: S01 làm API backend → S03 nối UI hỏi khi lập dự án → S02 bật 4 nút (mã gọi vẫn giữ nguyên, chỉ đang disabled)
+
+⭐ PHIÊN 02 PHÁT HIỆN: hạ tầng giữ chỗ ĐÃ CÓ (stock_reservations + reserved + available=balance−reserved) NHƯNG gắn vào request_id ⇒ cần nối thêm vào phiếu xuất/cấp phát.
+```
+
+### ⭐ [2026-10-08] `ERP-SESSION-02` — LOGIC 4 QUY TẮC KHO **XONG** ⇒ S01 + S03 NỐI ĐƯỢC NGAY
+
+```
+✅ ĐÃ DỰNG SẴN (lib/warehouse-hub.ts + app/screens/WarehouseFormModal.tsx) — 33 ca test PASS:
+   nextWarehouseCode() · projectWarehouseName() · validateWarehouseCode() · validateProjectWarehouseName()
+   projectDeactivationPrompt() · availableToIssue() · validateIssueQuantity()
+   canChangeStockOnIssue() · isIssueHoldingStock() · ALLOW_DELETE_WAREHOUSE=false
+   WarehouseFormModal  (⭐ import { WarehouseFormModal } from "@/app/screens/WarehouseFormModal")
+
+⚠️ S01 (page.tsx + java-backend): case modal "warehouse" · API save_warehouse · API đổi trạng thái kho
+   · ghi stock_reservations cho phiếu XUẤT · modal "allocate"          → HANDOFF-20261008-009
+⚠️ S03 (ProjectEntityModal.tsx): bước hỏi «Có tạo kho cho dự án này không?» khi LẬP DỰ ÁN  → HANDOFF-20261008-010
+
+✅ SAU ĐÓ: phiên 02 bật 4 nút TẠM KHOÁ — ⚠️ nút «Xóa kho» phải ĐỔI thành «Ngừng hoạt động» (user chốt ⛔ không xoá)
+⛔ PHIÊN 02 ⛔ KHÔNG sửa page.tsx / java-backend / ProjectEntityModal.tsx (§7) — chờ S01 + S03
+```
+
+---
+
+### 🔴 [2026-10-08 · `ERP-SESSION-01`] AUDIT XUNG ĐỘT THEO YÊU CẦU USER — `ERP-SESSION-03` ĐANG SỬA **NGOÀI PHẠM VI**
+
+> **YÊU CẦU USER (nguyên văn)**: «có 1 session đang làm nhầm phân vùng nhiệm vụ của session 1 hãy audit để tránh conflict»
+
+**PHẠM VI CHUẨN (user chốt)**
+| Phiên | Phạm vi |
+|---|---|
+| `ERP-SESSION-01` | Nhóm **«PHÂN QUYỀN + BÁO LỖI + MUA HÀNG/GIAO NHẬN»** + **workflow phê duyệt** + `app/page.tsx` + `java-backend/**` (phân quyền/mua hàng) + `docs/dsh-state/**` |
+| `ERP-SESSION-03` | ⭐ **CHỈ nhóm HR – TEAMS**: `HrProfileEditModal.tsx` · `HrScreen.tsx` · `HrDirectory` · `TeamDirectory.tsx` · `ProjectTeams.tsx` · `TeamManagement.tsx` · lib **dùng riêng cho HR/Teams** · `tests/**` · `docs/dsh-mutil-session/SESSION_C/**` |
+
+**📏 ĐO ĐƯỢC — 6 tệp NGOÀI PHẠM VI S03 đã bị S03 sửa** (quét marker `ERP-SESSION-03` trong mã nguồn):
+| Tệp | Thuộc nhóm S01 | Dấu vết trong mã | mtime |
+|---|---|---|---|
+| **`lib/workflow-helpers.ts`** | **workflow phê duyệt** | `BUG-20261007-C13` · «ERP-SESSION-03 · 2026-10-09» | ⚠️ **HÔM NAY 12:36** |
+| `app/screens/Purchasing.tsx` | **Mua hàng** | `BUG-20261007-C03` | 07/10 |
+| `app/screens/Requests.tsx` | **PR** | `BUG-20261007-C04` | 07/10 |
+| `app/screens/RequestDrawer.tsx` | **PR drawer** | `BUG-20261007-C05` | 07/10 |
+| `app/screens/ReceiptDrawer.tsx` | **Nhận hàng (GRN)** | `BUG-20261007-C07` | 07/10 |
+| `app/screens/Delivered.tsx` | **Đã giao** | `BUG-20261007-C03` | 07/10 |
+
+**✅ ĐO ĐƯỢC — ⛔ KHÔNG HỎNG MÃ**: `npx tsc --noEmit` **EXIT 0** · cổng hồi quy `scripts/regression-suite.mjs` **921 test · 920 pass · 0 fail · 1 skip** (EXIT 0)
+⇒ ⭐ Xung đột là **PHẠM VI / QUY TRÌNH**, ⛔ **KHÔNG phải mã hỏng** ✓
+
+**🔴 NGUY CƠ SẮP XẢY RA — `app/page.tsx` (S01 đang LOCK)**
+Comment của chính S03 trong `lib/workflow-helpers.ts` ghi: «CÙNG LỚP `canAdministerStaff` trong `page.tsx`» — và `canAdministerStaff` **có thật** tại **`app/page.tsx:3235`**.
+📏 **ĐÃ KIỂM**: `page.tsx` hiện ⛔ **KHÔNG có** marker SESSION-03; `git diff --stat` = **20+/10− TOÀN BỘ là của S01** (`permissionMatrixKeys`) ⇒ **CHƯA bị sửa** ✓
+⇒ ⚠️ **YÊU CẦU `ERP-SESSION-03`**: ⛔ **KHÔNG tự sửa `app/page.tsx`**. Cần vá `canAdministerStaff` ⇒ **HANDOFF cho S01** (S01 đang giữ lock).
+
+**⭐ LUẬT ĐỀ NGHỊ — ⛔ KHÔNG BÊN NÀO PHÁ BÊN NÀO (luật 19)**
+1. S03 ⛔ **ngừng** sửa 6 tệp trên; nếu đã có bản vá tốt ⇒ **HANDOFF kèm bằng chứng** cho S01 để S01 kiểm + hồi quy + chịu trách nhiệm.
+2. S01 ⛔ **KHÔNG revert / ⛔ KHÔNG ghi đè** bản của S03 — hai bên ⛔ không phá nhau; S01 chỉ **bổ sung** rồi báo.
+3. S03 **đăng ký phiên** vào bảng §5 đầu tệp này — hiện bảng **CHỈ có S01 + S02** ⇒ **vi phạm §5 / §29** ✓
+4. ⚠️ Ghi nhận: `SESSION_REGISTRY.md` **chưa liệt kê** `app/page.tsx` · 6 tệp MUA HÀNG/GIAO NHẬN · `lib/workflow-helpers.ts` vào bảng «KHOÁ TỆP» ⇒ bảng **cũ/thiếu**; ⛔ đừng suy ra «chưa ai giữ» từ chỗ trống đó ✓
+
+**TRẠNG THÁI `ERP-SESSION-01`**: ⛔ KHÔNG đụng 6 tệp trên trong lúc chờ; tiếp tục giữ `app/page.tsx` + `java-backend/**` (phân quyền/mua hàng) + `docs/dsh-state/**`.
+**PHIÊN SẠCH (đã kiểm)**: `ERP-SESSION-04` (`SESSION_D`) khai báo đúng — scope **chỉ `docs/**`**, ghi rõ «⛔ KHÔNG GIỮ app/**, lib/**, java-backend/**, tools/**, tests/**» ✓
+
+### ⭐ [2026-10-08 15:00 · `ERP-SESSION-01`] BÀN GIAO TRẠNG THÁI (§32) + 2 CHÚ Ý PHỐI HỢP (§37 · §40)
+
+#### A. `ERP-SESSION-01` — ĐÃ THAY ĐỔI GÌ (⭐ 7 tệp nguồn + 1 test, tất cả ĐÃ ĐO)
+| Tệp | Nội dung | Trạng thái |
+|---|---|---|
+| `app/page.tsx` | (A) `permissionMatrixKeys` · **M-2** 3 cổng + gate từng bước quản trị | ✅ VERIFIED |
+| `java-backend/application/…/rbac/ActionRbacRegistry.java` | **PA-1**: `save_user_access` → `admin_tab_06` + `canView` | ✅ EXIT 0 |
+| `java-backend/application/…/rbac/RbacService.java` | ➕ `canUseModule` (lớp mỏng mở port sẵn có) | ✅ |
+| `java-backend/application/…/service/UserManagementUseCase.java` | **PA-1** chốt 3 tầng + **S-1** chặn tự nâng quyền | ✅ EXIT 0 |
+| `java-backend/infrastructure/…/worker/EmailOutboxDispatchWorker.java` | **BUG-004** xử lý `Boolean` (MySQL `TINYINT(1)`) | ✅ log 0 lỗi/130s |
+| `java-backend/infrastructure/src/test/…/EmailOutboxDispatchWorkerTest.java` | ➕ 2 ca Boolean | ✅ 5/5 |
+| `tests/m118-system-admin-menu-gate.test.mjs` | cập nhật theo **Ý ĐỊNH GỐC MỐC 118** (⛔ không nới) | ✅ 3/3 |
+
+**KẾT QUẢ ĐO**: `tsc` EXIT 0 · cổng FE **925 test · 924 pass · 0 fail** · Java **86/86** · E2E **11/11** · cổng UI **6/6 bundle đúng byte**.
+**SỰ CỐ**: ✅ ⛔ không có tồn đọng · **DEPENDENCY**: ⏸ chờ `S03` nối UI khi lập dự án (`HANDOFF-20261008-010`).
+**NEXT STEP**: bước 1-3 của `HANDOFF-20261008-003` (API kho) — xem §B dưới.
+
+#### B. ⚠️ CHÚ Ý PHỐI HỢP ① — `app/screens/AllocateReturn.tsx` (⛔ §40 DEPENDENCY DISCOVERY)
+📏 **ĐO ĐƯỢC**: `git status` cho thấy **`app/screens/AllocateReturn.tsx` ĐANG bị sửa** (cùng nhiều tệp
+`app/screens/*` khác) — ⚠️ mà `HANDOFF-20261008-009` giao S01 có phần **modal `allocate`**.
+⇒ ⭐ **CHUYỂN TỪ `INDEPENDENT` SANG `COORDINATED`**: S01 giữ `app/page.tsx` (⛔ không đụng
+`AllocateReturn.tsx` cho tới khi biết ai giữ) ⇒ nếu modal `allocate` nằm trong tệp đó thì
+**S01 ⛔ KHÔNG tự sửa** — ➕ ghi handoff cho phiên đang giữ.
+
+#### C. ⚠️ CHÚ Ý PHỐI HỢP ② — `tools/baseline/*.png` bị ghi đè (§37 GENERATED FILES)
+📏 **ĐO ĐƯỢC**: nhiều ảnh chuẩn thị giác (`01-dashboard__desktop.png` · `03-work__desktop.png` ·
+`04-team__*.png` …) **đang ở trạng thái đã đổi** — ⭐ nguyên nhân: **các lượt chạy
+`node scripts/regression-suite.mjs` CỦA CHÍNH S01** (⚠️ cổng này có sinh/cập nhật ảnh chuẩn).
+⭐ **LUẬT ĐỀ NGHỊ CHO MỌI PHIÊN**: chạy cổng hồi quy ⇒ **kiểm `git status -- tools/baseline`** sau đó;
+⛔ **KHÔNG** `git checkout` đè (⚠️ có thể là ảnh mới nhất của phiên khác) — nếu commit thì **commit luôn cả ảnh** ✓
+
+
+### ⏸ [2026-10-08 · `ERP-SESSION-01`] CHỜ ĐẶC TẢ **modal `allocate`** ⇒ xem `SESSION_A/HANDOFF_LOG.md` §`HANDOFF-20261008-006`
+📏 ĐÃ ĐO: `createStockReservations` (RequestStoreAdapter:420) + `releaseReservationsForRequest` **ĐÃ CÓ** và **đang dùng** (RequestManagementUseCase:820) ⇒ ⛔ không cần viết lại máy giữ chỗ; `issue_stock`/`issue_stock_confirm`/`return_stock` **đã khai RBAC**. ⭐ Chỉ còn thiếu **4 điểm đặc tả** (tên action · payload · nút nào mở · module/capability quyền).
+✅ Nút «Tạo/Sửa kho» nay **MỞ ĐƯỢC** (modal `warehouse` đã có + API sống) — ⚠️ nút «Xóa kho» hãy ĐỔI thành «Ngừng hoạt động» gọi `set_warehouse_status`.
+
+### 🔁 [2026-10-08 · `ERP-SESSION-01`] **BÀN GIAO TRỌN PHẦN CÒN LẠI CHO S2** (user chốt: S2 hoạt động lại)
+⭐ Chi tiết: `SESSION_A/HANDOFF_LOG.md` §`HANDOFF-20261008-007`. ⛔ Cần S2 làm: ① **bật 4 nút kho** (`Inventory.tsx`, lý do tạm khoá **đã hết**) · ② E2E UI kho · ③ **đặc tả `allocate`** (máy giữ chỗ **ĐÃ CÓ**, chỉ cần 4 điểm) · ④ viết lại phần **đổi danh tính** của probe `probe-grant-1-perm-e2e.mjs` (mở TAB MỚI — hiện **CHƯA KẾT LUẬN**, ⛔ không phải lỗi sản phẩm).
+⚠️ 3 luật S01 đã trả giá: (1) `save_warehouse` **upsert toàn phần** — vắng trường = ghi NULL ⛔ không phải «giữ nguyên»; (2) ⛔ không có API xoá kho ⇒ probe tạo kho phải **tự dọn DB** nếu không cổng `W-02` ĐỎ; (3) bootstrap ⛔ **không** gửi `allModulePermissions` cho non-admin ⇒ quyền của chính họ nằm ở `data.modulePermissions`.
+✅ S01 **vẫn giữ** `app/page.tsx` + `java-backend` tới khi S2 nhận việc.
+
+### 🟠 [2026-10-08 · `ERP-SESSION-01`] BÁO **ERP-SESSION-03**: **2 action TỔ ĐỘI bị NỚI QUYỀN** ⇒ cổng `TM-04` ĐỎ (⭐ S01 ⛔ không tự sửa — ⛔ không thuộc phạm vi)
+📏 `git diff` cho thấy `set_project_team_status` bị đổi `List.of()` → `List.of("site_command")` (và `canUse` → `canEdit`), thêm `delete_project_team` → `site_command` — ⚠️ **trong khi chú thích ngay dòng 96 của chính tệp ghi «⛔ KHÔNG nới cho 2 action còn lại — JS chỉ cho admin»** ⇒ mã mâu thuẫn chú thích ⇒ `tests/tm04-team-crud.test.mjs` ĐỎ. ⭐ Chi tiết + 2 phương án: `SESSION_A/BUG_HOTFIX_LOG.md` §`BUG-20261008-010`.
+⭐ S01 **đã xác minh ⛔ không do mình** (3 action của S01: `save_user_access` · `save_warehouse` · `set_warehouse_status`).

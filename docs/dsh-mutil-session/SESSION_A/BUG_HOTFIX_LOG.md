@@ -329,3 +329,677 @@ Related Change: CHG-20261006-011
 ⭐ ② ⚠️ ⛔ KHÔNG bấm `@N` MÙ — đã bấm trượt 2 lần và CHUYỂN NHẦM MÀN (tưởng đang ở «Kho Tổng»
 ⭐    nhưng thực tế đang ở màn «BÁO CÁO»). Phải dùng SELECTOR ỔN ĐỊNH (`[data-nav-group="x"] .nav-child`).
 ```
+
+## BUG-20261007-004
+
+Date: 2026-10-07
+Session: ERP-SESSION-01
+Module: Quản trị hệ thống (page.tsx + lib/permissions.ts)
+Feature: Phân quyền module-level vs role-based
+Severity: MEDIUM
+Source: UI test (TEST-20261007-007)
+
+### Problem
+User có `admin` module permission (`can_view=1`) nhưng role ≠ `admin` ⇒ thấy nav group "QUẢN TRỊ HỆ THỐNG" trong sidebar nhưng nội dung trang hiển thị "CHƯA ĐƯỢC PHÂN QUYỀN".
+
+### Impact
+- User được cấp quyền admin qua module_permission nhưng không phải admin role ⇒ không thể sử dụng
+- Mâu thuẫn giữa phân quyền module-level (CSDL) và role-based (hardcode)
+- Nav group hiện nhưng nội dung bị chặn ⇒ UX confusion
+
+### Root Cause
+`page.tsx:625` dùng `isAdminUser(data.user)` kiểm `role === "admin"` (từ `lib/permissions.ts:13`):
+```
+function isAdminUser(user: Row) { return user.role === "admin" || roleBase(user) === "admin"; }
+```
+Hàm này KHÔNG kiểm `modulePermissions`. Chỉ kiểm trường `role` trong bảng `users`.
+
+### Fix
+Chưa sửa — cần user quyết định:
+- (a) Sửa `isAdminUser` kiểm cả `modulePermissions` ⇒ user có admin module perm được vào QTHS
+- (b) Giữ nguyên hardcode role-based ⇒ chỉ admin role mới vào QTHS
+- (c) Dùng `admin_tab_NN` permissions thay vì `admin` module perm ⇒ phân quyền tab-level
+
+### Status
+OPEN — chờ user quyết định
+
+### Test
+- TEST-20261007-007: FAIL (admin perm nhưng role≠admin)
+- TEST-20261007-008: PASS (admin_tab_01 only ⇒ không thấy nav)
+
+### Evidence
+- Screenshot: `tools/baseline/e2e-kich-bang-1-full-admin.png`
+- Code: `page.tsx:625`, `lib/permissions.ts:13`
+
+---
+
+## BUG-20261008-001 — 🚨 «BẤM LƯU KHÔNG LƯU ĐƯỢC QUYỀN» Ở MODAL PHÂN QUYỀN (mất 16 khoá)
+
+| ⭐ | ⭐ |
+|---|---|
+| **BUG_ID** | BUG-20261008-001 |
+| **DATE** | 2026-10-08 10:30:00 (Asia/Ho_Chi_Minh) |
+| **SESSION_ID** | ERP-SESSION-01 (SESSION_A) |
+| **MODULE** | RBAC · Quản trị hệ thống |
+| **FEATURE** | Modal «Phân quyền công việc / chức năng» (thẻ Sửa tài khoản) + tab 6 «Phân quyền người dùng» |
+| **SEVERITY** | **HIGH** (user-blocking + **mất dữ liệu quyền âm thầm**) |
+| **SOURCE** | USER báo trực tiếp 08/10/2026 |
+| **STATUS** | **FIXED** cho nguyên nhân (A) · **BLOCKED chờ user quyết** cho nguyên nhân (B) |
+
+### USER, nguyên văn
+> «tôi vừa thực hiện cấu hình phân quyền cho 1 user nhưng gặp lỗi, khi bấm lưu thì nó không
+> lưu phân quyền tôi vừa chọn cho user, check lại modal phân quyền công việc/ chức năng xem sao.»
+
+### PROBLEM
+Người dùng tick quyền trong ma trận, bấm «Lưu», giao diện báo bình thường nhưng quyền **không
+được lưu** — và tệ hơn: quyền cũ ngoài payload bị **xoá âm thầm** (`save_user_access` là
+FULL-REPLACE: `clearUserScopes()` xoá cứng 3 bảng rồi ghi lại).
+
+### ROOT CAUSE — ĐO, ⛔ KHÔNG SUY ĐOÁN (bài học D-081)
+
+**(A) FRONTEND BỎ 16 KHOÁ — tập khoá VẼ RA ⊋ tập khoá GỬI ĐI** ✅ đã vá
+
+📏 Đo bằng `tools/probe-permission-save-keyset.mjs` trên bootstrap THẬT (76 dòng `module_catalog`):
+
+| Phép đo | Trước vá | Sau vá |
+|---|---|---|
+| Khoá PANEL vẽ ô tick | **77** | 77 |
+| Khoá PAYLOAD gửi đi | **61** | **77** |
+| **SỐ KHOÁ MẤT khi bấm Lưu** | **16** ❌ | **0** ✅ |
+
+16 khoá mất = `admin_tab_01`…`admin_tab_14` + `admin` + `reports`.
+
+Cơ chế: ma trận vẽ theo `permissionMenuStructure(data)` (`app/page.tsx:269-280`) =
+`configuredModules(data)` ∪ 14 khoá `admin_tab_NN`. Nhưng payload của `UserEditModal`
+(`app/page.tsx:3409`) và `UserAccessModal` (`app/page.tsx:3441`) map qua
+`configuredModules(data).filter((item) => item.key !== "admin")` — tập này **KHÔNG có**
+`admin_tab_NN` (chúng có trong `module_catalog` nhưng **KHÔNG có trong mảng menu `modules`**),
+cũng không có `admin` (bị lọc cứng) và `reports` (bị `Boolean(config.active)` loại vì
+`active: 0` — ⚠️ `0 !== false` nên panel vẫn vẽ).
+
+**(B) BACKEND CHẶN THEO ROLE** ⛔ chưa vá — **cần user quyết**
+`UserManagementUseCase.saveUserAccess:259` = `rbac.requireRole(principalAsCurrent(principal),
+List.of("admin"))`. Người dùng role ≠ `admin` nhưng ĐƯỢC CẤP quyền module `admin` **mở được
+modal, tick được**, mà bấm Lưu thì bị **HTTP 403** «Thao tác chưa được khai báo quyền trong hệ
+thống» ⇒ **không lưu được gì cả**.
+📏 Đo bằng `tools/probe-permission-save-api.mjs`: tạo user probe role `engineer`, cấp quyền
+`admin` (bootstrap xác nhận CÓ), chính họ gọi `save_user_access` ⇒ **HTTP 403**.
+
+### LOẠI TRỪ TỪNG GIẢ THUYẾT BẰNG PHÉP THỬ (⛔ không đoán)
+| Giả thuyết | Phép thử | Kết luận |
+|---|---|---|
+| Backend không nhận `admin_tab_NN` | admin lưu `admin_tab_01` ⇒ đọc lại | ✅ **NHẬN** (HTTP 200 + persisted) ⇒ ⛔ loại trừ |
+| Khoá `moduleCatalog` là `undefined` (lỗi vòng 214 tái phát) | đọc mã + test VỆ 1/4/5 | ✅ đã vá từ vòng 214 ⇒ ⛔ loại trừ |
+| Chốt P5.3 phòng ban chặn | đọc `UserManagementUseCase:284` | ✅ **đã BỎ 06/10/2026** (BUG-20261006-003) ⇒ ⛔ loại trừ |
+| Payload rỗng bị chặn (MỐC 111) | UI luôn gửi 61–77 khoá | ✅ không rỗng ⇒ ⛔ loại trừ |
+| **Frontend lệch tập khoá** | probe key-set | ❌ **ĐÚNG** ⇒ (A) |
+| **Backend chặn theo role** | probe API B2 | ❌ **ĐÚNG** ⇒ (B) |
+
+### FIX (A) — MỘT NGUỒN DUY NHẤT
+Thêm `permissionMatrixKeys(data, entries)` **export** từ `app/screens/PermissionAccessPanel.tsx`
+(hợp của `moduleCatalog` ∪ dòng ma trận thật `entries`), rồi dùng CHUNG cho **cả ba nơi**:
+1. panel dựng `moduleKeys` (ô tick),
+2. `UserEditModal` dựng payload,
+3. `UserAccessModal` dựng payload.
+⇒ ⛔ không còn đường nào dựng tập khoá thứ hai ⇒ **không thể lệch lại**.
+
+### FILES_CHANGED
+- `app/screens/PermissionAccessPanel.tsx` — thêm `permissionMatrixKeys`, panel dùng nó
+- `app/page.tsx` — import helper; CẢ HAI modal dựng payload qua helper; gỡ `assignableModules`
+- `tests/v214-phan-quyen-luu-quyen.test.mjs` — cập nhật theo cấu trúc mới + thêm **VỆ 7**
+- `tools/probe-permission-save-keyset.mjs` — máy DÒ LỆCH tập khoá (mới)
+- `tools/probe-permission-save-api.mjs` — đo đường API 2 nghi phạm (mới)
+
+### TEST
+- `tools/probe-permission-save-keyset.mjs` → **panel 77 = payload 77 · MẤT 0** ✅
+- `tests/v214-phan-quyen-luu-quyen.test.mjs` → **7/7 VỆ XANH** ✅
+- Cổng hồi quy `node scripts/regression-suite.mjs` → **pass 865 · fail 0** ✅
+- `npx tsc --noEmit --incremental false` → **exit 0** ✅
+
+### REGRESSION
+- Cổng hồi quy đầy đủ 866 test: **FAIL 0** — ⛔ không hồi quy.
+- Test nợ cũ `mt3-ui-25-all-groups-tabs` đỏ vì `ERR_MODULE_NOT_FOUND '@/lib'` khi chạy
+  `node --test` trực tiếp — **đã xác minh KHÔNG do bản vá này**: tệp nằm trong `KNOWN_RED`
+  của `scripts/regression-suite.mjs:32` và lỗi là phân giải alias của harness.
+
+### VERIFICATION
+- [x] CODE FIXED + TEST PASSED ⇒ **FIXED** (theo §24)
+- [ ] **VERIFIED** — chờ user mở lại modal, tick một ô `admin_tab_NN`, bấm Lưu, mở lại xem còn tick
+- ⛔ (B) **chưa sửa** — xem `DEC-20261008-001` (quyết định phân quyền, phải chờ user)
+
+### RELATED
+- TASK-20261008-001 · CHG-20261008-001 · DEV-20261008-001 · TEST-20261008-001 · DEC-20261008-001
+- Tiền lệ: **BUG vòng 214** (`tests/v214-phan-quyen-luu-quyen.test.mjs`) — cùng triệu chứng,
+  khác nguyên nhân: vòng 214 sửa phía PANEL, vòng 257 phát hiện phía MODAL vẫn lệch.
+
+## BUG-20261008-001 (TT-1) — ✅ **VERIFIED** bằng UI THẬT (nguyên nhân A đóng)
+
+| ⭐ | ⭐ |
+|---|---|
+| **BUG_ID** | BUG-20261008-001 |
+| **DATE** | 2026-10-08 11:05:00 |
+| **SESSION_ID** | ERP-SESSION-01 (SESSION_A) |
+| **LOẠI** | Cập nhật trạng thái (addendum — ⛔ không sửa khối gốc ở trên) |
+| **STATUS MỚI** | **(A) VERIFIED** · (B) vẫn ⏸ chờ user |
+
+### CĂN CỨ ĐỂ CHUYỂN **FIXED → VERIFIED** (§24: `VERIFIED = FIXED + RECHECK`)
+⛔ Không đánh dấu VERIFIED bằng suy luận — chuyển bằng **phép đo trên UI THẬT**:
+
+| Phép đo | Bằng chứng |
+|---|---|
+| `tools/probe-permission-save-ui.mjs` (Edge headless + CDP, modal thật «Sửa tài khoản · Ngọc Mai» → thẻ «Phân quyền công việc / Chức năng») | **15/15 ĐẠT** |
+| Payload trình duyệt **THỰC SỰ GỬI** khi bấm «LƯU PHÂN QUYỀN →» | **77 dòng** |
+| `admin_tab_01` có trong payload | ✅ `canView=true` (đúng ô vừa tick) |
+| Khoá `admin_tab_NN` trong payload | ✅ **14/14** — biểu thức CŨ gửi **0** |
+| Khoá bị bỏ sót | ✅ **0** — trước vá: **16** |
+
+📄 Chi tiết đầy đủ: `TEST-20261008-002`.
+
+### ⛔ KHÔNG GHI DỮ LIỆU NGƯỜI THẬT
+Request đã bị **chặn ở tầng `window.fetch`** (trả 200 giả) ⇒ phép đo chỉ ĐỌC payload.
+Việc backend ghi được đã chứng minh RIÊNG ở `TEST-20261008-001` (B1: admin lưu `admin_tab_01`
+⇒ HTTP 200 + đọc lại thấy persisted).
+
+### CÒN LẠI — (B) ⏸ **CHỜ USER QUYẾT** (`DEC-20261008-001`)
+`UserManagementUseCase.saveUserAccess:259` = `rbac.requireRole(…, List.of("admin"))` ⇒ user
+role ≠ `admin` dù ĐƯỢC CẤP quyền module `admin` vẫn **HTTP 403** khi lưu.
+⛔ Đây là **chính sách phân quyền**, ⛔ DSH không tự vá. Ba phương án PA-1/PA-2/PA-3 đã ghi ở
+`DEC-20261008-001`; ⛔ sẽ thi hành đúng phương án user chọn.
+
+### TRẠNG THÁI TỔNG
+| Nguyên nhân | Trạng thái |
+|---|---|
+| (A) frontend bỏ 16 khoá | ✅ **VERIFIED** (đo UI thật 15/15) |
+| (B) backend chặn theo role | ⏸ **BLOCKED — chờ user** |
+
+## BUG-20261008-002 — 🚨 **CRITICAL (BẢO MẬT)**: người có `admin_tab_06` **TỰ LEO THANG** tới `factory_reset_execute` (XOÁ DỮ LIỆU)
+
+| ⭐ | ⭐ |
+|---|---|
+| **BUG_ID** | BUG-20261008-002 |
+| **DATE** | 2026-10-08 11:50:00 |
+| **SESSION_ID** | ERP-SESSION-01 (SESSION_A) |
+| **MODULE** | RBAC · Authorization |
+| **FEATURE** | Phân quyền người dùng (`save_user_access`) ↔ Cấu hình hệ thống (`factory_reset_execute`) |
+| **SEVERITY** | **CRITICAL** (§20: AUTHORIZATION BYPASS + DATA LOSS) |
+| **SOURCE** | SESSION_A phát hiện khi vá PA-1 (rà soát hệ quả) |
+| **STATUS** | **OPEN — ⏸ CHỜ USER QUYẾT** (⛔ DSH ⛔ không tự thêm guard: xem lý do bên dưới) |
+
+### CHUỖI LEO THANG (đọc mã, ⛔ không suy đoán)
+```text
+① Admin cấp cho A quyền `admin_tab_06` + canView            (Tab 06 «Phân quyền người dùng»)
+② A gọi `save_user_access`  →  ✅ HTTP 200 (SAU PA-1 — đo ở TEST-20261008-003)
+③ A tự cấp cho CHÍNH MÌNH module `admin` (canEdit = 1)
+④ A gọi `factory_reset_execute`  →  ⚠️ XOÁ SẠCH DỮ LIỆU
+```
+
+### VÌ SAO ④ QUA ĐƯỢC CỔNG — 2 mắt xích đo được
+| Mắt xích | Bằng chứng (mã) |
+|---|---|
+| `factory_reset_execute` chỉ đòi **module `admin`**, ⛔ KHÔNG đòi `role` | `ActionRbacRegistry.java:154` → `Map.entry("factory_reset_execute", List.of("admin"))` (capability `canEdit`, dòng 425) |
+| Controller ⛔ **không** gọi `requireRequireAdmin` cho action này | `SystemController.java:1096-1099` → `AuthUseCase.CurrentUser cu = requireCurrentUser(request);` |
+| Và `RbacService` chỉ chặn C-level khi module ⛔ **không** chứa `"admin"` | `RbacService.java:69` → `if (isCompanyLeadership(user) && !required.contains("admin")) return;` ⇒ module `"admin"` **KHÔNG** có nhánh miễn trừ ⇒ đi tiếp xuống `canUseModule(userId, "admin", "canEdit")` |
+
+⇒ **Ai có module `admin` + `canEdit` là gọi được factory reset.** ⛔ Không có rào `role`.
+
+### LẬP LUẬN AN TOÀN CŨ — VÀ LỖ HỔNG CỦA NÓ
+Mã ghi rõ (2 chỗ, `UserManagementUseCase.java:333-334` và `:606-607`):
+> «⚠️ AN TOÀN: bước 12 «Cấu hình hệ thống» (có `FactoryResetAdmin` XÓA DỮ LIỆU), 13 «Thông báo»,
+>  14 «Báo lỗi» vẫn CHỈ **hiện** với `role === "admin"` — `ADMIN_ROLE_ONLY_STEPS`.»
+
+⚠️ Lập luận đó bảo vệ **GIAO DIỆN** (tab ⛔ không hiện), ⛔ **KHÔNG** bảo vệ **API**:
+`factory_reset_execute` là action RIÊNG, cổng của nó là **module `admin`**, ⛔ không phải tab 12.
+⇒ Giao diện ẩn tab ⛔ không ngăn được một lệnh gọi API trực tiếp.
+
+### QUAN HỆ VỚI PA-1 (⭐ điều quan trọng nhất)
+| | Trước PA-1 | Sau PA-1 |
+|---|---|---|
+| Ai cấp được module `admin`? | **chỉ `role = admin`** | **`role = admin` HOẶC người có `admin_tab_06`** |
+| Người có `admin_tab_06` tự nâng quyền mình? | ⛔ không (bị chặn ở 3 tầng) | ⚠️ **ĐƯỢC** (bước ②③) |
+
+⚠️ Đây là **hệ quả TRỰC TIẾP của PA-1** — ⛔ không phải lỗi có sẵn từ trước.
+⚠️ Mặt khác, ⛔ **KHÔNG hẳn là ngoài ý muốn**: user chốt mô hình «quản trị hệ thống dùng tài khoản
+**ITM** … được cấp **full quyền**» ⇒ tài khoản cấp đủ quyền VỐN ĐƯỢC PHÉP mạnh. Điểm đáng ngờ chỉ là
+**TỰ** cấp (⛔ không qua quyết định của admin) — ⛔ chưa rõ user có muốn chặn hay không.
+
+### ⛔ VÌ SAO DSH ⛔ KHÔNG TỰ THÊM GUARD
+Thêm luật «non-admin ⛔ không được cấp module `admin`» là **CHÍNH SÁCH PHÂN QUYỀN** — có thể
+**xung đột** với mô hình «ITM full quyền» mà user vừa chốt. Theo quy tắc **dừng-chờ-quyết-định**:
+🚨 **BÁO ĐỘNG + GHI LOG + CHỜ USER**, ⛔ không tự áp phương án mặc định.
+
+### 3 PHƯƠNG ÁN ĐỀ XUẤT CHO USER
+| PA | Nội dung | Ưu | Nhược |
+|---|---|---|---|
+| **S-1** | Chặn **tự** nâng quyền: non-admin gọi `save_user_access` ⛔ không được gửi khoá `admin` (và `admin_tab_12/13/14`) | Diệt đúng đường leo thang, giữ nguyên phần còn lại | Thêm 1 luật mới ở `saveUserAccess` (~5 dòng) |
+| **S-2** | Giữ nguyên PA-1, ⛔ không chặn — coi `admin_tab_06` là «quyền quản trị cấp cao», ai có thì mạnh toàn phần | Khớp mô hình ITM full quyền | Người được giao Tab 06 có thể xoá sạch dữ liệu ⛔ không qua admin |
+| **S-3** | Siết ở gốc: `factory_reset_execute/preview` đổi cổng từ module `admin` sang **`role = admin`** (thêm `requireRequireAdmin` ở controller như `delete_user`) | Diệt rủi ro ở ĐÍCH, ⛔ không hạn chế việc cấp quyền | ⛔ Có thể chặn nhầm tài khoản ITM nếu user muốn ITM reset được |
+
+### 📌 KHUYẾN NGHỊ KỸ THUẬT (⛔ không phải quyết định)
+**S-3** sửa đúng CHỖ NGUY HIỂM NHẤT (một action phá dữ liệu) mà ⛔ không thu hẹp quyền cấp phát —
+nhưng ⛔ vẫn là **quyết định của user** vì nó chạm mô hình ITM.
+
+### RELATED
+`BUG-20261008-001` (nguyên nhân B) · `CHG-20261008-002` (PA-1) · `DEC-20261008-001` · `DEC-20261008-002`
+
+## BUG-20261008-003 — ⛔ **KHÔNG THỂ CẤP QUYỀN VÀO «QUẢN LÝ HỆ THỐNG» TỪ GIAO DIỆN** (ma trận thiếu dòng module `admin`)
+
+| ⭐ | ⭐ |
+|---|---|
+| **BUG_ID** | BUG-20261008-003 |
+| **DATE** | 2026-10-08 12:20:00 |
+| **SESSION_ID** | ERP-SESSION-01 (SESSION_A) |
+| **MODULE** | RBAC · Phân quyền người dùng ↔ Menu «Quản trị hệ thống» |
+| **FEATURE** | Ma trận «Phân quyền công việc / Chức năng» cấp quyền vào khu quản trị |
+| **SEVERITY** | **HIGH** (chức năng ⛔ không dùng được: ⛔ không thể uỷ quyền khu quản trị cho ai) |
+| **SOURCE** | USER yêu cầu test E2E 08/10/2026 → `TEST-20261008-004` |
+| **STATUS** | **OPEN — ⏸ CHỜ USER QUYẾT** (là **thiết kế/chủ trương**, ⛔ DSH không tự chọn) |
+
+### TRIỆU CHỨNG (đo, ⛔ không suy đoán)
+Cấp **1 quyền** cho tài khoản qua modal «Phân quyền công việc / Chức năng» (đã lưu THẬT, ✅),
+rồi đăng nhập chính tài khoản đó ⇒ **⛔ KHÔNG có nhóm «QUẢN TRỊ HỆ THỐNG»** trong sidebar
+⇒ ⛔ không truy cập được «Quản lý hệ thống».
+
+### NGUYÊN NHÂN GỐC — **MÂU THUẪN GIỮA 2 CHỖ** (cả hai đều đo được)
+| # | Chỗ | Luật | Hệ quả |
+|---|---|---|---|
+| ① | `app/page.tsx:486-487` | `systemAdminMenuVisible = isAdminUser(user) \|\| configuredModules(data).some(item => groupKey==="system_admin" && hasAnyCapability(...))` | Menu quản trị chỉ hiện khi có **module `admin`** (hoặc là role admin) |
+| ② | `app/page.tsx:280` (`permissionMenuStructure`) | `moduleRows = [...configuredModules(data).filter(item => item.key !== "admin"), ...adminTabRows]` | Ma trận **LỌC BỎ** dòng `admin` ⇒ ⛔ **⛔ KHÔNG có ô tick nào** để cấp module `admin` |
+
+📏 **ĐO BẰNG `tools/_probe-matrix-rows.mjs`** (đọc DOM thật, ⛔ không lưu gì):
+```
+75 dòng có ô tick · 75 khoá chức năng phân biệt
+⭐ CÓ dòng module «admin» («Danh mục & phân quyền»)? ⛔ KHÔNG
+dòng admin_tab_NN: 14   (Tab 01..Tab 14)
+→ 75 = 14 admin_tab_NN + 61 module nghiệp vụ
+```
+
+⇒ **KHOÁ DUY NHẤT mở được khu quản trị lại là khoá DUY NHẤT mà ma trận ⛔ không cho cấp.**
+⇒ Vì `configuredModules` lặp **mảng menu TĨNH** (`lib/menu-helpers.ts`) và `admin_tab_NN` ⛔ **không**
+nằm trong đó ⇒ **cấp bao nhiêu `admin_tab_NN` cũng ⛔ không mở được menu**.
+
+### ✅ ĐỐI CHỨNG (cùng một tài khoản, chỉ đổi 1 biến)
+| Cấu hình | nav groups | Vào «Quản lý hệ thống»? |
+|---|---|---|
+| Chỉ `admin_tab_06` (canView) | `my_work · site_command · mep · purchasing · warehouse · teams · finance · hr_legal · reports · material_master` | ❌ |
+| **+ module `admin`** (canView) | **`system_admin`** | ✅ «DANH MỤC & PHÂN QUYỀN» |
+
+### ĐÃ LOẠI TRỪ (⛔ không phải nguyên nhân)
+- ⛔ Không phải lỗi lưu quyền: `admin_tab_06` **đã ghi xuống CSDL** (`canView=1`, đo lại thấy) ⇒ PA-1 + (A) OK.
+- ⛔ Không phải lỗi backend: API nhận và ghi đủ; `factory_reset`/menu đọc từ cùng dữ liệu.
+- ⛔ Không phải cache: đã **nạp lại trang** và đăng nhập lại bằng tài khoản đó.
+
+### 3 PHƯƠNG ÁN (⏸ CHỜ USER — ⛔ DSH không tự chọn: là **quy ước hiển thị + chính sách cấp quyền**)
+| PA | Nội dung | Ưu | Nhược |
+|---|---|---|---|
+| **M-1** | **Thêm dòng `admin` («Danh mục & phân quyền») vào ma trận** ⇒ cấp được quyền vào khu quản trị | Đúng ý «uỷ quyền bằng cấu hình»; ⛔ không đổi luật menu | Mở đường cấp khu quản trị cho tài khoản thường (⚠️ xem `BUG-20261008-002`) |
+| **M-2** | **Đổi luật MENU**: `systemAdminMenuVisible` nhận cả `admin_tab_NN` (có ≥1 tab) ⇒ cấp Tab 06 là vào được khu quản trị | ⛔ không thêm dòng vào ma trận; chi tiết theo từng tab | Phải rà lại `visibleGroupKeys` + `isSystemAdminItem` cho nhất quán |
+| **M-3** | **Giữ nguyên** — khu quản trị ⛔ chỉ role `admin` vào được; ⛔ không uỷ quyền qua UI | An toàn nhất | ⛔ Không đáp ứng được yêu cầu «phân quyền từng tab» cho khu quản trị |
+
+### 📌 KHUYẾN NGHỊ KỸ THUẬT (⛔ không phải quyết định)
+**M-1** là chỗ lệch **nhỏ và đúng gốc** (ma trận thiếu 1 dòng so với `moduleCatalog` vốn ĐÃ có `admin`)
+— nhưng ⚠️ nó **tương tác với `BUG-20261008-002`** (tự leo thang tới `factory_reset`), nên
+**hai việc này nên quyết CÙNG LÚC**.
+
+### RELATED
+`TEST-20261008-004` · `BUG-20261008-001` · `BUG-20261008-002` · `DEC-20261008-002` · `CHG-20261008-002`
+
+## BUG-20261008-004 — ✅ **FIXED + VERIFIED**: worker email ném `NumberFormatException` MỖI 60 GIÂY ⇒ ⛔ không gửi được email nào
+
+| ⭐ | ⭐ |
+|---|---|
+| **BUG_ID** | BUG-20261008-004 |
+| **DATE** | 2026-10-08 13:15:00 |
+| **SESSION_ID** | ERP-SESSION-01 (SESSION_A) |
+| **MODULE** | Backend · Worker gửi hàng đợi `email_outbox` |
+| **FEATURE** | `EmailOutboxDispatchWorker` (MT2-P13-05) |
+| **SEVERITY** | **HIGH** — ⛔ không phải «nhiễu log»: `activeSettings()` ném lỗi ⇒ **worker ⛔ KHÔNG BAO GIỜ gửi email** trên MySQL |
+| **SOURCE** | SESSION_A phát hiện khi đọc log backend (⚠️ **có sẵn từ 29/09/2026**, ⛔ không do thay đổi 08/10) |
+| **STATUS** | ✅ **FIXED + VERIFIED** |
+
+### PROBLEM
+Lỗi lặp **đúng nhịp 60 giây** trong log:
+```
+ERROR ... [scheduling-1] o.s.s.s.TaskUtils$LoggingErrorHandler : Unexpected error occurred in scheduled task
+java.lang.NumberFormatException: For input string: "false"
+```
+
+### ROOT CAUSE (⭐ đọc mã + đo, ⛔ không suy đoán)
+`EmailOutboxDispatchWorker.intValue` (dòng ~168):
+```java
+private static int intValue(Object value) {
+    return value instanceof Number number ? number.intValue() : Integer.parseInt(text(value));
+}
+```
+- `email_settings.enabled` là **`TINYINT(1)`**; trình điều khiển MySQL mặc định (**`tinyInt1isBit=true`**) trả về **`Boolean`**.
+- `Boolean instanceof Number` = **FALSE** ⇒ rơi xuống `Integer.parseInt(String.valueOf(false))` = `Integer.parseInt("false")` ⇒ **ném**.
+- Gọi tại `activeSettings()` (dòng ~73) — chạy **ĐẦU mỗi lượt** `run()` ⇒ ⛔ mọi lượt đều chết trước khi gửi.
+
+### ⚠️ VÌ SAO LỌT LƯỚI TỪ 29/09/2026 — BÀI HỌC (D-095)
+`EmailOutboxDispatchWorkerTest.settings()` dùng `"enabled", 1` = **`Integer`** ⇒ `instanceof Number` = TRUE ⇒
+⭐ **test ⛔ chưa bao giờ chạm nhánh `Boolean` mà MySQL thật trả về** ⇒ test xanh trong khi sản phẩm chết.
+📏 **Bằng chứng lỗi CÓ SẴN TỪ TRƯỚC**: `java-run.log` (29/09/2026) + log backend 08/10 — ⛔ không do thay đổi nào hôm nay.
+
+### FIX (§10 TEST TRƯỚC — ĐỎ rồi mới vá)
+```java
+private static int intValue(Object value) {
+    if (value instanceof Boolean flag) return flag ? 1 : 0;   // ⭐ MySQL TINYINT(1) ⇒ Boolean
+    return value instanceof Number number ? number.intValue() : Integer.parseInt(text(value));
+}
+```
+⚠️ Giữ **nguyên** ngữ nghĩa cho `Number`/chuỗi ⇒ `smtpPort` · `attemptCount` ⛔ không đổi hành vi.
+⚠️ Theo **khuôn sẵn có** của repo — 10+ chỗ đã dùng `if (x instanceof Boolean ...)`.
+
+### FILES_CHANGED
+- `java-backend/infrastructure/…/worker/EmailOutboxDispatchWorker.java` (+ chú thích)
+- `java-backend/infrastructure/src/test/…/worker/EmailOutboxDispatchWorkerTest.java` — **+2 ca**: `enabledLaBoolean_tuMySQL_khongNemNumberFormatException` · `enabledBooleanFalse_boQuaKhongGui`
+
+### TEST — CHUỖI ĐỎ → XANH (bằng chứng §10/§24)
+| Bước | Kết quả |
+|---|---|
+| **TRƯỚC vá** | ❌ `Tests run: 5 · Failures: 0 · **Errors: 2**` — `NumberFormatException: For input string: "true"` + **`"false"`** (⭐ **đúng câu lỗi sản xuất**) |
+| **SAU vá** | ✅ `Tests run: 5 · Failures: 0 · Errors: 0` · **BUILD SUCCESS** |
+| **Hồi quy Java toàn bộ** | ✅ **86 test · 0 fail · 0 error** · BUILD SUCCESS |
+| **Triển khai** | ✅ dừng đúng PID `18081` → build fat jar (91 044 468 B) → chạy lại (PID **12972**) |
+| **VERIFIED — log SAU 130 giây (≥2 lượt worker)** | ✅ **`NumberFormatException` = 0 lần** (trước: mỗi 60 s một lần) |
+
+### RELATED
+`java-run.log` (29/09/2026) · `DEV-20261008-003` (bài học D-095) · `HANDOFF-20261008-002` (audit phiên)
+
+## BUG-20261008-003 (TT-1) — ✅ **ĐÃ VÁ + VERIFIED**: cấp 1 quyền qua modal ⇒ VÀO ĐƯỢC «Quản lý hệ thống»
+
+| ⭐ | ⭐ |
+|---|---|
+| **BUG_ID** | BUG-20261008-003 |
+| **DATE** | 2026-10-08 14:00:00 |
+| **SESSION_ID** | ERP-SESSION-01 (SESSION_A) |
+| **TRẠNG THÁI** | ✅ **VERIFIED** (user chốt hướng `DEC-20261008-003` = M-2) |
+
+### TRIỆU CHỨNG BAN ĐẦU
+Cấp 1 quyền (`admin_tab_06`) qua modal rồi đăng nhập ⇒ ⛔ **không có nhóm «QUẢN TRỊ HỆ THỐNG»** trong sidebar.
+
+### ROOT CAUSE — **3 CỔNG độc lập khoá theo ROLE**, ⛔ không chỉ 1 (⭐ bài học D-096)
+| # | Vị trí | Luật CŨ | Hệ quả đo được |
+|---|---|---|---|
+| ① | `page.tsx` `systemAdminMenuVisible` | chỉ `configuredModules` = **mảng menu TĨNH**, ⛔ thiếu 14 khoá `admin_tab_NN` | menu ⛔ **KHÔNG hiện** |
+| ② | `page.tsx` `accessDenied` (nhánh `admin`) | `!isAdminUser(...)` = **CHỈ role** | «CHƯA ĐƯỢC PHÂN QUYỀN» |
+| ③ | `page.tsx` render `<Admin …/>` | `isAdminUser(...)` = **CHỈ role** | thân màn **TRỐNG**, **0 tab**, ⛔ không có `.permission-steps` |
+
+⚠️ **BÀI HỌC (D-096)**: sửa ① thì menu hiện **NHƯNG thân màn TRỐNG** ⇒ nếu ⛔ không đo **từng cổng một**
+thì rất dễ kết luận sai «đã xong». 📏 Chuỗi đo thật: ①→0 tab (238 ký tự) · ①+②→hết câu chặn nhưng vẫn 0 tab
+· ①+②+③→**14 tab** ✓
+
+### FIX
+`CHG-20261008-004` — dùng **MỘT** luật cho cả 3 cổng: `isAdminUser(...) || hasAnyAdminGroupPermission`
+(bộ đếm `data.modulePermissions` nhận module `admin` **VÀ** `admin_tab_NN`).
+⛔ **KHÔNG** hạ rào tab **12/13/14** (`ADMIN_LOCKED_TABS`) — tab 12 có `FactoryResetAdmin` (XOÁ DỮ LIỆU) ✓
+
+### VERIFICATION — `TEST-20261008-006` (E2E, LƯU THẬT, đổi danh tính) ⇒ **11/11 ĐẠT**
+| Phép kiểm | TRƯỚC | SAU |
+|---|---|---|
+| `nav groups` có `system_admin` | ⛔ KHÔNG | ✅ **CÓ** |
+| Vào màn «DANH MỤC & PHÂN QUYỀN» | ⛔ «CHƯA ĐƯỢC PHÂN QUYỀN» | ✅ **VÀO ĐƯỢC** |
+| Tab quản trị hiện ra | **0** | ✅ **14** |
+| `.permission-steps` | ⛔ không có | ✅ **14 nút** |
+
+### REGRESSION
+✅ Cổng FE **925 test · 924 pass · 0 fail** (đã cập nhật `tests/m118-system-admin-menu-gate.test.mjs`
+theo **Ý ĐỊNH GỐC MỐC 118** của user — «kể cả 1 quyền cũng hiển thị menu» — ⛔ **không nới test**) ✓
+✅ Cổng UI: vân tay `891f9f19…` khớp SSOT · **6/6 bundle đúng byte**.
+✅ Java **86 test · 0 fail**.
+
+### RELATED
+`DEC-20261008-003` · `CHG-20261008-004` · `TEST-20261008-004` (phát hiện) · `TEST-20261008-006` (nghiệm thu)
+
+## BUG-20261008-005 — ✅ **ĐÃ VÁ + VERIFIED**: M-2 mở cổng ⇒ **LỘ 14 TAB quản trị** cho người chỉ có 1 quyền
+
+| ⭐ | ⭐ |
+|---|---|
+| **BUG_ID** | BUG-20261008-005 |
+| **DATE** | 2026-10-08 14:25:00 |
+| **SESSION_ID** | ERP-SESSION-01 (SESSION_A) |
+| **MODULE** | Màn «DANH MỤC & PHÂN QUYỀN» — 14 bước |
+| **SEVERITY** | **HIGH** (authorization/lộ phạm vi xem) |
+| **SOURCE** | SESSION_A **tự kiểm hệ quả** của chính `CHG-20261008-004` (M-2) — §45 |
+| **STATUS** | ✅ **FIXED + VERIFIED** |
+
+### PROBLEM — ⭐ TỰ GÂY, TỰ ĐO, TỰ VÁ
+Sau khi M-2 mở cổng vào màn quản trị cho người có ≥1 quyền trong nhóm, ⛔ **thân 14 bước render theo
+`step===N` mà KHÔNG kiểm quyền** (⚠️ `hasAdminTab` chỉ dùng ở 2 chỗ: nút «Sửa tài khoản» + bước 14)
+⇒ ⭐ người **chỉ được cấp `admin_tab_06`** vẫn **bấm được BƯỚC 01 «Tài khoản»** và thân bước render.
+
+### 📏 ĐO ĐƯỢC (`tools/probe-grant-1-perm-e2e.mjs`, E2E thật)
+| | TRƯỚC vá | SAU vá |
+|---|---|---|
+| Bước 01 «Tài khoản» bị khoá? | ⛔ **KHÔNG** (bấm được) | ✅ **CÓ** |
+| Số dòng bảng lộ ra | **1** | **0** |
+| Nút «Sửa tài khoản» | ✅ không (đã gate sẵn) | ✅ không |
+
+### ROOT CAUSE
+M-2 (`CHG-20261008-004`) **mở rộng được khả năng TỚI màn** (trước đây ⛔ chỉ `role=admin` ⇒ 14 tab
+⛔ không ai tới được) nhưng phần **gate theo TỪNG TAB trong UI thì chưa có** (quyền `admin_tab_NN` chỉ
+được dùng ở tầng **API** + nút hành động). ⇒ M-2 làm lộ phần chưa được gác.
+
+### FIX — ⭐ TÁI DÙNG LUẬT NHÀ (§17), ⛔ không tự chế
+`app/page.tsx`: thêm `duocXemBuoc(so)` dùng **helper có sẵn** `ADMIN_TAB_MODULE_KEY` +
+`adminTabGrantable` (`app/screens/admin-governance-pure.ts:69-79`):
+```ts
+const duocXemBuoc = (so) => {
+  if (isAdminUser(data.user)) return true;
+  if (so === 14) return coQuyenBaoLoi;                 // ⛔ giữ NGUYÊN luật cũ (bản vá BUG-B)
+  if (!adminTabGrantable(so)) return false;             // 12 · 13 — KHOÁ cho user thường (luật nhà)
+  return hasAdminTab(data, ADMIN_TAB_MODULE_KEY[so-1]); // ⭐ quyền CỦA CHÍNH bước đó
+};
+```
+➕ nút bước dùng cùng luật (`disabled`) ➕ **kẹp `step` về bước ĐẦU TIÊN được xem** (⚠️ mặc định `step=1`
+⇒ ⛔ không kẹp thì người thiếu tab 01 vẫn thấy thân bước 01); ⛔ không bước nào ⇒ `0` (sentinel, ⛔ không render).
+
+### ⚠️ LỖI PHỤ ĐÃ GẶP + SỬA (ghi để ⛔ không lặp)
+`useEffect(..., [step, active, data.user?.id])` ⇒ **`tsc` TS2304 «Cannot find name 'active'»** —
+`active` thuộc component **CHA**, ⛔ không có trong `Admin`. ✅ Bỏ `active` khỏi danh sách phụ thuộc.
+⭐ **BÀI HỌC**: `npm run build` ⛔ **KHÔNG** chặn lỗi này (build vẫn ĐẠT) — ⭐ **PHẢI chạy `npx tsc --noEmit`**
+mới thấy ✓
+
+### TEST + REGRESSION
+✅ E2E `TEST-20261008-006` **11/11** (menu hiện · vào màn · 14 tab hiện · **bước không có quyền BỊ KHOÁ**)
+✅ Cổng FE **925 test · 924 pass · 0 fail** · ✅ Cổng UI `6/6 bundle đúng byte` · vân tay `12eb928f…` khớp SSOT
+
+### RELATED
+`CHG-20261008-004` (M-2 — nguyên nhân) · `DEC-20261008-003` · `TEST-20261008-006`
+
+## BUG-20261008-006 — ✅ **ĐÃ VÁ + VERIFIED**: gate bước quản trị đọc **SAI NGUỒN QUYỀN** + nút khoá ⛔ không nhìn thấy được
+
+| ⭐ | ⭐ |
+|---|---|
+| **BUG_ID** | BUG-20261008-006 |
+| **DATE** | 2026-10-08 15:40:00 |
+| **SESSION_ID** | ERP-SESSION-01 (SESSION_A) |
+| **MODULE** | Màn «DANH MỤC & PHÂN QUYỀN» — dải 14 bước |
+| **SEVERITY** | **HIGH** (chặn oan người CÓ quyền — authorization sai chiều) |
+| **SOURCE** | SESSION_A tự đo sau `BUG-20261008-005` (§45) |
+| **STATUS** | ✅ **FIXED + VERIFIED** |
+
+### ① LỖI CHÍNH — ĐỌC SAI NGUỒN QUYỀN (⛔ CHẶN OAN)
+📏 **ĐO ĐƯỢC** (E2E `tools/probe-grant-1-perm-e2e.mjs`):
+```
+[KHOÁ] bước 01 class="locked" · bước 06 class="locked"
+[KHOÁ] bước 06 có 'locked'? ⛔ CÓ (SAI — bước này được cấp quyền)
+```
+⚠️ Tài khoản **ĐÃ được cấp `admin_tab_06`** (menu hiện, nav có `system_admin`) nhưng bước 06 vẫn **bị khoá**.
+
+**ROOT CAUSE**: bản vá `BUG-20261008-005` gọi helper **`hasAdminTab(data, key)`** — hàm này
+(`app/screens/AdminUserModalTabs.tsx:18-24`) đọc **`data.allModulePermissions`** ⛔ **KHÔNG** phải
+`data.modulePermissions`. Hai nguồn KHÁC NHAU:
+| Nguồn | Nội dung |
+|---|---|
+| `data.modulePermissions` | quyền của **CHÍNH người đang đăng nhập** — ⭐ `lib/permissions.ts:17` dùng nguồn này |
+| `data.allModulePermissions` | quyền của **MỌI người** (màn quản trị cần để vẽ ma trận) |
+
+⇒ ⭐ Menu dùng `modulePermissions` (đúng ⇒ hiện) nhưng gate bước dùng `allModulePermissions` (sai ⇒ ẩn) ⇒ **lệch nhau**.
+
+**FIX** (`app/page.tsx`): ➕ `coQuyenTab(key)` đọc **`data.modulePermissions`** của chính người dùng —
+⭐ **cùng nguồn** với `hasAnyAdminGroupPermission` (đã chứng minh chạy đúng) và với `modulePermission(...)`
+của nhà ⇒ ⛔ không còn hai nguồn lệch nhau.
+
+### ② LỖI PHỤ — TRẠNG THÁI KHOÁ ⛔ KHÔNG NHÌN THẤY ĐƯỢC (§22)
+📏 Repo **ĐÃ CÓ** rule `.permission-steps button.locked` (xám + `cursor:not-allowed`) trong
+`app/globals.css` — ghi ở `docs/dsh-state/CHECKLIST.md` dòng 36 = **DONE** và `TASK_HISTORY.md:104`.
+⚠️ **NHƯNG** cả bản cũ lẫn bản vá `BUG-005` ⛔ **chưa từng gắn class `locked`** ⇒ người dùng ⛔ không
+phân biệt được bước nào bị khoá (chỉ mờ 55% chung của `button:disabled`) ✓
+**FIX**: gắn `locked` cho bước ⛔ không có quyền — ⭐ theo đúng luật nhà (§17), ⛔ không tự chế CSS mới.
+
+### ĐO LẠI — SAU VÁ
+| | TRƯỚC | SAU |
+|---|---|---|
+| bước 01 (⛔ không quyền) | `locked` | ✅ `locked` |
+| **bước 06 (CÓ quyền)** | ⛔ **`locked`** (SAI) | ✅ **`active`** |
+| bước 01 bấm được? | ✅ bị khoá | ✅ bị khoá (0 thân bước 01) |
+
+⭐ E2E **11/11 ĐẠT** · cổng FE **925 test · 924 pass · 0 fail** · `tsc` EXIT 0 · cổng UI **6/6 bundle đúng byte**.
+
+### ⚠️ GHI CHÚ PHÉP ĐO (⛔ không che)
+Dòng `[LEAK] … 1 dòng bảng` sau bản vá là **⛔ KHÔNG phải lộ dữ liệu**: bước 01 bị `disabled` nên cú
+`click` ⛔ không điều hướng; bảng đếm được là của **bước 06** (bước được phép, do luật kẹp `step`).
+📌 Tiêu chí đúng là **`biKhoa: ✅ CÓ`** + `class="locked"` — ⚠️ nên đổi phép đo sang *khớp tiêu đề bước*
+ở lần sau (⛔ chưa làm để tiết kiệm lượt).
+
+### RELATED
+`BUG-20261008-005` (bản vá trước) · `CHG-20261008-004` (M-2) · `TEST-20261008-006` · `HANDOFF-20261008-009`
+
+## BUG-20261008-007 — 🚨 **SỰ CỐ DO PHÉP ĐO CỦA CHÍNH S01**: probe XOÁ liên kết dự án của một KHO THẬT ⇒ cổng `W-02` ĐỎ
+
+| ⭐ | ⭐ |
+|---|---|
+| **BUG_ID** | BUG-20261008-007 |
+| **DATE** | 2026-10-08 17:35:00 |
+| **SESSION_ID** | ERP-SESSION-01 (SESSION_A) |
+| **SEVERITY** | **HIGH** (⚠️ ghi vào DỮ LIỆU THẬT — đã khôi phục) |
+| **SOURCE** | S01 tự phát hiện khi cổng FE ĐỎ sau khi chạy probe của mình |
+| **STATUS** | ✅ **ĐÃ KHÔI PHỤC + ĐÃ CHẶN TÁI PHÁT** |
+
+### SỰ VIỆC (⭐ trình tự thật, ⛔ không tô hồng)
+1. S01 chạy `tools/probe-warehouse-api.mjs` **2 lượt** ⇒ mỗi lượt **TẠO 1 KHO MỚI** (`WH-E2E-*`).
+2. ⚠️ Hệ thống **CỐ Ý ⛔ không có API xoá kho** (`ALLOW_DELETE_WAREHOUSE=false`) ⇒ probe ⛔ **không thể tự dọn**.
+3. CSDL thật `warehouses` **12 → 14** ⇒ cổng `W-02` (kiểm số dòng khớp tệp audit) **ĐỎ**.
+4. S01 **xoá tay** 2 dòng rác (đã kiểm **0 tham chiếu con** trước khi xoá) ⇒ về 12.
+5. ⚠️⚠️ **NHƯNG cổng VẪN ĐỎ** ⇒ đo lại: `kho=12 · dự án=5 · **kho gắn dự án=9**` (audit ghi 10).
+6. 🔎 **NGUYÊN NHÂN THẬT**: bản sửa «chế độ an toàn» của probe chọn **KHO CÓ SẴN** để đo —
+   trúng **`KHO-DA-MAU-01`** (kho DỰ ÁN) — và gửi `save_warehouse` **⛔ THIẾU `projectId`**.
+   ⚠️ `saveWarehouse` ghi `project_id = projectId.isEmpty() ? null : projectId`
+   ⇒ ⭐ **payload thiếu `projectId` = XOÁ LIÊN KẾT DỰ ÁN** ⇒ kho DỰ ÁN thành kho TỔNG ⇒ `gắn dự án` 10 → **9**.
+   ⚠️ Phần «dọn» của probe chỉ trả lại **TÊN** ⇒ ⛔ không trả `project_id`.
+7. ✅ **KHÔI PHỤC**: `UPDATE warehouses SET project_id='PRJ_cfba8c1a…' WHERE code='KHO-DA-MAU-01'`
+   ⇒ đo lại **12 / 5 / 10** — ⭐ **KHỚP audit** ✓
+
+### ✅ ĐÃ CHẶN TÁI PHÁT (2 lớp)
+| # | Thay đổi | Nội dung |
+|---|---|---|
+| ① | Probe **chế độ MẶC ĐỊNH = DÙNG KHO CÓ SẴN** | ⛔ không tạo kho mới ⇒ ⛔ không sinh rác; tạo mới chỉ khi `ALLOW_CREATE=1` **kèm cảnh báo phải tự dọn DB** |
+| ② | Probe **GỬI LẠI MỌI TRƯỜNG GỐC** khi sửa + khi dọn | ⭐ `projectId` GỐC + `name` GỐC + `active` GỐC ⇒ ⛔ không xoá thứ nó không định đổi |
+| ③ | Thêm ca **«DỌN: kho có sẵn được HOÀN NGUYÊN»** | cổng tự kiểm việc hoàn nguyên ⇒ ⛔ không im lặng phá dữ liệu |
+
+### 📌 LUẬT RÚT RA — ⭐ CHO **MỌI PHIÊN** (D-097)
+> **`save_warehouse` là UPSERT TOÀN PHẦN trên các cột của nó**: trường ⛔ **vắng mặt** (hoặc rỗng)
+> ⇒ bị ghi **NULL** ⚠️ — ⛔ **không** phải «giữ nguyên».
+> ⇒ ⭐ **MỌI probe/script sửa kho PHẢI gửi lại giá trị GỐC của các trường không định đổi**
+> (`projectId` · `name` · `active`) — ⛔ nếu không sẽ **âm thầm xoá liên kết dự án** và làm ĐỎ cổng `W-02` ✓
+> ⚠️ Ghi chú cho phiên 02: `WarehouseFormModal` **AN TOÀN** vì khởi tạo `projectId` từ `row?.projectId`
+> (`:51`) ⇒ gửi lại đúng dự án hiện có ✓ — ⭐ rủi ro chỉ ở phía **probe/script viết tay**.
+
+### BẰNG CHỨNG SAU KHI SỬA
+✅ Probe `tools/probe-warehouse-api.mjs`: **7/7 ĐẠT** (chế độ an toàn) · ✅ chạy xong CSDL **vẫn 12/5/10** (⛔ không đổi)
+✅ Cổng `W-02` **XANH** · ✅ cổng FE **939 test · 938 pass · 0 fail** ✓
+
+### RELATED
+`TEST-20261008-009` · `CHG-20261008-005` · `HANDOFF-20261008-009` · `tools/mt3-measure-w02.mjs` (đo chỉ-đọc)
+
+## BUG-20261008-008 — ✅ **ĐÃ VÁ + VERIFIED**: `hasAdminTab` **LUÔN FALSE cho non-admin** ⇒ quyền uỷ nhiệm ⛔ vô hiệu + nút «Sửa tài khoản» ⛔ không bao giờ hiện
+
+| ⭐ | ⭐ |
+|---|---|
+| **BUG_ID** | BUG-20261008-008 |
+| **DATE** | 2026-10-08 18:20:00 |
+| **SESSION_ID** | ERP-SESSION-01 (SESSION_A) |
+| **MODULE** | Màn quản trị — nút «Sửa tài khoản» (`app/page.tsx:1847`) |
+| **SEVERITY** | **HIGH** (quyền uỷ nhiệm qua CẤU HÌNH ⛔ **không có tác dụng UI**) |
+| **SOURCE** | S01 tự phát hiện khi đo E2E M-2 (`tools/probe-grant-1-perm-e2e.mjs`) |
+| **STATUS** | ✅ **FIXED + VERIFIED** |
+
+### PROBLEM — 📏 ĐO ĐƯỢC
+Tài khoản ĐÃ được cấp `admin_tab_06` (menu «QUẢN TRỊ HỆ THỐNG» hiện, vào được màn) **mà `hasAdminTab(...)` trả `false`**.
+
+### ROOT CAUSE — ⭐ **2 NGUỒN QUYỀN**, hàm đọc nhầm nguồn (⭐ CÙNG LỚP `BUG-20261008-006`)
+`hasAdminTab` (`app/screens/AdminUserModalTabs.tsx`) **CHỈ** đọc `data.allModulePermissions`, lọc theo `p.userId === me`.
+📏 Mà `BootstrapDataAdapter.java:943`:
+```java
+data.put("allModulePermissions", admin ? query(…) : …)   // ⭐ CHỈ đổ khi admin === true
+```
+⇒ ⭐ với **MỌI non-admin**, `allModulePermissions` **RỖNG** ⇒ `hasAdminTab` **⛔ LUÔN trả FALSE**
+⇒ ⚠️ hệ quả: nút **«Sửa tài khoản»** (`page.tsx:1847` — `hasAdminTab(data,"admin_tab_01")||role==="admin"`)
+⛔ **KHÔNG BAO GIỜ HIỆN** với người được **uỷ nhiệm** `admin_tab_01` ⇒ cấp quyền qua cấu hình **vô hiệu** ✓
+
+### FIX (⛔ KHÔNG phá hành vi cũ — chỉ THÊM vế)
+```ts
+if (khop(data.allModulePermissions, /* lọc theo mình */ true)) return true;   // ⭐ giữ nguyên đường cũ
+return khop(data.modulePermissions, /* ⛔ KHÔNG lọc: đã là của chính họ */ false);  // ⭐ NGUỒN LUÔN CÓ
+```
+⚠️ `data.modulePermissions` = quyền của **CHÍNH người đang đăng nhập** (`lib/permissions.ts:17`) ⇒ dòng ⛔ **không có `userId`** ⇒ ⛔ không được lọc theo `userId` ở nguồn 2 ✓
+
+### TEST — ⬆ MỚI `tests/has-admin-tab-source.test.mjs` (**6 ca**, hàm thuần ⇒ rẻ + chặt)
+| Ca | Kỳ vọng |
+|---|---|
+| ⭐ **non-admin**, `allModulePermissions` rỗng, `modulePermissions` CÓ quyền | **true** (⭐ ca đã hỏng) |
+| admin (có `allModulePermissions`) | true (⛔ không phá đường cũ) |
+| ⛔ không cấp quyền / khoá khác / `canView=0` | false |
+| ⛔ quyền của **NGƯỜI KHÁC** | **false** (⚠️ nếu true ⇒ LỘ QUYỀN) |
+| ⛔ chưa đăng nhập | false |
+
+⭐ **ĐÃ CHỨNG MINH CỔNG CÓ THỂ ĐỎ**: tạm bỏ vế dự phòng ⇒ ca 1 **ĐỎ** (`# fail 1`) ⇒ khôi phục (**hash khớp**) ⇒ **6/6 xanh** ✓
+
+### BẰNG CHỨNG SAU KHI VÁ
+✅ `tsc` EXIT 0 · ✅ **cổng FE 946 test · 945 pass · 0 fail** · ✅ build + triển khai (vân tay `12065a0a…` khớp SSOT · **6/6 bundle đúng byte**)
+
+### ⚠️ GHI CHÚ ⛔ KHÔNG CHE
+⏸ **CHƯA** đo được đường **UI thật** (đăng nhập non-admin được uỷ nhiệm `admin_tab_01` ⇒ **thấy nút «Sửa tài khoản»**):
+⚠️ nút đó nằm trong **bảng tài khoản** mà màn quản trị chỉ mở được khi có quyền — chuỗi E2E này nên bổ sung ở lượt sau ✓
+⭐ Hiện mới chứng minh: **hàm trả đúng** + **bundle mới** + **hồi quy xanh**.
+
+### RELATED
+`BUG-20261008-006` (cùng lớp «2 nguồn quyền») · `CHG-20261008-004` (M-2) · `TEST-20261008-006`
+
+## BUG-20261008-010 — 🟠 **OPEN (⛔ KHÔNG thuộc S01)**: 2 action đáng lẽ **ADMIN-ONLY** đã bị **NỚI QUYỀN** ⇒ cổng `TM-04` ĐỎ
+
+| ⭐ | ⭐ |
+|---|---|
+| **BUG_ID** | BUG-20261008-010 |
+| **DATE** | 2026-10-08 19:10 · **SESSION phát hiện** ERP-SESSION-01 |
+| **MODULE** | `site_command` / quản lý TỔ ĐỘI DỰ ÁN (`set_project_team_status` · `delete_project_team`) |
+| **SEVERITY** | **HIGH** (nới quyền ngoài chủ đích — ⚠️ nhóm `site_command`) |
+| **OWNER ĐỀ NGHỊ** | `ERP-SESSION-03` (nhóm project teams) — ⭐ **S01 ⛔ KHÔNG tự sửa** (§20: báo cáo, ⛔ không chiếm việc) |
+| **STATUS** | 🟠 **OPEN — đã báo, chưa sửa** |
+
+### 📏 BẰNG CHỨNG (⭐ `git diff` — ⛔ không phải thay đổi của S01)
+```
+-            Map.entry("set_project_team_status", List.of()),
++            Map.entry("set_project_team_status", List.of("site_command")),      ⛔ NỚI QUYỀN
+-            Map.entry("set_project_team_status", "canUse"),
++            Map.entry("set_project_team_status", "canEdit"),                     ⛔ NỚI QUYỀN
++            Map.entry("delete_project_team", List.of("site_command")),           ⛔ NỚI QUYỀN
+```
+⚠️ Đối chiếu **ngay trong tệp**, dòng 96 (`ActionRbacRegistry.java`) ghi:
+> «⛔ **KHÔNG nới** cho 2 action còn lại (xem `delete_project_team`/`set_project_team_status` — **JS chỉ cho admin**)»
+
+⇒ ⭐ **MÃ đang MÂU THUẪN với CHÚ THÍCH của chính nó** ⇒ cổng `tests/tm04-team-crud.test.mjs` bắt đúng:
+```
+AssertionError: set_project_team_status phải là ADMIN-ONLY (JS :1716/:1720 = requireRole(["admin"]))
+                — ⛔ không nới module    ·  actual: false, expected: true
+```
+
+### ⛔ VÌ SAO S01 KHÔNG TỰ SỬA
+1. Action thuộc **nhóm project teams** — ⛔ không nằm trong phạm vi S01 («PHÂN QUYỀN + BÁO LỖI + MUA HÀNG/GIAO NHẬN»).
+2. ⚠️ Có thể là **chủ đích mới chưa cập nhật test** (hoặc ngược lại) ⇒ ⭐ phải do **người sở hữu nhóm đó** quyết, ⛔ S01 không tự đổi quyền của người khác ✓
+3. ⭐ S01 **đã xác minh** nó ⛔ **không** do mình: 3 action S01 thêm/đổi là `save_user_access` (PA-1) · `save_warehouse` · `set_warehouse_status` — ⛔ không dòng nào là `*_project_team_*` ✓
+
+### ĐỀ NGHỊ (⛔ S01 không quyết thay)
+♻️ **Một trong hai** — cần `ERP-SESSION-03` chốt:
+· **(a)** Trả 2 action về **ADMIN-ONLY** (`List.of()` + capability cũ) ⇒ khớp chú thích L96 + test `TM-04` ✓
+· **(b)** Nếu **CỐ Ý** mở cho `site_command` ⇒ ⭐ phải **cập nhật chú thích L96 + test `TM-04` kèm lý do**, ⛔ không để mã và cổng đá nhau ✓

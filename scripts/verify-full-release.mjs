@@ -14,13 +14,34 @@ const migrationHeadNumber = Number.parseInt(String(identity.MIGRATION_HEAD).slic
 if (!Number.isInteger(migrationHeadNumber)) throw new Error(`Migration head không hợp lệ: ${identity.MIGRATION_HEAD}.`);
 const expectedMigrationCount = migrationHeadNumber + 1;
 const expectedMigrationRange = `0000..${String(migrationHeadNumber).padStart(4, "0")}`;
-if (migrations.length !== expectedMigrationCount) throw new Error(`Migration chain phải có đúng ${expectedMigrationCount} file (${expectedMigrationRange}), nhận ${migrations.length}.`);
-for (let index = 0; index < migrations.length; index += 1) {
-  if (!migrations[index].startsWith(String(index).padStart(4, "0") + "_")) {
-    throw new Error(`Migration chain bị đứt tại thứ tự ${String(index).padStart(4, "0")}.`);
-  }
+// ⭐ `BUG-D06` — `drizzle/**` có 393 file nhưng chỉ **353 MÃ SỐ**: `*_identity.sql` là **LÀM MỚI FINGERPRINT**
+//    (*«Không đổi nghiệp vụ và không đổi schema»*) và **40 cặp TRÙNG MÃ SỐ** được ghi **CÙNG MỘT THỜI ĐIỂM**
+//    (`mtime` 40/40 cặp lệch **0 giây** ⇒ hai phiên `gd-cycle` chạy ĐỒNG THỜI).
+//    ⛔ KHÔNG xoá file nào: mỗi file là **1 lần làm mới fingerprint của một dòng công việc**, và bộ theo dõi
+//    `__mep_migrations` khoá theo **TÊN ĐẦY ĐỦ** ⇒ xoá/đổi tên là mất/thêm một lần áp.
+//    ⇒ Cổng kiểm **CHUỖI MÃ SỐ** (mạnh hơn đếm file): mỗi mã `0000..head` phải có **≥1** file, ⛔ không vượt head,
+//      và **trùng mã CHỈ được phép với `*_identity.sql`** (⛔ hai migration schema cùng mã là lỗi thật).
+//    ⚠️ ĐO THẬT 40 nhóm trùng: **38 nhóm = cả hai đều identity** · **2 nhóm = 1 file KHÔNG-identity + 1 identity**
+//    · **0 nhóm có >1 file KHÔNG-identity** ⇒ luật đúng bản chất: **một mã chỉ được chứa TỐI ĐA 1 migration
+//    KHÔNG-identity** (migration thật), còn `*_identity.sql` thì bao nhiêu cũng được ⇒ ⛔ VẪN CHẶN được lỗi thật
+//    (hai migration SCHEMA cùng một mã).
+const byNumber = new Map();
+for (const name of migrations) {
+  const key = name.slice(0, 4);
+  if (!byNumber.has(key)) byNumber.set(key, []);
+  byNumber.get(key).push(name);
 }
-if (migrations.at(-1) !== identity.MIGRATION_HEAD) throw new Error(`Migration head FULL W2 sai: ${migrations.at(-1)}.`);
+for (let index = 0; index < expectedMigrationCount; index += 1) {
+  const key = String(index).padStart(4, "0");
+  if (!byNumber.has(key)) throw new Error(`Migration chain bị đứt tại ${key} (${expectedMigrationRange}).`);
+}
+for (const [key, names] of byNumber) {
+  if (Number(key) > migrationHeadNumber) throw new Error(`Có migration vượt head ${expectedMigrationRange}: ${names.join(", ")}.`);
+  const notIdentity = names.filter((name) => !/_identity\.sql$/.test(name));
+  if (notIdentity.length > 1) throw new Error(`Mã số ${key} có ${notIdentity.length} migration ⛔ KHÔNG phải identity: ${notIdentity.join(", ")}.`);
+}
+if (!(byNumber.get(String(migrationHeadNumber).padStart(4, "0")) || []).includes(identity.MIGRATION_HEAD))
+  throw new Error(`Migration head FULL W2 sai: ${identity.MIGRATION_HEAD}.`);
 
 const marker = readFileSync(join(root, "VNTECH_FULL_W2_ID.txt"), "utf8");
 for (const expected of [

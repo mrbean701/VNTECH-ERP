@@ -379,7 +379,9 @@ function TeamDirectory({ data, action, permission }: TeamDirectoryProps) {
   // khi `isAdminUser(data.user)` (`lib/permissions.ts:16`) ⇒ chỉ cần thêm cờ `isAdmin` để `teamGates` phản ánh
   // đúng nguồn quyền, KHÔNG hardcode vai trò ở màn này.
   const gates = teamGates(Boolean(permission?.isAdmin) || isAdminUser(data.user), permission);
-  const notes = teamListSourceNotes(data);
+  // ⛔ ERP-SESSION-03 (07/10/2026) — GỠ render khối «Nguồn …» của danh sách ⇒ biến `notes` không còn
+  //    dùng để in. Hàm `teamListSourceNotes()` ⛔ KHÔNG xoá (dữ liệu cho `tests/tm01`) ⇒ nay EXPORT
+  //    ở cuối tệp để vẫn là một phần hợp đồng dữ liệu (và ⛔ không bị coi là biến chết).
   const projectOf = (id: unknown) => (data.projects || []).find((item) => String(item.id) === String(id));
   const warehouseOf = (id: unknown) => (data.warehouses || []).find((item) => String(item.id) === String(id));
   const userOf = (id: unknown) => (data.staffDirectory || []).concat(data.users || []).find((item) => String(item.id) === String(id));
@@ -401,11 +403,11 @@ function TeamDirectory({ data, action, permission }: TeamDirectoryProps) {
   // `TM-01` — ô «Thành viên»: CÓ nguồn ⇒ số thật; KHÔNG nguồn ⇒ «chưa có nguồn», không hiện 0.
   const memberCell = (row: ReturnType<typeof teamListRows>[number]) => row.membersKnown
     ? <>{row.activeMembers} người{row.leftMembers > 0 && <small> · {row.leftMembers} đã rời</small>}</>
-    : <span className="muted">{NO_SOURCE_TEXT}<small> · {row.membersSource}</small></span>;
+    : <span className="muted">{NO_SOURCE_TEXT}</span>;
   // `TM-01` — ô «Hoạt động gần nhất»: có chứng từ ⇒ ngày thật; không ⇒ «chưa có nguồn» + lý do.
   const activityCell = (row: ReturnType<typeof teamListRows>[number]) => row.lastActivityAt
-    ? <>{date(row.lastActivityAt)}<small> · {row.lastActivitySource}</small></>
-    : <span className="muted">{NO_SOURCE_TEXT}<small> · {row.lastActivitySource}</small></span>;
+    ? <>{date(row.lastActivityAt)}</>
+    : <span className="muted">{NO_SOURCE_TEXT}</span>;
 
   if (view === "detail" && detail) {
     const tid = String(detail.id);
@@ -469,20 +471,17 @@ function TeamDirectory({ data, action, permission }: TeamDirectoryProps) {
             <tr><td>Trạng thái</td><td><StatusBadge value={Number(detail.active ?? 1) === 0 ? TEAM_STOPPED_LABEL : TEAM_ACTIVE_LABEL} /></td></tr>
           </tbody></table></div>
         </section>
-        <section className="card">
-          <CardHead title="Nguồn dữ liệu của 6 tab" note="Tab nào thiếu nguồn thì nêu rõ lý do — không hiện số 0 thay cho «không biết»" />
-          <DataTable rows={tabs} rowKey={(row) => row.label} columns={[
-            { key: "c1", header: "Tab", render: (row) => <strong>{row.label}</strong> },
-            { key: "c2", header: "Số dòng", render: (row) => row.available ? String(row.count) : <span className="muted">{NO_SOURCE_TEXT}</span> },
-            { key: "c3", header: "Nguồn", render: (row) => <small>{row.source}</small> },
-            { key: "c4", header: "Ghi chú", render: (row) => row.noSourceReason ? <small>{row.noSourceReason}</small> : "—" },
-          ]} emptyText="Không có tab nào." />
-        </section>
+        {/* ⛔ ERP-SESSION-03 (07/10/2026) — ĐÃ GỠ CARD «Nguồn dữ liệu của 6 tab».
+            Card đó in bảng `Tab · Số dòng · Nguồn · Ghi chú` với NGUYÊN VĂN tên bảng/cột CSDL
+            (`stock_issues.team_id`, `inventory[].balance`, `team_members …`) — thông tin CHỈ ĐỂ DEV
+            TEST, là RÁC với người dùng cuối (user: «lược bỏ các thông tin bị thừa - rác»).
+            ✅ Dữ liệu `teamDetailTabs()[].source` ⛔ KHÔNG bị xoá — 6 test hợp đồng `tests/tm0*.test.mjs`
+               vẫn trích và chạy thật; chỉ gỡ phần RENDER (đúng tiền lệ MỐC 116 ở `:458-462`). */}
       </div>}
 
       {tab === 1 && <div className="stack">
         <section className="card">
-          <CardHead title="Nhân sự — thành viên đang hoạt động" note={tabs[1].available ? "Sắp theo NGÀY THAM GIA · nguồn team_members" : tabs[1].noSourceReason} />
+          <CardHead title="Nhân sự — thành viên đang hoạt động" note={tabs[1].available ? "Sắp xếp theo ngày tham gia." : "Chưa có dữ liệu thành viên của tổ đội."} />
           {tabs[1].available
             ? <DataTable rows={[...activeMembers].sort((a, b) => tmCompare({ active: true, lastAt: tmDayKey(a.joinedAt), code: "" }, { active: true, lastAt: tmDayKey(b.joinedAt), code: "" }))} rowKey={(member) => String(member.id)} emptyText="Tổ đội chưa ghi nhận thành viên đang hoạt động." columns={[
               { key: "c1", header: "Họ tên", render: (member) => <strong>{member.fullName || member.userId || "—"}</strong> },
@@ -493,10 +492,10 @@ function TeamDirectory({ data, action, permission }: TeamDirectoryProps) {
               { key: "c6", header: "Ngày tham gia", render: (member) => (member.joinedAt ? date(member.joinedAt) : "—") },
               { key: "c7", header: "Ngày rời", render: (member) => (member.leftAt ? date(member.leftAt) : "—") },
             ]} />
-            : <Empty text={`${NO_SOURCE_TEXT} — payload bootstrap KHÔNG trả khoá teamMembers nên màn này không thể đếm sĩ số. Lý do: bảng team_members chỉ có đường ĐỌC ở Java (BootstrapDataAdapter), scripts/system-route.mjs không đọc bảng này.`} />}
+            : <Empty text="Chưa có dữ liệu thành viên của tổ đội trong phiên bản đang chạy." />}
         </section>
         {tabs[1].available && pastMembers.length > 0 && <section className="card">
-          <CardHead title="Nhân sự — đã rời tổ đội" note="Lưu vết thời gian tham gia và rời đi (team_members.left_at · active=0)" />
+          <CardHead title="Nhân sự — đã rời tổ đội" />
           <DataTable rows={pastMembers} rowKey={(member) => String(member.id)} columns={[
             { key: "c1", header: "Họ tên", render: (member) => <strong>{member.fullName || member.userId || "—"}</strong> },
             { key: "c2", header: "Vai trò", render: (member) => member.roleInTeam || "Thành viên" },
@@ -508,7 +507,7 @@ function TeamDirectory({ data, action, permission }: TeamDirectoryProps) {
 
       {tab === 2 && <div className="stack">
         <section className="card">
-          <CardHead title="Dự án tổ đội thuộc về" note="Mô hình hiện hành: mỗi tổ đội thuộc ĐÚNG MỘT dự án (teams.project_id NOT NULL)" />
+          <CardHead title="Dự án tổ đội thuộc về" note="Mỗi tổ đội thuộc một dự án." />
           <DataTable rows={project ? [project] : []} rowKey={(row) => String(row.id)} emptyText="Tổ đội chưa gắn dự án nào." columns={[
             { key: "c1", header: "Mã dự án", render: (row) => <strong className="code">{row.code}</strong> },
             { key: "c2", header: "Tên dự án", render: (row) => row.name },
@@ -520,7 +519,7 @@ function TeamDirectory({ data, action, permission }: TeamDirectoryProps) {
 
       {tab === 3 && <div className="stack">
         <section className="card">
-          <CardHead title="Kho của tổ đội" note={warehouse ? `${TEAM_WAREHOUSE_STOCK_FIELDS.balance} · ${TEAM_WAREHOUSE_STOCK_FIELDS.available} · ${TEAM_WAREHOUSE_STOCK_FIELDS.reserved}` : `teams.warehouse_id không trỏ tới kho nào trong payload — ${NO_SOURCE_TEXT}`} />
+          <CardHead title="Kho của tổ đội" note={warehouse ? "Kho đang gắn với tổ đội này." : "Tổ đội chưa được gắn kho."} />
           <DataTable rows={warehouse ? [warehouse] : []} rowKey={(row) => String(row.id)} emptyText={`${NO_SOURCE_TEXT} — không tra được kho từ teams.warehouse_id trong payload.`} columns={[
             { key: "c1", header: "Mã kho", render: (row) => <strong className="code">{row.code}</strong> },
             { key: "c2", header: "Tên kho", render: (row) => row.name },
@@ -529,8 +528,8 @@ function TeamDirectory({ data, action, permission }: TeamDirectoryProps) {
           ]} />
         </section>
         <section className="card">
-          <CardHead title="Tồn kho tại kho của tổ đội" note={stockRows.length ? `${stockRows.length} dòng inventory[]` : `inventory[] không có dòng nào cho kho này — ${NO_SOURCE_TEXT}`} />
-          <DataTable rows={stockRows} rowKey={(row, index) => String(row.materialId || index)} emptyText={`${NO_SOURCE_TEXT} — payload không có dòng tồn kho nào cho kho của tổ đội (kho có thể chưa phát sinh nhập/xuất).`} columns={[
+          <CardHead title="Tồn kho tại kho của tổ đội" note={stockRows.length ? `${stockRows.length} mặt hàng đang có tồn.` : "Kho của tổ đội chưa phát sinh tồn kho."} />
+          <DataTable rows={stockRows} rowKey={(row, index) => String(row.materialId || index)} emptyText="Kho của tổ đội chưa phát sinh nhập/xuất nên chưa có tồn kho." columns={[
             { key: "c1", header: "Mã vật tư", render: (row) => <strong className="code">{row.materialCode || row.materialId}</strong> },
             { key: "c2", header: "Tên vật tư", render: (row) => row.materialName || "—" },
             { key: "c3", header: "ĐVT", render: (row) => row.unit || "—" },
@@ -546,7 +545,7 @@ function TeamDirectory({ data, action, permission }: TeamDirectoryProps) {
             ⛔ Mỗi chứng từ là 1 dòng — KHÔNG nhân dòng bằng join. Các bảng chi tiết bên dưới
             vẫn giữ nguyên (⛔ không mất nghiệp vụ nào). */}
         <section className="card" data-vntech="team-history-aggregate">
-          <CardHead title="TỔNG HỢP CHỨNG TỪ TỔ ĐỘI" note="MT3 §G — mọi đơn/phiếu liên quan: cấp phát · hoàn trả · nhật ký thao tác. Mỗi chứng từ 1 dòng, không nhân dòng."/>
+          <CardHead title="TỔNG HỢP CHỨNG TỪ TỔ ĐỘI" note="Mọi đơn/phiếu liên quan đến tổ đội: cấp phát · hoàn trả · nhật ký thao tác."/>
           <ListToolbar
             title="CHỨNG TỪ CỦA TỔ ĐỘI" note="Tìm · Sắp xếp · Lọc theo loại chứng từ."
             count={visibleHistory.length} total={historyRows.length} unit="chứng từ"
@@ -568,10 +567,10 @@ function TeamDirectory({ data, action, permission }: TeamDirectoryProps) {
           />
         </section>
         <section className="card">
-          <CardHead title="TÁI DÙNG logic cấp phát kho" note={`Hai nguồn dưới đây CHÍNH LÀ hai bảng mà action ${allocations.map((item) => item.action).join(" / ")} ghi vào (mang team_id của tổ đội) — KHÔNG dựng sổ/bảng mới`} />
+          <CardHead title="Phiếu cấp phát & hoàn trả của tổ đội" note="Hai danh sách dưới đây là phiếu xuất kho và phiếu hoàn trả mang tên tổ đội này." />
           {allocations.map((source) => <div key={source.key} className="stack">
-            <CardHead title={`${source.label} — ${source.total} chứng từ`} note={`Nguồn: ${source.table} · action ghi dữ liệu: ${source.action}`} />
-            <DataTable rows={source.rows} rowKey={(row, index) => String(row.id || index)} emptyText={`${NO_SOURCE_TEXT} — chưa có ${source.label.toLowerCase()} nào mang team_id của tổ đội này.`} columns={[
+            <CardHead title={`${source.label} — ${source.total} chứng từ`} />
+            <DataTable rows={source.rows} rowKey={(row, index) => String(row.id || index)} emptyText={`Chưa có ${source.label.toLowerCase()} nào của tổ đội này.`} columns={[
               { key: "c1", header: "Số chứng từ", render: (row) => <strong className="code">{String(row[source.keyField] || row.id || "—")}</strong> },
               { key: "c2", header: "Trạng thái", render: (row) => <StatusBadge value={statusLabel(row.status)} /> },
               { key: "c3", header: "Người liên quan", render: (row) => String(row[source.whoField] || "—") },
@@ -582,8 +581,8 @@ function TeamDirectory({ data, action, permission }: TeamDirectoryProps) {
           </div>)}
         </section>
         <section className="card">
-          <CardHead title="Phiếu đề nghị mua hàng của dự án" note="Không mang team_id — lọc theo DỰ ÁN của tổ đội (teamId trong payload luôn NULL ở dữ liệu thật: 0/4 phiếu có team_id)" />
-          <DataTable rows={(data.requests || []).filter((row) => String(row.projectId) === String(detail.projectId))} rowKey={(row, index) => String(row.id || index)} emptyText={`${NO_SOURCE_TEXT} — dự án của tổ đội chưa có phiếu đề nghị nào trong payload.`} columns={[
+          <CardHead title="Phiếu đề nghị mua hàng của dự án" note="Các phiếu đề nghị mua hàng thuộc dự án của tổ đội." />
+          <DataTable rows={(data.requests || []).filter((row) => String(row.projectId) === String(detail.projectId))} rowKey={(row, index) => String(row.id || index)} emptyText="Dự án của tổ đội chưa có phiếu đề nghị mua hàng nào." columns={[
             { key: "c1", header: "Số phiếu", render: (row) => <strong className="code">{String(row.requestNo || row.id || "—")}</strong> },
             { key: "c2", header: "Trạng thái", render: (row) => <StatusBadge value={statusLabel(row.status)} /> },
             { key: "c3", header: "Người đề nghị", render: (row) => String(row.requestedBy || "—") },
@@ -596,18 +595,18 @@ function TeamDirectory({ data, action, permission }: TeamDirectoryProps) {
           ĐÃ GỘP vào tab «Lịch sử» (nay là tab 4) để giữ nguyên nghiệp vụ, không xoá gì. */}
       {tab === 4 && <div className="stack">
         <section className="card">
-          <CardHead title="Lịch sử thao tác trên tổ đội" note={history.source} />
+          <CardHead title="Lịch sử thao tác trên tổ đội" />
           {history.auditRowsAvailable
             ? <DataTable rows={history.audits} rowKey={(row, index) => String(row.id || index)} emptyText={`${NO_SOURCE_TEXT} — chưa có dòng audit_logs nào cho entity_type='team' của tổ đội này.`} columns={[
               { key: "c1", header: "Thời điểm", render: (row) => date(row.occurredAt) },
               { key: "c2", header: "Hành động", render: (row) => String(row.action || "—") },
               { key: "c3", header: "Người thực hiện", render: (row) => String(row.userName || "—") },
             ]} />
-            : <Empty text={`${NO_SOURCE_TEXT} — payload không có khoá audits[] cho tài khoản này. Lý do: bootstrap chỉ trả audit_logs cho ADMIN (scripts/system-route.mjs:756) và chỉ 100 dòng gần nhất toàn hệ thống.`} />}
+            : <Empty text="Bạn chưa được xem lịch sử thao tác của tổ đội này." />}
         </section>
         <section className="card">
-          <CardHead title="Hợp đồng giao khoán & quyết toán của tổ đội" note="team_subcontracts.team_id · team_settlements.team_id" />
-          <DataTable rows={history.subcontracts} rowKey={(row) => String(row.id)} emptyText={`${NO_SOURCE_TEXT} — tổ đội chưa có hợp đồng giao khoán nào trong payload.`} columns={[
+          <CardHead title="Hợp đồng giao khoán & quyết toán của tổ đội" />
+          <DataTable rows={history.subcontracts} rowKey={(row) => String(row.id)} emptyText="Tổ đội chưa có hợp đồng giao khoán nào." columns={[
             { key: "c1", header: "Số HĐ", render: (row) => <strong className="code">{String(row.contractNo || "—")}</strong> },
             { key: "c2", header: "Tên/phạm vi", render: (row) => String(row.contractName || "—") },
             { key: "c3", header: "Giá trị", render: (row) => String(row.contractValue ?? "—") },
@@ -662,13 +661,16 @@ function TeamDirectory({ data, action, permission }: TeamDirectoryProps) {
         </>}
       />
       <p className="muted" data-team-sort-note="TM-02">Thứ tự ưu tiên: <strong>ĐANG HOẠT ĐỘNG</strong> → hoạt động gần nhất ↓ → ngừng.</p>
-      <p className="muted" data-team-source-notes="TM-01">Nguồn: Thành viên — {notes.members} · Hoạt động gần nhất — {notes.lastActivity} · Tổ đội đã ngừng — {notes.stoppedTeams}</p>
+      {/* ⛔ ERP-SESSION-03 (07/10/2026) — ĐÃ GỠ `<p data-team-source-notes="TM-01">`: đoạn đó in
+          `team_members …` · `stock_issues · material_returns …` · `teams WHERE active=1` = tên
+          bảng/cột CSDL ⇒ RÁC với người dùng. Hàm `teamListSourceNotes()` ⛔ KHÔNG bị xoá (dữ liệu
+          cho `tests/tm01`), chỉ bỏ phần render. */}
       <DataTable rows={rows} rowKey={(row) => row.id} emptyText="Không có tổ đội phù hợp." columns={[
         { key: "code", header: TEAM_LIST_COLUMNS[0].header, render: (row) => <strong className="code">{row.code}</strong> },
         { key: "name", header: TEAM_LIST_COLUMNS[1].header, render: (row) => row.name },
         { key: "status", header: TEAM_LIST_COLUMNS[2].header, render: (row) => <StatusBadge value={row.statusLabel} /> },
         { key: "members", header: TEAM_LIST_COLUMNS[3].header, render: memberCell },
-        { key: "project", header: TEAM_LIST_COLUMNS[4].header, render: (row) => (row.projectKnown ? `${row.projectCode} · ${row.projectName}` : <span className="muted">{NO_SOURCE_TEXT}<small> · teams.project_id không tra được trong projects[]</small></span>) },
+        { key: "project", header: TEAM_LIST_COLUMNS[4].header, render: (row) => (row.projectKnown ? `${row.projectCode} · ${row.projectName}` : <span className="muted">{NO_SOURCE_TEXT}</span>) },
         { key: "lastActivity", header: TEAM_LIST_COLUMNS[5].header, render: activityCell },
         { key: "actions", header: "", render: (row) => <button type="button" className="export-mini" onClick={() => { setDetailId(row.id); setView("detail"); setTab(0); }}>Chi tiết ›</button> },
       ]} />
@@ -676,6 +678,6 @@ function TeamDirectory({ data, action, permission }: TeamDirectoryProps) {
   </div>;
 }
 
-export { TeamDirectory, TEAM_LIST_COLUMNS, TEAM_TABS, TEAM_ACTION_GATES, TEAM_ALLOCATION_SOURCES, NO_SOURCE_TEXT };
+export { TeamDirectory, TEAM_LIST_COLUMNS, TEAM_TABS, TEAM_ACTION_GATES, TEAM_ALLOCATION_SOURCES, NO_SOURCE_TEXT, teamListSourceNotes, TEAM_WAREHOUSE_STOCK_FIELDS };
 export type { TeamDirectoryProps };
 export default TeamDirectory;

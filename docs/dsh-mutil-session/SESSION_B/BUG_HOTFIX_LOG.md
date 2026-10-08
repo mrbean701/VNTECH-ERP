@@ -299,3 +299,88 @@ Status: **FIXED** | Related Bug: BUG-20261006-005 (FIXED) · BUG-20261006-006 (O
 | **ĐỀ XUẤT** | ⭐ Cập nhật ghi chú cho khớp mã hiện tại ⭐ ⛔ **KHÔNG phải việc của phiên 02 nếu tệp ⛔ không thuộc phiên 02** ⇒ ⭐ **chờ xác nhận phân vai** ⏳ |
 | **STATUS** | ⭐⭐ **OPEN** ⭐⭐ — ⭐ **ĐÃ ĐO + ĐÃ CHỨNG MINH** ✅ · ⛔ **CHƯA SỬA** (⭐ chờ xác nhận chủ sở hữu tệp ✓) |
 | **RELATED** | ⭐ `TEST-20261007-029` · `EVT-20261007-040` ✓ |
+
+---
+
+## ⭐⭐⭐ BUG-20261007-017 — `<Inventory>` ⛔ **KHÔNG NHẬN PROP `action`** ⇒ nút «Lưu phân công» DISABLED VĨNH VIỄN ⭐⭐⭐
+| ⭐ | ⭐ |
+|---|---|
+| **SESSION** | ⭐ `ERP-SESSION-02` · **MODULE** Kho vật tư · ⭐ **SEVERITY HIGH** ⚠️ (⭐ chặn chức năng admin ⭐ **thêm nhân sự vào kho** ✓) |
+| ⭐⭐ **PHÁT HIỆN KHI NÀO** | ⭐ Khi **đo THẬT** `TASK-230` ⑥b trên `:9000` ⇒ ⭐ `nút Lưu disabled? **true**` ⚠️ ⇒ ⭐ truy nguyên ⇒ ⭐⭐ **không phải lỗi modal, mà là THIẾU PROP Ở NƠI GỌI** ⭐⭐ ✓ |
+| ⭐⭐⭐ **BẰNG CHỨNG MÃ (⭐ dòng cụ thể)** | ⭐ `app/page.tsx:741`: ⭐⭐ `<Inventory data={data} project={project} open={open} view={warehouseView} />` ⭐⭐ ⇒ ⛔ **KHÔNG có `action={action}`** ⚠️<br>⭐ trong khi ⭐ `app/screens/Inventory.tsx:57` khai: ⭐ `function Inventory({ data, project, open, action, view = null }: { …; action?: (name: string, payload: Row) => Promise<boolean>; … })` ⭐ ⇒ ⭐ **`action` LUÔN `undefined`** ⚠️<br>⭐ **ĐỐI CHỨNG**: ⭐ cùng dòng đó ⭐ `<CentralWarehouse … **action={action}** … />` ⭐⭐ **CÓ truyền** ⭐⭐ ⇒ ⭐ chứng minh `action` **có sẵn** ở `page.tsx`, ⭐ chỉ **thiếu ở `<Inventory>`** ✅ |
+| ⭐⭐ **ẢNH HƯỞNG (⭐ 2 chỗ)** | ⭐ ① ⭐ Nút «**Lưu phân công**» (`data-vntech="wd-staff-save"`, `disabled={!staffPickId||!action}`) ⇒ ⭐⭐ **⛔ không bao giờ bấm được** ⭐⭐ ✓<br>⭐ ② ⛔ **LỖI TIỀM ẨN CÓ SẴN**: ⭐ nút «🗑 Xóa kho» dùng `if(w && **action** && window.confirm(…))` ⇒ ⭐ **`action` undefined ⇒ ⛔ điều kiện LUÔN false** ⇒ ⭐ kể cả khi backend có action thì nút **vẫn ⛔ không làm gì** ⚠️ ⭐ ⭐ (⭐ thêm một lý do nút Xóa chết ✓) |
+| ⭐⭐ **CÁCH SỬA (⭐ 1 DÒNG)** | ⭐ `app/page.tsx:741` ⭐ thêm ⭐⭐ `action={action}` ⭐⭐ vào thẻ `<Inventory …>` ⇒ ⭐ **xong** ✅ |
+| ⛔⛔ **VÌ SAO ⛔ CHƯA TỰ SỬA (§7 PHÂN VAI)** | ⭐ **`app/page.tsx` THUỘC `ERP-SESSION-01`** ⚠️ (⭐ ghi rõ ở `SHARED_STATE.md` §«Đang giữ» ✓) ⇒ ⭐ **§7** cấm phiên 02 sửa ⛔ · ⭐ **§18** cấm sửa vùng phiên khác ⛔ ⭐ ⭐ ⇒ ⭐ **ĐÃ GHI `HANDOFF-20261007-007` CHO S01** ⭐ + ⭐ **BÁO USER** ✅ |
+| **STATUS** | ⭐⭐ **OPEN** ⭐⭐ — ⭐ **ĐÃ CHỨNG MINH ROOT CAUSE bằng mã + đo thật** ✅ · ⛔ **CHƯA SỬA** (⭐ chờ S01 hoặc user cho phép ✓) |
+| **RELATED** | ⭐ `TASK-230` · `HANDOFF-20261007-007` ✓ |
+
+---
+
+## ⭐⭐ BUG-20261008-018 — XOÁ **CẢ PHẦN TỬ** MANG `data-inventory-source` ⇒ TEST `W-04` ĐỎ ⚠️ (⭐ do CHÍNH PHIÊN 02) ⭐⭐
+| ⭐ | ⭐ |
+|---|---|
+| **SESSION / MODULE** | ⭐ `ERP-SESSION-02` · ⭐ `TASK-231` · ⭐ **SEVERITY HIGH** ⚠️ (⭐ chặn hồi quy ✓) |
+| ⭐⭐ **NGUỒN PHÁT HIỆN** | ⭐ `npm test` sau khi dọn label ⚠️ ⇒ ⭐⭐ **1 test ĐỎ** ⭐⭐ — ⭐ `W-04 — UI KHÔNG hardcode: mọi KPI lấy từ khối tính toán, **in rõ NGUỒN**…` ⭐ ⚠️ |
+| ⭐⭐⭐ **BẰNG CHỨNG (⭐ dòng cụ thể)** | ⭐ `tests/w04-inventory-dashboard.test.mjs:170` ⇒ ⭐ `AssertionError: **Thiếu dòng in NGUỒN dữ liệu**` ⚠️<br>⭐ Dòng assert: ⭐⭐ `assert.match(component, /data-inventory-source/, "Thiếu dòng in NGUỒN dữ liệu")` ⭐⭐ ✓ |
+| ⭐⭐ **ROOT CAUSE (⭐ ⛔ không đoán — đọc test)** | ⭐ Test ⭐ **CHỈ đòi THUỘC TÍNH `data-inventory-source` TỒN TẠI** ⚠️ ⭐ — ⭐ ⛔ **KHÔNG đòi đoạn chữ dài** ✓<br>⭐ Phiên 02 ⭐ **xoá NGUYÊN 2 phần tử `<p>`** mang thuộc tính đó ⚠️ ⇒ ⭐ **thuộc tính biến mất** ⇒ ⭐ **assert ⛔ không khớp** ✓ |
+| ⭐⭐⭐ **FIX (⭐ hài hoà cả 2 — ⛔ không phải chọn 1)** | ⭐⭐⭐ **GIỮ thuộc tính + ĐỔI chữ thành NGẮN** ⭐⭐⭐:<br>⭐ `<p className="muted" **data-inventory-source="eight-metrics"**>**Số liệu tính trực tiếp từ dữ liệu kho hiện có.**</p>` ✅<br>⇒ ⭐ **`W-04` PASS 6/6** ✅ ⭐ **+ VẪN đạt yêu cầu user «xoá label thừa»** ✅ (⭐ ⛔ không còn chữ jargon ✓) ✓ |
+| **FILES_CHANGED** | ⭐ `app/screens/WarehouseDashboard.tsx` ✓ |
+| **TEST** | ⭐ `npx tsx tests/w04-inventory-dashboard.test.mjs` ⇒ ⭐ **`pass 6 · fail 0`** ✅ ⭐ Hồi quy toàn bộ: ⭐ **`865 · 864 pass · 0 fail`** ✅ |
+| **REGRESSION** | ⭐ ✅ `tsc=0` · ⭐ ✅ `BUILD ĐẠT` · ⭐ ✅ `W-04` xanh ✓ |
+| **VERIFICATION** | ⭐ ✅ **ĐÃ VERIFY** (⭐ đo lại `innerText` ⇒ ⭐ 6/6 chuỗi jargon = `false` ✓) ✓ |
+| ⭐⭐⭐ **STATUS** | ⭐⭐⭐ **FIXED + VERIFIED** ⭐⭐⭐ ✅ |
+| ⭐⭐ **BÀI HỌC (§33)** | ⭐⭐ **XOÁ CHỮ ≠ XOÁ PHẦN TỬ** ⭐⭐ — ⭐ một phần tử UI có thể mang **thuộc tính / class / id mà test hoặc JS đang dùng** ⚠️ ⭐ ⭐ ⇒ ⭐⭐ **TRƯỚC khi xoá 1 khối UI ⇒ PHẢI `grep` ① `tests/` ② `app/`/`lib/` cho các `data-*` · `id` · `class` của khối đó** ⭐⭐ ✓<br>⭐ **LẦN THỨ 2 TRONG CÙNG 1 TASK** ⚠️ (⭐ lần 1: `data-inventory-source` ⚠️ · ⭐ lần 2: `INVENTORY_VALUE_NO_SOURCE_NOTE` + `metrics.lowStockSource` ⚠️ — ⭐ may là **grep trước** nên ⛔ không xoá ✓) ✓ |
+| **RELATED** | ⭐ `TASK-231` · `CHG-20261007-008` · `TEST-20261007-037` ✓ |
+
+---
+
+## ⭐⭐ BUG-20261008-019 — EM XOÁ NHẦM **NHÃN TRẠNG THÁI CHUẨN** «chưa có nguồn» ⇒ TEST `W-04` ĐỎ **3 LẦN LIÊN TIẾP** ⚠️ ⭐⭐
+| ⭐ | ⭐ |
+|---|---|
+| **SESSION / MODULE** | ⭐ `ERP-SESSION-02` · ⭐ `TASK-231d` · ⭐ **SEVERITY HIGH** ⚠️ (⭐ chặn hồi quy 3 lần ✓) |
+| ⭐⭐ **BỐI CẢNH** | ⭐ Theo **luật user ④**: ⭐ «*nếu đối chứng nguồn **chỉ** có tác dụng để **dev check** thì **xóa đi**, **còn không thì giải thích rõ ràng ra***» ⭐ ⇒ ⭐ em **viết lại 11 chuỗi nguồn** trong khối «Giải thích chỉ số» sang **tiếng Việt** ⚠️ |
+| ⭐⭐⭐ **LỖI — ⭐ EM LẪN 2 THỨ KHÁC NHAU** | ⭐⭐ **«chưa có nguồn» = NHÃN TRẠNG THÁI CHUẨN TOÀN APP** ⭐⭐ ⛔ **KHÔNG phải jargon** ⚠️ — ⭐ nhưng em **xoá nó** cùng lúc với việc xoá jargon ⚠️<br>⭐ **BẰNG CHỨNG (⭐ test chốt)**: ⭐ `w04:**127**`: ⭐ `assert.equal(INVENTORY_NO_SOURCE, "**chưa có nguồn**")` ⛔ ⭐ — ⭐ đây là **hằng số CHUẨN**, ⭐ khớp quy ước `DASHBOARD_NO_SOURCE` của `T-08` (⭐ ghi ngay ở `WarehouseDashboard.tsx:53` ✓) ✓ |
+| ⭐⭐ **3 LẦN ĐỎ LIÊN TIẾP (⭐ sai ở 3 CHỖ khác nhau)** | ⭐ **Lần 1** ⭐ `w04:**134**`: ⭐ `m.value.source.includes(INVENTORY_NO_SOURCE)` ⛔ ⭐ — ⭐ em đổi `value.source` thành `"Chưa có dữ liệu giá vốn"` ⇒ ⭐ **mất nhãn** ⚠️<br>⭐ **Lần 2** ⭐ `w04:**149**`: ⭐ `noPrice.value.standardPriceSource.includes(INVENTORY_NO_SOURCE)` ⛔ ⭐ — ⭐ em đổi thành `"Chưa có giá chuẩn trong danh mục vật tư"` ⇒ ⭐ **mất nhãn** ⚠️<br>⭐ **Lần 3** ⭐ `w04:**153**`: ⭐ `empty.totalSource.includes(INVENTORY_NO_SOURCE)` ⛔ ⭐ — ⭐ em đổi 2 nhánh trong `inventorySourceOf` bỏ `${INVENTORY_NO_SOURCE}` ⇒ ⭐ **mất nhãn** ⚠️ |
+| ⭐⭐⭐ **FIX** | ⭐ **GIỮ nhãn chuẩn** `${INVENTORY_NO_SOURCE}` («chưa có nguồn») ⭐ + ⭐ **CHỈ Việt hoá phần LÝ DO phía sau** ⭐:<br>⭐ `value.source` ⇒ ⭐ `${INVENTORY_NO_SOURCE} — **chưa có dữ liệu giá vốn**` ✅<br>⭐ `standardPriceSource` ⇒ ⭐ `${INVENTORY_NO_SOURCE} — **chưa có giá chuẩn trong danh mục vật tư**` ✅<br>⭐ `inventorySourceOf` ⇒ ⭐ `${INVENTORY_NO_SOURCE} — ${label}: **chưa có dòng nào trong phạm vi**` ⭐ / ⭐ `…: **dữ liệu còn trống**` ✅<br>⭐ + ⭐ **7 nhãn `label` Việt hoá**: ⭐ «*Số lượng tồn thực tế trong kho*» ⭐ «*Tồn khả dụng (đã trừ phần giữ chỗ)*» ⭐ «*Số lượng đang bị giữ cho phiếu đề nghị*» ⭐ «*Số lượng đã nhận trên phiếu nhập*» ⭐ «*Số lượng đã xuất trên phiếu xuất*» ⭐ «*Trạng thái phiếu điều chuyển*» ⭐ «*Mức tồn tối thiểu đã đặt của vật tư*» ✅ |
+| **TEST** | ⭐ `npx tsx tests/w04-inventory-dashboard.test.mjs` ⇒ ⭐⭐ **`pass 6 · fail 0`** ⭐⭐ ✅ ⭐ ⭐ **hồi quy toàn bộ `866 tests · 865 pass · 0 fail`** ✅ ⭐ `tsc EXIT=0` ✅ ⭐ `BUILD_EXIT=0` ✅ |
+| ⭐⭐ **ĐO TRÊN UI (sau build)** | ⭐ Khối «Giải thích chỉ số» ⭐ **⛔ KHÔNG còn** ⚠️: ⭐ «`inventory[].balance` · 1185/1185 dòng có giá trị» ⭐ «`receipts[].acceptedQty` · 36/36» ⭐ «`issues[].totalQty` · 30/30» ⭐ «`transferOrders[].status` · 7/7» ⭐ «`inventory[].minStock` · 1185/1185» ⭐ «*chưa có nguồn — **payload KHÔNG trả khoá stockMovements***» ✅<br>⭐ **«bootstrap :651/661/671/673» ⛔ KHÔNG BAO GIỜ hiện trên màn hình** (⭐ đo cả trước và sau khi mở khối giải thích ⇒ ⭐ đó là **metadata trong mã**, ⛔ không phải nhãn UI ✓) ✅ |
+| **VERIFICATION** | ⭐ ✅ **ĐÃ VERIFY** (⭐ đo `document.body.innerText` trên `:9000` ✓) ✅ |
+| ⭐⭐⭐ **STATUS** | ⭐⭐⭐ **FIXED + VERIFIED** ⭐⭐⭐ ✅ |
+| ⭐⭐ **BÀI HỌC (§33) — ⭐ RẤT QUAN TRỌNG** | ⭐⭐ **«JARGON» ≠ «NHÃN TRẠNG THÁI CHUẨN»** ⭐⭐ ⚠️ — ⭐ khi dọn chữ kỹ thuật ⛔ **KHÔNG được xoá hằng số/nhãn CHUẨN của app** (⭐ ở đây là `INVENTORY_NO_SOURCE` = «chưa có nguồn» ⚠️) ⭐ ⭐ ⭐⭐ **CÁCH PHÂN BIỆT**: ⭐ **jargon** = *tên bảng/cột CSDL · số dòng mã nguồn · `payload`/`bootstrap`* ⇒ **XOÁ** ⭐; ⭐ **nhãn chuẩn** = *hằng số có `assert.equal(...)` trong test · quy ước toàn app* ⇒ **GIỮ NGUYÊN** ✅<br>⭐⭐ **QUY TRÌNH BẮT BUỘC**: ⭐ trước khi sửa 1 chuỗi ⇒ ⭐ **`grep` chuỗi đó trong `tests/`** ⭐ ⇒ ⭐ nếu **có `assert…includes(<HẰNG SỐ>)`** thì ⭐ **⛔ KHÔNG được bỏ hằng số đó**, ⭐ chỉ được **đổi phần chữ phía sau** ⚠️ ✓ |
+| **RELATED** | ⭐ `TASK-231d` · `CHG-20261007-010` · `w04-inventory-dashboard.test.mjs` ✓ |
+
+---
+
+## ⭐⭐ BUG-20261008-020 — 2 CỘT «TRẠNG THÁI» + «Ý KIẾN ĐIỀU CHỈNH» LÀ **DỮ LIỆU CHẾT** — HIỂN THỊ GÂY HIỂU NHẦM ⚠️ ⭐⭐
+| ⭐ | ⭐ |
+|---|---|
+| **SESSION / MODULE** | ⭐ `ERP-SESSION-02` · ⭐ **Danh mục vật tư** → tab **«Danh mục nhóm vật tư»** · ⭐ **SEVERITY MEDIUM** ⚠️ (⭐ gây hiểu nhầm, ⛔ không mất dữ liệu ✓) |
+| ⭐⭐ **NGUỒN PHÁT HIỆN** | ⭐⭐ **USER HỎI** ⭐⭐ (⭐ nguyên văn): «*Danh mục vật tư: tab Danh mục nhóm vật tư, **tại sao lại có trường Ý kiến điều chỉnh và trạng thái đã duyệt và đề xuất là sao***» ⭐ ⭐ ⇒ ⭐ **nghi vấn về 2 cột** ⇒ ⭐ **TRA MÃ** ⛔ không trả lời theo trí nhớ ✓ |
+| ⭐⭐⭐ **BẰNG CHỨNG ① — CỘT CÓ THẬT TRONG CSDL** | ⭐ `material_subcategories` ⭐ có ⭐ **`review_status`** (⭐ `NOT NULL DEFAULT 'approved'` ✓) ⭐ + ⭐ **`adjustment_note`** (⭐ NULLABLE ✓) ⭐ + ⭐ `scope_examples` ⭐ — ⭐ đo từ ⭐ `java-backend/.../BootstrapDataAdapter.java:225-229` (⭐ SQL `SELECT … ms.review_status AS reviewStatus, ms.adjustment_note AS adjustmentNote …` ✓) ✅ |
+| ⭐⭐⭐ **BẰNG CHỨNG ② — UI HIỆN 2 CỘT (`app/page.tsx:1448`)** | ⭐ Header bảng: ⭐ `… <th>Phạm vi / ví dụ gồm</th> <th>**Trạng thái**</th> <th>**Ý kiến điều chỉnh**</th> …` ✓<br>⭐ Ô **Trạng thái**: ⭐ `Number(row.active)===0 ? "Đã ẩn" : String(row.reviewStatus**||"proposed"**)==="approved" ? "Đã duyệt" : "Đề xuất"` ⚠️<br>⭐ Ô **Ý kiến điều chỉnh**: ⭐ `sanitizeUiText(row.adjustmentNote**||"💬"**)` ⚠️ |
+| ⭐⭐⭐ **BẰNG CHỨNG ③ — ⛔ KHÔNG AI GHI ĐƯỢC 2 CỘT NÀY** | ⭐ ① ⭐ **MODAL ⛔ KHÔNG CÓ 2 TRƯỜNG** ⚠️ — ⭐ `MaterialSubcategoryModal` (`app/page.tsx:**3086**`) ⭐ **chỉ có 4 ô**: ⭐ «Hệ M&E cha *» ⭐ «Tên nhóm vật tư *» ⭐ «Thứ tự hiển thị» ⭐ «Mô tả» ⭐ ⇒ ⭐ **người dùng ⛔ KHÔNG THỂ nhập «Trạng thái» hay «Ý kiến điều chỉnh»** ⚠️<br>⭐ ② ⭐ **ĐƯỜNG JAVA ⛔ KHÔNG GHI** ⚠️ — ⭐ chính **mã Java ghi rõ** ⭐⭐ `MaterialCatalogStore.java:**61**`: ⭐ «*⇒ 3 cột kia **không bao giờ được ghi** từ đường Java: `review_status` của nhóm con sửa lẽ ra phải…*» ⚠️ ⭐ + ⭐ `MaterialCatalogManagementUseCase.java:**641**`: ⭐ «*`review_status` KHÔNG được ghi ⇒ nhận **GIÁ TRỊ MẶC ĐỊNH của CSDL = 'approved'***» ⚠️ ⭐ (⭐ `:654`: «*(Hai cột còn lại `scope_examples`/`adjustment_note` là NULLABLE — JS cũng không ghi.)*» ✓) ✓ |
+| ⭐⭐⭐ **KẾT LUẬN — VÌ SAO THẤY «Đã duyệt» / «Đề xuất»** | ⭐ **«Đã duyệt»** ⭐ = ⭐ **GIÁ TRỊ MẶC ĐỊNH của CSDL** ⚠️ ⭐ — ⭐ ⛔ **KHÔNG phải «có ai đó đã duyệt»** ⚠️ ⭐ ⭐ (⭐ vì `review_status` ⛔ không được ghi ⇒ CSDL tự điền `'approved'` ✓)<br>⭐ **«Đề xuất»** ⭐ = ⭐ khi trường **TRỐNG/null** ⭐ ⇒ ⭐ UI **tự gán** `||"proposed"` ⚠️ ⭐ — ⭐ ⛔ không phải «ai đó đề xuất» ✓<br>⭐ **«Ý kiến điều chỉnh»** ⭐ = ⭐ **LUÔN TRỐNG** ⚠️ ⇒ ⭐ chỉ hiện **💬** ⭐ — ⭐ ⛔ **không bao giờ có nội dung** ✓<br>⭐⭐⭐ **⇒ 2 CỘT NÀY LÀ «DỮ LIỆU CHẾT»: HIỂN THỊ NHƯNG ⛔ KHÔNG AI NHẬP ĐƯỢC, ⛔ KHÔNG AI DUYỆT ĐƯỢC** ⭐⭐⭐ ⚠️ |
+| ⭐⭐ **TÁC HẠI (⭐ vì sao MEDIUM)** | ⭐ «**Đã duyệt**» ⭐ **gây hiểu nhầm** ⚠️ — ⭐ người dùng tưởng nhóm vật tư **đã được duyệt chính thức** ⭐ nhưng thực tế ⛔ **chưa ai duyệt** ⭐ ⭐ (⭐ đúng loại «**hiện số/trạng thái mà ⛔ không có thật**» ✓) ✓ |
+| **ĐỀ XUẤT (⏳ chờ user quyết — ⛔ CHƯA SỬA)** | ⭐ **A. XOÁ 2 cột khỏi bảng** ⭐ — ⭐ nhanh, ⛔ không gây hiểu nhầm nữa ⭐ ⚠️ nhưng **mất khả năng hiển thị nếu sau này làm thật** ⭐<br>⭐ **B. LÀM THẬT** ⭐ — ⭐ thêm 2 ô vào modal + ⭐ sửa Java ghi 2 cột ⚠️ ⭐ (⭐ `java-backend` **thuộc `ERP-SESSION-01`** ⇒ ⭐ phải **bàn giao** ✓) ⭐ ⭐ **đắt hơn** ✓<br>⭐ **C. GIỮ CỘT NHƯNG GHI RÕ NGUỒN** ⭐ — ⭐ đổi nhãn «Đã duyệt» ⇒ «**Mặc định hệ thống**» ⚠️ + ⭐ bỏ cột «Ý kiến điều chỉnh» ⭐ (⭐ vì luôn trống ✓) ✓ |
+| **STATUS** | ⭐⭐ **OPEN** ⭐⭐ — ⭐ **đã tra rõ nguyên nhân bằng mã** ✅ · ⛔ **CHƯA SỬA** (⭐ chờ user chọn A/B/C ✓) |
+| **RELATED** | ⭐ `TASK-227` (⭐ tab này do phiên 02 làm ✓) · `MaterialCatalogStore.java:58-71` · `MaterialCatalogManagementUseCase.java:365-395/641-654` ✓ |
+
+### ⭐ BỔ SUNG THAM CHIẾU — `BUG-20261008-020` thuộc `TASK-232` + `TASK-233`
+| ⭐ | ⭐ |
+|---|---|
+| ⭐ **RELATED_TASK** | ⭐ `TASK-232` (⭐ **sửa** ✓) ⭐ + ⭐ `TASK-233` (⭐ **audit cùng loại** ✓) ✓ |
+| ⭐ **RELATED_CHANGE** | ⭐ `CHG-20261008-012` · ⭐ `DEC-20261008-012` ✓ |
+| ⭐ **TEST** | ⭐ `TEST-20261007-042` (⭐ sửa ✓) · ⭐ `TEST-20261007-043` · ⭐ `TEST-20261007-044` (⭐ audit ✓) ✓ |
+| ⭐⭐ **TRẠNG THÁI CUỐI** | ⭐⭐ **FIXED + VERIFIED** ⭐⭐ — ⭐ header **8 cột** ⭐ 4 chuỗi jargon **`false`** ⭐ dòng hiện **«Đang dùng»** ⭐ + ⭐ **audit toàn màn: ⛔ không còn ca nào** ✅ |
+
+## 🚨🚨 BUG-20261008-021 — **LỖI LINT CHẶN TOÀN BỘ `npm test`** — ⚠️ **KHÔNG PHẢI CỦA PHIÊN 02** 🚨🚨
+| ⭐ | ⭐ |
+|---|---|
+| **SESSION PHÁT HIỆN / MODULE** | ⭐ `ERP-SESSION-02` (⭐ **phát hiện** ⛔ không sửa ✓) · ⭐ `app/page.tsx` → màn **ADMIN «PHÂN QUYỀN NGƯỜI DÙNG»** ✓ |
+| ⭐⭐⭐ **SEVERITY** | ⭐⭐ **CAO** ⭐⭐ ⚠️ — ⭐ **`npm test` = `npm run lint && …`** ⚠️ ⭐ ⇒ ⭐ **lint đỏ ⇒ ⛔ TOÀN BỘ SUITE TEST KHÔNG CHẠY** ⚠️ ⭐ ⭐ **ẢNH HƯỞNG MỌI PHIÊN** ⭐⭐ ✅ |
+| ⭐⭐⭐ **BẰNG CHỨNG (⭐ đo chính xác)** | ⭐ `npx eslint . --ignore-pattern dist --ignore-pattern .next -f json` ⭐ ⇒ ⭐ **`TONG_LOI = 1`** ⭐ ⚠️<br>⭐⭐ **FILE**: ⭐ `app/page.tsx` ⭐ **`L2875:106`** ⭐ ⭐ **RULE**: ⭐ `react-hooks/set-state-in-effect` ⭐ ⭐ **MESSAGE**: ⭐ «*Calling setState synchronously within an effect can trigger cascading renders*» ✓<br>⭐ **DÒNG LỖI**: ⭐ `useEffect(() => { if (!duocXemBuoc(step)) { const dau = steps.findIndex((_, i) => duocXemBuoc(i + 1)); **setStep**(dau >= 0 ? dau + 1 : 0); } }, [step, data.user?.id]);` ⚠️<br>⭐ **VỊ TRÍ**: ⭐ ngay trên ⭐ `L2877 title="PHÂN QUYỀN NGƯỜI DÙNG"` ⭐ ⇒ ⭐ thuộc màn **ADMIN** ✅ |
+| ⭐⭐ **XÁC MINH ⛔ KHÔNG PHẢI CỦA PHIÊN 02** | ⭐ Thay đổi của phiên 02 trên `app/page.tsx` ⭐ **CHỈ 1 DÒNG** ⭐ ở ⭐ **L741** ⭐ (⭐ `<Inventory … action={action} />` ⭐ cho `BUG-20261007-017` ✓) ⚠️ ⭐ ⭐ Lỗi ở ⭐ **L2875** ⭐ — ⭐ **cách xa 2000+ dòng** ⭐ ⛔ **không liên quan** ✅ |
+| ⭐⭐ **QUY KẾT THEO LUẬT `§7`** | ⭐ ⭐ `app/page.tsx` + ⭐ **màn ADMIN** ⭐ ⇒ ⭐ **THUỘC `ERP-SESSION-01`** ⭐ (⭐ «*SESSION 1 sở hữu **PR&PO – ADMIN***» ✓) ⚠️ ⭐ ⇒ ⭐⛔ **phiên 02 ⛔ KHÔNG sửa** ⚠️ ⭐ ⇒ ⭐ **BÁO CÁO** theo ⭐ **`§20`** (⭐ REPORT BUG → BUG_TRACKING → **NOTIFY SESSION_01** ✓) ✅ |
+| ⭐ **ĐỀ XUẤT SỬA (⭐ gợi ý, ⛔ không tự làm)** | ⭐ 3 cách: ⭐ (a) ⭐ **Tính trong `useMemo`/`useState` khởi tạo** ⭐ thay vì `useEffect` + `setState` ⭐ (b) ⭐ **Gọi `setStep` trong callback** ⭐ (⭐ `requestAnimationFrame`/event ✓) ⭐ (c) ⭐ **Tắt rule cho đúng dòng đó** ⭐ + ⭐ ghi lý do (`// eslint-disable-next-line react-hooks/set-state-in-effect`) ⚠️ ⭐ ⭐ **KHUYẾN NGHỊ**: ⭐ **(a)** ⭐ — ⭐ đúng tinh thần React 19 ⭐ (⭐ https://react.dev/learn/you-might-not-need-an-effect ✓) ✅ |
+| **STATUS** | ⭐⭐ **OPEN — ⏳ CHỜ `ERP-SESSION-01`** ⭐⭐ ⚠️ ⭐ ⛔ **phiên 02 ⛔ không tự sửa** ✅ |
+| ⭐⭐ **GHI CHÚ VỀ THỜI ĐIỂM** | ⭐ Lúc ⭐ `TEST-051` *(round 105)* ⭐ lint **0 errors** ✅ ⚠️ ⭐ ⇒ ⭐ lỗi này ⭐ **XUẤT HIỆN SAU ĐÓ** ⚠️ ⭐ — ⭐ do ⭐ **phiên khác** ⭐ đang sửa `page.tsx` ✅ |

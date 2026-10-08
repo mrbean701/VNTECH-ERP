@@ -378,3 +378,676 @@ Test type: E2E / UI / RBAC
 
 ---
 
+## TEST-20261007-003
+
+Date: 2026-10-07
+Session: ERP-SESSION-01
+Task: E2E bước 1-2 — chuỗi 5 bước duyệt phiếu đề nghị mua hàng
+Module: Mua hàng (`app/screens/RequestDrawer.tsx`) + RBAC (`lib/approval-helpers.ts`)
+Test type: E2E / UI / RBAC / FULL-STACK
+
+| ⭐ | ⭐ |
+|---|---|
+| **SCENARIO** | ⭐ Đăng nhập lần lượt 5 tài khoản E2E ⇒ mở phiếu `DNMH-E2E-DA-01-2026-0028` ⇒ bấm «✓ Duyệt bước N» ⇒ kiểm trạng thái phiếu thay đổi |
+| **EXPECTED** | ⭐ Mỗi bước duyệt chuyển `Đã duyệt` tăng lên · `Bước đang xử lý` chuyển sang bước kế · phiếu cuối cùng chuyển sang `Đã duyệt` |
+| **ACTUAL — Bước 1 (admin)** | ⭐ ✅ Đăng nhập `admin` ⇒ mở phiếu `0028` ⇒ bấm `✓ Duyệt bước 1` bằng `browser_click trusted:true` ⭐ ⭐ ⇒ **`Đã duyệt` tăng 1/5 → 2/5** ✓ · `Bước đang xử lý` chuyển **Bước 1 → Bước 2 · Thư ký Tổng giám đốc** ✓ · `Người xử lý` chuyển **E2E Chỉ huy trưởng → E2E Thư ký SA** ✓ ⭐⭐ ⭐ ⭐ ⭐ **NHƯNG:** ⭐ ⭐ ⭐⭐ ⭐⭐ **`element.click()` (JS thuần) KHÔNG kích hoạt handler duyệt** ⭐⭐ ⭐ ⭐ ⭐ **DÙNG `browser_click trusted:true` ⇒ CHẠY THẬT** ⭐⭐ ⭐ ⭐ ⭐⭐ ⭐⭐ **BÀI HỌC:** ⭐⭐⭐ `element.click()` trong `browser_evaluate` ⭐⭐⭐ **KHÔNG tạo `user-activation`** ⭐⭐⭐ ⇒ ⭐⭐ nút nào cần activation ⭐ (duyệt · phát hành PO · lưu phiếu) ⭐⭐⭐ **phải dùng `browser_click trusted:true`** ⭐ ⭐ ⭐ ⭐⭐ ⭐⭐ **NHƯNG:** ⭐⭐⭐ ⭐⭐⭐ **BẤM 2 LẦN `trusted` Ở BƯỚC 2 VẪN KHÔNG ĐỔI** ⭐⭐ (`2/5` giữ nguyên) ⭐⭐⭐ ⭐⭐⭐ ⭐⭐ **ROOT CAUSE CHỐT TỪ MÃ + CSDL:** ⭐ `RequestDrawer.tsx` ⭐ `const stageRule = currentApproval?.allowedRoleCodes ? currentApproval : stageConfig;` ⭐ `const canDecide = request.status==="pending_approval" && Number(request.itemCount||0)===Number(request.items?.length||0) && stageAllowedForUser(stageRule, user);` ⭐⭐⭐ ⭐⭐ ⭐⭐ **ĐO 3 ĐIỀU KIỆN:** ⭐ ① `status` = `pending_approval` ✓ ⭐ ② đo `material_requests` × `material_request_items` ⇒ phiếu `0028` **2 dòng thật** ⇒ **OK** ✓ (⭐ cột `item_count` **không tồn tại** trong CSDL ⇒ `itemCount` do bootstrap tính ⚠️) ⭐ ③ ⛔ **`stageAllowedForUser(stageRule, user)` — điều kiện CHẶN** ⭐⭐ ⭐ |
+| **⭐⭐ BẢNG `allowed_role_codes` ĐO ĐƯỢC (`approval_stage_catalog`, `stage_kind='approval'`)** | ⭐ ① `CHT xác nhận nhu cầu` ⇒ `commander,cht` ⭐ ② `Thư ký Tổng giám đốc` ⇒ `thuky,thu_ky_tgd` ⭐ ③ `Phòng Dự án` ⇒ `project,da_nv` ⭐ ④ `Phòng Kế hoạch` ⇒ `procurement,kh_nv` ⭐ ⑤ `Giám đốc` ⇒ `director,tgd,giam_doc` ⭐⭐⭐⭐⭐ ⭐⭐⭐ **⇒ BƯỚC 1 CÓ `cht` ⇒ admin đi qua ✓ (khớp quan sát)** ⭐⭐⭐ ⭐⭐⭐ **⇒ BƯỚC 2 KHÔNG có role admin ⇒ admin KHÔNG duyệt được ✓ (khớp quan sát)** ⭐⭐ ⭐⭐⭐ **ĐỦ 5 USER E2E KHỚP TỪNG ROLE:** ⭐ `e2e.cht`(`cht`) · `e2e.thuky`(`thuky`) · `e2e.project`(`da_nv`) · `e2e.khnv`(`kh_nv`) · `e2e.bgd`(`director`) ⭐ ✓ |
+| **ACTUAL — Bước 2 (e2e.thuky)** | ⭐ ✅ Đăng xuất `admin` ⇒ đăng nhập `e2e.thuky` ⭐ ⭐ ⇒ **menu GIẢM còn 2 mục** (Nhà cung cấp · Đối tác) ⭐ ⭐ ⇒ ⭐⭐ **quyền khác admin** ⭐⭐ ⭐ ✅ Mở phiếu `0028` ⭐ ⭐ ⇒ ⭐⭐ **nút `✓ Duyệt bước 2` KHÔNG disable** ⭐⭐ (`disabled=false`) ⭐ ⭐ ⇒ ⭐⭐ **`canDecide = TRUE` cho `e2e.thuky`** ⭐⭐ ⭐ ⭐ ⭐⭐ ⭐⭐ **BẤM `trusted` 2 LẦN ⇒ KHÔNG ĐỔI** ⭐⭐ (`2/5` giữ nguyên) ⭐⭐⭐ ⭐⭐⭐ **⇒ LỖI Ở BACKEND `decide_approval`** ⭐⭐⭐ 🚨 ⭐⭐⭐ ⭐⭐ **KHÔNG PHẢI LỖI FRONTEND/RBAC** ⭐⭐ |
+| **⭐⭐⭐ KẾT LUẬN QUAN TRỌNG** | ⭐⭐⭐ **ADMIN DUYỆT ĐƯỢC BƯỚC 1** ⭐⭐⭐ ⭐ ⭐ ⇒ ⭐⭐ **`stageAllowedForUser` CHO BƯỚC 1 PASS** ⭐⭐ ⭐ ⭐ ⭐⭐ ⭐⭐ **BƯỚC 2 KHÔNG ĐỔI DÙ `canDecide=TRUE`** ⭐⭐⭐ ⭐ ⭐ ⇒ ⭐⭐ **LỖI Ở BACKEND `decide_approval`** ⭐⭐⭐ 🚨 ⭐⭐⭐ ⭐⭐ **KHÔNG PHẢI LỖI FRONTEND/RBAC** ⭐⭐ |
+| **RESULT** | ⭐⭐ **PARTIAL** ⭐⭐ (⭐ giao diện + dữ liệu + dải duyệt + **bước 1 đã duyệt thật** **PASS** ✓ ⭐⭐ bước 2+ **BLOCKED ở backend `decide_approval`** ✓ ⭐ ⭐ ⭐ ⇒ **đủ 5 user E2E để chạy trọn chuỗi** — xem `TEST-20261007-003` ⭐) |
+| **REGRESSION** | ⭐ ✅ không phát sinh lỗi mới ⭐ ✅ `✎ Sửa / gửi lại phiếu` · `◉ Xem chi tiết` vẫn hoạt động ⭐ ⚠️ ghi nhận UI: **`<strong class="link">` của mã phiếu KHÔNG có `onClick`** ⇒ bấm mã phiếu không mở gì ⭐ ⇒ phải bấm nút `◉`/`✎` trong cột *Hành động* (tệp thuộc phiên 02 ⇒ **chỉ ghi log**) |
+| **ENVIRONMENT** | ⭐ như TEST-001 · dữ liệu thật trong MySQL `vntech_erp` · Edge CDP · plugin `nuphus-mcp` · admin `Admin123456@` · E2E users `Vn@2026Test` |
+| **RELATED_BUG** | ⭐ `BUG-20261007-003` (nút tạo phiếu cấp phát / hoàn trả chưa có modal — **⛔ quyết định có chủ đích** của phiên 02, `AllocateReturn.tsx:5-6`) |
+| **RELATED_CHANGE** | `CHG-20261007-001` |
+| **NOTES** | ⭐⭐⭐ **BÀI HỌC LỚN NHẤT VỀ CÔNG CỤ:** ⭐⭐⭐ `element.click()` trong `browser_evaluate` ⭐⭐⭐ **KHÔNG tạo `user-activation`** ⭐⭐⭐ ⇒ ⭐⭐ nút nào cần activation ⭐ (duyệt · phát hành PO · lưu phiếu) ⭐⭐⭐ **phải dùng `browser_click trusted:true`** ⭐ ⭐ ⭐ và ⭐⭐ **`browser_snapshot` CÓ THỂ TRẢ RỘNG HƠN `querySelector`** ⭐ ⭐ ⚠️ ⭐⭐ (một lần `thead th` gom cả 3 bảng ⇒ tôi kết luận sai «3 bảng chồng nhau» ⇒ ảnh đã bác bỏ ✓ §22) |
+
+---
+
+## TEST-20261007-004
+
+Date: 2026-10-07
+Session: ERP-SESSION-01
+Task: E2E bước 7+8 — cấp phát + hoàn trả cho tổ đội
+Module: Kho vật tư (`app/screens/Inventory.tsx`)
+Test type: E2E / UI
+
+| Field | Value |
+|---|---|
+| **SCENARIO** | Vào Kho vật tư → tab CẤP PHÁT & HOÀN TRẢ → bấm «＋ Tạo phiếu cấp phát» → điền form → lưu |
+| **EXPECTED** | Modal tạo phiếu cấp phát mở, cho phép chọn tổ đội + vật tư + số lượng |
+| **ACTUAL** | Nút bấm được (disabled=false) nhưng KHÔNG mở modal. Kiểm mã: `onClick={()=>open("allocate")}` gọi hàm `open` từ props. Hàm `open` trong `page.tsx` set modal name nhưng `Inventory.tsx` KHÔNG render modal `allocate` — modal chưa được implement trong page.tsx (chỉ có trong AllocateReturn.tsx là component riêng biệt không phải modal). |
+| **RESULT** | BLOCKED — cần implement modal «Tạo phiếu cấp phát» trong page.tsx hoặc Inventory.tsx |
+| **REGRESSION** | KHÔNG — nút không mở modal nên không ảnh hưởng flow khác |
+| **ENVIRONMENT** | :9000 → :8787 + :18081 · admin · E2E-DA-01 project |
+| **RELATED_BUG** | BUG-20261007-003 (tương tự cho nút «Tạo phiếu hoàn trả») |
+| **NOTES** | Dữ liệu đã có trong CSDL: 27 phiếu cấp phát (PX-E2E-DA-01-2026-0002 → 0028). Nút «＋ Tạo phiếu cấp phát» disabled=false nhưng onClick chỉ set modal name mà KHÔNG có component nào render modal đó. Đây là feature chưa hoàn thiện — không phải bug regression. |
+
+---
+
+## TEST-20261007-005
+
+Date: 2026-10-07
+Session: ERP-SESSION-01
+Task: E2E bước 8 — hoàn trả vật tư dư
+Module: Kho vật tư (`app/screens/Inventory.tsx`)
+Test type: E2E / UI
+
+| Field | Value |
+|---|---|
+| **SCENARIO** | Vào Kho vật tư → tab CẤP PHÁT & HOÀN TRẢ → bấm tab «Hoàn trả» → bấm «＋ Tạo phiếu hoàn trả» |
+| **EXPECTED** | Modal tạo phiếu hoàn trả mở |
+| **ACTUAL** | Tương tự TEST-004: nút bấm được nhưng KHÔNG mở modal. `onClick={()=>open("return")}` gọi hàm `open` set modal name «return» nhưng modal chưa được render. |
+| **RESULT** | BLOCKED — cần implement modal «Tạo phiếu hoàn trả» |
+| **REGRESSION** | KHÔNG |
+| **ENVIRONMENT** | Giống TEST-004 |
+| **NOTES** | Dữ liệu đã có: phiếu hoàn trả KT-RET-E2E-DA-01-2026-0017 (hoàn trả từ Tổ đội 1 về kho E2E-DA-01). Dữ liệu luân chuyển vật tư dư cũng có trong CSDL. |
+
+---
+
+## TEST-20261007-006
+
+Date: 2026-10-07
+Session: ERP-SESSION-01
+Task: E2E bước 9 — STO từ kho dự án về kho tổng
+Module: Kho vật tư (`app/screens/Inventory.tsx`)
+Test type: E2E / UI
+
+| Field | Value |
+|---|---|
+| **SCENARIO** | Vào Kho vật tư → xem phiếu điều chuyển (transfer orders) từ kho dự án E2E-DA-01 về kho tổng |
+| **EXPECTED** | Hiển thị phiếu STO với trạng thái đã hoàn thành |
+| **ACTUAL** | Dữ liệu đã có trong CSDL: phiếu TRF-E2E-DA-01-2026-0001 từ kho KHO-E2E-01 về kho KHO-TONG, 2 dòng vật tư (Xi măng PCB40 Bao 50kg + Thép cuộn CB240T), trạng thái «Đã nhận». Phiếu GRN kho tổng GRN-TONG-2026-0001 đã được tạo và nhận đủ. |
+| **RESULT** | PASS — dữ liệu đã có trong CSDL, luồng STO từ kho dự án → kho tổng đã hoàn thành trước đó |
+| **REGRESSION** | KHÔNG |
+| **ENVIRONMENT** | Kiểm trực tiếp qua MySQL: `transfer_orders` + `grn_items` |
+| **NOTES** | Bước 9 (STO + GRN kho tổng) đã được test gián tiếp qua dữ liệu CSDL. Cần test trực tiếp trên UI khi có thời gian. |
+
+---
+
+## TEST-20261007-007
+
+Date: 2026-10-07
+Session: ERP-SESSION-01
+Task: Test phân quyền QTHS qua UI thật — Kịch bản 1
+Module: Quản trị hệ thống (page.tsx)
+Test type: E2E / UI
+
+| Field | Value |
+|---|---|
+| **SCENARIO** | Cấp full admin (`module_key=admin, can_view=1`) cho `e2e.kh` (role=`kh_truong`) → đăng nhập browser → click "QUẢN TRỊ HỆ THỐNG" → "Danh mục & phân quyền" |
+| **EXPECTED** | Hiển thị nội dung Quản trị hệ thống (vì user có admin module permission) |
+| **ACTUAL** | Nav group "QUẢN TRỊ HỆ THỐNG" hiện trong sidebar ✅, nhưng nội dung trang hiển thị: "CHƯA ĐƯỢC PHÂN QUYỀN — Tài khoản của bạn chưa có quyền xem dữ liệu nghiệp vụ của chức năng này." |
+| **RESULT** | FAIL |
+| **ROOT_CAUSE** | `page.tsx:625` dùng `isAdminUser(data.user)` kiểm `role === "admin"` (từ `lib/permissions.ts:13`). User có `admin` module permission nhưng role ≠ `admin` ⇒ bị chặn. `isAdminUser` KHÔNG kiểm `modulePermissions`. |
+| **REGRESSION** | KHÔNG — đây là hardcode có chủ đích nhưng mâu thuẫn với phân quyền module-level |
+| **ENVIRONMENT** | :9000 → :8787 + :18081 · e2e.kh (kh_truong) · admin module perm |
+| **RELATED_BUG** | BUG-20261007-003 (isAdminUser hardcode) |
+| **NOTES** | Screenshot: `tools/baseline/e2e-kich-bang-1-full-admin.png`. Cần user quyết định: (a) sửa `isAdminUser` kiểm cả module perm, hoặc (b) giữ nguyên hardcode role-based. |
+
+---
+
+## TEST-20261007-008
+
+Date: 2026-10-07
+Session: ERP-SESSION-01
+Task: Test phân quyền QTHS qua UI thật — Kịch bản 2
+Module: Quản trị hệ thống (page.tsx)
+Test type: E2E / UI
+
+| Field | Value |
+|---|---|
+| **SCENARIO** | Chỉ cấp `admin_tab_01` (can_view=1) cho `e2e.kh`, KHÔNG cấp full admin → đăng nhập browser → kiểm nav group "QUẢN TRỊ HỆ THỐNG" |
+| **EXPECTED** | Nav group "QUẢN TRỊ HỆ THỐNG" KHÔNG hiện (vì cần `admin` module perm để mở cổng) |
+| **ACTUAL** | Nav group "QUẢN TRỊ HỆ THỐNG" KHÔNG hiển thị trong sidebar ✅ |
+| **RESULT** | PASS |
+| **REGRESSION** | KHÔNG |
+| **ENVIRONMENT** | :9000 → :8787 + :18081 · e2e.kh (kh_truong) · admin_tab_01 only |
+| **NOTES** | Screenshot: `tools/baseline/e2e-kich-bang-2-admin-tab-01-only.png`. `admin_tab_NN` chỉ kiểm soát bên trong trang QTHS, không mở cổng vào. Cần cả `admin` module perm. |
+
+---
+
+## TEST-20261008-001 — ĐO LỖI «BẤM LƯU KHÔNG LƯU QUYỀN» + HỒI QUY BẢN VÁ
+
+| ⭐ | ⭐ |
+|---|---|
+| **TEST_ID** | TEST-20261008-001 |
+| **DATE** | 2026-10-08 10:30:00 |
+| **SESSION_ID** | ERP-SESSION-01 (SESSION_A) |
+| **TASK_ID** | TASK-20261008-001 |
+| **MODULE** | RBAC · Phân quyền người dùng |
+| **TEST_TYPE** | API + UI(logic) + REGRESSION |
+| **ENVIRONMENT** | localhost — UI :9000 · API :18081 · MySQL `vntech_erp` |
+| **RELATED_BUG** | BUG-20261008-001 |
+| **RELATED_CHANGE** | CHG-20261008-001 |
+
+### ⭐ BẰNG CHỨNG ① — ĐO TẬP KHOÁ (trước vá) · `tools/probe-permission-save-keyset.mjs`
+| | |
+|---|---|
+| SCENARIO | So tập khoá panel VẼ ô tick với tập khoá payload `save_user_access` GỬI ĐI, trên bootstrap thật |
+| EXPECTED | Hai tập TRÙNG (mọi ô tick bấm được đều phải gửi được) |
+| ACTUAL | panel **77** · payload **61** · **MẤT 16** = `admin_tab_01..14` + `admin` + `reports` |
+| RESULT | ❌ **FAIL** ⇒ tái hiện đúng triệu chứng user báo |
+
+### ⭐ BẰNG CHỨNG ② — ĐO ĐƯỜNG API, 2 NGHI PHẠM · `tools/probe-permission-save-api.mjs`
+| Phép thử | EXPECTED | ACTUAL | RESULT |
+|---|---|---|---|
+| **B1** admin thật lưu `admin_tab_01` rồi đọc lại | persisted | HTTP 200 · đọc lại **thấy persisted** | ✅ PASS ⇒ backend NHẬN `admin_tab_NN` ⇒ lỗi ở FRONTEND |
+| **B2** user role≠admin (đã được cấp quyền `admin`) gọi `save_user_access` | ? | **HTTP 403** «Thao tác chưa được khai báo quyền trong hệ thống» | ❌ **CHẶN** ⇒ nguyên nhân (B) đứng vững |
+
+> Ghi chú: (B) **không** được sửa trong vòng này — đó là **quyết định phân quyền** (ai được lưu
+> quyền), phải chờ user chốt. Xem `DEC-20261008-001`.
+
+### ⭐ BẰNG CHỨNG ③ — ĐO LẠI SAU VÁ
+| | |
+|---|---|
+| SCENARIO | Chạy lại `tools/probe-permission-save-keyset.mjs` sau bản vá |
+| EXPECTED | MẤT **0** khoá |
+| ACTUAL | Khoá PANEL vẽ **77** · Khoá PAYLOAD gửi đi **77** · ✅ **KHÔNG lệch** |
+| RESULT | ✅ **PASS** |
+
+### ⭐ BẰNG CHỨNG ④ — TEST HỒI QUY CHỐNG TÁI PHÁT
+`tests/v214-phan-quyen-luu-quyen.test.mjs` — **7/7 VỆ XANH**
+| VỆ | Nội dung | KQ |
+|---|---|---|
+| VỆ 1 | nguồn khoá là `moduleKey` (cột CSDL thật), ⛔ không `item.key` | ✅ |
+| VỆ 2 | khoá = HỢP `moduleCatalog` ∪ `entries`, dùng CHUNG 2 phía | ✅ |
+| VỆ 3 | vùng DỰNG STATE ⛔ không đọc `item.key` của dòng danh mục | ✅ |
+| VỆ 4 | hành vi: N dòng ⇒ N khoá phân biệt | ✅ |
+| VỆ 5 | **đối chứng âm**: biểu thức CŨ gộp 76 dòng ⇒ ĐÚNG 1 khoá `"undefined"` | ✅ |
+| VỆ 6 | CẢ HAI modal dựng payload từ hàm nguồn chung; ⛔ không còn `assignableModules` | ✅ |
+| **VỆ 7** ⭐MỚI | payload PHỦ ĐỦ tập khoá panel vẽ; **đối chứng âm mất ĐÚNG 16 khoá** | ✅ |
+
+### ⭐ BẰNG CHỨNG ⑤ — HỒI QUY TOÀN PHẦN (§25)
+| Cổng | Kết quả |
+|---|---|
+| `node scripts/regression-suite.mjs` (cổng chính thức) | **tests 866 · pass 865 · fail 0 · skipped 1** ✅ exit 0 |
+| `npx tsc --noEmit --incremental false` | **exit 0** ✅ |
+| `tests/ad11-scope-audit` · `runtime-admin-boq-regression` · `m118-system-admin-menu-gate` | ✅ XANH |
+
+### NOTES
+- `mt3-ui-25-all-groups-tabs.test.mjs` đỏ khi chạy `node --test` trực tiếp vì
+  `ERR_MODULE_NOT_FOUND '@/lib'` — **đã xác minh KHÔNG do bản vá này**: tệp nằm trong
+  `KNOWN_RED` (`scripts/regression-suite.mjs:32`, nợ cũ đợt MT3 đã rollback) và lỗi là
+  phân giải alias của harness, ⛔ không phải lỗi logic.
+- ⛔ Chưa chạy được UI thật bằng trình duyệt (nuphus browser không khả dụng trong phiên này)
+  ⇒ VERIFIED còn chờ user xác nhận trên giao diện.
+
+## TEST-20261008-002 — ⭐ NGHIỆM THU BẰNG **UI THẬT** (trình duyệt) — 15/15 ĐẠT
+
+| ⭐ | ⭐ |
+|---|---|
+| **TEST_ID** | TEST-20261008-002 |
+| **DATE** | 2026-10-08 11:05:00 |
+| **SESSION_ID** | ERP-SESSION-01 (SESSION_A) |
+| **TASK_ID** | TASK-20261008-001 |
+| **MODULE** | RBAC · Modal «Phân quyền công việc / chức năng» |
+| **TEST_TYPE** | **UI** (trình duyệt thật — Edge headless qua CDP, ⛔ không phải API) |
+| **ENVIRONMENT** | `http://127.0.0.1:9000` · Edge `--headless=new` · tài khoản `admin` |
+| **RELATED_BUG** | BUG-20261008-001 |
+| **TOOL** | `tools/probe-permission-save-ui.mjs` |
+
+### VÌ SAO PHẢI ĐO BẰNG UI (⛔ không đủ nếu chỉ đọc mã)
+Lỗi nằm ở **FRONTEND dựng payload thiếu khoá**. Test đọc mã chỉ chứng minh *hình dạng mã*;
+phép đo này chứng minh **payload trình duyệt THỰC SỰ GỬI** — đúng thứ đã hỏng.
+
+### CÁCH ĐO (⛔ không vòng quanh · ⛔ không ghi dữ liệu người thật)
+1. Edge headless + CDP, nạp app, đăng nhập `admin` (HTTP 200).
+2. Menu «QUẢN TRỊ HỆ THỐNG › DANH MỤC & PHÂN QUYỀN».
+3. Bấm «Sửa tài khoản» dòng đầu ⇒ modal **«Sửa tài khoản · Ngọc Mai»**.
+4. Mở thẻ **«Phân quyền công việc / Chức năng»** ⇒ ma trận hiện (87 dòng · 531 ô tick).
+5. **CÀI BẪY `window.fetch`**: gặp `save_user_access` ⇒ **ghi lại body rồi CHẶN** (trả 200 giả)
+   ⇒ thấy payload THẬT mà ⛔ **không ghi gì vào CSDL**.
+6. Tick `view-admin_tab_01` (khoá TỪNG BỊ BỎ) + `view-purchasing` (khoá vốn vẫn được gửi).
+7. Bấm **«LƯU PHÂN QUYỀN →»** ⇒ đọc payload đã bắt.
+
+### KẾT QUẢ — 15/15 PHÉP KIỂM ĐẠT
+| # | Phép kiểm | KQ |
+|---|---|---|
+| 1 | Đăng nhập admin + SPA mount | ✅ HTTP 200 |
+| 2 | Vào màn «Danh mục & phân quyền» | ✅ |
+| 3 | Mở modal «Sửa tài khoản» | ✅ «Sửa tài khoản · Ngọc Mai» |
+| 4 | Mở thẻ «Phân quyền công việc / Chức năng» | ✅ |
+| 5 | Ma trận hiện + CÓ ô `admin_tab_01` | ✅ 87 dòng · 531 ô tick |
+| 6 | Cài bẫy fetch (chặn ghi CSDL) | ✅ |
+| 7 | Tick `view-admin_tab_01` + `view-purchasing` | ✅ cả hai BẬT |
+| 8 | Chụp tập khoá panel vẽ (lúc modal còn mở) | ✅ **75** khoá |
+| 9 | Bẫy bắt được payload `save_user_access` | ✅ 12 144 byte |
+| 10 | **Payload GỬI `admin_tab_01`** (khoá đã từng bị bỏ) | ✅ `{"moduleKey":"admin_tab_01","canView":true,…}` |
+| 11 | `admin_tab_01`.canView = true (đúng ô vừa tick) | ✅ |
+| 12 | Payload vẫn gửi khoá thường `purchasing` | ✅ canView=true |
+| 13 | Payload PHỦ ĐỦ tập khoá panel vẽ | ✅ **77 ≥ 75** |
+| 14 | ⛔ KHÔNG khoá nào bị bỏ sót | ✅ **0 khoá thiếu** |
+| 15 | ĐỦ 14 khoá `admin_tab_NN` (biểu thức cũ gửi **0**) | ✅ **14/14** |
+
+### 📏 SỐ ĐO QUYẾT ĐỊNH
+```
+PAYLOAD THẬT (trình duyệt gửi): 77 dòng
+admin_tab_NN trong payload    : 14/14      ← biểu thức CŨ gửi 0
+khoá bị bỏ sót                : 0          ← trước vá: 16
+```
+
+### NOTES
+- ⚠️ Request **đã bị chặn ở tầng `fetch`** ⇒ ⛔ **không có dữ liệu người thật nào bị ghi**;
+  phép đo chỉ đọc payload. Việc backend ghi được đã chứng minh riêng ở `TEST-20261008-001` (B1).
+- ✅ Đây là **VERIFIED theo §24** cho nguyên nhân (A): đúng đường UI user báo, nay gửi đủ khoá.
+- ⏸ Nguyên nhân (B) vẫn chờ user (`DEC-20261008-001`) — ⛔ không liên quan phép đo này.
+
+## TEST-20261008-003 — ✅ VERIFY **PA-1** (backend): non-admin có `admin_tab_06` LƯU ĐƯỢC + GHI THẬT
+
+| ⭐ | ⭐ |
+|---|---|
+| **TEST_ID** | TEST-20261008-003 |
+| **DATE** | 2026-10-08 11:45:00 |
+| **SESSION_ID** | ERP-SESSION-01 (SESSION_A) |
+| **TASK_ID** | TASK-20261008-001 |
+| **MODULE** | RBAC · Lưu bảng phân quyền |
+| **TEST_TYPE** | API + REGRESSION |
+| **ENVIRONMENT** | `http://127.0.0.1:9000` → Java `:18081` (PID 12420, jar 91 MB build 11:18) · MySQL `vntech_erp` |
+| **RELATED_BUG** | BUG-20261008-001 (nguyên nhân B) |
+| **RELATED_CHANGE** | CHG-20261008-002 |
+| **TOOL** | `tools/probe-permission-save-api.mjs` |
+
+### KẾT QUẢ — `PROBE_EXIT = 0`
+| # | Phép kiểm | EXPECTED | ACTUAL | KQ |
+|---|---|---|---|---|
+| B1 | admin lưu `admin_tab_01` rồi đọc lại | persisted | HTTP 200 · persisted | ✅ |
+| **B2** | **user role≠admin có `admin_tab_06` + `canView` gọi `save_user_access`** | **200** | **HTTP 200** | ✅ |
+| **B2b** | **đọc lại: payload non-admin CÓ ghi xuống CSDL** | có | `requests.canCreate=1` (B1 đặt 0 · B2 đặt 1) + `admin_tab_06.canView=1` | ✅ |
+| **B3** | **đối chứng ÂM — user ⛔ không quyền nào** | **403** | **HTTP 403** | ✅ |
+
+📏 Trước PA-1: B2 = **403** · Sau PA-1: B2 = **200** ⇒ đã nới ĐÚNG mức, ⛔ không mở toang (B3 vẫn chặn).
+
+### ⭐ ĐO ĐƯỢC **3 TẦNG** CHẶN (loại trừ từng tầng bằng phép thử — D-081)
+| Tầng | Chỗ chặn | Trạng thái |
+|---|---|---|
+| ① | `ActionRbacRegistry` khai `List.of()` (rỗng) ⇒ default-DENY | ✅ đã sửa → `admin_tab_06` |
+| ② | `UserManagementUseCase.saveUserAccess` `requireRole(…, List.of("admin"))` | ✅ đã sửa → khuôn `update_user` |
+| ③ | `SystemController` `requireRequireAdmin(request)` (cứng role=admin) | ✅ đã sửa → `requireCurrentUser` |
+
+**Bằng chứng tách được từng tầng — THÔNG ĐIỆP 403 ĐỔI THEO TỪNG BƯỚC VÁ:**
+1. Chưa vá: «Thao tác **chưa được khai báo quyền** trong hệ thống» (tầng ① — default-DENY).
+2. Vá ①②: «Tài khoản **chưa được cấp đúng quyền** cho thao tác này» (tầng ② — `requireActionModule`).
+3. Vá ①②③: «Tài khoản **không có quyền thực hiện nghiệp vụ này**» (tầng ③ — `requireRequireAdmin`).
+4. Vá cả ③: **HTTP 200** ✅
+
+### REGRESSION (§25)
+| Cổng | Kết quả |
+|---|---|
+| Java backend `mvn test` (cả 4 module) | ✅ **web 86 test · 0 fail · 0 error** · BUILD SUCCESS |
+| Cổng hồi quy frontend `scripts/regression-suite.mjs` | ✅ **866 test · 865 pass · 0 fail · 1 skip** |
+| `tests/f03-tai-chinh-audit-deps.test.mjs` | ✅ **7/7** (sau khi cập nhật cột số dòng — xem NOTES) |
+
+### NOTES
+- ⚠️ **SỬA CẢ TÀI LIỆU, ⛔ KHÔNG NỚI TEST**: khối chú thích PA-1 thêm **16 dòng** vào `SystemController.java`
+  ⇒ mọi `case "…"` dịch xuống 16 ⇒ hồ sơ `docs/agent-progress/F-03-TAI-CHINH-AUDIT-PHU-THUOC.md`
+  (bảng «action ↔ số dòng») thành CŨ ⇒ test F-03 đỏ. §22: tài liệu phải khớp mã thật ⇒ đã cập nhật
+  **23 dòng** (JS giữ nguyên — đo được **lệch JS = 0**, lệch JAVA = 23, đều đúng **+16**).
+  Công cụ: `tools/_fix-f03-lines.mjs` (có kiểm khuôn trước khi ghi + backup).
+- ⛔ **SỰ CỐ CỦA TÔI ĐÃ SỬA**: bản đầu của công cụ trên ghi **thiếu dấu `:` ở cột JS**
+  (`| 1382 |` thay vì `| :1382 |`) ⇒ regex của test khớp **0 dòng**. Đã khôi phục từ `.bak` và sửa lại;
+  bản 2 có bước 「khôi phục backup」 + 「kiểm khuôn ≥ 20 dòng TRƯỚC KHI GHI」.
+- ⚠️ Lỗi `NumberFormatException: For input string: "false"` trong log backend là **CÓ SẴN TỪ TRƯỚC**
+  (đo được trong `java-run.log` ngày **29/09/2026**) ⇒ ⛔ không do PA-1. Ghi nhận làm việc riêng.
+
+## TEST-20261008-004 — ⭐ E2E THẬT: cấp 1 quyền qua MODAL → đăng nhập user đó → vào «Quản lý hệ thống»
+
+| ⭐ | ⭐ |
+|---|---|
+| **TEST_ID** | TEST-20261008-004 |
+| **DATE** | 2026-10-08 12:20:00 |
+| **SESSION_ID** | ERP-SESSION-01 (SESSION_A) |
+| **TASK_ID** | TASK-20261008-001 |
+| **MODULE** | RBAC · Modal «Phân quyền công việc / Chức năng» → menu «Quản trị hệ thống» |
+| **TEST_TYPE** | **E2E** (trình duyệt thật Edge headless + CDP, **LƯU THẬT**, đổi danh tính giữa 2 tài khoản) |
+| **ENVIRONMENT** | `http://127.0.0.1:9000` → Java `:18081` (PID 12420) · MySQL `vntech_erp` |
+| **TOOL** | `tools/probe-grant-1-perm-e2e.mjs` · `tools/_probe-matrix-rows.mjs` |
+
+### YÊU CẦU USER (nguyên văn)
+> «sau khi thực hiện xong thì làm lại test cấp 1 quyền cho user bất kì thông qua modal Phân quyền
+>  công việc / chức năng sau đó vào tài khoản của user đó thực hiện truy cập vào quản lý hệ thống»
+
+### KẾT QUẢ — **CƠ CHẾ 10/10 ĐẠT** (`E2E_EXIT = 0`)
+| # | Phép kiểm | KQ |
+|---|---|---|
+| 1 | Đăng nhập admin + SPA mount | ✅ HTTP 200 |
+| 2 | Tạo tài khoản probe (role `ksda`/engineer) | ✅ |
+| 3 | Tìm tài khoản trong bảng + mở «Sửa tài khoản» | ✅ |
+| 4 | Mở thẻ «Phân quyền công việc / Chức năng» | ✅ |
+| 5 | Ma trận hiện ra | ✅ **75 dòng** có ô tick |
+| 6 | Tick THÊM đúng **1 ô** («Xem» · Tab 06) | ✅ ô đã tick 60 → 61 (Δ+1) |
+| 7 | Bấm «LƯU PHÂN QUYỀN →» | ✅ **LƯU THẬT** (⛔ không chặn request) |
+| 8 | `admin_tab_06` **XUẤT HIỆN trong CSDL** | ✅ `canView = 1` |
+| 9 | Ô vừa tick ĐÃ GHI xuống CSDL | ✅ 60 → **77** dòng (Δ17) |
+| 10 | **Đăng nhập bằng CHÍNH tài khoản probe** | ✅ HTTP 200 · `role=ksda` |
+
+📌 **PA-1 + bản vá (A) đã hiệu lực đầu-cuối**: cấp quyền qua modal nay **lưu thật** và **tài khoản
+nhận được quyền** — đúng thứ user báo hỏng.
+
+### ⚠️ ĐÍNH CHÍNH KỲ VỌNG (⛔ phép đo, không phải sản phẩm)
+- **Δ17 ⛔ không phải lỗi**: `save_user_access` là **FULL-REPLACE** và panel gửi **LẠI toàn bộ 77 khoá**
+  nó quản lý ⇒ 60 dòng cũ được ghi lại + 17 khoá mới. ⛔ Không phải «cấp 17 quyền».
+- **Ma trận ⛔ không rỗng khi mở**: tài khoản mới **ĐÃ CÓ ~60 quyền `department_default` theo phòng**
+  ⇒ panel nạp sẵn thành ô ĐÃ TICK. ⚠️ «Cấp 1 quyền» thực chất là **tick THÊM 1 ô** trên nền quyền phòng.
+
+### 🚨 3 PHÁT HIỆN (⛔ không phải lỗi phép đo — ghi thành `BUG-20261008-003`)
+1. **Chỉ có `admin_tab_06` ⇒ sidebar ⛔ KHÔNG có nhóm «QUẢN TRỊ HỆ THỐNG».**
+   Menu quản trị đòi **module `admin`** (`app/page.tsx:486-487` — `configuredModules` lặp **mảng menu TĨNH**,
+   mà `admin_tab_NN` ⛔ không nằm trong mảng đó).
+2. **Ma trận ⛔ KHÔNG có dòng cho module `admin`** — đo `tools/_probe-matrix-rows.mjs`:
+   75 khoá = **14 `admin_tab_NN`** + **61 module nghiệp vụ**; `permissionMenuStructure` (`page.tsx:280`)
+   **LỌC BỎ** `admin` ⇒ ⛔ **không thể cấp quyền vào «Quản lý hệ thống» TỪ GIAO DIỆN**.
+3. ⇒ Tài khoản ⛔ **không vào được** «Quản lý hệ thống» dù đã được cấp `admin_tab_06`.
+
+### ✅ ĐỐI CHỨNG CHỨNG MINH NGUYÊN NHÂN (cùng một tài khoản)
+| Bước | nav groups | Vào được? |
+|---|---|---|
+| Chỉ có `admin_tab_06` | `my_work … material_master` (⛔ **không** `system_admin`) | ❌ |
+| Cấp THÊM **module `admin`** (canView=1) qua API | **`system_admin`** | ✅ màn «DANH MỤC & PHÂN QUYỀN» |
+
+📏 ⇒ **KHOÁ MỞ «Quản lý hệ thống» là module `admin`** — và đó đúng là khoá **duy nhất** mà ma trận
+⛔ không cho cấp.
+
+### NOTES
+- ⚠️ **2 lỗi của PHÉP ĐO đã tự sửa** (⛔ không phải lỗi sản phẩm), ghi lại để người sau ⛔ không lặp:
+  1. **Bootstrap cũ**: tạo tài khoản SAU khi trang đã nạp ⇒ `data.users` ⛔ không có tài khoản mới
+     ⇒ bảng ⛔ không hiện dòng. ✅ Sửa: **nạp lại trang** sau khi tạo.
+  2. **Ô tìm kiếm lọc CLIENT-SIDE trên 25 dòng/trang** ⇒ tài khoản ở trang sau **⛔ không tìm thấy**
+     («Không có tài khoản nào phù hợp bộ lọc»). ✅ Sửa: tạo tài khoản với `employeeCode` sắp ĐẦU bảng
+     (`000PG1-…`) để nằm ngay trang 1.
+- 📸 Ảnh bằng chứng: `tools/baseline/e2e-grant1-da-tick-1-quyen.png` ·
+  `e2e-grant1-sau-khi-luu.png` · `e2e-grant1-doi-chung-co-module-admin.png`
+
+## TEST-20261008-005 — ✅ VERIFY **S-1** (chặn tự nâng quyền) — đo **3 CHIỀU** · `EXIT 0`
+
+| ⭐ | ⭐ |
+|---|---|
+| **TEST_ID** | TEST-20261008-005 |
+| **SESSION_ID** | ERP-SESSION-01 (SESSION_A) · **DATE** 2026-10-08 14:00 |
+| **TEST_TYPE** | API (thật, tài khoản probe riêng) · **TOOL** `tools/probe-permission-save-api.mjs` |
+| **RELATED** | `BUG-20261008-002` · `CHG-20261008-003` · `DEC-20261008-002` |
+
+| # | Ca đo | EXPECTED | ACTUAL | KQ |
+|---|---|---|---|---|
+| B2 | non-admin có `admin_tab_06` lưu **giữ nguyên** tập đang có | 200 | **200** | ✅ |
+| B2c | tự **THU HỒI** `requests.canCreate` của mình (chiều ĐI XUỐNG) | 200 | **200** | ✅ |
+| B2b | đọc lại: thu hồi **ĐÃ GHI** | canCreate=0 | **0** + `admin_tab_06`=1 | ✅ |
+| B3 | user ⛔ không quyền ⇒ 403 | 403 | **403** | ✅ |
+| **B4** | ⛔ **TỰ CẤP THÊM `admin`** cho mình | **403** | **403** «Không được tự cấp thêm quyền cho chính mình…» | ✅ |
+| **B5** | ⛔ không chặn oan — giữ nguyên | 200 | **200** | ✅ |
+| **B6** | ⛔ không chặn oan — cấp cho **người khác** | 200 | **200** | ✅ |
+
+📏 **Kết luận**: leo thang bị chặn · ⛔ **không chặn oan** · hồi quy Java **86 test · 0 fail**.
+
+⚠️ **ĐÍNH CHÍNH PHÉP ĐO (⛔ lỗi của TÔI, ⛔ không phải sản phẩm)**: bản probe CŨ của B2/B5 gửi payload
+**thêm `requests` mà tài khoản chưa có** ⇒ đó **CHÍNH LÀ leo thang** ⇒ S-1 chặn 403 là **ĐÚNG**.
+Đã sửa B2 thành «giữ nguyên tập đang có» và thêm **B2c** (thu hồi) để chứng minh **GHI THẬT** bằng
+chiều ĐI XUỐNG ⭐ — cách này ⛔ không vi phạm luật mới ✓
+
+---
+
+## TEST-20261008-006 — ✅ VERIFY **M-2** (E2E): cấp 1 quyền qua modal ⇒ VÀO ĐƯỢC quản trị · **11/11**
+
+| ⭐ | ⭐ |
+|---|---|
+| **TEST_ID** | TEST-20261008-006 |
+| **SESSION_ID** | ERP-SESSION-01 (SESSION_A) · **DATE** 2026-10-08 14:00 |
+| **TEST_TYPE** | **E2E** (Edge headless + CDP, **LƯU THẬT**, đổi danh tính) · **TOOL** `tools/probe-grant-1-perm-e2e.mjs` |
+| **RELATED** | `BUG-20261008-003` · `CHG-20261008-004` · `DEC-20261008-003` |
+
+### DIỄN BIẾN (đúng yêu cầu user)
+Tạo tài khoản mới → mở modal «Phân quyền công việc / Chức năng» → tick **ĐÚNG 1 ô** («Xem» · Tab 06)
+→ «LƯU PHÂN QUYỀN →» (**lưu THẬT**) → **đăng nhập bằng chính tài khoản đó**.
+
+### KẾT QUẢ — **11/11 ĐẠT**
+| Phép kiểm | KQ |
+|---|---|
+| Modal mở đúng tài khoản · thẻ phân quyền | ✅ |
+| Tick thêm **đúng 1 ô** (235 → 236) | ✅ |
+| `admin_tab_06` **vào CSDL** (`canView=1`) | ✅ |
+| Đăng nhập bằng tài khoản đó | ✅ HTTP 200 |
+| **`nav groups` CÓ `system_admin`** | ✅ (trước M-2: ⛔ THIẾU) |
+| **Vào màn «DANH MỤC & PHÂN QUYỀN»** | ✅ |
+| **`14 tab quản trị` hiện ra** (1 Tài khoản · 2 Tổ chức · …) | ✅ (trước: **0 tab**) |
+| `.permission-steps` có **14 nút** | ✅ (trước: ⛔ KHÔNG có) |
+| **Bị chặn?** | **✅ KHÔNG** (trước: «CHƯA ĐƯỢC PHÂN QUYỀN») |
+
+### 📏 BẰNG CHỨNG TỪNG CỔNG (⭐ đo được nhờ SỬA TỪNG CỔNG MỘT)
+| Sau khi sửa | Đo được |
+|---|---|
+| ① mới `systemAdminMenuVisible` | menu **hiện** ✅ nhưng thân màn **TRỐNG** (0 tab · 238 ký tự · ⛔ không `.permission-steps`) |
+| ①+② `accessDenied` | ✅ hết câu «CHƯA ĐƯỢC PHÂN QUYỀN» nhưng vẫn **0 tab** (thiếu điều kiện render) |
+| ①+②+③ render `<Admin/>` | ✅ **14 tab** · `.permission-steps` 14 nút · **11/11** |
+
+### HỒI QUY
+✅ Cổng FE `scripts/regression-suite.mjs`: **925 test · 924 pass · 0 fail** (sau khi cập nhật
+`tests/m118-system-admin-menu-gate.test.mjs` theo **ý định gốc MỐC 118** — ⛔ không nới test).
+✅ Cổng UI `tools/verify-ui-build-applied.mjs`: `vân tay khớp SSOT` · `6/6 bundle đúng byte`.
+
+## TEST-20261008-007 — ✅ **INTEGRATION**: API kho (H2) — 2 ca mới XANH · hồi quy **88/88**
+
+| ⭐ | ⭐ |
+|---|---|
+| **CHANGE_ID** | CHG-20261008-005 |
+| **DATE** | 2026-10-08 16:10:00 |
+| **SESSION_ID** | ERP-SESSION-01 (SESSION_A) |
+| **CATEGORY** | API · BACKEND |
+| **MODULE** | `inventory` + `central_warehouse` (capability `canEdit`) |
+
+**BEFORE** — ⛔ **CHƯA CÓ** 2 action (quét `java-backend/**/*.java` = 0 kết quả). UI ⛔ không thể tạo/sửa/ngừng kho.
+
+**AFTER** — 2 action đi đủ **3 tầng quyền**:
+```text
+① ActionRbacRegistry : save_warehouse / set_warehouse_status → ["inventory","central_warehouse"] + canEdit
+② SystemController   : case "save_warehouse" / "set_warehouse_status" → requireCurrentUser(request)   (⛔ KHÔNG requireRequireAdmin)
+③ AdminSystemUseCase : saveWarehouse(principal,payload) · setWarehouseStatus(principal,payload)
+                       + accessScope.requireProjectAccess(...) khi tạo kho cho DỰ ÁN
+                       + accessScope.requireWarehouseAccess(...) khi sửa / đổi trạng thái
+```
+➕ 4 hàm store THUẦN THÊM: `upsertWarehouse` · `setWarehouseActive` · `warehouseCodeExists` · `warehouseExists`.
+➕ **KHÔNG** thêm khoá mới vào `module_catalog` (dùng lại nhóm của action anh em) ✓
+
+**REASON** — `HANDOFF-20261008-009` (phiên 02 yêu cầu) · thứ tự phiên 02 chốt: **S01 làm API backend trước** → S03 nối UI → S02 bật 4 nút.
+**FILES** — `AdminSystemStore.java` · `AdminSystemStoreAdapter.java` · `AdminSystemUseCase.java` · `ActionRbacRegistry.java` · `SystemController.java` · `AdminSystemIntegrationTest.java`
+**IMPACT** — ⛔ không đổi hành vi action cũ · ⛔ không migration (bảng `warehouses` đã có sẵn) · ⛔ không đổi chữ ký hàm cũ.
+**COMPATIBILITY** — ⭐ Java-only: action ⛔ **chưa có** trong `ACTION_CATALOG` phía JS ⇒ ⚠️ làm tăng độ lệch của
+`probe-action-module-parity.mjs` (vốn **đã đỏ sẵn** 64 dòng, ⛔ không do thay đổi này). ⚠️ Cần phiên nào đó
+sinh lại catalog khi nối UI — ⛔ **KHÔNG** tự sinh ở đây (hợp đồng ghi rõ catalog sinh TỪ JS).
+**TEST** — ✅ `TEST-20261008-007` · **STATUS** ✅ **FIXED + VERIFIED**
+
+---
+
+## TEST-20261008-007 — ✅ **INTEGRATION**: API kho (H2) — 2 ca mới XANH · hồi quy **88/88**
+
+| ⭐ | ⭐ |
+|---|---|
+| **TEST_ID** | TEST-20261008-007 · **DATE** 2026-10-08 16:10 |
+| **SESSION_ID** | ERP-SESSION-01 (SESSION_A) · **TEST_TYPE** INTEGRATION (SpringBootTest + H2 `jdbc:h2:mem:vntech`) |
+| **TOOL** | `AdminSystemIntegrationTest` (mở rộng chính bộ test có sẵn — ⭐ §17) |
+
+| Ca | Kỳ vọng | Kết quả |
+|---|---|---|
+| `saveWarehouse_taoMoiVaChanTrungMa` — tạo `WH-TEST-01` | 200 + `ok` | ✅ |
+| ⛔ mã trùng **KHÁC hoa/thường** (`wh-test-01`) | **400** + «Mã kho WH-TEST-01 đã tồn tại.» | ✅ |
+| ⛔ thiếu `name` | 400 | ✅ |
+| `setWarehouseStatus_ngungRoiBatLaiDuoc` — ngừng `WH-CENTRAL` | 200 | ✅ |
+| ⭐ **BẬT LẠI** kho đang `active=0` | **200** (⛔ không được 400) | ✅ |
+| ⛔ `id` không tồn tại | 400 | ✅ |
+
+**HỒI QUY** — ✅ `AdminSystemIntegrationTest` **9/9** (trước 7) · ✅ **toàn bộ Java: 88 test · 0 fail · 0 error** (trước 86) · ✅ `tsc` EXIT 0
+**MÔI TRƯỜNG** — H2 in-memory (⛔ an toàn với MySQL thật) · build fat jar + chạy lại backend (healthy) · 3 cổng `:8787` `:9000` `:18081` sống ✓
+**GHI CHÚ** — ⛔ **CHƯA E2E qua UI**: bước 7 (FE modal `warehouse`/`allocate`) ⛔ chưa làm; ⚠️ và phần `allocate`
+**phải phối hợp với phiên đang giữ `app/screens/AllocateReturn.tsx`** (xem `HANDOFF-20261008-002` §40) ✓
+
+## CHG-20261008-006 — ➕ **FE: MODAL KHO** nối vào `page.tsx` (TÁI DÙNG component phiên 02) + ⚠️ **ĐÍNH CHÍNH HỢP ĐỒNG** `warehouseId`
+
+| ⭐ | ⭐ |
+|---|---|
+| **CHANGE_ID** | CHG-20261008-006 |
+| **DATE** | 2026-10-08 16:40:00 |
+| **SESSION_ID** | ERP-SESSION-01 (SESSION_A) |
+| **CATEGORY** | FRONTEND · API |
+| **MODULE** | Kho — `inventory` / `central_warehouse` |
+
+### PHẦN 1 — NỐI FE (bước 7/8 của `HANDOFF-20261008-009`)
+⛔ **KHÔNG viết modal mới** — ⭐ **TÁI DÙNG** `app/screens/WarehouseFormModal.tsx` do **`ERP-SESSION-02` dựng**
+(§17 «REUSE»), chỉ ➕ 1 import + 1 case trong `app/page.tsx`:
+```tsx
+{modal === "warehouse" && <WarehouseFormModal
+  data={{ warehouses: data.warehouses, projects: data.projects }}
+  row={selected} close={() => setModal(null)} submit={action}
+  canEdit={modulePermission(data, "inventory").canEdit || modulePermission(data, "central_warehouse").canEdit} />}
+```
+⭐ `canEdit` do **nơi gọi** quyết định — đúng như component ghi rõ («VIỆC KIỂM QUYỀN thuộc nơi gọi»), dùng
+CÙNG nhóm module với tầng RBAC của action ⇒ ⛔ không lệch luật giữa UI và API ✓
+
+### ⚠️⚠️ PHẦN 2 — ĐÍNH CHÍNH `CHG-20261008-005`: LỆCH TÊN KHOÁ GIỮA 2 BÊN (⭐ đã sửa ở PHÍA S01)
+📏 **ĐỌC MÃ NƠI GỌI TRƯỚC KHI CHỐT** mới phát hiện: component gửi
+`submit("save_warehouse", { **warehouseId**, projectId, code, name })`
+⚠️ NHƯNG use-case S01 viết đọc `payload.get("id")` ⇒ ⭐ **«Sửa kho» ⛔ LUÔN bị coi là TẠO MỚI** ⇒ trùng mã ⇒ **400**.
+🔎 **QUY ƯỚC NHÀ LÀ `warehouseId`** — chính `saveWarehouseLocation` (action anh em) cũng đọc `warehouseId` ⇒
+**S01 SAI**, ⛔ không phải phiên 02.
+✅ **FIX Ở PHÍA S01** (`AdminSystemUseCase`), ⛔ **KHÔNG** sửa tệp của phiên 02:
+```java
+String id = trim(payload.get("warehouseId"));
+if (id.isEmpty()) id = trim(payload.get("id"));   // ⭐ nhận CẢ HAI ⇒ ⛔ không vỡ bên nào
+```
+⚠️ **ĐÃ BUILD LẠI + CHẠY LẠI BACKEND** — ⛔ nếu chỉ build 1 lần trước đó thì **jar đang chạy THIẾU bản vá này** ✓
+
+### PHẦN 3 — HỆ QUẢ BẮT BUỘC: SỬA `F-03`
+Việc chèn dòng vào `ActionRbacRegistry.java` làm **bảng action↔số dòng** trong
+`docs/agent-progress/F-03-TAI-CHINH-AUDIT-PHU-THUOC.md` **lệch** ⇒ cổng `F-03` ĐỎ.
+✅ Chạy **công cụ có sẵn** `tools/_fix-f03-lines.mjs` (⭐ có kiểm khuôn trước khi ghi): cập nhật **23 dòng** ⇒ **F-03 7/7 XANH**.
+
+**TEST** — ✅ `TEST-20261008-008` · **STATUS** ✅ **FIXED + VERIFIED**
+**RELATED** — `HANDOFF-20261008-009` · `CHG-20261008-005` · `DEV-20261008-003`
+
+---
+
+## TEST-20261008-008 — ✅ **BUILD + HỒI QUY** sau khi nối FE modal kho & vá `warehouseId`
+
+| ⭐ | ⭐ |
+|---|---|
+| **TEST_ID** | TEST-20261008-008 · **DATE** 2026-10-08 16:40 |
+| **SESSION_ID** | ERP-SESSION-01 (SESSION_A) · **TEST_TYPE** REGRESSION + UI |
+| **RELATED** | `CHG-20261008-006` |
+
+| Cổng | Kết quả |
+|---|---|
+| `npx tsc --noEmit` | ✅ **EXIT 0** |
+| `fixpoint-fingerprint` | ✅ FIXPOINT OK |
+| `npm run build` | ✅ BUILD SUCCESS + `BUILT ARTIFACT VALIDATION: ĐẠT` |
+| `_sync-identity-once` | ✅ `VNTECH-KHO-MEP-001` + `TRUST-ROOT` KHỚP · trigger tạo lại |
+| **Cổng UI** `verify-ui-build-applied` | ✅ `dist mới hơn nguồn` · `vân tay khớp SSOT` · **6/6 bundle đúng byte** |
+| **Cổng FE** `regression-suite` | ✅ **931 test · 930 pass · 0 fail** (⚠️ trước đó 1 đỏ ở `F-03` — đã sửa bằng công cụ nhà) |
+| **Java** `mvn -B test` (chạy lại SAU bản vá `warehouseId`) | ✅ **88 test · 0 fail · 0 error** · `AdminSystemIntegrationTest` **9/9** |
+| Triển khai | ✅ build fat jar + chạy lại backend (healthy) · 3 cổng `:8787` `:9000` `:18081` sống |
+
+**GHI CHÚ ⚠️** — ⛔ **CHƯA có E2E bấm-thử modal kho qua UI** (bước 7b chưa làm): phép đo hiện tại mới chứng
+minh **biên dịch + bundle + hồi quy**, ⛔ chưa chứng minh «mở modal từ màn Kho ⇒ lưu được».
+⭐ Điều kiện cần đã đủ (API sống + component khớp khoá) — cần 1 probe UI màn Kho ở lượt sau ✓
+
+## TEST-20261008-009 — ✅ **API KHO: 6/6 ĐẠT** — đo bằng **ĐÚNG payload modal gửi** (⚠️ ⛔ không bấm được UI vì nút do phiên 02 tạm khoá)
+
+| ⭐ | ⭐ |
+|---|---|
+| **TEST_ID** | TEST-20261008-009 · **DATE** 2026-10-08 17:00 |
+| **SESSION_ID** | ERP-SESSION-01 (SESSION_A) · **TEST_TYPE** API (thật, `:9000`→`:18081`) |
+| **TOOL** | `tools/probe-warehouse-api.mjs` (⬆ MỚI) |
+| **RELATED** | `CHG-20261008-005` · `CHG-20261008-006` · `HANDOFF-20261008-009` |
+
+### ⚠️ VÌ SAO ĐO Ở TẦNG API (⛔ không phải né tránh)
+📏 Nút «Tạo kho» trong `app/screens/Inventory.tsx` đang **`disabled`** với lý do ghi ngay trong mã:
+«**TẠM KHOÁ (BUG-20261007-014): `app/page.tsx` chưa có modal «warehouse»**» — ⭐ việc **bật lại 4 nút là của PHIÊN 02**
+(registry ghi rõ: «⭐ SAU ĐÓ: phiên 02 bật 4 nút»). ⛔ S01 **không** sửa tệp của phiên 02 ✓
+⇒ Rủi ro thật nằm ở **hợp đồng payload giữa component và API** — đo được ngay, ⛔ không cần chờ UI ✓
+
+| # | Ca đo (payload **y hệt** `WarehouseFormModal.tsx:85`) | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| W1 | TẠO: `{ warehouseId: undefined, projectId: undefined, code, name }` | 200 + đọc lại thấy kho | ✅ 200 · `id=WH_291c3cba…` |
+| **W2** | ⭐ **SỬA bằng `warehouseId`** (nhánh `editing=true`) | **200** — ⛔ **KHÔNG 400 trùng mã** | ✅ **200** + tên đã đổi + **số bản ghi cùng mã = 1** |
+| W3 | `set_warehouse_status {warehouseId, active:false}` | 200 + **mất khỏi danh sách kho đang dùng** | ✅ 200 · còn trong danh sách? **false** |
+| **W4** | ⭐ **BẬT LẠI** kho vừa ngừng | 200 + **quay lại danh sách** | ✅ 200 · quay lại? **true** |
+| W5 | ĐỐI CHỨNG ÂM: mã trùng | **400** + nêu rõ mã | ✅ 400 · «Mã kho WH-E2E-716394 đã tồn tại.» |
+
+**KẾT QUẢ**: 🎉 **6/6 ĐẠT · `EXIT 0`**
+
+### ⭐ W2 LÀ CA QUYẾT ĐỊNH (⭐ chứng minh bản vá lệch khoá CÓ hiệu lực)
+⛔ Nếu backend còn đọc `payload.get("id")` thì W2 = **TẠO MỚI trùng mã** ⇒ **400** ⇒ ca này ĐỎ.
+✅ Nay **200** + tên đổi + ⛔ không sinh bản ghi thứ hai ⇒ ⭐ **hợp đồng `warehouseId` đã khớp** ✓
+
+### ⚠️ SỬA PHÉP ĐO (lần 1 hỏng — ⛔ không phải lỗi sản phẩm)
+Lần đầu W3 đọc `w.active` ⇒ luôn `undefined` ⇒ **ĐỎ GIẢ**. 🔎 Nguyên nhân: bootstrap dựng bằng
+`FROM warehouses WHERE active=1` (`BootstrapDataAdapter:215`) ⇒ ⭐ kho NGỪNG **biến mất khỏi danh sách**
+chứ ⛔ **không** trả `active=0`. ✅ Sửa: đo **có/không có trong danh sách** — đúng hiện tượng quan sát được
+(⭐ bài học «số vô lý = PHÉP ĐO HỎNG, ⛔ không phải code thiếu»).
+
+### GHI CHÚ ⛔ KHÔNG CHE
+⏸ **CHƯA** đo được đường **UI** (bấm nút ⇒ modal ⇒ lưu) vì nút còn khoá ở phía phiên 02.
+⚠️ Khi phiên 02 bật nút ⇒ **cần chạy lại** một probe UI để khép vòng «người dùng bấm được» ✓
+⭐ Dọn dẹp: probe để kho test ở trạng thái **NGỪNG** (⛔ hệ thống cố ý **không có API xoá kho** — đúng chốt `ALLOW_DELETE_WAREHOUSE=false`) ✓
+
+## TEST-20261008-010 — ✅ **§22 UI/UX: TAB TRONG MODAL KÍCH THƯỚC NHẤT QUÁN** — đo được, lệch **0px** · cổng FE **951/952 pass · 0 fail**
+
+| ⭐ | ⭐ |
+|---|---|
+| **TEST_ID** | TEST-20261008-010 · **DATE** 2026-10-08 21:10 · **SESSION** ERP-SESSION-01 |
+| **TEST_TYPE** | UI (E2E, Edge headless + CDP) · **TOOL** `tools/probe-grant-1-perm-e2e.mjs` (**+2 phép kiểm mới**) |
+| **CĂN CỨ** | §22 GOAL: «tabs trong cùng một modal phải có kích thước nhất quán; ⛔ không để title dài/ngắn làm thay đổi **width** · **title area** · alignment» |
+
+### 📏 ĐO ĐƯỢC — modal «Sửa tài khoản» (2 tab: «Sửa tài khoản» · «Phân quyền công việc / Chức năng»)
+| Thẻ | WIDTH modal | Vùng TIÊU ĐỀ | Chiều cao |
+|---|---|---|---|
+| Thẻ 1 «Sửa tài khoản» (title NGẮN) | **1240** | **78** | 830 |
+| Thẻ 2 «Phân quyền công việc / Chức năng» (title DÀI) | **1240** | **78** | 939 |
+| **Lệch** | ✅ **0 px** | ✅ **0 px** | +109 px |
+
+⇒ ✅ **§22 ĐẠT**: ⭐ `width` và **vùng tiêu đề** **BẤT BIẾN** dù tiêu đề tab dài/ngắn khác hẳn ✓
+⚠️ Chiều cao thân thẻ 2 lớn hơn **109 px** — ⭐ **KHÔNG phải lỗi**: đó là **nội dung** khác nhau (ma trận 75 dòng);
+§22 chỉ cấm **title dài/ngắn** làm đổi kích thước/hình học, ⛔ không cấm nội dung khác ⇒ giữ nguyên ✓
+
+### ⭐ ĐÃ BIẾN PHÉP ĐO THÀNH **CỔNG THƯỜNG TRỰC** (⛔ không phải đo một lần rồi quên)
+Thêm **2 phép kiểm** vào `tools/probe-grant-1-perm-e2e.mjs` (⭐ đo hộp modal **TRƯỚC** và **SAU** khi đổi tab):
+· `§22 — WIDTH modal BẤT BIẾN khi đổi tab`
+· `§22 — VÙNG TIÊU ĐỀ BẤT BIẾN khi đổi tab`
+⚠️ Ghi chú thiết kế: **CỐ Ý** ⛔ không khoá cứng chiều cao (⚠️ nội dung khác nhau ⇒ chiều cao khác là hợp lệ) ✓
+
+### KẾT QUẢ TOÀN BỘ PROBE
+🎉 **CƠ CHẾ: 14/14 phép kiểm ĐẠT** (trước: 12/13) + ⚠️ 1 `finding` (`BUG-008` nhánh DƯƠNG — ⛔ **không kết luận được** do hạn chế phép đo đổi danh tính, ⛔ **không phải lỗi sản phẩm** — đã phân định ở `TEST-20261008-009`) ✓
+
+### 🌐 TRẠNG THÁI HỆ THỐNG TẠI THỜI ĐIỂM NÀY (⭐ tin tốt cho cả nhóm)
+✅ **`TM-04` ĐÃ HẾT ĐỎ** (⭐ `ERP-SESSION-03` đã xử lý `BUG-20261008-010` — 2 action tổ đội bị nới quyền) ⇒ ⭐ **CỔNG FE XANH HOÀN TOÀN: 952 test · 951 pass · 0 fail** ✓
+✅ 3 cổng `:8787` `:9000` `:18081` sống · CSDL kho **12/5/10** (khớp audit) ✓
+📌 **S2**: nút kho đã bật (15:07) — ⏸ chưa thấy ghi state về `allocate` (theo dõi tiếp, ⛔ không đụng) ✓
+
+## TEST-20261008-011 — ⭐ **`BUG-008` CHỨNG MINH MỘT PHẦN**: cổng bước 01 **MỞ** khi có `admin_tab_01` (⛔ trước: khoá ở CẢ HAI nhánh)
+
+| ⭐ | ⭐ |
+|---|---|
+| **TEST_ID** | TEST-20261008-011 · **DATE** 2026-10-08 21:35 · **SESSION** ERP-SESSION-01 |
+| **TEST_TYPE** | UI (E2E) · **TOOL** `tools/probe-grant-1-perm-e2e.mjs` |
+| **TASK** | Khép vòng `BUG-008` — viết lại **phép đo đổi danh tính** |
+
+### 🔎 LỖI PHÉP ĐO ĐÃ SỬA (⭐ nguyên nhân tìm được rất đơn giản)
+`loginInPage(u,p)` **chỉ `fetch(action:'login')` để ĐẶT COOKIE** — ⛔ **KHÔNG nạp lại app** ⇒ SPA vẫn chạy **PHIÊN CŨ**
+⇒ ⚠️ cả 2 nhánh ÂM/DƯƠNG đo trong **phiên admin** ⇒ kết quả vô nghĩa (⭐ đèn báo `bước 01 bị khoá = true` ở **CẢ HAI** nhánh là dấu hiệu nhận ra).
+📏 Luồng **CHÍNH** của probe làm ĐÚNG (login rồi `Page.navigate` — L118/121/145); 2 helper **tôi tự thêm** thì **thiếu** bước đó.
+✅ **FIX**: thêm helper `dangNhapLai(u,p)` = login + **`Page.navigate` + `waitReady(80)`** ⇒ dùng cho cả 2 helper ✓
+
+### 📏 KẾT QUẢ SAU KHI SỬA (⭐ đổi hẳn so với trước)
+| Nhánh | `bước 01 bị khoá?` TRƯỚC | **SAU** | Ý nghĩa |
+|---|---|---|---|
+| ÂM (chỉ `admin_tab_02`) | `true` (⚠️ vô nghĩa) | **`true`** ✅ | ⛔ không có tab 01 ⇒ bước 01 **ĐÚNG là bị khoá** |
+| **DƯƠNG (`admin_tab_01`)** | `true` (⚠️ vô nghĩa) | ⭐ **`false`** | ⭐ **có quyền ⇒ bước 01 MỞ** ⇒ **`BUG-008` CHỨNG MINH ở mức CỔNG BƯỚC** ✓ |
+
+⇒ ⭐ **Phép đo nay PHÂN BIỆT ĐƯỢC 2 nhánh** (ÂM khoá / DƯƠNG mở) ⇒ ⭐ **bản vá `BUG-008` + cổng từng bước (`BUG-005`) đều ĐÚNG** ✓
+
+### ⏸ CÒN THIẾU (⛔ không hạ thành «đạt»)
+`nút «Sửa tài khoản» đếm được = 0` ở nhánh DƯƠNG ⇒ ⛔ **chưa kết luận** «mở bước 01 ⇒ THẤY nút»
+⚠️ Nghi do **chưa chờ đủ** cho danh sách tài khoản render (hoặc cần cuộn/đợi mạng) — ⛔ **không** kết luận sản phẩm sai khi chưa đo được ✓
+⭐ Giữ nguyên dạng `finding` + ghi rõ người tiếp nhận cần: **thêm `await sleep` sau khi mở bước 01 rồi đo lại** ✓
+📌 `tools/probe-admin-tab01-api.mjs` (đo API) đã chứng minh **quyền ĐÃ tới client** ⇒ ⛔ không phải lỗi tầng dữ liệu ✓
+
+### TRẠNG THÁI TỔNG (⭐ chốt phiên S1)
+✅ Cổng FE **952 test · 951 pass · 0 fail** · ✅ Java **88/88** · ✅ `tsc` 0 · ✅ 3 cổng sống · ✅ CSDL kho **12/5/10** (khớp audit)
+✅ Probe E2E **14/14 phép kiểm ĐẠT** + **1 `finding`** (nói trên, ⛔ không phải lỗi sản phẩm)
+⭐ **Hết việc trong phạm vi S1** — phần còn lại thuộc `ERP-SESSION-02` (E2E UI kho · đặc tả `allocate`).

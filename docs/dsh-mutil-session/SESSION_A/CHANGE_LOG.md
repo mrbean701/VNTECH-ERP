@@ -319,3 +319,327 @@ Status: **FIXED** (⭐ **TIEN DO da xong** — ⚠️ **nhung GOC VAN CON**: ⭐
 
 ---
 
+## CHG-20261008-001 — Payload `save_user_access` dựng từ MỘT nguồn khoá duy nhất
+
+| ⭐ | ⭐ |
+|---|---|
+| **CHANGE_ID** | CHG-20261008-001 |
+| **DATE** | 2026-10-08 10:30:00 |
+| **SESSION_ID** | ERP-SESSION-01 (SESSION_A) |
+| **CATEGORY** | RBAC |
+| **MODULE** | Phân quyền người dùng (modal «Phân quyền công việc / chức năng» + tab 6) |
+
+### BEFORE → AFTER
+
+**BEFORE**
+```ts
+// app/page.tsx — UserEditModal (~3409) VÀ UserAccessModal (~3441)
+const assignableModules = configuredModules(data).filter((item) => item.key !== "admin");
+const modulePermissions = assignableModules.map((item) => ({
+  moduleKey: item.key,
+  canView: Boolean(ps[item.key]?.view), /* …6 capability… */
+  permissionExpiresAt: form.get(`expires-${item.key}`),
+}));
+// ⇒ 61 khoá — THIẾU admin_tab_01..14 + admin + reports so với 77 ô tick panel vẽ
+```
+
+**AFTER**
+```ts
+// app/screens/PermissionAccessPanel.tsx — NGUỒN DUY NHẤT (export)
+export function permissionMatrixKeys(data: AppData, entries: PermissionEntry[]): string[] {
+  const catalogKeys = (data.moduleCatalog || [])
+    .filter((item) => item.active !== false)
+    .map((item) => String(item.moduleKey));
+  const entryKeys = entries
+    .map((entry) => String(entry.module?.key ?? ""))
+    .filter((key) => key !== "");
+  return Array.from(new Set<string>([...catalogKeys, ...entryKeys]));
+}
+// app/page.tsx — CẢ HAI modal, và panel tự dùng cho `moduleKeys`
+const modulePermissions = permissionMatrixKeys(data, permissionRows).map((key) => ({
+  moduleKey: key,
+  canView: Boolean(ps[key]?.view), /* …6 capability… */
+  permissionExpiresAt: form.get(`expires-${key}`),
+}));
+// ⇒ 77 khoá — TRÙNG KHÍT tập ô tick panel vẽ
+```
+
+### REASON
+USER 08/10/2026: «khi bấm lưu thì nó không lưu phân quyền tôi vừa chọn cho user».
+Đo được: tập khoá VẼ RA (77) ⊋ tập khoá GỬI ĐI (61) ⇒ 16 khoá tick vào bị BỎ QUA.
+`save_user_access` là **FULL-REPLACE** (`clearUserScopes()` xoá cứng 3 bảng rồi ghi lại)
+⇒ khoá không gửi lên còn bị **XOÁ ÂM THẦM** (mất dữ liệu quyền cũ).
+
+### FILES
+| Tệp | Thay đổi |
+|---|---|
+| `app/screens/PermissionAccessPanel.tsx` | ➕ `export function permissionMatrixKeys`; panel `moduleKeys = permissionMatrixKeys(data, entries)` (gỡ khối `assignableModules` cục bộ) |
+| `app/page.tsx` | import helper; **cả hai** modal dựng `modulePermissions` qua helper; gỡ biến `assignableModules` ở cả hai |
+| `tests/v214-phan-quyen-luu-quyen.test.mjs` | cập nhật theo cấu trúc mới + thêm **VỆ 7** |
+| `tools/probe-permission-save-keyset.mjs` | ➕ máy DÒ LỆCH tập khoá |
+| `tools/probe-permission-save-api.mjs` | ➕ đo đường API (2 nghi phạm) |
+
+### IMPACT
+- ✅ Tick vào **14 tab quản trị `admin_tab_NN`** + `admin` + `reports` **đã lưu được**.
+- ✅ ⛔ Hết mất âm thầm quyền cũ ngoài payload (FULL-REPLACE nay phủ đủ tập panel quản lý).
+- ⚠️ Payload nay gửi **77** dòng thay vì 61 ⇒ nhiều hơn 16 dòng `user_module_permissions`
+  (toàn `false` với khoá không tick) — **cùng ngữ nghĩa** (`false` = không có quyền), ⛔ không đổi hành vi.
+- ⛔ **KHÔNG** đụng tới (B) `rbac.requireRole(List.of("admin"))` — vẫn chờ user quyết (`DEC-20261008-001`).
+
+### COMPATIBILITY
+✅ Tương thích ngược — backend `saveUserAccess` (`UserManagementUseCase:312-318`) chỉ bỏ qua
+`moduleKey` rỗng, ⛔ không whitelist; đã đo HTTP 200 với `admin_tab_01`.
+✅ ⛔ Không đổi hợp đồng API, không đổi schema, ⛔ không migration.
+
+### TEST STATUS
+✅ **PASS** — probe 77=77/mất 0 · test v214 7/7 · cổng hồi quy 865 pass/0 fail · typecheck 0.
+Xem `TEST-20261008-001`.
+
+## CHG-20261008-002 — PA-1: nới cổng `save_user_access` sang QUYỀN CẤU HÌNH (`admin_tab_06`)
+
+| ⭐ | ⭐ |
+|---|---|
+| **CHANGE_ID** | CHG-20261008-002 |
+| **DATE** | 2026-10-08 11:45:00 |
+| **SESSION_ID** | ERP-SESSION-01 (SESSION_A) |
+| **CATEGORY** | RBAC · BACKEND |
+| **MODULE** | Lưu bảng phân quyền người dùng (`save_user_access`) |
+
+### QUYẾT ĐỊNH NGUỒN
+`DEC-20261008-001` — **USER CHỌN PA-1**, kèm ngữ nghĩa do user chốt (nguyên văn):
+> «role === admin thì có nghĩa là user đó có toàn quyền và override toàn bộ phân quyền, là user có khả
+> năng vượt qua mọi quyền mà không cần cấu hình, user có role === admin là quản trị hệ thống chỉ được
+> sử dụng trong trường hợp đặc biệt ngoài ra khi không có việc gì quan trọng thì quản trị hệ thống sẽ
+> sử dụng tài khoản ITM hoặc tài khoản tương tự được cấp full quyền.»
+⇒ **QUYỀN ĐẾN TỪ CẤU HÌNH**, ⛔ không chỉ từ `role`.
+
+### BEFORE → AFTER (3 TẦNG — đo được, xem `TEST-20261008-003`)
+| # | Tệp · vị trí | BEFORE | AFTER |
+|---|---|---|---|
+| ① | `ActionRbacRegistry.java` `ACTION_MODULES` | `Map.entry("save_user_access", List.of())` ⇒ **rỗng = default-DENY** (PHASE 0B S-03) | `Map.entry("save_user_access", List.of("admin_tab_06"))` |
+| ② | `ActionRbacRegistry.java` `ACTION_CAPABILITIES` | `Map.entry("save_user_access", "canUse")` | `Map.entry("save_user_access", "canView")` — **khớp UI**: `hasAdminTab` (`AdminUserModalTabs.tsx:22`) và `canManageUserPermissions` (`app/page.tsx:3433`) đều kiểm `canView === 1` |
+| ③ | `UserManagementUseCase.saveUserAccess` | `rbac.requireRole(principalAsCurrent(principal), List.of("admin"))` | `if (!rbac.isAdmin(…)) rbac.requireActionModule(…, "save_user_access")` — **đúng khuôn `update_user`** (MỐC 103) |
+| ④ | `SystemController.java` `case "save_user_access"` | `AuthUseCase.CurrentUser cu = requireRequireAdmin(request);` | `… = requireCurrentUser(request, false);` — **đúng khuôn `update_user`** (MỐC 109) |
+
+⛔ Tầng ③④ là **CÙNG LỖI đã vá cho `update_user`** ở MỐC 103/109 nhưng **SÓT `save_user_access`**
+⇒ hai sửa đầu trở thành **CODE CHẾT** nếu ⛔ không sửa nốt ③④ (đo được qua việc thông điệp 403 **đổi 3 lần**).
+
+### REASON
+USER 08/10/2026: «bấm lưu thì nó không lưu phân quyền tôi vừa chọn cho user» — nguyên nhân (B):
+UI cho người có `admin_tab_06` MỞ modal + tick, backend chặn ở **3 tầng** ⇒ **HTTP 403**, ⛔ không lưu gì.
+
+### FILES
+- `java-backend/application/…/rbac/ActionRbacRegistry.java` (2 dòng + chú thích)
+- `java-backend/application/…/service/UserManagementUseCase.java` (1 khối guard)
+- `java-backend/web/…/controller/SystemController.java` (1 case)
+- `docs/agent-progress/F-03-TAI-CHINH-AUDIT-PHU-THUOC.md` (cập nhật 23 dòng số dòng Java — §22)
+- `tools/probe-permission-save-api.mjs` (sửa phép đo sai + thêm B2b/B3)
+- `tools/_fix-f03-lines.mjs` (mới)
+
+### IMPACT
+- ✅ Người có **`admin_tab_06` + `canView`** lưu được bảng phân quyền (đo: HTTP 200 + **ghi thật**).
+- ✅ `role = admin` vẫn toàn quyền (nhánh `isAdmin`), ⛔ không đổi.
+- ✅ Người ⛔ **thiếu quyền** vẫn **403** (đối chứng âm B3) ⇒ cổng ⛔ không hở.
+- 🚨 **TÁC DỤNG PHỤ CẦN USER QUYẾT** — xem `BUG-20261008-002`: người có `admin_tab_06` nay có thể
+  **tự cấp module `admin`** cho mình, mà module `admin` là cổng của `factory_reset_execute`
+  (XOÁ DỮ LIỆU). Đây là hệ quả **trực tiếp của PA-1**, đã báo user, ⛔ CHƯA thêm guard (chờ quyết định).
+
+### COMPATIBILITY
+✅ ⛔ không đổi hợp đồng API · ⛔ không migration · ⛔ không đổi schema.
+⚠️ Lệch có chủ ý với route JS cũ (`scripts/system-route.mjs`): route đó **KHÔNG được app đang chạy gọi**
+(bằng chứng ghi ngay trong tệp, dòng ~3074-3075) ⇒ ⛔ không sửa. Cổng `probe-action-module-parity`
+vốn **đã đỏ 64 điểm từ trước** (gồm `update_user` cùng loại) ⇒ thay đổi này thêm **1 dòng** cùng loại.
+
+### TEST STATUS
+✅ **PASS** — `tools/probe-permission-save-api.mjs` **EXIT 0** · Java **86/86** · cổng FE **865 pass/0 fail**.
+Xem `TEST-20261008-003`.
+
+## CHG-20261008-003 — ⛔ S-1: CHẶN TỰ NÂNG QUYỀN ở `save_user_access` (backend)
+
+| ⭐ | ⭐ |
+|---|---|
+| **CHANGE_ID** | CHG-20261008-003 |
+| **DATE** | 2026-10-08 14:00:00 |
+| **SESSION_ID** | ERP-SESSION-01 (SESSION_A) |
+| **CATEGORY** | RBAC · BACKEND |
+| **MODULE** | `save_user_access` (`UserManagementUseCase`) |
+
+**BEFORE** — ⛔ không có rào: người có `admin_tab_06` (sau PA-1) gọi được `save_user_access`
+⇒ ⭐ **tự cấp module `admin`** cho chính mình ⇒ gọi `factory_reset_execute` = **XOÁ SẠCH DỮ LIỆU**
+(`ActionRbacRegistry:154` map action đó vào module `admin`; controller ⛔ không `requireRequireAdmin`).
+
+**AFTER** — chèn chốt NGAY TRƯỚC `clearUserScopes()`:
+```java
+if (!rbac.isAdmin(principalAsCurrent(principal)) && principal.userId().equals(targetUserId)) {
+    for (… modulePermissions …) for (String[] cap : selfElevationCaps)
+        if (intOf(row.get(cap[0])) == 1 && !rbac.canUseModule(targetUserId, moduleKey, cap[1]))
+            throw new AuthUseCase.ApiError("Không được tự cấp thêm quyền cho chính mình. …", 403);
+}
+```
+➕ `RbacService.canUseModule(userId, moduleKey, capability)` — lớp mỏng mở lại port `ModulePermissionStore`
+đã nằm sẵn ở `RbacService` ⇒ ⛔ **không** phải đổi constructor của use-case (đổi sẽ lan sang cấu hình
+Spring + mọi bài kiểm thử).
+
+**REASON** — `DEC-20261008-002` (user chốt S-1) · nguồn gốc `BUG-20261008-002` (CRITICAL).
+**FILES** — `java-backend/application/…/rbac/RbacService.java` · `…/service/UserManagementUseCase.java`
+**IMPACT** — ⛔ không đổi hợp đồng API · ⛔ không migration. `role=admin` ⛔ không bị ảnh hưởng (ngoại lệ).
+**TEST** — ✅ `TEST-20261008-005` (3 chiều) · Java **86/86**.
+
+---
+
+## CHG-20261008-004 — ✅ M-2: ≥1 quyền trong nhóm quản trị ⇒ HIỆN + VÀO ĐƯỢC màn quản trị
+
+| ⭐ | ⭐ |
+|---|---|
+| **CHANGE_ID** | CHG-20261008-004 |
+| **DATE** | 2026-10-08 14:00:00 |
+| **SESSION_ID** | ERP-SESSION-01 (SESSION_A) |
+| **CATEGORY** | RBAC · FRONTEND |
+| **MODULE** | Menu nhóm «QUẢN TRỊ HỆ THỐNG» + màn «DANH MỤC & PHÂN QUYỀN» |
+
+**BEFORE** — `systemAdminMenuVisible` chỉ xét `configuredModules(data)` (**mảng menu TĨNH**, ⛔ không có
+14 khoá `admin_tab_NN`); `accessDenied` và điều kiện render `<Admin/>` thì **CHỈ `isAdminUser`** (role)
+⇒ người được cấp `admin_tab_06`: **⛔ không thấy menu**; nếu có thấy thì **thân màn TRỐNG (0 tab)**.
+
+**AFTER**
+```ts
+const hasAnyAdminGroupPermission = (data.modulePermissions || []).some((p) => {
+  const key = String(p.moduleKey || "");
+  if (!hasAnyCapability(p)) return false;
+  return key === "admin" || /^admin_tab_\d{2}$/.test(key);   // ⭐ nhận CẢ 14 tab
+});
+const systemAdminMenuVisible = isAdminUser(data.user) || hasAnyAdminGroupPermission;
+// accessDenied (nhánh admin)  : !isAdminUser(data.user) && !hasAnyAdminGroupPermission
+// render <Admin …/>           : active === "admin" && (isAdminUser(data.user) || hasAnyAdminGroupPermission)
+// mục con nhóm quản trị        : systemAdminMenuVisible && (hasAnyCapability(…) || hasAnyAdminGroupPermission)
+```
+
+**REASON** — `DEC-20261008-003` (user chốt M-2) + **ý định gốc MỐC 118** («kể cả 1 quyền cũng hiển thị menu»)
++ `BUG-20261008-003`.
+**FILES** — `app/page.tsx` (3 chỗ) · `tests/m118-system-admin-menu-gate.test.mjs` (cập nhật theo **ý định gốc**, ⛔ không nới).
+**IMPACT** — ✅ người có ≥1 quyền nhóm quản trị vào được màn; ⛔ **KHÔNG** hạ rào tab **12/13/14**
+(`ADMIN_LOCKED_TABS` — tab 12 có `FactoryResetAdmin` XOÁ DỮ LIỆU) ✓
+**TEST** — ✅ `TEST-20261008-006` E2E **11/11** · cổng FE **924/925 pass · 0 fail**.
+
+## CHG-20261008-005 — ➕ **API TẠO/SỬA KHO + ĐỔI TRẠNG THÁI KHO** (`save_warehouse` · `set_warehouse_status`)
+
+| ⭐ | ⭐ |
+|---|---|
+| **CHANGE_ID** | CHG-20261008-005 |
+| **DATE** | 2026-10-08 16:10:00 |
+| **SESSION_ID** | ERP-SESSION-01 (SESSION_A) |
+| **CATEGORY** | API · BACKEND |
+| **MODULE** | `inventory` + `central_warehouse` (capability `canEdit`) |
+
+**BEFORE** — ⛔ **CHƯA CÓ** 2 action (quét `java-backend/**/*.java` = 0 kết quả). UI ⛔ không thể tạo/sửa/ngừng kho.
+
+**AFTER** — 2 action đi đủ **3 tầng quyền**:
+```text
+① ActionRbacRegistry : save_warehouse / set_warehouse_status → ["inventory","central_warehouse"] + canEdit
+② SystemController   : case "save_warehouse" / "set_warehouse_status" → requireCurrentUser(request)   (⛔ KHÔNG requireRequireAdmin)
+③ AdminSystemUseCase : saveWarehouse(principal,payload) · setWarehouseStatus(principal,payload)
+                       + accessScope.requireProjectAccess(...) khi tạo kho cho DỰ ÁN
+                       + accessScope.requireWarehouseAccess(...) khi sửa / đổi trạng thái
+```
+➕ 4 hàm store THUẦN THÊM: `upsertWarehouse` · `setWarehouseActive` · `warehouseCodeExists` · `warehouseExists`.
+➕ **KHÔNG** thêm khoá mới vào `module_catalog` (dùng lại nhóm của action anh em) ✓
+
+**REASON** — `HANDOFF-20261008-009` (phiên 02 yêu cầu) · thứ tự phiên 02 chốt: **S01 làm API backend trước** → S03 nối UI → S02 bật 4 nút.
+**FILES** — `AdminSystemStore.java` · `AdminSystemStoreAdapter.java` · `AdminSystemUseCase.java` · `ActionRbacRegistry.java` · `SystemController.java` · `AdminSystemIntegrationTest.java`
+**IMPACT** — ⛔ không đổi hành vi action cũ · ⛔ không migration (bảng `warehouses` đã có sẵn) · ⛔ không đổi chữ ký hàm cũ.
+**COMPATIBILITY** — ⭐ Java-only: action ⛔ **chưa có** trong `ACTION_CATALOG` phía JS ⇒ ⚠️ làm tăng độ lệch của
+`probe-action-module-parity.mjs` (vốn **đã đỏ sẵn** 64 dòng, ⛔ không do thay đổi này). ⚠️ Cần phiên nào đó
+sinh lại catalog khi nối UI — ⛔ **KHÔNG** tự sinh ở đây (hợp đồng ghi rõ catalog sinh TỪ JS).
+**TEST** — ✅ `TEST-20261008-007` · **STATUS** ✅ **FIXED + VERIFIED**
+
+---
+
+## TEST-20261008-007 — ✅ **INTEGRATION**: API kho (H2) — 2 ca mới XANH · hồi quy **88/88**
+
+| ⭐ | ⭐ |
+|---|---|
+| **TEST_ID** | TEST-20261008-007 · **DATE** 2026-10-08 16:10 |
+| **SESSION_ID** | ERP-SESSION-01 (SESSION_A) · **TEST_TYPE** INTEGRATION (SpringBootTest + H2 `jdbc:h2:mem:vntech`) |
+| **TOOL** | `AdminSystemIntegrationTest` (mở rộng chính bộ test có sẵn — ⭐ §17) |
+
+| Ca | Kỳ vọng | Kết quả |
+|---|---|---|
+| `saveWarehouse_taoMoiVaChanTrungMa` — tạo `WH-TEST-01` | 200 + `ok` | ✅ |
+| ⛔ mã trùng **KHÁC hoa/thường** (`wh-test-01`) | **400** + «Mã kho WH-TEST-01 đã tồn tại.» | ✅ |
+| ⛔ thiếu `name` | 400 | ✅ |
+| `setWarehouseStatus_ngungRoiBatLaiDuoc` — ngừng `WH-CENTRAL` | 200 | ✅ |
+| ⭐ **BẬT LẠI** kho đang `active=0` | **200** (⛔ không được 400) | ✅ |
+| ⛔ `id` không tồn tại | 400 | ✅ |
+
+**HỒI QUY** — ✅ `AdminSystemIntegrationTest` **9/9** (trước 7) · ✅ **toàn bộ Java: 88 test · 0 fail · 0 error** (trước 86) · ✅ `tsc` EXIT 0
+**MÔI TRƯỜNG** — H2 in-memory (⛔ an toàn với MySQL thật) · build fat jar + chạy lại backend (healthy) · 3 cổng `:8787` `:9000` `:18081` sống ✓
+**GHI CHÚ** — ⛔ **CHƯA E2E qua UI**: bước 7 (FE modal `warehouse`/`allocate`) ⛔ chưa làm; ⚠️ và phần `allocate`
+**phải phối hợp với phiên đang giữ `app/screens/AllocateReturn.tsx`** (xem `HANDOFF-20261008-002` §40) ✓
+
+## CHG-20261008-006 — ➕ **FE: MODAL KHO** nối vào `page.tsx` (TÁI DÙNG component phiên 02) + ⚠️ **ĐÍNH CHÍNH HỢP ĐỒNG** `warehouseId`
+
+| ⭐ | ⭐ |
+|---|---|
+| **CHANGE_ID** | CHG-20261008-006 |
+| **DATE** | 2026-10-08 16:40:00 |
+| **SESSION_ID** | ERP-SESSION-01 (SESSION_A) |
+| **CATEGORY** | FRONTEND · API |
+| **MODULE** | Kho — `inventory` / `central_warehouse` |
+
+### PHẦN 1 — NỐI FE (bước 7/8 của `HANDOFF-20261008-009`)
+⛔ **KHÔNG viết modal mới** — ⭐ **TÁI DÙNG** `app/screens/WarehouseFormModal.tsx` do **`ERP-SESSION-02` dựng**
+(§17 «REUSE»), chỉ ➕ 1 import + 1 case trong `app/page.tsx`:
+```tsx
+{modal === "warehouse" && <WarehouseFormModal
+  data={{ warehouses: data.warehouses, projects: data.projects }}
+  row={selected} close={() => setModal(null)} submit={action}
+  canEdit={modulePermission(data, "inventory").canEdit || modulePermission(data, "central_warehouse").canEdit} />}
+```
+⭐ `canEdit` do **nơi gọi** quyết định — đúng như component ghi rõ («VIỆC KIỂM QUYỀN thuộc nơi gọi»), dùng
+CÙNG nhóm module với tầng RBAC của action ⇒ ⛔ không lệch luật giữa UI và API ✓
+
+### ⚠️⚠️ PHẦN 2 — ĐÍNH CHÍNH `CHG-20261008-005`: LỆCH TÊN KHOÁ GIỮA 2 BÊN (⭐ đã sửa ở PHÍA S01)
+📏 **ĐỌC MÃ NƠI GỌI TRƯỚC KHI CHỐT** mới phát hiện: component gửi
+`submit("save_warehouse", { **warehouseId**, projectId, code, name })`
+⚠️ NHƯNG use-case S01 viết đọc `payload.get("id")` ⇒ ⭐ **«Sửa kho» ⛔ LUÔN bị coi là TẠO MỚI** ⇒ trùng mã ⇒ **400**.
+🔎 **QUY ƯỚC NHÀ LÀ `warehouseId`** — chính `saveWarehouseLocation` (action anh em) cũng đọc `warehouseId` ⇒
+**S01 SAI**, ⛔ không phải phiên 02.
+✅ **FIX Ở PHÍA S01** (`AdminSystemUseCase`), ⛔ **KHÔNG** sửa tệp của phiên 02:
+```java
+String id = trim(payload.get("warehouseId"));
+if (id.isEmpty()) id = trim(payload.get("id"));   // ⭐ nhận CẢ HAI ⇒ ⛔ không vỡ bên nào
+```
+⚠️ **ĐÃ BUILD LẠI + CHẠY LẠI BACKEND** — ⛔ nếu chỉ build 1 lần trước đó thì **jar đang chạy THIẾU bản vá này** ✓
+
+### PHẦN 3 — HỆ QUẢ BẮT BUỘC: SỬA `F-03`
+Việc chèn dòng vào `ActionRbacRegistry.java` làm **bảng action↔số dòng** trong
+`docs/agent-progress/F-03-TAI-CHINH-AUDIT-PHU-THUOC.md` **lệch** ⇒ cổng `F-03` ĐỎ.
+✅ Chạy **công cụ có sẵn** `tools/_fix-f03-lines.mjs` (⭐ có kiểm khuôn trước khi ghi): cập nhật **23 dòng** ⇒ **F-03 7/7 XANH**.
+
+**TEST** — ✅ `TEST-20261008-008` · **STATUS** ✅ **FIXED + VERIFIED**
+**RELATED** — `HANDOFF-20261008-009` · `CHG-20261008-005` · `DEV-20261008-003`
+
+---
+
+## TEST-20261008-008 — ✅ **BUILD + HỒI QUY** sau khi nối FE modal kho & vá `warehouseId`
+
+| ⭐ | ⭐ |
+|---|---|
+| **TEST_ID** | TEST-20261008-008 · **DATE** 2026-10-08 16:40 |
+| **SESSION_ID** | ERP-SESSION-01 (SESSION_A) · **TEST_TYPE** REGRESSION + UI |
+| **RELATED** | `CHG-20261008-006` |
+
+| Cổng | Kết quả |
+|---|---|
+| `npx tsc --noEmit` | ✅ **EXIT 0** |
+| `fixpoint-fingerprint` | ✅ FIXPOINT OK |
+| `npm run build` | ✅ BUILD SUCCESS + `BUILT ARTIFACT VALIDATION: ĐẠT` |
+| `_sync-identity-once` | ✅ `VNTECH-KHO-MEP-001` + `TRUST-ROOT` KHỚP · trigger tạo lại |
+| **Cổng UI** `verify-ui-build-applied` | ✅ `dist mới hơn nguồn` · `vân tay khớp SSOT` · **6/6 bundle đúng byte** |
+| **Cổng FE** `regression-suite` | ✅ **931 test · 930 pass · 0 fail** (⚠️ trước đó 1 đỏ ở `F-03` — đã sửa bằng công cụ nhà) |
+| **Java** `mvn -B test` (chạy lại SAU bản vá `warehouseId`) | ✅ **88 test · 0 fail · 0 error** · `AdminSystemIntegrationTest` **9/9** |
+| Triển khai | ✅ build fat jar + chạy lại backend (healthy) · 3 cổng `:8787` `:9000` `:18081` sống |
+
+**GHI CHÚ ⚠️** — ⛔ **CHƯA có E2E bấm-thử modal kho qua UI** (bước 7b chưa làm): phép đo hiện tại mới chứng
+minh **biên dịch + bundle + hồi quy**, ⛔ chưa chứng minh «mở modal từ màn Kho ⇒ lưu được».
+⭐ Điều kiện cần đã đủ (API sống + component khớp khoá) — cần 1 probe UI màn Kho ở lượt sau ✓

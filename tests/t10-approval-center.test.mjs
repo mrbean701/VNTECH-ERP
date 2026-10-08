@@ -74,11 +74,12 @@ test("T-10 — BẰNG CHỨNG «KHÔNG MIGRATION / KHÔNG KHOÁ MODULE MỚI» (
   assert.deepEqual(groupSql, [], "Nhóm menu mới bị seed vào `menu_group_catalog` ⇒ cần migration, ngoài phạm vi T-10");
 });
 
-test("T-10 — KHÔNG phá 5 mục «CÔNG VIỆC» đã chốt ở T-01", () => {
+test("T-10 — KHÔNG phá MỤC HUB «CÔNG VIỆC» (VIỆC 1: 5 mục ⇒ 1 mục `work_hub`)", () => {
   assert.match(menuHelpers, /const workMenuItems: \{ key: string; label: string; groupKey: "my_work"; view: WorkMenuView; permissionKeys: ModuleKey\[\] \}\[\] = \[/);
-  assert.equal((menuHelpers.match(/groupKey: "my_work", view: /g) || []).length, 5, "5 mục «CÔNG VIỆC» phải giữ nguyên");
-  // Vẫn vẽ 5 mục đó ở CẢ sidebar lẫn menu mobile.
-  assert.equal((page.match(/groupKey==="my_work"&&workMenuChildren\.map\(/g) || []).length, 2, "Mất dải 5 mục ở sidebar hoặc menu mobile");
+  // ⭐ CẬP NHẬT 08/10/2026 (USER — VIỆC 1): nhóm «Công việc» GOM 5 mục rời ⇒ **ĐÚNG 1 mục hub** `work_hub`.
+  assert.equal((menuHelpers.match(/groupKey: "my_work", view: /g) || []).length, 1, "Nhóm «CÔNG VIỆC» phải chỉ còn 1 MỤC HUB");
+  // Vẫn vẽ mục đó ở CẢ sidebar lẫn menu mobile.
+  assert.equal((page.match(/groupKey==="my_work"&&workMenuChildren\.map\(/g) || []).length, 2, "Mất dải mục «CÔNG VIỆC» ở sidebar hoặc menu mobile");
   // `workMenuBadge(item.badgeKeys)` vẫn đúng 4 lần (2 badge nhóm + 2 badge mục con) — không nhân đôi/nuốt badge.
-  assert.equal((page.match(/workMenuBadge\(item\.badgeKeys\)/g) || []).length, 4, "Huy hiệu 5 mục «CÔNG VIỆC» bị đổi số lần vẽ");
+  assert.equal((page.match(/workMenuBadge\(item\.badgeKeys\)/g) || []).length, 4, "Huy hiệu mục «CÔNG VIỆC» bị đổi số lần vẽ");
 });

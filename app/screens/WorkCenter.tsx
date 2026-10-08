@@ -9,9 +9,12 @@
 // `page.tsx` — công cụ SINH LẠI import đó ở đây, hoặc (d) kiểu của React ⇒ `import type … from "react"`.
 // Không còn tên nào khác ⇒ KHÔNG thể tạo import vòng.
 //
-// PHASE 3 (`T-01`) — MÀN CÔNG VIỆC: 5 TAB ĐÚNG THỨ TỰ CỦA NHÓM MENU «CÔNG VIỆC»
-//   Cá nhân (0) · Phòng ban (1) · Giao việc (2) · Dashboard (3) · Báo cáo (4)
-// Giữ NGUYÊN hành vi 3 tab cũ: `Việc của tôi` → Cá nhân · `Phòng ban / tổ đội` → Phòng ban · `KPI & báo cáo` → Báo cáo.
+// PHASE 3 (`T-01`) — MÀN CÔNG VIỆC, NAY **7 TAB** THEO YÊU CẦU USER 08/10/2026 (chốt qua thẻ quyết định):
+//   0 Dashboard · 1 Danh sách công việc · 2 Được giao · 3 Phòng ban/ Tổ đội · 4 Giao việc · 5 Dự án · 6 Báo cáo
+// ⭐ «Dashboard» được ĐƯA LÊN ĐẦU (yêu cầu VIỆC 1); «Danh sách công việc» là tên mới của tab «Cá nhân»
+//    (yêu cầu VIỆC 2); thêm tab RIÊNG «Được giao» (yêu cầu VIỆC 6); «Phòng ban» đổi tên thành
+//    «Phòng ban/ Tổ đội» (yêu cầu VIỆC 7).
+// Giữ NGUYÊN hành vi các tab cũ về nội dung: `Việc của tôi` → «Danh sách công việc» · `Phòng ban / tổ đội` → «Phòng ban/ Tổ đội».
 // Tab «Báo cáo» TÁI DÙNG `ReportView` + `lib/report-catalog.ts` (nguồn `workItems`) — KHÔNG viết màn mới.
 // Mục menu «Giao việc» KHÔNG mở màn này: nó mở `DepartmentTaskWorkspace` (xem nhánh render trong `app/page.tsx`).
 //
@@ -22,7 +25,8 @@
 import { DataTable, ListToolbar, PermissionGuard, StatusBadge } from "@/app/components/ui";
 // MT3 §IV.7 + ma trận #6 — XUẤT dùng ĐÚNG thư viện dùng chung (§14), ⛔ không tự viết lại CSV/Blob.
 //   Và `statusLabel` để ⛔ KHÔNG rò mã thô trạng thái ra tệp xuất (đúng tinh thần ma trận #5).
-import { downloadCsv } from "@/lib/tabular-export";
+// ⭐ CẬP NHẬT 08/10/2026 (USER): **⛔ ĐÃ BỎ nút «Xuất CSV» ở MỌI TAB** module «Công việc»
+//    ⇒ import `downloadCsv` cũng đã gỡ. Cần lại thì import từ `@/lib/tabular-export`.
 import { statusLabel } from "@/lib/status-labels";
 import { ReportView } from "@/app/screens/ReportView";
 import { WorkDashboard } from "@/app/screens/WorkDashboard";
@@ -84,16 +88,24 @@ function overdueApprovalCount(data: AppData): number | null {
     && Boolean(a.dueAt) && Date.parse(String(a.dueAt)) < now).length;
 }
 
-// PHASE 3 (`T-01`) — 5 TAB NHÓM «CÔNG VIỆC», ĐÚNG thứ tự đã chốt (5 mục menu ⇄ 5 tab).
-// MT3 §A — thứ tự tab yêu cầu: «Cá nhân» · **«Dự án» (TẠO MỚI)** · «Phòng ban» · «Báo cáo».
-// ⚠️ ⛔ KHÔNG xoá các tab đang có («Giao việc» · «Dashboard») vì đó là chức năng THẬT còn dùng
-//    (giao việc · KPI); MT3 §IV.1 chỉ yêu cầu bỏ tab TRÙNG chức năng — chưa có bằng chứng trùng ở đây.
-//    Các index cũ được DỜI LÙI 1 chỗ để nhường chỗ cho tab mới (không mất chức năng nào).
-const WORK_TABS = ["Cá nhân", "Dự án", "Phòng ban", "Giao việc", "Dashboard", "Báo cáo"];
-// MT2-P5-01 (§3.1) — thêm khoá `dashboard` (tab «Dashboard»). Số 3 ĐO từ `WORK_TABS` ở trên:
-// «Cá nhân»=0 · «Phòng ban»=1 · «Giao việc»=2 · **«Dashboard»=3** · «Báo cáo»=4 ⇒ `dashboard: 3` ✔
-// ⚠️ GIỮ `kpi: 3` (cùng index) vì `WorkMenuView` vẫn còn `"kpi"` — dùng chung đúng tab Dashboard.
-const WORK_TAB_OF_VIEW: Record<WorkMenuView, number> = { personal: 0, department: 2, assign: 3, kpi: 4, dashboard: 4, reports: 5 };
+// PHASE 3 (`T-01`) → **VIỆC 1 + 2 + 6 + 7 của USER (08/10/2026)**: DẢI **7 TAB**, «Dashboard» ĐẦU TIÊN.
+// ⚠️ SỐ ĐO TỪ `WORK_TABS` NGAY DƯỚI — ⛔ KHÔNG suy từ tài liệu cũ (chú thích cũ ghi «5 tab»/«Dashboard=3» đã SAI
+//    từ lâu; bài học §16: **nguồn sự thật = MÃ**).
+const WORK_TABS = ["Dashboard", "Danh sách công việc", "Được giao", "Phòng ban/ Tổ đội", "Giao việc", "Dự án", "Báo cáo"];
+// ⭐ ÁNH XẠ `view` (từ menu) → CHỈ SỐ TAB của dải 7 tab ở trên:
+//   «Dashboard»=0 · «Danh sách công việc»=1 · «Được giao»=2 · «Phòng ban/ Tổ đội»=3 · «Giao việc»=4 · «Dự án»=5 · «Báo cáo»=6
+// ⚠️ GIỮ alias `kpi: 0` (cùng tab Dashboard) vì `WorkMenuView` vẫn còn `"kpi"` — đúng chủ ý cũ (MT2-P5-01).
+// ⚠️ `personal` là «Danh sách công việc» (tên mới), ⛔ KHÔNG phải tab Dashboard.
+const WORK_TAB_OF_VIEW: Record<WorkMenuView, number> = { personal: 1, department: 3, assign: 4, kpi: 0, dashboard: 0, reports: 6 };
+
+// ⛔ TẠM ẨN «CHẾ ĐỘ XEM» (Kanban · Cây) — **QUYẾT ĐỊNH CỦA USER 08/10/2026** (vòng 65):
+//   nguyên văn: *«tạm thời ẩn Kanban / cây **ghi vào log nếu sau này cần thì dùng lại**»*.
+//   ⭐ **GIỮ NGUYÊN MÃ** (`WorkKanban` · `WorkHierarchy` + 2 khối JSX + import + `deptView`) — ⛔ **KHÔNG xoá**.
+//   ⭐ **BẬT LẠI SAU NÀY = đổi ĐÚNG 1 CHỖ**: `WORK_VIEW_MODES_HIDDEN = false` ⇒ 3 nút «Bảng · Kanban · Cây»
+//      và 2 khối hiện lại y như trước (⛔ không cần viết lại gì).
+//   📌 Vì sao ẩn: tab «Phòng ban/ Tổ đội» trước đây hiện **3 cách nhìn CÙNG 1 tập việc** (2 bảng + Kanban + Cây)
+//      ⇒ user thấy thừa; ⚠️ `WorkHierarchy` còn phụ thuộc `teamMembers` (**Java-only**) nên hay ghi «chưa có nguồn».
+const WORK_VIEW_MODES_HIDDEN = true;
 // Báo cáo CÔNG VIỆC dùng LẠI catalog chung (`R-05a/b/c`, nguồn `workItems`) — không khai định nghĩa mới.
 const WORK_REPORT_CATALOG = REPORT_CATALOG.filter((entry) => entry.source === "workItems");
 
@@ -199,6 +211,14 @@ function WorkCenter({ data, action, refresh, view = "personal" }: { data: AppDat
   const [personalGroup, setPersonalGroup] = useState("mine");
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState(false);
+  // VIỆC 4 (USER 08/10/2026) — «tự tạo việc cho bản thân» chuyển từ FORM NỘI TUYẾN sang MODAL «Tạo công việc».
+  const [createOpen, setCreateOpen] = useState(false);
+  // VIỆC 7 (USER 08/10/2026) — tab «Phòng ban/ Tổ đội» có **2 SUB-TAB** và Kanban/Cây thành **«CHẾ ĐỘ XEM»**
+  //   (user chốt qua thẻ quyết định: *giữ dạng «chế độ xem»* — ⛔ không xoá chức năng, ⛔ không phá test `t07`/`t09`).
+  const [deptTab, setDeptTab] = useState<"dept" | "team">("dept");
+  const [deptView, setDeptView] = useState<"list" | "kanban" | "tree">("list");
+  // VIỆC 5 (USER 08/10/2026) — **MODAL CHI TIẾT CÔNG VIỆC**: click vào công việc (CẢ DÒNG) ⇒ mở modal.
+  const [detailRow, setDetailRow] = useState<Row | null>(null);
   const me = data.user || {};
   const myId = String(me.id || "");
   const items: Row[] = data.workItems || [];
@@ -216,6 +236,9 @@ function WorkCenter({ data, action, refresh, view = "personal" }: { data: AppDat
   const personalGroups = personalWorkGroups(items, myId);
   const personalRows: Row[] = personalGroups.find((group) => group.key === personalGroup)?.rows || [];
   const mine = personalGroups[0].rows;
+  // VIỆC 6 (USER 08/10/2026) — tab RIÊNG «Được giao»: TÁI DÙNG ĐÚNG nhóm `assigned` đã có (`personalGroups[1]`,
+  // định nghĩa: `assignedTo = tôi` ∧ `assignedBy ≠ tôi`) ⇒ ⛔ KHÔNG viết lại luật lọc (tránh 2 nguồn sự thật).
+  const assignedRows = personalGroups[1].rows;
   const scope = workScopeOf(data);
   const managerDepartments = scope.managerDepartments;
   // T-06 — tập việc THUỘC PHẠM VI ĐƯỢC PHÉP; phần bị loại được đếm để người dùng THẤY mình đang bị giới hạn.
@@ -225,7 +248,26 @@ function WorkCenter({ data, action, refresh, view = "personal" }: { data: AppDat
   const activeMemberIds = [...new Set((data.teamMembers || []).filter((m) => Number(m.active ?? 1) === 1).map((m) => String(m.userId)))];
   const deptWork = scopedWork.filter((r) => String(r.assignedTo) !== myId && (scope.isAdmin || myDepts.includes(String(r.departmentCode || ""))));
   const teamWork = scopedWork.filter((r) => String(r.assignedTo) !== myId && activeMemberIds.includes(String(r.assignedTo)));
+  // ⭐ FIX (vòng 63 — «sửa lại các tab» theo yêu cầu user): `deptWork` và `teamWork` **GIAO NHAU**
+  //   (một việc của thành viên tổ đội THUỘC phòng của tôi bị đếm ở CẢ HAI tập) ⇒ tiêu đề cũ ghi
+  //   «24 việc phòng ban/tổ đội» trong khi TỔNG chỉ có 16 ⇒ ⚠️ **số liệu vô lý** với người đọc.
+  //   ⇒ tính thêm tập **HỢP (không trùng)** để hiển thị ở tiêu đề.
+  //   ⛔ KHÔNG đổi 2 tập dùng cho 2 SUB-TAB: mỗi sub-tab vẫn phải hiện ĐÚNG danh sách của nó.
+  const deptTeamWork = scopedWork.filter((row) => String(row.assignedTo) !== myId
+    && ((scope.isAdmin || myDepts.includes(String(row.departmentCode || ""))) || activeMemberIds.includes(String(row.assignedTo))));
   const scopeNote = `${scope.isAdmin ? "Quản trị: toàn bộ" : `Phòng ${myDepts.join(" / ") || "—"} · dự án ${scope.projectIds.length}${scope.managerDepartments.length ? ` · trưởng phòng ${scope.managerDepartments.join(" / ")}` : ""}`}${outOfScope > 0 ? ` · ${outOfScope} việc NGOÀI phạm vi đã bị ẩn` : ""}`;
+
+  // VIỆC 5·6 (USER 08/10/2026) — AI được XÁC NHẬN HOÀN THÀNH / YÊU CẦU LÀM LẠI?
+  // ⚠️ Mô phỏng ĐÚNG luật BE `isDepartmentManager(user, department_code)` — `scripts/system-route.mjs:263`:
+  //    `if (isAdmin(user)) return true;` rồi `department==="KH" ? ["kh_truong"] : department==="DA" ? ["da_truong"] : false`
+  // ⇒ admin · hoặc (phòng «KH» ∧ role `kh_truong`) · hoặc (phòng «DA» ∧ role `da_truong`); ⚠️ **BCH KHÔNG có**.
+  // ⛔ KHÔNG nới rộng hơn: FE cho bấm mà BE từ chối = «nút chết» (đúng lớp lỗi đã ghi trong `BUG-D05`).
+  const canApproveRow = (row: Row) => {
+    if (scope.isAdmin) return true;
+    const code = String(row.departmentCode || "");
+    const role = String(me.role || "");
+    return (code === "KH" && role === "kh_truong") || (code === "DA" && role === "da_truong");
+  };
 
   const find = (rows: Row[]) => !q.trim() ? rows
     : rows.filter((r) => `${r.taskNo || ""} ${r.title || ""} ${r.assignedToName || ""}`.toLocaleLowerCase("vi").includes(q.trim().toLocaleLowerCase("vi")));
@@ -235,6 +277,17 @@ function WorkCenter({ data, action, refresh, view = "personal" }: { data: AppDat
     const ok = await action(name, payload);
     setBusy(false);
     if (ok) { form?.reset(); refresh(); }
+  }
+  // VIỆC 4 (USER 08/10/2026) — nộp form trong MODAL «Tạo công việc».
+  // ⚠️ `send` KHÔNG trả kết quả (`Promise<void>`) ⇒ muốn ĐÓNG modal khi thành công thì phải gọi `action` TRỰC TIẾP
+  //    (bài học đã ghi ở `docs/52` §4: `send` chỉ dùng cho form nội tuyến).
+  async function submitSelfWork(form: HTMLFormElement) {
+    const fd = new FormData(form);
+    setBusy(true);
+    const ok = await action("create_self_work_item", { title: fd.get("title"), description: fd.get("description"),
+      projectId: fd.get("projectId"), dueAt: fd.get("dueAt"), priority: fd.get("priority"), requiredOutput: fd.get("requiredOutput") });
+    setBusy(false);
+    if (ok) { form.reset(); setCreateOpen(false); refresh(); }
   }
   // T-07 — board Kanban gọi ACTION THẬT `update_work_item_status` (KHÔNG đổi trạng thái bằng state cục bộ).
   async function moveStatus(workItemId: unknown, status: string, reason: string) {
@@ -264,33 +317,15 @@ function WorkCenter({ data, action, refresh, view = "personal" }: { data: AppDat
 
   return <div className="stack work-center">
     <section className="card">
+      {/* VIỆC 2 (USER 08/10/2026) — ⛔ BỎ ô tìm ở ĐẦU màn; ô tìm nay nằm NGAY TRÊN «Danh sách công việc»
+          (xem `ListToolbar` trong khối danh sách của tab «Cá nhân» bên dưới). */}
+      {/* ⭐ VIỆC MỚI (USER 08/10/2026): **⛔ BỎ nút «Xuất CSV» ở MỌI TAB** của module «Công việc»
+          ⇒ `ListToolbar` nay chỉ còn `title` + `note` (⛔ KHÔNG truyền `actions`).
+          ⚠️ Sau này muốn xuất lại: dùng thư viện dùng chung `lib/tabular-export` (`downloadCsv`)
+          và ⛔ NHỚ import lại — xem ghi chú ở đầu tệp. */}
       <ListToolbar
         title="CÔNG VIỆC"
-        note={`${mine.length} việc của bạn · ${deptWork.length + teamWork.length} việc phòng ban/tổ đội · ${items.length} tổng`}
-        search={{ value: q, onChange: setQ, placeholder: "Tìm mã việc, nội dung, người làm…" }}
-        actions={<>
-          {/* MT3 ma trận #6 — nút XUẤT THẬT (dùng `lib/tabular-export`).
-              ⚠️ TÊN TRƯỜNG lấy ĐÚNG theo hợp đồng đã đo ở đầu tệp + cột thật của `TaskTable`
-              (`taskNo` · `title` · `assignedToName` · `projectId` · `dueAt` · `priority` · `progress` · `status`)
-              — ⛔ KHÔNG đoán tên trường (bài học: trước đây đoán sai nên tab «Việc của tôi» LUÔN 0 việc).
-              `status` đi qua bảng nhãn dùng chung ⇒ ⛔ không rò mã thô. */}
-          <button type="button" className="secondary" data-vntech="work-export-csv"
-            title="Xuất danh sách công việc ra CSV (UTF-8, có BOM — mở đúng tiếng Việt trong Excel)"
-            onClick={() => downloadCsv(
-              ["Mã việc", "Nội dung", "Người làm", "Dự án (mã)", "Hạn", "Ưu tiên", "Tiến độ", "Trạng thái"],
-              items.map((r) => [
-                String(r.taskNo ?? ""),
-                String(r.title ?? ""),
-                String(r.assignedToName ?? ""),
-                String(r.projectId ?? ""),
-                r.dueAt ? date(r.dueAt) : "",
-                r.priority === "urgent" ? "Khẩn" : r.priority === "high" ? "Cao" : "Thường",
-                `${Number(r.progress || 0)}%`,
-                statusLabel(r.status),
-              ]),
-              "danh-sach-cong-viec",
-            )}>⤓ Xuất CSV</button>
-        </>}
+        note={`${mine.length} việc của bạn · ${deptTeamWork.length} việc phòng ban/tổ đội · ${items.length} tổng`}
       />
       <div className="project-scope-tabs" role="tablist">
         {WORK_TABS.map((label, i) => <button key={label} type="button" role="tab" aria-selected={tab === i} className={tab === i ? "active" : ""} data-vntech={`work-tab-${i}`} onClick={() => setTab(i)}>{label}</button>)}
@@ -299,7 +334,7 @@ function WorkCenter({ data, action, refresh, view = "personal" }: { data: AppDat
     {/* ── MT3 §A.2 — TAB «DỰ ÁN» (TẠO MỚI): dashboard gom CÔNG VIỆC theo dự án ──────────────
         ⛔ KHÔNG phát minh nghiệp vụ: chỉ TỔNG HỢP dữ liệu nhiệm vụ ĐANG CÓ (cùng tập `rows` mà
         các tab khác dùng), theo `projectCode`. ⛔ Chưa khai báo luật nghiệp vụ mới cho tiến độ dự án. */}
-    {tab === 0 && <div className="stack">
+    {tab === 1 && <div className="stack">
       <div className="kpi-grid small">
         <Kpi icon="CV" label="Việc của tôi" value={String(mine.length)} note={`${mine.filter((r) => String(r.status) === "COMPLETED").length} đã xong`} tone="blue"/>
         <Kpi icon="QH" label="Quá hạn" value={String(mine.filter(isTaskLate).length)} note="Cần xử lý trước" tone="red"/>
@@ -315,28 +350,65 @@ function WorkCenter({ data, action, refresh, view = "personal" }: { data: AppDat
         <p className="muted">{personalGroups.find((group) => group.key === personalGroup)?.note}</p>
       </section>
       {canSelf && <section className="card">
-        <CardHead title="Tự tạo việc cho bản thân" note="Việc cá nhân (mã CN) không gắn nghiệp vụ nguồn và không lẫn vào việc phòng ban"/>
-        <form onSubmit={(e) => { e.preventDefault(); const f = e.currentTarget; const fd = new FormData(f);
-          void send("create_self_work_item", { title: fd.get("title"), description: fd.get("description"), projectId: fd.get("projectId"),
-            dueAt: fd.get("dueAt"), priority: fd.get("priority"), requiredOutput: fd.get("requiredOutput") }, f); }}>
-          <div className="form-grid">
-            <label className="full"><span>Nội dung công việc *</span><input name="title" required placeholder="Ví dụ: Rà soát hồ sơ nghiệm thu đợt 2"/></label>
-            <label><span>Dự án</span><select name="projectId"><option value="">— Không gắn dự án —</option>{(data.projects || []).map((p) => <option key={String(p.id)} value={String(p.id)}>{p.code} · {p.name}</option>)}</select></label>
-            <label><span>Hạn hoàn thành</span><input name="dueAt" type="date"/></label>
-            <label><span>Ưu tiên</span><select name="priority"><option value="normal">Bình thường</option><option value="high">Cao</option><option value="urgent">Khẩn</option></select></label>
-            <label><span>Kết quả cần có</span><input name="requiredOutput" placeholder="Đầu ra mong đợi"/></label>
-            <label className="full"><span>Mô tả</span><textarea name="description" rows={2}/></label>
-          </div>
-          <PermissionGuard allow={canSelf}><div className="row-actions"><button className="primary" disabled={busy}>＋ Tạo việc cho tôi</button></div></PermissionGuard>
-        </form>
+        <CardHead title="Tạo công việc" note="Việc cá nhân (mã CN) không gắn nghiệp vụ nguồn và không lẫn vào việc phòng ban — mở MODAL để nhập"/>
+        <div className="row-actions">
+          <PermissionGuard allow={canSelf}><button type="button" className="primary" disabled={busy} data-vntech="work-create-open"
+            onClick={() => setCreateOpen(true)}>＋ Tạo công việc</button></PermissionGuard>
+        </div>
       </section>}
+      {/* MODAL «Tạo công việc» — khuôn chuẩn của dự án (đối chiếu `ConstructionScreen.tsx:56-73`):
+          `.overlay` (bấm ra ngoài để đóng) → `.modal card` (role=dialog + aria-modal + aria-label)
+          → `.modal-head` + nút ✕ `aria-label="Đóng"` → `.modal-body` → `footer.modal-actions`. */}
+      {createOpen && <div className="overlay" onMouseDown={(event) => event.target === event.currentTarget && setCreateOpen(false)}>
+        <div className="modal card" data-vntech="work-create-modal" role="dialog" aria-modal="true" aria-label="Tạo công việc">
+          <div className="modal-head"><strong>TẠO CÔNG VIỆC</strong>
+            <button type="button" onClick={() => setCreateOpen(false)} aria-label="Đóng">✕</button></div>
+          <form onSubmit={(e) => { e.preventDefault(); void submitSelfWork(e.currentTarget); }}>
+            <div className="modal-body"><div className="form-grid">
+              <label className="full"><span>Nội dung công việc *</span><input name="title" required autoFocus placeholder="Ví dụ: Rà soát hồ sơ nghiệm thu đợt 2"/></label>
+              <label><span>Dự án</span><select name="projectId"><option value="">— Không gắn dự án —</option>{(data.projects || []).map((p) => <option key={String(p.id)} value={String(p.id)}>{p.code} · {p.name}</option>)}</select></label>
+              <label><span>Hạn hoàn thành</span><input name="dueAt" type="date"/></label>
+              <label><span>Ưu tiên</span><select name="priority"><option value="normal">Bình thường</option><option value="high">Cao</option><option value="urgent">Khẩn</option></select></label>
+              <label><span>Kết quả cần có</span><input name="requiredOutput" placeholder="Đầu ra mong đợi"/></label>
+              <label className="full"><span>Mô tả</span><textarea name="description" rows={2}/></label>
+            </div></div>
+            <footer className="modal-actions">
+              <button type="button" className="secondary" disabled={busy} onClick={() => setCreateOpen(false)}>Huỷ</button>
+              <button className="primary" disabled={busy} data-vntech="work-create-submit">＋ Tạo việc cho tôi</button>
+            </footer>
+          </form>
+        </div>
+      </div>}
       <section className="card">
-        <CardHead title="Danh sách việc của tôi" note={`Nhóm đang chọn: «${personalGroups.find((group) => group.key === personalGroup)?.label}» (${personalRows.length} việc) — cập nhật tiến độ và đánh dấu hoàn thành ngay tại đây`}/>
-        <TaskTable rows={find(personalRows)} allowEdit projCode={projCode} busy={busy} send={send}/>
+        {/* VIỆC 2 (USER 08/10/2026) — «Danh sách việc của tôi» → «Danh sách công việc»,
+            và ô TÌM KIẾM hạ xuống NGAY TRÊN bảng (trước đây nằm ở đầu màn — xem `ListToolbar` đầu trang).
+            ⚠️ `find()` lọc theo mã việc · nội dung · người làm (không đổi luật lọc). */}
+        <ListToolbar
+          title="Danh sách công việc"
+          note={`Nhóm «${personalGroups.find((group) => group.key === personalGroup)?.label}» · ${personalRows.length} việc — nhập % tiến độ và gửi kiểm tra ngay tại đây`}
+          search={{ value: q, onChange: setQ, placeholder: "Tìm mã việc, nội dung, người làm…" }}/>
+        <TaskTable rows={find(personalRows)} allowEdit projCode={projCode} busy={busy} send={send} canApproveRow={canApproveRow} onOpenDetail={setDetailRow}/>
       </section>
     </div>}
 
-    {tab === 1 && <div className="stack" data-vntech="work-project-tab">
+    {/* VIỆC 6 (USER 08/10/2026) — TAB RIÊNG «Được giao»: việc NGƯỜI KHÁC giao cho tôi.
+        ⚠️ Dùng ĐÚNG nhóm `assigned` sẵn có (`personalGroups[1]` = `assignedTo = tôi` ∧ `assignedBy ≠ tôi`)
+        ⇒ ⛔ KHÔNG viết lại luật lọc (tránh hai nguồn sự thật). Người thực hiện được NHẬP % + «Gửi kiểm tra»
+        (`SUBMITTED`); «Duyệt xong»/«Yêu cầu làm lại» chỉ hiện với người có quyền duyệt (`canApproveRow`). */}
+    {tab === 2 && <div className="stack" data-vntech="work-assigned-tab">
+      <div className="kpi-grid small">
+        <Kpi icon="DG" label="Việc được giao" value={String(assignedRows.length)} note="Người khác giao cho tôi" tone="blue"/>
+        <Kpi icon="QH" label="Quá hạn" value={String(assignedRows.filter(isTaskLate).length)} note="Cần xử lý trước" tone="red"/>
+        <Kpi icon="TL" label="Tỉ lệ hoàn thành" value={`${workRate(assignedRows)}%`} note="Trên việc được giao" tone="green"/>
+      </div>
+      <section className="card">
+        <CardHead title="Việc được giao cho tôi"
+          note={`${assignedRows.length} việc người khác giao cho bạn — nhập % tiến độ và bấm «Gửi kiểm tra» khi xong; trưởng phòng là người xác nhận hoàn thành`}/>
+        <TaskTable rows={find(assignedRows)} allowEdit projCode={projCode} busy={busy} send={send} canApproveRow={canApproveRow} onOpenDetail={setDetailRow}/>
+      </section>
+    </div>}
+
+    {tab === 5 && <div className="stack" data-vntech="work-project-tab">
       <div className="kpi-grid small">
         <Kpi icon="DA" label="Dự án có công việc" value={String(projectWorkGroups(items).length)} note="Trong phạm vi bạn được xem" tone="blue"/>
         <Kpi icon="CV" label="Tổng nhiệm vụ" value={String(items.length)} note="Toàn bộ nhiệm vụ đang giao" tone="green"/>
@@ -356,24 +428,46 @@ function WorkCenter({ data, action, refresh, view = "personal" }: { data: AppDat
       </section>
     </div>}
 
-    {tab === 2 && <div className="stack">
+    {tab === 3 && <div className="stack" data-vntech="work-dept-tab">
+      {/* VIỆC 7 (USER 08/10/2026) — tab «Phòng ban/ Tổ đội»: **2 SUB-TAB** (việc phòng ban · việc tổ đội)
+          + Kanban/Cây chuyển thành **«CHẾ ĐỘ XEM»** (user chốt: giữ dạng chế độ xem) ⇒ tab gọn mà ⛔ không mất chức năng.
+          ⚠️ Giữ NGUYÊN 2 nhãn cũ («Việc phòng ban của tôi» · «Việc của tổ đội tôi tham gia») để ⛔ không phá `t06`. */}
       <section className="card">
-        <CardHead title="Việc phòng ban của tôi" note={`Nhiệm vụ thuộc phòng mà tài khoản trực thuộc — PHẠM VI ĐƯỢC PHÉP: ${scopeNote}`}/>
-        <TaskTable rows={find(deptWork)} allowEdit={false} projCode={projCode} busy={busy} send={send}/>
+        <CardHead title="Phòng ban/ Tổ đội"
+          note={`Việc của phòng ban và của tổ đội bạn tham gia — phạm vi được phép: ${scopeNote}`}/>
+        <div className="project-scope-tabs" role="tablist" aria-label="Phòng ban hay tổ đội">
+          <button type="button" role="tab" aria-selected={deptTab === "dept"} className={deptTab === "dept" ? "active" : ""}
+            data-vntech="work-dept-subtab-dept" onClick={() => setDeptTab("dept")}>Việc phòng ban của tôi · {deptWork.length}</button>
+          <button type="button" role="tab" aria-selected={deptTab === "team"} className={deptTab === "team" ? "active" : ""}
+            data-vntech="work-dept-subtab-team" onClick={() => setDeptTab("team")}>Việc của tổ đội tôi tham gia · {teamWork.length}</button>
+        </div>
+        {/* ⛔ TẠM ẨN «CHẾ ĐỘ XEM» Kanban/Cây (USER 08/10/2026 — «tạm thời ẩn Kanban/cây, ghi vào log nếu sau này
+            cần thì dùng lại»). ⭐ GIỮ NGUYÊN MÃ 2 khối bên dưới + import — chỉ ẨN khỏi giao diện.
+            ⭐ BẬT LẠI: đổi `WORK_VIEW_MODES_HIDDEN = false` (ĐÚNG 1 CHỖ) — xem hằng số ở cấp module. */}
+        {!WORK_VIEW_MODES_HIDDEN && <div className="project-scope-tabs" role="tablist" aria-label="Chế độ xem">
+          {([["list", "Bảng"], ["kanban", "Kanban"], ["tree", "Cây"]] as const).map(([mode, label]) =>
+            <button key={mode} type="button" role="tab" aria-selected={deptView === mode} className={deptView === mode ? "active" : ""}
+              data-vntech={`work-dept-view-${mode}`} onClick={() => setDeptView(mode)}>{label}</button>)}
+        </div>}
       </section>
-      <section className="card">
-        <CardHead title="Việc của tổ đội tôi tham gia" note="Thành viên tổ đội đang hoạt động (đã lọc theo cùng phạm vi được phép)"/>
-        <TaskTable rows={find(teamWork)} allowEdit={false} projCode={projCode} busy={busy} send={send}/>
-      </section>
-      <WorkKanban rows={scopedWork} busy={busy} myId={myId} isAdmin={scope.isAdmin} managerDepartments={kanbanManagerDepartments(me)}
-        scopeNote={`Phạm vi: ${scopeNote}`} onMove={moveStatus}/>
+      {/* ⚠️ Khi đã ẩn «chế độ xem» thì LUÔN hiện bảng (`WORK_VIEW_MODES_HIDDEN` ⇒ bỏ qua `deptView`) — tránh
+          trường hợp `deptView` còn giá trị cũ mà ⛔ không có nút nào để đổi lại ⇒ màn trắng. */}
+      {(WORK_VIEW_MODES_HIDDEN || deptView === "list") && <section className="card">
+        {deptTab === "dept"
+          ? <><CardHead title="Việc phòng ban của tôi" note="Nhiệm vụ thuộc phòng mà tài khoản trực thuộc — chỉ trong phạm vi được phép"/>
+              <TaskTable rows={find(deptWork)} allowEdit={false} projCode={projCode} busy={busy} send={send} onOpenDetail={setDetailRow}/></>
+          : <><CardHead title="Việc của tổ đội tôi tham gia" note="Thành viên tổ đội đang hoạt động (đã lọc theo cùng phạm vi được phép)"/>
+              <TaskTable rows={find(teamWork)} allowEdit={false} projCode={projCode} busy={busy} send={send} onOpenDetail={setDetailRow}/></>}
+      </section>}
+      {!WORK_VIEW_MODES_HIDDEN && deptView === "kanban" && <WorkKanban rows={scopedWork} busy={busy} myId={myId} isAdmin={scope.isAdmin} managerDepartments={kanbanManagerDepartments(me)}
+        scopeNote={`Phạm vi: ${scopeNote}`} onMove={moveStatus}/>}
       {/* PHASE 3 (`T-09`) — KIẾN TRÚC 4 CẤP Task → Team → Thành viên → Hỗ trợ liên phòng (§10).
-          Đặt trong tab «Phòng ban» (nơi đã có board Kanban của `T-07`), KHÔNG mở màn/menu mới và KHÔNG đổi 5 tab `T-01`.
+          Nay nằm trong CHẾ ĐỘ XEM «Cây» của tab «Phòng ban/ Tổ đội» (VIỆC 7) — ⛔ vẫn KHÔNG mở màn/menu mới.
           Bấm Team/Nhân sự mở `EntityDetailModal` qua cổng dùng chung `ProjectEntityModal` (PR-04). */}
-      <WorkHierarchy data={data} rows={find(scopedWork)} scopeNote={`Phạm vi: ${scopeNote}`} permission={modulePermission(data, "dept_plan_assign")}/>
+      {!WORK_VIEW_MODES_HIDDEN && deptView === "tree" && <WorkHierarchy data={data} rows={find(scopedWork)} scopeNote={`Phạm vi: ${scopeNote}`} permission={modulePermission(data, "dept_plan_assign")}/>}
     </div>}
 
-    {tab === 3 && <div className="stack">
+    {tab === 4 && <div className="stack">
       {canAssign && <section className="card">
         <CardHead title="Giao việc cho nhân viên" note="Chỉ Trưởng phòng hoặc Quản trị viên giao được việc thủ công — backend chặn bằng userIsDepartmentManager. Bàn giao chi tiết (hồ sơ · dòng thời gian · đổi trạng thái) nằm ở mục «Giao việc» của menu."/>
         <form onSubmit={(e) => { e.preventDefault(); const f = e.currentTarget; const fd = new FormData(f);
@@ -384,6 +478,10 @@ function WorkCenter({ data, action, refresh, view = "personal" }: { data: AppDat
             <label><span>Phòng ban *</span><select name="departmentCode" required><option value="KH">Phòng Kế hoạch (KH)</option><option value="DA">Phòng Dự án (DA)</option></select></label>
             <label><span>Giao cho *</span><select name="assignedTo" required><option value="">— Chọn nhân viên —</option>{users.filter((u) => u.active !== false).map((u) => <option key={String(u.id)} value={String(u.id)}>{u.fullName} · {u.roleName || u.role || ""}</option>)}</select></label>
             <label className="full"><span>Nội dung công việc *</span><input name="title" required/></label>
+            {/* ⭐ FIX `BUG-20261008-D10` (vòng 58): payload gửi đi ĐỌC `fd.get("description")` (dòng dưới)
+                nhưng form ⛔ **THIẾU ô nhập** ⇒ «Mô tả» LUÔN RỖNG khi giao việc. Ô này phải có `name="description"`
+                — khuôn giống modal «Tạo công việc» (cùng tệp, khối tự tạo việc). */}
+            <label className="full"><span>Mô tả</span><textarea name="description" rows={2}/></label>
             <label><span>Dự án</span><select name="projectId"><option value="">— Không gắn dự án —</option>{(data.projects || []).map((p) => <option key={String(p.id)} value={String(p.id)}>{p.code} · {p.name}</option>)}</select></label>
             <label><span>Hạn hoàn thành</span><input name="dueAt" type="date"/></label>
             <label><span>Ưu tiên</span><select name="priority"><option value="normal">Bình thường</option><option value="high">Cao</option><option value="urgent">Khẩn</option></select></label>
@@ -397,7 +495,7 @@ function WorkCenter({ data, action, refresh, view = "personal" }: { data: AppDat
       </section>}
     </div>}
 
-    {tab === 4 && <div className="stack">
+    {tab === 0 && <div className="stack">
       <section className="card">
         <CardHead title="Dashboard công việc"
           note={isOverseer ? "Phạm vi: TOÀN BỘ nhân sự (quyền CEO/Quản trị)" : "Phạm vi: phòng ban của bạn"}/>
@@ -414,10 +512,18 @@ function WorkCenter({ data, action, refresh, view = "personal" }: { data: AppDat
       {/* MT2-P6-01 (§4.1) — card «Chờ Giám đốc duyệt»: chỉ hiện khi user ĐỦ QUYỀN (API 403 ⇒ tự ẩn). */}
       {/* MT2-P6-06 (§4.4) — card «Đơn quá hạn SLA»: ĐẾM từ payload; thiếu nguồn ⇒ «chưa có nguồn» (⛔ không hiện 0). */}
       <div className="kpi-grid small"><DirectorPendingCard/><Kpi icon="QH" label="Đơn quá hạn SLA" value={overdueApprovalCount(data) === null ? "chưa có nguồn" : String(overdueApprovalCount(data))} note="Phiếu đang chờ đã quá hạn xử lý" tone="red"/></div>
+      {/* VIỆC 3 (USER 08/10/2026) — tab «Dashboard» phải hiển thị CÔNG VIỆC CỦA CHÍNH USER NÀY và cho
+          **NHẬP % HOÀN THÀNH** ngay tại đây (thay cho các nút «Thao tác» preset cũ).
+          ⚠️ Dùng ĐÚNG tập `mine` (= việc `assignedTo` = tôi) — cùng nguồn với tab Cá nhân, ⛔ không gọi API mới. */}
+      <section className="card">
+        <CardHead title="Việc của tôi (Dashboard)"
+          note={`${mine.length} việc mang tên bạn · ${mine.filter((r) => String(r.status) === "COMPLETED").length} đã hoàn thành — nhập % và gửi kiểm tra ngay tại đây`}/>
+        <TaskTable rows={find(mine)} allowEdit projCode={projCode} busy={busy} send={send} canApproveRow={canApproveRow} onOpenDetail={setDetailRow}/>
+      </section>
       <WorkDashboard data={data} personalRows={mine} scopeRows={scopedWork} isLate={isTaskLate} scopeNote={scopeNote}/>
     </div>}
 
-    {tab === 5 && <div className="stack">
+    {tab === 6 && <div className="stack">
       <section className="card">
         <CardHead title="Tỉ lệ hoàn thành theo nhân viên"
           note={isOverseer ? "Phạm vi: TOÀN BỘ nhân sự (quyền CEO/Quản trị)" : "Phạm vi: phòng ban của bạn"}/>
@@ -429,6 +535,42 @@ function WorkCenter({ data, action, refresh, view = "personal" }: { data: AppDat
       </section>}
       <ReportView catalog={WORK_REPORT_CATALOG.map((entry) => entry.def)} rowsFor={(key) => sourceRows(findEntry(key)?.source ?? "workItems", data)} />
     </div>}
+    {/* VIỆC 5 (USER 08/10/2026) — **MODAL CHI TIẾT CÔNG VIỆC**: mở bằng click **CẢ DÒNG**
+        (`onRowClick` của `DataTable`) hoặc nút mã việc (a11y/bàn phím).
+        Khuôn chuẩn dự án: `.overlay` → `.modal card` (`role=dialog` + `aria-modal`) → `.modal-head` + ✕ `aria-label="Đóng"`
+        → `.modal-body` → `footer.modal-actions`.
+        ⚠️ «Nhận xét» **TẠM ẨN** theo QUYẾT ĐỊNH CỦA USER (thẻ quyết định 08/10/2026): BE Java ⛔ CHƯA có handler
+        `add_work_item_comment` (gọi vào trả **400**) ⇒ hiện DÒNG THÔNG BÁO, ⛔ KHÔNG hiện nút chết. */}
+    {detailRow && <div className="overlay" onMouseDown={(event) => event.target === event.currentTarget && setDetailRow(null)}>
+      <div className="modal card" data-vntech="work-detail-modal" role="dialog" aria-modal="true" aria-label="Chi tiết công việc">
+        <div className="modal-head"><strong>{String(detailRow.taskNo || "Công việc")}</strong>
+          <button type="button" onClick={() => setDetailRow(null)} aria-label="Đóng">✕</button></div>
+        <div className="modal-body">
+          <h3>{String(detailRow.title || "—")}</h3>
+          <div className="form-grid">
+            <label><span>Người làm</span><div>{String(detailRow.assignedToName || "—")}</div></label>
+            <label><span>Người giao</span><div>{String(detailRow.assignedByName || "—")}</div></label>
+            <label><span>Dự án</span><div>{projCode(detailRow.projectId)}</div></label>
+            <label><span>Phòng ban</span><div>{String(detailRow.departmentCode || "—")}</div></label>
+            <label><span>Hạn hoàn thành</span><div>{detailRow.dueAt ? date(detailRow.dueAt) : "—"}{isTaskLate(detailRow) && <small className="red-text"> Quá hạn</small>}</div></label>
+            <label><span>Ưu tiên</span><div>{statusLabel(detailRow.priority, "priority")}</div></label>
+            <label><span>Tiến độ</span><div><div className="task-bar"><span><i style={{ width: `${Number(detailRow.progress || 0)}%` }} /></span><b>{Number(detailRow.progress || 0)}%</b></div></div></label>
+            <label><span>Trạng thái</span><div><StatusBadge value={WORK_STATUS_LABELS[String(detailRow.status)] || statusLabel(detailRow.status, "work_item")}/></div></label>
+            <label className="full"><span>Kết quả cần có</span><div>{String(detailRow.requiredOutput || "—")}</div></label>
+          </div>
+          <CardHead title="Nhận xét" note="Trao đổi trên công việc"/>
+          <p className="muted" data-vntech="work-comment-pending">Nhận xét sẽ bật sau khi backend hoàn tất phần bình luận công việc — hiện ⛔ chưa mở nút để tránh bấm vào là lỗi.</p>
+        </div>
+        <footer className="modal-actions">
+          <button type="button" className="secondary" onClick={() => setDetailRow(null)}>Đóng</button>
+          {String(detailRow.status) !== "COMPLETED" && (canApproveRow(detailRow)
+            ? <button type="button" className="primary" disabled={busy} data-vntech="work-detail-approve"
+                onClick={() => { void send("update_work_item_status", { workItemId: detailRow.id, status: "COMPLETED" }); setDetailRow(null); }}>Duyệt xong</button>
+            : <button type="button" className="primary" disabled={busy} data-vntech="work-detail-submit"
+                onClick={() => { void send("update_work_item_status", { workItemId: detailRow.id, status: "SUBMITTED" }); setDetailRow(null); }}>Gửi kiểm tra</button>)}
+        </footer>
+      </div>
+    </div>}
   </div>;
 }
 
@@ -437,13 +579,64 @@ function WorkCenter({ data, action, refresh, view = "personal" }: { data: AppDat
 // Khai báo trong thân render tạo component MỚI mỗi lần render ⇒ state bên trong bị reset, và eslint
 // báo react-hooks/static-components. Nay nhận đủ dữ liệu qua props thay vì đóng kín vào WorkCenter:
 //   rows · allowEdit · projCode · busy · send
-function TaskTable({ rows, allowEdit, projCode, busy, send }: { rows: Row[]; allowEdit: boolean; projCode: (id: unknown) => string; busy: boolean; send: (name: string, payload: Row) => Promise<void> }) {
-  return <DataTable rows={rows} rowKey={(r) => String(String(r.id))} columns={[{ key: "c1", header: "Mã việc", render: (r) => <><strong className="code">{r.taskNo}</strong></> }, { key: "c2", header: "Nội dung", render: (r) => <>{r.title}<small>{r.requiredOutput || r.workGroup || ""}</small></> }, { key: "c3", header: "Người làm", render: (r) => <>{r.assignedToName || "—"}</> }, { key: "c4", header: "Dự án", render: (r) => <>{projCode(r.projectId)}</> }, { key: "c5", header: "Hạn", render: (r) => <>{r.dueAt ? date(r.dueAt) : "—"}{isTaskLate(r) && <small className="red-text">Quá hạn</small>}</> }, { key: "c6", header: "Ưu tiên", render: (r) => <>{r.priority === "urgent" ? "Khẩn" : r.priority === "high" ? "Cao" : "Thường"}</> }, { key: "c7", header: "Tiến độ", render: (r) => <><div className="task-bar"><span><i style={{ width: `${Number(r.progress || 0)}%` }} /></span><b>{Number(r.progress || 0)}%</b></div></> }, { key: "c8", header: "Trạng thái", render: (r) => <><StatusBadge value={WORK_STATUS_LABELS[String(r.status)] || String(r.status || "—")}/></> }, { key: "c9", header: "Thao tác", render: (r) => <><div className="row-actions">
-          {[25, 50, 75, 100].map((p) => <button key={p} type="button" className="export-mini" disabled={busy || Number(r.progress || 0) >= p} onClick={() => void send("update_work_item_progress", { workItemId: r.id, progress: p })}>{p}%</button>)}
-          {String(r.status) !== "COMPLETED" && <button type="button" className="export-mini" disabled={busy} onClick={() => void send("update_work_item_status", { workItemId: r.id, status: "COMPLETED" })}>Xong</button>}
-        </div></> }]} emptyText="Chưa có nhiệm vụ nào." />;
+function TaskTable({ rows, allowEdit, projCode, busy, send, canApproveRow, onOpenDetail }: { rows: Row[]; allowEdit: boolean; projCode: (id: unknown) => string; busy: boolean; send: (name: string, payload: Row) => Promise<void>; canApproveRow?: (row: Row) => boolean; onOpenDetail?: (row: Row) => void }) {
+  return <DataTable rows={rows} rowKey={(r) => String(String(r.id))} onRowClick={onOpenDetail ? (row) => onOpenDetail(row) : undefined} columns={[{ key: "c1", header: "Mã việc", render: (r) => (onOpenDetail
+      // VIỆC 5 (USER 08/10/2026) — click MỞ CHI TIẾT: dùng class có sẵn của dự án `.link-cell`
+      // (⚠️ ⛔ KHÔNG bịa class mới); cửa chính là **click CẢ DÒNG** (`onRowClick`), nút này giữ cho BÀN PHÍM/a11y.
+      ? <button type="button" className="link-cell code" data-vntech="work-open-detail" title="Xem chi tiết công việc" onClick={() => onOpenDetail(r)}>{r.taskNo}</button>
+      : <strong className="code">{r.taskNo}</strong>) }, { key: "c2", header: "Nội dung", render: (r) => <>{r.title}<small>{r.requiredOutput || r.workGroup || ""}</small></> }, { key: "c3", header: "Người làm", render: (r) => <>{r.assignedToName || "—"}</> }, { key: "c4", header: "Dự án", render: (r) => <>{projCode(r.projectId)}</> }, { key: "c5", header: "Hạn", render: (r) => <>{r.dueAt ? date(r.dueAt) : "—"}{isTaskLate(r) && <small className="red-text">Quá hạn</small>}</> }, { key: "c6", header: "Ưu tiên", render: (r) => <>{statusLabel(r.priority, "priority")}</> }, { key: "c7", header: "Tiến độ", render: (r) => <><div className="task-bar"><span><i style={{ width: `${Number(r.progress || 0)}%` }} /></span><b>{Number(r.progress || 0)}%</b></div></> }, { key: "c8", header: "Trạng thái", render: (r) => <><StatusBadge value={WORK_STATUS_LABELS[String(r.status)] || statusLabel(r.status, "work_item")}/></> }, { key: "c9", header: "Tiến độ & xác nhận", render: (r) => <ProgressCell row={r} busy={busy} allowEdit={allowEdit} canApprove={Boolean(canApproveRow?.(r))}
+          onProgress={(row, value) => void send("update_work_item_progress", { workItemId: row.id, progress: value })}
+          onStatus={(row, status, reason) => void send("update_work_item_status", { workItemId: row.id, status, reason })}/> }]} emptyText="Chưa có nhiệm vụ nào." />;
 }
 
+
+// ══════════════════════════════════════════════════════════════════════════════════════════════════
+// VIỆC 3 (USER 08/10/2026) — CỘT «TIẾN ĐỘ & XÁC NHẬN»: **NHẬP %** thay 4 nút preset,
+//   ⭐ ĐỒNG THỜI SỬA `BUG-20261008-D05` (nút «Xong» cũ gửi `COMPLETED` cho MỌI user ⇒ BE từ chối).
+//
+// ⚠️ LUẬT BE ĐÃ ĐO — `scripts/system-route.mjs:1275`:
+//   `if (next==='COMPLETED' && !manager) throw new Error("Người thực hiện chỉ Gửi kiểm tra;
+//    Trưởng phòng/người có thẩm quyền mới xác nhận Hoàn thành.")`
+//   ⇒ **người thực hiện gửi `SUBMITTED`** («Gửi kiểm tra»), **chỉ người duyệt** mới gửi `COMPLETED`.
+//   Mã trạng thái hợp lệ của route (`TASK_STATUSES:260`): NEW · IN_PROGRESS · WAITING_* · BLOCKED · ON_HOLD ·
+//   **SUBMITTED** · **REWORK** · **COMPLETED** · CANCELLED.
+//   ✅ ĐÃ SỬA 08/10/2026 (`BUG-20261008-D14`): `REWORK` + 4 mã `WAITING_*` đã được **thêm vào Java**
+//      (`OpsTaskManagementUseCase.TASK_STATUSES`) ⇒ nay **2 đường PHỦ NHAU** (có test chống lệch ở `tests/t13`).
+// ⚠️ `REWORK` ⛔ KHÔNG bắt buộc lý do ở BE (`TASK_WAITING:261` chỉ gồm WAITING_*/BLOCKED/ON_HOLD) —
+//   nhưng yêu cầu NGHIỆP VỤ của user là «yêu cầu làm lại phải nêu lý do» ⇒ FE TỰ CHẶN bằng `disabled`.
+// ══════════════════════════════════════════════════════════════════════════════════════════════════
+function ProgressCell({ row, busy, allowEdit, canApprove, onProgress, onStatus }: {
+  row: Row; busy: boolean; allowEdit: boolean; canApprove: boolean;
+  onProgress: (row: Row, value: number) => void; onStatus: (row: Row, status: string, reason?: string) => void;
+}) {
+  const [value, setValue] = useState(String(Number(row.progress || 0)));
+  const [reason, setReason] = useState("");
+  const status = String(row.status || "");
+  if (!allowEdit) return <span className="muted">—</span>;
+  if (status === "COMPLETED") return <span className="muted">Đã hoàn thành</span>;
+  const clamped = () => Math.max(0, Math.min(100, Number(value) || 0));
+  // VIỆC 5 (USER 08/10/2026) — ⚠️ BẮT BUỘC khi bật `onRowClick`: mọi cú click TRONG ô này (nhập % · Lưu · Duyệt ·
+  //   Yêu cầu làm lại · Lý do) phải DỪNG LAN TRUYỀN, nếu ⛔ không thì vừa nhập % vừa bật modal chi tiết.
+  return <div className="row-actions" data-vntech="work-progress-cell" onClick={(event) => event.stopPropagation()}>
+    <input type="number" min={0} max={100} step={5} value={value} disabled={busy} aria-label="Phần trăm hoàn thành"
+      className="export-mini" style={{ width: 78 }} onChange={(e) => setValue(e.target.value)}/>
+    <button type="button" className="export-mini" disabled={busy} data-vntech="work-progress-save"
+      title="Lưu phần trăm hoàn thành" onClick={() => onProgress(row, clamped())}>Lưu %</button>
+    {canApprove ? <>
+      <button type="button" className="export-mini" disabled={busy} data-vntech="work-approve"
+        title="Xác nhận công việc đã hoàn thành" onClick={() => onStatus(row, "COMPLETED")}>Duyệt xong</button>
+      <input value={reason} disabled={busy} aria-label="Lý do yêu cầu làm lại" placeholder="Lý do làm lại…"
+        className="export-mini" style={{ width: 150 }} onChange={(e) => setReason(e.target.value)}/>
+      <button type="button" className="export-mini" disabled={busy || !reason.trim()} data-vntech="work-rework"
+        title={reason.trim() ? "Gửi yêu cầu làm lại kèm lý do" : "Phải nhập lý do trước khi yêu cầu làm lại"}
+        onClick={() => { onStatus(row, "REWORK", reason.trim()); setReason(""); }}>Yêu cầu làm lại</button>
+    </> : (status === "SUBMITTED"
+      ? <span className="muted">Đã gửi kiểm tra — chờ trưởng phòng</span>
+      : <button type="button" className="export-mini" disabled={busy} data-vntech="work-submit"
+          title="Người thực hiện chỉ GỬI KIỂM TRA; trưởng phòng mới xác nhận hoàn thành"
+          onClick={() => onStatus(row, "SUBMITTED")}>Gửi kiểm tra</button>)}
+  </div>;
+}
 
 function isTaskLate(row: Row): boolean {
   if (WORK_CLOSED.includes(String(row.status))) return false;
@@ -461,6 +654,7 @@ function workRate(rows: Row[]): number {
   return Math.round((rows.filter((r) => String(r.status) === "COMPLETED").length / rows.length) * 100);
 }
 export {
+  ProgressCell,
   TaskTable,
   WorkCenter,
   isTaskLate,

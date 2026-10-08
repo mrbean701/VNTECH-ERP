@@ -1661,6 +1661,11 @@ CREATE TABLE IF NOT EXISTS `stock_reservations` (
   `material_id` VARCHAR(64) NOT NULL,
   `request_id` VARCHAR(64) NULL,
   `request_item_id` VARCHAR(64) NULL,
+  -- ⭐ GƯƠNG H2 của `V39__session02_stock_reservation_issue_id.sql` (⚠️ TRƯỚC ĐÂY THIẾU
+  --    ⇒ `INSERT INTO stock_reservations (…,issue_id,…)` báo `BadSqlGrammarException`
+  --    ⇒ 2 test `StockIssueWorkflowSteps345Test` + `SupplyChainEndToEndIntegrationTest` LỖI.
+  --    ⛔ KHÔNG phải lỗi sản phẩm — ⭐ chỉ là schema H2 chưa cập nhật kịp MySQL ✓
+  `issue_id` VARCHAR(64) NULL,
   `quantity` DECIMAL(18,4) NOT NULL,
   `status` VARCHAR(255) NOT NULL DEFAULT 'active',
   `reserved_at` TIMESTAMP(3) NOT NULL,

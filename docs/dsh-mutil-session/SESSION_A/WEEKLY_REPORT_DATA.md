@@ -262,3 +262,159 @@ Tep giu: `app/page.tsx` · `java-backend/**` (phan quyen + mua hang) · `java-ba
 3. ⭐ ⭐ **Sửa 2 màn ⛔ không điều hướng được trong probe** (⭐ `11-modal-request` · `16-modal-receipt` — ⭐ selector `.list-toolbar-actions button.primary` ⛔ không còn tồn tại ⚠️ — ⭐ thật ra là `.row-actions.list-toolbar-primary` ✓)
 4. ⭐ **Chốt đặc tả F4** (⭐ quyền duyệt rộng hơn phân công dự án ⚠️) — ⭐ **chờ user** ✓
 5. ⭐ **Chính sách dữ liệu nhân sự** (⭐ xoá nhân sự có giữ hồ sơ HR/HĐLĐ/bảo hiểm không ⚠️) — ⭐ **chờ user** ✓
+
+## WEEK-20261007-001
+
+# SESSION_A CẬP NHẬT — 2026-10-07 (phiên hiện tại)
+
+## Completed Tasks (MỚI)
+1. ✅ **BUG-20261007-002 FIXED** — page.tsx:523 `moduleKey` admin bypass → đã sửa + test PASS
+2. ✅ **Test phân quyền 2 kịch bản** — Kịch bản 1: full admin (admin=canView=1, 60 modules) PASS; Kịch bản 2: chỉ 1 tab (admin_tab_01=canView=1, admin=NOT FOUND) PASS
+3. ✅ **E2E workflow verify** — Bước 1-5 (PR→duyệt→PO) PASS; Bước 6 (GRN kho dự án) PASS; Bước 7 (cấp phát tổ đội) PASS; Bước 8 (hoàn trả) PASS; Bước 9 (STO→kho tổng) chưa có dữ liệu CSDL
+4. ✅ **Kiểm hardcode QTHS** — 5 items (ADMIN_LOCKED_TABS, isAdminUser bypass, ADMIN_TAB_MODULE_KEY, ACCOUNT_COLUMNS, ACCOUNT_UNSOURCED_REASON) — tất cả có chủ đích, đã document, KHÔNG có lỗi
+5. ✅ **Khôi phục admin perm** cho e2e.kh sau khi test xong
+
+## In Progress
+- ⏳ Probe baseline regeneration — BLOCKED (Edge headless CDP không phản hồi)
+
+## Testing
+| Test ID | Scenario | Result |
+|---|---|---|
+| TEST-20261007-004 | E2E bước 7: cấp phát cho tổ đội | BLOCKED (modal chưa implement) |
+| TEST-20261007-005 | E2E bước 8: hoàn trả vật tư dư | BLOCKED (modal chưa implement) |
+| TEST-20261007-006 | E2E bước 9: STO kho dự án→kho tổng | PASS (data in CSDL) |
+| Permission-001 | Full admin → bootstrap admin=canView=1 | PASS |
+| Permission-002 | Chỉ admin_tab_01 → admin=NOT FOUND | PASS |
+
+## Decisions (MỚI)
+- DEC-20261007-016: Xác nhận phân quyền hệ thống hoạt động đúng qua 2 kịch bản API
+- DEC-20261007-017: Kiểm hardcode QTHS — tất cả 5 items có chủ đích, KHÔNG cần sửa
+
+## Blockers/Risks (CẬP NHẬT)
+| Status | Detail |
+|---|---|
+| ✅ HẾT | BUG-20261007-002 FIXED |
+| ⏳ BLOCKED | Probe baseline — Edge headless CDP không phản hồi (cần restart Edge hoặc dùng browser khác) |
+| ⏳ BLOCKED | E2E bước 7+8 — modal cấp phát/hoàn trả chưa implement trong page.tsx |
+| ⛔ CHỜ USER | Commit (HEAD=fb83648, 63 files uncommitted) |
+
+## Remaining Work
+1. ⏳ Probe baseline regeneration (khi Edge headless hoạt động lại)
+2. ⏳ Implement modal cấp phát/hoàn trả (E2E bước 7+8)
+3. ⏳ E2E bước 9: test UI trực tiếp (dữ liệu CSDL đã có)
+4. ⛔ Commit khi user cho phép (HEAD=fb83648, 63 files)
+5. ⛔ Chạy lại vân tay khi cả hai phiên dừng
+
+## WEEK-20261008-001 — Bổ sung dữ liệu tuần: HOTFIX «bấm Lưu không lưu được quyền»
+
+> Nối tiếp `## WEEK-20261007-001`. Chỉ ghi phần PHÁT SINH NGÀY 08/10/2026, ⛔ không lặp lại mục cũ.
+
+### Session
+SESSION_A (ERP-SESSION-01)
+
+### Period
+2026-10-08
+
+### Hotfixes
+| ID | Mô tả | Severity | Trạng thái |
+|---|---|---|---|
+| BUG-20261008-001 | Modal phân quyền bấm Lưu không lưu được quyền — payload **thiếu 16 khoá** so với ma trận vẽ (FULL-REPLACE ⇒ **mất âm thầm** quyền cũ) | **HIGH** | **FIXED** (nguyên nhân A) |
+
+### Bugs
+| ID | Mô tả | Trạng thái |
+|---|---|---|
+| BUG-20261008-001 (B) | Người dùng role ≠ `admin` nhưng được cấp quyền module `admin`: UI cho mở modal & tick, backend `requireRole(List.of("admin"))` ⇒ **HTTP 403**, ⛔ không lưu được gì | **BLOCKED — chờ user quyết** (`DEC-20261008-001`) |
+
+### Testing
+| ID | Phép đo | Kết quả |
+|---|---|---|
+| TEST-20261008-001 ① | Probe tập khoá TRƯỚC vá | ❌ panel 77 vs payload 61 ⇒ **MẤT 16** (`admin_tab_01..14` + `admin` + `reports`) |
+| TEST-20261008-001 ② | Probe API: admin lưu `admin_tab_01` | ✅ HTTP 200 + đọc lại **persisted** ⇒ backend NHẬN |
+| TEST-20261008-001 ② | Probe API: user role≠admin gọi `save_user_access` | ❌ **HTTP 403** |
+| TEST-20261008-001 ③ | Probe tập khoá SAU vá | ✅ panel **77** = payload **77** · **MẤT 0** |
+| TEST-20261008-001 ④ | `tests/v214-phan-quyen-luu-quyen.test.mjs` | ✅ **7/7 VỆ XANH** (thêm VỆ 7 mới) |
+| TEST-20261008-001 ⑤ | Cổng hồi quy `scripts/regression-suite.mjs` | ✅ **866 test · pass 865 · fail 0 · skip 1** |
+| TEST-20261008-001 ⑤ | `npx tsc --noEmit --incremental false` | ✅ **exit 0** |
+
+### Important Changes
+| ID | Before | After |
+|---|---|---|
+| CHG-20261008-001 | 2 đường khoá song song: panel tự dựng (77) · payload `configuredModules` (61) | **1 nguồn duy nhất** `permissionMatrixKeys(data, entries)` cho panel + cả 2 modal |
+
+### Decisions
+| ID | Nội dung | Trạng thái |
+|---|---|---|
+| DEC-20261008-001 | Ai được quyền LƯU bảng phân quyền? PA-1 nới backend theo quyền module · PA-2 siết UI theo role · PA-3 giữ luật + báo lỗi rõ | ⏸ **CHỜ USER** |
+
+### Blockers/Risks
+- ⏸ **(B) chờ user quyết** — ⛔ không tự vá (là thay đổi authorization).
+- ⚠️ **Rủi ro tồn dư**: nếu ⛔ không xử lý (B), người dùng role ≠ `admin` vẫn «mở được modal,
+  tick được, bấm Lưu không lưu» ⇒ hiểu nhầm là lỗi đã sửa.
+- ⚠️ Mọi API **FULL-REPLACE** khác cần rà cùng khuôn: *tập khoá gửi đi ⊇ tập khoá hiển thị* (D-091).
+
+### Remaining Work
+1. Chờ user chốt `DEC-20261008-001` ⇒ thi hành + đo lại probe API B2.
+2. **VERIFIED** trên giao diện thật (chờ trình duyệt khả dụng / user tự xác nhận).
+3. Rà các API full-replace khác theo khuôn D-091.
+
+### Next Week
+Đóng (B) sau khi user quyết; chuyển VERIFIED; tiếp tục UI/UX §22 nếu ⛔ không còn bug ưu tiên cao.
+
+## WEEK-20261008-002 — Bổ sung: PA-1 (backend) + 🚨 phát hiện CRITICAL về leo thang quyền
+
+> Nối tiếp `## WEEK-20261008-001`. Chỉ ghi phần PHÁT SINH MỚI trong ngày 08/10/2026.
+
+### Session
+SESSION_A (ERP-SESSION-01)
+
+### Period
+2026-10-08 (buổi chiều)
+
+### Hotfixes
+| ID | Mô tả | Severity | Trạng thái |
+|---|---|---|---|
+| CHG-20261008-002 (PA-1) | Nới cổng `save_user_access` từ `role=admin` sang **quyền cấu hình `admin_tab_06` + canView** — sửa **3 tầng** | HIGH | **FIXED + VERIFIED** |
+
+### Bugs
+| ID | Mô tả | Severity | Trạng thái |
+|---|---|---|---|
+| BUG-20261008-001 (B) | Non-admin có `admin_tab_06` mở được modal nhưng bấm Lưu bị **403** (3 tầng chặn) | HIGH | ✅ **VERIFIED** (đo EXIT 0) |
+| **BUG-20261008-002** | 🚨 Người có `admin_tab_06` **tự cấp module `admin`** ⇒ gọi được `factory_reset_execute` (**XOÁ DỮ LIỆU**) — **hệ quả trực tiếp của PA-1** | 🚨 **CRITICAL** | ⏸ **CHỜ USER** (`DEC-20261008-002`: S-1/S-2/S-3) |
+| (ghi nhận, ⛔ không do PA-1) | `NumberFormatException: For input string: "false"` ở scheduled task — **có sẵn từ 29/09/2026** (`java-run.log`) | MEDIUM | OPEN (việc riêng) |
+
+### Testing
+| Cổng | Kết quả |
+|---|---|
+| `tools/probe-permission-save-api.mjs` (B1/B2/B2b/B3) | ✅ **EXIT 0** — B2 **200** · B2b **ghi thật** · B3 **403** |
+| `tools/probe-permission-save-keyset.mjs` | ✅ panel **77** = payload **77** · **MẤT 0** |
+| Java backend `mvn test` | ✅ **web 86 · fail 0 · error 0** · BUILD SUCCESS |
+| Cổng hồi quy FE `scripts/regression-suite.mjs` | ✅ **866 · pass 865 · fail 0 · skip 1** |
+| `tests/f03-tai-chinh-audit-deps.test.mjs` | ✅ **7/7** (sau khi cập nhật 23 dòng số dòng trong hồ sơ F-03) |
+
+### Important Changes
+| ID | Before | After |
+|---|---|---|
+| CHG-20261008-002 | `save_user_access` chặn ở 3 tầng, chỉ `role=admin` | admin **HOẶC** `admin_tab_06` + `canView` (khớp UI) |
+
+### Decisions
+| ID | Nội dung | Trạng thái |
+|---|---|---|
+| DEC-20261008-001 | **PA-1** + ngữ nghĩa `role=admin` = break-glass toàn quyền; việc thường ngày dùng tài khoản **ITM được cấp full quyền theo CẤU HÌNH** | ✅ ĐÃ CHỐT + thi hành |
+| DEC-20261008-002 | Có chặn đường **tự leo thang** tới `factory_reset_execute` không? (S-1 chặn tự nâng quyền · S-2 không chặn · S-3 siết ở đích) | ⏸ **CHỜ USER** |
+
+### Blockers/Risks
+- 🚨 **CRITICAL đang mở**: đường tự leo thang tới xoá dữ liệu (chi tiết `BUG-20261008-002`).
+  ⚠️ Rủi ro cụ thể: cấp `admin_tab_06` cho một tài khoản = cấp luôn khả năng **tự nâng lên toàn quyền**.
+- ⚠️ **Bài học D-092**: sửa RBAC phải rà **ĐỦ 3 TẦNG** (registry · use-case · controller) — sửa thiếu
+  một tầng làm các tầng kia thành **code chết** (đã lặp lại y hệt vết xe `update_user` MỐC 103→109).
+- ⚠️ **Bài học D-094**: sửa mã làm **dịch số dòng** ⇒ phải rà mọi tài liệu/test **khoá theo số dòng**.
+- ⚠️ Build backend khi đang chạy ⇒ `repackage` đỏ vì **JVM giữ khoá jar** trên Windows (quy trình đúng ở `DEV-20261008-002`).
+
+### Remaining Work
+1. ⏸ Chờ user chốt `DEC-20261008-002` (S-1/S-2/S-3) rồi thi hành + đo lại + hồi quy.
+2. VERIFIED trên giao diện thật cho **PA-1** (đã VERIFIED ở tầng API; UI đã VERIFIED cho phần (A)).
+3. Việc riêng: `NumberFormatException "false"` ở scheduled task (có sẵn từ 29/09).
+4. Rà các action khác map vào module **`admin`** xem còn cổng nào chỉ dựa vào module mà ⛔ thiếu rào role.
+
+### Next Week
+Đóng `BUG-20261008-002` sau khi user chốt; hoàn tất VERIFIED; tiếp tục UI/UX §22 nếu ⛔ hết bug ưu tiên cao.

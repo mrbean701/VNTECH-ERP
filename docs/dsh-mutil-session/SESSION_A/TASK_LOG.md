@@ -324,3 +324,54 @@ Next Action: Doc ky `eslint.config.*` (luat React Compiler) TRUOC khi sua ⇒ ro
 > ⭐ ⭐ **TỔNG: 12 task** — ⭐ **4 VERIFIED** · ⭐ **4 DONE** · ⭐ **4 FIXED (chờ nghiệm thu)** · ⭐ **0 OPEN** ✓
 > ✅ ⭐ **TẤT CẢ TASK ĐÃ XỬ LÝ XONG** — ⚠️ **4 task `FIXED` đang CHỜ USER NGHIỆM THU** ⇒ `VERIFIED` (§24 ✓)
 > ⭐ ⭐ **`TASK-20261006-011` nay KHÔNG còn `Remaining (b)`** — ⭐ **backend ĐÃ SỬA XONG + ĐÃ LÊN SÓNG + ĐÃ ĐO** ✓
+
+## TASK-20261008-001 — Bắt & vá lỗi «bấm Lưu không lưu được quyền» ở modal phân quyền
+
+| ⭐ | ⭐ |
+|---|---|
+| **TASK_ID** | TASK-20261008-001 |
+| **DATE** | 2026-10-08 |
+| **SESSION_ID** | ERP-SESSION-01 (SESSION_A) |
+| **MODULE** | RBAC · Quản trị hệ thống |
+| **FEATURE** | Modal «Phân quyền công việc / chức năng» + tab 6 «Phân quyền người dùng» |
+| **OBJECTIVE** | User báo bấm Lưu không lưu quyền ⇒ tìm **nguyên nhân gốc** và vá |
+| **PRIORITY** | **HIGH** (§21.4 USER-BLOCKING + mất dữ liệu quyền) |
+| **STATUS** | **FIXED** (nguyên nhân A) · **BLOCKED chờ user quyết** (nguyên nhân B) |
+| **START** | 2026-10-08 10:20:00 |
+| **END** | 2026-10-08 10:50:00 |
+
+### IMPLEMENTATION_SUMMARY
+1. **ĐO trước, ⛔ không đoán** (D-081): viết 2 probe —
+   `tools/probe-permission-save-keyset.mjs` (so tập khoá panel vẽ vs payload gửi) và
+   `tools/probe-permission-save-api.mjs` (đo đường API, tài khoản probe riêng).
+2. Kết quả đo: **(A)** panel 77 khoá vs payload 61 khoá ⇒ **mất 16**; **(B)** user role≠admin
+   có quyền module `admin` ⇒ **HTTP 403**.
+3. **Vá (A)**: một nguồn duy nhất `permissionMatrixKeys(data, entries)` (export từ
+   `PermissionAccessPanel.tsx`) dùng cho **panel + cả hai modal**; gỡ `assignableModules`.
+4. **Hồi quy**: cập nhật `tests/v214-phan-quyen-luu-quyen.test.mjs` theo cấu trúc mới, giữ
+   nguyên ý định 6 VỆ cũ + thêm **VỆ 7** (payload phủ đủ tập panel vẽ, đối chứng âm mất đúng 16).
+5. **Đo lại**: panel 77 = payload 77 · **MẤT 0** · test 7/7 · cổng hồi quy 865 pass/0 fail · tsc 0.
+
+### FILES_CHANGED
+| Tệp | Loại |
+|---|---|
+| `app/screens/PermissionAccessPanel.tsx` | sửa — thêm helper nguồn duy nhất |
+| `app/page.tsx` | sửa — 2 modal dựng payload qua helper, gỡ `assignableModules` |
+| `tests/v214-phan-quyen-luu-quyen.test.mjs` | sửa — cập nhật + thêm VỆ 7 |
+| `tools/probe-permission-save-keyset.mjs` | mới — máy dò lệch tập khoá |
+| `tools/probe-permission-save-api.mjs` | mới — đo đường API |
+
+### RESULT
+✅ Nguyên nhân (A) **FIXED** (CODE FIXED + TEST PASSED, §24).
+⏸ Nguyên nhân (B) **BLOCKED** — là **quyết định phân quyền**, đã ghi `DEC-20261008-001` và
+báo user; ⛔ DSH ⛔ không tự chọn phương án (quy tắc dừng chờ quyết định).
+
+### TEST_REFERENCE
+`TEST-20261008-001` · `BUG-20261008-001` · `CHG-20261008-001` · `DEV-20261008-001`
+
+### REMAINING
+- ⏸ Chờ user chốt `DEC-20261008-001` (PA-1 / PA-2 / PA-3) cho nguyên nhân (B).
+- ⏸ **VERIFIED** còn chờ user xác nhận trên giao diện thật (nuphus browser ⛔ không khả dụng phiên này).
+
+### NEXT_ACTION
+Khi user chốt ⇒ thi hành đúng phương án đã chọn cho (B), chạy lại probe API B2 + hồi quy, rồi VERIFIED.

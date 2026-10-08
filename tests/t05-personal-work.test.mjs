@@ -113,16 +113,21 @@ test("T-05 — [đối chứng âm] dòng chỉ có TÊN TRƯỜNG GIẢ (`assig
 });
 
 test("T-05 — UI tab «Cá nhân» RENDER 3 nhóm kèm bộ đếm (không chỉ khai báo trong mã)", () => {
-  const i0 = workCenter.indexOf("{tab === 0 &&");
-  const i1 = workCenter.indexOf("{tab === 1 &&");
-  assert.ok(i0 > 0 && i1 > i0, "Không tách được nhánh tab «Cá nhân»");
+  // ⭐ CẬP NHẬT 08/10/2026 — sau VIỆC 1/2/6 dải tab thành **7 tab** (0 Dashboard · 1 Danh sách công việc ·
+  //   2 Được giao · …) ⇒ tab «Cá nhân» nay tên «Danh sách công việc» và ở CHỈ SỐ 1 ⇒ tách bằng chỉ số MỚI.
+  const i0 = workCenter.indexOf("{tab === 1 &&");
+  const i1 = workCenter.indexOf("{tab === 2 &&");
+  assert.ok(i0 > 0 && i1 > i0, "Không tách được nhánh tab «Danh sách công việc» (chỉ số 1)");
   const tab0 = workCenter.slice(i0, i1);
   assert.match(workCenter, /const personalGroups = personalWorkGroups\(items, myId\);/, "Tab «Cá nhân» chưa tính 3 nhóm bằng `personalWorkGroups`");
   assert.match(tab0, /personalGroups\.map\(/, "Tab «Cá nhân» chưa render dải 3 nhóm");
   assert.match(tab0, /g\.rows\.length|group\.rows\.length/, "Dải nhóm chưa hiện bộ đếm riêng");
   assert.match(tab0, /setPersonalGroup\(/, "Chưa có bộ chọn nhóm (bộ lọc riêng theo nhóm)");
   assert.match(workCenter, /const \[personalGroup, setPersonalGroup\] = useState\("mine"\);/, "Trạng thái nhóm đang chọn chưa mặc định về «Của tôi» (khoá `mine`)");
-  // KHÔNG được phá hợp đồng `T-01` đã đóng.
-  assert.match(tab0, /create_self_work_item/, "Mất form tự tạo việc của T-01");
-  assert.match(tab0, /Danh sách việc của tôi/, "Mất tiêu đề danh sách việc của T-01");
+  // KHÔNG được phá hợp đồng `T-01` đã đóng — ⭐ CẬP NHẬT 08/10/2026 theo VIỆC 4 + VIỆC 2 của user:
+  //   form nội tuyến → **MODAL «Tạo công việc»**; tiêu đề → **«Danh sách công việc»**.
+  assert.match(tab0, /data-vntech="work-create-open"/, "Mất nút mở MODAL «Tạo công việc» của T-01");
+  assert.match(tab0, /data-vntech="work-create-modal"/, "Mất MODAL «Tạo công việc» của T-01");
+  assert.match(workCenter, /create_self_work_item/, "Mất lời gọi `create_self_work_item` (nay ở `submitSelfWork`)");
+  assert.match(tab0, /Danh sách công việc/, "VIỆC 2: mất tiêu đề «Danh sách công việc»");
 });

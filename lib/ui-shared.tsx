@@ -11,6 +11,10 @@
 
 import type { FormFieldConfig } from "@/lib/form-fields";
 import { pdfFromJpegs } from "@/lib/boq-export";
+// ERP-SESSION-03 (07/10/2026) — `BUG-20261007-C06`: tệp xuất «Đơn hàng đã giao» PHẢI dùng bảng nhãn DÙNG CHUNG
+// (⛔ trước đây in mã thô `complete`/`missing` cho 2 cột «Chứng chỉ» và «Giấy giao hàng»).
+// ⚠️ `lib/status-labels.ts` KHÔNG import gì ⇒ ⛔ không tạo import vòng.
+import { statusLabel } from "@/lib/status-labels";
 import { downloadBlob, downloadCsv, downloadSimpleXlsx } from "@/lib/tabular-export";
 import { FormEvent, ReactNode, useCallback, useEffect, useState } from "react";
 
@@ -284,7 +288,11 @@ function Kpi({ icon, label, value, note, tone = "blue", percent }: { icon: strin
 
 const UI_TODAY = new Date(UI_NOW_MS).toISOString().slice(0, 10);
 
-function deliveredExportRows(rows:Row[]) { return rows.map(row=>[row.poNo||"",row.projectName||row.projectCode||"",row.supplierName||"",row.warehouseName||"",String(row.receivedAt||""),row.bchConfirmedByName||"",String(row.bchConfirmedAt||""),Number(row.acceptedQty||0),row.certificateStatus||"",row.deliveryDocumentStatus||""]); }
+// ⛔ ERP-SESSION-03 (07/10/2026) — `BUG-20261007-C06`: 2 cột CUỐI («Chứng chỉ» = CO/CQ, «Giấy giao hàng»)
+// ⛔ TRƯỚC ĐÂY đưa **MÃ THÔ TIẾNG ANH** (`complete`/`missing`/`not_required`) vào **CẢ XLSX LẪN CSV**.
+// ✅ Nay đi qua bảng nhãn DÙNG CHUNG (domain `certificate_status` / `delivery_document`) — cùng nguồn với
+//    tệp PO/GRN của `lib/request-export.ts` (REUSE — Goal §17).
+function deliveredExportRows(rows:Row[]) { return rows.map(row=>[row.poNo||"",row.projectName||row.projectCode||"",row.supplierName||"",row.warehouseName||"",String(row.receivedAt||""),row.bchConfirmedByName||"",String(row.bchConfirmedAt||""),Number(row.acceptedQty||0),statusLabel(row.certificateStatus,"certificate_status"),statusLabel(row.deliveryDocumentStatus,"delivery_document")]); }
 
 function exportDeliveredXlsx(rows:Row[]) { downloadSimpleXlsx({sheetName:"Đơn đã giao",title:"ĐƠN HÀNG ĐÃ GIAO",headers:["PO","Dự án","Nhà cung cấp","Kho nhận","Ngày giao","BCH xác nhận","Thời điểm xác nhận","SL chấp nhận","Chứng chỉ","Giấy giao hàng"],rows:deliveredExportRows(rows),widths:[20,30,32,26,20,24,22,16,18,20],freezeRows:2},`Don_hang_da_giao_${UI_TODAY}`); }
 

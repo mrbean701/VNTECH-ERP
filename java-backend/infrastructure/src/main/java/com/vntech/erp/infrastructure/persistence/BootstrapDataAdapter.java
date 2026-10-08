@@ -1563,19 +1563,19 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
         if (admin) {
             workItemWhere = "1=1";
         } else if ("KH".equals(depForRole)) {
-            workItemWhere = "(wi.department_code='KH' AND (wi.assigned_to=?"
-                    + " OR EXISTS(SELECT 1 FROM role_catalog rc WHERE rc.code=? AND rc.code='kh_truong')))";
-            workItemBinds.add(ctx.userId());
+            workItemWhere = "(wi.assigned_to=? OR (wi.department_code='KH' AND (wi.assigned_to=?"
+                    + " OR EXISTS(SELECT 1 FROM role_catalog rc WHERE rc.code=? AND rc.code='kh_truong'))))";
+            workItemBinds.add(ctx.userId()); workItemBinds.add(ctx.userId());
             workItemBinds.add(ctx.roleCode());
         } else if ("DA".equals(depForRole)) {
-            workItemWhere = "(wi.department_code='DA' AND (wi.assigned_to=?"
-                    + " OR EXISTS(SELECT 1 FROM role_catalog rc WHERE rc.code=? AND rc.code='da_truong')))";
-            workItemBinds.add(ctx.userId());
+            workItemWhere = "(wi.assigned_to=? OR (wi.department_code='DA' AND (wi.assigned_to=?"
+                    + " OR EXISTS(SELECT 1 FROM role_catalog rc WHERE rc.code=? AND rc.code='da_truong'))))";
+            workItemBinds.add(ctx.userId()); workItemBinds.add(ctx.userId());
             workItemBinds.add(ctx.roleCode());
         } else if ("BCH".equals(depCode)) {
-            workItemWhere = "(wi.department_code='BCH' AND (wi.assigned_to=?"
-                    + " OR wi.project_id IS NULL OR wi.project_id IN (" + pidSql + ")))";
-            workItemBinds.add(ctx.userId());
+            workItemWhere = "(wi.assigned_to=? OR (wi.department_code='BCH' AND (wi.assigned_to=?"
+                    + " OR wi.project_id IS NULL OR wi.project_id IN (" + pidSql + "))))";
+            workItemBinds.add(ctx.userId()); workItemBinds.add(ctx.userId());
             workItemBinds.addAll(pids);
         } else {
             workItemWhere = "wi.assigned_to=?";

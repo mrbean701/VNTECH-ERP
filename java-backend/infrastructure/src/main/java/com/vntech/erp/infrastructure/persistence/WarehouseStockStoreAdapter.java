@@ -175,6 +175,40 @@ public class WarehouseStockStoreAdapter implements WarehouseStockStore {
                 now, now, requestId, materialId, warehouseId);
     }
 
+    // ⭐ TASK-243 — QUY TẮC ④: giữ chỗ cho PHIẾU XUẤT (⭐ theo đúng mẫu `createStockReservations`
+    //   của `RequestStoreAdapter:420` + `releaseReservationsForRequest` ngay trên ✓)
+    @Override
+    @Transactional
+    public void createIssueReservations(String issueId, Instant now) {
+        // ⚠️ Lấy header TRƯỚC (cần `project_id` + `from_warehouse_id` + `issued_by` cho dòng reservation).
+        Map<String, Object> issue = jdbcTemplate.queryForMap(
+                "SELECT project_id,from_warehouse_id,issued_by FROM stock_issues WHERE id=?", issueId);
+        // ⚠️ CHỈ giữ chỗ phần CHƯA xuất (`quantity - installed_qty > 0`) ⇒ ⛔ không giữ chỗ phần đã giao.
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
+                SELECT id,material_id AS materialId,request_item_id AS requestItemId,
+                       (quantity-COALESCE(installed_qty,0)) AS qty
+                FROM stock_issue_items WHERE issue_id=? AND (quantity-COALESCE(installed_qty,0))>0""", issueId);
+        for (Map<String, Object> r : rows) {
+            jdbcTemplate.update("""
+                    INSERT INTO stock_reservations (id,project_id,warehouse_id,material_id,request_id,request_item_id,
+                                                    issue_id,quantity,status,reserved_at,released_at,created_by,created_at,updated_at)
+                    VALUES (?,?,?,?,NULL,?,?,?,?,?,NULL,?,?,?)""",
+                    "RSV_" + java.util.UUID.randomUUID(),
+                    issue.get("project_id"), issue.get("from_warehouse_id"), r.get("materialId"),
+                    r.get("requestItemId"), issueId, r.get("qty"),
+                    "active", now, String.valueOf(issue.get("issued_by")), now, now);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void releaseReservationsForIssue(String issueId, Instant now) {
+        jdbcTemplate.update("""
+                UPDATE stock_reservations SET status='released',released_at=?,updated_at=?
+                WHERE issue_id=? AND status='active'""",
+                now, now, issueId);
+    }
+
     @Override
     @Transactional
     public void insertSupplyWorkflowStepIssued(String requestId, String issueId, Instant now, long dueHours) {

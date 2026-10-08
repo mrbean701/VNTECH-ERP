@@ -337,3 +337,74 @@ Description: **BUG-20261006-007 DA SUA (dinh chinh bao xanh gia)** — ghi khoi 
 | ⭐ **GHI NHẬN ĐỂ LẠI** | ⭐ Màn con ⭐ **chỉ truyền `emptyText`** ⚠️ (⛔ không `error`/`loading`) ⭐ vì ⭐ dữ liệu từ **bootstrap của `page.tsx`** (⭐ **tệp S01** ✓) ⇒ ⭐ **lựa chọn thiết kế** ⭐ ⛔ không phải lỗi ✅ ⭐ ⭐ nếu muốn thêm ⭐ phải sửa `page.tsx` ⇒ ⭐ **thuộc S01** ⚠️ ⇒ ⭐ đã ghi nhận, ⛔ **không tự làm** ✓ |
 | ⭐ **CÁCH LÀM NÊN (⭐ 3 bước đo đúng — rút từ 3 lần đo empty state)** | ⭐ **① CÔ LẬP ĐÚNG KHỐI** ⭐ **② BƯỚC 0: LIỆT KÊ `[data-vntech]` CÓ THẬT** ⭐ **③ CHỌN ĐÚNG ĐƠN VỊ ĐẾM** ✓ |
 | **TRUY VẾT** | ⭐ `TEST-20261007-034` · `TEST-20261007-029` · `TEST-20261007-033` ✓ |
+
+## ⭐⭐ EVT-20261007-046 — SỬA NGOÀI PHẠM VI: ĐÃ **KIỂM CONFLICT** + **BÁO 2 PHIÊN** ⭐⭐
+| ⭐ | ⭐ |
+|---|---|
+| **SỰ KIỆN** | ⭐ `OWNERSHIP_CLAIM` + ⭐ `HANDOFF` — ⭐ user chỉ thị: ⭐⭐ «Sửa cái gì thì nhớ ghi log, nếu ngoài phạm vi của mình thì phải **báo cho những session khác** và phải **check xem có session nào đang làm ở đấy** hay không tránh conflict» ⭐⭐ ✓ |
+| ⭐⭐ **ĐÃ CHECK (§28) — TRƯỚC KHI SỬA** | ⭐ Sửa **2 tệp NGOÀI phạm vi** phiên 02: ⭐ `app/page.tsx` (**LOCK `ERP-SESSION-01`** ⚠️) + ⭐ `app/globals.css` (**DÙNG CHUNG** ⚠️)<br>⭐ **Kết quả check**: ⭐ ① `SHARED_STATE.md:16` — ⭐ page.tsx do S01 giữ ✓ ⭐ ② `SHARED_STATE.md:467` — ⭐ **S03 cũng cần 2 tệp này** ⚠️ (⭐ họ **⛔ không tự sửa**, đã ghi `HANDOFF-C10` ⭐ ⇒ ⭐ **làm ĐÚNG quy trình** ✅) ⭐ ③ ⭐ `git diff HEAD -- page.tsx` = ⭐⭐ **đúng 1 dòng** ⭐⭐ ⇒ ⭐ **⛔ KHÔNG ai đang sửa dở** ✅ ⇒ ⭐ **⛔ KHÔNG có xung đột** ✅ |
+| **ĐÃ GHI LOG** | ⭐ `CHG-20261007-007` (⭐ before/after + lý do + test + impact ✓) ⭐ `BUG-20261007-017` ⭐ `HANDOFF-20261007-008` ✓ |
+| **ĐÃ THÔNG BÁO** | ⭐⭐⭐ **2 PHIÊN** ⭐⭐⭐ — ⭐ `ERP-SESSION-01` (⭐ chủ `page.tsx` ⭐ — ⭐ báo **em đã sửa 1 dòng theo lệnh user**, ⭐ để họ ⛔ không giật mình khi `git status` đổi ⚠️ ✓) ⭐ + ⭐ `ERP-SESSION-03` (⭐ đang cần **cùng 2 tệp** ⚠️ — ⭐ báo **`globals.css` nay ĐÃ có thay đổi của phiên 02** ⇒ ⭐ nếu họ pull sẽ thấy ⚠️ ✓) ⭐ + ⭐ ghi khối vào **`SHARED_STATE.md`** ✓ |
+| **LÝ DO ĐƯỢC PHÉP** | ⭐⭐⭐ **USER CHO PHÉP TRỰC TIẾP** ⭐⭐⭐ (⭐ `page.tsx` ⭐ + ⭐ `globals.css` ⭐ — ⭐ trả lời qua kênh điện thoại ✓) ⛔ **KHÔNG tự ý** ✅ |
+| ⭐ **BÀI HỌC (§33)** | ⭐ ⭐⭐ **SỬA NGOÀI PHẠM VI ⇒ TRÌNH TỰ BẮT BUỘC: ⭐ `CHECK ai đang giữ` → `CHECK có ai sửa dở` → `XIN PHÉP` → `GHI LOG` → `BÁO 2 PHIÊN`** ⭐ ⭐⭐ ⭐ ⚠️ **lần này em ⛔ ĐÃ SAI ở `globals.css`** (⭐ sửa **TRƯỚC** khi báo ⚠️) ⇒ ⭐ **user phải nhắc** ⚠️ ⇒ ⭐⭐ **từ nay ⛔ KHÔNG sửa tệp dùng chung trước khi báo** ⭐⭐ ✓ |
+| **TRUY VẾT** | ⭐ `CHG-20261007-007` · `HANDOFF-20261007-008` ✓ |
+
+## ⭐ EVT-20261007-047 — `TASK-231`: TASK_START → TASK_COMPLETE ⭐
+| ⭐ | ⭐ |
+|---|---|
+| **SỰ KIỆN** | ⭐ `TASK_START` ⭐ → ⭐ `BUG_FOUND` ⚠️ ⭐ → ⭐ `HOTFIX_COMPLETE` ⭐ → ⭐ `TEST_COMPLETE` ⭐ → ⭐ `TASK_COMPLETE` ⭐ → ⭐ `OWNERSHIP_RELEASE` ✓ |
+| **DIỄN BIẾN** | ⭐ ① ⭐ `TASK_START` — ⭐ user yêu cầu «*card kích thước khác nhau… loại bỏ label thừa*» ✓<br>⭐ ② ⭐ `BLOCKER` (⭐ nhỏ) — ⭐ đo ra card lệch **20px** ⚠️ ⇒ ⭐ xác định nguyên nhân: **thiếu dòng «Dự án:»** ✓<br>⭐ ③ ⭐ `HOTFIX_COMPLETE` — ⭐ `min-height:222px` ⇒ ⭐ **lệch 0px** ✅<br>⭐ ④ ⭐ **`BUG_FOUND` (⚠️ do CHÍNH PHIÊN 02)** — ⭐ xoá **cả `<p>`** mang `data-inventory-source` ⇒ ⭐ **test `W-04` ĐỎ** ⚠️ ⭐ ⇒ ⭐ `HOTFIX_COMPLETE`: ⭐ giữ **thuộc tính** + ⭐ **đổi chữ ngắn** ⇒ ⭐ `W-04` **PASS 6/6** ✅<br>⭐ ⑤ ⭐ `VERIFICATION` — ⭐ **quét tự động** 7 màn ⇒ ⭐ dọn **18/19 đoạn** jargon, ⭐ **giữ 2** (⭐ ràng buộc bởi `w04:81` + `w04:136` ✓) ✅<br>⭐ ⑥ ⭐ `TEST_COMPLETE` — ⭐ `TEST-037` + `TEST-038` **PASS** · ⭐ hồi quy **`865 · 864 · 0`** ✅<br>⭐ ⑦ ⭐ `HANDOFF` — ⭐ báo **S01 + S03** tại `SHARED_STATE.md` (⭐ `globals.css` ⭐ **dùng chung** ✓) ✅<br>⭐ ⑧ ⭐ `OWNERSHIP_RELEASE` — ⛔ **CHƯA COMMIT** ⚠️ (⭐ user yêu cầu ⛔ phiên 02 không tự commit ✓) ✓ |
+| **KẾT QUẢ** | ⭐⭐ **card lệch 0px** ⭐⭐ + ⭐⭐⭐ **3 màn SẠCH jargon** ⭐⭐⭐ + ⭐ **`865 · 864 pass · 0 fail`** ✅ |
+| **TRUY VẾT** | ⭐ `CHG-20261007-008` · ⭐ `TEST-20261007-037` · ⭐ `TEST-20261007-038` · ⭐ `DEV-20261008-005` · ⭐ `BUG-20261008-018` ✓ |
+
+## ⭐ EVT-20261007-048 — USER CHỐT 4 VIỆC + SOẠN TÀI LIỆU GIẢI THÍCH 4 CHỨC NĂNG KHO ⭐
+| ⭐ | ⭐ |
+|---|---|
+| **SỰ KIỆN** | ⭐ `DECISION` (⭐ user trả lời) ⭐ + ⭐ `DOCUMENTATION` ⭐ + ⭐ `HOTFIX_COMPLETE` ✓ |
+| ⭐⭐ **USER CHỐT (⭐ nguyên văn)** | ⭐ ① «**không push**» ⛔ ⭐ ② «**không commit**» ⛔ ⭐ ③ «*giải thích 4 chức năng kho là những chức năng gì*» ⭐ ④ «*nếu **đối chứng nguồn** chỉ có tác dụng để **dev check** thì **xóa đi** còn **không thì giải thích rõ ràng ra***» ⭐ ⭐ ⭐⭐ **+ QUY TẮC MỚI**: «***không hỏi có push hay commit hay không, nếu tôi cho phép thì làm không thì đừng hỏi.***» ⭐⭐ ✓ |
+| ⭐⭐⭐ **ĐÃ GHI NHỚ QUY TẮC (⭐ memory pinned)** | ⭐⭐⭐ `memory_write` ⭐ **pinned = true** ⇒ ⭐ «*⛔ TUYỆT ĐỐI KHÔNG hỏi user «có push không / có commit không». MẶC ĐỊNH = KHÔNG commit, KHÔNG push, KHÔNG force-push. Chỉ làm khi user CHỦ ĐỘNG cho phép rõ ràng.*» ⭐⭐⭐ ✅ |
+| ⭐⭐ **XỬ LÝ ④ — PHÂN TÍCH «PHỤC VỤ AI» (⭐ đo từ mã)** | ⭐ ① `INVENTORY_VALUE_NO_SOURCE_NOTE` ⭐ hiện ở **`note` ô KPI «Giá trị kho»** (`WarehouseDashboard.tsx:142` ✓) ⇒ ⭐ người dùng **thấy «chưa có nguồn» ở chỗ đáng ra là SỐ TIỀN** ⚠️ ⇒ ⭐ **CẦN biết vì sao** ✅<br>⭐ ② `metrics.lowStockSource` ⭐ hiện ở **dòng empty-state** (`:235` ✓) ⇒ ⭐ **CẦN biết đã kiểm bao nhiêu** ✅<br>⭐⭐ **KẾT LUẬN: ⛔ KHÔNG CHỈ để dev check** ⭐⭐ ⇒ ⭐ theo luật user: ⭐⭐ **GIẢI THÍCH RÕ RÀNG RA** ⭐⭐ (⛔ không xoá) ✅ |
+| ⭐ **ĐÃ VIẾT LẠI 2 ĐOẠN (⭐ `CHG-20261007-009`)** | ⭐ (a) ⇒ ⭐ «*Chưa tính được giá trị kho: sổ giá vốn (bảng `stock_movements`) chưa được nạp vào dữ liệu, nên hệ thống để trống thay vì hiện một con số không đúng.*» ⭐ ✅<br>⭐ (b) ⇒ ⭐ «*Không có dòng nào dưới mức tồn tối thiểu (đã kiểm 1185 dòng tồn trong phạm vi).*» ⭐ ✅<br>⚠️ **RÀNG BUỘC**: ⭐ `w04:136` đòi câu (a) **phải chứa `stock_movements`** ⚠️ ⇒ ⭐ **giữ** nhưng đặt trong **câu tiếng Việt đọc được** ✅ |
+| ⭐ **SOẠN TÀI LIỆU CHO USER** | ⭐ `docs/dsh-mutil-session/SESSION_B/**4-CHUC-NANG-KHO.md**` ⭐ — ⭐ giải thích **4 chức năng** bằng **ngôn ngữ nghiệp vụ** (⛔ không thuật ngữ kỹ thuật) ⭐ + ⭐ **sơ đồ vị trí nút trên màn hình** ⭐ + ⭐ **8 ô đề xuất cho «Tạo kho»** ⭐ + ⭐ **3 điều kiện chặn xoá** ⭐ + ⭐ **3 câu hỏi cho «phiếu cấp phát»** ⭐ + ⭐ **PHẦN ANH ĐIỀN** (⭐ điền xong là viết mã ✓) ✅ |
+| **TEST** | ⭐ `tsc EXIT=0` ✅ ⭐ `npx tsx tests/w04-inventory-dashboard.test.mjs` ⇒ ⭐ **`pass 6 · fail 0`** ✅ ⭐ ⭐ **hồi quy toàn bộ `866 tests · 865 pass · 0 fail`** ✅ ⭐ `BUILD_EXIT=0` ✅ |
+| **GIT** | ⛔ **KHÔNG commit · KHÔNG push · KHÔNG force-push** (⭐ theo lệnh user ✓) ⭐ ⚠️ `origin/unity` **vẫn còn 2 commit cũ** của phiên 02 — ⭐ **GIỮ NGUYÊN**, ⛔ không hỏi lại ✅ |
+| **TRUY VẾT** | ⭐ `CHG-20261007-009` · `TEST-20261007-039` · `DEC-20261007-011` · `4-CHUC-NANG-KHO.md` ✓ |
+
+## ⭐ EVT-20261008-049 — `TASK-232` + `TASK-233`: USER HỎI → PHÁT HIỆN DỮ LIỆU CHẾT → SỬA → AUDIT CÙNG LOẠI ⭐
+| ⭐ | ⭐ |
+|---|---|
+| **SỰ KIỆN** | ⭐ `BUG_FOUND` ⭐ → ⭐ `DECISION` (⭐ user chốt «C» ✓) ⭐ → ⭐ `HOTFIX_COMPLETE` ⭐ → ⭐ `TEST_COMPLETE` ⭐ → ⭐ `VERIFICATION` ⭐ → ⭐ `TASK_COMPLETE` ✓ |
+| **DIỄN BIẾN** | ⭐ ① ⭐ **User HỎI** «*tại sao có trường Ý kiến điều chỉnh + trạng thái đã duyệt/đề xuất*» ⭐ ⭐ ② ⭐ **TRA MÃ** (⛔ không trả lời theo trí nhớ ✓) ⇒ ⭐ phát hiện **2 CỘT LÀ DỮ LIỆU CHẾT** ⚠️ ⭐ (⭐ `MaterialCatalogStore.java:61` · `MaterialCatalogManagementUseCase.java:641` ✓) ⭐ ③ ⭐ **ĐỀ XUẤT A/B/C** ⭐ ④ ⭐ **USER CHỐT «C»** ⭐ + ⭐ nêu **lý do nghiệp vụ** (⭐ nhóm con chỉ là đưa từ **file Excel** ⇒ ⛔ không cần duyệt ✓) ⭐ ⑤ ⭐ **KIỂM TEST TRƯỚC KHI SỬA** (⭐ 4 mẫu = 0 ✓) ⭐ ⑥ ⭐ **SỬA 4 CHỖ** ⭐ ⑦ ⭐ **ĐO THẬT** — ⚠️ **lần 1 sai phép đo** (⭐ bấm sai loại menu ⇒ `KHONG_THAY` ⚠️) ⇒ ⭐⭐ **⛔ KHÔNG báo thành công** ⭐⭐ ⇒ ⭐ liệt kê menu thật ⇒ ⭐ **đo lại ĐÚNG** ✅ ⭐ ⑧ ⭐ **AUDIT CÙNG LOẠI** (`TASK-233`) ⇒ ⭐ **toàn màn CHỈ 1 ca — đã sửa** ✅ |
+| **KẾT QUẢ** | ⭐⭐ **header 8 cột** ⭐ 4 chuỗi jargon **`false`** ⭐ dòng hiện **«Đang dùng»** ⭐ + ⭐ **audit toàn màn: ⛔ không còn ca nào** ✅ |
+| **BÀI HỌC (§33)** | ⭐ ① **XOÁ CHỮ ≠ XOÁ PHẦN TỬ** ⭐ ② **JARGON ≠ NHÃN TRẠNG THÁI CHUẨN** ⭐ ③ **KIỂM 1 CHIỀU = CHƯA ĐỦ** ⭐ ④ **KIỂM ĐÃ VÀO ĐÚNG MÀN CHƯA** ⭐ ⑤ **1 LỖI USER TÌM RA ⇒ ĐI TÌM CÙNG LOẠI** ⭐ ⑥ **AUDIT PHẢI ĐỦ TOÀN MÀN** ⭐ ⑦ **GHI RÕ PHẠM VI** ✓ |
+| **TRUY VẾT** | ⭐ `TASK-232` · `TASK-233` · `BUG-20261008-020` · `CHG-20261008-012` · `DEC-20261008-012` · `TEST-20261007-042/043/044` ✓ |
+
+## ⭐⭐ EVT-20261008-050 — HOÀN TẤT **PHẦN LOGIC CỦA CẢ 4 QUY TẮC KHO** ⭐⭐
+| ⭐ | ⭐ |
+|---|---|
+| **SỰ KIỆN** | ⭐ `TASK_COMPLETE` ×4 ⭐ — ⭐ `TASK-234` · `TASK-235` · `TASK-236` · `TASK-237` ✅ |
+| ⭐⭐ **Ý NGHĨA** | ⭐⭐ **TOÀN BỘ PHẦN LOGIC THUỘC PHẠM VI PHIÊN 02 ĐÃ XONG** ⭐⭐ ⭐ — ⭐ 4/4 quy tắc user chốt đều có **hàm kiểm chứng được + test** ✅ |
+| **TỔNG KẾT** | ⭐ ① ⭐ **quy tắc ①** (⭐ tạo kho `KD-xxx` + `KHO <dự án>` ✓) ⭐ ② ⭐ **quy tắc ②** (⭐ sửa + kiểm mã có `currentCode` ✓) ⭐ ③ ⭐ **quy tắc ③** (⭐ ⛔ không xoá + hỏi khi dự án ngừng ✓) ⭐ ④ ⭐ **quy tắc ④** (⭐ giữ chỗ — ví dụ user 100−70=30 ✓) ✅ |
+| ⭐ **TEST** | ⭐ **13 + 6 + 7 + 7 = 33 ca PASS** ⭐ ⭐ **hồi quy `915 · 914 pass · 0 fail`** ✅ |
+| ⭐ **CÒN LẠI** | ⭐ ⏳ **CHỜ S01** (`HANDOFF-009`: modal+API+reservations ⭐ thuộc `page.tsx`/`java-backend` ✓) ⭐ ⏳ **CHỜ S03** (`HANDOFF-010`: hỏi khi lập dự án ⭐ thuộc `ProjectEntityModal.tsx` ✓) ⭐ ⏳ **CHỜ USER** xác nhận 2 điều về quyền ⚠️ ⭐ ⇒ ⭐ sau đó ⭐ **phiên 02 BẬT 4 nút TẠM KHOÁ** ✅ |
+
+## 🚨 EVT-20261008-052 — PHÁT HIỆN LỖI LINT **CHẶN TOÀN BỘ `npm test`** ⚠️
+| ⭐ | ⭐ |
+|---|---|
+| **SỰ KIỆN** | ⭐ `BUG_FOUND` ⭐ → ⭐ `BLOCKER` ⭐ → ⭐ `NOTIFY` ⭐ (⭐ ⛔ chưa `HOTFIX` ⭐ vì ⭐ **⛔ không thuộc phiên 02** ✓) |
+| ⭐⭐ **PHÁT HIỆN** | ⭐ Khi chạy ⭐ hồi quy cuối ⭐ ⇒ ⭐ `npm test` ⭐ **`EXIT = 1`** ⚠️ ⭐ ⭐ `✖ 293 problems (**1 error**, 292 warnings)` ⚠️ ⭐ — ⭐ ⭐ **trước đó là `0 errors`** ⚠️ ⭐ ⇒ ⭐ ⭐⭐ **EM ⛔ ĐÃ KHÔNG BÁO «HỒI QUY ĐẠT»** ⭐⭐ ✅ |
+| ⭐⭐ **CHẨN ĐOÁN** | ⭐ `npx eslint . --ignore-pattern dist --ignore-pattern .next -f json` ⭐ ⇒ ⭐ **`TONG_LOI = 1`** ⭐ ⭐ ⇒ ⭐ `app/page.tsx:**L2875:106**` ⭐ `react-hooks/set-state-in-effect` ⭐ — ⭐ màn **ADMIN «PHÂN QUYỀN NGƯỜI DÙNG»** ✅ |
+| ⭐⭐ **XÁC MINH TRÁCH NHIỆM** | ⭐ Thay đổi của phiên 02 trên `page.tsx` ⭐ **chỉ 1 dòng ở L741** ⭐ ⇒ ⭐ lỗi ở **L2875** ⭐ ⛔ **cách xa 2000+ dòng** ⭐ ⇒ ⭐ **⛔ KHÔNG PHẢI CỦA PHIÊN 02** ✅ ⭐ ⭐ `page.tsx` + **ADMIN** ⇒ ⭐ **vùng `ERP-SESSION-01`** (`§7` ✓) ⭐ ⇒ ⭐ **BÁO CÁO, ⛔ KHÔNG TỰ SỬA** ✅ |
+| ⭐ **BÀI HỌC (§33)** | ⭐⭐ **`0 errors` HÔM QUA ⛔ KHÔNG ĐẢM BẢO `0 errors` HÔM NAY** ⭐⭐ ⚠️ ⭐ — ⭐ nhiều phiên cùng sửa repo ⚠️ ⭐ ⇒ ⭐ **PHẢI CHẠY HỒI QUY NGAY TRƯỚC KHI BÁO CÁO**, ⛔ không dùng số cũ ✅ ⭐ ⭐ **+ ⭐ LUÔN ĐỌC `EXIT CODE`** ⭐ — ⭐ `Select-String` lọc mất dòng lỗi ⚠️ ⭐ nhưng ⭐ **exit code ⛔ không nói dối** ✅ |
+| **TRUY VẾT** | ⭐ `BUG-20261008-021` ⭐ · ⭐ `HANDOFF-20261008-009` ⭐ (⭐ cùng phiên S01 ✓) ✅ |
+
+## ⭐⭐ EVT-20261008-055 — KIỂM CHẶN: **⛔ CHƯA TIẾN TRIỂN — CẢ 3 ĐỀU THUỘC S01** ⭐⭐
+| ⭐ | ⭐ |
+|---|---|
+| **SỰ KIỆN** | ⭐ `BLOCKER` ⭐ (⭐ kiểm định kỳ ✓) |
+| ⭐ **① LINT `page.tsx:2875`** | ⚠️ **VẪN CÒN** — ⭐ `npx eslint . --ignore-pattern dist --ignore-pattern .next -f json` ⭐ ⇒ ⭐ **`TONG_LOI = 1`** ⭐ ⭐ ⇒ ⭐ `npm test` ⭐ **⛔ vẫn bị chặn** ⚠️ ⭐ (⭐ `BUG-20261008-021` ⭐ `OPEN` ✓) ✅ |
+| ⭐ **② MODAL `allocate`** | ⛔ **CHƯA CÓ** ⭐ — ⭐ `grep 'modal === "allocate"' app/page.tsx` ⭐ ⇒ ⭐ **0 kết quả** ⚠️ ⭐ ⇒ ⭐ **nút «＋ Tạo phiếu cấp phát» ⛔ VẪN PHẢI GIỮ KHOÁ** ⭐ ⭐ = ⭐ **quyết định ĐÚNG** (⭐ ⛔ không bật nút khi chưa có đích ✓) ✅ |
+| ⭐ **③ `stock_reservations` CHO PHIẾU XUẤT** | ⛔ **CHƯA NỐI** ⭐ — ⭐ `grep 'INSERT INTO stock_reservations'` ⭐ ⇒ ⭐ **chỉ 1 chỗ** ⭐ `RequestStoreAdapter.java:**426**` ⭐ (⭐ gắn `request_id` ⭐ = phiếu ĐỀ NGHỊ ✓) ⚠️ ⭐ ⇒ ⭐ **quy tắc ④ ⛔ chưa chạy end-to-end** ⚠️ ⭐ ⭐ (⭐ phần LOGIC của phiên 02 **đã xong + test** ⭐ — ⭐ `availableToIssue`/`validateIssueQuantity` ✓ — ⭐ nhưng ⛔ **chưa ai GỌI nó** vì ⭐ backend thuộc S01 ✓) ✅ |
+| ⭐⭐ **CÁC PHIÊN KHÁC ⛔ KHÔNG STALE** | ⭐ `git status` ⭐ ⇒ ⭐ **12+ tệp ngoài phạm vi phiên 02 ĐANG bị sửa** ⚠️: ⭐ `app/components/ui/StatusBadge.tsx` ⭐ `app/screens/AllocateReturn.tsx` ⭐ `app/screens/AdminUserModalTabs.tsx` ⭐ `app/screens/HrProfileEditModal.tsx` ⭐ `app/screens/HrScreen.tsx` ⭐ `app/screens/ContractReviewScreen.tsx` ⭐ … ⭐ ⭐ ⇒ ⭐ **các phiên đang HOẠT ĐỘNG** ⭐ ⭐ ⇒ ⭐ **§34: ⛔ KHÔNG được coi là «stale»** ⭐ ⇒ ⭐⛔ **phiên 02 ⛔ KHÔNG được takeover** ✅ |
+| ⭐⭐⭐ **KẾT LUẬN** | ⭐⭐ **PHIÊN 02 ĐÃ HẾT VIỆC TRONG PHẠM VI** ⭐⭐ ⭐ — ⭐ 4 quy tắc (⭐ logic + test 33 ca ✓) ⭐ modal dùng chung ⭐ 3/4 nút đã bật + **E2E đạt** ⭐ bản vá quyền sẵn sàng ⭐ ⚠️ ⭐ ⭐ **3 chặn còn lại ĐỀU THUỘC `ERP-SESSION-01`** ⭐ ⭐ + ⭐ **2 câu hỏi chờ user** ✅ |
+| ⭐ **BÀI HỌC (§33)** | ⭐⭐ **KIỂM «MỞ LẠI» LÀ VIỆC BẮT BUỘC** ⭐⭐ ⚠️ — ⭐ ⛔ **không được giả định chặn đã gỡ** ⭐ ⭐ (⭐ lần này đo ⇒ ⭐ **vẫn còn** ⚠️) ⭐ ⭐ **+ ⭐ `git status` ĐỂ PHÂN BIỆT «PHIÊN CHẾT» vs «ĐANG LÀM»** ⭐ ⭐ ⇒ ⭐ ⛔ **không kết luận stale khi thấy nhiều tệp đang đổi** ✅ |

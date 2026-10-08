@@ -53,7 +53,7 @@ const INVENTORY_METRICS = [
 // Nhãn DÙNG CHUNG cho mọi trường hợp "không có nguồn" (khớp `DASHBOARD_NO_SOURCE` của `T-08`).
 const INVENTORY_NO_SOURCE = "chưa có nguồn";
 // LÝ DO cụ thể — bắt buộc in ra UI, không được để người dùng tự đoán.
-const INVENTORY_VALUE_NO_SOURCE_NOTE = `Giá vốn thật chỉ có ở stock_movements.unit_cost, nhưng payload bootstrap KHÔNG trả khoá stockMovements (và mọi dòng stock_movements.unit_cost trên CSDL hiện đang = 0 ⇒ có đọc cũng KHÔNG phải giá vốn thật). Vì vậy KHÔNG hiện số ở đây thay vì bịa hoặc lấy unitPrice của PO (đang = 0).`;
+const INVENTORY_VALUE_NO_SOURCE_NOTE = `Chưa tính được giá trị kho: sổ giá vốn (bảng stock_movements) chưa được nạp vào dữ liệu, nên hệ thống để trống thay vì hiện một con số không đúng.`;
 // Trạng thái đóng của phiếu điều chuyển — nguyên văn điều kiện đang dùng ở màn Tồn kho cũ.
 const INVENTORY_TRANSFER_CLOSED = ["received", "cancelled"];
 const INVENTORY_NO_PROJECT_SCOPE = "Tất cả dự án được phân quyền";
@@ -61,11 +61,11 @@ const INVENTORY_NO_PROJECT_SCOPE = "Tất cả dự án được phân quyền";
 /** Tình trạng NGUỒN của một tập giá trị: 0 dòng và cột rỗng là hai chuyện KHÁC NHAU, cả hai đều KHÔNG được hiện 0. */
 function inventorySourceOf(rows: Row[], field: string, label: string) {
   const list = rows || [];
-  if (!list.length) return `${INVENTORY_NO_SOURCE} — ${label}: 0 dòng trong phạm vi`;
+  if (!list.length) return `${INVENTORY_NO_SOURCE} — ${label}: chưa có dòng nào trong phạm vi`;
   const known = list.filter((row) => row && row[field] !== undefined && row[field] !== null && String(row[field]) !== "");
   return known.length
     ? `${label} · ${known.length}/${list.length} dòng có giá trị`
-    : `${INVENTORY_NO_SOURCE} — ${label} rỗng trong payload`;
+    : `${INVENTORY_NO_SOURCE} — ${label}: dữ liệu còn trống`;
 }
 const inventoryNumber = (value: unknown) => {
   const parsed = Number(value);
@@ -138,21 +138,23 @@ function warehouseDashboard(data: AppData, projectScope: string) {
     zeroBalanceOnly: rows.length > 0 && rows.every((row) => inventoryNumber(row.balance) === 0),
     value: {
       ledgerValue,
-      source: ledgerValue === null ? `${INVENTORY_NO_SOURCE} — payload KHÔNG trả khoá stockMovements` : "stockMovements[].quantity × unitCost",
+      source: ledgerValue === null ? `${INVENTORY_NO_SOURCE} — chưa có dữ liệu giá vốn` : "stockMovements[].quantity × unitCost",
       note: INVENTORY_VALUE_NO_SOURCE_NOTE,
       standardPriceValue,
       standardPriceSource: standardPriceValue === null
-        ? `${INVENTORY_NO_SOURCE} — materials.standardPrice rỗng/không dòng tồn nào có giá`
-        : `materials.standardPrice × inventory[].balance · ${priced.length}/${rows.length || 0} dòng có giá`,
+        ? `${INVENTORY_NO_SOURCE} — chưa có giá chuẩn trong danh mục vật tư`
+        // TASK-231e (08/10/2026): Việt hoá cho người dùng đọc — ⚠️ GIỮ từ khoá «materials»
+        //   vì test `w04-inventory-dashboard.test.mjs:144` BẮT BUỘC nguồn giá chuẩn phải nêu `materials`.
+        : `Giá chuẩn trong danh mục vật tư (materials) nhân với số lượng tồn · ${priced.length}/${rows.length || 0} dòng có giá`,
       standardPriceNote: "Giá trị theo GIÁ CHUẨN của danh mục vật tư — đây KHÔNG phải giá vốn thực tế (giá vốn cần stock_movements.unit_cost).",
     },
-    totalSource: inventorySourceOf(rows, "balance", "inventory[].balance"),
-    availableSource: inventorySourceOf(rows, "available", "inventory[].available"),
-    reservedSource: inventorySourceOf(rows, "reserved", "inventory[].reserved"),
-    inboundSource: inventorySourceOf(receipts, "acceptedQty", "receipts[].acceptedQty"),
-    outboundSource: inventorySourceOf(issues, "totalQty", "issues[].totalQty"),
-    transferSource: inventorySourceOf(transfers, "status", "transferOrders[].status"),
-    lowStockSource: inventorySourceOf(rows, "minStock", "inventory[].minStock"),
+    totalSource: inventorySourceOf(rows, "balance", "Số lượng tồn thực tế trong kho"),
+    availableSource: inventorySourceOf(rows, "available", "Tồn khả dụng (đã trừ phần giữ chỗ)"),
+    reservedSource: inventorySourceOf(rows, "reserved", "Số lượng đang bị giữ cho phiếu đề nghị"),
+    inboundSource: inventorySourceOf(receipts, "acceptedQty", "Số lượng đã nhận trên phiếu nhập"),
+    outboundSource: inventorySourceOf(issues, "totalQty", "Số lượng đã xuất trên phiếu xuất"),
+    transferSource: inventorySourceOf(transfers, "status", "Trạng thái phiếu điều chuyển"),
+    lowStockSource: inventorySourceOf(rows, "minStock", "Mức tồn tối thiểu đã đặt của vật tư"),
   };
 }
 // W04-PURE-END
@@ -171,21 +173,21 @@ function WarehouseDashboard({ data, project }: { data: AppData; project: string 
   return <div className="stack" data-dashboard-block="inventory">
     <section className="card">
       <CardHead title="DASHBOARD TỒN KHO"
-        note={`Phạm vi: ${scopeLabel} · ${metrics.warehouseCount} kho · ${metrics.rows.length} dòng tồn theo (kho × vật tư). Mọi số tính TRỰC TIẾP từ dữ liệu đang có trong payload — không gọi API mới.`}
+        note={`Phạm vi: ${scopeLabel} · ${metrics.warehouseCount} kho · ${metrics.rows.length} dòng tồn.`}
         action={showHelp ? "Ẩn giải thích chỉ số" : "Giải thích chỉ số"}
         onClick={()=>setShowHelp((v)=>!v)}/>
       <div className="kpi-grid small">
-        <div data-inventory-metric="total"><Kpi icon="TC" label="Tổng tồn" value={String(metrics.total)} note={`Σ balance trên ${metrics.rows.length} dòng tồn (On hand)`} tone="blue"/></div>
+        <div data-inventory-metric="total"><Kpi icon="TC" label="Tổng tồn" value={String(metrics.total)} note={`Tổng số lượng thực tế đang có · ${metrics.rows.length} dòng tồn`} tone="blue"/></div>
         <div data-inventory-metric="available"><Kpi icon="KD" label="Khả dụng" value={String(metrics.available)} note="Tồn trừ phần đã giữ chỗ — dùng được để cấp phát" tone="green"/></div>
-        <div data-inventory-metric="reserved"><Kpi icon="GC" label="Giữ chỗ" value={String(metrics.reserved)} note="Đang bị giữ cho phiếu đề nghị (stock_reservations)" tone="violet"/></div>
-        <div data-inventory-metric="inbound"><Kpi icon="NK" label="Nhập" value={String(metrics.inbound)} note={`Σ acceptedQty trên ${(data.receipts || []).length} phiếu nhập trong phạm vi`} tone="blue"/></div>
-        <div data-inventory-metric="outbound"><Kpi icon="XK" label="Xuất" value={String(metrics.outbound)} note={`Σ totalQty trên ${(data.issues || []).length} phiếu xuất trong phạm vi`} tone="amber"/></div>
+        <div data-inventory-metric="reserved"><Kpi icon="GC" label="Giữ chỗ" value={String(metrics.reserved)} note="Đang bị giữ cho phiếu đề nghị" tone="violet"/></div>
+        <div data-inventory-metric="inbound"><Kpi icon="NK" label="Nhập" value={String(metrics.inbound)} note={`Số lượng đã nhận · ${(data.receipts || []).length} phiếu nhập trong phạm vi`} tone="blue"/></div>
+        <div data-inventory-metric="outbound"><Kpi icon="XK" label="Xuất" value={String(metrics.outbound)} note={`Số lượng đã xuất · ${(data.issues || []).length} phiếu xuất trong phạm vi`} tone="amber"/></div>
         <div data-inventory-metric="pendingTransfer"><Kpi icon="DC" label="Chờ chuyển" value={String(metrics.transfers.pending)} note={`${metrics.transfers.rows.length} phiếu điều chuyển chưa nhận/xuất — trên tổng ${metrics.transfers.total} phiếu`} tone="violet"/></div>
         <div data-inventory-metric="lowStock"><Kpi icon="SH" label="Sắp hết" value={String(metrics.lowStock)} note="Số dòng có mức tồn tối thiểu và tồn khả dụng ĐANG dưới mức đó" tone="red"/></div>
         <div data-inventory-metric="value"><Kpi icon="GT" label="Giá trị kho" value={metrics.value.ledgerValue === null ? INVENTORY_NO_SOURCE : money(metrics.value.ledgerValue)}
-          note={metrics.value.ledgerValue === null ? metrics.value.note : "Σ quantity × unit_cost từ stock_movements"} tone={valueTone}/></div>
+          note={metrics.value.ledgerValue === null ? metrics.value.note : "Theo sổ giá vốn của kho"} tone={valueTone}/></div>
       </div>
-      <p className="muted" data-inventory-source="eight-metrics">Nguồn 8 chỉ số: tổng/khả dụng/giữ chỗ/sắp hết → `inventory[]`; nhập → `receipts[].acceptedQty`; xuất → `issues[].totalQty`; chờ chuyển → `transferOrders[].status`; giá trị kho → `stock_movements.unit_cost` ({metrics.value.source}).</p>
+      <p className="muted" data-inventory-source="eight-metrics">Số liệu tính trực tiếp từ dữ liệu kho hiện có.</p>
     </section>
 
     {showHelp && (<>
@@ -205,7 +207,7 @@ function WarehouseDashboard({ data, project }: { data: AppData; project: string 
     </>)}
 
     <section className="card">
-      <CardHead title="Tồn kho theo từng kho" note={`${metrics.byWarehouse.length} kho trong phạm vi — mỗi dự án có thể có NHIỀU kho (W-02 đã xác nhận quan hệ Project : Warehouse là 1:N).`}/>
+      <CardHead title="Tồn kho theo từng kho" note={`${metrics.byWarehouse.length} kho trong phạm vi được phân quyền.`}/>
       <div className="table-wrap"><table className="baseline-table"><thead><tr><th>Mã kho</th><th>Tên kho</th><th>Dự án</th><th>Loại</th><th>Tồn</th><th>Giữ chỗ</th><th>Khả dụng</th><th>Dòng tồn</th></tr></thead><tbody>
         {metrics.byWarehouse.map((warehouse) => <tr key={String(warehouse.id)}>
           <td><strong className="code">{warehouse.code}</strong></td>
@@ -219,11 +221,10 @@ function WarehouseDashboard({ data, project }: { data: AppData; project: string 
         </tr>)}
         {!metrics.byWarehouse.length && <tr><td colSpan={8}>{INVENTORY_NO_SOURCE} — không có kho nào trong phạm vi</td></tr>}
       </tbody></table></div>
-      <p className="muted" data-inventory-source="by-warehouse">Nguồn: `warehouses[]` (id · code · name · type · projectId · projectCode) ghép `inventory[].warehouseId`.</p>
     </section>
 
     <section className="card">
-      <CardHead title={`Vật tư dưới mức tồn tối thiểu (${metrics.lowStock})`} note="Chỉ tính dòng CÓ cấu hình mức tối thiểu (minStock > 0) — mức 0 nghĩa là 'chưa đặt', KHÔNG phải 'đã hết'."/>
+      <CardHead title={`Vật tư dưới mức tồn tối thiểu (${metrics.lowStock})`} note="Chỉ tính vật tư đã đặt mức tồn tối thiểu."/>
       <div className="table-wrap"><table className="baseline-table"><thead><tr><th>Mã vật tư</th><th>Tên vật tư</th><th>Kho</th><th>Tồn khả dụng</th><th>Mức tối thiểu</th><th>Thiếu</th></tr></thead><tbody>
         {metrics.lowRows.map((row, index) => <tr key={String(`${row.warehouseId}-${row.materialId}-${index}`)}>
           <td><strong className="code">{row.materialCode}</strong></td>
@@ -233,13 +234,13 @@ function WarehouseDashboard({ data, project }: { data: AppData; project: string 
           <td>{quantity(inventoryNumber(row.minStock))}</td>
           <td>{quantity(Math.max(0, inventoryNumber(row.minStock) - inventoryNumber(row.available ?? row.balance)))}</td>
         </tr>)}
-        {!metrics.lowRows.length && <tr><td colSpan={6}>Không có dòng nào dưới mức tồn tối thiểu ({metrics.lowStockSource})</td></tr>}
+        {!metrics.lowRows.length && <tr><td colSpan={6}>Không có dòng nào dưới mức tồn tối thiểu (đã kiểm {metrics.rows.length} dòng tồn trong phạm vi)</td></tr>}
       </tbody></table></div>
     </section>
 
     {showHelp && (<>
     <section className="card">
-      <CardHead title="Nguồn dữ liệu của từng chỉ số" note="In rõ nguồn + số dòng THẬT: phân biệt «0 dòng» với «cột rỗng trong payload» — cả hai đều KHÔNG được hiện 0."/>
+      <CardHead title="Nguồn dữ liệu của từng chỉ số" note="In rõ nguồn và số dòng THẬT: phân biệt «không có dòng nào» với «cột chưa có dữ liệu» — cả hai đều KHÔNG hiện số 0."/>
       <div className="simple-list">
         <div><div><strong>Tổng tồn</strong><p>{metrics.totalSource}</p></div></div>
         <div><div><strong>Khả dụng</strong><p>{metrics.availableSource}</p></div></div>

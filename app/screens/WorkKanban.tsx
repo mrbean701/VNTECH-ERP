@@ -21,6 +21,9 @@
 import { StatusBadge } from "@/app/components/ui";
 import { daysFromToday } from "@/lib/date-helpers";
 import { UI_TODAY, WORK_STATUS_LABELS, date } from "@/lib/ui-shared";
+// MT3-S03 (07/10/2026) — ⛔ KHÔNG để LỘ MÃ THÔ: ⛔ không rơi xuống `String(status)` khi bảng nhãn thiếu khoá.
+// ⭐ Dùng lại ĐÚNG bảng nhãn DÙNG CHUNG (`@/lib/status-labels`) làm chốt chặn cuối (§17 REUSE).
+import { statusLabel } from "@/lib/status-labels";
 import type { Row } from "@/lib/ui-shared";
 import { useState } from "react";
 
@@ -201,7 +204,7 @@ function WorkKanban({ rows, busy, myId, isAdmin, managerDepartments, scopeNote, 
           <div className="card-head">
             <div>
               <h3>{column.label}</h3>
-              <p className="muted">{columnRows.length} / {total} việc · trạng thái: {column.statuses.map((key) => WORK_STATUS_LABELS[key] || key).join(" · ")}</p>
+              <p className="muted">{columnRows.length} / {total} việc · trạng thái: {column.statuses.map((key) => WORK_STATUS_LABELS[key] || statusLabel(key, "work_item")).join(" · ")}</p>
             </div>
           </div>
           {columnRows.map((row) => {
@@ -219,14 +222,14 @@ function WorkKanban({ rows, busy, myId, isAdmin, managerDepartments, scopeNote, 
               <small>{who.name} · {row.projectCode || "—"} · {row.dueAt ? date(row.dueAt) : "không hạn"}</small>
               {late !== null && late > 0 && <small className="red-text">Quá hạn {late} ngày</small>}
               <div className="task-bar"><span><i style={{ width: `${progress}%` }} /></span><b>{progress}%</b></div>
-              <StatusBadge value={WORK_STATUS_LABELS[String(row.status)] || String(row.status || "—")}/>
+              <StatusBadge value={WORK_STATUS_LABELS[String(row.status)] || statusLabel(row.status, "work_item")}/>
             </article>;
           })}
           {!columnRows.length && <p className="muted">Không có việc trong cột này.</p>}
         </section>;
       })}
     </div>
-    <p className="muted">Hôm nay {UI_TODAY} — thẻ hiển thị: mã việc · ưu tiên · người được phân công · dự án · hạn · tiến độ · trạng thái.</p>
+    <p className="muted">Hôm nay {date(UI_TODAY)} — thẻ hiển thị: mã việc · ưu tiên · người được phân công · dự án · hạn · tiến độ · trạng thái.</p>
   </div>;
 }
 

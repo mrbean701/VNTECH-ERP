@@ -123,15 +123,18 @@ type WorkMenuView = "personal" | "department" | "assign" | "kpi" | "reports" | "
 //    ⇒ ⛔ KHÔNG thể «vào Dashboard bằng click nhóm cha»; cách đúng §3.1 ② là ĐỂ DASHBOARD ĐẦU MENU ✔
 // ⛔ KHÔNG xoá mục (giữ §3.1 ③ làm phương án khác) ⇒ ⛔ không thể tạo hồi quy (mất lối vào) ✔
 const workMenuItems: { key: string; label: string; groupKey: "my_work"; view: WorkMenuView; permissionKeys: ModuleKey[] }[] = [
-  // MT2-P5-01 — `view: "kpi"` ⇒ **`view: "dashboard"`** (mục này là «Dashboard», KHÔNG phải tab KPI).
-  // ⚠️ `permissionKeys` GIỮ NGUYÊN (`dept_plan_kpi`/`dept_project_kpi`) — §3.1 KHÔNG nói đổi quyền ⇒ ⛔ không tự đổi.
-  { key: "work_dashboard", label: "Dashboard", groupKey: "my_work", view: "dashboard", permissionKeys: ["dept_plan_kpi", "dept_project_kpi"] },
-  { key: "work_personal", label: "Cá nhân", groupKey: "my_work", view: "personal", permissionKeys: ["dept_plan_tasks", "dept_project_tasks"] },
-  { key: "work_department", label: "Phòng ban", groupKey: "my_work", view: "department", permissionKeys: ["dept_plan_assign", "dept_project_assign"] },
-  { key: "work_assign", label: "Giao việc", groupKey: "my_work", view: "assign", permissionKeys: ["dept_plan_assign", "dept_project_assign"] },
-  { key: "work_reports", label: "Báo cáo", groupKey: "my_work", view: "reports", permissionKeys: ["dept_plan_alerts", "dept_project_alerts"] },
+  // ⭐⭐ VIỆC 1 (USER 08/10/2026 — chốt qua thẻ quyết định): **GOM 5 MỤC RỜI THÀNH MỘT MỤC HUB «Công việc»**.
+  //   Bấm mục này ⇒ mở màn `WorkCenter` ở **tab «Dashboard»** (Dashboard đã được đưa LÊN ĐẦU dải 7 tab).
+  //   ⚠️ `permissionKeys` = **HỢP của các khoá quyền cũ** — ⛔ THIẾU khoá nào thì người chỉ có khoá đó
+  //      sẽ **MẤT mục menu** (`app/page.tsx` lọc `item.permissionKeys.find((key) => modulePermission(data, key).canView)`).
+  //   ⭐ KHUÔN ĐÃ CÓ TIỀN LỆ: nhóm «Kho vật tư» gom 7 mục → 1 (`warehouse_hub`, khối bên dưới).
+  //   ⛔ KHÔNG khai `moduleKey`: giữ nguyên cơ chế cũ (khoá quyền ĐẦU XEM ĐƯỢC quyết định màn đích).
+  { key: "work_hub", label: "Công việc", groupKey: "my_work", view: "dashboard",
+    permissionKeys: ["dept_plan_kpi", "dept_project_kpi", "dept_plan_tasks", "dept_project_tasks",
+      "dept_plan_assign", "dept_project_assign", "dept_plan_alerts", "dept_project_alerts"] },
 ];
-// BỐN MỤC CŨ BỊ ẨN KHỎI MENU (`T-01`). Khoá vẫn sống: quyền, tiêu đề, tìm kiếm, thông báo, nhánh render.
+// BỐN MỤC CŨ BỊ ẨN KHỎI MENU (`T-01`) — ⭐ VIỆC 1 (08/10/2026) nay đã GOM HẾT vào `work_hub`.
+// Khoá vẫn sống: quyền, tiêu đề, tìm kiếm, thông báo, nhánh render.
 // `approvals` («Trung tâm phê duyệt») CỐ Ý KHÔNG nằm ở đây — nó là mục thứ 6 của nhóm, do `T-10` tách riêng.
 const legacyWorkMenuKeys: ModuleKey[] = ["dept_plan_tasks", "dept_project_tasks", "dept_plan_assign", "dept_project_assign"];
 
@@ -367,20 +370,22 @@ const purchasingHubTabs: { key: ModuleKey; label: string }[] = [
  * `site_command`) **KHÔNG** vào đây — 1 mục thì ⛔ không có gì để thành tab.
  */
 const HUB_TAB_GROUP_KEYS: string[] = [
-  // ✅ 7 NHÓM ĐÃ ĐO có ≥2 MỤC CON và KHÔNG trùng nhãn (đo 27/09/2026 bằng `node --import tsx`):
-  //   `purchasing` 2 (dùng `purchasingHubTabs` curated 10) · `my_work` 5 · `warehouse` 6
+  // ✅ 6 NHÓM ĐÃ ĐO có ≥2 MỤC CON và KHÔNG trùng nhãn (đo 27/09/2026 bằng `node --import tsx`):
+  //   `purchasing` 2 (dùng `purchasingHubTabs` curated 10) · `warehouse` 6
   //   · `mep` 8 · `finance` 7 · `hr_legal` 6 · `project_management` 7
   //   ⚠️ `my_work`/`warehouse` trước đây bị TẮT vì `view="dashboard"` TRÙNG giữa 2 nhóm ⇒ mở 2 màn
   //   cùng lúc. ⛔ ĐÃ SỬA (user duyệt 27/09): `activateModule` nay xoá `view` của nhóm KHÔNG sở hữu
   //   màn đích (`app/page.tsx` khối "CHẶN RÒ TRẠNG THÁI QUA NHÓM") ⇒ an toàn bật lại.
+  //   ⭐ RÚT `my_work` (08/10/2026 — VIỆC 1): nhóm này nay chỉ còn **1 MỤC CON** (`work_hub`)
+  //   ⇒ theo ĐÚNG luật «nhóm ≥2 mục mới là hub» thì ⛔ không còn là nhóm hub nữa
+  //   (bấm mục con «Công việc» sẽ mở thẳng `WorkCenter` ở tab «Dashboard»).
   "purchasing",
-  "my_work",
   "warehouse",
   "mep",
   "finance",
   "hr_legal",
   "project_management",
-  // ⛔ KHÔNG có: `reports` (chỉ 1 mục) · `overview` (1) · `site_command` (1) · `material_master` (1)
+  // ⛔ KHÔNG có: `reports` (chỉ 1 mục) · `overview` (1) · `site_command` (1) · `material_master` (1) · **`my_work` (1)**
   //    · `system_admin` (1) ⇒ **1 mục thì KHÔNG có gì để thành tab** ⇒ sidebar giữ nguyên như cũ.
   // 📌 NGUỒN TAB KHÔNG CÒN LÀ `modules`: xem `app/page.tsx` — bản đồ `hubChildrenByGroup` dựng từ CÁC
   //   MẢNG CON THẬT (`workMenuItems`·`warehouseMenuItems`·`allocateReturnMenuItems`·

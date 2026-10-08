@@ -94,3 +94,33 @@ Mô tả kỹ thuật:
 5. ⭐ **`taskkill /F /PID` THAY ĐƯỢC `Stop-Process`** để dừng `local-server.mjs` — `Stop-Process` trong pwsh của DSH
    **làm chết job runner** (exit `4294967295`, gặp 2 lần); `taskkill` (tiến trình ngoài) **an toàn**.
    ⛔ Vẫn phải xác minh `CommandLine` chứa `scripts/local-server.mjs` trước khi kill (Goal §36).
+
+## ⭐ DEV-20261008-005 — `TASK-231`: ÉP CARD CAO ĐỀU BẰNG CSS + QUÉT JARGON TỰ ĐỘNG ⭐
+| ⭐ | ⭐ |
+|---|---|
+| **SESSION / TASK** | ⭐ `ERP-SESSION-02` · ⭐ `TASK-231` ✓ |
+| ⭐⭐ **KỸ THUẬT ① — ÉP CHIỀU CAO ĐỀU** | ⭐ **ĐO** bằng `getBoundingClientRect()` trên **12 thẻ** ⇒ ⭐ phát hiện **2 mức cao**: ⭐ **202px (2 thẻ)** vs ⭐ **222px (10 thẻ)** ⚠️<br>⭐ **NGUYÊN NHÂN**: ⭐ thẻ kho `transit` ⛔ **không có dòng «Dự án:»** ⇒ ⭐ **thiếu 1 dòng ~20px** ✓<br>⭐ **GIẢI PHÁP**: ⭐ `.approved-inventory-screen .warehouse-card{ min-height:222px }` ⭐ — ⭐ dùng **đúng max đo được** ⭐ ⭐ ✅ **VÌ SAO `min-height` ⛔ không `height`**: ⭐ nếu sau này nội dung dài hơn (⭐ tên thủ kho dài ✓) ⭐ thẻ vẫn **tự cao lên**, ⛔ không tràn ✓ ⭐ ⭐ + ⭐ `align-items:stretch` của grid ⭐ đảm bảo **cùng hàng cùng cao** ✅ |
+| ⭐⭐ **KỸ THUẬT ② — QUÉT JARGON TỰ ĐỘNG** | ⭐ Viết probe **duyệt mọi node LÁ** trong `.approved-inventory-screen` ⭐ (⭐ `e.children.length === 0` ⇒ ⭐ lấy **text trực tiếp**, ⛔ không lấy text của cha ✓) ⭐ rồi lọc theo **mẫu JARGON**: ⭐ tên bảng/cột CSDL · ⭐ `§` · ⭐ mã nội bộ `W-0x`/`MT3` · ⭐ `payload`/`backend`/`API` ✓<br>⭐ **VÌ SAO node LÁ**: ⭐ nếu lấy cả node cha ⭐ sẽ **trùng lặp** + ⭐ dính text của con ⚠️ ✓<br>⭐ **LỢI ÍCH**: ⭐ tìm được **19 đoạn** ⭐ trong khi mắt thường chỉ thấy vài đoạn ⭐ ⭐ ⇒ ⭐ **quét tự động > đọc bằng mắt** ✅ |
+| ⭐⭐ **KỸ THUẬT ③ — REWORD ⛔ KHÔNG XOÁ PHẦN TỬ** | ⭐ Sau lỗi `data-inventory-source` ⚠️: ⭐ ⛔ **KHÔNG xoá `<p>`/`<Kpi>`** ⭐ mà **đổi CHUỖI `note`** ⭐ ⇒ ⭐ giữ nguyên **thuộc tính `data-*`** ⭐ mà test đòi ✓<br>⭐ **QUY TRÌNH MỚI (⭐ rút ra)**: ⭐ `grep tests/` + `grep app/` cho **từng chuỗi định xoá** ⭐ ⇒ ⭐ chỉ xoá khi **⛔ không nơi nào ràng buộc** ✓ |
+| **CONFIG / CẤU HÌNH** | ⭐ ⛔ không đổi. ⭐ ⚠️ `globals.css` **vẫn kết thúc** bằng `/* VNTECH_MASTER_BASELINE_CSS_R1_1_1_END */` ✅ |
+| **PERFORMANCE** | ⭐ ⛔ không ảnh hưởng (⭐ `min-height` thuần CSS ✓) ✓ |
+| **TEST** | ⭐ `tsc=0` · ⭐ **`865 · 864 pass · 0 fail`** · ⭐ `BUILD ĐẠT` ✅ |
+
+## ⭐ DEV-20261008-006 — `TASK-232/233`: BỎ CỘT DỮ LIỆU CHẾT + KỸ THUẬT AUDIT «CỘT vs Ô NHẬP» ⭐
+| ⭐ | ⭐ |
+|---|---|
+| **SESSION / TASK** | ⭐ `ERP-SESSION-02` · ⭐ `TASK-232` + `TASK-233` ✓ |
+| ⭐⭐ **KỸ THUẬT ① — BỎ NHÁNH HIỂN THỊ SAI** | ⭐ Ô «Trạng thái» ⭐ TỪ ⭐ `Number(active)===0?"Đã ẩn":String(reviewStatus\|\|"proposed")==="approved"?"Đã duyệt":"Đề xuất"` ⚠️ ⭐ ⇒ ⭐ THÀNH ⭐ `Number(active)===0?"Đã ẩn":"Đang dùng"` ✅<br>⭐ **VÌ SAO**: ⭐ `review_status` ⛔ **không bao giờ được ghi** từ đường Java (⭐ `MaterialCatalogStore.java:61` ✓) ⇒ ⭐ CSDL tự điền mặc định `'approved'` ⚠️ ⭐ ⇒ ⭐ «Đã duyệt» **⛔ không phản ánh sự thật** ⭐ ⭐ + ⭐ `\|\|"proposed"` ⭐ khiến **trường trống** bị hiện thành **«Đề xuất»** ⚠️ ✓ |
+| ⭐⭐ **KỸ THUẬT ② — AUDIT «CỘT vs Ô NHẬP» (⭐ phương pháp MỚI)** | ⭐ **3 bước**: ⭐ ① ⭐ **liệt kê cột HIỂN THỊ** (⭐ trích `header: "…"` / `<th>` ✓) ⭐ ② ⭐ **liệt kê ô NHẬP** của modal sửa (⭐ trích `name="…"` + `<span>nhãn</span>` ✓) ⭐ ③ ⭐ **đối chiếu từng cột** ⇒ ⭐ cột nào **⛔ không có ô nhập** ⇒ ⭐ **nghi dữ liệu chết** ⚠️ ✅<br>⭐ **VÌ SAO CẦN**: ⭐ lỗi «*hiển thị nhưng ⛔ không ai ghi được*» ⭐ **⛔ không lộ ra khi đọc mã từng dòng** ⚠️ ⭐ mà chỉ lộ khi **ĐỐI CHIẾU 2 PHÍA** ✅<br>⭐ **KẾT QUẢ ÁP DỤNG**: ⭐ màn «Danh mục vật tư» ⭐ **3 tab** ⇒ ⭐ **chỉ 1 ca** (⭐ đã sửa ✓) ⭐ — ⭐ 2 tab còn lại **sạch** ✅ |
+| ⭐ **KỸ THUẬT ③ — KIỂM 2 CHIỀU KHI SỬA CHỮ** | ⭐ Khi **bỏ/đổi 1 chuỗi** ⇒ ⭐ **đo CẢ 2 CHIỀU**: ⭐ (a) ⭐ **chuỗi cũ ĐÃ MẤT?** ⭐ + ⭐ (b) ⭐ **chuỗi mới ĐÃ HIỆN?** ⚠️ ⭐ ⭐ (⭐ lần này đo 2 chiều đã **tìm thêm 2 chỗ sót** ⭐ ở `:146` + `:243` ✓) ✓ |
+| **TEST** | ⭐ `tsc=0` ⭐ **`866 tests · 865 pass · 0 fail`** ⭐ `BUILD ĐẠT` ✅ |
+
+## ⭐ DEV-20261008-007 — `TASK-236/237`: KỸ THUẬT «GIỮ CHỖ» + «NGỪNG KHO THEO DỰ ÁN» ⭐
+| ⭐ | ⭐ |
+|---|---|
+| **SESSION / TASK** | ⭐ `ERP-SESSION-02` · ⭐ `TASK-236` + `TASK-237` ✓ |
+| ⭐⭐ **KỸ THUẬT ① — `availableToIssue` = TỒN − GIỮ CHỖ, ⭐ KẸP VỀ 0** | ⭐ Công thức ⭐ `balance − reserved` ⭐ — ⭐ ⚠️ **ĐIỂM QUAN TRỌNG**: ⭐ nếu `reserved > balance` (⭐ dữ liệu lệch ✓) ⭐ thì **KẸP VỀ 0** ⚠️ ⭐ ⛔ **KHÔNG trả số âm** ⭐ — ⭐ vì số âm ⛔ sẽ khiến **kiểm tra `qty > available` luôn đúng** ⇒ ⭐ **chặn MỌI phiếu xuất** ⚠️ ✅ ⭐ + ⭐ **chịu `reserved` thiếu/null** (⭐ payload ⛔ có thể không có trường này ✓) ⭐ + ⭐ **chịu chuỗi số** (`"100"`/`"70"` ✓) ✅ |
+| ⭐⭐ **KỸ THUẬT ② — TÁCH «ĐỔI TỒN» KHỎI «GIỮ CHỖ» BẰNG TRẠNG THÁI** | ⭐ 2 hàm ⭐ **độc lập** ⭐: ⭐ `canChangeStockOnIssue(status)` ⭐ (⭐ ⛔ CHỈ `completed` ✓) ⭐ + ⭐ `isIssueHoldingStock(status)` ⭐ (⭐ `draft`/`pending_approval` ⇒ giữ chỗ ✓) ⭐ ⭐ **VÌ SAO TÁCH**: ⭐ theo user ⭐ «*khi phiếu ở trạng thái **hoàn thành** thì **mới được** thay đổi tồn kho*» ⚠️ ⭐ ⇒ ⭐ **2 câu hỏi KHÁC NHAU** ⭐ — ⭐ gộp lại sẽ ⛔ **không biểu diễn được** trạng thái trung gian ✅ |
+| ⭐⭐ **KỸ THUẬT ③ — `projectDeactivationPrompt` ⭐ THUẦN HÀM, ⛔ KHÔNG SIDE-EFFECT** | ⭐ Trả ⭐ `{ shouldAsk, warehouses, message }` ⭐ ⭐ ⚠️ **VÌ SAO ⛔ KHÔNG tự ngừng**: ⭐ user chốt «*nếu chọn **không** thì **kệ***» ⚠️ ⭐ ⇒ ⭐ nếu hàm **tự ngừng** thì ⭐ **mất quyền quyết của user** ⚠️ ⭐ ⇒ ⭐ tách **CÂU HỎI** khỏi **HÀNH ĐỘNG** ✅ ⭐ + ⭐ lọc ⭐ **3 điều kiện**: ⭐ đúng `projectId` ⭐ + ⭐ `active !== 0` (⛔ không hỏi lại kho đã ngừng ✓) ⭐ + ⭐ `projectId` phải **có thật** (⛔ kho Tổng có `projectId = null` ⇒ ⛔ không dính ✓) ✅ |
+| ⭐ **KỸ THUẬT ④ — HẰNG SỐ THAY VÌ CHUỖI RẢI RÁC** | ⭐ `WAREHOUSE_DEACTIVATE_ACTIONS` ⭐ + ⭐ `WAREHOUSE_DEACTIVATE_LABELS` ⭐ + ⭐ `ALLOW_DELETE_WAREHOUSE` ⭐ ⭐ **VÌ SAO**: ⭐ user chốt «***Xóa kho: không cho phép***» ⚠️ ⭐ ⇒ ⭐ biến nó thành **hằng `false`** ⭐ ⇒ ⭐ **test kiểm được** ⭐ và ⛔ **không ai vô tình bật lại** ✅ |
+| **TEST** | ⭐ `TEST-048` **7/7** ⭐ + ⭐ `TEST-049` **7/7** ⭐ ⭐ **hồi quy `915 · 914 pass · 0 fail`** ⭐ ✅ |

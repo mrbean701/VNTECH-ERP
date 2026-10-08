@@ -16,6 +16,8 @@
 
 import { EntityDetailModal, StatusBadge, type DetailTab } from "@/app/components/ui";
 import { Empty, date, format, money, PROJECT_STATUS_LABELS } from "@/lib/ui-shared";
+// MT3-S03 (08/10/2026) — ⛔ KHÔNG phơi MÃ THÔ: thẻ trạng thái ⛔ không rơi xuống `String(status)` khi bảng nhãn cục bộ thiếu khoá.
+import { statusLabel } from "@/lib/status-labels";
 import type { AppData, Row } from "@/lib/ui-shared";
 import type { ReactNode } from "react";
 
@@ -83,7 +85,7 @@ function ProjectEntityModal({ data, entity, onClose, permission }: ProjectEntity
         { key: "info", label: "Thông tin chung", content: <InfoTable rows={[
           { label: "Mã dự án", value: row.code, source: "projects.code" },
           { label: "Tên dự án", value: row.name, source: "projects.name" },
-          { label: "Trạng thái", value: <StatusBadge value={PROJECT_STATUS_LABELS[String(row.status || "active")] || String(row.status || "—")}/>, source: "projects.status" },
+          { label: "Trạng thái", value: <StatusBadge value={PROJECT_STATUS_LABELS[String(row.status || "active")] || statusLabel(row.status || "active", "project")}/>, source: "projects.status" },
           { label: "Số hợp đồng", value: row.contractNo, source: "projects.contract_no" },
           { label: "Tên hợp đồng", value: row.contractName, source: "projects.contract_name" },
           { label: "Bắt đầu", value: date(row.startDate), source: "projects.start_date" },
