@@ -299,3 +299,17 @@ Status: **FIXED** | Related Bug: BUG-20261006-005 (FIXED) · BUG-20261006-006 (O
 | **ĐỀ XUẤT** | ⭐ Cập nhật ghi chú cho khớp mã hiện tại ⭐ ⛔ **KHÔNG phải việc của phiên 02 nếu tệp ⛔ không thuộc phiên 02** ⇒ ⭐ **chờ xác nhận phân vai** ⏳ |
 | **STATUS** | ⭐⭐ **OPEN** ⭐⭐ — ⭐ **ĐÃ ĐO + ĐÃ CHỨNG MINH** ✅ · ⛔ **CHƯA SỬA** (⭐ chờ xác nhận chủ sở hữu tệp ✓) |
 | **RELATED** | ⭐ `TEST-20261007-029` · `EVT-20261007-040` ✓ |
+
+---
+
+## ⭐⭐⭐ BUG-20261007-017 — `<Inventory>` ⛔ **KHÔNG NHẬN PROP `action`** ⇒ nút «Lưu phân công» DISABLED VĨNH VIỄN ⭐⭐⭐
+| ⭐ | ⭐ |
+|---|---|
+| **SESSION** | ⭐ `ERP-SESSION-02` · **MODULE** Kho vật tư · ⭐ **SEVERITY HIGH** ⚠️ (⭐ chặn chức năng admin ⭐ **thêm nhân sự vào kho** ✓) |
+| ⭐⭐ **PHÁT HIỆN KHI NÀO** | ⭐ Khi **đo THẬT** `TASK-230` ⑥b trên `:9000` ⇒ ⭐ `nút Lưu disabled? **true**` ⚠️ ⇒ ⭐ truy nguyên ⇒ ⭐⭐ **không phải lỗi modal, mà là THIẾU PROP Ở NƠI GỌI** ⭐⭐ ✓ |
+| ⭐⭐⭐ **BẰNG CHỨNG MÃ (⭐ dòng cụ thể)** | ⭐ `app/page.tsx:741`: ⭐⭐ `<Inventory data={data} project={project} open={open} view={warehouseView} />` ⭐⭐ ⇒ ⛔ **KHÔNG có `action={action}`** ⚠️<br>⭐ trong khi ⭐ `app/screens/Inventory.tsx:57` khai: ⭐ `function Inventory({ data, project, open, action, view = null }: { …; action?: (name: string, payload: Row) => Promise<boolean>; … })` ⭐ ⇒ ⭐ **`action` LUÔN `undefined`** ⚠️<br>⭐ **ĐỐI CHỨNG**: ⭐ cùng dòng đó ⭐ `<CentralWarehouse … **action={action}** … />` ⭐⭐ **CÓ truyền** ⭐⭐ ⇒ ⭐ chứng minh `action` **có sẵn** ở `page.tsx`, ⭐ chỉ **thiếu ở `<Inventory>`** ✅ |
+| ⭐⭐ **ẢNH HƯỞNG (⭐ 2 chỗ)** | ⭐ ① ⭐ Nút «**Lưu phân công**» (`data-vntech="wd-staff-save"`, `disabled={!staffPickId||!action}`) ⇒ ⭐⭐ **⛔ không bao giờ bấm được** ⭐⭐ ✓<br>⭐ ② ⛔ **LỖI TIỀM ẨN CÓ SẴN**: ⭐ nút «🗑 Xóa kho» dùng `if(w && **action** && window.confirm(…))` ⇒ ⭐ **`action` undefined ⇒ ⛔ điều kiện LUÔN false** ⇒ ⭐ kể cả khi backend có action thì nút **vẫn ⛔ không làm gì** ⚠️ ⭐ ⭐ (⭐ thêm một lý do nút Xóa chết ✓) |
+| ⭐⭐ **CÁCH SỬA (⭐ 1 DÒNG)** | ⭐ `app/page.tsx:741` ⭐ thêm ⭐⭐ `action={action}` ⭐⭐ vào thẻ `<Inventory …>` ⇒ ⭐ **xong** ✅ |
+| ⛔⛔ **VÌ SAO ⛔ CHƯA TỰ SỬA (§7 PHÂN VAI)** | ⭐ **`app/page.tsx` THUỘC `ERP-SESSION-01`** ⚠️ (⭐ ghi rõ ở `SHARED_STATE.md` §«Đang giữ» ✓) ⇒ ⭐ **§7** cấm phiên 02 sửa ⛔ · ⭐ **§18** cấm sửa vùng phiên khác ⛔ ⭐ ⭐ ⇒ ⭐ **ĐÃ GHI `HANDOFF-20261007-007` CHO S01** ⭐ + ⭐ **BÁO USER** ✅ |
+| **STATUS** | ⭐⭐ **OPEN** ⭐⭐ — ⭐ **ĐÃ CHỨNG MINH ROOT CAUSE bằng mã + đo thật** ✅ · ⛔ **CHƯA SỬA** (⭐ chờ S01 hoặc user cho phép ✓) |
+| **RELATED** | ⭐ `TASK-230` · `HANDOFF-20261007-007` ✓ |

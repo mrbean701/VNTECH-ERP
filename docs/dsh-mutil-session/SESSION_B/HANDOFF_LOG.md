@@ -85,3 +85,18 @@ STATUS: **OPEN** | COMPLETED_BY: (chờ S01) | COMPLETED_AT: (chờ)
 | ⭐⭐ **CHỈ THỊ MỚI CỦA USER — EM GHI NHẬN** | ⭐ S03 ghi user chỉ đạo: ⭐⭐ «**GO-LIVE ⇒ hotfix theo thứ tự ưu tiên FE → BE → DB**, sửa frontend trước để user test được ngay» ⭐⭐ ⭐ ⇒ ⭐ **EM XÁC NHẬN PHÙ HỢP**: ⭐ việc phiên 02 làm hôm nay ⭐ **toàn bộ là FE** ✅ (⭐ `Inventory.tsx` · `WarehouseDashboard.tsx` · `MaterialCategoryList.tsx` ✓) ⭐ ⛔ **không đụng BE** ✅ |
 | ⭐ **VIỆC S03 CẦN LÀM** | ⭐ ⛔ **KHÔNG cần hành động gì** ⭐ — ⭐ chỉ **đọc lại `SHARED_STATE.md`** (⭐ em vừa cập nhật ✓) nếu cần đụng `WarehouseDashboard.tsx` / `MaterialCategoryList.tsx` ⚠️ |
 | **STATUS** | ⭐⭐ **CLOSED** (⭐ ACK xong ✓) — ⭐ ⛔ **không chặn ai** ✅ |
+
+## ⭐⭐⭐ HANDOFF-20261007-007 — `ERP-SESSION-01` THÊM 1 DÒNG `action={action}` VÀO `page.tsx` ⭐⭐⭐
+| ⭐ | ⭐ |
+|---|---|
+| **FROM** | ⭐ `ERP-SESSION-02` ⭐ **TO** ⭐⭐ `ERP-SESSION-01` ⭐⭐ (⭐ đang giữ `app/page.tsx` ✓) |
+| **TASK** | ⭐ `TASK-230` — chức năng «**Thêm nhân sự vào kho**» (⭐ yêu cầu user ⑥ ✓) |
+| **LÝ DO** | ⭐⭐ `app/page.tsx:741` gọi `<Inventory … />` ⭐⛔ **THIẾU `action={action}`** ⚠️ ⇒ ⭐ `action` luôn `undefined` ⇒ ⭐⭐ **nút «Lưu phân công» DISABLED VĨNH VIỄN** ⭐⭐ ⚠️ ✓ |
+| ⭐ **TỆP CẦN SỬA** | ⭐ `app/page.tsx` ⭐ — ⭐ **ĐÚNG 1 DÒNG 741** ⚠️ |
+| ⭐⭐ **THAY ĐỔI CỤ THỂ** | ⭐ **TỪ**: `<Inventory data={data} project={project} open={open} view={warehouseView} />`<br>⭐ **THÀNH**: `<Inventory data={data} project={project} open={open} view={warehouseView} **action={action}** />` ✅ |
+| **TRẠNG THÁI ĐO ĐƯỢC** | ⭐ Trên `:9000` ⭐ mở hub Kho ⇒ bấm 1 card ⇒ tab «Nhân sự» ⇒ bấm «＋ Thêm nhân sự» ⇒ chọn 1 ứng viên ⭐ ⇒ ⭐⭐ `document.querySelector('[data-vntech="wd-staff-save"]').disabled` = **`true`** ⚠️ ⭐ (⭐ **phải là `false`** sau khi chọn ✓) ✓ |
+| ⭐ **VIỆC CẦN LÀM (S01)** | ⭐ Thêm `action={action}` vào dòng 741 ⭐ ⇒ ⭐ **`tsc` = 0** ⇒ ⭐ báo lại `ERP-SESSION-02` để đo lại ✅ |
+| **RỦI RO** | ⭐⭐ **RẤT THẤP** ✅ — ⭐ thêm 1 prop **đã có sẵn** trong cùng scope ⭐ ⭐ **ĐỐI CHỨNG**: ⭐ dòng đó **đã** truyền `action={action}` cho `<CentralWarehouse />` ⭐ ⇒ ⭐ **cùng khuôn, ⛔ không có gì mới** ✅ |
+| ⭐ **LƯU Ý THÊM (⭐ có lợi cho S01)** | ⭐ Sửa dòng này ⭐ **cũng sửa luôn 1 lỗi tiềm ẩn có sẵn** ⚠️: ⭐ nút «🗑 Xóa kho» trong `Inventory.tsx` dùng `if(w && **action** && …)` ⇒ ⭐ nay điều kiện mới có thể đúng ✓ (⭐ ⚠️ nhưng action `delete_warehouse` **vẫn chưa tồn tại** ở backend — ⭐ xem `BUG-20261007-015` ✓) |
+| **TEST CẦN CHẠY** | ⭐ `npx tsc --noEmit` = **0** ⭐ + ⭐ **đo lại** `wd-staff-save`.disabled = **false** sau khi chọn ứng viên ✅ |
+| **STATUS** | ⭐⭐ **OPEN** ⭐⭐ — ⭐ **CHỜ `ERP-SESSION-01`** ⏳ ⭐ (⭐ hoặc user cho phép `ERP-SESSION-02` tự sửa 1 dòng ✓) ✓ |
