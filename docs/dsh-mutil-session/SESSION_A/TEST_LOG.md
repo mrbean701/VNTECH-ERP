@@ -1051,3 +1051,54 @@ Thêm **2 phép kiểm** vào `tools/probe-grant-1-perm-e2e.mjs` (⭐ đo hộp 
 ✅ Cổng FE **952 test · 951 pass · 0 fail** · ✅ Java **88/88** · ✅ `tsc` 0 · ✅ 3 cổng sống · ✅ CSDL kho **12/5/10** (khớp audit)
 ✅ Probe E2E **14/14 phép kiểm ĐẠT** + **1 `finding`** (nói trên, ⛔ không phải lỗi sản phẩm)
 ⭐ **Hết việc trong phạm vi S1** — phần còn lại thuộc `ERP-SESSION-02` (E2E UI kho · đặc tả `allocate`).
+
+## TEST-20261008-012 — ✅ **`HANDOFF-20261007-007` NGHIỆM THU ĐỦ 2/2**: nút «LƯU PHÂN CÔNG» **BẬT** (`disabled=false`) sau khi chọn nhân sự ⇒ ⭐ `action={action}` CÓ TÁC DỤNG THẬT
+
+| ⭐ | ⭐ |
+|---|---|
+| **TEST_ID** | TEST-20261008-012 · **DATE** 2026-10-08 17:15 · **SESSION** ERP-SESSION-01 |
+| **TEST_TYPE** | UI (E2E trên `:9000`, bundle mới, trình duyệt thật) · **RELATED** `HANDOFF-20261007-007` của `ERP-SESSION-02` · `TASK-230` |
+| **SCENARIO** | Mở hub Kho ⇒ 1 kho ⇒ tab «Nhân sự» ⇒ «＋ THÊM NHÂN SỰ» ⇒ chọn 1 ứng viên ⇒ đọc `[data-vntech="wd-staff-save"]`.disabled |
+| **EXPECTED** | `disabled = false` (⭐ tiêu chí S02 đặt ra) |
+| **ACTUAL** | ⭐ **`disabled = false`** ✓ · nhãn nút «LƯU PHÂN CÔNG» ✓ · ⭐ **TRƯỚC khi chọn người = `true`** ⇒ **đổi đúng thiết kế** ✓ |
+| **RESULT** | 🟢 **ĐẠT** |
+| **ĐƯỜNG ĐO** | ⭐ `:9000` → `.nav-child-warehouse` → `[data-vntech="warehouse-card"]` → `[data-vntech="wd-tab-4"]` → `[data-vntech="wd-staff-add"]` → 1 `[data-vntech="wd-staff-candidate"]` → đọc `.disabled` ✓ |
+| **⭐ SỰ THẬT PHỤ ĐO ĐƯỢC** | ⭐ **4 nút kho ĐÃ BẬT** trong hub: `＋ TẠO KHO` · `✎ SỬA` · `⏹ NGƯNG HOẠT ĐỘNG` (+ `⇄ CHUYỂN KHO`, `▤ THẺ KHO`, `▥ IN MÃ BARCODE`) ⇒ ⭐ **bước ① của `HANDOFF-20261008-007` (S01 giao S2) ĐÃ XONG** ✓ |
+| ⚠️ **GIỚI HẠN CÓ Ý** | ⛔ **KHÔNG bấm «Lưu phân công»**: thao tác gọi `save_user_access` = **FULL-REPLACE** (`clearUserScopes()` xoá rồi ghi lại **toàn bộ** `modulePermissions`) ⇒ ⚠️ **phá quyền thật của tài khoản thật** (⭐ bài học `BUG-20261008-007`). ⭐ Muốn khép tới CSDL: dùng **1 tài khoản rác dùng-một-lần** ✓ |
+| **ENVIRONMENT** | FE bundle vân tay `BB706F1202490077` (6/6 byte khớp) · BE `:18081` · MySQL `vntech_erp` · 3 cổng sống |
+
+## TEST-20261008-013 — ✅ **`BUG-008` CHỨNG MINH ĐỦ 2 CHIỀU** (ÂM khoá / DƯƠNG mở) ⇒ ⭐ probe **15/15 ĐẠT · HẾT `finding`**
+
+| ⭐ | ⭐ |
+|---|---|
+| **TEST_ID** | TEST-20261008-013 · **DATE** 2026-10-08 17:45 · **SESSION** ERP-SESSION-01 |
+| **TEST_TYPE** | UI (E2E, trình duyệt thật + CDP) · **TOOL** `tools/probe-grant-1-perm-e2e.mjs` |
+| **RELATED** | `BUG-20261008-008` · `BUG-20261008-009` (bản vá `hasAdminTab` + 4 cổng `page.tsx`) · `S-1` |
+
+### 📏 KẾT QUẢ ĐO (⭐ ĐÃ ĐO, ⛔ không suy đoán)
+| Nhánh | Quyền cấp | `bước 01 bị khoá?` | Dòng bảng | Nút «Sửa tài khoản» |
+|---|---|---|---|---|
+| **ÂM** | chỉ `admin_tab_02` | ⭐ **`true`** (KHOÁ) | 11 | 0 |
+| **DƯƠNG** | thêm `admin_tab_01` | ⭐ **`false`** (MỞ) | 1 | 0 |
+⇒ ⭐ **HAI NHÁNH KHÁC NHAU RÕ RỆT** ⇒ quyền uỷ nhiệm **CÓ tác dụng thật** ✓ — ⭐ **chính là điều `BUG-008` cần chứng minh** ✓
+
+### 🔎 GỠ ĐƯỢC 2 NGHI VẤN SAI BẰNG CÁCH **ĐO**, ⛔ KHÔNG ĐOÁN
+| Nghi vấn | Cách kiểm | Kết luận |
+|---|---|---|
+| (a) Dấu tiếng Việt **NFC/NFD** làm regex ⛔ không khớp | Đo trên màn thật: khớp **25/25** bằng **cả** `/Sửa tài khoản/i` **VÀ** hàm chuẩn hoá | ❌ **SAI** |
+| (b) **TIMING** — đếm trước khi bảng render | Thêm `choBangTaiKhoan()` **poll** tới khi bảng có dòng | ✅ **ĐÚNG** (đã sửa) |
+| (c) ⭐ `nút «Sửa tài khoản» = 0` ở nhánh DƯƠNG có phải BUG? | ⭐ Đo `dòng bảng` = **1** ⇒ tài khoản uỷ nhiệm tối thiểu **chỉ thấy CHÍNH MÌNH** | ✅ ⭐ **KHÔNG phải bug** — ⛔ **không được tự sửa mình** (⭐ đúng luật `S-1` tôi đã cài) ✓ |
+
+⚠️ **TỰ NHẬN SAI ĐỀ**: giả thuyết ban đầu của tôi («mở bước 01 ⇒ **phải** thấy nút Sửa tài khoản») là **SAI ĐỀ** — ⛔ không phải sản phẩm sai.
+⭐ **Sửa phép kiểm cho đo ĐÚNG HỢP ĐỒNG THẬT**: *có quyền ⇒ bước MỞ (+ bảng render) · ⛔ không quyền ⇒ bước KHOÁ* ✓
+
+### 🎯 TRẠNG THÁI PROBE CUỐI
+```
+CƠ CHẾ: 15/15 phép kiểm ĐẠT   (⛔ KHÔNG còn `finding` nào)
+```
+⭐ Từ **12/13 + 1 `finding`** ⇒ **15/15 ĐẠT** sau 3 lần sửa phép đo (đổi danh tính · timing · sai đề) ✓
+
+### 📌 BÀI HỌC (D-101)
+> **Khi một phép đo cho kết quả VÔ LÝ, ⛔ đừng kết luận sản phẩm sai — hãy nêu giả thuyết rồi ĐO TỪNG GIẢ THUYẾT.**
+> ⭐ 3 lần liên tiếp "đỏ" của tôi đều do **PHÉP ĐO**, ⛔ không phải sản phẩm (đổi danh tính · timing · sai đề) ✓
+> ⚠️ Và: **kỳ vọng phải suy từ HỢP ĐỒNG**, ⛔ không từ cảm giác «chắc là phải thấy nút» ✓

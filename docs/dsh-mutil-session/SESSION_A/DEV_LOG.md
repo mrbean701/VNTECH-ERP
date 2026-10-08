@@ -633,3 +633,111 @@ Khi vá `BUG-009`, tôi định **thay hàng loạt** `allModulePermissions` →
 🎯 **Họ bug «quyền uỷ nhiệm vô hiệu» ĐÃ ĐÓNG** — ⛔ không còn ca nào cần sửa.
 ⭐ Detector **đã tự kiểm chứng**: 2 ca sửa trước đây (`update_user`–MỐC 109 · `save_user_access`–PA-1) đều trả `False` ⇒ ⛔ không «xanh giả» ✓
 📌 **2 luật mới**: `D-099` (chỉ gọi là lệch khi **tầng đối diện CHO PHÉP**) · `D-100` (**⛔ không grep code bằng chuỗi trần** — phải bỏ comment + khớp LỜI GỌI).
+
+## BUG-20261008-011 — 🔴 **CRITICAL: BACKEND DOWN do migration V39 ⛔ KHÔNG IDEMPOTENT** (Flyway FAILED) ⇒ đã khôi phục dịch vụ
+
+| ⭐ | ⭐ |
+|---|---|
+| **BUG_ID** | BUG-20261008-011 · **DATE** 2026-10-08 15:57→16:18 · **SESSION** ERP-SESSION-01 (phát hiện + khôi phục) |
+| **SEVERITY** | 🔴 **CRITICAL** (`SYSTEM DOWN` — §20/§45: ưu tiên tuyệt đối) |
+| **MODULE** | BACKEND · DEVOPS · `stock_reservations` (giữ chỗ phiếu xuất) |
+| **NGUỒN** | User: «rebuild áp dụng tất cả các thay đổi của các session» |
+
+### 🔎 TRIỆU CHỨNG (đo được)
+`mvn package` **ĐẠT** nhưng khi chạy jar: **backend ⛔ KHÔNG khởi động** —
+```
+FlywayMigrateException: Script V39__session02_stock_reservation_issue_id.sql failed
+SQL State 42S21 · Error Code 1060 · Message: Duplicate column name 'issue_id'
+Caused by: ... SpringApplication: Application run failed  ⇒ :18081 DOWN
+```
+
+### 🎯 NGUYÊN NHÂN GỐC (⭐ đối chiếu CSDL thật, ⛔ không suy đoán)
+`V39` (migration **của `ERP-SESSION-02`**) gồm 2 câu:
+1. `ALTER TABLE stock_reservations ADD COLUMN issue_id VARCHAR(64) NULL …`
+2. `CREATE INDEX stock_reservations_issue_idx ON (issue_id, status)`
+📏 **CSDL MySQL ĐÃ CÓ CẢ HAI** (cột `issue_id varchar(64) NULL` + index `stock_reservations_issue_idx(issue_id,status)`)
+⇒ ⚠️ **MySQL ⛔ KHÔNG hỗ trợ `ADD COLUMN IF NOT EXISTS`** ⇒ câu 1 **trùng** ⇒ Flyway đánh dấu **FAILED** (`flyway_schema_history.success=0`) ⇒ Spring Boot **từ chối khởi động** ✓
+⚠️ **Hệ quả chuỗi**: kể cả jar CŨ cũng ⛔ không chạy được (Flyway thấy migration lỗi trong lịch sử) ⇒ ⭐ **cả hệ thống chết**, ⛔ không chỉ bản mới.
+
+### ✅ CÁCH KHÔI PHỤC (⭐ tối thiểu · ⛔ KHÔNG sửa tệp migration của phiên khác, ⛔ KHÔNG sửa mã nghiệp vụ)
+📏 **Bước 0 — CHỨNG MINH** ý định của V39 **đã được thoả mãn đầy đủ** (cả cột + index đều có, đúng kiểu `varchar(64) NULL`) ✓
+⛔ ⇒ **KHÔNG cần chạy lại** câu nào ⇒ chỉ cần sửa **lịch sử Flyway**:
+```sql
+UPDATE flyway_schema_history SET success=1 WHERE version='39' AND success=0;   -- 1 dòng
+```
+⇒ Backend khởi động lại **OK**: `Schema vntech_erp is up to date` · `Started VntechErpApplication` · ⛔ **0 ERROR** ✓
+
+### ⚠️ KHUYẾN NGHỊ CHO `ERP-SESSION-02` (⛔ S01 không tự sửa tệp của họ — §19)
+V39 cần **chịu được môi trường đã có cột** (⚠️ nhiều máy/DB đã có `issue_id` từ trước). Cách an toàn: dùng
+`INFORMATION_SCHEMA` để **chỉ `ADD COLUMN` khi cột CHƯA tồn tại** (MySQL ⛔ không có `IF NOT EXISTS`), hoặc
+tách câu `CREATE INDEX` ra migration riêng. ⭐ Nếu để nguyên: **mọi máy đã có cột sẽ ⛔ chết ở lần khởi động kế tiếp** ✓
+
+---
+
+## BUG-20261008-012 — 🟠 **2 test Java LỖI vì `schema-h2.sql` ⛔ THIẾU GƯƠNG `issue_id`** (⛔ không phải lỗi sản phẩm)
+
+| ⭐ | ⭐ |
+|---|---|
+| **SEVERITY** | 🟠 MEDIUM (⚠️ nhưng **chặn điều kiện «build không lỗi»** để commit) |
+| **TRIỆU CHỨNG** | `mvn test`: **88 run · 0 failure · 2 ERRORS** ⇒ BUILD FAILURE — `StockIssueWorkflowSteps345Test.steps345_fullFlow` + `SupplyChainEndToEndIntegrationTest.fullSupplyChain` |
+| **LỖI THẬT** | `BadSqlGrammarException … INSERT INTO stock_reservations (…,issue_id,…)` |
+| **NGUYÊN NHÂN GỐC** | Mã mới của S2 ghi `issue_id`, **MySQL đã có cột (V39)** — ⚠️ nhưng `web/src/test/resources/schema-h2.sql` **chưa có gương** ⇒ H2 (test) ⛔ thiếu cột ✓ |
+| **FIX** | Thêm **1 dòng** `` `issue_id` VARCHAR(64) NULL `` vào `CREATE TABLE stock_reservations` — ⭐ **đúng kiểu của V39** (⚠️ `NULL`, ⛔ không `NOT NULL`) ✓ |
+| **KẾT QUẢ** | ⭐ `Tests run: 88, Failures: 0, Errors: 0` · **BUILD SUCCESS** ✓ (⭐ và cổng FE **955 test · 954 pass · 0 fail**) |
+
+---
+
+## DEV-20261008-007 — 🚀 **REBUILD TOÀN HỆ + COMMIT + PUSH `unity`** (user chốt: «không lỗi thì commit + push + merge vào unity»)
+
+| # | Việc | Kết quả ĐO được |
+|---|---|---|
+| 1 | `tsc --noEmit` cây gộp | ✅ **0** |
+| 2 | FE: `fixpoint` → `npm run build` → sync identity | ✅ `BUILT ARTIFACT VALIDATION: ĐẠT` · vân tay **`VNTECH-FP-BB706F1202490077`** khớp SSOT |
+| 3 | Cổng UI `verify-ui-build-applied --port=8787` | ✅ `do-moi` · `van-tay bb706f1202490077` · **`byte 6/6`** |
+| 4 | BE: `mvn test` | ✅ **88/88** (0 failure · 0 error) |
+| 5 | BE: `mvn -DskipTests -pl web -am package` | ✅ jar **91.051.684 B @ 16:18:08** |
+| 6 | 3 cổng `:8787` `:9000` `:18081` | ✅ LISTEN · `:9000/api/system` → **401** (đúng, cần đăng nhập) |
+| 7 | CSDL kho (bất biến) | ✅ **12 / 5 / 10** khớp `W-02-AUDIT` |
+| 8 | **Git** | ✅ commit `0119160` (**292 tệp · +28.717 / −547**) → merge `origin/unity` (**2 commit của phiên khác** — TASK-230 hub Kho) → **merge `defccb1`** → **PUSH** `8d9c303..defccb1 unity -> unity` ✓ |
+
+### ⚠️ 2 BÀI HỌC (⭐ ghi để ⛔ không lặp)
+1. **`git add -A` trong repo ĐA PHIÊN là NGUY HIỂM** — nó gom cả thay đổi của phiên khác (⭐ lần này là chủ đích theo yêu cầu user, ⚠️ nhưng phải **kiểm mất mát**: đã đối chiếu `Inventory.tsx` **744 > 723 dòng** · `globals.css` **129 > 124** · log `SESSION_B` **386 + 150 dòng còn nguyên** ⇒ ⭐ **⛔ KHÔNG mất việc của ai** ✓)
+2. **Gặp xung đột khi merge ⇒ ⛔ đừng chọn bừa `--ours`/`--theirs`** — ⭐ phải **ĐO** bản nào mới hơn (so **số dòng + dấu hiệu đặc trưng** của phiên kia) rồi mới chốt ✓
+
+## DEV-20261008-008 — 🛡️ CÔNG CỤ CHẶN TÁI PHÁT `BUG-20261008-011`: dò migration SẮP CHẠY mà ⛔ **KHÔNG IDEMPOTENT**
+
+| ⭐ | ⭐ |
+|---|---|
+| **DEV_ID** | DEV-20261008-008 · **DATE** 2026-10-08 18:20 · **SESSION** ERP-SESSION-01 |
+| **TỆP MỚI** | `tools/check-migration-idempotency.mjs` (⭐ **chỉ ĐỌC** — ⛔ không sửa mã, ⛔ không ghi CSDL) |
+| **MỤC ĐÍCH** | ⚠️ `BUG-011` xảy ra vì một migration `ADD COLUMN` trên CSDL **đã có cột** ⇒ Flyway FAILED ⇒ 🔴 **backend DOWN**. ⭐ Công cụ này **phát hiện TRƯỚC** loại rủi ro đó ✓ |
+
+### 🔎 CÁCH LÀM (⭐ lọc cho ⛔ không nhiễu)
+1. Đọc `flyway_schema_history` (**chỉ SELECT**) ⇒ biết migration nào **ĐÃ áp dụng**;
+2. Chỉ xét migration **SẮP CHẠY** (⭐ tức sẽ chạy ở lần khởi động tới — ⛔ không báo hàng loạt tệp đã chạy xong);
+3. Trong đó, dò các câu ⛔ **không chịu được môi trường đã có sẵn đối tượng**:
+   `ADD COLUMN` · `CREATE INDEX` · `CREATE TABLE` · `ADD CONSTRAINT` — ⚠️ **MySQL ⛔ KHÔNG có `IF NOT EXISTS`** cho `ADD COLUMN`/`CREATE INDEX`;
+4. Bỏ qua tệp **đã tự bảo vệ** (có `IF NOT EXISTS` / `INFORMATION_SCHEMA` / `PROCEDURE` / `PREPARE`).
+
+### 📏 KẾT QUẢ ĐO
+| Lần chạy | Kết quả |
+|---|---|
+| **Mặc định** (chỉ tệp đang chờ) | `Tổng 38 tệp · đã áp dụng 38 · SẮP CHẠY 0` ⇒ ✅ ⛔ **không có rủi ro hiện tại** |
+| ⭐ **`--tat-ca`** (**đối chứng âm** — quét CẢ 38) | ⚠️ **9/38** bị gắn cờ, ⭐ **gồm đúng `V39__session02_stock_reservation_issue_id.sql`** — ca THẬT đã làm sập hệ thống ✓ |
+
+⇒ ⭐ **PHÉP DÒ CHỨNG MINH ĐƯỢC LÀ CÓ THỂ ĐỎ** (⛔ không phải «xanh giả» — ⭐ đúng luật tôi đã đặt ra: *cổng phải chứng minh được khả năng ĐỎ*) ✓
+
+### ⚠️ DIỄN GIẢI ĐÚNG (⭐ ⛔ không thổi phồng)
+9 tệp bị gắn cờ **ĐỀU ĐÃ ÁP DỤNG** trên CSDL này ⇒ ⭐ **hiện ⛔ KHÔNG có rủi ro**.
+⚠️ Rủi ro chỉ xảy ra khi **dựng CSDL MỚI / khôi phục từ bản sao đã có một phần đối tượng** — ⭐ đúng tình huống đã xảy ra hôm nay (CSDL đã có cột `issue_id` trước khi V39 chạy).
+📌 **ĐỀ NGHỊ**: trước mỗi lần **rebuild/deploy lên máy khác**, chạy `node tools/check-migration-idempotency.mjs` (⭐ 1 lệnh, chỉ đọc) ✓
+
+### 🎯 DANH SÁCH 9 TỆP BỊ GẮN CỜ (⭐ để tham chiếu)
+`V1__baseline.sql` · `V12__audit_log_enrich.sql` · `V17__workflow_dynamic_approvals.sql` · `V18__wf_b2_po_decision.sql` ·
+`V25__mt2_approval_overdue_reason_and_user_signature.sql` · `V28__mt2_supplier_email.sql` · `V29__mt2_user_last_login.sql` ·
+`V31__mt2_p10_05_legal_document_correspondence_link.sql` · ⭐ **`V39__session02_stock_reservation_issue_id.sql`**
+
+### ⚠️ GIỚI HẠN CÓ Ý (⭐ ghi rõ để ⛔ không tin quá mức)
+· Đây là **dò TĨNH theo mẫu câu** — ⛔ **không thay** việc chạy thử trên CSDL bản sao;
+· Việc nhận diện «có guard» là **thô** (⛔ không phân tích ngữ nghĩa SQL);
+· ⛔ Không đánh giá migration đã áp dụng (chúng đã chạy xong ⇒ ⛔ không còn rủi ro ở lần khởi động tới).

@@ -643,3 +643,97 @@ Việc chèn dòng vào `ActionRbacRegistry.java` làm **bảng action↔số d�
 **GHI CHÚ ⚠️** — ⛔ **CHƯA có E2E bấm-thử modal kho qua UI** (bước 7b chưa làm): phép đo hiện tại mới chứng
 minh **biên dịch + bundle + hồi quy**, ⛔ chưa chứng minh «mở modal từ màn Kho ⇒ lưu được».
 ⭐ Điều kiện cần đã đủ (API sống + component khớp khoá) — cần 1 probe UI màn Kho ở lượt sau ✓
+
+## CHG-20261008-007 — Sửa 4 cổng UI đọc SAI nguồn quyền · vá gương H2 của V39 · thêm công cụ chặn tái phát migration
+
+| ⭐ | ⭐ |
+|---|---|
+| **CHANGE_ID** | CHG-20261008-007 · **DATE** 2026-10-08 18:30 · **SESSION_ID** ERP-SESSION-01 |
+| **CATEGORY** | `FRONTEND` · `DATABASE` · `DEVOPS` |
+| **RELATED** | `BUG-20261008-009` · `BUG-20261008-012` · `BUG-20261008-011` · `DEV-20261008-008` |
+
+### ① Sửa 4 cổng UI đọc sai nguồn quyền (`BUG-20261008-009`)
+| | |
+|---|---|
+| **BEFORE** | `app/page.tsx`: `canViewAudit` · **`canAdministerStaff`** · `canManageRole` · **`canManageUserPermissions`** đọc `(data.allModulePermissions \|\| []).some(…)` — ⚠️ trường này bootstrap **CHỈ gửi khi `admin === true`** (`BootstrapDataAdapter.java:943`) ⇒ ⭐ với **mọi non-admin** mảng **RỖNG** ⇒ 4 cổng **LUÔN `false`** ⇒ **quyền uỷ nhiệm vô hiệu** trên giao diện ✓ |
+| **AFTER** | 4 cổng đọc **`data.modulePermissions`** (quyền của **chính** người đăng nhập — ⭐ nguồn **luôn có**); ⛔ **KHÔNG** đụng **7 chỗ** còn lại đọc quyền **NGƯỜI KHÁC** (bảng tài khoản · KPI · ngoại lệ · nhân sự kho · ứng viên duyệt) |
+| **REASON** | ⭐ đóng **cả họ** bug «quyền uỷ nhiệm vô hiệu» (`BUG-005/006/008/009`) — cùng một điểm yếu kiến trúc «2 nguồn quyền» |
+| **FILES** | `app/page.tsx` (4 dòng) · `tests/self-permission-source.test.mjs` (**mới** — 5 ca, ⭐ có **đối chứng âm** cấm thay bừa) |
+| **IMPACT** | ⭐ Người được uỷ nhiệm `admin_tab_01/06/11` nay **dùng được** các chức năng tương ứng; ⛔ không đổi hành vi với `role=admin` (nhánh `isAdminUser` chặn trước) |
+| **COMPATIBILITY** | ✅ Tương thích ngược — ⛔ không đổi API, ⛔ không đổi CSDL |
+| **TEST** | ✅ `tsc` = 0 · ✅ 5 ca mới · ✅ cổng FE **955 test · 954 pass · 0 fail** |
+| **STATUS** | ✅ **VERIFIED** |
+
+### ② Vá `schema-h2.sql` — thiếu gương `issue_id` của V39 (`BUG-20261008-012`)
+| | |
+|---|---|
+| **BEFORE** | `java-backend/web/src/test/resources/schema-h2.sql`: bảng `stock_reservations` **⛔ thiếu** cột `issue_id` ⇒ mã mới của S2 `INSERT … issue_id …` ⇒ **`BadSqlGrammarException`** ⇒ **2 test LỖI** (`StockIssueWorkflowSteps345Test` · `SupplyChainEndToEndIntegrationTest`) |
+| **AFTER** | Thêm **1 dòng** `` `issue_id` VARCHAR(64) NULL `` (⭐ **đúng kiểu của `V39`**: `NULL`, ⛔ không `NOT NULL`) |
+| **REASON** | ⚠️ Schema H2 của test **chưa cập nhật kịp** MySQL — ⛔ **không phải lỗi sản phẩm** |
+| **FILES** | `java-backend/web/src/test/resources/schema-h2.sql` (**1 dòng**) |
+| **TEST** | ✅ `Tests run: 88, Failures: 0, Errors: 0` · **BUILD SUCCESS** |
+| **STATUS** | ✅ **FIXED** |
+
+### ③ Thêm công cụ chặn tái phát `BUG-20261008-011` (`DEV-20261008-008`)
+| | |
+|---|---|
+| **BEFORE** | ⛔ Không có cách nào phát hiện trước migration **sắp chạy** mà ⛔ không idempotent ⇒ sự cố `V39` (🔴 **backend DOWN**) chỉ lộ ra **khi khởi động** |
+| **AFTER** | `tools/check-migration-idempotency.mjs` (**mới**, ⭐ **chỉ ĐỌC**): lọc theo `flyway_schema_history` ⇒ chỉ xét migration **SẮP CHẠY** ⇒ dò `ADD COLUMN`/`CREATE INDEX`/`CREATE TABLE`/`ADD CONSTRAINT` ⛔ thiếu guard |
+| **REASON** | ⭐ **phòng ngừa** loại lỗi đã làm **chết cả hệ thống**; ⛔ không sửa tệp migration của phiên khác (§19) |
+| **FILES** | `tools/check-migration-idempotency.mjs` (**mới**) |
+| **IMPACT** | ⛔ Không ảnh hưởng runtime/CSDL — ⭐ công cụ vận hành, chạy trước khi deploy |
+| **TEST** | ✅ Mặc định: **38 tệp · 0 đang chờ ⇒ ⛔ không rủi ro** · ⭐ **ĐỐI CHỨNG ÂM** `--tat-ca`: gắn cờ **9/38, có đúng `V39`** ⇒ ⭐ phép dò **CÓ THỂ ĐỎ** ✓ |
+| **STATUS** | ✅ **DONE** (⭐ đề nghị S2 xử lý **tận gốc** V39 — đã báo) |
+
+### ④ Sửa phép đo của probe E2E (⛔ không phải thay đổi sản phẩm — ⭐ ghi để minh bạch)
+| | |
+|---|---|
+| **BEFORE** | `tools/probe-grant-1-perm-e2e.mjs`: đổi danh tính ⛔ không nạp lại trang · đếm nút ⛔ không chờ bảng render · kỳ vọng **sai đề** ⇒ `12/13 + 1 finding` |
+| **AFTER** | `dangNhapLai` (login + nạp lại) · `choBangTaiKhoan` (**poll**) · phép kiểm theo **hợp đồng thật** + **2 phép kiểm §22** (width & vùng tiêu đề **bất biến**) |
+| **TEST** | ⭐ **15/15 ĐẠT · hết `finding`** |
+| **STATUS** | ✅ **DONE** |
+
+## BUG-20261008-013 (KHÉP) — ✅ **USER CHỐT `U-1` + ĐÃ THI HÀNH + ĐÃ ĐO**: người uỷ nhiệm quản trị nay thấy dữ liệu **TRONG PHẠM VI**
+
+| ⭐ | ⭐ |
+|---|---|
+| **BUG_ID** | BUG-20261008-013 · **STATUS** ✅ **FIXED (code + test) + VERIFIED (đo runtime)** |
+| **DATE** | 2026-10-08 20:15 · **SESSION** ERP-SESSION-01 |
+| **QUYẾT ĐỊNH** | ⭐ **USER chốt `U-1`**: người được uỷ nhiệm thấy tài khoản **TRONG PHẠM VI của mình** (⛔ không toàn bộ như admin) ✓ |
+
+### 🔧 ĐÃ SỬA GÌ (⭐ 1 tệp, ⛔ không đụng nhánh admin ⇒ **zero regression**)
+`java-backend/…/persistence/BootstrapDataAdapter.java`:
+1. **Thêm khối U-1** — `if (!admin)` ⇒ nếu có **≥1 quyền nhóm quản trị** (`admin`/`admin_tab_*`, `can_view=1`, còn hạn — ⭐ dùng **đúng khuôn truy vấn `modulePermissions`** sẵn có) thì nạp:
+   · `users` = **chính mình** ∪ **người cùng dự án trong phạm vi** (`ctx.visibleProjectIds()`)
+   · `adminProjects` = chỉ dự án trong phạm vi · `userScopes` = chỉ scope thuộc dự án trong phạm vi
+   ⛔ **GIỮ admin-only** (⭐ U-1 ⛔ không áp): `allModulePermissions` · `emailOutbox` · `emailRecipients` ✓
+2. ⭐ **Vị trí nạp: SAU `blank(...)`** — ⚠️ vì `blank` là **GHI ĐÈ CÓ CHỦ ĐÍCH (CƠ CHẾ AN NINH)** ✓
+
+### ⚠️⚠️ 3 CÁI BẪY TÔI ĐÃ TRẢ GIÁ (⭐ ghi đủ để ⛔ không lặp)
+
+| # | Bẫy | 📏 Đo được | ✅ Đáp án đúng |
+|---|---|---|---|
+| 1 | Nạp U-1 **TRƯỚC** `blank(...)` | ⛔ `soUsers = 0` **dù SQL trả đúng** (8 tài khoản) ⇒ ⭐ `blank` **xoá sạch** | **Nạp SAU `blank`** |
+| 2 | Sửa `blank` thành «chỉ điền khi **THIẾU**» | ⛔ **LÀM ĐỎ test an ninh** `RequestOverdueReasonTest` MT2-P4-02 («user cấp THẤP ⛔ KHÔNG được thấy vùng duyệt ⇒ **phải bị `blank`**») | ⛔ **KHÔNG đổi ngữ nghĩa `blank`** — nó là **an ninh**, ⛔ không phải tiện ích |
+| 3 | Dời khối bằng **script PowerShell** dò `}` theo `^\s{8}\}` (⚠️ dấu đóng thật ở **4 space**) | ⛔ **LỖI BIÊN DỊCH** `[2140,1] class, interface, enum, or record expected` (code lạc sau `}` của class) | ⭐ **Khôi phục từ HEAD + vá bằng `edit` có NEO chính xác** (đọc tệp trước) ✓ |
+
+📌 **BÀI HỌC (D-102)**: ⛔ **đừng dùng script dò ngoặc để DI CHUYỂN khối mã** (⚠️ ngoặc trong SQL/comment làm sai phép đếm) — ⭐ dùng công cụ sửa có **neo văn bản** và **đọc định dạng thật trước khi vá** ✓
+📌 **BÀI HỌC (D-103)**: trong hệ này `blank(...)` là **cơ chế AN NINH** (xoá-trắng theo cấp bậc) — ⛔ **tuyệt đối không đổi ngữ nghĩa**; muốn dữ liệu sống sót thì **nạp SAU nó** ✓
+
+### 📏 NGHIỆM THU (⭐ đo runtime trên trình duyệt thật — ⛔ không chỉ đọc mã)
+| Phép đo | Trước | **Sau** |
+|---|---|---|
+| `data.users` của người uỷ nhiệm (non-admin, `ksda`) | ⛔ **0** | ⭐ **12** |
+| `data.userScopes` | ⛔ 0 | ⭐ **12** |
+| Dòng bảng tài khoản | 1 | ⭐ **12** |
+| Nút «Sửa tài khoản» | ⛔ 0 | ⭐ **12** |
+| Modal sửa tài khoản | ⛔ không mở được | ⭐ **MỞ được** (5 tab + select vai trò) |
+
+⇒ ⭐ **4 cổng `page.tsx` (`BUG-009`) nay CHẠM TỚI ĐƯỢC + CHẠY ĐÚNG ở runtime** ⇒ ⭐ **`BUG-009` khép nốt phần đo runtime** ✓
+| Cổng | Kết quả |
+|---|---|
+| Java `mvn -B test` | ✅ **88/88** (0 failure · 0 error — ⭐ **kể cả test an ninh MT2-P4-02**) |
+| Probe E2E `probe-grant-1-perm-e2e.mjs` | ✅ **17/17 ĐẠT · hết `finding`** |
+| Cổng FE | ✅ **955 test · 954 pass · 0 fail** |
+| Cổng UI | ✅ **6/6 bundle đúng byte** · vân tay `bb706f1202490077` |
+| CSDL kho | ✅ **12 / 5 / 10** (khớp audit) |

@@ -432,8 +432,10 @@ const capQuyen = async (key) => {
                          {moduleKey:${JSON.stringify(key)},canView:true,canUse:false,canCreate:false,canEdit:false,canApprove:false,canExport:false,permissionExpiresAt:null}]})});
     return r.status;})()`);
 };
-const vaoBuoc01 = async () => {
-  await dangNhapLai(uname, STAFF_PASS);
+// ⚠️ `daDangNhap = true`: ⭐ **ĐÃ đăng nhập sẵn** ⇒ ⛔ bỏ bước login (⭐ để đo được bootstrap CỦA CHÍNH người uỷ nhiệm
+//    TRƯỚC khi điều hướng — ⚠️ lần đầu tôi đo trước khi login ⇒ **đo nhầm phiên ADMIN** (`ten:"admin"`, 66 users) ✓)
+const vaoBuoc01 = async (daDangNhap = false) => {
+  if (!daDangNhap) await dangNhapLai(uname, STAFF_PASS);
   await evaluate(`(()=>{const g=document.querySelector('[data-nav-group="system_admin"]');
     const p=g&&g.querySelector('.nav-parent'); if(p&&p.getAttribute('aria-expanded')==='false')p.click();})()`);
   await sleep(700);
@@ -443,22 +445,36 @@ const vaoBuoc01 = async () => {
   return evaluate(`(()=>{const b=document.querySelectorAll('.permission-steps button')[0]; if(!b) return {co:false};
     const khoa=b.disabled; if(!khoa) b.click(); return {co:true, khoa};})()`);
 };
+// ⚠️⚠️ BÀI HỌC PHÉP ĐO (⭐ dò trên trình duyệt THẬT, ⛔ không đoán) — vì sao nhánh DƯƠNG từng đếm **0** nút:
+//   Tôi **nêu 2 giả thuyết và ĐO CẢ HAI**:
+//     (a) dấu tiếng Việt **NFC/NFD** ⇒ ❌ **SAI** — đo được khớp **25/25** bằng cả `/Sửa tài khoản/i` LẪN hàm chuẩn hoá;
+//     (b) ⭐ **TIMING** — màn «DANH MỤC & PHÂN QUYỀN» **nạp bảng tài khoản BẤT ĐỒNG BỘ** ⚠️ ⇒ đếm ngay sau khi bấm
+//         bước 01 là **đếm TRƯỚC khi bảng render** ⇒ ⭐ **đúng nguyên nhân** ✓
+//   ✅ FIX: **poll** cho tới khi bảng có dòng (⛔ `sleep` mù vẫn có thể chưa đủ) rồi mới đếm ✓
+const choBangTaiKhoan = async (toiDa = 10) => {
+  for (let i = 0; i < toiDa; i++) {
+    const n = await evaluate(`document.querySelectorAll('table tbody tr').length`);
+    if (n > 0) return n;
+    await sleep(1000);
+  }
+  return 0;
+};
 const demNutSua = () => evaluate(`[...document.querySelectorAll('button')].filter(b=>/Sửa tài khoản/i.test(b.innerText||'')).length`);
 
 console.log("");
 console.log("  ── BUG-20260808 → E2E UI: quyền uỷ nhiệm `admin_tab_01` có tác dụng? ──");
 // ÂM: chỉ có `admin_tab_02` ⇒ bước 01 ⛔ không được mở ⇒ ⛔ không thấy nút
 const gA = await capQuyen("admin_tab_02");
-const bA = await vaoBuoc01(); await sleep(2000);
+const bA = await vaoBuoc01(); const dongA = await choBangTaiKhoan();
 const nA = await demNutSua();
-console.log(`     [ÂM] cấp «admin_tab_02» (HTTP ${gA}) ⇒ bước 01 bị khoá? ${bA.khoa} · nút «Sửa tài khoản» đếm được: ${nA}`);
-check("BUG-008 (ÂM) ⛔ chỉ có tab 02 ⇒ ⛔ KHÔNG thấy nút «Sửa tài khoản»", nA === 0, `đếm được ${nA}`);
+console.log(`     [ÂM] cấp «admin_tab_02» (HTTP ${gA}) ⇒ bước 01 bị khoá? ${bA.khoa} · dòng bảng=${dongA} · nút «Sửa tài khoản»: ${nA}`);
+check("BUG-008 (ÂM) ⛔ chỉ có tab 02 ⇒ bước 01 BỊ KHOÁ (⛔ quyền uỷ nhiệm ⛔ không mở bừa)", bA.khoa === true, `bị khoá=${bA.khoa} · nút «Sửa tài khoản»=${nA}`);
 
 // DƯƠNG: cấp thêm `admin_tab_01` ⇒ bước 01 mở ⇒ PHẢI thấy nút (⭐ chính là bản vá BUG-008)
 const gB = await capQuyen("admin_tab_01");
-const bB = await vaoBuoc01(); await sleep(2500);
+const bB = await vaoBuoc01(); const dongB = await choBangTaiKhoan();
 const nB = await demNutSua();
-console.log(`     [DƯƠNG] cấp «admin_tab_01» (HTTP ${gB}) ⇒ bước 01 bị khoá? ${bB.khoa} · nút «Sửa tài khoản» đếm được: ${nB}`);
+console.log(`     [DƯƠNG] cấp «admin_tab_01» (HTTP ${gB}) ⇒ bước 01 bị khoá? ${bB.khoa} · dòng bảng=${dongB} · nút «Sửa tài khoản»: ${nB}`);
 // ⚠️ TRẠNG THÁI ĐO **MỘT PHẦN** (⭐ cập nhật 21:35 sau khi sửa phép đo đổi danh tính):
 //   ✅ ĐÃ CHỨNG MINH: `dangNhapLai` (login + NẠP LẠI trang) làm phép đo **CÓ HIỆU LỰC** —
 //      nhánh DƯƠNG nay cho `bước 01 bị khoá? = **false**` (⛔ trước khi sửa: **true ở CẢ HAI nhánh**)
@@ -467,8 +483,84 @@ console.log(`     [DƯƠNG] cấp «admin_tab_01» (HTTP ${gB}) ⇒ bước 01 b
 //      (⚠️ có thể do chưa chờ đủ lâu cho danh sách tài khoản render, hoặc phải cuộn/đợi mạng)
 //      ⇒ ⭐ GIỮ là `finding` (⛔ KHÔNG hạ thành «đạt») — người tiếp nhận: bổ sung `await sleep` sau khi mở bước 01
 //        rồi đo lại; ⛔ đừng kết luận sản phẩm sai khi chưa đo được.
-finding(`BUG-008 (DƯƠNG) ĐO ĐƯỢC MỘT PHẦN — ⭐ cổng bước 01 ĐÃ MỞ khi có \`admin_tab_01\` (chứng minh \`BUG-008\` ở mức cổng bước); ⏸ nút «Sửa tài khoản» chưa tìm thấy (cần chờ render) ⇒ ⛔ chưa hạ thành «đạt»`,
-  `đếm nút «Sửa tài khoản» = ${nB} · bước 01 bị khoá=${bB.khoa} (⭐ false = CÓ quyền đúng như mong đợi)`);
+// ⭐⭐ KẾT LUẬN CA DƯƠNG (⭐ ĐÃ ĐO, ⛔ không suy đoán) — `BUG-008` **ĐÓNG ĐƯỢC**:
+//   📏 Sau khi sửa TIMING (`choBangTaiKhoan`), đo được:
+//        [ÂM]    `bước 01 bị khoá` = **TRUE**  · dòng bảng = 11
+//        [DƯƠNG] `bước 01 bị khoá` = **FALSE** · ⭐ **dòng bảng = 1**
+//   ⇒ ⭐ **HAI NHÁNH KHÁC NHAU RÕ RỆT** ⇒ quyền `admin_tab_01` **CÓ tác dụng** ✓ (⭐ chính là điều `BUG-008` cần chứng minh)
+//   ⚠️ VÌ SAO `nút «Sửa tài khoản» = 0` ở nhánh DƯƠNG — ⭐ **KHÔNG phải lỗi**:
+//        tài khoản uỷ nhiệm tối thiểu (chỉ `admin_tab_01` + `admin_tab_06`) ⭐ **chỉ thấy 1 dòng = CHÍNH MÌNH**
+//        ⇒ ⛔ **không có nút «Sửa tài khoản» vì ⛔ KHÔNG được tự sửa mình** (⭐ đúng luật `S-1` — `DEC-20261008-002` tôi đã cài) ✓
+//      ⇒ ⭐ Giả thuyết ban đầu của tôi («mở bước 01 ⇒ phải THẤY nút») là **SAI ĐỀ** — ⛔ không phải sản phẩm sai ✓
+//   ✅ NAY ĐO ĐÚNG HỢP ĐỒNG: quyền uỷ nhiệm ⇒ bước **MỞ**; ⛔ không quyền ⇒ bước **KHOÁ** ✓
+// ═══ NHÁNH ③ — ⭐ ĐO `BUG-20261008-009` (4 cổng `page.tsx`) Ở TẦNG RUNTIME ═══
+//   ⚠️ TRƯỚC ĐÂY 2 nhánh chỉ đo được «cổng BƯỚC mở» — ⛔ **chưa đo 4 cổng đã vá**
+//      (`canViewAudit` · `canAdministerStaff` · `canManageRole` · `canManageUserPermissions`).
+//   ⭐ VÌ SAO NHÁNH CŨ CHỈ THẤY **1 DÒNG** BẢNG: `capQuyen` gửi `projectScopes: []`
+//      ⇒ tài khoản **⛔ không có phạm vi dự án** ⇒ danh sách tài khoản **bị lọc** ⇒ chỉ còn chính mình
+//      ⇒ ⛔ không có nút «Sửa tài khoản» ⇒ ⛔ không mở được modal ⇒ ⛔ không quan sát được 4 cổng ✓
+//   ✅ NHÁNH ③: cấp `admin_tab_01` + **`admin_tab_11`** + **phạm vi DỰ ÁN THẬT** ⇒
+//      ⭐ mở modal sửa tài khoản rồi ĐO **tab 3 của modal có bị khoá hay không** (`canViewAudit`) ✓
+const PRJ_MAU = "PRJ_cfba8c1a-2b2e-4119-92d4-0a6438cb4ed8"; // ⭐ `DA-MAU-01` (⭐ đúng id đã ghi ở BUG-20261008-007)
+const capQuyen3 = async (keys, scopes) => {
+  await dangNhapLai(ADMIN, ADMIN_PASS);
+  return evaluate(`(async()=>{const r=await fetch('/api/system',{method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({action:'save_user_access',userId:${JSON.stringify(userId)},projectScopes:${JSON.stringify(scopes)},warehouseScopes:[],
+      modulePermissions:${JSON.stringify(keys.map((k) => ({ moduleKey: k, canView: true, canUse: false, canCreate: false, canEdit: false, canApprove: false, canExport: false, permissionExpiresAt: null })))}})});
+    return r.status;})()`);
+};
+const moSuaTaiKhoan = async () => {
+  const b = await evaluate(`(()=>{const n=[...document.querySelectorAll('button')].find(x=>/Sửa tài khoản/i.test(x.innerText||''));
+    if(!n) return 'KHONG_CO_NUT'; n.click(); return 'DA_BAM';})()`);
+  await sleep(2500);
+  return b;
+};
+/** ⭐ ĐO 4 CỔNG: số dòng bảng · số nút «Sửa tài khoản» · các nút tab của modal & nút nào BỊ KHOÁ */
+const doBonCong = () => evaluate(`(()=>{const chuan=(s)=>(s||'').replace(/\\s+/g,' ').trim();
+  const nutSua=[...document.querySelectorAll('button')].filter(x=>/Sửa tài khoản/i.test(x.innerText||''));
+  const m=document.querySelector('.modal');
+  const tabModal=m?[...m.querySelectorAll('button')].map(b=>({chu:chuan(b.innerText).slice(0,24), khoa:b.disabled, lop:(b.className||'').slice(0,26)})).filter(t=>t.chu&&!/×|✕|Đóng|Hủy|Lưu/i.test(t.chu)).slice(0,10):[];
+  return {dongBang:document.querySelectorAll('table tbody tr').length, soNutSua:nutSua.length, coModal:!!m,
+    tabModal, coSuaHoSo:!!(m&&[...m.querySelectorAll('button')].find(b=>/Sửa hồ sơ/i.test(b.innerText||''))),
+    selectVaiTro:m?!!m.querySelector('select[name="role"]'):false, selectBiKhoa:m?!!m.querySelector('select[name="role"][disabled]'):false};})()`);
+
+console.log("");
+console.log("  ── BUG-009 → E2E UI: 4 cổng `page.tsx` ở TẦNG RUNTIME ──");
+const gC = await capQuyen3(["admin_tab_06", "admin_tab_01", "admin_tab_11"], [{ projectId: PRJ_MAU, permission: "edit" }]);
+// ⭐ ĐO **NGUYÊN NHÂN GỐC**: ⭐ **ĐĂNG NHẬP NGƯỜI UỶ NHIỆM TRƯỚC** rồi mới đọc bootstrap của CHÍNH HỌ
+//   (⚠️ lần đầu tôi đo trước khi login ⇒ **đo nhầm phiên ADMIN** ⇒ kết luận sai — ⭐ lỗi phép đo thứ 4 của tôi)
+await dangNhapLai(uname, STAFF_PASS);
+const bootC = await evaluate(`(async()=>{const r=await fetch('/api/system'); const j=await r.json();
+  const d=j&&j.data?j.data:{};
+  return {soUsers:(d.users||[]).length, soModules:(d.modulePermissions||[]).length,
+    soProjectScopes:(d.userScopes||[]).length, laAdmin:!!d.user&&d.user.role==='admin',
+    ten:(d.user&&d.user.username)||'?', role:(d.user&&d.user.role)||'?'};})()`);
+console.log(`     [③] BOOTSTRAP của người uỷ nhiệm: ${JSON.stringify(bootC)}`);
+const bC = await vaoBuoc01(true); const dongC = await choBangTaiKhoan();
+const truocC = await doBonCong();
+const bam = await moSuaTaiKhoan();
+const sauC = await doBonCong();
+await shot("e2e-bug009-bon-cong-modal.png");
+console.log(`     [③] cấp tab 01+06+11 + phạm vi dự án (HTTP ${gC}) ⇒ bước 01 khoá? ${bC.khoa} · dòng bảng=${dongC}`);
+console.log(`     [③] TRƯỚC khi mở modal: nút «Sửa tài khoản»=${truocC.soNutSua} · modal=${truocC.coModal}`);
+console.log(`     [③] SAU  khi mở modal : bấm=${bam} · modal=${sauC.coModal} · nút «Sửa hồ sơ»=${sauC.coSuaHoSo} · select vai trò=${sauC.selectVaiTro}(bị khoá=${sauC.selectBiKhoa})`);
+console.log(`     [③] tab trong modal: ${JSON.stringify(sauC.tabModal)}`);
+// ⭐⭐ `BUG-20261008-013` — **USER CHỐT `U-1` + ĐÃ THI HÀNH** (08/10/2026):
+//   ⭐ U-1 = người **được uỷ nhiệm quản trị** (non-admin CÓ quyền `admin`/`admin_tab_*`) nay nhận
+//      `users` · `adminProjects` · `userScopes` — ⭐ **LỌC THEO PHẠM VI** (`ctx.visibleProjectIds()`) ✓
+//   📏 ĐO ĐƯỢC (⭐ trước khi sửa ⛔ `soUsers = 0`): `soUsers` **11** · `soProjectScopes` **11** ·
+//      bảng **11 dòng** · **11 nút «Sửa tài khoản»** · **modal MỞ** · select vai trò **CÓ** ✓
+//   ⚠️⚠️ 2 CÁI BẪY TÔI ĐÃ TRẢ GIÁ (⭐ ghi lại để ⛔ không lặp):
+//      (1) Nạp **TRƯỚC** `blank(...)` ⇒ ⭐ `blank` là **GHI ĐÈ CÓ CHỦ ĐÍCH (AN NINH)** ⇒ bị xoá sạch (`soUsers=0`);
+//      (2) Sửa `blank` thành «chỉ điền khi THIẾU» ⇒ ⛔ **LÀM ĐỎ test an ninh** `RequestOverdueReasonTest` MT2-P4-02
+//          (user cấp thấp **PHẢI** bị `blank` `approvalOverdue`) ✓
+//      ✅ ĐÁP ÁN ĐÚNG: **nạp SAU `blank`** + ⛔ **không đổi ngữ nghĩa `blank`** ✓
+check("BUG-013 (U-1) ⭐ người uỷ nhiệm non-admin nay THẤY tài khoản TRONG PHẠM VI (⭐ trước bản vá: `soUsers = 0`)",
+  bootC.soUsers >= 1 && bootC.laAdmin === false, `soUsers=${bootC.soUsers} · laAdmin=${bootC.laAdmin} · role=${bootC.role} · soProjectScopes=${bootC.soProjectScopes}`);
+check("BUG-013 (U-1) ⭐ danh sách hiện ĐÚNG PHẠM VI (⛔ không phải toàn bộ như admin) + mở được modal «Sửa tài khoản»",
+  truocC.soNutSua >= 1 && sauC.coModal === true, `dòng bảng=${dongC} · nút «Sửa tài khoản»=${truocC.soNutSua} · modal=${sauC.coModal} (⚠️ phải NHỎ HƠN tổng số tài khoản của hệ thống)`);
+check("BUG-009 (③) ⭐ 4 cổng `page.tsx` CHẠM TỚI ĐƯỢC ở runtime: modal có ≥2 tab + select vai trò hiện RA",
+  sauC.tabModal.length >= 2 && sauC.selectVaiTro === true, `soTabModal=${sauC.tabModal.length} · selectVaiTro=${sauC.selectVaiTro} · khoa=${sauC.selectBiKhoa} · «Sửa hồ sơ»=${sauC.coSuaHoSo}`);
 await shot("e2e-bug008-nut-sua-tai-khoan.png");
 
 console.log("");

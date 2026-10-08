@@ -1924,6 +1924,66 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
             blank(data, "adminProjects", "adminSuppliers", "users", "userScopes",
                     "userWarehouseScopes", "allModulePermissions", "audits", "activeSessions",
                     "emailRecipients");
+            // ══════════════════════════════════════════════════════════════════════════════════
+            // ⭐⭐ U-1 — **USER CHỐT 08/10/2026** (`BUG-20261008-013`): người được **UỶ NHIỆM QUẢN TRỊ**
+            //    (non-admin CÓ quyền nhóm quản trị) nay nhận `users` · `adminProjects` · `userScopes`
+            //    — ⭐ **LỌC THEO PHẠM VI của chính họ** (`ctx.visibleProjectIds()`), ⛔ KHÔNG toàn bộ
+            //    như admin, và ⛔ **KHÔNG mở cho nhân viên thường** ✓
+            //   📏 ĐIỀU KIỆN: có ≥1 quyền **nhóm quản trị** (`admin` / `admin_tab_*`, `can_view=1`,
+            //      còn hạn) — ⭐ dùng ĐÚNG khuôn truy vấn `modulePermissions` phía trên ✓
+            //   ⛔ **GIỮ admin-only** (⭐ U-1 ⛔ KHÔNG áp): `allModulePermissions` · `emailOutbox` · `emailRecipients`
+            //      ⚠️ Các khoá này **VẪN nằm trong `blank(...)` ngay trên** ⇒ ⭐ giữ nguyên hành vi + an ninh ✓
+            //   ⚠️⚠️ VÌ SAO ĐẶT **SAU** `blank(...)`: `blank` là **GHI ĐÈ CÓ CHỦ ĐÍCH** (cơ chế AN NINH —
+            //      vd `approvalOverdue` cho user cấp thấp, ⭐ khoá bởi `RequestOverdueReasonTest` MT2-P4-02).
+            //      📌 TÔI ĐÃ TRẢ GIÁ: đặt TRƯỚC `blank` ⇒ bị xoá sạch (đo được `soUsers = 0`); sửa `blank`
+            //      thành «chỉ điền khi thiếu» ⇒ ⛔ **LÀM ĐỎ test an ninh**. ⭐ Đáp án ĐÚNG: **nạp SAU `blank`** ✓
+            // ══════════════════════════════════════════════════════════════════════════════════
+            if (!admin) {
+                boolean duocQuanTri = !query("""
+                        SELECT 1 FROM user_module_permissions ump
+                        JOIN module_catalog mc ON mc.module_key=ump.module_key AND mc.active=1
+                        LEFT JOIN menu_group_catalog mg ON mg.group_key=mc.group_key
+                        WHERE ump.user_id=? AND ump.can_view=1
+                          AND (ump.module_key='admin' OR ump.module_key LIKE 'admin_tab_%')
+                          AND (ump.permission_expires_at IS NULL OR ump.permission_expires_at>?)
+                          AND (mc.group_key IS NULL OR mg.active=1)
+                        LIMIT 1""", ctx.userId(), java.time.Instant.now()).isEmpty();
+                if (duocQuanTri) {
+                    // ⭐ Tài khoản TRONG PHẠM VI = **chính mình** ∪ **người cùng dự án trong phạm vi**
+                    //   ⚠️ `pids` rỗng ⇒ `pidSql="NULL"` ⇒ `IN (NULL)` ⛔ khớp ai ⇒ ⭐ chỉ còn chính mình (an toàn) ✓
+                    Object[] thamSo = java.util.stream.Stream
+                            .concat(java.util.stream.Stream.of(ctx.userId()), pids.stream()).toArray();
+                    data.put("users", query("""
+                            SELECT u.id,u.employee_code AS employeeCode,u.full_name AS fullName,u.username,u.email,u.role,
+                                   COALESCE(rc.name,u.role) AS roleName,COALESCE(rc.base_role,u.role) AS roleBase,
+                                   rc.warehouse_scope_kind AS warehouseScopeKind,u.department,
+                                   u.organization_unit_id AS organizationUnitId,ou.code AS organizationCode,
+                                   COALESCE(ou.name,u.department) AS organizationName,u.avatar_url AS avatarUrl,u.signature_url AS signatureUrl,
+                                   u.must_change_password AS mustChangePassword,
+                                   u.last_login_at AS lastLoginAt,u.created_at AS createdAt,
+                                   u.password_reset_at AS passwordResetAt,u.active,
+                                   u.system_level_code AS systemLevelCode
+                            FROM users u
+                            LEFT JOIN role_catalog rc ON rc.code=u.role
+                            LEFT JOIN organization_units ou ON ou.id=u.organization_unit_id
+                            WHERE u.id=? OR EXISTS (SELECT 1 FROM user_project_scopes ups2
+                                                     WHERE ups2.user_id=u.id AND ups2.project_id IN (%s))
+                            ORDER BY u.full_name""".formatted(pidSql), thamSo));
+                    data.put("adminProjects", pids.isEmpty() ? List.of() : query("""
+                            SELECT id,code,name,status,contract_no AS contractNo,contract_name AS contractName,
+                                   start_date AS startDate,planned_end_date AS plannedEndDate
+                            FROM projects WHERE status<>'purged' AND id IN (%s)
+                            ORDER BY CASE WHEN status='active' THEN 0 ELSE 1 END,code""".formatted(pidSql), params(pids)));
+                    data.put("userScopes", pids.isEmpty() ? List.of() : query("""
+                            SELECT ups.user_id AS userId,ups.project_id AS projectId,ups.permission,
+                                   ups.joined_at AS joinedAt,ups.left_at AS leftAt,
+                                   ups.position_name AS positionName,
+                                   p.code AS projectCode,p.name AS projectName
+                            FROM user_project_scopes ups JOIN projects p ON p.id=ups.project_id
+                            WHERE ups.project_id IN (%s)
+                            ORDER BY ups.user_id,p.code""".formatted(pidSql), params(pids)));
+                }
+            }
             if (!canEditCentral) {
                 blank(data, "adminMaterials", "adminMaterialCategories", "adminMaterialSubcategories");
                 // TASK-064 — NHÁNH DỰ PHÒNG LÀ **BIẾN KHÁC** (JS `:694`/`:695`), không phải `[]`:

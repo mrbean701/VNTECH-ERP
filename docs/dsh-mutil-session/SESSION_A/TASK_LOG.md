@@ -375,3 +375,16 @@ báo user; ⛔ DSH ⛔ không tự chọn phương án (quy tắc dừng chờ q
 
 ### NEXT_ACTION
 Khi user chốt ⇒ thi hành đúng phương án đã chọn cho (B), chạy lại probe API B2 + hồi quy, rồi VERIFIED.
+
+## TASK-20261008-004 — ✅ Nhận + xử lý `HANDOFF-20261007-007` của `ERP-SESSION-02` (⛔ không viết lại gì — bản sửa đã có sẵn)
+
+| ⭐ | ⭐ |
+|---|---|
+| **TASK_ID** | TASK-20261008-004 · **SESSION** ERP-SESSION-01 · **STATUS** 🟡 **MỘT PHẦN** |
+| **YÊU CẦU (của S02)** | `app/page.tsx` gọi `<Inventory … />` **thiếu `action={action}`** ⇒ `action` luôn `undefined` ⇒ ⭐ nút «Lưu phân công» (`wd-staff-save`) ⛔ KHÔNG LƯU được (chức năng TASK-230 «Thêm nhân sự vào kho» của họ) |
+| **📏 ĐO THỰC TẾ (⭐ nguồn sự thật = mã)** | `<Inventory data={data} project={project} open={open} view={warehouseView} action={action} />` ⇒ ⭐ **`action={action}` ĐÃ CÓ** ✓ |
+| **AI THÊM** | `git log -S …` ⇒ commit **`0119160`** (bản gom 3 phiên) — ⭐ bản sửa đã nằm sẵn trong cây trước khi gom ✓ |
+| **`tsc`** | ✅ **0** (đúng phép kiểm 1/2 họ yêu cầu) |
+| **`Inventory.tsx:478`** | `disabled={!staffPickId||!action}` ⇒ ⭐ với `action` có giá trị, nút chỉ phụ thuộc `staffPickId` ⇒ ⭐ **logic đúng** (⚠️ nghiên cứu mã, ⛔ không thay phép đo DOM) |
+| ⏸ **CHƯA XONG** | ⚠️ Phép đo DOM: `[data-vntech="wd-staff-save"]`.disabled = **false**. Đi được: bundle mới ⇒ hub (`h1="TỒN KHO & ĐIỀU CHUYỂN"`, **12 card**) ⇒ ⛔ **bấm card chưa mở chi tiết** ⇒ dừng ✓ |
+| **PHẢN HỒI** | ✅ Đã ghi vào `SESSION_B/HANDOFF_LOG.md` (⭐ **thêm vào**, ⛔ không ghi đè) + đề nghị S02 đo 1 lệnh (màn của họ) ✓ |

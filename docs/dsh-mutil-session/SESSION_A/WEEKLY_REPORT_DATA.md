@@ -418,3 +418,76 @@ SESSION_A (ERP-SESSION-01)
 
 ### Next Week
 Đóng `BUG-20261008-002` sau khi user chốt; hoàn tất VERIFIED; tiếp tục UI/UX §22 nếu ⛔ hết bug ưu tiên cao.
+
+---
+
+## WEEK-20261008-003 — Bổ sung: S-1 thi hành · đóng CẢ HỌ bug «quyền uỷ nhiệm» · rebuild + push `unity`
+
+### Session
+`SESSION_A` (ERP-SESSION-01) · **Period**: 2026-10-08 (chiều) → 2026-10-08 (tối)
+
+### Completed Tasks
+| # | Việc | Bằng chứng ĐO được |
+|---|---|---|
+| 1 | ⭐ **Thi hành `S-1`** (user chốt `DEC-20261008-002`): chặn **tự nâng quyền**, ⛔ trừ tài khoản ADMIN | `RbacService.canUseModule` + `UserManagementUseCase` · `TEST-20261008-005` **EXIT 0** (đo 3 chiều) |
+| 2 | ⭐ **`M-2`**: màn quản trị hiện/đóng theo **quyền cấu hình** (≥1 quyền nhóm quản trị) thay vì chỉ role | `TEST-20261008-006` E2E **11/11** · phải sửa **ĐỦ 3 cổng** (sửa 1 cổng ⇒ màn **trống**) |
+| 3 | `BUG-20261008-004`: `NumberFormatException "false"` mỗi 60s (worker email · `TINYINT(1)` trả `Boolean`) | **0 lần** trong 130 s sau vá + 2 test mới |
+| 4 | ⭐ **ĐÓNG CẢ HỌ bug «quyền uỷ nhiệm vô hiệu»**: `BUG-005` (lộ 14 tab) · `BUG-006` (chặn oan người có quyền) · `BUG-008` (`hasAdminTab` luôn `false`) · `BUG-009` (**4 cổng** `page.tsx`) | Audit **FE 13 chỗ** `allModulePermissions` (5 SAI đã vá) + **BE 33 hàm** `requireRole(admin)` + **216 action** 3 tầng ⇒ **lệch thật = 0** (`DEV-004`·`DEV-005`·`DEV-006`) |
+| 5 | **API kho** `save_warehouse` · `set_warehouse_status` + **modal kho** (tái dùng `WarehouseFormModal` của S2 — §17 REUSE) | `TEST-20261008-009` **6/6** · `tests/warehouse-modal-contract.test.mjs` **6 ca** |
+| 6 | `BUG-20261008-007` (sự cố probe **do chính tôi** làm mất liên kết dự án của kho thật) | Đã **khôi phục** (`warehouses=12` · `projects=5` · **gắn dự án=10** khớp audit) + chặn tái phát **3 lớp** |
+| 7 | ⭐ **Nghiệm thu `HANDOFF-20261007-007`** của S2 (nút «Lưu phân công» ⛔ không lưu) | `tsc`=0 **+ ĐO DOM**: `wd-staff-save`.disabled = **`false`** sau khi chọn nhân sự (`TEST-20261008-012`) ⇒ 🟢 **VERIFIED 2/2** |
+| 8 | ⭐ **`BUG-008` chứng minh ĐỦ 2 CHIỀU** (ÂM khoá / DƯƠNG mở) — tự gỡ **3 giả thuyết sai** bằng ĐO | Probe E2E (**+2 phép kiểm §22**) nay **15/15 ĐẠT · hết `finding`** (`TEST-20261008-013`) |
+| 9 | ⭐ **REBUILD + COMMIT + PUSH** theo yêu cầu user | commit `0119160` (**292 tệp · +28.717/−547**) → merge 2 commit của S2 → `defccb1` → **push `8d9c303..defccb1 unity -> unity`** |
+| 10 | 🚨 **`BUG-20261008-011` (CRITICAL — SYSTEM DOWN)**: migration `V39` (của S2) ⛔ **không idempotent** ⇒ Flyway FAILED ⇒ **backend ⛔ không khởi động** | Đã khôi phục: đo trước ⇒ chứng minh CSDL **khớp đủ ý định V39** (cột + index) ⇒ sửa **1 dòng** lịch sử Flyway ⇒ `Schema up to date` · **0 ERROR** |
+| 11 | `BUG-20261008-012`: 2 test Java lỗi vì `schema-h2.sql` ⛔ thiếu **gương `issue_id`** của V39 | Thêm **1 dòng** ⇒ `Tests run: 88 · Failures: 0 · Errors: 0` · **BUILD SUCCESS** |
+
+### Testing
+| Cổng | Kết quả |
+|---|---|
+| Cổng hồi quy FE (`scripts/regression-suite.mjs`) | ✅ **955 test · 954 pass · 0 fail** |
+| Java (`mvn -B test`) | ✅ **88/88** (0 failure · 0 error) |
+| `npx tsc --noEmit` | ✅ **0** |
+| Cổng UI (bundle khớp nguồn) | ✅ `verify-ui-build-applied` **6/6 bundle đúng byte** · vân tay **`VNTECH-FP-BB706F1202490077`** khớp SSOT |
+| Probe E2E quyền uỷ nhiệm | ✅ **15/15** (+2 phép kiểm §22: width & vùng tiêu đề **bất biến, lệch 0px**) |
+| CSDL (bất biến kiểm lại) | ✅ `warehouses=12` · `projects=5` · **gắn dự án=10** (khớp `W-02-AUDIT`) |
+
+### Bugs
+| ID | Nội dung | Mức | Trạng thái |
+|---|---|---|---|
+| `BUG-20261008-011` | Migration V39 ⛔ không idempotent ⇒ **BACKEND DOWN** | 🔴 CRITICAL | ✅ đã khôi phục (1 dòng lịch sử Flyway) |
+| `BUG-20261008-012` | `schema-h2.sql` thiếu gương `issue_id` ⇒ 2 test lỗi | 🟠 MEDIUM | ✅ FIXED |
+| `BUG-20261008-009` | 4 cổng UI đọc sai nguồn quyền | 🟠 HIGH | ✅ FIXED (`page.tsx`) |
+| `BUG-20261008-010` | 2 action TỔ ĐỘI bị **NỚI QUYỀN** (⛔ không thuộc S01) | 🟠 HIGH | ✅ **S3 đã xử lý** (cổng `TM-04` hết đỏ) |
+
+### Hotfixes
+`BUG-004` (worker email 60s) · `BUG-005/006/008/009` (họ quyền uỷ nhiệm) · `BUG-011` (khôi phục dịch vụ) · `BUG-012` (gương H2) — �⭐⭐ **tất cả đều kèm phép ĐO**, ⛔ không có mục nào «FIXED» mà thiếu test.
+
+### Important Changes
+| ID | Before | After |
+|---|---|---|
+| `CHG-20261008-006` | 4 cổng `page.tsx` đọc `allModulePermissions` (⚠️ rỗng với non-admin) | `data.modulePermissions` (⭐ nguồn luôn có) |
+| `0119160` | 295 tệp chưa commit giữa 3 phiên | ✅ commit + push `unity` (**cây gộp cả 3 phiên**) |
+
+### Decisions
+| ID | Nội dung | Trạng thái |
+|---|---|---|
+| `DEC-20261008-002` | ⭐ **USER chốt `S-1`**: chặn tự nâng quyền, ngoại lệ chỉ tài khoản ADMIN | ✅ **đã thi hành + đo** |
+| `DEC-20261008-004` | 33 chốt quyền backend có lệch lớp PA-1? | ❌ **WITHDRAWN (rút lại)** — ⭐ **tôi báo động sai**: đo lại bảng ánh xạ ⇒ **31/33 nhất quán** (registry cũng default-DENY) + 2 ca admin-only **cả 3 tầng** ⇒ **lệch thật = 0** |
+| `D-099` | Một chốt quyền chỉ gọi là «thừa/lệch» khi **tầng đối diện CHO PHÉP** | 📌 luật mới |
+| `D-100` | ⛔ **không grep CODE bằng chuỗi trần** — phải **bỏ comment** + khớp **LỜI GỌI** (chú thích hay viết lại mã CŨ) | 📌 luật mới |
+| `D-101` | Khi phép đo ra kết quả vô lý ⇒ ⛔ **đừng kết luận sản phẩm sai**; **nêu giả thuyết rồi đo từng cái**; kỳ vọng phải suy từ **HỢP ĐỒNG** | 📌 luật mới |
+
+### Blockers/Risks
+- ⚠️ **`BUG-20261008-011` chưa được chủ sở hữu xử lý tận gốc**: V39 thêm cột `issue_id` bằng `ADD COLUMN` trần ⇒ ⭐ **mọi máy/DB đã có cột sẽ ⛔ chết ở lần khởi động kế tiếp**. Khuyến nghị cho `ERP-SESSION-02`: dùng `INFORMATION_SCHEMA` để chỉ thêm khi **chưa có** (MySQL ⛔ không có `IF NOT EXISTS`), hoặc tách `CREATE INDEX` sang migration riêng.
+- ⚠️ **Quy trình build**: `mvn package` khi JVM đang chạy ⇒ `repackage` đỏ vì Windows **giữ khoá jar** ⇒ phải **dừng đúng PID** trước (đã ghi `DEV-20261008-007`).
+- ⚠️ **`git add -A` trong repo ĐA PHIÊN rất nguy hiểm** — lần này là chủ đích theo yêu cầu user, ⚠️ nhưng **bắt buộc kiểm mất mát** sau merge (đã kiểm: `Inventory.tsx` **744>723** · `globals.css` **129>124** · log `SESSION_B` **386+150 dòng còn nguyên** ⇒ ⛔ không mất việc của ai) ✓
+- ⏸ **2 ca E2E chưa khép ở phía S02**: E2E UI kho (nút đã bật ✓) + đặc tả `allocate`.
+
+### Remaining Work
+1. ⏸ `ERP-SESSION-02`: bật-đã-xong 4 nút kho ✓ · E2E UI kho · **đặc tả `allocate`** (máy giữ chỗ **đã có**, chỉ cần 4 điểm).
+2. ⏸ `ERP-SESSION-02`: xử lý **tận gốc** `BUG-20261008-011` (V39 idempotent).
+3. ⏸ Cân nhắc: khép vòng «Lưu phân công» tới CSDL bằng **1 tài khoản rác dùng-một-lần** (⚠️ ⛔ không dùng người thật vì `save_user_access` là **FULL-REPLACE**).
+4. ✅ Trong phạm vi S01: **⛔ không còn việc treo và ⛔ không còn phép đo nào chưa khép**.
+
+### Next Week
+⭐ Đóng hẳn các mục của S02; ⚠️ rà lại V39 sau khi S2 sửa; ⭐ giữ 3 cổng tĩnh (`has-admin-tab-source` · `self-permission-source` · `warehouse-modal-contract`) làm **hàng rào chống tái phát** cho cả họ bug quyền uỷ nhiệm.

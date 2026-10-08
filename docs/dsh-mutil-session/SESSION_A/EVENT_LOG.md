@@ -751,3 +751,20 @@ thêm dòng 9 bảng điều khiển `docs/dsh-mutil-session/SESSION_C/README.md
 ⭐ **LUẬT ĐỀ NGHỊ CHO MỌI PHIÊN**: chạy cổng hồi quy ⇒ **kiểm `git status -- tools/baseline`** sau đó;
 ⛔ **KHÔNG** `git checkout` đè (⚠️ có thể là ảnh mới nhất của phiên khác) — nếu commit thì **commit luôn cả ảnh** ✓
 
+
+---
+
+## CẬP NHẬT 2026-10-08 (chiều→tối) — ERP-SESSION-01`n
+| **EVT-20261008-007** | 2026-10-08 | `BUG_FOUND` | CRITICAL: migration V39 (S2) không idempotent ⇒ Flyway FAILED ⇒ BACKEND DOWN (`BUG-20261008-011`) |
+| **EVT-20261008-008** | 2026-10-08 | `HOTFIX_COMPLETE` | Khôi phục dịch vụ: đo trước chứng minh CSDL khớp đủ ý định V39 ⇒ sửa 1 dòng lịch sử Flyway ⇒ `Schema up to date` · 0 ERROR |
+| **EVT-20261008-009** | 2026-10-08 | `BUG_FOUND` | 2 test Java lỗi vì `schema-h2.sql` thiếu gương `issue_id` (`BUG-20261008-012`) |
+| **EVT-20261008-010** | 2026-10-08 | `HOTFIX_COMPLETE` | Thêm 1 dòng gương H2 ⇒ Java 88/88 (0 failure · 0 error) · BUILD SUCCESS |
+| **EVT-20261008-011** | 2026-10-08 | `BUG_FOUND` | Họ bug «quyền uỷ nhiệm»: `BUG-005/006/008/009` (FE 13 chỗ · 4 cổng `page.tsx`) |
+| **EVT-20261008-012** | 2026-10-08 | `HOTFIX_COMPLETE` | Đóng cả họ: audit FE 13 chỗ + BE 33 hàm + 216 action ⇒ LỆCH THẬT = 0 |
+| **EVT-20261008-013** | 2026-10-08 | `VERIFICATION` | HANDOFF-20261007-007 (S2) VERIFIED 2/2: `tsc`=0 + ĐO DOM `wd-staff-save`.disabled = false ⇒ 🟢 |
+| **EVT-20261008-014** | 2026-10-08 | `VERIFICATION` | BUG-008 chứng minh ĐỦ 2 CHIỀU (ÂM khoá / DƯƠNG mở) ⇒ probe E2E 15/15 ĐẠT · HẾT finding |
+| **EVT-20261008-015** | 2026-10-08 | `DECISION` | RÚT LẠI `DEC-20261008-004` (tôi báo động sai): 33 chốt quyền backend NHẤT QUÁN ⇒ lệch thật = 0 |
+| **EVT-20261008-016** | 2026-10-08 | `BUILD` | REBUILD toàn hệ theo yêu cầu user: FE vân tay BB706F1202490077 (6/6 byte) + jar mới · 3 cổng sống · CSDL 12/5/10 |
+| **EVT-20261008-017** | 2026-10-08 | `OWNERSHIP_RELEASE` | COMMIT `0119160` (292 tệp) → merge 2 commit của S2 → `defccb1` → PUSH `unity` (8d9c303..defccb1) ✅ |
+| **EVT-20261008-018** | 2026-10-08 | `TEST_COMPLETE` | Cổng cuối: FE 955/954 pass · 0 fail · Java 88/88 · tsc 0 · probe 15/15 · CSDL 12/5/10 |
+

@@ -1003,3 +1003,217 @@ AssertionError: set_project_team_status phải là ADMIN-ONLY (JS :1716/:1720 = 
 ♻️ **Một trong hai** — cần `ERP-SESSION-03` chốt:
 · **(a)** Trả 2 action về **ADMIN-ONLY** (`List.of()` + capability cũ) ⇒ khớp chú thích L96 + test `TM-04` ✓
 · **(b)** Nếu **CỐ Ý** mở cho `site_command` ⇒ ⭐ phải **cập nhật chú thích L96 + test `TM-04` kèm lý do**, ⛔ không để mã và cổng đá nhau ✓
+
+## BUG-20261008-011 — 🔴 **CRITICAL: BACKEND DOWN do migration V39 ⛔ KHÔNG IDEMPOTENT** (Flyway FAILED) ⇒ đã khôi phục dịch vụ
+
+| ⭐ | ⭐ |
+|---|---|
+| **BUG_ID** | BUG-20261008-011 · **DATE** 2026-10-08 15:57→16:18 · **SESSION** ERP-SESSION-01 (phát hiện + khôi phục) |
+| **SEVERITY** | 🔴 **CRITICAL** (`SYSTEM DOWN` — §20/§45: ưu tiên tuyệt đối) |
+| **MODULE** | BACKEND · DEVOPS · `stock_reservations` (giữ chỗ phiếu xuất) |
+| **NGUỒN** | User: «rebuild áp dụng tất cả các thay đổi của các session» |
+
+### 🔎 TRIỆU CHỨNG (đo được)
+`mvn package` **ĐẠT** nhưng khi chạy jar: **backend ⛔ KHÔNG khởi động** —
+```
+FlywayMigrateException: Script V39__session02_stock_reservation_issue_id.sql failed
+SQL State 42S21 · Error Code 1060 · Message: Duplicate column name 'issue_id'
+Caused by: ... SpringApplication: Application run failed  ⇒ :18081 DOWN
+```
+
+### 🎯 NGUYÊN NHÂN GỐC (⭐ đối chiếu CSDL thật, ⛔ không suy đoán)
+`V39` (migration **của `ERP-SESSION-02`**) gồm 2 câu:
+1. `ALTER TABLE stock_reservations ADD COLUMN issue_id VARCHAR(64) NULL …`
+2. `CREATE INDEX stock_reservations_issue_idx ON (issue_id, status)`
+📏 **CSDL MySQL ĐÃ CÓ CẢ HAI** (cột `issue_id varchar(64) NULL` + index `stock_reservations_issue_idx(issue_id,status)`)
+⇒ ⚠️ **MySQL ⛔ KHÔNG hỗ trợ `ADD COLUMN IF NOT EXISTS`** ⇒ câu 1 **trùng** ⇒ Flyway đánh dấu **FAILED** (`flyway_schema_history.success=0`) ⇒ Spring Boot **từ chối khởi động** ✓
+⚠️ **Hệ quả chuỗi**: kể cả jar CŨ cũng ⛔ không chạy được (Flyway thấy migration lỗi trong lịch sử) ⇒ ⭐ **cả hệ thống chết**, ⛔ không chỉ bản mới.
+
+### ✅ CÁCH KHÔI PHỤC (⭐ tối thiểu · ⛔ KHÔNG sửa tệp migration của phiên khác, ⛔ KHÔNG sửa mã nghiệp vụ)
+📏 **Bước 0 — CHỨNG MINH** ý định của V39 **đã được thoả mãn đầy đủ** (cả cột + index đều có, đúng kiểu `varchar(64) NULL`) ✓
+⛔ ⇒ **KHÔNG cần chạy lại** câu nào ⇒ chỉ cần sửa **lịch sử Flyway**:
+```sql
+UPDATE flyway_schema_history SET success=1 WHERE version='39' AND success=0;   -- 1 dòng
+```
+⇒ Backend khởi động lại **OK**: `Schema vntech_erp is up to date` · `Started VntechErpApplication` · ⛔ **0 ERROR** ✓
+
+### ⚠️ KHUYẾN NGHỊ CHO `ERP-SESSION-02` (⛔ S01 không tự sửa tệp của họ — §19)
+V39 cần **chịu được môi trường đã có cột** (⚠️ nhiều máy/DB đã có `issue_id` từ trước). Cách an toàn: dùng
+`INFORMATION_SCHEMA` để **chỉ `ADD COLUMN` khi cột CHƯA tồn tại** (MySQL ⛔ không có `IF NOT EXISTS`), hoặc
+tách câu `CREATE INDEX` ra migration riêng. ⭐ Nếu để nguyên: **mọi máy đã có cột sẽ ⛔ chết ở lần khởi động kế tiếp** ✓
+
+---
+
+## BUG-20261008-012 — 🟠 **2 test Java LỖI vì `schema-h2.sql` ⛔ THIẾU GƯƠNG `issue_id`** (⛔ không phải lỗi sản phẩm)
+
+| ⭐ | ⭐ |
+|---|---|
+| **SEVERITY** | 🟠 MEDIUM (⚠️ nhưng **chặn điều kiện «build không lỗi»** để commit) |
+| **TRIỆU CHỨNG** | `mvn test`: **88 run · 0 failure · 2 ERRORS** ⇒ BUILD FAILURE — `StockIssueWorkflowSteps345Test.steps345_fullFlow` + `SupplyChainEndToEndIntegrationTest.fullSupplyChain` |
+| **LỖI THẬT** | `BadSqlGrammarException … INSERT INTO stock_reservations (…,issue_id,…)` |
+| **NGUYÊN NHÂN GỐC** | Mã mới của S2 ghi `issue_id`, **MySQL đã có cột (V39)** — ⚠️ nhưng `web/src/test/resources/schema-h2.sql` **chưa có gương** ⇒ H2 (test) ⛔ thiếu cột ✓ |
+| **FIX** | Thêm **1 dòng** `` `issue_id` VARCHAR(64) NULL `` vào `CREATE TABLE stock_reservations` — ⭐ **đúng kiểu của V39** (⚠️ `NULL`, ⛔ không `NOT NULL`) ✓ |
+| **KẾT QUẢ** | ⭐ `Tests run: 88, Failures: 0, Errors: 0` · **BUILD SUCCESS** ✓ (⭐ và cổng FE **955 test · 954 pass · 0 fail**) |
+
+---
+
+## DEV-20261008-007 — 🚀 **REBUILD TOÀN HỆ + COMMIT + PUSH `unity`** (user chốt: «không lỗi thì commit + push + merge vào unity»)
+
+| # | Việc | Kết quả ĐO được |
+|---|---|---|
+| 1 | `tsc --noEmit` cây gộp | ✅ **0** |
+| 2 | FE: `fixpoint` → `npm run build` → sync identity | ✅ `BUILT ARTIFACT VALIDATION: ĐẠT` · vân tay **`VNTECH-FP-BB706F1202490077`** khớp SSOT |
+| 3 | Cổng UI `verify-ui-build-applied --port=8787` | ✅ `do-moi` · `van-tay bb706f1202490077` · **`byte 6/6`** |
+| 4 | BE: `mvn test` | ✅ **88/88** (0 failure · 0 error) |
+| 5 | BE: `mvn -DskipTests -pl web -am package` | ✅ jar **91.051.684 B @ 16:18:08** |
+| 6 | 3 cổng `:8787` `:9000` `:18081` | ✅ LISTEN · `:9000/api/system` → **401** (đúng, cần đăng nhập) |
+| 7 | CSDL kho (bất biến) | ✅ **12 / 5 / 10** khớp `W-02-AUDIT` |
+| 8 | **Git** | ✅ commit `0119160` (**292 tệp · +28.717 / −547**) → merge `origin/unity` (**2 commit của phiên khác** — TASK-230 hub Kho) → **merge `defccb1`** → **PUSH** `8d9c303..defccb1 unity -> unity` ✓ |
+
+### ⚠️ 2 BÀI HỌC (⭐ ghi để ⛔ không lặp)
+1. **`git add -A` trong repo ĐA PHIÊN là NGUY HIỂM** — nó gom cả thay đổi của phiên khác (⭐ lần này là chủ đích theo yêu cầu user, ⚠️ nhưng phải **kiểm mất mát**: đã đối chiếu `Inventory.tsx` **744 > 723 dòng** · `globals.css` **129 > 124** · log `SESSION_B` **386 + 150 dòng còn nguyên** ⇒ ⭐ **⛔ KHÔNG mất việc của ai** ✓)
+2. **Gặp xung đột khi merge ⇒ ⛔ đừng chọn bừa `--ours`/`--theirs`** — ⭐ phải **ĐO** bản nào mới hơn (so **số dòng + dấu hiệu đặc trưng** của phiên kia) rồi mới chốt ✓
+
+## BUG-20261008-013 — 🟠 **HIGH (CHÍNH SÁCH, ⛔ không phải lỗi mã)**: mô hình «tài khoản uỷ nhiệm» bị chặn ở **TẦNG DỮ LIỆU** — `data.users = 0` cho non-admin
+
+| ⭐ | ⭐ |
+|---|---|
+| **BUG_ID** | BUG-20261008-013 · **DATE** 2026-10-08 19:10 · **SESSION phát hiện** ERP-SESSION-01 |
+| **SEVERITY** | 🟠 **HIGH** (⛔ không phải lỗi mã — ⭐ **chính sách chưa quyết**) |
+| **MODULE** | RBAC · BOOTSTRAP · màn «DANH MỤC & PHÂN QUYỀN» · `BootstrapDataAdapter` |
+| **NGUỒN** | ⭐ Tôi đi **đo runtime 4 cổng vừa vá (`BUG-009`)** thì phát hiện — ⛔ không phải suy đoán ✓ |
+
+### 📏 BẰNG CHỨNG ĐO ĐƯỢC (⭐ probe E2E, ⛔ không suy đoán)
+Nhánh ③ của `tools/probe-grant-1-perm-e2e.mjs`: tạo tài khoản probe ⇒ cấp **`admin_tab_01` + `admin_tab_06` + `admin_tab_11`** + 1 phạm vi dự án ⇒ đăng nhập chính người đó ⇒ đọc bootstrap:
+```
+{ soUsers: 0 , soModules: 3 , soProjectScopes: 0 , laAdmin: false , role: "ksda" }
+```
+⇒ ⭐ **`soUsers = 0`**: backend gửi **⛔ KHÔNG tài khoản nào** cho người uỷ nhiệm ⇒ bảng tài khoản **trống** (chỉ 1 dòng = ⭐ không phải người khác) ⇒ **⛔ không có nút «Sửa tài khoản»** ⇒ **⛔ không mở được modal** ⇒ ⭐ **4 cổng vừa vá ⛔ KHÔNG THỂ CHẠM TỚI** ở runtime ✓
+
+### 🔎 ĐỐI CHIẾU MÃ (⭐ ⛔ không suy đoán — chỉ ra đúng dòng)
+`java-backend/infrastructure/src/main/java/com/vntech/erp/infrastructure/persistence/BootstrapDataAdapter.java`
+```java
+// L1257
+if (admin) {
+    data.put("users", query(""" SELECT u.id, u.username, u.role, … FROM users … """));
+```
+⇒ ⭐ **`data.users` CHỈ được đổ khi `admin === true`** — ⚠️ **CHÍNH XÁC CÙNG MỘT KHUÔN** với `allModulePermissions` (L943) mà tôi đã vá cho `BUG-008` ✓
+
+### ⚠️ HỆ QUẢ (⭐ nói thẳng vì liên quan tới MÔ HÌNH USER ĐÃ CHỐT)
+⭐ USER chốt (`DEC-20261008-001`): «`role = admin` chỉ dùng trong **trường hợp đặc biệt**; việc thường ngày dùng
+**tài khoản ITM hoặc tài khoản tương tự ĐƯỢC CẤP FULL QUYỀN**» ✓
+⚠️ **Nhưng**: tài khoản ITM là **non-admin** ⇒ nhận `data.users = 0`
+⇒ ⭐ **⛔ KHÔNG quản trị được tài khoản nào** ⇒ ⚠️ **mô hình «uỷ nhiệm bằng cấu hình» bị chặn ở tầng DỮ LIỆU**,
+⛔ dù các cổng quyền ở giao diện nay **đã tôn trọng** quyền uỷ nhiệm (sau `BUG-006/008/009`) ✓
+
+### ⏸ VÌ SAO S01 ⛔ KHÔNG TỰ SỬA
+⚠️ Đây là **CHÍNH SÁCH «AI ĐƯỢC THẤY TÀI KHOẢN NÀO»** — ⚠️ **nhạy cảm an ninh** (⭐ lộ danh sách người dùng là rủi ro thật).
+📌 Đúng bài học `BUG-20261008-002` + `DEC-20261008-004`: ⛔ **không tự mở rộng tầm nhìn dữ liệu** khi chưa được chốt ✓
+
+### 3 PHƯƠNG ÁN (⭐ chờ user chốt)
+| PA | Nội dung | ⚠️ Đánh đổi |
+|---|---|---|
+| **U-1** | Người uỷ nhiệm `admin_tab_01` **thấy tài khoản TRONG PHẠM VI của mình** (dự án/kho được cấp) | ⭐ **An toàn nhất, đúng §4** («phạm vi quyết định thấy ai») — ⚠️ cần viết query lọc theo phạm vi |
+| **U-2** | Người uỷ nhiệm `admin_tab_01` **thấy MỌI tài khoản** (như admin) | ⚠️ Rộng — ⭐ dễ làm, ⚠️ nhưng lộ toàn bộ danh sách người dùng cho mọi người có tab 01 |
+| **U-3** | **Giữ nguyên** (`data.users` chỉ cho `role=admin`) | ⚠️ ⭐ **mô hình ITM ⛔ KHÔNG dùng được** phần quản trị tài khoản ⇒ phải dùng tài khoản `admin` cho việc đó |
+
+### ✅ TÌNH TRẠNG PHÉP ĐO (⭐ trung thực, ⛔ không tạo «đỏ giả»)
+Probe E2E nay: ⭐ **14/14 phép kiểm ĐẠT + 1 `finding`** (chính `BUG-20261008-013`).
+⚠️ Tôi **hạ 3 phép kiểm của nhánh ③ xuống `finding`** vì ⛔ **chưa có chính sách** ⇒ ⛔ không thể kỳ vọng «phải thấy tài khoản khác» ✓
+📌 Nhánh ③ ⛔ **chưa khép được** (⭐ sẽ khép ngay sau khi user chốt U-1/U-2/U-3) ✓
+
+## BUG-20261008-013 (MỞ RỘNG) — 📋 **DANH SÁCH ĐẦY ĐỦ 11 trường bootstrap bị GIỮ LẠI khỏi non-admin** ⇒ ⭐ chốt **MỘT LẦN** cho cả nhóm
+
+| ⭐ | ⭐ |
+|---|---|
+| **BUG_ID** | BUG-20261008-013 (**mở rộng**) · **DATE** 2026-10-08 19:40 · **SESSION** ERP-SESSION-01 |
+| **MỤC ĐÍCH** | ⭐ ⛔ **không phát hiện lai rai**: quét HẾT để user chốt **U-1/U-2/U-3 một lần** cho cả nhóm ✓ |
+| **CÁCH QUÉT** | `Select-String` trên `BootstrapDataAdapter.java`: mọi `if (admin)` ⇒ `data.put` kế tiếp · mọi `data.put(… , admin ? …)` ✓ |
+
+### ✅ ĐÃ XÁC NHẬN BẰNG **ĐO** (⭐ mạnh nhất — ⛔ không chỉ đọc mã)
+| # | Trường | Bằng chứng |
+|---|---|---|
+| 1 | **`users`** (L1258, trong `if (admin)` L1257) | 📏 Probe nhánh ③: bootstrap của người uỷ nhiệm = **`soUsers: 0`** ⇒ ⭐ **⛔ không quản trị được ai** ⇒ 4 cổng `BUG-009` ⛔ không thể chạm tới ✓ |
+| 2 | **`allModulePermissions`** (L943, `admin ? …`) | 📏 Đã đo ở `BUG-008`: non-admin nhận **0 dòng** ⇒ ⭐ tôi đã vá giao diện đọc `modulePermissions` ✓ |
+
+### 📋 DANH SÁCH ĐẦY ĐỦ (⭐ quét mã — ⚠️ **cần xác nhận thêm bằng ĐO** trước khi sửa)
+**Nhóm A — trong `if (admin)`:**
+| # | Trường | Dòng | ⚠️ Hệ quả với tài khoản uỷ nhiệm (ITM) |
+|---|---|---|---|
+| 3 | `adminSuppliers` | L269 | ⛔ màn nhà cung cấp **thiếu dữ liệu** |
+| 4 | `modulePermissions` *(⚠️ cần xác minh lại — có thể là ánh xạ nhầm)* | ~L866 | ⚠️ nếu đúng thì ⛔ **quyền của chính họ cũng không tới** (⚠️ mâu thuẫn với phép đo `soModules: 3` ⇒ **nghi ánh xạ nhầm**) |
+| 5 | `engineRoleProfiles` | L1219 | ⛔ màn chức danh/vai trò trống |
+| 6 | `users` | L1258 | ⭐ **đã xác nhận** (mục 1) |
+| 7 | *(chưa phân giải được — L1563)* | L1563 | ⚠️ cần đọc thêm |
+
+**Nhóm B — dạng `admin ? …`:**
+| # | Trường | Dòng |
+|---|---|---|
+| 8 | `adminPartners` | L287 |
+| 9 | `allModulePermissions` | L943 (mục 2) |
+| 10 | `userWarehouseScopes` | L959 |
+| 11 | `emailRecipients` | L986 |
+| 12 | `emailOutbox` | L1000 |
+| 13 | `workflowAssignments` | L1011 |
+| 14 | `projectAccessAll` | L59 (`data.put("projectAccessAll", admin)`) |
+
+⇒ ⭐ **~11–14 trường** bị giữ lại khỏi non-admin ⇒ ⚠️ **tài khoản ITM thiếu**: danh sách người dùng · quyền của người khác ·
+phạm vi kho · người nhận/hộp thư email · phân công workflow · NCC/đối tác quản trị · hồ sơ vai trò
+⇒ ⭐ **mô hình «uỷ nhiệm bằng cấu hình» bị chặn KHÔNG PHẢI Ở MỘT CHỖ mà ở TẦNG DỮ LIỆU nói chung** ✓
+
+### ⚠️ ĐỀ XUẤT CÁCH CHỐT (⭐ để ⛔ không phải quyết 11 lần)
+| PA | Phạm vi áp dụng |
+|---|---|
+| **U-1** | ⭐ Áp cho **các trường phục vụ quản trị uỷ nhiệm** (`users` · `userWarehouseScopes` · `engineRoleProfiles` · `adminSuppliers`/`adminPartners` · `projectAccessAll`) — ⭐ **lọc theo PHẠM VI** của người đó ✓ |
+| **U-2** | Áp cho **tất cả** như admin (⚠️ rộng nhất) |
+| **U-3** | Giữ nguyên tất cả (⚠️ ITM ⛔ không dùng được phần quản trị) |
+| ⭐ **U-1 + danh sách loại trừ** | ⭐ **an toàn nhất**: áp U-1 nhưng **⛔ giữ admin-only** cho `emailOutbox` · `emailRecipients` · `allModulePermissions` (⚠️ nhạy cảm/nặng) ✓ |
+
+### 📌 TRẠNG THÁI
+⏸ **BLOCKED (chờ user chốt)** — ⛔ S01 ⛔ **không tự sửa** (⭐ chính sách «ai thấy dữ liệu gì», ⚠️ nhạy cảm an ninh).
+📏 ⚠️ **Cần xác nhận thêm bằng ĐO** cho 4 trường chưa phân giải/mapping nghi ngờ (mục 4 · 7) trước khi sửa ✓
+
+## BUG-20261008-013 (KHÉP) — ✅ **USER CHỐT `U-1` + ĐÃ THI HÀNH + ĐÃ ĐO**: người uỷ nhiệm quản trị nay thấy dữ liệu **TRONG PHẠM VI**
+
+| ⭐ | ⭐ |
+|---|---|
+| **BUG_ID** | BUG-20261008-013 · **STATUS** ✅ **FIXED (code + test) + VERIFIED (đo runtime)** |
+| **DATE** | 2026-10-08 20:15 · **SESSION** ERP-SESSION-01 |
+| **QUYẾT ĐỊNH** | ⭐ **USER chốt `U-1`**: người được uỷ nhiệm thấy tài khoản **TRONG PHẠM VI của mình** (⛔ không toàn bộ như admin) ✓ |
+
+### 🔧 ĐÃ SỬA GÌ (⭐ 1 tệp, ⛔ không đụng nhánh admin ⇒ **zero regression**)
+`java-backend/…/persistence/BootstrapDataAdapter.java`:
+1. **Thêm khối U-1** — `if (!admin)` ⇒ nếu có **≥1 quyền nhóm quản trị** (`admin`/`admin_tab_*`, `can_view=1`, còn hạn — ⭐ dùng **đúng khuôn truy vấn `modulePermissions`** sẵn có) thì nạp:
+   · `users` = **chính mình** ∪ **người cùng dự án trong phạm vi** (`ctx.visibleProjectIds()`)
+   · `adminProjects` = chỉ dự án trong phạm vi · `userScopes` = chỉ scope thuộc dự án trong phạm vi
+   ⛔ **GIỮ admin-only** (⭐ U-1 ⛔ không áp): `allModulePermissions` · `emailOutbox` · `emailRecipients` ✓
+2. ⭐ **Vị trí nạp: SAU `blank(...)`** — ⚠️ vì `blank` là **GHI ĐÈ CÓ CHỦ ĐÍCH (CƠ CHẾ AN NINH)** ✓
+
+### ⚠️⚠️ 3 CÁI BẪY TÔI ĐÃ TRẢ GIÁ (⭐ ghi đủ để ⛔ không lặp)
+
+| # | Bẫy | 📏 Đo được | ✅ Đáp án đúng |
+|---|---|---|---|
+| 1 | Nạp U-1 **TRƯỚC** `blank(...)` | ⛔ `soUsers = 0` **dù SQL trả đúng** (8 tài khoản) ⇒ ⭐ `blank` **xoá sạch** | **Nạp SAU `blank`** |
+| 2 | Sửa `blank` thành «chỉ điền khi **THIẾU**» | ⛔ **LÀM ĐỎ test an ninh** `RequestOverdueReasonTest` MT2-P4-02 («user cấp THẤP ⛔ KHÔNG được thấy vùng duyệt ⇒ **phải bị `blank`**») | ⛔ **KHÔNG đổi ngữ nghĩa `blank`** — nó là **an ninh**, ⛔ không phải tiện ích |
+| 3 | Dời khối bằng **script PowerShell** dò `}` theo `^\s{8}\}` (⚠️ dấu đóng thật ở **4 space**) | ⛔ **LỖI BIÊN DỊCH** `[2140,1] class, interface, enum, or record expected` (code lạc sau `}` của class) | ⭐ **Khôi phục từ HEAD + vá bằng `edit` có NEO chính xác** (đọc tệp trước) ✓ |
+
+📌 **BÀI HỌC (D-102)**: ⛔ **đừng dùng script dò ngoặc để DI CHUYỂN khối mã** (⚠️ ngoặc trong SQL/comment làm sai phép đếm) — ⭐ dùng công cụ sửa có **neo văn bản** và **đọc định dạng thật trước khi vá** ✓
+📌 **BÀI HỌC (D-103)**: trong hệ này `blank(...)` là **cơ chế AN NINH** (xoá-trắng theo cấp bậc) — ⛔ **tuyệt đối không đổi ngữ nghĩa**; muốn dữ liệu sống sót thì **nạp SAU nó** ✓
+
+### 📏 NGHIỆM THU (⭐ đo runtime trên trình duyệt thật — ⛔ không chỉ đọc mã)
+| Phép đo | Trước | **Sau** |
+|---|---|---|
+| `data.users` của người uỷ nhiệm (non-admin, `ksda`) | ⛔ **0** | ⭐ **12** |
+| `data.userScopes` | ⛔ 0 | ⭐ **12** |
+| Dòng bảng tài khoản | 1 | ⭐ **12** |
+| Nút «Sửa tài khoản» | ⛔ 0 | ⭐ **12** |
+| Modal sửa tài khoản | ⛔ không mở được | ⭐ **MỞ được** (5 tab + select vai trò) |
+
+⇒ ⭐ **4 cổng `page.tsx` (`BUG-009`) nay CHẠM TỚI ĐƯỢC + CHẠY ĐÚNG ở runtime** ⇒ ⭐ **`BUG-009` khép nốt phần đo runtime** ✓
+| Cổng | Kết quả |
+|---|---|
+| Java `mvn -B test` | ✅ **88/88** (0 failure · 0 error — ⭐ **kể cả test an ninh MT2-P4-02**) |
+| Probe E2E `probe-grant-1-perm-e2e.mjs` | ✅ **17/17 ĐẠT · hết `finding`** |
+| Cổng FE | ✅ **955 test · 954 pass · 0 fail** |
+| Cổng UI | ✅ **6/6 bundle đúng byte** · vân tay `bb706f1202490077` |
+| CSDL kho | ✅ **12 / 5 / 10** (khớp audit) |

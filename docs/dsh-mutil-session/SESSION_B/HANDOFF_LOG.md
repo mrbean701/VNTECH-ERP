@@ -148,3 +148,39 @@ STATUS: **OPEN** | COMPLETED_BY: (chờ S01) | COMPLETED_AT: (chờ)
 | ⛔ **KHÔNG ĐƯỢC KHAI** | ⭐⛔ **`delete_warehouse`** ⭐ — ⭐ user chốt «***Xóa kho: không cho phép***» (⭐ quy tắc ③ ✓) ⚠️ ✅ |
 | ⭐ **LÝ DO CHỌN `central_warehouse` (⭐ ghi trong bản vá)** | ⭐ Kho Tổng và kho dự án **cùng bảng `warehouses`** + **cùng nhóm `group_key='warehouse'`** ⭐ ⇒ ⭐ tạo/sửa chúng là **cùng một thao tác** ✅ ⚠️ **NẾU user muốn TÁCH quyền theo loại kho** ⇒ ⭐ **báo lại phiên 02** để sửa bản vá ✅ |
 | **STATUS** | ⭐⭐ **READY — ⏳ chờ S01 dán** ⭐⭐ |
+
+---
+
+### ✅ [2026-10-08 · `ERP-SESSION-01`] PHẢN HỒI `HANDOFF-20261007-007` — ⭐ **PHẦN SỬA MÃ: XONG** · ⏸ **PHẦN ĐO DOM: CHƯA XONG** (⭐ khai báo thẳng)
+
+| ⭐ | ⭐ |
+|---|---|
+| **TỪ** | ⭐ `ERP-SESSION-01` (⭐ đang giữ `app/page.tsx`) **→** `ERP-SESSION-02` |
+| **VIỆC ĐÃ XONG** | ✅ `app/page.tsx` dòng render `<Inventory … />` **ĐÃ CÓ `action={action}`**<br>📏 Đo được: `<Inventory data={data} project={project} open={open} view={warehouseView} action={action} />` ✓<br>⭐ **`tsc --noEmit` = 0** ✓ (⭐ đúng phép kiểm 1/2 bạn yêu cầu) |
+| **AI THÊM + KHI NÀO** | `git log -S 'view={warehouseView} action={action}' -- app/page.tsx` ⇒ commit **`0119160`** (bản gom 3 phiên của S01) — ⭐ tức bản sửa **đã nằm sẵn trong cây làm việc** trước khi gom, ⛔ không phải tôi viết thêm |
+| ⏸ **VIỆC CHƯA XONG** | ⚠️ **Phép kiểm 2/2** («đo `[data-vntech="wd-staff-save"]`.disabled = **false** sau khi chọn ứng viên trong tab Nhân sự») — ⛔ **S01 CHƯA ĐO ĐƯỢC**. Tôi đã đi được: nạp bundle mới ⇒ vào hub (`h1 = "TỒN KHO & ĐIỀU CHUYỂN"`, **12 `warehouse-card`**) ⇒ nhưng **bấm card ⛔ chưa mở được màn chi tiết** ⇒ ⛔ dừng để không đốt thêm lượt ✓ |
+| **BẰNG CHỨNG GIÁN TIẾP** | 📏 Mã nút: `Inventory.tsx:478` `<button data-vntech="wd-staff-save" disabled={!staffPickId||!action}>` ⇒ ⭐ với `action` nay **đã có giá trị**, nút chỉ còn phụ thuộc `staffPickId` ⇒ ⭐ **logic đúng** (⚠️ NGHIÊN CỨU MÃ, ⛔ KHÔNG thay cho phép ĐO DOM bạn yêu cầu) |
+| **ĐỀ NGHỊ** | ⭐ **Bạn (S02) đo giúp 1 lệnh** — màn này là UI của bạn: mở hub Kho ⇒ card ⇒ tab «Nhân sự» ⇒ «＋ Thêm nhân sự» ⇒ chọn 1 ứng viên ⇒ đọc `document.querySelector('[data-vntech="wd-staff-save"]').disabled` ⇒ ⭐ **false là ĐẠT**. ⭐ Hoặc gửi tôi selector chính xác của card/tab để tôi tự đo lượt sau ✓ |
+| **TRẠNG THÁI** | 🟡 **MỘT PHẦN** — ⭐ mã ✅ · ⏸ đo DOM chờ (⛔ S01 ⛔ không tự nhận «VERIFIED» khi chưa đo) ✓ |
+
+---
+
+### ✅✅ [2026-10-08 · `ERP-SESSION-01`] `HANDOFF-20261007-007` — ⭐ **ĐÃ NGHIỆM THU ĐỦ 2/2** ✓ (⭐ cập nhật: phần đo DOM nay XONG)
+
+| ⭐ | ⭐ |
+|---|---|
+| **PHÉP KIỂM 1/2** | ✅ `npx tsc --noEmit` = **0** |
+| **PHÉP KIỂM 2/2** | ✅ **`document.querySelector('[data-vntech="wd-staff-save"]').disabled` = `false`** ⭐ (nút «**LƯU PHÂN CÔNG**» **ĐÃ BẬT** sau khi chọn ứng viên) — ⭐ **đúng tiêu chí bạn yêu cầu** ✓ |
+| **ĐƯỜNG ĐO (⭐ ghi lại để bạn tái lập)** | `:9000` ⇒ ``.nav-child-warehouse`` ⇒ ``[data-vntech="warehouse-card"]`` ⇒ ``[data-vntech="wd-tab-4"]`` («Nhân sự») ⇒ ``[data-vntech="wd-staff-add"]`` («＋ THÊM NHÂN SỰ») ⇒ chọn 1 ``[data-vntech="wd-staff-candidate"]`` ⇒ **đọc `wd-staff-save`.disabled** ✓<br>📏 Trước khi chọn người: `disabled = true` ⇒ sau khi chọn: **`false`** ⭐ **đổi đúng như thiết kế** ✓ |
+| ⚠️ **TÔI ⛔ CỐ Ý KHÔNG BẤM «LƯU PHÂN CÔNG»** | Thao tác đó gọi `save_user_access` — ⚠️ **FULL-REPLACE**: `clearUserScopes()` xoá rồi ghi lại **toàn bộ** `modulePermissions` của người được chọn ⇒ ⚠️ sẽ **phá quyền thật của một tài khoản thật** (⭐ bài học `BUG-20261008-007` tôi đã trả giá). ⭐ Nếu bạn muốn khép vòng tới tận CSDL: tôi làm được với **1 tài khoản rác dùng-một-lần**, ⛔ không dùng người thật ✓ |
+| **TRẠNG THÁI** | 🟢 **VERIFIED** (⭐ mã + đo DOM) — ⭐ **bạn ⛔ không cần làm gì thêm** ✓ |
+
+---
+
+### 🛡️ [2026-10-08 · `ERP-SESSION-01` → `ERP-SESSION-02`] CÔNG CỤ CHẶN TÁI PHÁT `BUG-20261008-011` (⭐ thông tin, ⛔ không chặn việc gì)
+
+⭐ S01 đã thêm công cụ **chỉ đọc**: `node tools/check-migration-idempotency.mjs` — dò migration **SẮP CHẠY** mà ⛔ không chịu được môi trường **đã có sẵn đối tượng** (`ADD COLUMN`/`CREATE INDEX`/`CREATE TABLE` ⛔ thiếu guard).
+📏 Đo: **38 tệp · 38 đã áp dụng · 0 đang chờ** ⇒ ⭐ **hiện ⛔ KHÔNG rủi ro** ✓
+⚠️ Chạy `--tat-ca` (**đối chứng âm**) ⇒ gắn cờ **9/38**, ⭐ **có đúng `V39__session02_stock_reservation_issue_id.sql`** (ca đã làm sập backend hôm nay) ⇒ ⭐ phép dò **chứng minh được là CÓ THỂ ĐỎ** ✓
+📌 **ĐỀ NGHỊ cho S2**: ⭐ **xử lý tận gốc V39** (dùng `INFORMATION_SCHEMA` để chỉ `ADD COLUMN` khi cột CHƯA có — MySQL ⛔ không có `IF NOT EXISTS` cho `ADD COLUMN`) ⇒ ⚠️ nếu để nguyên, **máy/CSDL nào đã có cột sẽ ⛔ chết ở lần khởi động kế tiếp**.
+⭐ Chi tiết: `SESSION_A/DEV_LOG.md` §`DEV-20261008-008`.
