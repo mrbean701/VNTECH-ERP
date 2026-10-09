@@ -70,6 +70,14 @@
 > xem **D-110**. Ngoài ra số `D-044` ở đây là **gán nhầm**: D-044 nói về việc không hạ phiên bản test để làm xanh.
 > **Số liệu ở bảng trên giữ nguyên, chưa sửa.**
 
+> ## 🛑 ĐÓNG CÂU HỎI (a)/(b) — **QUYẾT ĐỊNH USER 09/10/2026** (`DEC-20261008-015`)
+> **Nguyên văn user:** «**MT3 đã rollback không lấy MT3 làm căn cứ cho công việc sắp tới nữa**» ✓
+> ⇒ ⛔ **KHÔNG** «đánh lại mục MT3 để làm tiếp» · ⛔ **KHÔNG** «khôi phục UI MT3» — **câu hỏi đã ĐÓNG** ✓
+> 📏 **Đo được (09/10/2026)**: `git log unity..backup/mt3-head-20260928` = **0 commit** · `git diff --shortstat unity...<nhánh>` = **rỗng**
+> ⇒ ⭐ lựa chọn **(b) vốn đã BẤT KHẢ THI** (khôi phục = ⛔ không đổi gì) ✓ · `tests/` nay **158 tệp** (⚠️ cảnh báo trên nói «119 tệp, chạy 14» ⇒ **đã cũ**) ✓
+> 🧊 **8 tệp `KNOWN_RED` = NỢ CŨ ĐÓNG BĂNG (MT3)** — giữ để cổng ⛔ không giấu nợ mới, ⚠️ nhưng ⛔ **không phải việc cần làm** và ⛔ **không là căn cứ** cho công việc sắp tới ✓
+> ⚠️ Nếu một hành vi MT3 được nhắc lại vì **yêu cầu nghiệp vụ mới** ⇒ ⭐ làm như **TÍNH NĂNG MỚI**, ⛔ đừng vin vào «khôi phục MT3» ✓
+
 | Phase | DONE / tổng | Ghi chú |
 |---|---|---|
 | PHASE 0 — AUDIT | **16 / 16 — ĐÓNG ✅** | A-01…A-16; A-13…A-16 còn TODO |

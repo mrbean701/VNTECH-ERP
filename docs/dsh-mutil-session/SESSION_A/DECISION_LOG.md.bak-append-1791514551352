@@ -634,35 +634,3 @@ Tôi thấy **~60 chỗ** `requireRole(…, List.of("admin"))` và **kết luậ
 ### 📌 BÀI HỌC **D-107**
 > ⚠️ **Một «lựa chọn chờ user chốt» có thể ĐÃ HẾT HIỆU LỰC** nếu mã đã tiến hoá ⇒ ⭐ **trước khi hỏi lại user, hãy ĐO LẠI tiền đề của câu hỏi** ✓
 > ⛔ Đừng để một quyết định treo nhiều ngày vì **tiền đề của nó đã sai** ✓
-
-## DEC-20261008-015 — 🛑 **USER CHỐT: MT3 ĐÃ ROLLBACK ⇒ TỪ NAY ⛔ KHÔNG LẤY MT3 LÀM CĂN CỨ CHO CÔNG VIỆC SẮP TỚI** (đóng hẳn câu hỏi (a)/(b) đang treo)
-
-| ⭐ | ⭐ |
-|---|---|
-| **DEC_ID** | DEC-20261008-015 · **DATE** 2026-10-09 · **SESSION** ERP-SESSION-01 · **CATEGORY** TECHNICAL DIRECTION |
-| **NGUỒN** | ⭐ **QUYẾT ĐỊNH CỦA USER** (nguyên văn): «**MT3 đã rollback không lấy MT3 làm căn cứ cho công việc sắp tới nữa**» ✓ |
-| **PHẠM VI** | ⛔ **ĐÓNG** toàn bộ nhánh công việc liên quan MT3 · ⛔ **KHÔNG** khôi phục MT3 · ⛔ **KHÔNG** lấy 8 tệp test MT3 làm danh sách việc |
-
-### ✅ HỆ QUẢ (⭐ áp NGAY, ⛔ không cần bàn lại)
-1. 🛑 **Câu hỏi (a)/(b) trong `MASTER_STATUS.md` được ĐÓNG**: ⛔ **không** «đánh lại mục MT3 để làm tiếp», ⛔ **không** «khôi phục UI MT3» ✓
-   ⭐ Và thực tế **(b) vốn đã bất khả thi** — đo được: `git log unity..backup/mt3-head-20260928` = **0 commit** · `git diff --shortstat unity...<nhánh>` = **rỗng** ✓
-2. 🧊 **8 tệp `KNOWN_RED` = NỢ CŨ ĐÓNG BĂNG** (MT3): giữ trong danh sách để cổng ⛔ **không giấu nợ mới**, ⚠️ nhưng ⛔ **KHÔNG** là «việc cần làm» và ⛔ **KHÔNG** là căn cứ cho công việc sắp tới ✓
-3. ⛔ **KHÔNG** dùng mã `MT3-*` (MT3-BE-05 · MT3-UI-04/12d/13/14/25/28 · MT3-B.2) làm tiêu chí nghiệm thu hay lộ trình ✓
-4. ⭐ **Con số tiến độ 108/110 (98,2%)**: giữ nguyên nghĩa «**theo lời khai cột TT của roadmap**» — ⚠️ và nay **⛔ không còn bị coi là «đang chờ xử lý MT3»** nữa ✓
-5. ⚠️ **Nếu một hành vi MT3 được nhắc lại vì lý do NGHIỆP VỤ khác** (⭐ vd user yêu cầu trực tiếp tính năng đó) ⇒ ⭐ **làm như TÍNH NĂNG MỚI**, ⛔ **không** vin vào «khôi phục MT3» ✓
-
-### 📏 BẰNG CHỨNG KÈM (⭐ đo 09/10/2026, chạy lại được)
-| # | Phép đo | Kết quả |
-|---|---|---|
-| 1 | `git log --oneline unity..backup/mt3-head-20260928` | **0 commit** ⇒ ⛔ không có gì để khôi phục |
-| 2 | `git diff --shortstat unity...backup/mt3-head-20260928` | **rỗng** ⇒ khôi phục = **⛔ không đổi gì** |
-| 3 | `git log --oneline backup/mt3-head..unity` | unity **đi trước 58 commit** |
-| 4 | `tests/*.test.mjs` | **158 tệp** (cảnh báo 01/10 nói «119 tệp, chạy 14» ⇒ **đã cũ**) |
-| 5 | `KNOWN_RED` | **8 tệp — TẤT CẢ là MT3** ⇒ lỗ hổng **hẹp, đã đóng băng** ✓ |
-| 6 | Chạy 8 tệp bằng `node --import tsx --test` | ⚠️ **7/8 tệp đỏ vì KỲ VỌNG MT3** (vd «phải dùng CƠ CHẾ DÙNG CHUNG §14», «nhóm warehouse chỉ 1 mục ⇒ KHÔNG được bật tab», «MT3 §B.2: bình luận không được hiện trực tiếp trên tiến trình») ⇒ ⭐ **đều là đặc tả MT3**, ⛔ không phải lỗi sản phẩm hiện tại ✓ |
-| 7 | Lý do ghi cho `mt3-be-05` trong cổng | ⚠️ **SAI**: cổng ghi «`lib/material-alias.ts` **chỉ tồn tại ở nhánh MT3**» — ⭐ **đo lại: tệp CÓ ở CẢ HAI nhánh** ⇒ lý do đúng là **thiếu HÀNH VI alias**, ⛔ không phải thiếu tệp ✓ |
-
-### 📌 BÀI HỌC **D-108**
-> 🛑 **Một đợt đã ROLLBACK thì phải ĐÓNG HẲN trong state** — ⚠️ nếu để nó nằm mãi trong danh sách nợ/kế hoạch thì
-> **mọi phiên sau đều tưởng đó là việc phải làm** ⇒ ⭐ tốn công rà lại và **dễ kéo dự án quay về hướng đã bị bỏ** ✓
-> ⭐ Ghi rõ **«ĐÓNG BĂNG — ⛔ không lấy làm căn cứ»** ngay cạnh danh sách nợ ✓

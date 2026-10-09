@@ -373,7 +373,7 @@ Set-Location java-backend
 
 | Tệp | Lý do | Mốc gỡ |
 |---|---|---|
-| `mt3-be-05-material-alias-search.test.mjs` | `lib/material-alias.ts` chỉ có ở nhánh MT3 đã rollback | MT3-BE-05 |
+| `mt3-be-05-material-alias-search.test.mjs` | 🔴 **NỢ CŨ ĐÓNG BĂNG (MT3)** — ⚠️ **ĐÍNH CHÍNH 09/10**: `lib/material-alias.ts` **CÓ ở CẢ HAI nhánh** ⇒ đỏ vì **thiếu HÀNH VI alias**, ⛔ không phải thiếu tệp | MT3-BE-05 |
 | `mt3-ui-04-no-project-block.test.mjs` | thuộc đợt MT3 đã rollback | MT3-UI-04 |
 | `mt3-ui-12d-purchasing-hub-tabs.test.mjs` | thuộc đợt MT3 đã rollback | MT3-UI-12d |
 | `mt3-ui-13-material-alias.test.mjs` | thuộc đợt MT3 đã rollback | MT3-UI-13 |
@@ -536,3 +536,19 @@ UI (app/page.tsx · app/screens/*)  --POST {action,...}-->  app/api/system/route
 
 ---
 *Tài liệu thuộc bộ tài liệu bàn giao hệ thống VNTECH ERP V5.3.0 — cập nhật 09/10/2026. Mọi số liệu trong tài liệu đều kèm LỆNH KIỂM; chỗ chưa kiểm chứng được ghi rõ «cần xác minh».*
+
+---
+
+## 🧊🛑 8 TỆP `KNOWN_RED` = **NỢ CŨ ĐÓNG BĂNG (MT3)** — `DEC-20261008-015` (user chốt 09/10/2026)
+
+> **Nguyên văn user**: «**MT3 đã rollback không lấy MT3 làm căn cứ cho công việc sắp tới nữa**» ✓
+
+| ⭐ | ⭐ |
+|---|---|
+| **Ý NGHĨA** | 8 tệp đỏ trong `KNOWN_RED` **⛔ KHÔNG phải việc cần làm** và ⛔ **KHÔNG là căn cứ** cho công việc sắp tới ✓ |
+| **VÌ SAO VẪN GIỮ TRONG DANH SÁCH** | ⭐ để cổng ⛔ **không giấu NỢ MỚI**: mọi tệp **không** nằm trong `KNOWN_RED` đều **BẮT BUỘC xanh** ✓ |
+| **SỐ ĐO (09/10/2026)** | `KNOWN_RED = 8` · `allTests = 162` · `gateTests = 154` (⭐ chạy lại được: `node -e "import('./scripts/regression-suite.mjs').then(m=>console.log(m.KNOWN_RED.length,m.gateTests().length))"`) |
+| **7/8 TỆP ĐỎ VÌ GÌ** | ⭐ **KỲ VỌNG ĐẶC TẢ MT3** (đo bằng `node --import tsx --test tests/<tệp>`): «phải dùng **CƠ CHẾ DÙNG CHUNG** §14» · «modal thông báo phải giữ **13 tab**, đang có 14» · «nhóm `warehouse` chỉ 1 mục ⇒ **KHÔNG được bật tab**» · «**MT3 §B.2**: bình luận ⛔ không được hiện trực tiếp trên tiến trình» ⇒ ⛔ **không phải lỗi sản phẩm hiện tại** ✓ |
+| **⚠️ ĐÍNH CHÍNH** | Lý do cũ ghi cho `mt3-be-05` («`lib/material-alias.ts` **chỉ tồn tại ở nhánh MT3**») là **SAI** — ⭐ **đo lại: tệp CÓ ở CẢ HAI nhánh** ⇒ đã sửa trong `scripts/regression-suite.mjs` ✓ |
+| **⛔ CẤM** | Vin vào «khôi phục MT3» — 📏 `git log unity..backup/mt3-head-20260928` = **0 commit** · `git diff --shortstat unity...<nhánh>` = **rỗng** ⇒ khôi phục = ⛔ **không đổi gì** ✓ |
+| **NẾU CẦN LẠI HÀNH VI ĐÓ** | ⭐ làm như **TÍNH NĂNG MỚI** theo yêu cầu nghiệp vụ, ⛔ đừng gọi là «khôi phục MT3» ✓ |

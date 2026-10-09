@@ -23,8 +23,14 @@ import { spawnSync } from "node:child_process";
 // 📌 VÒNG 196 — phân loại lại theo bằng chứng (tên test đỏ + vị trí lỗi): 8 tệp đỏ vì
 //   ĐỢT MT3 ĐÃ ROLLBACK (7 tệp `mt3-*` + `p2-d4`, vì test đỏ của nó mang dấu MT3-B.2 ngay
 //   trong tên). Không còn tệp đỏ không-MT3 nào. `pr03` đã xanh (khẳng định sót từ PR-01).
+// 🧊🛑 CHỐT 09/10/2026 — `DEC-20261008-015` (QUYẾT ĐỊNH USER, nguyên văn):
+//   «MT3 đã rollback không lấy MT3 làm căn cứ cho công việc sắp tới nữa»
+//   ⇒ 8 mục dưới đây = **NỢ CŨ ĐÓNG BĂNG (MT3)**: giữ để cổng ⛔ KHÔNG giấu nợ mới,
+//     ⚠️ nhưng ⛔ KHÔNG phải «việc cần làm» và ⛔ KHÔNG là căn cứ cho công việc sắp tới ✓
+//   📏 Đo được: `git log unity..backup/mt3-head-20260928` = 0 commit · `git diff --shortstat` = rỗng
+//     ⇒ khôi phục MT3 = ⛔ không đổi gì (lựa chọn (b) bất khả thi) ✓
 export const KNOWN_RED = [
-  ["mt3-be-05-material-alias-search.test.mjs", "lib/material-alias.ts chỉ tồn tại ở nhánh MT3 đã rollback (7fdf71d)", "MT3-BE-05"],
+  ["mt3-be-05-material-alias-search.test.mjs", "MT3 ĐÓNG BĂNG (DEC-20261008-015) — ĐÍNH CHÍNH 09/10: lib/material-alias.ts CÓ ở CẢ HAI nhánh; đỏ vì thiếu HÀNH VI alias, KHÔNG phải thiếu tệp", "MT3-BE-05"],
   ["mt3-ui-04-no-project-block.test.mjs", "thuộc đợt MT3 đã rollback", "MT3-UI-04"],
   ["mt3-ui-12d-purchasing-hub-tabs.test.mjs", "thuộc đợt MT3 đã rollback", "MT3-UI-12d"],
   ["mt3-ui-13-material-alias.test.mjs", "thuộc đợt MT3 đã rollback", "MT3-UI-13"],
