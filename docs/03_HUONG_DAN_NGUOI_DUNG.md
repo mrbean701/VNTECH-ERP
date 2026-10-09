@@ -1,3 +1,9 @@
+> **VNTECH ERP — BỘ TÀI LIỆU PHIÊN BẢN `ALPHA TEST`**
+> · Phiên bản tài liệu: **`DOC-ALPHA-TEST-2026.10`** · Ngày cập nhật: **08/10/2026** · Phiên soạn: `ERP-SESSION-01`
+> · Sản phẩm: `V5.3.0-MASTER-BASELINE-R1.1.1` · Cổng: `:8787` (UI) · `:9000` (cutover) · `:18081` (API Java)
+> · ⚠️ Trạng thái: **ALPHA TEST** — tài liệu phản ánh bản ĐANG CHẠY; ⛔ chưa phải bản phát hành chính thức.
+> · 📌 Nguồn sự thật: **mã nguồn + CSDL thật** (mọi số liệu đều ĐO được, ⛔ không suy đoán).
+
 # HƯỚNG DẪN SỬ DỤNG VNTECH ERP — DÀNH CHO NGƯỜI DÙNG
 
 Bản cập nhật: 09/2026 · Phần mềm nội bộ VNTECH — Quản trị & Điều hành
@@ -121,3 +127,11 @@ Mẹo: màn **Đề nghị mua** trên menu có chữ ĐN — là "Phiếu đề
 ## 6. LIÊN HỆ & HỖ TRỢ
 - Gặp lỗi hệ thống, mất quyền, quên mật khẩu, hoặc muốn báo nhu cầu tính năng → liên hệ **phòng IT/Quản trị viên hệ thống**.
 - Khi báo lỗi: nêu rõ **màn hình, bước thực hiện, nội dung hiển thị, mã lỗi/mã tham chiếu nếu có**, và **ảnh chụp màn hình** để xử lý nhanh nhất.
+---
+
+> ## ⚠️ TÀI LIỆU NÀY ĐÃ ĐƯỢC THAY THẾ — ⛔ ĐỪNG DÙNG LÀM BẢN CHÍNH
+> <!-- DA_THAY_THE_BOI_30 -->
+> Bản **đang dùng** cho người dùng cuối là **[`30_HUONG_DAN_NGUOI_DUNG.md`](30_HUONG_DAN_NGUOI_DUNG.md)**
+> (⭐ cập nhật theo bản chạy `ALPHA TEST`, có nhãn `DOC-ALPHA-TEST-2026.10`).
+> ⚠️ Tệp này giữ lại **chỉ để tra cứu lịch sử** (bản 26/09/2026) — ⛔ có thể đã lệch so với mã hiện tại.
+> 📌 Nếu phát hiện nội dung ở đây còn giá trị: **chuyển sang `30_…`** rồi cập nhật ở đó, ⛔ đừng sửa tệp này.

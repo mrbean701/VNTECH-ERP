@@ -1,3 +1,9 @@
+> **VNTECH ERP — BỘ TÀI LIỆU PHIÊN BẢN `ALPHA TEST`**
+> · Phiên bản tài liệu: **`DOC-ALPHA-TEST-2026.10`** · Ngày cập nhật: **08/10/2026** · Phiên soạn: `ERP-SESSION-01`
+> · Sản phẩm: `V5.3.0-MASTER-BASELINE-R1.1.1` · Cổng: `:8787` (UI) · `:9000` (cutover) · `:18081` (API Java)
+> · ⚠️ Trạng thái: **ALPHA TEST** — tài liệu phản ánh bản ĐANG CHẠY; ⛔ chưa phải bản phát hành chính thức.
+> · 📌 Nguồn sự thật: **mã nguồn + CSDL thật** (mọi số liệu đều ĐO được, ⛔ không suy đoán).
+
 # VNTECH ERP V5.3.0 — MASTER BASELINE R1.1.1 FINAL
 
 Bộ cài FULL độc lập sau vòng **MASTER BASELINE CLEANUP R1.1.1**, package `VNTECH_ERP_V5_3_0_MASTER_BASELINE_R1_1_1`, build `5.3.0-MASTER-BASELINE-R1.1.1-FINAL-20260908`.
@@ -39,3 +45,20 @@ Trust Lock Foundation vẫn ở `development`; License Enforcement và Online At
 - `MASTER_BASELINE_CLEANUP_VALIDATION.md`
 - `MASTER_BASELINE_CLEANUP_DIFF.txt`
 - `MIGRATION_UPGRADE_ROLLBACK.md`
+
+---
+
+## 📚 BỘ TÀI LIỆU DỰ ÁN — PHIÊN BẢN `ALPHA TEST`
+
+⭐ **Điểm vào:** [`docs/00_INDEX_TAI_LIEU_ALPHA_TEST.md`](docs/00_INDEX_TAI_LIEU_ALPHA_TEST.md)
+
+| Tài liệu | Dùng cho |
+|---|---|
+| [`31_TAI_LIEU_BAN_GIAO.md`](docs/31_TAI_LIEU_BAN_GIAO.md) | người nhận bàn giao |
+| [`30_HUONG_DAN_NGUOI_DUNG.md`](docs/30_HUONG_DAN_NGUOI_DUNG.md) | người dùng cuối |
+| [`33_MO_TA_CHUC_NANG_VA_HE_THONG.md`](docs/33_MO_TA_CHUC_NANG_VA_HE_THONG.md) | nghiệp vụ / BA |
+| [`32_TAI_LIEU_PHAN_TICH_HE_THONG.md`](docs/32_TAI_LIEU_PHAN_TICH_HE_THONG.md) | kỹ thuật / kiến trúc |
+
+⚠️ **Phân biệt 2 loại phiên bản:** phiên bản **SẢN PHẨM** `V5.3.0-MASTER-BASELINE-R1.1.1`
+(+ vân tay `VNTECH-FP-BB706F1202490077`) ⛔ **không đổi** khi chỉ cập nhật tài liệu —
+vì vân tay gắn với **bản build đang chạy**; còn phiên bản **TÀI LIỆU** là `DOC-ALPHA-TEST-2026.10`.

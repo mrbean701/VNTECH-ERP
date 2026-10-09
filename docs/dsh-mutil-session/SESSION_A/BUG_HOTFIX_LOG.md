@@ -1217,3 +1217,47 @@ phạm vi kho · người nhận/hộp thư email · phân công workflow · NCC
 | Cổng FE | ✅ **955 test · 954 pass · 0 fail** |
 | Cổng UI | ✅ **6/6 bundle đúng byte** · vân tay `bb706f1202490077` |
 | CSDL kho | ✅ **12 / 5 / 10** (khớp audit) |
+
+## BUG-20261008-014 — 🔴 **CRITICAL (nguy cơ MẤT DỮ LIỆU)**: người uỷ nhiệm mở modal «Thêm nhân sự vào kho» ⛔ **XOÁ phân công kho khác của nhân sự** (payload FULL-REPLACE + thiếu dữ liệu)
+
+| ⭐ | ⭐ |
+|---|---|
+| **BUG_ID** | BUG-20261008-014 · **DATE** 2026-10-08 · **SESSION phát hiện** ERP-SESSION-01 |
+| **SEVERITY** | 🔴 **CRITICAL** (`DATA LOSS` — §20) |
+| **MODULE** | RBAC · BOOTSTRAP · màn Kho → tab «Nhân sự» → modal «Thêm nhân sự vào kho» |
+| **NGUỒN** | ⭐ Phát hiện khi **đi đo tận cùng phạm vi `U-1`** — ⛔ không phải suy đoán ✓ |
+| **TRẠNG THÁI** | 🟠 **OPEN** — ⛔ **S01 ⛔ KHÔNG tự sửa** (⚠️ xem «vì sao» bên dưới) |
+
+### 🔗 CHUỖI NHÂN QUẢ (⭐ đọc theo thứ tự — mỗi mắt xích đều ĐO được)
+1. ⭐ **U-1 (đã thi hành, commit `3cfbd75`)** ⇒ người uỷ nhiệm `admin_tab_01` **mở được** bảng tài khoản + **modal sửa tài khoản** ✓
+2. ⇒ Họ cũng **mở được** luồng «Thêm nhân sự vào kho» (tab «Nhân sự» → `wd-staff-add`) ✓
+3. ⚠️ Modal dựng payload **FULL-REPLACE** — `app/screens/Inventory.tsx` L~483–490:
+   ```js
+   const whCu = (data.userWarehouseScopes||[]).filter(s => String(s.userId)===uid)   // ⚠️ CHỈ những gì CLIENT THẤY
+   await action("save_user_access", { userId: uid, projectScopes, warehouseScopes: [...whCu, {warehouseId, permission}], modulePermissions })
+   ```
+4. 🔴 **`save_user_access` là FULL-REPLACE** (`clearUserScopes()` xoá rồi ghi lại) ⇒ những phân công **KHÔNG có trong payload** sẽ **BỊ XOÁ**
+5. 🔴 **`data.userWarehouseScopes` với non-admin chỉ chứa CỦA CHÍNH HỌ** — `BootstrapDataAdapter` **L959**:
+   ```java
+   data.put("userWarehouseScopes", admin ? query(<tất cả>) : query(<… WHERE uws.user_id=?>, ctx.userId()));
+   ```
+   ⇒ ⭐ người uỷ nhiệm **⛔ không thấy** phân công kho của nhân sự được chọn ⇒ `whCu` **RỖNG** ⇒ payload mất hết ⇒ 🔴 **XOÁ SẠCH phân công kho của nhân sự đó**
+
+### 📏 VÌ SAO LÀ MỚI (⭐ trước U-1 thì ⛔ không chạm tới được)
+⚠️ Trước `3cfbd75`, người uỷ nhiệm **⛔ không mở được** bảng tài khoản (`data.users = 0`) ⇒ luồng này **⛔ không chạm tới**.
+⇒ ⭐ **Chính bản vá U-1 đã MỞ ĐƯỜNG tới rủi ro này** ⇒ ⛔ **không được coi là «đã xong U-1»** khi chưa xử lý ✓
+
+### ⛔ VÌ SAO S01 ⛔ KHÔNG TỰ SỬA
+⚠️ 2 hướng sửa **khác nhau về bản chất bảo mật** ⇒ ⭐ cần **user chốt** (⚠️ cùng loại với `BUG-20261008-013`):
+| PA | Cách sửa | ⚠️ Đánh đổi |
+|---|---|---|
+| **V-1** | ⭐ **Sửa ở MÁY CHỦ** (an toàn nhất): khi người **⛔ không phải admin** gọi `save_user_access`, backend **GIỮ NGUYÊN** các phân công **ngoài phạm vi** của người gọi (chỉ sửa phần trong phạm vi) — ⛔ không phụ thuộc dữ liệu client thấy | ⚠️ cần sửa `UserManagementUseCase` + `AdminSystemStore` (lớn hơn) |
+| **V-2** | Gửi `userWarehouseScopes` **lọc theo phạm vi** cho người uỷ nhiệm (như đã làm cho `users`/`userScopes` ở U-1) | ⚠️ **GIẢM nhưng ⛔ KHÔNG HẾT** rủi ro: nếu nhân sự có phân công **ngoài phạm vi người uỷ nhiệm** thì vẫn bị xoá |
+| **V-3** | ⛔ **Chặn**: chỉ `role=admin` mới lưu được phân công kho (⚠️ lùi lại: người uỷ nhiệm mở được modal nhưng ⛔ không lưu được) | ⚠️ làm tính năng «một nửa» |
+
+⭐ **KHUYẾN NGHỊ**: **V-1** (sửa ở máy chủ) — ⭐ đúng nguyên tắc «⛔ đừng để client quyết định xoá gì»; ⚠️ V-2 chỉ là giảm nhẹ.
+
+### 📌 BIỆN PHÁP TẠM (⭐ đã có, ⛔ không thay cho sửa)
+- `docs/36` mục **M15-05** đã ghi **quy tắc an toàn**: «⚠️ thao tác ghi quyền là **GHI ĐÈ TOÀN PHẦN** ⇒ ⛔ **chỉ test trên tài khoản thử**, ⛔ **KHÔNG dùng tài khoản thật**» ✓
+- `docs/61` §5 (hạng mục tồn) nêu cùng cảnh báo ✓
+⚠️ ⛔ **không đủ** để coi là đã xử lý — vẫn phải sửa mã.

@@ -42,6 +42,23 @@ public interface UserAdminStore {
     void insertWarehouseScope(String scopeId, String userId, String warehouseId, String permission, Instant now);
     void clearUserScopes(String userId); // DELETE user_project_scopes + user_warehouse_scopes + user_module_permissions
     /**
+     * ⭐⭐ V-1 (`BUG-20261008-014` — 🔴 CRITICAL «mất dữ liệu») — ĐỌC **phạm vi HIỆN CÓ** của một người,
+     * trả về **ĐÚNG DẠNG PAYLOAD** mà `saveUserAccess` đang tiêu thụ ⇒ bên gọi **HỢP** được mà ⛔ không mất trường nào.
+     *
+     * <p>⚠️ VÌ SAO CẦN: `saveUserAccess` là **FULL-REPLACE** (`clearUserScopes()` rồi chèn lại theo payload).
+     * Người **⛔ không phải admin** chỉ nhận **một phần** dữ liệu phạm vi — vd `data.userWarehouseScopes`
+     * với non-admin **chỉ có của chính họ** (`BootstrapDataAdapter` L959), và `data.allModulePermissions`
+     * là **rỗng** với non-admin ⇒ payload gửi lên **THIẾU** ⇒ FULL-REPLACE sẽ ⛔ **XOÁ OAN** ⇒ 🔴 **mất dữ liệu** ✓
+     *
+     * <p>⭐ 3 khoá trả về (⛔ luôn có mặt, ⛔ không null — danh sách rỗng nếu chưa có):
+     * <ul>
+     *   <li>{@code "projectScopes"} — {@code [{projectId, permission}]}</li>
+     *   <li>{@code "warehouseScopes"} — {@code [{warehouseId, permission}]}</li>
+     *   <li>{@code "modulePermissions"} — {@code [{moduleKey, canView, canUse, canCreate, canEdit, canApprove, canExport}]}</li>
+     * </ul>
+     */
+    java.util.Map<String, java.util.List<java.util.Map<String, Object>>> listExistingScopes(String userId);
+    /**
      * Xoá ngoại lệ cá nhân (chỉ dòng có {@code permission_source='manual_override'}).
      *
      * <p>⛔⛔ VÁ 05/10/2026 (GO-LIVE · BUG-20261011 — LOW): đổi {@code void} → {@code int} để use-case

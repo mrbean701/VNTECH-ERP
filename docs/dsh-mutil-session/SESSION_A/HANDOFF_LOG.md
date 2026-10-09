@@ -584,3 +584,52 @@ AssertionError: set_project_team_status phải là ADMIN-ONLY (JS :1716/:1720 = 
 ♻️ **Một trong hai** — cần `ERP-SESSION-03` chốt:
 · **(a)** Trả 2 action về **ADMIN-ONLY** (`List.of()` + capability cũ) ⇒ khớp chú thích L96 + test `TM-04` ✓
 · **(b)** Nếu **CỐ Ý** mở cho `site_command` ⇒ ⭐ phải **cập nhật chú thích L96 + test `TM-04` kèm lý do**, ⛔ không để mã và cổng đá nhau ✓
+
+## HANDOFF-20261008-008 — 🟠 **SẴN THI HÀNH**: vá `BUG-20261008-014` (CRITICAL mất dữ liệu) theo phương án **V-1 — hợp ở MÁY CHỦ**
+
+| ⭐ | ⭐ |
+|---|---|
+| **HANDOFF_ID** | HANDOFF-20261008-008 · **DATE** 2026-10-08 · **FROM** `ERP-SESSION-01` · **TO** chính S01 (lượt sau, context mới) **hoặc** phiên được giao |
+| **LÝ DO** | 🔴 `BUG-20261008-014` là **CRITICAL (mất dữ liệu)** ⇒ §20 «**FIX OR HANDOFF**» — tôi **đã ALERT**, nay lập **kế hoạch sẵn-thi-hành** vì việc vá cần **thêm API đọc scope** (⚠️ 3–4 tệp) — ⛔ không nên làm vội cuối lượt dài ✓ |
+| **VÌ SAO V-1 ⛔ KHÔNG CẦN USER QUYẾT** | ⭐ V-1 **⛔ không mở thêm dữ liệu cho client** — chỉ **ngăn máy chủ XOÁ dữ liệu NGOÀI phạm vi người gọi** ⇒ ⛔ **không phải chính sách «ai thấy gì»** ⇒ S01 **được tự thi hành** ✓ (⚠️ khác hẳn V-2 — V-2 mới cần quyết vì có mở dữ liệu) |
+
+### 📍 VỊ TRÍ CHÍNH XÁC (⚠️ đã đọc mã, ⛔ không suy đoán)
+| Tệp | Dòng | Hiện trạng |
+|---|---|---|
+| `java-backend/application/…/service/UserManagementUseCase.java` | **L258** `saveUserAccess(...)` | hàm ghi quyền |
+| ↑ | **L339–341** | `Instant now = Instant.now(); store.runAtomically(() -> { store.clearUserScopes(targetUserId);` ⚠️ **ĐIỂM MẤT DỮ LIỆU** |
+| ↑ | **L342–356** | chèn lại `projectScopes` → `warehouseScopes` → `modulePermissions` |
+| `java-backend/application/…/port/out/UserAdminStore.java` | **L41–43** | có `insertProjectScope` · `insertWarehouseScope` · `clearUserScopes` ⇒ ⛔ **KHÔNG có hàm ĐỌC** ⇒ ⭐ **ĐÂY LÀ VIỆC PHẢI THÊM** |
+| `java-backend/infrastructure/…/UserAdminStoreAdapter.java` | **L171** | `public void clearUserScopes(String userId)` |
+
+### 🛠 KẾ HOẠCH THI HÀNH (⭐ 4 bước, ⛔ nhỏ · an toàn · hoàn nguyên được)
+**B1 — thêm API ĐỌC vào port** `UserAdminStore.java`:
+```java
+/** ⭐ V-1 (BUG-20261008-014) — khoá scope HIỆN CÓ của 1 người: "P:<projectId>" · "W:<warehouseId>" · "M:<moduleKey>". */
+java.util.Set<String> listScopeKeys(String userId);
+```
+**B2 — cài đặt ở** `UserAdminStoreAdapter.java` (3 `SELECT` gộp `Set`):
+`user_project_scopes` → `"P:"+project_id` · `user_warehouse_scopes` → `"W:"+warehouse_id` · `user_module_permissions` → `"M:"+module_key` ✓
+**B3 — dùng ở** `UserManagementUseCase.saveUserAccess`: ⭐ **trước** `clearUserScopes(targetUserId)`:
+```java
+// ⭐ V-1 — người ⛔ KHÔNG phải admin chỉ được THÊM/SỬA, ⛔ KHÔNG được XOÁ (⚠️ payload FULL-REPLACE ⇒ thiếu dữ liệu = xoá oan)
+boolean laAdmin = rbac.isAdmin(principal);           // ⚠️ đúng API đang dùng trong tệp
+Set<String> cu = laAdmin ? Set.of() : store.listScopeKeys(targetUserId);
+```
+⇒ trong 3 vòng chèn: ⭐ **bổ sung** các khoá cũ **⛔ không có trong payload** (giữ nguyên `permission` cũ — cần đọc kèm permission ⇒ ⚠️ nếu muốn giữ đúng quyền cũ thì `listScopeKeys` nên trả `Map<String,String>` khoá→permission ✓ **KHUYẾN NGHỊ ĐỔI CHỮ KÝ THÀNH `Map<String,String>`**)
+**B4 — test** (⚠️ bắt buộc, §24): thêm vào `AdminSystemIntegrationTest` (hoặc test use-case):
+① non-admin gửi payload **chỉ 1** warehouseScope cho người có **3** ⇒ ⭐ **vẫn còn 3** (⛔ không mất) ✓
+② admin gửi payload 1 ⇒ **còn đúng 1** (⛔ không đổi hành vi admin) ✓
+③ non-admin **thêm** 1 ⇒ **4** ✓
+
+### ⚠️ RỦI RO & LƯU Ý KHI THI HÀNH
+1. ⚠️ **Thêm hàm vào port ⇒ mọi lớp CÀI ĐẶT phải bổ sung** (⭐ kể cả **test fake** nếu có) ⇒ chạy `mvn -B test` để lộ ngay ✓
+2. ⚠️ Nếu chọn `Map<String,String>` (giữ permission) ⇒ ⭐ đúng hơn, ⛔ tránh hạ quyền cũ thành `read` ✓
+3. ⛔ **KHÔNG** đổi ngữ nghĩa `blank(...)` (bài học `D-103`) — handoff này **⛔ không đụng** `BootstrapDataAdapter` ✓
+4. ⚠️ Sau khi vá: **đo lại** bằng probe + kiểm bất biến CSDL **12/5/10** ✓
+5. ⚠️ **Trong lúc chưa vá**: ⛔ **không test M15-04/M15-05 trên tài khoản thật** (⚠️ đã ghi ở `docs/36` M15-05 + `docs/61` §5) ✓
+
+### ✅ TIÊU CHÍ XONG
+- [ ] `mvn -B test` **88/88** + có **3 ca mới** (B4) xanh
+- [ ] ⭐ **ĐO được**: non-admin lưu ⇒ số scope của người đích **⛔ KHÔNG giảm**
+- [ ] Cập nhật `BUG-20261008-014` → **FIXED** + `CHANGE_LOG` + `docs/32` §9 (hạng mục tồn) ✓

@@ -1,3 +1,9 @@
+> **VNTECH ERP — BỘ TÀI LIỆU PHIÊN BẢN `ALPHA TEST`**
+> · Phiên bản tài liệu: **`DOC-ALPHA-TEST-2026.10`** · Ngày cập nhật: **08/10/2026** · Phiên soạn: `ERP-SESSION-01`
+> · Sản phẩm: `V5.3.0-MASTER-BASELINE-R1.1.1` · Cổng: `:8787` (UI) · `:9000` (cutover) · `:18081` (API Java)
+> · ⚠️ Trạng thái: **ALPHA TEST** — tài liệu phản ánh bản ĐANG CHẠY; ⛔ chưa phải bản phát hành chính thức.
+> · 📌 Nguồn sự thật: **mã nguồn + CSDL thật** (mọi số liệu đều ĐO được, ⛔ không suy đoán).
+
 Công việc: 
 - Khi click vào công việc thì hiển thị luôn dashboard và đưa dashboard lên đầu menu của công việc hoặc bỏ việc hiển thị menuitem đi vì trong menu công việc đã có các tab đầy đủ thông tin rồi.
 - Trong phần giao việc & kiểm soát hoàn thành đang hiển thị theo phòng ban và dự án cái này cần thiết nhưng vẫn chưa đủ phạm vi. Đối với user có chức vụ trưởng phòng trở lên thì có thể xem được công việc của nhân viên trong phòng ban của mình. Đối với user có chức vụ là phó giám đốc trở lên thì có thể xem được công việc của toàn bộ phòng ban và nhân viên trong công ty. Logic giao việc cũng hoạt động tương tự như vậy.

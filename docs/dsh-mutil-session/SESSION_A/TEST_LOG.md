@@ -1102,3 +1102,37 @@ CƠ CHẾ: 15/15 phép kiểm ĐẠT   (⛔ KHÔNG còn `finding` nào)
 > **Khi một phép đo cho kết quả VÔ LÝ, ⛔ đừng kết luận sản phẩm sai — hãy nêu giả thuyết rồi ĐO TỪNG GIẢ THUYẾT.**
 > ⭐ 3 lần liên tiếp "đỏ" của tôi đều do **PHÉP ĐO**, ⛔ không phải sản phẩm (đổi danh tính · timing · sai đề) ✓
 > ⚠️ Và: **kỳ vọng phải suy từ HỢP ĐỒNG**, ⛔ không từ cảm giác «chắc là phải thấy nút» ✓
+
+## TEST-20261008-014 — ✅ **QA BỘ TÀI LIỆU `ALPHA TEST`**: quét số cũ sót · phân định «cố ý» vs «lệch thật» · làm rõ 2 số dễ mâu thuẫn
+
+| ⭐ | ⭐ |
+|---|---|
+| **TEST_ID** | TEST-20261008-014 · **DATE** 2026-10-08 · **SESSION** ERP-SESSION-01 · **RELATED** `TASK-20261008-005` |
+| **TEST_TYPE** | DOCUMENTATION QA (đối chiếu 5 tài liệu mới viết với **bảng số liệu nền** đã đo) |
+
+### 📏 CÁCH LÀM
+Quét 5 tài liệu (`31` · `30` · `33` · `32` · `34`) tìm **số CŨ** còn sót: `42 màn` · `224` · `135 action` · `926` · `114 bảng` · `tableCount=114` · `166+` · `chưa push`
+⇒ ⭐ **ĐỌC NGỮ CẢNH từng hit** trước khi sửa (⚠️ bài học: ⛔ đừng xoá số chỉ vì nó khác — có thể là **bảng so sánh «cũ → mới» CỐ Ý**) ✓
+
+### 🎯 KẾT QUẢ PHÂN ĐỊNH
+| # | Tài liệu | Hit | Phân định |
+|---|---|---|---|
+| 1 | `33` L63 · L147 · L513 | «42 màn» · «~224 case» · «~135 action» · «484→926» | ✅ **CỐ Ý** — trong khối «⚠️ Chênh lệch với bản 23/09/2026 (đã cũ)» + «số đo hôm nay là 2 772» ✓ |
+| 2 | `31` L218 · L265 | «166+ commit chưa push» · «114 bảng baseline» | ✅ **CỐ Ý** — «câu cũ … **SAI ở thời điểm 08/10**» + «nay đã lệch: 134 bảng, 38 migration» ✓ |
+| 3 | `32` L203 | «114 bảng baseline» | ✅ **CỐ Ý** — «Số THẬT hôm nay là 134» ✓ |
+| 4 | **`34` L84** | «KHÔNG phủ hết **114 bảng** MySQL» | 🔴 **LỆCH THẬT** (⛔ không phải so sánh — nêu như số hiện tại) ⇒ ✅ **ĐÃ SỬA thành 134** + ghi cách đo |
+| 5 | `30` | — | ✅ **sạch** |
+
+### ⚠️ LÀM RÕ 2 SỐ DỄ BỊ COI LÀ MÂU THUẪN
+Chỉ mục ghi `app/screens/*.tsx` = **52** · tài liệu `33`/`32`/`34` ghi **55** ⇒ ⭐ **KHÁC BỘ LỌC, ⛔ không mâu thuẫn**:
+- **55** = `Get-ChildItem app/screens -File` (mọi tệp)
+- **52** = lọc `-Filter *.tsx`
+✅ Đã sửa chỉ mục thành: «⭐ **55 tệp** (trong đó **52** `.tsx`) — ⚠️ 2 số KHÁC BỘ LỌC, ⛔ không mâu thuẫn» ✓
+
+### 📌 BÀI HỌC (D-105)
+> ⛔ **Đừng "sửa" một con số chỉ vì nó khác bảng số nền** — ⭐ phải **đọc ngữ cảnh**: nó có thể là
+> **so sánh cố ý «cũ → mới»** (giữ lại để người đọc biết tài liệu đã được cập nhật) ✓
+> ⚠️ Và: khi **2 tài liệu ghi 2 số khác nhau**, ⭐ kiểm **BỘ LỌC/PHÉP ĐO** trước khi kết luận mâu thuẫn ✓
+
+### KẾT LUẬN
+✅ Bộ tài liệu `ALPHA TEST` **nhất quán với số liệu nền đo ngày 08/10/2026**; 1 chỗ lệch đã sửa; 2 số dễ nhầm đã được làm rõ ✓

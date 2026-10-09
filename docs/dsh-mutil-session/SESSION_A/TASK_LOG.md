@@ -388,3 +388,53 @@ Khi user chốt ⇒ thi hành đúng phương án đã chọn cho (B), chạy l�
 | **`Inventory.tsx:478`** | `disabled={!staffPickId||!action}` ⇒ ⭐ với `action` có giá trị, nút chỉ phụ thuộc `staffPickId` ⇒ ⭐ **logic đúng** (⚠️ nghiên cứu mã, ⛔ không thay phép đo DOM) |
 | ⏸ **CHƯA XONG** | ⚠️ Phép đo DOM: `[data-vntech="wd-staff-save"]`.disabled = **false**. Đi được: bundle mới ⇒ hub (`h1="TỒN KHO & ĐIỀU CHUYỂN"`, **12 card**) ⇒ ⛔ **bấm card chưa mở chi tiết** ⇒ dừng ✓ |
 | **PHẢN HỒI** | ✅ Đã ghi vào `SESSION_B/HANDOFF_LOG.md` (⭐ **thêm vào**, ⛔ không ghi đè) + đề nghị S02 đo 1 lệnh (màn của họ) ✓ |
+
+## TASK-20261008-005 — ✅ **BỘ TÀI LIỆU PHIÊN BẢN `ALPHA TEST`**: gắn nhãn 80 tệp · chỉ mục · viết lại 5 tài liệu chính · vá lỗ hổng kiểm thử
+
+| ⭐ | ⭐ |
+|---|---|
+| **TASK_ID** | TASK-20261008-005 · **DATE** 2026-10-08 · **SESSION** ERP-SESSION-01 · **STATUS** ✅ **DONE** |
+| **YÊU CẦU (user)** | «viết tài liệu bàn giao, hướng dẫn sử dụng, mô tả chức năng và hệ thống. Mọi tài liệu đã có trong repo cập nhật lại phiên bản alpha test» |
+
+### ① GẮN NHÃN PHIÊN BẢN `ALPHA TEST` — 80 tệp
+Nhãn chuẩn `DOC-ALPHA-TEST-2026.10` + sản phẩm `V5.3.0-MASTER-BASELINE-R1.1.1` + 3 cổng.
+⭐ **ĐÃ XÁC MINH ⛔ không hỏng nội dung**: `git diff` **+449 / −1** trên 69 tệp ⇒ **chỉ THÊM**, ⛔ không xoá dòng nào (vd `docs/24`: **+6/−0**) ✓
+⚠️ **Phân biệt 2 loại phiên bản**: **TÀI LIỆU** = `DOC-ALPHA-TEST-2026.10` (đã cập nhật) · **SẢN PHẨM** = `V5.3.0-MASTER-BASELINE-R1.1.1` + vân tay `VNTECH-FP-BB706F1202490077` ⛔ **KHÔNG đổi** (vân tay gắn với bản build đang chạy, cổng `verify-ui-build-applied` kiểm `byte 6/6`) ✓
+
+### ② TÀI LIỆU MỚI
+| Tệp | Nội dung |
+|---|---|
+| `docs/00_INDEX_TAI_LIEU_ALPHA_TEST.md` (**105 dòng**) | ⭐ điểm vào: 5 nhóm tài liệu · chuẩn nhãn · 6 cổng kiểm chứng · **§8 SỐ LIỆU NỀN** để đối chiếu |
+| `docs/61_GHI_CHU_PHAT_HANH_ALPHA_TEST_20261008.md` (**69 dòng**) | ghi chú phát hành: bản này là gì · 7 thay đổi lớn kể từ 01/10 · cổng đã xanh · **5 hạng mục tồn & rủi ro** · quy tắc ghi phiếu lỗi |
+
+### ③ VIẾT LẠI 5 TÀI LIỆU CHÍNH (⭐ bản cũ cập nhật 01/10 ⇒ đã lệch)
+| Tài liệu | Trước → Sau |
+|---|---|
+| `31_TAI_LIEU_BAN_GIAO` | 141 → **393 dòng** |
+| `30_HUONG_DAN_NGUOI_DUNG` | 155 → **487 dòng** |
+| `33_MO_TA_CHUC_NANG_VA_HE_THONG` | 190 → **782 dòng** |
+| `32_TAI_LIEU_PHAN_TICH_HE_THONG` | 169 → **489 dòng** |
+| `34_TAI_LIEU_DEV` | 206 → **538 dòng** |
+⭐ Cách làm: **5 subagent song song**, mỗi tài liệu **1 tệp** (⛔ không giẫm nhau) · ⛔ cấm bịa số · ⛔ cấm ghi mật khẩu/token ✓
+
+### ④ 🔴 VÁ LỖ HỔNG THẬT TRONG KẾ HOẠCH KIỂM THỬ ALPHA
+Rà `docs/36` (487 dòng, phủ M1–M13): `uỷ nhiệm` · `admin_tab` · `thêm nhân sự` · `giữ chỗ` · `hub` = **0 lần** ⇒ ⛔ **chưa phủ chức năng vừa xây**.
+✅ Bổ sung **M14** (phân quyền uỷ nhiệm, **8 ca**) · **M15** (4 chức năng kho, **5 ca**) · **M16** (giữ chỗ tồn kho, **4 ca**) + **quy tắc an toàn** («⛔ KHÔNG test thao tác ghi đè quyền trên tài khoản thật»).
+
+### ⑤ SỬA SỐ LIỆU — ⭐ 3 LỖI PHÉP ĐO CỦA CHÍNH TÔI (⛔ không phải của subagent)
+| Số | Tôi đo | Sự thật | Nguyên nhân lỗi của tôi |
+|---|---|---|---|
+| Dòng `app/page.tsx` | 3607 ❌ | **3718** | ⚠️ `Measure-Object -Line` **đếm thiếu** (bỏ dòng) — dùng `(Get-Content).Count` |
+| Nhãn `case "` | 260 ❌ | **261** | ⚠️ neo `^\s*case "` **sót** `L1200: }case "close_po_line" -> {` (case chung dòng) |
+| Cổng `if (admin)` | 5 ❌ | **4** | ⚠️ `L1208` là **COMMENT** (⛔ lại bẫy comment — luật `D-100`) |
+✅ Đã sửa ở **cả 2 phía** (`docs/00_INDEX` §8 · `docs/32` · `docs/33`) ✓
+
+### ⑥ DỌN RÁC DO CHÍNH PROBE CỦA TÔI (⭐ phát hiện bởi subagent bàn giao)
+📏 Đo được: **44 tài khoản `probe_*`** (43 đang hoạt động) do các probe E2E của tôi tạo.
+✅ Đã **vô hiệu hoá 43 tài khoản** (`active=0`) ⇒ tài khoản hoạt động **71 → 28** · ⭐ **hoàn nguyên được** (`UPDATE users SET active=1 WHERE username LIKE 'probe\_%'`) · ⛔ **không xoá** (vướng khoá ngoại) ✓
+✅ Đã kiểm ⛔ không có tài khoản THẬT nào lọt mẫu `probe_%` ✓ · **bất biến kho ⛔ không đổi: 12/5/10** ✓
+✅ Cập nhật `docs/31` (bảng tài khoản + rủi ro **R-5** nay «ĐÃ XỬ LÝ») ✓
+📌 **LUẬT (D-104)**: probe ghi vào CSDL dùng chung **PHẢI tự dọn** hoặc **vô hiệu hoá** sau khi chạy ✓
+
+### ⑦ CỔNG KIỂM (không đổi — ⛔ không có mã sản phẩm nào bị sửa trong task này)
+Java **88/88** · FE **955 test · 954 pass · 0 fail** · `tsc` **0** · cổng UI **6/6 byte** · probe **17/17** · CSDL kho **12/5/10** · `:8787`/`:9000`/`:18081` sống ✓

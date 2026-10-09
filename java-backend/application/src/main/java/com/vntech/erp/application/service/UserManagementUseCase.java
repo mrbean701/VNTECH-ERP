@@ -336,24 +336,46 @@ public final class UserManagementUseCase {
             }
         }
         Instant now = Instant.now();
+        // ⭐⭐⭐ V-1 (`BUG-20261008-014` — 🔴 CRITICAL «mất dữ liệu») — `saveUserAccess` là **FULL-REPLACE**:
+        //   `clearUserScopes()` xoá cả 3 bảng rồi chèn lại **theo payload**. ⚠️ Người **⛔ không phải admin**
+        //   chỉ nhận được **MỘT PHẦN** dữ liệu phạm vi:
+        //     · `data.userWarehouseScopes` non-admin **chỉ có của chính họ** (`BootstrapDataAdapter` L959)
+        //     · `data.allModulePermissions` **rỗng** với non-admin (`if (admin)` L943)
+        //     · `data.userScopes` non-admin **chỉ có của chính họ**
+        //   ⇒ payload gửi lên **THIẾU** ⇒ nếu vẫn FULL-REPLACE thì ⛔ **XOÁ OAN** phần họ không nhìn thấy
+        //   ⇒ 🔴 mất dữ liệu (⚠️ con đường: U-1 mở modal «Thêm nhân sự vào kho» cho người uỷ nhiệm) ✓
+        //   ✅ CÁCH VÁ: **HỢP** payload với phạm vi **HIỆN CÓ** — người ⛔ không phải admin chỉ **THÊM/SỬA**,
+        //      ⛔ KHÔNG **XOÁ** (⭐ admin giữ nguyên hành vi FULL-REPLACE như cũ ⇒ ⛔ zero regression) ✓
+        List<Object> listProject = listOf(payload.get("projectScopes"));
+        List<Object> listWarehouse = listOf(payload.get("warehouseScopes"));
+        List<Object> listModule = listOf(payload.get("modulePermissions"));
+        if (!rbac.isAdmin(principalAsCurrent(principal))) {
+            Map<String, List<Map<String, Object>>> hienCo = store.listExistingScopes(targetUserId);
+            listProject = hopThemKhongXoa(hienCo.get("projectScopes"), listProject, "projectId");
+            listWarehouse = hopThemKhongXoa(hienCo.get("warehouseScopes"), listWarehouse, "warehouseId");
+            listModule = hopThemKhongXoa(hienCo.get("modulePermissions"), listModule, "moduleKey");
+        }
+        final List<Object> duAnCuoi = listProject;
+        final List<Object> khoCuoi = listWarehouse;
+        final List<Object> quyenCuoi = listModule;
         // MỐC 112 — nguyên tử: xoá và chèn lại phải cùng thành công hoặc cùng không đổi gì.
         store.runAtomically(() -> {
         store.clearUserScopes(targetUserId);
-        for (Object o : listOf(payload.get("projectScopes"))) {
+        for (Object o : duAnCuoi) {
             Map<?, ?> row = asMap(o);
             String projectId = trim(row.get("projectId"));
             if (!projectId.isEmpty())
                 store.insertProjectScope(idGenerator.next("SCOPE"), targetUserId, projectId,
                         blankDefault(trim(row.get("permission")), "read"), now);
         }
-        for (Object o : listOf(payload.get("warehouseScopes"))) {
+        for (Object o : khoCuoi) {
             Map<?, ?> row = asMap(o);
             String warehouseId = trim(row.get("warehouseId"));
             if (!warehouseId.isEmpty())
                 store.insertWarehouseScope(idGenerator.next("UWS"), targetUserId, warehouseId,
                         blankDefault(trim(row.get("permission")), "read"), now);
         }
-        for (Object o : listOf(payload.get("modulePermissions"))) {
+        for (Object o : quyenCuoi) {
             Map<?, ?> row = asMap(o);
             String moduleKey = trim(row.get("moduleKey"));
             // USER 28/09/2026 — bỏ chặn `admin` (xem giải thích đầy đủ ở dòng ~232).
@@ -859,6 +881,28 @@ public final class UserManagementUseCase {
     }
     private static String trim(Object o) { return o == null ? "" : String.valueOf(o).trim(); }
     private static String blankDefault(String s, String fallback) { return s.isEmpty() ? (fallback == null ? "" : fallback) : s; }
+
+    /**
+     * ⭐⭐ V-1 (`BUG-20261008-014` — 🔴 CRITICAL «mất dữ liệu») — **HỢP** «phạm vi HIỆN CÓ» với «payload» theo khoá:
+     * <ul>
+     *   <li>⭐ khoá trùng ⇒ **payload THẮNG** (người dùng SỬA được) ✓</li>
+     *   <li>⭐ khoá chỉ có ở `hienCo` ⇒ **GIỮ LẠI NGUYÊN** (⛔ KHÔNG XOÁ — ⚠️ đây chính là chỗ chống mất dữ liệu) ✓</li>
+     * </ul>
+     * ⚠️ Vì sao cần: xem giải thích đầy đủ ở khối V-1 trong `saveUserAccess` (người ⛔ không phải admin
+     * chỉ nhận **một phần** dữ liệu phạm vi ⇒ FULL-REPLACE sẽ xoá oan) ✓
+     */
+    private static List<Object> hopThemKhongXoa(List<Map<String, Object>> hienCo, List<Object> payloadRows, String khoa) {
+        List<Object> kq = new java.util.ArrayList<>(payloadRows);
+        java.util.Set<String> daCoTrongPayload = new java.util.HashSet<>();
+        for (Object o : payloadRows) daCoTrongPayload.add(trim(asMap(o).get(khoa)));
+        if (hienCo != null) {
+            for (Map<String, Object> r : hienCo) {
+                String k = trim(r.get(khoa));
+                if (!k.isEmpty() && !daCoTrongPayload.contains(k)) kq.add(new java.util.LinkedHashMap<>(r));
+            }
+        }
+        return kq;
+    }
     private static double numberValue(Object o) { try { return o == null ? 0 : Double.parseDouble(String.valueOf(o)); } catch (NumberFormatException e) { return 0; } }
     private static int intOf(Object o) { return o == null || "false".equalsIgnoreCase(String.valueOf(o)) || "0".equals(String.valueOf(o)) ? 0 : 1; }
 
