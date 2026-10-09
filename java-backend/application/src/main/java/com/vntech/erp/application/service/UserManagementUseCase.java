@@ -890,8 +890,11 @@ public final class UserManagementUseCase {
      * </ul>
      * ⚠️ Vì sao cần: xem giải thích đầy đủ ở khối V-1 trong `saveUserAccess` (người ⛔ không phải admin
      * chỉ nhận **một phần** dữ liệu phạm vi ⇒ FULL-REPLACE sẽ xoá oan) ✓
+     *
+     * <p>⭐ Cố ý để **package-private** (⛔ không `private`) để test được ở
+     * {@code UserAccessScopeMergeTest} — ⚠️ đây là **hàm thuần** (⛔ không I/O) nên test thẳng là đủ ✓
      */
-    private static List<Object> hopThemKhongXoa(List<Map<String, Object>> hienCo, List<Object> payloadRows, String khoa) {
+    static List<Object> hopThemKhongXoa(List<Map<String, Object>> hienCo, List<Object> payloadRows, String khoa) {
         List<Object> kq = new java.util.ArrayList<>(payloadRows);
         java.util.Set<String> daCoTrongPayload = new java.util.HashSet<>();
         for (Object o : payloadRows) daCoTrongPayload.add(trim(asMap(o).get(khoa)));

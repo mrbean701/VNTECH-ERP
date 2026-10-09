@@ -11,6 +11,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import com.vntech.erp.application.port.out.UserAdminStore;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -43,6 +45,10 @@ class AdminGovernanceIntegrationTest {
 
     @Autowired
     private JdbcTemplate jdbc;
+
+    /** ⭐ V-1 (`BUG-20261008-014`): dùng để kiểm chứng hàm ĐỌC phạm vi hiện có (chống mất dữ liệu). */
+    @Autowired
+    private UserAdminStore userAdminStore;
 
     private jakarta.servlet.http.Cookie adminCookie;
     private String adminId;
@@ -239,6 +245,47 @@ class AdminGovernanceIntegrationTest {
         assertEquals(0, count("SELECT COUNT(*) FROM user_module_permissions WHERE user_id=?"
                 + " AND module_key='dept_legal_hr' AND permission_source='department_default'", staffId),
                 "thu hồi quyền phòng phải xoá quyền mặc định tương ứng");
+    }
+
+    // ==================== V-1 — BUG-20261008-014 (🔴 CRITICAL «mất dữ liệu») ====================
+
+    /**
+     * ⭐⭐ V-1 (`BUG-20261008-014`) — `UserAdminStore.listExistingScopes` phải đọc **ĐÚNG 3 nhóm phạm vi
+     * HIỆN CÓ** và trả về **ĐÚNG DẠNG PAYLOAD** mà `saveUserAccess` tiêu thụ.
+     *
+     * <p>⚠️ VÌ SAO BÀI NÀY QUAN TRỌNG: use-case dùng kết quả này để **HỢP** với payload (người ⛔ không phải
+     * admin ⇒ chỉ THÊM/SỬA, ⛔ không XOÁ). Nếu **tên trường sai** (vd trả `project_id` thay vì `projectId`)
+     * thì phép hợp sẽ ⛔ **âm thầm không giữ được gì** ⇒ 🔴 **bug mất dữ liệu quay lại mà ⛔ không ai thấy** ✓
+     *
+     * <p>⭐ Ca «admin ⛔ không đổi» (FULL-REPLACE vẫn nguyên) đã được chốt sẵn ở bài
+     * {@code phanQuyenPhongBan_capVuotQuyenChoNguoiDung_KHONGConChan} — payload rỗng ⇒ phạm vi về 0 là
+     * **ĐÚNG Ý ĐỊNH** (⚠️ V-1 **miễn trừ admin** nên bài đó ⛔ không đổi kỳ vọng) ✓
+     */
+    @Test
+    void v1_listExistingScopes_traDungDangPayload() throws Exception {
+        seed();
+        Instant now = Instant.now();
+        // Người dùng đã có sẵn (từ seed): 1 phạm vi DỰ ÁN + 1 quyền MODULE. Thêm 1 phạm vi KHO.
+        jdbc.update("INSERT INTO warehouses (id,code,name,type,active,created_at,updated_at)"
+                + " VALUES ('wh_v1','WH-V1','Kho kiểm chứng V-1','central',1,?,?)", now, now);
+        jdbc.update("INSERT INTO user_warehouse_scopes (id,user_id,warehouse_id,permission,created_at,updated_at)"
+                + " VALUES ('uws_v1',?,'wh_v1','approve',?,?)", staffId, now, now);
+
+        Map<String, List<Map<String, Object>>> kq = userAdminStore.listExistingScopes(staffId);
+
+        assertEquals(3, kq.size(), "phải có ĐỦ 3 khoá: projectScopes · warehouseScopes · modulePermissions");
+        assertEquals(1, kq.get("projectScopes").size(), "seed có 1 phạm vi dự án");
+        assertEquals("p_gov", kq.get("projectScopes").get(0).get("projectId"),
+                "⭐ TÊN TRƯỜNG phải đúng dạng payload (`projectId`) — sai tên là bug mất dữ liệu quay lại");
+        assertEquals(1, kq.get("warehouseScopes").size(), "vừa thêm 1 phạm vi kho");
+        assertEquals("wh_v1", kq.get("warehouseScopes").get(0).get("warehouseId"), "⭐ đúng `warehouseId`");
+        assertEquals("approve", kq.get("warehouseScopes").get(0).get("permission"),
+                "⭐ GIỮ NGUYÊN quyền của phạm vi kho (⛔ không hạ về mặc định)");
+        assertEquals(1, kq.get("modulePermissions").size(), "seed có 1 quyền module");
+        assertEquals("requests", kq.get("modulePermissions").get(0).get("moduleKey"), "⭐ đúng `moduleKey`");
+        assertTrue(kq.get("modulePermissions").get(0).containsKey("canView"), "⭐ phải có `canView`");
+        assertTrue(kq.get("modulePermissions").get(0).containsKey("canUse"), "⭐ phải có `canUse`");
+        assertTrue(kq.get("modulePermissions").get(0).containsKey("canExport"), "⭐ phải có `canExport`");
     }
 
     @Test

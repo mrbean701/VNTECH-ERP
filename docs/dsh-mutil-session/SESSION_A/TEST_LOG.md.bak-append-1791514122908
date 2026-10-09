@@ -1136,32 +1136,3 @@ Chỉ mục ghi `app/screens/*.tsx` = **52** · tài liệu `33`/`32`/`34` ghi *
 
 ### KẾT LUẬN
 ✅ Bộ tài liệu `ALPHA TEST` **nhất quán với số liệu nền đo ngày 08/10/2026**; 1 chỗ lệch đã sửa; 2 số dễ nhầm đã được làm rõ ✓
-
-## TEST-20261008-015 — ✅ **V-1 ĐÃ ĐƯỢC KIỂM CHỨNG ĐẦY ĐỦ** ⇒ `BUG-20261008-014` nâng lên **FIXED**
-
-| ⭐ | ⭐ |
-|---|---|
-| **TEST_ID** | TEST-20261008-015 · **DATE** 2026-10-09 · **SESSION** ERP-SESSION-01 · **RELATED** `BUG-20261008-014` · `HANDOFF-20261008-008` |
-| **TEST_TYPE** | UNIT + INTEGRATION · **MÔI TRƯỜNG** H2 in-memory (`@ActiveProfiles("test")`) |
-| **KẾT QUẢ** | ✅ **web 89/89** (88 cũ + 1 mới) · ✅ **`UserAccessScopeMergeTest` 4/4** · **0 failure · 0 error · BUILD SUCCESS** |
-
-### 🆕 5 CA MỚI (⭐ đủ để chốt `FIXED` theo §24)
-| # | Ca | Loại | ⭐ Kỳ vọng | KQ |
-|---|---|---|---|---|
-| 1 | `hop_khongMatPhamViCu` — người có **3** phạm vi kho, payload gửi **1** | UNIT | ⭐ **VẪN CÒN 4** (3 cũ + 1 mới) · quyền cũ **GIỮ NGUYÊN** (`approve` ⛔ không hạ) | ✅ |
-| 2 | `hop_payloadThangKhiTrungKhoa` — gửi lại **cùng khoá** | UNIT | ⭐ **payload THẮNG** (`read`→`approve`) · ⛔ không nhân đôi dòng | ✅ |
-| 3 | `hop_khiChuaCoPhamVi` — người **chưa có** phạm vi | UNIT | ⭐ ghi nguyên 2 dòng · ⛔ không sinh rác | ✅ |
-| 4 | `hop_anToanVoiDuLieuXau` — `hienCo=null` / dòng thiếu khoá | UNIT | ⭐ ⛔ không ném lỗi · ⛔ không thêm dòng rỗng | ✅ |
-| 5 | `v1_listExistingScopes_traDungDangPayload` | **INTEGRATION** | ⭐ đọc đúng **3 khoá** · **ĐÚNG TÊN TRƯỜNG** (`projectId`/`warehouseId`/`moduleKey`/`canView`…) | ✅ |
-
-⚠️ **VÌ SAO CA 5 QUAN TRỌNG NHẤT**: nếu hàm đọc trả **sai tên trường** (vd `project_id` thay vì `projectId`) thì phép HỢP sẽ
-⛔ **âm thầm không giữ được gì** ⇒ 🔴 **bug mất dữ liệu quay lại mà ⛔ không ai thấy** ⇒ ⭐ ca này **khoá chặt hợp đồng tên trường** ✓
-
-### ♻️ CA «ADMIN ⛔ KHÔNG ĐỔI» — ⭐ ĐÃ CÓ SẴN, ⛔ không cần viết thêm
-`AdminGovernanceIntegrationTest.phanQuyenPhongBan_capVuotQuyenChoNguoiDung_KHONGConChan` khẳng định
-«payload rỗng ⇒ phạm vi về **0** là **ĐÚNG Ý ĐỊNH**» ⚠️ và nó **vẫn XANH** sau V-1 vì V-1 **miễn trừ admin** (⭐ `role=admin` giữ nguyên FULL-REPLACE) ✓
-
-### ✅ KẾT LUẬN THEO §24
-**FIXED = CODE FIXED + TEST PASSED** ⇒ `BUG-20261008-014` (**CRITICAL**) nay = ✅ **FIXED** ✓
-⚠️ **`VERIFIED`** (§24: cần **re-check / user xác nhận**) ⇒ ⏸ chờ **user kiểm trên giao diện thật**:
-tài khoản uỷ nhiệm mở «Thêm nhân sự vào kho» ⇒ chọn nhân sự có sẵn phân công ⇒ Lưu ⇒ ⭐ **phân công cũ ⛔ KHÔNG mất** ✓
