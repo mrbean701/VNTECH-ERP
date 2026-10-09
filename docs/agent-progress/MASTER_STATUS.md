@@ -836,3 +836,10 @@ nếu chưa chứng minh ảnh chuẩn là **ảnh thật của đúng màn đó
 
 **TRUY VẾT:** `BUG_HOTFIX_LOG.md` (SESSION_B) `BUG-20261006-005` · `BUG-20261006-006` · `BUG-20261006-007` ·
 `TEST-20261006-015` · `TEST-20261007-023`
+
+---
+
+> ## 🛑 CHỈ ĐẠO USER 09/10/2026 (`DEC-20261008-016`) — ⛔ KHÔNG RÀ SOÁT LẠI
+> «**Master task 1 và 2 đã được đánh dấu là đã xong không rà soát lại nữa, công việc hiện tại được giao việc trực tiếp bởi** [user]»
+> ⇒ ⛔ **KHÔNG** đối chiếu tiến độ / đánh lại trạng thái mục / rà `KNOWN_RED` / kiểm kê lại danh sách 110 mục.
+> 🎯 **Công việc nay do USER giao trực tiếp** ✓

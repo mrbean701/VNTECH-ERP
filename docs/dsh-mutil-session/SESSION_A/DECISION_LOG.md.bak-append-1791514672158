@@ -666,30 +666,3 @@ Tôi thấy **~60 chỗ** `requireRole(…, List.of("admin"))` và **kết luậ
 > 🛑 **Một đợt đã ROLLBACK thì phải ĐÓNG HẲN trong state** — ⚠️ nếu để nó nằm mãi trong danh sách nợ/kế hoạch thì
 > **mọi phiên sau đều tưởng đó là việc phải làm** ⇒ ⭐ tốn công rà lại và **dễ kéo dự án quay về hướng đã bị bỏ** ✓
 > ⭐ Ghi rõ **«ĐÓNG BĂNG — ⛔ không lấy làm căn cứ»** ngay cạnh danh sách nợ ✓
-
-## DEC-20261008-016 — 🛑 **CHỈ ĐẠO CỦA USER: MASTER TASK 1 & 2 ĐÃ XONG ⇒ ⛔ KHÔNG RÀ SOÁT LẠI · CÔNG VIỆC NAY DO USER GIAO TRỰC TIẾP**
-
-| ⭐ | ⭐ |
-|---|---|
-| **DEC_ID** | DEC-20261008-016 · **DATE** 2026-10-09 · **SESSION** ERP-SESSION-01 · **CATEGORY** TECHNICAL DIRECTION |
-| **NGUỒN** | ⭐ **CHỈ ĐẠO CỦA USER** (nguyên văn): «**Master task 1 và 2 đã được đánh dấu là đã xong không rà soát lại nữa, công việc hiện tại được giao việc trực tiếp bởi** [user]» ✓ |
-
-### 🎯 HỆ QUẢ (⭐ áp NGAY)
-1. 🛑 **MASTER TASK 1 & 2 = ĐÓNG**: ⛔ **KHÔNG** rà soát lại · ⛔ **KHÔNG** đối chiếu tiến độ · ⛔ **KHÔNG** đánh lại trạng thái mục · ⛔ **KHÔNG** lấy roadmap/`MASTER_STATUS`/danh sách 110 mục làm nguồn chọn việc ✓
-2. 🎯 **NGUỒN CÔNG VIỆC DUY NHẤT = USER GIAO TRỰC TIẾP** ⇒ ⛔ **DỪNG** cơ chế «tự tìm việc kế tiếp từ backlog» (§46 bước «FIND NEXT TASK») khi ⛔ chưa có chỉ định của user ✓
-3. ⛔ **KHÔNG tự nhận** các loại việc sau nếu user ⛔ chưa giao: rà cổng đỏ cũ · dọn nợ kỹ thuật · đối chiếu tài liệu–mã · kiểm kê tiến độ · rà `KNOWN_RED`/MT3 ✓
-4. ✅ **VẪN LÀM NGAY** (⛔ không cần chờ giao): ① việc user giao trực tiếp ② **bug CRITICAL/HIGH do user báo** ③ sửa hậu quả do chính phiên này gây ra ④ cập nhật **state/log** theo quy trình ✓
-
-### 📏 VIỆC ĐANG LÀM DỞ — ĐÃ DỪNG THEO CHỈ ĐẠO (⭐ ghi lại kết quả đo để ⛔ không mất công)
-Trước chỉ đạo, S01 đang rà 2 cổng RBAC đỏ. **Kết quả đo đã có** (⭐ ghi lại, ⛔ không tiếp tục):
-| # | Cổng | Kết quả đo | Phân định |
-|---|---|---|---|
-| 1 | `tools/probe-action-module-parity.mjs` | **68 điểm lệch** (capability khớp **184/215**) — phần lớn là **LỆCH CAPABILITY**: JS cũ dùng **`canUse`**, Java dùng **`canCreate`/`canEdit`/`canApprove`/`canView`** | ⚠️ Java **chi tiết hơn** (siết đúng thao tác) ⇒ **khác biệt có chủ đích của bản viết lại**, ⛔ không phải lỗi mới ✓ |
-| 2 | `tools/probe-catalog-drift.mjs` | **7 action «CHƯA BIẾT»**: `error_reports` · `manage_contract_review` · `mark_error_report_resolved` · `request_supplement` · `save_error_report` · `save_warehouse` · `set_warehouse_status` | ✅ **ĐÃ KIỂM TẬN NƠI**: **CẢ 7 action đều khai ĐỦ `module` + `capability`** trong `ActionRbacRegistry` (vd `save_warehouse` → `List.of("inventory","central_warehouse")` + `canEdit`) ⇒ ⛔ **KHÔNG có lỗ hổng an ninh**, chỉ là **chưa khai vào danh sách Java-only đã biết** ✓ |
-
-⇒ ⭐ **KẾT LUẬN**: 2 cổng đỏ đó **⛔ không phải rủi ro an ninh**; việc còn lại chỉ là **sổ sách** (khai 7 action vào danh sách Java-only) ⇒ 🛑 **DỪNG** theo chỉ đạo, ⛔ không làm tiếp khi chưa được giao ✓
-
-### 📌 BÀI HỌC **D-109**
-> 🎯 Khi user chuyển sang **«giao việc trực tiếp»** thì **nguồn chọn việc đổi hẳn** —
-> ⛔ đừng tiếp tục «công nhân tự chọn mục kế tiếp» từ backlog, ⚠️ vì như vậy là **làm việc user ⛔ không yêu cầu** và **dễ đụng vùng đã đóng** ✓
-> ⭐ Vẫn **giữ nguyên** nghĩa vụ: bug CRITICAL do user báo · sửa hậu quả do mình gây · cập nhật state/log ✓
