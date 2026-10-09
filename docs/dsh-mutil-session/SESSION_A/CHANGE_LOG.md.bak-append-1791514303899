@@ -825,32 +825,3 @@ Java **88/88** · FE **955 test · 954 pass · 0 fail** · `tsc` **0** · cổng
 ② admin gửi **1** ⇒ **còn đúng 1** (⛔ không đổi hành vi admin)
 ③ non-admin **thêm** 1 ⇒ **4** ✓
 ➕ **phép đo runtime** «số scope của người đích ⛔ không giảm» qua API ✓
-
-## CHG-20261008-009 — 📚 **ĐÍNH CHÍNH TÀI LIỆU THEO MÃ THẬT** (`§16 STATE vs ACTUAL CODE`): 5 chỗ tài liệu ALPHA TEST đã CŨ
-
-| ⭐ | ⭐ |
-|---|---|
-| **CHANGE_ID** | CHG-20261008-009 · **DATE** 2026-10-09 · **SESSION** ERP-SESSION-01 · **CATEGORY** DOCUMENTATION |
-| **NGUỒN PHÁT HIỆN** | ⭐ Rà việc mở trong phạm vi S01 ⇒ **đối chiếu MÃ** thay vì tin nhật ký ✓ |
-
-### 🔴 VÌ SAO PHẢI SỬA — bài học **D-106**
-Bộ tài liệu viết **08/10** chép trạng thái bug từ **nhật ký phiên**, ⛔ **không đối chiếu lại mã** sau khi **phiên khác đã vá** ⇒
-⭐ tài liệu nói «🟠 OPEN» trong khi **mã đã đúng** ⇒ ⚠️ **người kiểm thử alpha sẽ đi tìm một lỗi ⛔ không còn tồn tại** ✓
-
-### 📏 3 CHỖ SỬA (⭐ đều kèm BẰNG CHỨNG ĐO LẠI)
-| # | Chỗ | Trước (SAI) | Sau (ĐÚNG) | ⭐ Bằng chứng |
-|---|---|---|---|---|
-| 1 | `docs/31` **R-1** | 🟠 **OPEN** «2 action TỔ ĐỘI bị nới quyền · `TM-04` ĐỎ» | ✅ **ĐÃ XỬ LÝ** — admin-only ở **CẢ 2 TẦNG** | `ActionRbacRegistry` **L137/L303** = `List.of()` (**mặc định từ chối**) · **L96** chú thích chốt · `RbacService.ADMIN_ONLY_ACTIONS` **có cả 2 action** + chú thích «⚠️ `TM-04` chốt: ⛔ KHÔNG nới module `site_command`» ✓ |
-| 2 | `docs/32` **§9.1 + §9.2①** | 🔴 **OPEN** — chờ `ERP-SESSION-03` | ✅ **ĐÃ VÁ** + viết lại cả khối ① thành **đính chính có bằng chứng** | như trên ⭐ (⚠️ action **được nới CHÍNH ĐÁNG** là `create_project_team` — cho `commander`, MT2-P14-03c — ⛔ **không liên quan**) |
-| 3 | `docs/31` **R-4** | 🟠 **MỘT PHẦN** «U-1 chưa áp cho 4 trường» | ✅ **ĐÃ ĐO LẠI — ⛔ không còn là «một phần»** | ① `engineRoleProfiles` query **vô điều kiện** ⇒ **đã gửi mọi người** ② `adminPartners` có **biến thể `partners`** cho non-admin ③ `suppliers`/`partners` **⛔ không có cột dự án** ④ `userWarehouseScopes` ⚠️ rủi ro **đã vá bằng `V-1`** ✓ |
-| 4 | `docs/31` **R-6** | 🟠 «cây bẩn **79 tệp** chưa commit» | ✅ **ĐÃ COMMIT + PUSH** — cây **SẠCH (0 tệp)** | `git status --short` = 0 · HEAD = remote = **`7539626`** ✓ |
-| 5 | `docs/31` **R-3** · `docs/32` (L344) · `docs/61` (§4) | «Java **88/88**» | **89/89** (⭐ 88 cũ + **1 ca V-1 mới**) | `TEST-20261008-015` · `AdminGovernanceIntegrationTest` **6/6** ✓ |
-
-### ✅ ĐÃ ĐÚNG SẴN — ⛔ KHÔNG sửa (⭐ tránh sửa nhầm)
-- `BUG-20261008-011` (`V39` ⛔ **không idempotent**): ⭐ **ĐO LẠI THẤY VẪN ĐÚNG** — `V39` **vẫn** `ALTER TABLE ... ADD COLUMN` **trần** (L31) + tự thừa nhận ở L36 ⇒ ⚠️ **rủi ro còn nguyên trong mã** ⇒ ⭐ tài liệu ghi đúng, **giữ nguyên** ✓
-- `docs/61` §5 dòng 4 («2 action TỔ ĐỘI») đã ghi «✅ đã xử lý» ⇒ ✓ đúng sẵn.
-- `docs/dsh-state/SESSION_REGISTRY.md` **L877** là **nhật ký lịch sử** (⛔ không sửa) ⇒ ⭐ đã ghim **mục đính chính MỚI** ngay dưới ✓
-
-### 📌 BÀI HỌC **D-106** (⭐ ghi vào luật làm việc)
-> ⛔ **Đừng chép trạng thái bug/Lỗi từ nhật ký phiên vào tài liệu** — ⭐ phải **ĐỌC MÃ tại thời điểm viết**.
-> ⚠️ Trong chế độ đa phiên, **phiên khác có thể đã vá xong** kể từ lúc bug được ghi ✓

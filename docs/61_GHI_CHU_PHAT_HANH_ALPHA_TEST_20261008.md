@@ -42,7 +42,7 @@ Bản **alpha test** của VNTECH ERP: hệ thống **chạy được đầy đ�
 |---|---|---|
 | Hồi quy giao diện | `node scripts/regression-suite.mjs` | ✅ **955 test · 954 pass · 0 fail** |
 | Kiểu TypeScript | `npx tsc --noEmit --incremental false` | ✅ **0 lỗi** |
-| Test backend | `cd java-backend && mvn -B test` | ✅ **88/88** (0 failure · 0 error) |
+| Test backend | `cd java-backend && mvn -B test` | ✅ **89/89** (0 failure · 0 error) ⭐ 89 = 88 cũ + 1 ca V-1 mới |
 | Bản chạy khớp bản build | `node tools/verify-ui-build-applied.mjs --port=8787` | ✅ `do-moi` · `van-tay bb706f1202490077` · **`byte 6/6`** |
 | Phân quyền E2E | `node tools/probe-grant-1-perm-e2e.mjs` | ✅ **17/17 ĐẠT** |
 | Migration sắp chạy | `node tools/check-migration-idempotency.mjs` | ✅ **38 tệp · 0 đang chờ** |

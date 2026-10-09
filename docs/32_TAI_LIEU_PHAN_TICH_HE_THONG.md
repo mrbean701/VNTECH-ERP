@@ -341,7 +341,7 @@ private static void blank(Map<String, Object> data, String... keys) {     // L21
 | `data.userScopes` | ⛔ **0** | ⭐ **12** |
 | Dòng bảng tài khoản · nút «Sửa tài khoản» | 1 · 0 | ⭐ **12 · 12** |
 
-Cổng đã xanh sau U-1: Java `mvn -B test` **88/88** · probe E2E `probe-grant-1-perm-e2e.mjs` **17/17 ĐẠT** · cổng FE **955 test · 954 pass · 0 fail** · cổng UI **6/6 bundle đúng byte** · CSDL kho **12 / 5 / 10**. Commit thi hành: **`3cfbd75`** (`unity`).
+Cổng đã xanh sau U-1: Java `mvn -B test` **89/89** · probe E2E `probe-grant-1-perm-e2e.mjs` **17/17 ĐẠT** · cổng FE **955 test · 954 pass · 0 fail** · cổng UI **6/6 bundle đúng byte** · CSDL kho **12 / 5 / 10**. Commit thi hành: **`3cfbd75`** (`unity`).
 
 > ⚠️ **PHẠM VI U-1 CÒN LẠI** (chưa áp): `userWarehouseScopes` · `engineRoleProfiles` · `adminSuppliers` / `adminPartners` ⇒ **cần xác minh** trạng thái trước khi tuyên bố «đã mở đủ cho uỷ nhiệm».
 
@@ -407,16 +407,25 @@ Nguồn: `docs/dsh-mutil-session/SESSION_A/BUG_HOTFIX_LOG.md` (**1.219 dòng**) 
 | `BUG-20261008-007` | 🚨 | **Sự cố do phép đo**: probe xoá liên kết dự án của một **kho THẬT** ⇒ cổng `W-02` ĐỎ | ✅ Đã khôi phục (bất biến **12 / 5 / 10** khớp lại) |
 | `BUG-20261008-008` | 🟠 | `hasAdminTab` **luôn false cho non-admin** ⇒ quyền uỷ nhiệm vô hiệu | ✅ **ĐÃ VÁ + VERIFIED** |
 | `BUG-20261008-009` | — | 4 cổng `page.tsx` liên quan uỷ nhiệm | ⚠️ **Chỉ được NHẮC trong log** (không có mục riêng) ⇒ **cần xác minh** nếu cần chi tiết |
-| `BUG-20261008-010` | 🟠 **HIGH** | 2 action đáng lẽ **ADMIN-ONLY** bị **NỚI QUYỀN** ⇒ cổng `TM-04` ĐỎ | 🔴 **OPEN** — chờ `ERP-SESSION-03` |
+| `BUG-20261008-010` | 🟠 **HIGH** | 2 action đáng lẽ **ADMIN-ONLY** bị **NỚI QUYỀN** ⇒ cổng `TM-04` ĐỎ | ✅ **ĐÃ VÁ** (⚠️ tài liệu trước ghi «OPEN» là **SAI** — xem §9.2 ①) |
 | `BUG-20261008-011` | 🔴 **CRITICAL** | BACKEND DOWN do `V39` ⛔ **không idempotent** (Flyway FAILED) | ⚠️ **Đã khôi phục dịch vụ**, ⚠️ **khuyến nghị CHƯA thi hành** |
-| `BUG-20261008-012` | 🟠 | 2 test Java lỗi vì `schema-h2.sql` thiếu gương `issue_id` | ✅ **FIXED** ⇒ `mvn test` **88/88** |
+| `BUG-20261008-012` | 🟠 | 2 test Java lỗi vì `schema-h2.sql` thiếu gương `issue_id` | ✅ **FIXED** ⇒ `mvn test` **89/89** |
 | `BUG-20261008-013` | 🟠 **HIGH (chính sách)** | Mô hình «tài khoản uỷ nhiệm» bị chặn ở **tầng dữ liệu** (`data.users = 0`) | ✅ **FIXED + VERIFIED** qua **U-1** (§7.2) — commit `3cfbd75` |
 
-### 9.2 Chi tiết 2 mục còn mở / còn rủi ro
+### 9.2 Chi tiết mục còn rủi ro + ⚠️ 1 mục tài liệu TRƯỚC GHI SAI (đã đính chính 09/10)
 
-**① `BUG-20261008-010` — 🟠 OPEN (⛔ không thuộc ERP-SESSION-01).**
-`ActionRbacRegistry` đã **nới quyền** cho `set_project_team_status` và `delete_project_team` (thêm module `site_command`, đổi capability `canUse → canEdit`) ⇒ **mâu thuẫn với chú thích ngay trong chính tệp** (`ActionRbacRegistry.java` dòng 96 ghi «⛔ KHÔNG nới cho 2 action còn lại») ⇒ cổng `tests/tm04-team-crud.test.mjs` **ĐỎ**.
-⇒ Cần `ERP-SESSION-03` chốt **(a)** trả về ADMIN-ONLY, hoặc **(b)** nếu cố ý mở thì **cập nhật chú thích + test kèm lý do**. ⛔ Không để mã và cổng đá nhau.
+**① `BUG-20261008-010` — ✅ ĐÃ VÁ (⚠️ ⛔ KHÔNG còn OPEN — dòng trên đã đính chính).**
+📏 **Đo lại mã ngày 09/10/2026** (⭐ theo §16 «STATE vs ACTUAL CODE»):
+- `ActionRbacRegistry.java` **L137** `Map.entry("delete_project_team", List.of())` và **L303** `Map.entry("set_project_team_status", List.of())`
+  ⇒ ⭐ **`List.of()` = MẶC ĐỊNH TỪ CHỐI = ADMIN-ONLY** ✓ (⛔ **không** còn `site_command` như bản tài liệu 08/10 mô tả)
+- `ActionRbacRegistry.java` **L96** có chú thích chốt: «⛔ **KHÔNG nới cho 2 action còn lại** (`delete_project_team`/`set_project_team_status` — JS chỉ cho admin)»
+- ⭐ **Tầng thứ 2 độc lập**: `RbacService.ADMIN_ONLY_ACTIONS` (Set **`ADMIN_ONLY_ACTIONS`** khai `static final`)
+  **có mặt cả 2 action**, kèm chú thích nguyên văn: «nhóm TỔ ĐỘI (2) — ⚠️ **`TM-04` chốt**: `requireRole(["admin"])` ⇒ ⛔ **KHÔNG nới module `site_command`**»
+- ⚠️ Action **được nới một cách CHÍNH ĐÁNG** là `create_project_team` (`List.of("site_command")`) — vì `commander` được tạo tổ đội (MT2-P14-03c) — ⛔ **không liên quan** 2 action đã chốt trên ✓
+
+⇒ ✅ **Kết luận**: cả **2 cổng (registry + `ADMIN_ONLY_ACTIONS`)** đều **admin-only** + chú thích **khớp mã** ⇒ **mâu thuẫn đã hết** ✓
+📌 ⚠️ **Bài học (D-106)**: tài liệu 08/10 chép trạng thái từ **nhật ký** mà ⛔ **không đối chiếu lại mã** sau khi phiên khác vá ⇒
+⭐ **số liệu/trạng thái bug PHẢI đọc từ MÃ tại thời điểm viết** ✓
 
 **② `BUG-20261008-011` — 🔴 rủi ro còn nguyên trong mã.**
 📏 Đo lại hôm nay: `V39__session02_stock_reservation_issue_id.sql` (**38 dòng**) **vẫn** dùng `ALTER TABLE ... ADD COLUMN` **trần** + `CREATE INDEX` (L30–L34) — ⛔ chưa có `INFORMATION_SCHEMA` guard.
