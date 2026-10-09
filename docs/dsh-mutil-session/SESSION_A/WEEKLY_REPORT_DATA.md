@@ -491,3 +491,72 @@ SESSION_A (ERP-SESSION-01)
 
 ### Next Week
 ⭐ Đóng hẳn các mục của S02; ⚠️ rà lại V39 sau khi S2 sửa; ⭐ giữ 3 cổng tĩnh (`has-admin-tab-source` · `self-permission-source` · `warehouse-modal-contract`) làm **hàng rào chống tái phát** cho cả họ bug quyền uỷ nhiệm.
+
+---
+
+## WEEK-20261008-004 — Bổ sung: **BỘ TÀI LIỆU `ALPHA TEST`** · **`BUG-014` (CRITICAL mất dữ liệu) FIXED** · **ĐÓNG MT3** · **ĐÍNH CHÍNH TÀI LIỆU THEO MÃ**
+
+### Session
+`ERP-SESSION-01` (`SESSION_A`) · Period: 2026-10-08 → 2026-10-09
+
+### Completed Tasks
+| ID | Việc | Kết quả |
+|---|---|---|
+| `TASK-20261008-005` | ⭐ **BỘ TÀI LIỆU PHIÊN BẢN `ALPHA TEST`** | ✅ gắn nhãn **80 tệp** (⭐ xác minh `git diff` **+449/−1** ⇒ **chỉ THÊM**, ⛔ không hỏng nội dung) · tạo `docs/00_INDEX_TAI_LIEU_ALPHA_TEST.md` + `docs/61_GHI_CHU_PHAT_HANH_ALPHA_TEST_20261008.md` · **viết lại 5 tài liệu chính** bằng **5 subagent song song** (`31` 141→**393** · `30` 155→**487** · `33` 190→**782** · `32` 169→**489** · `34` 206→**538**) |
+| `TEST-20261008-014` | **QA bộ tài liệu** | 4/5 «số cũ» còn lại là **bảng so sánh «cũ → mới» CỐ Ý** (⛔ không xoá) · **1 lệch thật** đã sửa (`docs/34`: «114 bảng» → **134**) · làm rõ **52 `.tsx` vs 55 tệp** màn hình (khác bộ lọc) |
+| `BUG-20261008-014` | 🔴 **CRITICAL «mất dữ liệu»** — V-1 | ✅ **FIXED** (xem §Bugs) + **đã triển khai** jar 09:41 |
+| `TEST-20261008-015` | **5 ca kiểm chứng V-1** | ✅ `UserAccessScopeMergeTest` **4/4** (UNIT) + `AdminGovernanceIntegrationTest` **6/6** (⭐ +1 ca INTEGRATION `listExistingScopes`) · **web 89/89** · 0 failure · 0 error |
+| `CHG-20261008-009` | 📚 **ĐÍNH CHÍNH TÀI LIỆU THEO MÃ** | 5 chỗ đã cũ: `BUG-010` (**ĐÃ VÁ**, ⛔ không còn OPEN) · `R-4` (U-1 ⛔ không còn «một phần») · `R-6` (cây **SẠCH**) · `88→89` test · `R-1` |
+| `DEC-20261008-016` | 🛑 **CHỈ ĐẠO USER** | **MT 1&2 ĐÓNG — ⛔ không rà lại** · **công việc do user giao trực tiếp** ⇒ ghi vào `MASTER_STATUS` + registry |
+
+### Bugs
+| ID | Mức | Nội dung | Trạng thái |
+|---|---|---|---|
+| `BUG-20261008-014` | 🔴 **CRITICAL** | ⭐ **do chính `U-1` mở đường**: người uỷ nhiệm mở được modal «Thêm nhân sự vào kho», nhưng `data.userWarehouseScopes` non-admin **chỉ có của chính họ** ⇒ `whCu` **rỗng** ⇒ payload **FULL-REPLACE** ⇒ ⛔ **XOÁ phân công kho của nhân sự** | ✅ **FIXED** (+ triển khai) · ⏸ `VERIFIED` chờ user re-check UI |
+| `BUG-20261008-010` | 🟠 HIGH | 2 action TỔ ĐỘI bị nới quyền — **ĐO LẠI 09/10: ĐÃ VÁ** ở **CẢ 2 TẦNG** (`ActionRbacRegistry` L137/L303 `List.of()` + `RbacService.ADMIN_ONLY_ACTIONS`) | ✅ **ĐÃ VÁ** (⚠️ tài liệu cũ ghi «OPEN» là **SAI** ⇒ đã đính chính) |
+| `BUG-20261008-011` | 🔴 CRITICAL | `V39` ⛔ **vẫn** `ADD COLUMN` trần (L31) | ⚠️ **rủi ro còn nguyên trong mã** (chủ sở hữu khác) |
+
+### Hotfixes
+| Chiều | Nội dung |
+|---|---|
+| **Ngữ nghĩa V-1** | ⭐ người ⛔ **không phải admin** chỉ **THÊM/SỬA** phạm vi, ⛔ **KHÔNG XOÁ** (khoá trùng ⇒ **payload thắng**; khoá cũ còn thiếu ⇒ **giữ nguyên**) · ⭐ **`role=admin` giữ nguyên FULL-REPLACE** ⇒ **zero regression** |
+| **Tệp sửa** | `UserAdminStore.java` (➕ `listExistingScopes`) · `UserAdminStoreAdapter.java` (➕ 3 `SELECT`) · `UserManagementUseCase.java` (➕ khối V-1 L339–360 + helper `hopThemKhongXoa`) |
+| **Cổng** | ✅ `mvn -B compile` **0** · `mvn -B test` **89/89** · **BUILD SUCCESS** · jar **09:41** · `health` **200** · 3 cổng sống · **CSDL kho 12/5/10** ⛔ không đổi |
+
+### Testing
+| Loại | Kết quả |
+|---|---|
+| **UNIT (V-1)** | ① người có **3** phạm vi, payload gửi **1** ⇒ **vẫn còn 4** + quyền cũ **GIỮ NGUYÊN** ✓ ② gửi lại **cùng khoá** ⇒ **payload THẮNG** ✓ ③ chưa có phạm vi ⇒ ghi nguyên ✓ ④ `hienCo=null`/dòng thiếu khoá ⇒ an toàn ✓ |
+| **INTEGRATION (V-1)** | `listExistingScopes` trả **đúng 3 khoá** + **ĐÚNG TÊN TRƯỜNG** (`projectId`/`warehouseId`/`moduleKey`/`canView`…) ⇒ ⭐ khoá chặt **hợp đồng tên trường** (nếu sai thì phép HỢP ⛔ âm thầm không giữ được gì) ✓ |
+| **Ca «admin ⛔ không đổi»** | ✅ **đã có sẵn** (`phanQuyenPhongBan_…`) và **vẫn xanh** — ⭐ V-1 **miễn trừ admin** ✓ |
+| **Cổng hệ thống** | Java **89/89** · FE **955 test / 954 pass / 0 fail** · `tsc` **0** · cổng UI **6/6 byte** (`bb706f1202490077`) · probe quyền **17/17** · CSDL **12/5/10** |
+
+### Important Changes
+| # | Thay đổi | Ghi chú |
+|---|---|---|
+| 1 | **V-1 lên sống** (backend đã triển khai) | ⭐ rủi ro mất dữ liệu **đã chặn ở MÁY CHỦ** (⛔ không để client quyết định xoá gì) |
+| 2 | **Dọn 43 tài khoản `probe_*`** (do probe E2E của S01 tạo) | ✅ vô hiệu hoá (`active=0`) ⇒ hoạt động **71 → 28** · ⭐ hoàn nguyên được · **bất biến kho ⛔ không đổi** ✓ |
+| 3 | **Chuẩn nhãn tài liệu** `DOC-ALPHA-TEST-2026.10` | ⚠️ **phân biệt** với **phiên bản SẢN PHẨM** `V5.3.0-MASTER-BASELINE-R1.1.1` (⛔ **không đổi** — vân tay gắn với bản build đang chạy) |
+| 4 | **`scripts/regression-suite.mjs`** | ⚠️ **chỉ sửa CHUỖI LÝ DO + chú thích** (đính chính `mt3-be-05`) — ⛔ **không đổi hành vi**: `KNOWN_RED=8` · `allTests=162` · `gateTests=154` ✓ |
+| 5 | **Git** | commit `268dba5` → `7539626` → `045889a` → `193f3dd` → `4e5fa6d` · ⭐ **local = remote** (`unity`) |
+
+### Decisions
+| ID | Nội dung | Trạng thái |
+|---|---|---|
+| `DEC-20261008-014` | ⭐ **MT3: lựa chọn (b) «khôi phục» là BẤT KHẢ THI** — 📏 `git log unity..backup/mt3-head-20260928` = **0 commit** · `git diff --shortstat` = **RỖNG** | ✅ đo được |
+| `DEC-20261008-015` | 🛑 **USER CHỐT: MT3 đã rollback ⇒ ⛔ không lấy MT3 làm căn cứ cho công việc sắp tới** ⇒ đóng hẳn câu hỏi (a)/(b) · 8 tệp `KNOWN_RED` = **NỢ CŨ ĐÓNG BĂNG** | ✅ **đã thi hành** |
+| `DEC-20261008-016` | 🛑 **CHỈ ĐẠO USER**: **MT 1&2 ĐÓNG — ⛔ không rà lại** · **việc do user giao TRỰC TIẾP** ⇒ ⛔ dừng «tự tìm việc kế tiếp» | ✅ **đã thi hành** |
+| `D-103`…`D-109` | ⭐ luật rút ra: `blank(...)` là **cơ chế an ninh** · `Measure-Object -Line` **đếm thiếu** · đừng «sửa» số khi chưa đọc ngữ cảnh (**D-105**) · ⛔ đừng chép trạng thái bug từ **nhật ký** mà ⛔ không đối chiếu **mã** (**D-106**) · đợt đã **rollback** phải **ĐÓNG HẲN** trong state (**D-108**) · user chuyển sang **giao việc trực tiếp** thì **nguồn chọn việc đổi hẳn** (**D-109**) | 📌 luật mới |
+
+### Blockers/Risks
+- ⚠️ **`BUG-20261008-011` (`V39`)** — ⛔ vẫn `ADD COLUMN` trần ⇒ máy/CSDL đã có `issue_id` sẽ **chết ở lần khởi động sau** (⚠️ chủ sở hữu khác).
+- ⏸ **`VERIFIED` cho `BUG-014`** — ⚠️ cần **user re-check trên UI** (⛔ S01 ⛔ không tự ghi vào CSDL dùng chung để kiểm).
+- ⚠️ **Phiên bản SẢN PHẨM** ⛔ **chưa** đổi sang alpha test (⚠️ muốn đổi ⇒ phải **build lại + đồng bộ vân tay**, có rủi ro lệch `byte 6/6`).
+
+### Remaining Work
+1. ⏸ **`VERIFIED` `BUG-014`** — chờ user re-check UI (tài khoản uỷ nhiệm → «Thêm nhân sự vào kho» → chọn nhân sự **đã có phân công** → Lưu ⇒ ⭐ phân công cũ ⛔ **không mất**).
+2. 🎯 **Công việc tiếp theo = do USER giao trực tiếp** (`DEC-20261008-016`) ⇒ ⛔ S01 **không tự chọn việc** từ backlog.
+3. ⏸ `ERP-SESSION-02`: `BUG-011` tận gốc (`V39` idempotent) · 2 ca E2E phía S02.
+
+### Next Week
+⭐ Chờ chỉ đạo trực tiếp · giữ 3 cổng tĩnh xanh · ⛔ không rà lại MT 1&2 · ⛔ không dùng MT3 làm căn cứ.
