@@ -854,3 +854,34 @@ Bộ tài liệu viết **08/10** chép trạng thái bug từ **nhật ký phi�
 ### 📌 BÀI HỌC **D-106** (⭐ ghi vào luật làm việc)
 > ⛔ **Đừng chép trạng thái bug/Lỗi từ nhật ký phiên vào tài liệu** — ⭐ phải **ĐỌC MÃ tại thời điểm viết**.
 > ⚠️ Trong chế độ đa phiên, **phiên khác có thể đã vá xong** kể từ lúc bug được ghi ✓
+
+## CHG-20261008-010 — 🧹 **DỌN RÁC DO CÔNG CỤ GHI LOG + CHẶN TÁI PHÁT** (⭐ hậu quả do chính phiên này)
+
+| ⭐ | ⭐ |
+|---|---|
+| **CHANGE_ID** | CHG-20261008-010 · **DATE** 2026-10-09 · **SESSION** ERP-SESSION-01 · **CATEGORY** DEVOPS |
+| **VÌ SAO** | ⭐ Nghĩa vụ **③** của chỉ đạo `DEC-20261008-016`: **sửa hậu quả do chính phiên gây ra** ✓ |
+
+### 🔴 PHÁT HIỆN — **9 tệp rác ĐÃ BỊ COMMIT vào repo**
+`tools/_append-log.mjs` **cố ý** tạo bản sao lưu trước khi nối log (⭐ an toàn, **giữ nguyên thiết kế**):
+```js
+const bak = `${dich}.bak-append-${Date.now()}`;   // L35
+copyFileSync(dich, bak);                           // L36
+```
+⚠️ **NHƯNG** các lệnh `git add -A` của S01 (⭐ commit gộp nhiều phiên) đã **cuốn 9 tệp `.bak-append-*` vào git**:
+`BUG_HOTFIX_LOG` (**2**) · `CHANGE_LOG` (**2**) · `DECISION_LOG` (**3**) · `DEV_LOG` (**2**) · `TASK_LOG`/`TEST_LOG`/`HANDOFF_LOG`… ⇒
+⇒ ⚠️ **ô nhiễm repo** (⭐ không phải nhật ký, ⛔ không có giá trị, ⚠️ dễ gây nhầm khi rà log) ✓
+
+### ✅ ĐÃ XỬ LÝ
+| # | Việc | Kết quả |
+|---|---|---|
+| 1 | ⭐ **KIỂM LOG GỐC TRƯỚC KHI XOÁ** (⛔ không xoá mù) | ✅ `BUG_HOTFIX_LOG` **1330** · `CHANGE_LOG` **856** · `DECISION_LOG` **695** · `DEV_LOG` **787** dòng — ⭐ **đều còn mục mới nhất** (`BUG-014` · `DEC-016` · `DEV-009`) ✓ |
+| 2 | Gỡ khỏi git + xoá trên đĩa | ✅ **9 tệp** ⇒ `git ls-files` = **0** · trên đĩa = **0** |
+| 3 | ⭐ **CHẶN TÁI PHÁT** — thêm vào `.gitignore` (L118) | ✅ `*.bak-append-*` (⭐ chặn cho **MỌI phiên** dùng công cụ này) ✓ |
+| 4 | Commit + push | ✅ `a38d1a1` — **10 tệp · +5 / −7972** (⭐ gỡ **7972 dòng rác**) · ⭐ **local = remote** ✓ |
+| 5 | Kiểm thư mục tạm | ✅ `tools/_tmp*` = **0** (⭐ S01 đã tự dọn sau mỗi lần dùng) ✓ |
+
+### 📌 BÀI HỌC **D-110**
+> ⚠️ **`git add -A` trong repo ĐA PHIÊN sẽ cuốn cả RÁC của công cụ** (bản sao lưu, tệp tạm) vào commit ✓
+> ⭐ Hai lớp phòng: ① **`.gitignore` phải chặn rác của công cụ** ② **trước khi commit gộp: `git status --short` ⛔ phải được ĐỌC** (⚠️ S01 đã đọc nhưng ⛔ không nhận ra `.bak-append-*` là rác) ✓
+> ⛔ **Đừng xoá bản sao lưu trước khi kiểm tệp gốc còn nguyên** ✓
