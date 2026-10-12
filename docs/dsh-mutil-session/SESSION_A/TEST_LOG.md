@@ -1751,3 +1751,28 @@ Trước bài này: `tests/t13` + `tests/t07` **chỉ SO CHUỖI khai báo** (re
 | **📌 LUẬT VỆ SINH TEST ĐỀ XUẤT (⭐ ghi để các phiên sau tuân)** | ① ⭐ mọi probe/test chạm CSDL THẬT ⇒ **chỉ dùng tài khoản `active=0`** ✓ hoặc **dọn ngay trong cùng lượt** ✓ · ② ⛔ **KHÔNG BAO GIỜ gán `module_key='admin'`** cho tài khoản `active=1` ✓ · ③ ⭐ nếu buộc phải gán ⇒ **đặt `permission_expires_at`** để tự hết hạn ✓ (⭐ cơ chế này ĐÃ CÓ ✓ mà 10 dòng kia đều `NULL` ✓) |
 | **⚠️ GIỚI HẠN (trung thực)** | ⚠️ S01 ⛔ **chưa xác định được CHÍNH XÁC công cụ nào** đã ghi 2 dòng đó (⭐ chỉ chứng minh được **⛔ không phải sản phẩm + ⛔ không phải script trong repo** ✓) · ⚠️ 1 lệnh grep của S01 **lỗi regex** (dấu `\` cuối chuỗi ✓) ⇒ ⛔ **không ảnh hưởng kết luận** ✓ (kết luận dựa trên phép quét `manual_test` đã chạy ✓) |
 | **STATUS** | ✅ **DONE** — 🔴 `BUG-D35` **vẫn OPEN** (⚠️ chờ user cho phép sửa **dữ liệu** ✓) · ⛔ **0 thay đổi mã · 0 thay đổi CSDL** ✓ |
+
+## TEST-20261009-057 — ✅ **COMMIT + MERGE THEO YÊU CẦU USER** (`commit + push + merge unity`) — ⭐ **push ⛔ KHÔNG ĐƯỢC vì máy mất mạng** (⛔ không phải lỗi quyền)
+
+| **TEST_ID** | `TEST-20261009-057` · **DATE** 2026-10-09 (≈22:40) · **SESSION** `ERP-SESSION-01` · **TYPE** GIT (yêu cầu TRỰC TIẾP của user ✓) |
+|---|---|
+| **BỐI CẢNH** | ⭐ User yêu cầu trực tiếp «**commit + push + merge unity**» ✓ ⇒ ⭐ đây là **yêu cầu người** (⛔ không phải `AUTO_COMMIT` bị cấm ✓) ⇒ ✅ **được phép và phải làm** ✓ |
+| **LÀM RÕ «merge unity» TRƯỚC KHI LÀM** | ⭐ Đo ra: **nhánh hiện tại CHÍNH LÀ `unity`** ✓ · có `origin/main` ✓ · ⭐ **quy ước của chính dự án**: mọi lần merge đặt tên «**Merge origin/unity vao main (đợt N)**» ✓ (lần cuối **đợt 14** ✓) ⇒ ⭐ nghĩa là: **commit → push `unity` → merge `unity` vào `main`** ✓ |
+| **① COMMIT — ✅ XONG** | `8fe33b8` ✓ «go-live(4 phien): CHG-011 — nghiem thu UI that + va D27/D31 + dong A-list MT3 + BUG-D35 (HIGH, cho user)» ✓ — **105 tệp, +12.878 / −2.335** ✓ · ⭐ **0 tệp còn sót** ✓ · ⭐ **ghi công đủ 4 phiên** (SESSION_A/C/D + java-backend/tests/tools ✓) ✓ |
+| **② MERGE `unity` → `main` — ✅ XONG (đợt 15)** | `main` = **`45e0345`** ✓ «Merge origin/unity vao main (**đợt 15**) …» ✓ — **448 tệp, +46.039 / −3.290** ✓ · ⭐ **merge SẠCH**: `merge-tree` **EXIT 0** trước khi merge ✓ · **0 tệp chưa hợp nhất** ✓ · **`main` thiếu `unity` = 0 commit** ✓ · **0 tệp dở** ✓ |
+| **⭐⭐ CÁCH LÀM AN TOÀN CHO 4 PHIÊN (điểm đáng ghi nhất)** | ⭐ Merge thực hiện trong **worktree TẠM Ở NGOÀI repo** (`%TEMP%\vntech-merge-main` ✓) ⇒ ⛔ **KHÔNG chuyển nhánh** ✓ · ⛔ **KHÔNG chạm cây làm việc đang chạy** ✓ · ⛔ **KHÔNG làm bẩn vân tay** (worktree ngoài repo ✓) ⇒ ⭐ sau đó **đã dọn sạch** ✓ (`worktree list` chỉ còn cây chính ✓) · ⭐ **Kiểm chứng**: nhánh `unity` ✓ · HEAD `8fe33b8` ✓ · **0 tệp thay đổi** ✓✓ |
+| **③ PUSH — ⛔ KHÔNG ĐƯỢC (lỗi MẠNG)** | 🔴 `git push origin unity` ⇒ «**fatal: unable to access … Could not resolve host: github.com**» ✓ (EXIT 128 ✓) ⇒ ⭐ **máy KHÔNG có DNS/mạng** ✓ — ⛔ **KHÔNG phải lỗi quyền, ⛔ không phải sai remote** ✓ (remote đúng: `github.com/mrbean701/VNTECH-ERP.git` ✓) ⇒ ⚠️ **thử lại `main` cũng cùng lỗi** ✓ ⇒ ⭐ **chưa đẩy được lên GitHub** ✓ |
+| **⚠️ TRẠNG THÁI HIỆN TẠI (trung thực)** | ✅ Commit: **có** (máy ✓) · ✅ Merge `main`: **có** (nhánh nội bộ `main` = `45e0345` ✓) · ⛔ Push: **CHƯA** (⚠️ cần mạng ✓) ⇒ ⭐ **khi có mạng, chạy `git push origin unity main`** ✓ (⭐ 1 lệnh, ⛔ không cần merge lại ✓) |
+| **⚠️ BÀI HỌC MỚI (ghi để ⛔ không lặp)** | ⚠️ ⛔ **KHÔNG pipe lệnh git dài vào `Select-Object -First N`** ✓ — ⭐ PowerShell **cắt pipeline ⇒ GIẾT lệnh giữa lúc ghi** ✓ (⭐ lần đầu làm `git worktree add` kẹt ở «initializing» + `index.lock` ⇒ merge sau đó ⛔ không chạy ✓) ⇒ ⭐ **dùng `Out-String`** ✓ · ➕ ⚠️ nếu worktree kẹt: `git worktree unlock <path>` → `git worktree remove --force --force <path>` ✓ |
+| **STATUS** | ✅ **DONE (2/3)** — ⛔ **push chờ mạng** ✓ (⛔ không phải blocker kỹ thuật ✓) |
+
+## TEST-20261009-058 — ✅✅✅ **ĐÍNH CHÍNH `TEST-057`: PUSH ĐÃ THÀNH CÔNG** — «commit + push + merge unity» **HOÀN TẤT 3/3**
+
+| **TEST_ID** | `TEST-20261009-058` · **DATE** 2026-10-09 (≈22:45) · **SESSION** `ERP-SESSION-01` · **TYPE** GIT đính chính · **RELATED** `TEST-20261009-057` (⚠️ đã cũ) |
+|---|---|
+| **⭐ VÌ SAO CÓ BẢN ĐÍNH CHÍNH** | ⚠️ `TEST-057` ghi «**③ PUSH ⛔ KHÔNG ĐƯỢC**» ✓ — ⭐ điều đó **ĐÚNG lúc đo** (máy mất DNS: «Could not resolve host: github.com» ✓) — ⚠️ nhưng **5 phút sau, mạng trở lại** và S01 **thử lại thành công** ✓ ⇒ ⭐ **bản ghi cũ đã lỗi thời** ✓ (⭐ luật: log phải khớp **thực tế hiện tại** ✓ · ⛔ **KHÔNG xoá dòng cũ** ✓) |
+| **✅ KẾT QUẢ THẬT (đo được)** | ✅ **`git push origin unity`** ⇒ «`46a1cfd..8fe33b8  unity -> unity`» ✓ **EXIT 0** · ✅ **`git push origin main`** ⇒ «`5b7a4ce..45e0345  main -> main`» ✓ **EXIT 0** · ⭐ **kiểm chứng đồng bộ**: `unity` ahead/behind = **0/0** ✓ · `main` vs `origin/main` = **0/0** ✓ |
+| **🎉 TRẠNG THÁI CUỐI CÙNG** | ✅ **① COMMIT** `8fe33b8` (105 tệp ✓) · ✅ **② PUSH** (2 nhánh lên `origin` ✓) · ✅ **③ MERGE** `main` = **`45e0345`** «đợt 15» (448 tệp ✓ · 0 xung đột ✓) ⇒ ⭐ **YÊU CẦU CỦA USER: HOÀN TẤT 3/3** ✓ |
+| **⭐ QUY TRÌNH AN TOÀN ĐÃ GIỮ** | ⭐ Merge trong **worktree TẠM ngoài repo** ⇒ ⛔ không chuyển nhánh · ⛔ không chạm cây 4 phiên · ⛔ không bẩn vân tay ✓ · ⭐ **cây chính vẫn**: nhánh `unity` ✓ · **0 tệp dở** ✓ |
+| **⚠️ BÀI HỌC GIỮ NGUYÊN** | ⛔ Không pipe lệnh git dài vào `Select-Object -First N` (⭐ giết lệnh giữa lúc ghi ✓ — dùng `Out-String` ✓) · ⚠️ worktree kẹt ⇒ `git worktree unlock` → `remove --force --force` ✓ · ⭐ **lỗi mạng ≠ lỗi quyền** — «Could not resolve host» là **DNS**, ⛔ không phải token ✓ (⇒ ⭐ **thử lại là đúng** ✓, ⛔ không cần đổi cấu hình gì ✓) |
+| **STATUS** | ✅ **DONE 3/3** |
