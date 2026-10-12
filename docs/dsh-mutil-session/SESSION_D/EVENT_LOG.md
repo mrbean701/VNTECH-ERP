@@ -311,3 +311,224 @@
 | 5 | `docs/42` | **Spec vá P-08** sẵn thi hành (12+6 action · diff · `ADMIN_ONLY_ACTIONS` · cổng tĩnh + 5 phép thử) · **tầng cổng thứ 3** (`requireProjectAccess`) |
 | 6 | `docs/43` | **Rà chiều ngược SẠCH** (⛔ không bypass) · **2 cổng tĩnh hoàn chỉnh sẵn dán** |
 | ⛔ | **Chưa vòng nào chạy được phép thử runtime** | shell hỏng **4 vòng liên tiếp** (thiếu `@deepseek-ai/dsh-scope`) |
+
+---
+
+## 📌 VÒNG 81–90 (08/10/2026) — **MA TRẬN PHÂN QUYỀN WORK ĐỘNG** (lệnh trực tiếp của user)
+
+| # | Hồ sơ | Việc |
+|---|---|---|
+| 1 | `MA_TRAN_WORK_DONG_20261008.md` | **HỒ SƠ ĐẦY ĐỦ** của đợt này (số đo trước/sửa · 5 tầng thay đổi · bằng chứng xác minh · việc còn lại · **3 câu hỏi chờ user quyết**) |
+| 2 | `probes/probe-ma-tran-dong.mjs` | ĐO: **11 đơn vị** · 73 nhân sự (BCH **44**) · nhóm WORK chỉ **4 khoá/2 phòng** |
+| 3 | `probes/do-luong-csdl-pham-vi.mjs` | ĐO CSDL: **62/73** tài khoản `system_level_code=NULL` · 3 tài khoản `%_truong` · `thuky`/`hr` có `base_role='director'` |
+| 4 | `CHG-D17` | Khoá `work` (5 tầng) + **phạm vi ĐỘNG** theo `organization_units` + `V40` (CSDL) ⇒ **FIXED** |
+| 5 | `BUG-D17` | ⛔ Bộ sinh registry **xoá 34 mục ghi tay** (tự phát hiện) ⇒ khôi phục + **chốt chặn tận gốc** ⇒ **FIXED** |
+| 6 | `BUG-D18` | ⛔ Tách action duyệt (`Q2-b`) làm **quản lý phòng 403** ⇒ bù bằng dữ liệu (`V40 §3`) ⇒ **FIXED** |
+| 7 | `CHG-D19` | Ghi nhận phần CSDL của `BUG-D18` (+3 dòng `user_module_permissions`) |
+| ⭐ | **XÁC MINH** | `node --check` **0** · `javac` **0** · `tsc` **0** · `t13` **15/15** · `t07` **8/8** · cổng catalog **không trôi dạt** · hồi quy **`957·956·FAIL 0`** · app ĐANG CHẠY đọc được khoá `work` (77 dòng danh mục) |
+
+## 📌 VÒNG 91 (08/10/2026) — theo 2 chỉ đạo mới của user + nghĩa vụ LOGGING của Goal
+
+| Loại | Nội dung |
+|---|---|
+| `OWNERSHIP_CLAIM` | Phiên 04 nhận `TASK-20261008-D44` (ma trận WORK động) — phạm vi: `scripts/system-route.mjs` · `java-backend/**` · `lib/**` (2 tệp) · `app/page.tsx` (1 mục) · `app/screens/Permission*.tsx` · `tests/{t13,w03,v214}` · **CSDL MySQL** |
+| `DECISION` | User: «**Admin sẽ quyết định ai là trưởng phòng**» ⇒ thi hành vế ② **`work.canApprove` do admin cấp = tư cách quản lý phòng** (⛔ nếu thiếu thì quyết định của admin **vô hiệu một nửa**: chỉ mở nút Duyệt mà ⛔ không mở phạm vi XEM) |
+| `DECISION` | User: «**ẩn**» 4 khoá cũ khỏi ma trận ⇒ thi hành **ẩn ở tầng vẽ** + **bắt buộc** sửa 2 nút hàng loạt |
+| `COORDINATION` | User: «Session 1 hoạt động trở lại ⇒ phối hợp tránh conflict» ⇒ ghi `SHARED_STATE.md` **CẬP NHẬT 69** (+ bổ sung vòng 91) · ✅ kiểm: ⛔ **không build script nào** gọi bộ sinh registry ⇒ chốt chặn ⛔ **không làm gãy build** phiên 01 · ⛔ **ĐÓNG BĂNG** tệp của phiên 01/02 |
+| `BUG_FOUND` + `HOTFIX_START/COMPLETE` | **`BUG-D19`**: 2 nút hàng loạt sẽ **ghi 0 âm thầm** khoá bị ẩn ⇒ chặn **cùng lượt** với việc ẩn (`bulkKeys`) |
+| `VERIFICATION` | ⭐ **Đối chiếu mã THỰC TẾ vs state**: quét **14 bất biến** (khoá `work` 5 tầng · 8 action registry · phạm vi động 2 đường · 34 mục ghi tay · 3452 dòng) ⇒ **14/14 ĐẠT** ⇒ phiên khác ⛔ **chưa ghi đè** việc của phiên 04 |
+| `TEST_COMPLETE` | `v214` **8/8** (VỆ 8 mới) · `tsc` **0** · ⭐ hồi quy **`958 · 957 pass · FAIL 0`** |
+| `LOGGING` | Ghi đủ **9 log** của Goal cho vòng này: `TASK_LOG` (`TASK-D44`) · `DEV_LOG` (3 kỹ thuật mới) · `CHANGE_LOG` (`CHG-D20`/`D21`) · `TEST_LOG` (`TEST-D45`) · `BUG_HOTFIX_LOG` (`BUG-D19`) · `DECISION_LOG` (mục 9–11) · `EVENT_LOG` (mục này) · `HANDOFF_LOG` (bàn giao S01/S02) · `WEEKLY_REPORT_DATA` (tuần `2026-W41`) |
+| `OWNERSHIP_RELEASE` | ⏳ ⛔ **chưa release**: còn **1 việc chờ BUILD** (`VERIFIED`) — nhưng ⛔ **không chặn** phiên khác (mọi thay đổi đã có test khoá) |
+
+## 📌 VÒNG 82 (08/10/2026) — PHỐI HỢP VỚI `ERP-SESSION-01` + vá 2 lỗi (1 do phiên khác báo, 1 tự phát hiện)
+
+| Loại | Nội dung |
+|---|---|
+| `COORDINATION` | ⭐ **`ERP-SESSION-01` ghi handoff VÀO `SESSION_D/HANDOFF_LOG.md`** (họ tự đề nghị kênh này) ⇒ tôi phát hiện qua cảnh báo «file changed since read» của hệ thống ⇒ ⭐ **đúng quy trình**: đọc lại → trả lời **tại chỗ** (⛔ không ghi đè phần của họ) |
+| `BUG_FOUND` + `FIXED` | 🔴 **`BUG-D21`** (`ERP-SESSION-01` báo — ⭐ **LỖI THẬT TRONG THAY ĐỔI CỦA TÔI**): handler JS `requireWorkItemAccess` (`system-route.mjs:509`) lặp **4 khoá CŨ** ⇒ người **chỉ có khoá chung `work`** qua được ROUTE nhưng bị **handler CHẶN OAN**. ✅ **Vá**: thêm `"work"` (**0 dòng dịch** — tệp vẫn **3452** dòng · `node --check` **0**) · ⭐ vì **Java ⛔ không lặp khoá** (`OpsTaskManagementUseCase.requireWorkItemAccess:915-926` đi theo **REGISTRY**) ⇒ JS sau vá **khớp lại Java** ✓ · ➕ **test khoá BẤT BIẾN TỔNG QUÁT**: *mọi mảng khoá 1 dòng trong route có `dept_plan_tasks` **PHẢI** kèm `"work"`* (ĐO: **8/8** mảng thoả) |
+| `BUG_FOUND` + `FIXED` | 🔴 **`BUG-D20`** (tự phát hiện, ⭐ **cổng kiểm bị CHE**): `probe-catalog-drift` **ĐỎ** (7/34 action Java-only ⛔ chưa có trong danh sách đã biết) nhưng từng in **XANH GIẢ** — vì bộ sinh đã xoá 34 mục ghi tay (`BUG-D17`) ⇒ `onlyRegistry` **RỖNG** ⇒ ⚠️ **cổng kiểm tính toàn vẹn ⛔ tự vô hiệu khi dữ liệu nó kiểm đã bị xoá**; ➕ câu kết luận in **số CỨNG «12»** trong khi đo được **34**. ✅ **Vá** (`CHG-D22`): whitelist **7 tên đã kiểm từng tên** (0 lần trong JS + có `Map.entry` thật + tổng **34 = 27+7**) + in **số ĐỘNG** ⇒ **`exit 1 → 0`**, `CHƯA BIẾT: 7 → 0` |
+| `VERIFICATION` | ⭐ **PARITY JS↔JAVA HOÀN TẤT**: `ERP-SESSION-01` đã port **`add_work_item_comment`** + **`set_work_item_participant`** (`SystemController.java:1510`/`:1515`) và **`VERIFIED` live** (đo `:18081` = **200**, ẩn danh = **401**) ⇒ `probe-action-parity` = **«Java THIẾU: 0»** ⇒ `docs/61` **Q3 ĐÓNG HẲN** |
+| `HANDOFF` | ➕ **`HANDOFF-D12`** → `ERP-SESSION-03`: **đảo cổng canary `COMMENTS_READY`** (`WorkCenter.tsx:139`) — ⭐ điều kiện đã đủ theo luật `docs/55:205` · ➕ **`HANDOFF-D13`** → phiên giữ `app/api/**`: **2 chỗ cùng lớp lỗi `D1`** còn sót (`WorkCenter.tsx:171` · `app/api/files/route.ts:44`) |
+| `BLOCKER` | 🛑 **BUILD BỊ CHẶN BỞI QUYẾT ĐỊNH CỦA USER** (`ERP-SESSION-01` báo `A03`): `npm run build` **EXIT 1** vì **cổng vân tay** (`expected bb706f12…` ≠ `actual aa2…`) ⇒ muốn build **PHẢI** chạy `tools/fixpoint-fingerprint.mjs` = **ĐỔI VÂN TAY SẢN PHẨM** ⇒ ⭐ **QUYẾT ĐỊNH CỦA USER** (S01 đã ghi `DEC-20261009-017` **3 phương án**) ⇒ ⚠️ **mọi `VERIFIED` của phiên 04 ⛔ đang chờ mốc này** |
+| `OWNERSHIP_RELEASE` | ✅ **RELEASED 2 phạm vi** (trả lời câu hỏi §D1 của S01): **Java** — bằng chứng `mtime`: registry **12:22:51** · adapter **12:34:29** ⭐ **cả hai TRƯỚC mốc 12:39** ⇒ jar của S01 ⛔ **không lệch mã do tôi**; **FE** — sửa cuối **12:40:20** ⇒ S01 build **MỘT LẦN** được (⚠️ chờ user quyết vân tay) |
+| `TEST_COMPLETE` | `t13` **15/15** (thêm bất biến tổng quát về mảng khoá) · `probe-catalog-drift` **exit 0** · `probe-action-parity` **exit 0** · `node --check` **0** · ⭐ hồi quy **`958 · 957 pass · FAIL 0`** |
+
+## 📌 VÒNG 83 (08/10/2026) — QUÉT LẠI TOÀN BỘ CỔNG (kiểm hồi quy + đo trạng thái go-live THẬT)
+
+| Loại | Nội dung |
+|---|---|
+| `TEST_START` | Mục đích kép: ① **thay đổi của tôi có làm vỡ cổng nào không** ② **trạng thái phát hành THẬT** đang là gì (⛔ không tin state cũ — luật §16 `actual code`) |
+| `TEST_COMPLETE` | ✅ **8/10 probe XANH** — ⭐ nổi bật `probe-task024-leadership-parity` **7/7 ĐẠT** (chứng minh `isWorkCompanyScope` của tôi **⛔ không phá parity lãnh đạo**) · `probe-action-coverage-controller` = **0 action UI gọi sẽ hỏng** · `action-role-parity`/`action-scope-parity`/`write-map-drift`/`gate-truth` = **0** |
+| `BUG_FOUND` | 🔴 **`probe-action-module-parity` = 68 điểm lệch** ⇒ ⭐ **ĐÃ CHỨNG MINH ⛔ KHÔNG do phiên 04**: đặc trưng `JS=[] Java=[…]` = **action Java-only CỐ Ý** (approve_po · create_project_team · …) và ⭐ **8 action WORK đã sửa xuất hiện `0 lần`** trong danh sách lệch ⇒ ⚠️ cổng này **ĐỎ CẤU TRÚC** (thiếu danh sách trắng) ⇒ 📤 đề xuất cho chủ cổng |
+| `BUG_FOUND` | 🟠 **`BUG-D22` (MỚI)** — **6 action «MÙ QUYỀN»**: `list/open/save/log/delete_contract_review` + ⭐ **`work_scope`** ⛔ **không có dòng nào** trong `ActionRbacRegistry` (grep âm **6/6**) ⇒ non-admin nhận **403 + thông điệp SAI** (đúng lớp **`P-08`**) · ⚠️ `MEDIUM`: `action-coverage-controller` đo **0 action UI gọi sẽ hỏng** ⇒ ⛔ **chưa chặn người dùng hôm nay** · 📤 **`HANDOFF-D14`** → phiên 01 (⚠️ **kèm cảnh báo**: TRƯỚC khi gắn module **phải ĐO cổng `requireRole` 2 route** — gắn sai = **LEO THANG**, bài học `P-08`/`TM-04`) |
+| `VERIFICATION` | 🔴 **`test:release-static` = 1** + 🔴 **`verify:release` = 1** — ⭐ **NGUYÊN NHÂN ĐO ĐƯỢC CHÍNH XÁC (⛔ không phải mã nghiệp vụ)**: `Error: SHA256 không khớp: _javac-verify/BOOT-INF/classes/…class` vì **`MANIFEST_SHA256.txt` CŨ** — ĐO: **7611 dòng**, trong đó **384 dòng là thư mục TẠM `_javac-verify`**, và **0 dòng** cho tệp mới `V40__work_module_dynamic.sql` ⇒ ⭐ **sinh lại manifest ở BUILD là XANH** (bộ sinh **đã** loại `_javac-verify`: `generate-release-manifest.mjs:16`) ⇒ ✅ **giải thích được 100%**, ⛔ không cần sửa mã |
+| `TEST_COMPLETE` | ✅ **2 cổng còn lại XANH**: `audit:tests` **0** · `verify:master-baseline` **0** |
+| `OWNERSHIP_RELEASE` | ✅ **tiếp tục giữ `RELEASED`** cho `java-backend/**` (⛔ 0 dòng Java sửa ở vòng này) · ⛔ không claim thêm vùng nào — `BUG-D22` **bàn giao**, ⛔ không tự sửa |
+
+## 📌 VÒNG 84 (08/10/2026) — VÁ NỐT LỚP LỖI `D1` Ở CỔNG THỨ BA + KIỂM THAY ĐỔI TỪ PHIÊN KHÁC
+
+| Loại | Nội dung |
+|---|---|
+| `COORDINATION_CHECK` | ⭐ Đã kiểm **thay đổi từ phiên khác**: **mtime mọi tệp tôi sửa ⛔ KHÔNG đổi** (không ai ghi đè) · **`SHARED_STATE` ⛔ chưa có mục mới** sau CẬP NHẬT 71 ⇒ **chưa có trả lời** cho `HANDOFF-D12/D13/D14` |
+| `BUG_FOUND` + `FIXED` | 🔴 **Cổng TỆP ĐÍNH KÈM CÔNG VIỆC** (`app/api/files/route.ts:44`, hàm `moduleAllowed`) liệt kê **4 khoá cũ**, ⛔ thiếu khoá chung `work` ⇒ người **chỉ được cấp `work`** ⛔ **không tải/xoá được tệp** công việc — ⚠️ **cùng lớp `BUG-D21`** (S01 báo ở handler JS). ✅ **Vá** (`CHG-D23`) + ➕ **mở rộng bất biến test** (mọi mảng khoá công việc trong **CẢ 2 tệp** phải kèm `"work"`) |
+| `OWNERSHIP_CLAIM` | ⭐ **Đã kiểm CẢ HAI `SESSION_REGISTRY`** ⇒ `app/api/files/route.ts` **⛔ KHÔNG ai claim** ⇒ theo §17/§28: **CLAIM → SỬA → TEST → GHI PHỐI HỢP** (`SHARED_STATE` CẬP NHẬT 72) — ⚠️ lý do chính đáng: đây là **phần còn thiếu của chính thay đổi `work`** |
+| `HANDOFF` | 🔄 **`HANDOFF-D13` cập nhật**: chỗ ② (`app/api/files/route.ts`) nay **✅ ĐÃ VÁ bởi phiên 04**; ⚠️ chỗ ① (`app/screens/WorkCenter.tsx:171` — **S03**) **VẪN OPEN** ⇒ ⭐ **nên làm CHUNG 1 lượt với `HANDOFF-D12`** |
+| `TEST_COMPLETE` | ✅ `tsc` **0** · `t13` **15/15** (bất biến mở rộng sang `app/api/files/route.ts`) · `runtime-admin-boq-regression` **27/27** (test ĐỌC chính tệp này) · chờ hồi quy đầy đủ |
+| `OWNERSHIP_RELEASE` | ✅ ⛔ **0 dòng Java** sửa ở vòng này ⇒ **giữ `RELEASED`** cho `java-backend/**` (phiên 01 build ngay khi user quyết vân tay) |
+| `BUG_FOUND` (dọn cổng) | 🔄 **`tools/probe-task050-bootstrap.mjs:143`** — bản sao kỳ vọng của cổng `anyModule(...)` trong `BootstrapDataAdapter` **thiếu `"work"`** ⇒ nếu để nguyên thì probe báo **LỆCH do KỲ VỌNG CŨ** ⇒ ✅ **đã đồng bộ** (thêm `"work"`, ⛔ không xoá 4 khoá cũ) |
+| `BLOCKER` (⚠️ của PHIÊN KHÁC, ⛔ không phải của tôi) | 🔴 **`probe-task050-bootstrap` hiện ĐỎ vì LÝ DO HẠ TẦNG**: `đăng nhập thukydemo lỗi HTTP 401`. ⭐ **ĐO CSDL**: `thukydemo` **CÓ và `active=1`**, `must_change_password=0`, `password_reset_at=NULL` ⇒ **mật khẩu cứng trong probe đã CŨ** (⛔ tôi **KHÔNG đoán/không đổi mật khẩu** — luật phiên) ⇒ 📤 **báo chủ probe** (cần cập nhật mật khẩu mẫu hoặc dùng tài khoản khác). ⚠️ Vì vậy **⛔ không thể dùng probe này để nghiệm thu** `P5-03` cho tới khi sửa |
+| `VERIFICATION` (dọn dẹp) | ✅ **MỤC «DỌN TÀI KHOẢN PROBE» NAY ĐÃ XONG** (đo lại CSDL — ⛔ không phải suy đoán): `probe_d12_528419` **`active=0`** ✓ · `probe_self_186408` **`active=0`** ✓ · ⭐ ĐO THÊM: **43 tài khoản `probe_*` khác của các phiên khác** (`probe_grant1_*` · `probe_permdeny_*` · `probe_permsave_*` · `probe_tab01_*`) **ĐỀU `active=0`** ⇒ ⛔ không còn tài khoản probe nào đang hoạt động ⇒ **⛔ không có rủi ro bảo mật tồn đọng** |
+| `NOTE` (cho BUILD) | ⭐ **TÀI KHOẢN ĐỂ NGHIỆM THU PHẠM VI ĐỘNG SAU BUILD**: đo được `giamdoc.demo` (**role=`director`, `active=1`**) ⇒ dùng để kiểm «**giám đốc thấy việc của TẤT CẢ nhân viên**» (đúng yêu cầu user) · `trdademo` (`da_truong`) kiểm «trưởng phòng thấy việc phòng mình» · `nvdademo`/`nvkhdemo` kiểm «nhân viên chỉ thấy việc của mình» |
+
+## ⭐⭐⭐ VÒNG 85 (08/10/2026) — **NGHIỆM THU LIVE: PHẠM VI ĐỘNG ĐẠT TRÊN BẢN ĐANG CHẠY** (⛔ không cần chờ BUILD FE cho phần Java/CSDL)
+
+| Loại | Nội dung |
+|---|---|
+| `DISCOVERY` | ⭐ **PHÁT HIỆN MỐC BUILD**: tiến trình Java **PID 10888** khởi động **đúng `10-09 12:39:04`** chạy jar **build cùng lúc** ⇒ jar **SAU** sửa `BootstrapDataAdapter.java` (**12:34:29**) của tôi ⇒ ⭐ **thay đổi phạm vi động ĐÃ SỐNG THẬT** (⚠️ hiểu sai cũ: «mọi thứ chờ BUILD» — ⛔ chỉ **giao diện ma trận** mới chờ BUILD FE, `dist/` vẫn **10-08 16:13:31**) |
+| `TEST_START` | Viết probe nghiệm thu riêng (`SESSION_D/probes/probe-nghiem-thu-pham-vi-dong.mjs`) kiểm **3 yêu cầu user + 2 đối chứng âm** trên `:9000` |
+| ⚠️ `BUG_FOUND` (của CHÍNH PROBE) | 🔴 Lần chạy đầu **ĐỎ toàn bộ**: `POST {action:"bootstrap"}` ⇒ **HTTP 400/403** ⚠️ — ĐỌC MÃ UI (`app/page.tsx:345`) ⇒ payload lấy bằng **GET `/api/system`** ⇒ ⭐ **CÁCH GỌI CỦA PROBE SAI, ⛔ KHÔNG phải mã hỏng** ⇒ 📌 **bài học: probe đỏ ⇒ kiểm CÁCH GỌI trước khi kết luận** |
+| `VERIFICATION` ⭐ | ✅ **ĐẠT 5/5 (exit 0)**: admin **19** · **`giamdoc.demo` (director) = 19 = ĐÚNG BẰNG ADMIN** (⚠️ luật cũ ⇒ ≈**0** vì được giao **0** việc) ⇒ ✅ **yêu cầu ① của user ĐẠT** · `trdademo` **17 = đúng số việc phòng DA** (≤ giám đốc) ⇒ ✅ **yêu cầu ②** · `nvkhdemo` **0** · `ksda.demo` **0** ⇒ ✅ **yêu cầu ③** · ➕ **ĐỐI CHỨNG ÂM 1**: nhân viên (**0**) < giám đốc (**19**) ⇒ ⛔ **không mở toàn công ty** · ➕ **ĐỐI CHỨNG ÂM 2**: trưởng phòng (**17**) ≤ giám đốc (**19**) ⇒ ⛔ không leo thang |
+| `VERIFICATION` (Java/CSDL) | ✅ Khoá **`work` sống trong payload**: `giamdoc.demo` **77 module** có `work` (`v/u/a=1`) · `trdademo` **61 module** có `work` · `moduleCatalog` **có `work`** (⇒ `V40` hiệu lực thật) · ✅ **`BUG-D18`**: đúng **3 tài khoản `%_truong`** có `work.canApprove=1` (`e2e.kh` · `trinhtrench` · `trdademo`) |
+| `OWNERSHIP_RELEASE` | ✅ ⛔ **0 dòng Java** sửa ở vòng này (chỉ **thêm 1 probe** trong `SESSION_D/probes/`) ⇒ **giữ `RELEASED`** · ⭐ **`VERIFIED` (LIVE)**: phạm vi động + `V40` + `BUG-D18` (phần cấp quyền) |
+
+## ⭐ VÒNG 86 (08/10/2026) — **NGHIỆM THU E2E GIAO VIỆC + DUYỆT VIỆC ⇒ ĐÓNG HẲN `BUG-D18`**
+
+| Loại | Nội dung |
+|---|---|
+| `COORDINATION_CHECK` | ✅ **⛔ không ai ghi đè tệp của tôi** · ⛔ chưa có trả lời cho `HANDOFF-D12/D13/D14` · ⛔ **chưa BUILD** (`dist` = **10-08 16:13:31** · jar = **10-09 12:39:04**) |
+| `TEST_START` | Viết probe e2e `SESSION_D/probes/probe-nghiem-thu-duyet-cong-viec.mjs` (4 bước: giao → **duyệt** → đối chứng âm → dọn) |
+| ⚠️ `BUG_FOUND` (của CHÍNH PROBE) ×2 | ① Lần chạy 1: `create_work_item` ⛔ **không trả `id`** ⇒ probe **BỎ QUA im lặng** 3 bước sau **mà vẫn in «ĐẠT»** = ⭐ **KẾT LUẬN GIẢ** ⇒ sửa: tra `id` từ CSDL + **BẮT BUỘC đủ 4 bước** ② Lần chạy 2: regex id quá chặt ⛔ **loại oan** id dạng **`WI_<uuid>`** ⇒ sửa. 📌 **2 bài học phương pháp**: (a) probe ⛔ không được «bỏ qua im lặng» khi thiếu tiền đề (b) đọc **định dạng dữ liệu THẬT** trước khi viết điều kiện kiểm |
+| `VERIFICATION` ⭐⭐ | ✅ **ĐẠT 4/4 (exit 0)**: ① `create_work_item` (trưởng phòng DA) = **200** → `CV-DA-261009-3020` ② ⭐ **`approve_work_item` = 200** «Đã chuyển … sang COMPLETED» ⇒ **`BUG-D18` ĐÓNG HẲN** (hồi quy «tách action làm quản lý phòng bị 403» **đã hết**) ③ ➕ **đối chứng âm**: nhân viên = **403** «Tài khoản chưa được quản trị viên cấp đúng quyền cho thao tác này.» ④ 🧹 dọn = **200** → `CANCELLED` |
+| `BUG_FOUND` (mới) | 🟠 **`BUG-D23`**: **lệch 2 đường** — `scripts/system-route.mjs:1262` **hardcode `["KH","DA"]`** khi giao việc (⇒ 8/11 đơn vị ⛔ không giao được trên đường JS) trong khi **đường Java ĐỘNG theo cấp bậc** (⭐ nghiệm thu live: `trdademo` giao việc DA = **200**) ⇒ `MEDIUM`, ⛔ **chưa vá** (⚠️ đổi hành vi giao việc ⇒ cần user/phiên chốt) |
+| `NOTE` (dữ liệu thử) | 📌 Để lại **1 hàng** trong `work_items`: `WI_2f87008b-3865-433c-bc16-e48ded087393` (`CV-DA-261009-3020`) trạng thái **`CANCELLED`** — ⛔ **không xoá hàng khỏi CSDL thật** (an toàn hơn; đã ghi để admin purge nếu muốn) |
+| `OWNERSHIP_RELEASE` | ✅ ⛔ **0 dòng mã sản phẩm** sửa ở vòng này (chỉ thêm 1 probe) ⇒ **giữ `RELEASED`** cho cả `java-backend/**` và FE |
+
+## 📌 VÒNG 87 (08/10/2026) — TRỌNG TÂM UI/UX (§22): XÁC MINH ICON/TONE + QUÉT 8 PROBE UI
+
+| Loại | Nội dung |
+|---|---|
+| `VERIFICATION` | ✅ **Icon/tone của dòng «Công việc (mọi phòng ban)» HỢP LỆ**: `NAV_ICON_TYPE.work = "tasks"` (`lib/ui-shared.tsx:66`) và **glyph `tasks` có THẬT** (`:248` vẽ `<rect x="5" y="4" width="14" height="17" rx="2"/>…`) · tone `green` dùng chung với `dept_plan_*` ⇒ ⛔ **không** trỏ vào tên không tồn tại (⚠️ đây là lỗi UI dễ mắc khi thêm khoá mới) |
+| `TEST_COMPLETE` | ✅ **6/8 probe UI XANH**: `column-parity` (đối chứng dương **5/5 khớp MySQL**) · `statusbadge-parity` · `layout-audit` · `list-toolbar-inventory` · `ui-adoption` · `two-tier-toolbar` |
+| `BUG_FOUND` (ngoài phạm vi, có bằng chứng) | 🔴 **`probe-css-budget`**: `canonical.css` **1471 dòng > trần 1076** — ⭐ **CHỨNG MINH ⛔ KHÔNG do phiên 04**: `mtime = 10-07 09:42:11` (**2 ngày trước**) + `git diff --numstat` **RỖNG** + phiên 04 **chưa từng chạm CSS**. ⚠️ **MÂU THUẪN 2 BỘ ĐẾM**: cổng chính thức `verify:master-baseline` = **✅ ĐẠT** (`!important=3824`) trong khi probe đếm **3870** ⇒ 📤 **đề nghị chủ CSS/baseline đối chiếu** (⛔ phiên 04 không tự sửa CSS toàn cục — trái §41) |
+| `BUG_FOUND` (ngoài phạm vi, có bằng chứng) | 🔴 **`probe-toolbar-order`**: đo bằng **trình duyệt trên UI đang chạy = BẢN BUILD CŨ** (`dist` 10-08) và ở màn «Nhà cung cấp»/«Dự án» (⛔ không liên quan ma trận) ⇒ **kết quả thuộc bản cũ** ⇒ ⏳ **phải đo lại SAU BUILD FE** |
+| `NOTE` (nợ bảo trì) | 📌 **NHẬN XÉT XUYÊN SUỐT ĐỢT NÀY**: nhiều probe mang **kỳ vọng/ngưỡng CŨ** — đã gặp **3 lần**: ① `probe-catalog-drift` (danh sách trắng thiếu 7 tên → `BUG-D20`) ② `probe-task050-bootstrap` (danh sách khoá thiếu `work`) ③ `probe-css-budget` (trần CSS) ⇒ ⭐ **LUẬT RÚT RA: probe đỏ ⇒ phải phân biệt «MÃ SAI» vs «KỲ VỌNG CŨ» vs «CÁCH GỌI SAI» TRƯỚC khi kết luận** (⚠️ cả 3 khả năng đều đã gặp thật trong đợt này) |
+| `OWNERSHIP_RELEASE` | ✅ ⛔ **0 dòng mã sản phẩm** sửa ở vòng này (chỉ 1 lượt đo + nhật ký) |
+
+## ⭐ VÒNG 88 (08/10/2026) — **VÁ `BUG-D23`: BỎ HARDCODE PHÒNG BAN TRONG GIAO VIỆC** (user cho phép tự làm việc trong phạm vi phiên)
+
+| Loại | Nội dung |
+|---|---|
+| `TASK_START` | User: «*việc gì cần làm mà trong phạm vi của session thì cứ thực hiện đi, bị chặn chỗ nào thì báo. tránh conflict với session khác*» ⇒ chọn `BUG-D23` (thuộc `scripts/**` = phạm vi phiên 04, ⛔ không đụng vùng phiên khác) |
+| ⚠️ `BUG_FOUND` (tự phát hiện giữa chừng) | 🔴 **Tôi tự gây + tự bắt**: bản vá đầu tiên thêm **khối chú thích 5 dòng** ⇒ **dịch số dòng** (+5) = ⚠️ **vi phạm ràng buộc `F-03`** (vùng khoá `:1359-:2164` phải bất biến) ⇒ ✅ **sửa ngay** thành chú thích **trong cùng 1 dòng** ⇒ tệp trở lại **3452** dòng ✓ 📌 **bài học: khi vá trong tệp có vùng khoá theo SỐ DÒNG, chú thích cũng phải nằm TRONG dòng** |
+| ⚠️ `BUG_FOUND` (tự phát hiện) | 🔴 **Thiếu `await` ở dòng 1263** sau khi đổi hàm sang `async` (lần sửa đầu ⛔ không vào) ⇒ ⭐ nếu bỏ qua thì `!promise` **LUÔN false** ⇒ cổng quyền **LUÔN CHO QUA** = **NỚI QUYỀN ÂM THẦM** ⇒ ✅ vá + ➕ **khoá bằng test đếm đúng 5 `await`** |
+| `HOTFIX_COMPLETE` | ✅ **12 dòng viết lại, ⛔ 0 DÒNG DỊCH** (tệp vẫn **3452** dòng): ① `create_work_item` kiểm **TỒN TẠI THẬT** trong `organization_units` ② `isDepartmentManager` → **`async` + 2 nhánh** (giữ `%_truong` cũ ⛔ không hồi quy + **`work.canApprove` theo ĐÚNG đơn vị**) ③ `userCanReceiveDepartmentTask` theo **đơn vị thật** ④ `defaultDepartmentAssignee` **ưu tiên cùng đơn vị** |
+| ⭐ `VERIFICATION` | ✅ **3 câu SQL MỚI chạy THẬT trên MySQL**: `trdademo`+`DA` = **1 (khớp)** · `trdademo`+`KH` = **KHÔNG THẤY** ⇒ ⭐ **không rò quyền sang phòng khác** · người nhận mặc định cho **TCKT** = `e2e.kt` (**đơn vị TCKT** — trước đây chọn nhầm phòng Dự án) · ✅ số `?` **khớp bind** cả 5 câu (2·2·4·4·3·1) |
+| `TEST_COMPLETE` | ✅ `node --check` **0** · `t13` **16/16** (+1 test `B`) · `t07` **8/8** · ⭐ hồi quy **`959 · 958 pass · FAIL 0`** |
+| `HANDOFF` | 📤 **`HANDOFF-D15`** → `ERP-SESSION-03`: **2 bản sao ở FE vẫn suy trưởng phòng theo `role` CỨNG** (`WorkCenter.tsx` khối `T06-PURE` · `WorkKanban.tsx:110`) ⇒ ⚠️ người được admin cấp quyền ở 8 đơn vị khác **thấy được việc nhưng bị FE chặn** ⇒ **lệch FE↔BE** (⚠️ `t07` vẫn xanh vì nó so 2 bản sao FE với nhau) |
+| `BLOCKER` (còn lại of vòng) | ⏳ **Chưa chạy được smoke đường JS** (`test:local-runtime` cần khởi động server riêng ⇒ ⚠️ **nguy cơ trùng cổng với phiên khác** — §36 ⛔ không tự ý) ⇒ ghi là việc còn lại, ⛔ không coi là `VERIFIED` |
+| `OWNERSHIP_RELEASE` | ✅ **Đã release** `scripts/system-route.mjs` (12 dòng, 0 dòng dịch) · ⛔ **0 dòng Java** (giữ `RELEASED` cho phiên 01) · ⛔ không chạm vùng phiên 02/03 |
+
+## 📌 VÒNG 89 (08/10/2026) — NÂNG PROBE THÀNH **CỔNG THẬT** + SỬA 2 LỖI CÔNG CỤ + ĐO TÁC ĐỘNG Q1
+
+| Loại | Nội dung |
+|---|---|
+| `COORDINATION_CHECK` | ✅ ⛔ không ai ghi đè tệp của tôi · ⛔ **chưa BUILD** (`dist` = 10-08 · jar = 12:39) · ⛔ chưa có trả lời `HANDOFF-D12/D13/D15` |
+| `BUG_FOUND` + `FIXED` (công cụ) | 🔴 **`verify-ma-tran-dong.mjs` trước đây ⛔ CHỈ IN số liệu ⇒ luôn `exit 0`** ⇒ ⚠️ **không dùng làm cổng được** ⇒ ✅ nâng thành **cổng có khẳng định + mã thoát** với **5 khẳng định**: khoá `work` có trong danh mục · ⭐ **4/4 khoá CŨ ⛔ không bị xoá** (bất biến theo quyết định «ẩn» của user) · 8 đơn vị được cấp · **đúng 3 TK** có `work.canApprove=1` · **11 đơn vị thật** ⇒ ✅ **exit 0** |
+| ⚠️ `BUG_FOUND` ×2 (của CHÍNH probe) | 🔴 ① **backtick lồng trong template literal** ⇒ `_truong is not defined` (crash giữa chừng) ② ⚠️ **`process.exit()` khi còn socket `fetch` mở ⇒ Node CRASH lúc thoát** (`Assertion failed: !(handle->flags & UV_HANDLE_CLOSING)` · mã thoát **-1073740791**) **dù kết luận đã in ĐÚNG** ⇒ ⭐ cực nguy hiểm cho cổng tự động: **đọc mã thoát sẽ tưởng HỎNG** ⇒ ✅ đổi **cả 3 probe** sang `process.exitCode` ⇒ **ĐO LẠI: cả 3 exit 0 · crash = 0** |
+| `NOTE` (hệ quả phụ của probe) | ⚠️ `probe-nghiem-thu-duyet-cong-viec.mjs` mỗi lần chạy **tạo 1 hàng thử** ⇒ ĐO: **2 hàng** (đều `CANCELLED` + `active=0`): `WI_2f87008b-3865-433c-bc16-e48ded087393` · `WI_782b72c9-95f8-48b0-bbaa-61b6de5a5999` (tổng `work_items` 27 → **29**) ⇒ ⛔ vô hại nhưng ⭐ **lần sau chạy kèm mã việc để DÙNG LẠI** |
+| ⭐ `VERIFICATION` (cho quyết định Q1) | ✅ **ĐO ĐƯỢC**: khoá `dept_project_plan` ⛔ **KHÔNG được action nào dùng làm cổng** (0 lần trong `ActionRbacRegistry.java`; 1 lần trong JS chỉ là **danh sách khoá** `MODULE_KEYS:14`) ⇒ chọn **(A2)** ⛔ **không làm action nào khác đổi quyền** ⇒ rủi ro của (A2) nằm ở **DỮ LIỆU 42 tài khoản**, ⛔ không ở mã ⇒ đã ghi lại vào `docs/61` §3 để user quyết |
+| `OWNERSHIP_RELEASE` | ✅ ⛔ **0 dòng mã sản phẩm** sửa ở vòng này (chỉ **3 probe trong `SESSION_D/probes/`** + `docs/61`) · giữ `RELEASED` cho Java + FE |
+
+## 📌 VÒNG 90 (08/10/2026) — SQL 2 ENGINE + **ĐỊNH LƯỢNG LỆCH MySQL ↔ SQLite** + XÁC ĐỊNH CHẶN SMOKE ĐƯỜNG JS
+
+| Loại | Nội dung |
+|---|---|
+| `VERIFICATION` | ✅ **5/5 CÂU SQL MỚI CỦA `BUG-D23` CHẠY ĐƯỢC TRÊN SQLITE** (`probe do-kha-chuyen-sqlite.mjs` · **exit 0**): bảng cần có đủ **5/5** (`users`·`organization_units`·`user_module_permissions`·`role_catalog`·`work_items`) ⚠️ **phạm vi**: engine **chấp nhận** câu lệnh (cú pháp + lập kế hoạch); ⭐ **ngữ nghĩa** đã chứng minh ở **MySQL với giá trị thật** (`TEST-D50`) |
+| ⭐ `BUG_FOUND` + `VERIFICATION` (MỚI, định lượng) | ⚠️ **LỆCH DỮ LIỆU 2 CSDL** (ĐO `do-dong-bo-2-csdl.mjs`): `module_catalog` **77 (MySQL) ↔ 75 (SQLite)** · khoá **`work`: CÓ ↔ ⛔ KHÔNG** · `department_module_permissions(work)` **8 ↔ 0** · `user_module_permissions(work+duyệt)` **3 ↔ 0** · `organization_units` **11 ↔ 7** · `users` **73 ↔ 1** ⇒ SQLite là **bản cục bộ TỐI THIỂU** ⇒ ⭐ **đường JS ở chế độ cục bộ ⛔ KHÔNG có quyền `work`** ⇒ 📤 **`HANDOFF-D16`** → phiên 01: gộp vào **1 lần BUILD** (① sinh lại manifest ② thêm **drizzle `0353`**) ⚠️ cả 2 đều **đổi vân tay gói** ⇒ **quyết định cấp dự án**, ⛔ phiên 04 không tự làm |
+| `BLOCKER` (xác định rõ, có bằng chứng) | 🔴 **Không smoke được đường JS**: ĐO `:3000` = server Node **⛔ KHÔNG phải đường JS** (`GET /` = **200** nhưng `POST /api/system` = **404**) ⇒ **server đường JS ⛔ không chạy**; ⚠️ khởi động server mới = **nguy cơ trùng cổng với phiên khác** (§36 ⛔ không tự ý) ⇒ ⛔ `BUG-D23` giữ `FIXED`, **⛔ chưa `VERIFIED`** (thiếu 1 tầng kiểm runtime) — 📌 **trung thực theo §24** |
+| `NOTE` | 📌 **BÀI HỌC**: SQL mới **phải** thử **cả 2 engine** (bài học `LIKE '%_truong'`) · ⭐ **SQLite cục bộ ⛔ KHÔNG phải bản sao MySQL** (1 user vs 73) ⇒ ⛔ **không kết luận nghiệp vụ từ SQLite** |
+| `OWNERSHIP_RELEASE` | ✅ ⛔ **0 dòng mã sản phẩm** (chỉ **2 probe mới** + nhật ký) · giữ `RELEASED` cho Java + FE |
+
+## ⭐ VÒNG 91 (08/10/2026) — NGHIỆM THU **RỦI RO LỚN NHẤT** CỦA QUYẾT ĐỊNH «ẨN» (bằng HÀM THẬT + DỮ LIỆU THẬT)
+
+| Loại | Nội dung |
+|---|---|
+| `DISCOVERY` | ✅ **ĐO KHOẢNG TRỐNG NỬA «DỰ ÁN»**: danh mục có **77** khoá active, ma trận (`modules[]`) có **68** dòng ⇒ 15 khoá ⛔ không phải dòng ma trận, nhưng ĐO RA **⛔ KHÔNG khoá DỰ ÁN nào thiếu** (15 khoá đó = **14 `admin_tab_NN`** (vẽ bằng nhánh riêng) + nhóm `reports`) ⇒ ⭐ **nửa «DỰ ÁN» của yêu cầu user = ĐÚNG `docs/61` Q1** ⇒ ⛔ thật sự **chờ user quyết**, ⛔ không còn việc mã nào làm được |
+| ⭐ `VERIFICATION` | ✅✅ **ĐẠT 6/6 (exit 0)** — `verify-an-khong-mat-quyen.mjs`: nhập **HÀM THẬT** `permissionMatrixKeys` (`PermissionAccessPanel.tsx:110`) + **HẰNG SỐ THẬT** `MATRIX_HIDDEN_MODULE_KEYS` (`PermissionMatrix.tsx:44`) rồi chạy trên **payload THẬT**: ⭐ **tập khoá GỬI LÊN = 77 khoá, ĐỦ 4/4 khoá ẩn** ⇒ `save_user_access` (**FULL-REPLACE**) ⛔ **KHÔNG xoá** ⇒ ⭐⭐ **«ẩn» mà ⛔ KHÔNG MẤT QUYỀN** (đây là **rủi ro lớn nhất** của quyết định «ẩn» của user) · `work` ∈ tập gửi lên ✓ · vẽ **73 dòng** (77−4) và `work` **có** ✓ |
+| `NOTE` (phạm vi, ⛔ không nói quá) | ⚠️ Vế **tập GỬI LÊN** = chứng minh **bằng hàm thật + dữ liệu thật** ✓ (vế nguy hiểm nhất) · Vế **VẼ DÒNG** ở probe tính trên `moduleCatalog` + luật ẩn; đường vẽ **thật** đi qua `permissionMenuStructure`/`modules[]` ⇒ đã khoá **tĩnh** (`v214` **VỆ 8** + `t13`) ⏳ **xác nhận bằng mắt SAU BUILD** |
+| `OWNERSHIP_RELEASE` | ✅ ⛔ **0 dòng mã sản phẩm** (chỉ **1 probe mới** + nhật ký) · giữ `RELEASED` cho Java + FE |
+
+## 🎯 VÒNG 92 (08/10/2026) — **BẢN BUILD ĐÃ LÊN** + BẬT LẠI BÌNH LUẬN + ĐÓNG `BUG-D22` + ⚠️ 1 LỖI CỦA TÔI
+
+| Loại | Nội dung |
+|---|---|
+| ⭐⭐ `VERIFICATION` | **`ERP-SESSION-01` ĐÃ BUILD**: `npm run build` **EXIT 0** · `dist/` = **10-09 13:34:24** · `:8787` = **PID 17980** (**13:34:41**) · định danh «**ALPHA TEST 2026.10**» (user chốt phương án **d**) · vân tay **`VNTECH-FP-C37A1809D58C5856`** ⇒ ⭐ **ĐO TRONG BUNDLE** (`Get-ChildItem -Recurse`): nhãn «**Công việc (mọi phòng ban)**» **2 lần** · `work_hub` · `my_work` · `dept_plan_assign` **27 lần** ⇒ ⭐ **thay đổi MA TRẬN của tôi ĐÃ CÓ TRONG BẢN CHẠY** ✓ |
+| ⚠️ `BUG_FOUND` (CỦA CHÍNH TÔI) | ⚠️ **Tôi sửa `WorkCenter.tsx` lúc `13:36:26` — SAU bản build `13:34:24`** (⛔ tôi không biết phiên 01 đang build) ⇒ mã nguồn **mới hơn** bản build ⇒ cổng `verify-ui-build-applied` báo «**BẢN CHẠY CŨ**» **do tôi** ⇒ 📤 **đã báo phiên 01** + đề nghị **rebuild 1 lần** · 📌 **LUẬT: sau khi tự nhận `RELEASED` thì ⛔ không sửa nữa — muốn sửa phải HỎI trước** |
+| ⚠️ `BUG_FOUND` (công cụ đo của tôi) | ⚠️ Phép grep đầu tiên của tôi **SAI** (`Select-String -Path dist/**/*.js` trong PowerShell ⛔ **không đệ quy** như tưởng) ⇒ **0 kết quả giả**; sửa bằng `Get-ChildItem -Recurse` ⇒ mới thấy thật ✓ 📌 **bài học**: đo bằng glob phải **kiểm glob có đệ quy không** |
+| `BUG_FOUND` + `FIXED` | 🟠 **`BUG-D24`** (tự phát hiện): modal chi tiết công việc hiện dòng «*Nhận xét sẽ bật sau khi backend hoàn tất…*» + chú thích «*BE Java ⛔ CHƯA có handler*» ⇒ ⚠️ **CẢ HAI NAY SAI** — ⭐ **ĐO LIVE**: `add_work_item_comment` = **HTTP 200** («Đã thêm bình luận vào CV-DA-261009-3020») + **đọc lại thấy** bình luận trong payload · ⚠️ **ĐỐI CHỨNG**: `workItemId` sai ⇒ **400** (⛔ không phải 404) ⇒ chính mã 400 cũ bị hiểu nhầm thành «chưa có handler» ⇒ ✅ **`CHG-D25`: BẬT LẠI** phần bình luận (danh sách + ô gửi) theo luật dự án **`docs/55:205`**, gỡ dòng ⛔ sai, ⛔ không thêm CSS (ngân sách CSS vượt trần) |
+| `HOTFIX_COMPLETE` | ✅ **`CHG-D26`** — `WORK_DEPT_MODULE_KEYS` **+`"work"`** (`HANDOFF-D13①`): người chỉ có khoá chung `work` ⛔ không còn bị chặn khỏi tab «Phòng ban/ Tổ đội» (⭐ **chỗ thứ 3** cùng lớp lỗi `D1`) |
+| ⭐ `VERIFICATION` | ✅ **`BUG-D22` ĐÓNG HẲN**: phiên 01 vá **6 action «MÙ QUYỀN»** theo `HANDOFF-D14` ⇒ tôi **đồng bộ danh sách trắng** (6 tên, **điều kiện đã đo từng tên**: `Map.entry` thật **6/6** + **0 lần** trong JS **6/6**) ⇒ **3 CỔNG XANH**: `probe-catalog-drift` **exit 0** (`ĐÃ BIẾT 40/42 · CHƯA BIẾT 0`) · `probe-action-registry-coverage` **exit 0** («**MÙ QUYỀN: 0**») · `probe-action-parity` **exit 0** |
+| `TEST_COMPLETE` | ✅ `tsc` **0** · `t13` **17/17** (+test `C`) · `t07` **8/8** · ⭐ hồi quy **`960 · 959 pass · FAIL 0`** |
+| `NOTE` | ℹ️ **Nhãn định danh cũ trong `docs/**`**: ĐO **13 chỗ**, **TẤT CẢ** trong **tài liệu LỊCH SỬ** ⇒ ⛔ **KHÔNG viết lại lịch sử** (trả lời `A05` của phiên 01) |
+| ⚠️ `NOTE` (nợ nhật ký) | ⏳ **1 dòng trạng thái trong `BUG_HOTFIX_LOG` chưa đồng bộ** (`BUG-D22` vẫn ghi `⏳ OPEN` ở dòng 597 — ⚠️ neo dòng quá dài, 2 lần sửa ⛔ không khớp) ⇒ **việc còn lại vòng sau**, ⛔ **không ảnh hưởng mã** (trạng thái thật đã ghi ở `EVENT_LOG` + `SHARED_STATE` 80) |
+| `OWNERSHIP_RELEASE` | ✅ **Đã release** `app/screens/WorkCenter.tsx` (2 sửa đổi nhỏ) · ⚠️ **cần rebuild 1 lần** (đã báo phiên 01) · ⛔ 0 dòng Java |
+
+## ⚠️ VÒNG 97–98 (08/10/2026) — ĐÓNG BÁO ĐỘNG GIẢ (`D03`) · GIẢI THÍCH `Q1-A1` CHO USER · ⚠️ **GHI NHẬN LỖ HỔNG VƯỢT QUYỀN**
+
+> 🔴 **ĐÍNH CHÍNH (vòng 99–100) — `BUG-20261008-D25` = ❌ BÁO ĐỘNG GIẢ, đã `CANCELLED`.** Phần «GHI NHẬN LỖ HỔNG VƯỢT QUYỀN» dưới đây **SAI** và được giữ lại **chỉ để làm lịch sử**.
+> ⭐ **BẰNG CHỨNG ĐO LIVE** (dùng mã dự án **không tồn tại** ⇒ ⛔ không tạo/sửa dữ liệu): `admin` + `delete_project` = **HTTP 400** (qua cổng quyền, hỏng ở dữ liệu ⇒ đúng) · **`giamdoc.demo` (giám đốc)** + `delete_project` = **HTTP 403 = BỊ CHẶN** · `giamdoc.demo` + `update_project` = **HTTP 403 = BỊ CHẶN** ⇒ ⛔ **KHÔNG có lỗ hổng vượt quyền** — suy luận từ **đọc mã** (registry `List.of()` + nhánh cấp bậc) **SAI**, hệ thống thật **chặn đúng**.
+> 📌 **NGUYÊN NHÂN GỐC (của tôi)**: ⚠️ **đã gửi CẢNH BÁO dựa trên ĐỌC MÃ, ⛔ chưa đo** ⇒ ⭐ **LUẬT TỰ ÁP TỪ NAY (mạnh hơn luật cũ)**: **⛔ KHÔNG gửi cảnh báo «lỗ hổng/lỗi» nếu CHƯA có PHÉP ĐO LIVE** (trước đây luật này chỉ áp cho việc đánh dấu `VERIFIED`).
+> 📌 **Đây là lần thứ 3** trong đợt kết luận sai vì tin suy luận thay vì đo: `BUG-D03` (S01 đính chính) · `BUG-D24` (tôi nói «nhập nhằng» rồi mới đo ⇒ **đúng**) · `BUG-D25` (nay tự đính chính).
+> ✅ **ĐÃ ĐÍNH CHÍNH VỚI USER NGAY** (Telegram: «RÚT LẠI CẢNH BÁO 🚨» + nói rõ **⛔ không cần làm gì thêm**) và ⭐ **HẠ MỨC KHẨN CẤP CỦA `Q1`**: `Q1` nay **chỉ là câu hỏi cấp quyền cho trưởng phòng**, ⛔ **không phải** vá lỗ hổng.
+
+| Loại | Nội dung |
+|---|---|
+| ✅ `TASK_COMPLETE` | **`BUG-20261008-D03` → `CANCELLED` (BÁO ĐỘNG GIẢ)** theo đúng đề nghị `REQUIRED ACTION` của `ERP-SESSION-01`: họ **đã kiểm chứng ngược lại** (`TEST-20261009-020`) ⇒ các mục tôi từng coi là «mồ côi thật» **⛔ KHÔNG mồ côi** ⇒ ⚠️ **kết luận cũ của TÔI SAI** ⇒ ⛔ không sửa mã · ⭐ **ĐỐI CHỨNG**: `HANDOFF-D14` (6 action) thì S01 xác nhận **LÀ mù quyền THẬT** ✓ ⇒ `BUG-D22` ⛔ không phải báo động giả · 📌 **BÀI HỌC (lớp lỗi mục nát — lần thứ 5 trong đợt)**: kết luận từ **một phép đo tại MỘT thời điểm** rồi bị dùng như chân lý ⇒ ⭐ **LUẬT: mọi kết luận phải kèm THỜI ĐIỂM + ĐIỀU KIỆN đo** |
+| 📖 `DECISION_SUPPORT` | User hỏi «**`Q1-A1` là gì, giải thích rõ**» ⇒ tôi trả lời **theo nguyên văn `docs/61` §3** (⛔ không giải thích theo trí nhớ): **`Q1`** = *3 quyền `create/update/delete_project` cấp cho AI?* · **`A1`** = **giữ admin-only + thêm 3 action vào `ADMIN_ONLY_ACTIONS`** (như `P-08`) ⇒ ✅ siết khớp đường JS · ✅ **bịt lỗ hổng cấp bậc** · ✅ ⛔ không đụng dữ liệu · ⚠️ đánh đổi: **⛔ không** mở được cho trưởng phòng Dự án · ➕ kèm bảng so sánh `A1`/`A2`/`A3` (A2 phải sửa **42 tài khoản** = **nới quyền rất lớn**; A3 = khoá riêng + 1 dòng ma trận + migration) |
+| 🔴 `BUG_FOUND` (MỚI — **lớp VƯỢT QUYỀN**) | ⚠️ **`BUG-20261008-D25` — LỆCH QUYỀN GIỮA 2 ĐƯỜNG cho 3 action dự án**: ĐO ĐƯỢC: **đường JS** = `requireRole(user, ["admin"])` ngay dòng đầu handler (`system-route.mjs:2519`·`:2547`·`:2608`) ⇒ **chỉ admin** · ⚠️ **đường JAVA (bản đang chạy)** = registry `List.of()` (**⛔ không gắn module**) ⇒ rơi vào nhánh **cấp bậc (leadership)** ⇒ ⚠️ **`director` / `accountant` ĐI LỌT** và gọi được **tạo/sửa/xoá dự án** dù **⛔ không được cấp quyền dự án** ⇒ 🔴 **đây là lỗ hổng VƯỢT QUYỀN** (danh mục ưu tiên tuyệt đối của Goal §20/§45) |
+| `ALERT` | 📤 **Đã cảnh báo user** (Telegram) — ⚠️ **⛔ KHÔNG tự vá** vì: ① **cả 3 phương án `A1`/`A2`/`A3` ĐỀU bịt lỗ hổng này** (A2/A3 gắn module ⇒ cấp bậc không còn lọt) ⇒ ⭐ **chờ user chọn là đúng**, ⛔ không làm thừa/thừa-rồi-phải-hoàn ② `java-backend/**` là **phạm vi phiên 01** và họ **vừa build xong** ③ bản đang chạy là **ALPHA TEST** (chưa phát hành), tài khoản bị ảnh hưởng chỉ là `director`/`accountant` (**không phải người ngoài**) |
+| `NEXT_STEP` | ⏳ Chờ user chốt **`Q1`** ⇒ tôi **gửi handoff kèm bản vá đề xuất** cho phiên 01 áp trong **cùng lượt rebuild** + test khoá (registry phải có 3 tên, ⛔ không còn `List.of()`) + **đo live `director` gọi `create_project` ⇒ PHẢI BỊ CHẶN** |
+
+---
+
+## 🆕 LƯỢT 09/10/2026 (≈14:45–14:55) — `ERP-SESSION-04` (phiên 4 mới): **W2 + W3 XONG · ĐÓNG CỔNG ĐỎ S01 · ⭐ `RELEASED`**
+
+| Loại | Nội dung |
+|---|---|
+| ✅ `TASK_COMPLETE` | **W2 — «xem danh sách công việc của NGƯỜI KHÁC theo phạm vi»** (`CHG-D27`): thêm khối thuần `workByOwnerGroups` (mốc `W2-PURE-BEGIN/END`) + bộ chọn «Nhóm của tôi (**mặc định**) / **Theo người**» trong tab «Danh sách công việc». ⭐ Nguồn gom = `scopedWork` (tập ĐÃ thu hẹp) ⇒ ⛔ **0 API mới · 0 dòng CSDL · 0 dòng quyền** — phạm vi vẫn do MÁY CHỦ quyết. Nhóm theo `assignedTo` (khoá định danh) ⇒ **trùng tên = 2 nhóm**. «Theo người» là **CHỈ XEM** việc người khác. Test MỚI `tests/t14` — **8/8** (3 đối chứng âm) |
+| ✅ `TASK_COMPLETE` | **W3 — nút «XOÁ» việc của bản thân** (`CHG-D28`): S01 đã xong action `delete_work_item` (`work`+`canEdit`) ⇒ nút hiện **CHỈ KHI ĐỦ 2 CỔNG** (⛔ không «nút chết» — lớp `BUG-D05`): ① `work.canEdit` ② `assignedBy === tôi` ∧ ⛔ chưa đóng; có `window.confirm`; nối **3 bảng** sửa được (⛔ bảng Phòng ban vẫn chỉ-xem). Test khoá `tests/t13` **test `E`** — đọc THẲNG `ActionRbacRegistry.java` để đối chiếu module/capability |
+| ✅ `TASK_COMPLETE` | **ĐÓNG CỔNG ĐỎ** mà S01 nhờ (`CẬP NHẬT 82`): `tools/probe-catalog-drift.mjs` **exit 1 → 0** («CHƯA BIẾT: `delete_work_item` → **0**») bằng cách khai `KNOWN_JAVA_ONLY` **kèm điều kiện whitelist ĐÃ ĐO** (① `Map.entry` thật `:371`+`:652` ② **0 lần** trong `scripts/system-route.mjs`). ➕ phải khai thêm ở `tools/audit-java-only-actions.mjs` (⚠️ `tests/t13` test CŨ **ĐỎ ngay** khi WorkCenter gọi action Java-only chưa khai — đã ĐO) ⇒ `parity` **0 thiếu** · `coverage` **MÙ QUYỀN 0** · `audit` **Rủi ro 0** |
+| ℹ️ `NEU_TRUNG_THUC` | ⚠️ **NỢ CÓ TÊN (⛔ không giấu)**: chọn cách ② (whitelist) ⇒ đường JS `scripts/system-route.mjs` ⛔ **chưa có** `case "delete_work_item"` ⇒ nút «Xoá» ⛔ không chạy trên đường JS. Muốn parity thật phải thêm `case` **và** giữ ngân sách `F-03` (0 dòng ròng) — ⛔ không làm lúc này (đang giữ build) |
+| 🧹 `CLEANUP` | Dọn **2 warning lint** tồn dư trong `WorkCenter.tsx` (`assigned` · `managerDepartments`) — ⚠️ **KIỂM TRƯỚC**: `tests/t07:175` khoá `workScopeOf().managerDepartments` **KHỚP** `kanbanManagerDepartments(me)` ⇒ ⛔ chỉ xoá bản sao ở thân component ⇒ `eslint` **0 lỗi · 0 warning** |
+| 📊 `STATE` | `tsc` **0** · `eslint` **0** · hồi quy **`970 test · 969 pass · FAIL 0 · 1 skip · exit 0`** (nền 961 ⇒ **+9**) · 4 cổng `tools/*` **exit 0** |
+| 📤 `HANDOFF` | ⭐ **`HANDOFF-20261009-A13` → S01**: **`RELEASED — mtime cuối 14:51:12`** (điều kiện §4.5 họ chờ để **chạy trọn chuỗi build**) + mtime **từng tệp** đã chạm + xác nhận ⛔ **0 tệp** của S01 bị ảnh hưởng ⇒ ⭐ `FILES(S04) ∩ FILES(S01–S03) = ∅` ✓ |
+| ⏳ `NEXT_STEP` | **CÒN LẠI CỦA S04 (⛔ chưa làm, ⛔ không nằm trong lượt `RELEASED` này)**: ① dải tab đọc **6 khoá `work_*`** ② ma trận: hiện **6 dòng tab** + dòng **`work_others`** + **ẩn 4 khoá cũ** ③ (nợ) `case` cho đường JS ⇒ ⭐ làm **sau khi S01 build xong** (⛔ không sửa thêm để build sạch) |
+
+---
+
+## 🆕 LƯỢT 15:13–15:20 (09/10/2026) — `ERP-SESSION-04`: **W2/W3 LÊN BẢN CHẠY** · **W4 + W5 XONG** · 🔴 **PHÁT HIỆN `BUG-D27` (HIGH)**
+
+| Loại | Nội dung |
+|---|---|
+| ✅ `VERIFICATION` | **BUILD FE của S01 ĐÃ XONG** (`dist` **15:13:36** · `:8787` PID **12272**) ⇒ ⭐ **W2/W3 ĐÃ LÊN KÊNH PHỤC VỤ**: bundle **5 tệp / 1.336.701 ký tự** có «Theo người» · «Nhóm của tôi» · `work-owner-view-` · `work-delete` · `delete_work_item`; ⛔ mất `work-export-csv`/`work-comment-pending`/«Danh sách việc của tôi» ✓ |
+| 🔬 `TEST` | Probe **MỚI** `SESSION_D/probes/verify-w2-w3-tren-payload-that.mjs`: nhập **KHỐI THUẦN THẬT** (`W2-PURE`+`T06-PURE`) chạy trên **payload THẬT** ⇒ **9/9 ĐẠT** (W2 gom **6 nhóm người** từ **21** việc · W3 nút «Xoá» chỉ ở **9/21** dòng do chính admin giao) ⭐ đây là **bằng chứng W2/W3 chạy đúng trên DỮ LIỆU SỐNG** ✓ |
+| 🔴 `BUG_FOUND` | ⭐ Nhờ probe trên, **truy nguyên ra `BUG-20261009-D27` (HIGH)**: payload `workItems` ⛔ **không lọc `active`** ⇒ **7 dòng `active=0` (đã XOÁ MỀM, `CANCELLED`) VẪN về giao diện** ⇒ ⚠️ **nút «Xoá» (W3) xoá xong việc ⛔ vẫn nằm trên màn** + số đếm **phồng 33 %** · 🧭 **ROOT CAUSE 2 ĐƯỜNG**: `scripts/system-route.mjs:807` + `BootstrapDataAdapter.java:1610` (đều chỉ có `WHERE <phạm vi>`) · 📤 **`HANDOFF-20261009-A15`** → **S01** (họ sở hữu `java-backend/**`, đang build) ⛔ tôi không tự sửa ✓ |
+| 🔴 `CORRECTION` | ⛔ **ĐÍNH CHÍNH**: ghi chú cũ «2 hàng thử `CANCELLED`+`active=0` ⇒ **vô hại**, ⛔ không hiện» (TEST-D51/`SHARED_STATE`) 🔴 **SAI** — đo hôm nay cho thấy **`active=0` VẪN HIỆN** ⇒ ⭐ **luật mới: cờ `active` CÓ trong `SELECT` ⛔ không đồng nghĩa ĐÃ ĐƯỢC LỌC** (đã ghi `SHARED_STATE` CẬP NHẬT 85) ✓ |
+| ✅ `TASK_COMPLETE` | **W4** (`CHG-D30`): dải tab đọc **6 khoá `work_*`** theo **PHƯƠNG ÁN `A` — lùi an toàn** (USER chốt) + «chốt rơi về» tab đầu tiên đang hiện (⚠️ giữ nguyên `tab === i` ⇒ ⛔ không phá `t05`/`t14`) · **W5** (`CHG-D31`): **7 dòng** vào `modules[]` ⇒ ma trận vẽ được 6 dòng tab + `work_others` (⭐ HÀM THẬT: `my_work` **7 → 14 dòng**, hiển thị thực **10**) + **6 khoá tab** vào cổng menu `work_hub` (đo: **no-op** hôm nay, chặn lỗi mất menu lớp `D1` về sau) ✓ |
+| 📊 `STATE` | `tsc` **0** · `eslint` **0 lỗi · 0 warning** · `t13` **21/21** (gồm F/W4 + G/W5) · **4 cổng `tools/*` exit 0** · `verify-ma-tran-dong` **exit 0** · ⭐ hồi quy **`972 · 971 pass · FAIL 0 · 1 skip · exit 0`** (nền 970 ⇒ +2) ✓ |
+| 📤 `HANDOFF` | **`HANDOFF-20261009-A16`** → S01: **`RELEASED` mới** (`WorkCenter.tsx` **15:16:03** · `lib/menu-helpers.ts` **15:17:31**) ⇒ ⭐ **cần 1 LƯỢT BUILD FE NỮA** để W4/W5 lên kênh phục vụ · ⏳ `BUG-D27` vẫn **OPEN** (nên vá cùng lượt) ✓ |
+
+---
+
+## 🆕 LƯỢT `2026-10-09 15:32:09` (09/10/2026) — `ERP-SESSION-04`: **4 YÊU CẦU TRỰC TIẾP CỦA USER (kèm ảnh sidebar)** — 3 xong ngay + 1 chờ build
+
+| Loại | Nội dung |
+|---|---|
+| 📥 `USER_REQUEST` | User gửi **4 yêu cầu trực tiếp** (kèm ảnh chụp sidebar thật): ① bỏ **«QUẢN TRỊ DỰ ÁN»** khỏi menu Công việc ② **«TRUNG TÂM PHÊ DUYỆT»** là chức năng riêng ⇒ đưa ra khỏi menu Công việc ③ bỏ dải tab **«Nhóm của tôi / Theo người»** khỏi tabbar «Danh sách công việc» ④ menu Công việc ⛔ không còn mục con ⇒ **click «Công việc» là mở màn luôn** ✓ |
+| ✅ `TASK_COMPLETE` | ① `CHG-D32`: đưa `project_admin` + **7 khoá `work_*`/`work_others`** vào `legacyWorkMenuKeys` (⚠️ **8 khoá VẪN GIỮ dòng ma trận** ⇒ admin vẫn tick được) ⇒ nhóm `my_work` còn **ĐÚNG 1 mục** ⇒ ④ **tự giải quyết** (luật «1 mục ⇒ bấm mở thẳng» của S01) ✓ |
+| ✅ `TASK_COMPLETE` | ② `CHG-D32`: `approvalCenterGroup.sortOrder` **20 → 12** (📏 ĐO payload thật `overview 10` · `my_work 15`) ⇒ ⭐ **«TRUNG TÂM PHÊ DUYỆT» ngay sau «TỔNG QUAN ĐIỀU HÀNH»** ✓ (user chốt qua thẻ hỏi) |
+| ✅ `TASK_COMPLETE` | ③ `CHG-D33`: **bỏ dải tab** «Nhóm của tôi / Theo người» khỏi tabbar ⇒ chuyển thành **1 Ô CHỌN THƯỜNG** «Xem việc của» trên bảng (⭐ user chốt: **giữ** ô chọn này) + thêm **sentinel** chống lẫn trạng thái «chưa gán người» ↔ «Nhóm của tôi» ✓ |
+| 🔎 `SELF_CATCH` | ⭐ **TỰ PHÁT HIỆN + TỰ CHẶN trước khi build**: 7 khoá `W5` (thêm vào `modules[]` để có **dòng ma trận**) sẽ **MỌC THÀNH 7 MỤC MENU** — ⚠️ **đúng cơ chế** đã làm `project_admin` lọt (ĐO DOM thật: `my_work.children = [«CÔNG VIỆC», «QUẢN TRỊ DỰ ÁN»]`) ⇒ đã chặn ⇒ ⛔ không phát hành lỗi ✓ |
+| 📊 `VERIFICATION` | ⭐ **PROBE MỚI** `verify-menu-my_work.mjs` (**exit 0**): `configuredModules` **71 dòng** · mục module trong `my_work` = **0** · **8/8** khoá vẫn có dòng ma trận · thứ tự nhóm `overview(10) → approval_center(12) → my_work(15) → …` ✓ ➕ `t10`+`t13`+`t14`+`p6-08` **36/36** · probe W2/W3 payload thật **9/9** · `tsc` **0** · `eslint` **0** · ⭐ hồi quy **`972 · 971 pass · FAIL 0`** ✓ |
+| 📤 `HANDOFF` | **S04 → S01**: **`RELEASED` mới** cho 1 lượt build FE (⛔ chưa build nên `W4/W5` + lượt này ⛔ chưa lên kênh phục vụ) · ⚠️ **dặn S01**: chú thích ở `app/page.tsx:742-743` («*đứng ngay sau «CÔNG VIỆC» (15)*») nay **CŨ** — ⛔ tôi không sửa tệp của họ ✓ |

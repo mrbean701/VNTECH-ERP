@@ -55,6 +55,15 @@
 - [ ] ⭐ **BUG-20261007-001** — ⭐ them TIEN DO (⭐ nay da biet nguyen nhan ESLint) VA/HOAC **sua BACKEND** (⭐ bo `syncDepartmentUsers` khoi moi lan luu ⇒ **11,5s → ~1s**)
 - [ ] ⭐ Cho user nghiem thu 3 bug `FIXED` ⇒ chuyen `VERIFIED`
 
+### ⭐ 2026-10-09 — ĐÓNG `BUG-20261008-D03` (S01 đo 4 chiều, ⛔ 0 dòng mã đổi)
+- [x] ⭐ `BUG-20261008-D03` («12 action mồ côi») = 🚫 **BÁO ĐỘNG GIẢ / TIỀN ĐỀ CŨ** — đo 4 chiều **12/12**: `ADMIN_ONLY_ACTIONS` **12/12 có** · route JS **12/12 `requireRole(user,["admin"])`** · `case` controller **12/12 có** · registry **0/12 khai** ⚠️
+  - ⇒ nhánh `ADMIN_ONLY_ACTIONS` (`RbacService:108-112`) chạy **TRƯỚC** nhánh `required.isEmpty()` ⇒ **403 kèm THÔNG ĐIỆP ĐÚNG** ✓ ⇒ ⭐ **Java = JS (cả hai CHỈ ADMIN)** ⇒ ⛔ **không sửa gì** (bài học `P-08`: phải đo **cả** route JS trước khi gọi là «mù quyền»)
+  - 📌 Bằng chứng: `SESSION_A/TEST_LOG.md` **`TEST-20261009-020`** · `HANDOFF-20261009-A06` trong 2 `HANDOFF_LOG.md`
+- [x] ⭐ `HANDOFF-20261008-D14` (**6 action «MÙ QUYỀN» thật**) = **ĐÃ KHAI XONG** — `list/open/save/log/delete_contract_review` + `work_scope` ⇒ cổng `probe-action-registry-coverage` **EXIT 0** (`④ MÙ QUYỀN = 0`) · `parity` **Java thiếu 0** · Java **102/102** · hiện vật **JAR `:18081` 6/6** ✓
+- [x] ⭐ **ĐỔI ĐỊNH DANH SANG «ALPHA TEST 2026.10»** (user chốt phương án **d**) ⇒ `npm run build` **EXIT 0** · cổng UI **3/3 ĐẠT** · vân tay **`VNTECH-FP-C37A1809D58C5856`** ✓
+- [ ] ⚠️ Tồn: **59+11 chỗ nhãn/vân tay cũ** (chủ yếu `docs/**` + `AGENTS.md` banner) — ⏳ **chờ user quyết** có đồng bộ không ✓
+- [ ] ⚠️ Tồn: `tools/probe-catalog-drift.mjs` **EXIT 1** — cần S4 thêm **6 tên** Java-only mới vào `KNOWN_JAVA_ONLY` (`HANDOFF-20261009-A05`) ✓
+
 ---
 
 ## ERP-SESSION-03

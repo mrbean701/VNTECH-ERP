@@ -3,7 +3,7 @@
 ```text
 SESSION_ID : ERP-SESSION-04 (SESSION_D)
 SCOPE      : docs/**  +  ⭐ (USER uỷ quyền B1+B2) app/screens/WorkCenter.tsx · lib/menu-helpers.ts · app/page.tsx · tests/**
-STATUS     : 🟢 WORKING · bắt đầu 2026-10-08 · ⭐ ĐÃ THI HÀNH XONG **7/7 VIỆC «CÔNG VIỆC»** (xem mục «TRẠNG THÁI CUỐI» bên dưới)
+STATUS     : 🟢 WORKING · bắt đầu 2026-10-08 · ⭐ 08/10: ĐÃ THI HÀNH XONG **7/7 VIỆC «CÔNG VIỆC»** · ⭐ 09/10: XONG **W2 + W3 + đóng cổng drift** (xem «CẬP NHẬT 09/10/2026»)
 LOCK       : docs/dsh-mutil-session/SESSION_D/**  ·  docs/37_*…docs/58_*  ·  app/screens/WorkCenter.tsx  ·  lib/menu-helpers.ts
 KHÔNG GIỮ  : java-backend/**  ·  tools/**  ·  scripts/**  ·  app/globals.css  ·  drizzle/**  (thuộc S01/S02/S03)
 ⚠️ LƯU Ý  : README này TRƯỚC ĐÂY ghi «⛔ KHÔNG sửa mã sản phẩm» — **NAY ⛔ KHÔNG CÒN ĐÚNG**: từ 08/10/2026
@@ -21,6 +21,18 @@ ARTEFACT  : docs/58_BIEN_BAN_NGHIEM_THU_7_VIEC_CONG_VIEC_20261008.md  ← BIÊN 
 ⛔ commit/push: KHÔNG (AUTO_COMMIT=FALSE · AUTO_PUSH=FALSE — luật user)
 ⏳ CÒN 2 VIỆC CHỜ USER: ① build gộp MỘT LẦN khi mọi phiên dừng (đưa BUG-D09+D10 lên UI)
                         ② tài khoản nhân viên CÓ VIỆC (hoặc cho tạo việc thử) ⇒ kiểm nốt Ô NHẬP % (điểm VERIFIED cuối)
+```
+
+### ⭐ CẬP NHẬT 09/10/2026 (phiên 4 mới) — **W2 + W3 XONG** + **ĐÓNG CỔNG ĐỎ** + ⭐ **`RELEASED`** để S01 build
+
+```text
+W2 — «xem danh sách công việc của NGƯỜI KHÁC theo phạm vi»  : ✅ XONG (CHG-D27 · tests/t14 MỚI — 8 test)
+W3 — nút «XOÁ» việc của bản thân (gọi delete_work_item)      : ✅ XONG (CHG-D28 · tests/t13 test E)
+Cổng ĐỎ S01 nhờ đóng (probe-catalog-drift)                   : ✅ exit 1 → exit 0 (CHG-D29 · NỢ ghi rõ: đường JS thiếu `case`)
+Cổng                                            : tsc 0 · eslint WorkCenter.tsx 0 · hồi quy 970 test · 969 pass · FAIL 0 · 4 cổng tools/* exit 0
+⭐ RELEASED — mtime cuối app/screens/WorkCenter.tsx = 14:51:12 (10/9/2026)  → đã ghi HANDOFF-20261009-A13 để S01 build
+⛔ TỆP KHÔNG CHẠM lượt này: app/page.tsx · lib/** · java-backend/** · scripts/**  (⇒ FILES(S04) ∩ FILES(S01–S03) = ∅)
+⏳ CÒN LẠI CỦA S04 (⛔ chưa làm): ① dải tab đọc 6 khoá `work_*` ② ma trận: 6 dòng tab + `work_others` + ẩn 4 khoá cũ
 ```
 
 ### Tệp mã ĐÃ SỬA (⚠️ phiên khác ĐỌC TRƯỚC KHI GHI)
@@ -112,3 +124,68 @@ Shell của harness hỏng trong phiên này:
 Đã liệt kê `C:\Users\PC\.dsh\profiles\web\node_modules\@deepseek-ai\` (**5.119 đường dẫn**) và grep tìm `dsh-scope` ⇒ **0 kết quả**.
 ⇒ Gói **`@deepseek-ai/dsh-scope` KHÔNG tồn tại** trong profile, trong khi `@deepseek-ai/dsh-skill/lib/index.js` **import nó** ⇒ mọi tiến trình `node` chết ngay khi nạp skill loader (⇒ shell của DSH cũng chết theo).
 ⇒ **Cách sửa (cần user làm, ⛔ phiên trong workspace không có quyền ghi ra ngoài)**: cài lại/khôi phục gói cho profile **`web`** (vd chạy lại bước cài plugin/skill của DSH, hoặc sao chép `@deepseek-ai/dsh-scope` từ profile khác nếu có). Sau khi sửa: chạy `node -v` để xác nhận shell sống lại **trước khi** tin bất kỳ số cổng nào.
+
+---
+
+# ⏸️ BẢNG ĐIỀU KHIỂN — TẠM DỪNG CHỜ USER (09/10/2026 16:22 · `ERP-SESSION-04`)
+
+| Trường | Giá trị |
+|---|---|
+| **SESSION_ID** | `ERP-SESSION-04` (`SESSION_D`) |
+| **STATUS** | ⏸️ **TẠM DỪNG — CHỜ USER QUYẾT** (⚠️ theo luật user: gặp quyết định của user ⇒ dừng vòng lặp goal) |
+| **OWNED SCOPE** | `app/screens/WorkCenter.tsx` · `tests/**` · `tools/**` · `docs/dsh-mutil-session/SESSION_D/**` (+ `lib/menu-helpers.ts` **chỉ khi có thoả thuận**) |
+| **VIỆC TRONG PHẠM VI** | ✅ **XONG HẾT + ĐÃ NGHIỆM THU** (⚠️ không có việc dở dang) |
+| **CỔNG** | `tsc` **0** · `eslint` **0** · probe S04 **4/4 exit 0** · hồi quy **979·978 pass·FAIL 0** · **cổng `BUG-D27` = `exit 1`** (🔴 bug của S01 còn thật) |
+| **CHỜ USER** | ❓ `Q-UI-01` (vị trí nút «＋ Tạo công việc») · ❓ `Q-PERM-01` (cấp `work_others` cho trưởng phòng/GĐ) · ❓ `Q-PERM-02` (chốt sub-tab — S01 hỏi) |
+| **CHỜ S01** | 🔴 vá `BUG-D27` (⭐ chỉ cần chạy `node tools/probe-workitems-active.mjs` ⇒ exit 0) · xác nhận `W-W5` (7 dòng `modules[]`) |
+| **BƯỚC TIẾP KHI ĐƯỢC RESUME** | ① nếu user quyết `Q-UI-01` ⇒ sửa **1 chỗ** (`actions`→`secondaryActions`) + test + RELEASED ② nếu user đồng ý cấp `work_others` ⇒ **báo S01 thi hành** (vùng ADMIN) ③ khi S01 vá `D27` ⇒ **chạy cổng nghiệm thu** + báo `VERIFIED` |
+| **GHI CHÚ** | ⛔ S04 **dừng sửa mã** để build sạch; `RELEASED` cuối: `WorkCenter.tsx` **15:59:37** · `tests/v214` CANCELLED · `tools/probe-workitems-active.mjs` (mới) |
+
+---
+
+# ⏸️ BẢNG ĐIỀU KHIỂN — CHỜ BUILD FE (09/10/2026 16:36 · `ERP-SESSION-04`)
+
+| Trường | Giá trị |
+|---|---|
+| **SESSION_ID** | `ERP-SESSION-04` (`SESSION_D`) |
+| **STATUS** | ⏸️ **CHỜ S01 BUILD FE** (⚠️ điều kiện lặp 4 vòng · ⛔ S04 hết việc tự làm) |
+| **VIỆC USER CHỐT 16:26** | ✅ ② `VERIFIED` · ✅ ③ `VERIFIED` · ✅ ① **mã+test+render-component xong** (⏳ tầng DOM chờ build) |
+| **7 PROBE** | ✅ **exit 0** hết |
+| **HỒI QUY** | ✅ `979 test · 978 pass · FAIL 0 · 1 skip` |
+| **RELEASED cuối** | `WorkCenter.tsx` **16:26:32** · `scripts/system-route.mjs` **16:29:23** (⚠️ DÙNG CHUNG, số dòng ⛔ không đổi) |
+| **CHỜ S01** | ① **1 lượt build FE** ② xác nhận **GIỮ/TỰ QUẢN 7 dòng `modules[]`** (`W5`) |
+| **KHI BUILD XONG — S04 LÀM NGAY** | ① mở `:9000` ⇒ **nạp lại trang** ⇒ đo `[data-vntech="work-create-open"]?.closest('.list-toolbar-secondary')` = truthy + chụp ảnh ② báo `VERIFIED` cho ① |
+
+---
+
+# ✅ BẢNG ĐIỀU KHIỂN — CẬP NHẬT 09/10/2026 17:03 · `ERP-SESSION-04`
+
+| Trường | Giá trị |
+|---|---|
+| **SESSION_ID** | `ERP-SESSION-04` (`SESSION_D`) |
+| **STATUS** | ✅ **VIỆC ĐÃ XONG + ĐÃ NGHIỆM THU** · ⏳ **1 việc chờ S01 chọn** (⚠️ xem dòng cuối) |
+| **VIỆC USER GIAO (3 đợt)** | ① nút «＋ Tạo công việc» **sát ô tìm kiếm** ✅✅ VERIFIED (**DOM thật**: `<input>`=303 → nút=**1032**) · ② **LỌC «Trạng thái» + SẮP XẾP** (5 lựa chọn) cho 2 nhóm «Của tôi»/«Đã giao» ✅✅ VERIFIED · ③ nhóm «Đã giao» ⇒ **MODAL GIAO VIỆC CHO NGƯỜI KHÁC** ✅✅ VERIFIED (8 trường · phòng ban **7** lựa chọn động · nhân viên **29**) + ⭐ **S01 cũng chạy hộ 2 cổng của S04 ⇒ CẢ 2 `EXIT 0`** ✓ |
+| **ẢNH CHỨNG CỨ** | `SESSION_D/uat-batch-D-tab-danh-sach-cong-viec.png` · `SESSION_D/uat-modal-giao-viec-va-loc-sap-xep.png` ✓ |
+| **2 VIỆC TREO VỚI S01** | ✅ `BUG-20261009-D27` **VERIFIED** (cổng `exit 0` · payload `21 → 14`) · ✅ `W-W5` **GIỮ NGUYÊN 7 dòng `modules[]`** · ✅ `Q-PERM-01` (cấp `work_others`) **S01 verify end-to-end 3/3 + 3/3 đối chứng** ✓ |
+| **CỔNG VÙNG S04** | ✅ `tsc` **0** · `eslint` **0** · ⭐ hồi quy **`985 · 984 pass · FAIL 0 · 1 skip`** · **7/7 probe exit 0** · ✅ cổng vân tay `D200C5A3764E166D` ✓ |
+| **RELEASED (mốc cuối)** | `app/screens/WorkCenter.tsx` **16:50:52** · `tests/t17-work-filter-sort-assign.test.mjs` **16:58:54** (⚠️ ĐỔI TÊN từ `t16` — xem `CN104`) · `tests/t14-work-owner-view.test.mjs` **16:52:47** · `scripts/system-route.mjs` **16:29:23** |
+| **⛔ S04 ĐANG DỪNG SỬA MÃ** | ⚠️ để S01 chốt phát hành ✓ |
+| **⏳ CHỜ S01 (1 VIỆC)** | ⚠️ **CỔNG PHÁT HÀNH ĐANG ĐỎ** (`verify-full-release` **EXIT 1**: «Manifest tham chiếu file thiếu: `tests/t16-work-filter-sort-assign.test.mjs`») — ⚠️ **hệ quả của việc S04 đổi tên test theo đúng khuyến nghị `CN100` của S01** ⇒ 📌 **S01 CHỌN**: **(A)** sinh lại manifest + build 1 lượt (⭐ S04 đề xuất) **HAY (B)** S04 đổi tên lại về `t16` (⚠️ chấp nhận trùng số) ⇒ xem `CN105` ✓ |
+
+---
+
+# ⏸️ BẢNG ĐIỀU KHIỂN — CẬP NHẬT 09/10/2026 17:36 · `ERP-SESSION-04` — **CHỜ USER (2 ĐIỀU KIỆN)**
+
+| Trường | Giá trị |
+|---|---|
+| **SESSION_ID** | `ERP-SESSION-04` (`SESSION_D`) · phạm vi **WORK – PROJECT** |
+| **STATUS** | ⏸️ **BLOCKED — chờ USER** (⚠️ 2 điều kiện bên dưới đã lặp **≥3 vòng**; ⛔ mọi việc tự làm được **ĐÃ XONG**) |
+| **VIỆC USER GIAO** | ✅ Batch D (3 việc) · ✅ 2 việc mới (lọc+sắp xếp · modal giao việc) · ✅ «test giao diện thật» ⇒ **VERIFIED trên `dist` 17:04:45** + ảnh · ⚠️ **3 kịch bản**: phần `admin` **ĐẠT**, phần **theo vai trò** ⛔ chưa chạy được |
+| **BẰNG CHỨNG** | `SESSION_D/uat-modal-giao-viec-va-loc-sap-xep.png` · `uat-test-that-loc-sap-xep-modal-1705.png` · `TEST-D81`/`D84`/`D86`/`D87` |
+| **CỔNG** | `tsc` 0 · `eslint` 0 · hồi quy **985 · 984 pass · FAIL 0** · 7/7 probe `exit 0` · `verify-full-release` **EXIT 0** · vân tay **EXIT 0** |
+| **RELEASED (mốc cuối)** | `WorkCenter.tsx` **16:50:52** · `tests/t17-…` **16:58:54** · `tests/t14-…` 16:52:47 · ⛔ **S04 ĐÓNG BĂNG MÃ** |
+| **🔴 CHỜ USER #1** | **Đưa cửa sổ trình duyệt VNTECH RA TRƯỚC** — ⚠️ tab đang `document.visibilityState = **"hidden"**` ⇒ mọi request từ trang **treo vô hạn** (`window.__probe.xong=false` sau >60s) ⇒ ⛔ **không đo được UI thật** (⚠️ API vẫn khoẻ: login **576ms** · payload **249ms**) |
+| **🔴 CHỜ USER #2** | **QUYỀN ĐĂNG NHẬP** cho kịch bản nhân viên/trưởng phòng/giám đốc: 📏 mật khẩu tài liệu `VnTech@123` **đã bị đổi** (401 + hash CSDL ⛔ không khớp) ⇒ chọn: **(a)** cho phép S04 reset 3 mật khẩu demo (⭐ nhanh nhất) **(b)** user gửi mật khẩu hiện tại **(c)** user chạy `node java-backend/tools/seed-demo.mjs` |
+| **🔴 ĐANG MỞ (chủ S01)** | `BUG-20261009-D34` — `admin` duyệt được việc **KH/DA** (đối chứng `CV-DA-261009-5666` ⇒ **HTTP 200**) nhưng **bị chặn** với đơn vị khác (**`CN`** ⇒ **HTTP 400**) ⇒ bất nhất quán FE/BE ⇒ ⛔ S04 chờ S01 chốt cách sửa (`HANDOFF-A28`) |
+| **⛔ ĐÃ RÚT LẠI** | `BUG-20261009-D30` (**báo sai** của S04 — mã **CÓ** render `globalError` tại `app/page.tsx:849`) ⇒ ⛔ S01 **đừng vá theo** |
+| **⚠️ DỮ LIỆU THỬ** | `CVCN-261009-9917` (cá nhân · LÀM LẠI) · `CV-DA-261009-5666` (phòng DA · HOÀN THÀNH) — ⛔ **chưa xoá** (giữ làm mốc đo) |

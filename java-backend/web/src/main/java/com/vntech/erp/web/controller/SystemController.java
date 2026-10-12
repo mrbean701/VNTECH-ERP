@@ -279,12 +279,12 @@ public class SystemController {
                     return ResponseEntity.ok(json(Map.of("ok", true, "message", message)));
                 }
                 case "create_project" -> {
-                    AuthUseCase.CurrentUser cu = requireRequireAdmin(request);
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
                     String message = projectManagementUseCase.createProject(asPrincipal(cu), payload);
                     return ResponseEntity.ok(json(Map.of("ok", true, "message", message)));
                 }
                 case "update_project" -> {
-                    AuthUseCase.CurrentUser cu = requireRequireAdmin(request);
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
                     String message = projectManagementUseCase.updateProject(asPrincipal(cu), payload);
                     return ResponseEntity.ok(json(Map.of("ok", true, "message", message)));
                 }
@@ -294,7 +294,7 @@ public class SystemController {
                     return ResponseEntity.ok(json(Map.of("ok", true, "message", message)));
                 }
                 case "delete_project" -> {
-                    AuthUseCase.CurrentUser cu = requireRequireAdmin(request);
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
                     Map<String, Object> result = projectManagementUseCase.deleteProject(asPrincipal(cu), payload);
                     Map<String, Object> body = new LinkedHashMap<>();
                     body.put("ok", true);
@@ -1027,7 +1027,7 @@ public class SystemController {
                     Map<String, Object> result = opsTaskManagementUseCase.updateWorkItemProgress(asOpsTaskPrincipal(cu), payload);
                     return ResponseEntity.ok(jsonResult(result));
                 }
-                                case "update_work_item_status" -> {
+                                case "update_work_item_status", "approve_work_item" -> {
                     AuthUseCase.CurrentUser cu = requireCurrentUser(request);
                     Map<String, Object> result = opsTaskManagementUseCase.updateWorkItemStatus(asOpsTaskPrincipal(cu), payload);
                     return ResponseEntity.ok(jsonResult(result));
@@ -1502,6 +1502,26 @@ case "reject_po" -> {
                 case "save_error_report" -> { requireCurrentUser(request); return ResponseEntity.ok(jsonResult(errorReportUseCase.save(payload))); }
                 case "error_reports" -> { requireCurrentUser(request); return ResponseEntity.ok(jsonResult(java.util.Map.of("reports", errorReportUseCase.list(payload)))); }
                 case "mark_error_report_resolved" -> { requireCurrentUser(request); return ResponseEntity.ok(jsonResult(errorReportUseCase.resolve(payload))); }
+                // ⭐ T-04 (PHASE 3 · CÔNG VIỆC) — **PORT NỐT 2 action WORK** cho đường Java (đóng `docs/61` Q3).
+                // ⚠️ VÌ SAO Ở ĐÂY: đặt CUỐI switch, SAU mọi `case` mà hồ sơ `F-03-TAI-CHINH-AUDIT-PHU-THUOC.md`
+                //    gắn số dòng ⇒ ⛔ KHÔNG dịch dòng của bất kỳ action nào (cùng quy ước `save_error_report` ở trên).
+                // ⚠️ Quyền ⛔ KHÔNG đổi: `add_work_item_comment` = `canUse` · `set_work_item_participant` = `canEdit`
+                //    (đã khai sẵn ở `ActionRbacRegistry` L16/L314) ⇒ đây chỉ là CÀI ĐẶT handler còn thiếu.
+                case "add_work_item_comment" -> {
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                    Map<String, Object> result = opsTaskManagementUseCase.addWorkItemComment(asOpsTaskPrincipal(cu), payload);
+                    return ResponseEntity.ok(jsonResult(result));
+                }
+                case "delete_work_item" -> {
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                    return ResponseEntity.ok(jsonResult(
+                            opsTaskManagementUseCase.deleteWorkItem(asOpsTaskPrincipal(cu), payload)));
+                }
+                case "set_work_item_participant" -> {
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                    Map<String, Object> result = opsTaskManagementUseCase.setWorkItemParticipant(asOpsTaskPrincipal(cu), payload);
+                    return ResponseEntity.ok(jsonResult(result));
+                }
                 default -> {
                     return ResponseEntity.status(400).body(json(Map.of("ok", false,
                             "error", "Action '" + action + "' chưa được triển khai trên backend Java (Strangler Fig).")));

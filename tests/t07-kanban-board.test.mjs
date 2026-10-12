@@ -115,8 +115,12 @@ test("T-07 — KÉO-THẢ gọi ACTION THẬT, không chỉ đổi giao diện",
   assert.match(kanban, /kanbanDropGuard\(/, "Chưa kiểm cổng an toàn trước khi gọi action");
   assert.match(kanban, /onMove\(row\.id, column\.dropStatus, reason\)/, "Thả xuống cột phải gọi `onMove` với trạng thái đích của CHÍNH cột đó");
   // Hợp đồng với màn Công việc: `onMove` được cấp bằng ACTION THẬT `update_work_item_status`.
-  assert.match(workCenter, /action\("update_work_item_status",\s*\{\s*workItemId/, "WorkCenter chưa nối `onMove` vào action thật `update_work_item_status`");
+  // ⭐ USER 08/10/2026 (quyết định `Q2-b`): riêng trạng thái **`COMPLETED`** dùng action DUYỆT riêng
+  //    `approve_work_item` (capability `canApprove`) ⇒ test vẫn khoá ĐÚNG ý định «gọi action THẬT».
+  assert.match(workCenter, /action\(status === "COMPLETED" \? "approve_work_item" : "update_work_item_status",\s*\{\s*workItemId/,
+    "WorkCenter chưa nối `onMove` vào action THẬT (`update_work_item_status`, riêng COMPLETED ⇒ `approve_work_item`)");
   assert.match(route, /case "update_work_item_status"|"update_work_item_status"/, "Action `update_work_item_status` không tồn tại ở backend");
+  assert.match(route, /"approve_work_item"/, "Action DUYỆT `approve_work_item` không tồn tại ở backend");
   // Không được chuyển trạng thái bằng state cục bộ (đổi giao diện mà không lưu).
   assert.doesNotMatch(kanban.replace(/\/\/[^\n]*/g, ""), /setRows\(|setStatus\(/, "Có dấu hiệu đổi trạng thái bằng state cục bộ thay vì gọi action thật");
 });

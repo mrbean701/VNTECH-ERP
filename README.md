@@ -1,6 +1,6 @@
 > **VNTECH ERP — BỘ TÀI LIỆU PHIÊN BẢN `ALPHA TEST`**
 > · Phiên bản tài liệu: **`DOC-ALPHA-TEST-2026.10`** · Ngày cập nhật: **08/10/2026** · Phiên soạn: `ERP-SESSION-01`
-> · Sản phẩm: `V5.3.0-MASTER-BASELINE-R1.1.1` · Cổng: `:8787` (UI) · `:9000` (cutover) · `:18081` (API Java)
+> · Sản phẩm: `V5.3.0 ALPHA TEST 2026.10` · Cổng: `:8787` (UI) · `:9000` (cutover) · `:18081` (API Java)
 > · ⚠️ Trạng thái: **ALPHA TEST** — tài liệu phản ánh bản ĐANG CHẠY; ⛔ chưa phải bản phát hành chính thức.
 > · 📌 Nguồn sự thật: **mã nguồn + CSDL thật** (mọi số liệu đều ĐO được, ⛔ không suy đoán).
 
@@ -59,6 +59,7 @@ Trust Lock Foundation vẫn ở `development`; License Enforcement và Online At
 | [`33_MO_TA_CHUC_NANG_VA_HE_THONG.md`](docs/33_MO_TA_CHUC_NANG_VA_HE_THONG.md) | nghiệp vụ / BA |
 | [`32_TAI_LIEU_PHAN_TICH_HE_THONG.md`](docs/32_TAI_LIEU_PHAN_TICH_HE_THONG.md) | kỹ thuật / kiến trúc |
 
-⚠️ **Phân biệt 2 loại phiên bản:** phiên bản **SẢN PHẨM** `V5.3.0-MASTER-BASELINE-R1.1.1`
-(+ vân tay `VNTECH-FP-BB706F1202490077`) ⛔ **không đổi** khi chỉ cập nhật tài liệu —
-vì vân tay gắn với **bản build đang chạy**; còn phiên bản **TÀI LIỆU** là `DOC-ALPHA-TEST-2026.10`.
+⚠️ **Phân biệt 2 loại phiên bản:** phiên bản **SẢN PHẨM** nay là `V5.3.0 ALPHA TEST 2026.10`
+(vân tay `VNTECH-FP-CC2E15BDEB8348A4`) — ⭐ **user chốt 09/10/2026** (phương án d) để khớp trạng thái
+**ALPHA TEST** đang chạy; còn phiên bản **TÀI LIỆU** là `DOC-ALPHA-TEST-2026.10`.
+⚠️ Mục «R1.1.1 — điểm khóa chính» ở trên là **ghi chép LỊCH SỬ** của mốc cũ ⇒ ⛔ giữ nguyên (⛔ không viết lại lịch sử).

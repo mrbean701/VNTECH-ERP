@@ -37,7 +37,12 @@ const MODULE_KEY_BLOCK = uiShared.slice(uiShared.indexOf("type ModuleKey ="), ui
 test("T-10 — Approval Center TÁCH khỏi nhóm «CÔNG VIỆC» bằng UI (khoá đã có `approvals`, KHÔNG khoá module mới)", () => {
   // 1) Khoá dùng để tách = `approvals` (ĐÃ CÓ) — khai báo tường minh trong `lib/menu-helpers.ts`.
   assert.match(menuHelpers, /const approvalCenterMenuKey: ModuleKey = "approvals";/, "Thiếu khai báo khoá `approvals` cho Trung tâm phê duyệt");
-  assert.match(menuHelpers, /const approvalCenterGroup = \{ groupKey: "approval_center", name: "PHÊ DUYỆT", icon: "PD", sortOrder: 20 \} as const;/, "Thiếu khai báo NHÓM MENU độc lập `approval_center`");
+  // ⚠️ CẬP NHẬT 09/10/2026 — YÊU CẦU TRỰC TIẾP CỦA USER (kèm ảnh sidebar): «*đưa Trung tâm phê duyệt ra khỏi
+  //    menu Công việc*» ⇒ user chọn «**CHUYỂN LÊN NGAY SAU «TỔNG QUAN ĐIỀU HÀNH»**» ⇒ `sortOrder` **20 → 12**
+  //    (📏 ĐO payload thật: `overview 10` · `my_work 15` ⇒ 12 nằm giữa). ⛔ Vẫn GIỮ NGUYÊN bất biến: đây là
+  //    **KHOÁ NHÓM MENU** (`approval_center`, ⛔ không phải khoá module, ⛔ không dòng CSDL, ⛔ không migration).
+  assert.match(menuHelpers, /const approvalCenterGroup = \{ groupKey: "approval_center", name: "PHÊ DUYỆT", icon: "PD", sortOrder: 12 \} as const;/,
+    "Thiếu khai báo NHÓM MENU độc lập `approval_center` (hoặc `sortOrder` ⛔ không còn là 12 = sau «TỔNG QUAN ĐIỀU HÀNH», trước «CÔNG VIỆC»)");
   assert.match(menuHelpers, /const independentMenuKeys: ModuleKey\[\] = \["dashboard", "approvals"\];/, "Thiếu danh sách mục menu ĐỘC LẬP ở cấp cao nhất");
   // 2) `approvals` KHÔNG còn nằm trong `children` của BẤT KỲ nhóm nào (kể cả `my_work` — nhóm DB đang gán cho nó).
   assert.match(page, /!independentMenuKeys\.includes\(item\.key\)/, "Cây menu chưa loại các mục ĐỘC LẬP khỏi `children` của nhóm");

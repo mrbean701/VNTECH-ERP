@@ -2479,4 +2479,36 @@ CREATE TABLE IF NOT EXISTS error_reports (
   updated_at          VARCHAR(32)   NULL,
   PRIMARY KEY (id)
 );
+
+-- ═════════════════════════════════════════════════════════════════════════════════════════════════════
+-- T-04 (PHASE 3 · CÔNG VIỆC) — 2 bảng **CÒN THIẾU** trong schema test H2 (trước đây ⛔ chưa action Java nào
+-- dùng tới nên chưa lộ). ⭐ **MySQL THẬT ĐÃ CÓ 2 bảng này** (đo `SHOW CREATE TABLE` ngày 09/10/2026) ⇒ đây là
+-- **ĐỒNG BỘ schema test theo CSDL thật**, ⛔ KHÔNG phải bảng mới của test.
+-- ⚠️ Cần cho 2 action WORK vừa được port sang Java: `add_work_item_comment` · `set_work_item_participant`
+--    (đóng `docs/61` câu hỏi **Q3** — 2 quyền trước đây «MA» trên đường Java).
+-- ⚠️ Dùng **backtick** cho `comment` (từ khoá của H2) — cùng kiểu với `work_items` phía trên.
+-- ═════════════════════════════════════════════════════════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS `work_item_comments` (
+  `id`            VARCHAR(64)  NOT NULL,
+  `work_item_id`  VARCHAR(64)  NOT NULL,
+  `user_id`       VARCHAR(64)  NOT NULL,
+  `comment`       TEXT         NOT NULL,
+  `visibility`    VARCHAR(255) NOT NULL DEFAULT 'internal',
+  `created_at`    TIMESTAMP(3) NOT NULL,
+  `updated_at`    TIMESTAMP(3) NOT NULL,
+  PRIMARY KEY (`id`)
+);
+
+CREATE TABLE IF NOT EXISTS `work_item_participants` (
+  `id`            VARCHAR(64)  NOT NULL,
+  `work_item_id`  VARCHAR(64)  NOT NULL,
+  `user_id`       VARCHAR(64)  NOT NULL,
+  `role_in_task`  VARCHAR(255) NOT NULL DEFAULT 'follower',
+  `notify`        TINYINT      NOT NULL DEFAULT 1,
+  `added_by`      VARCHAR(64)  NULL,
+  `created_at`    TIMESTAMP(3) NOT NULL,
+  `updated_at`    TIMESTAMP(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  CONSTRAINT `work_item_participants_task_user_idx` UNIQUE (`work_item_id`, `user_id`)
+);
 -- [H2-MANUAL-END]

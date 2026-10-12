@@ -6,6 +6,83 @@
 
 ---
 
+# PHẦN A — CHUẨN §14 (đủ **17 mục**, ⭐ đặt TRƯỚC để gộp báo cáo tuần tự động được)
+> ⭐ Khuôn này **theo đúng cách `SESSION_C` đã dùng** («PHẦN A đủ 17 mục · PHẦN B giữ nguyên nhật ký cũ — ⛔ không xoá log») ✓
+> ⚠️ **Vì sao phải có PHẦN A**: `SESSION_A` trước đây dùng tiêu đề **tiếng Việt** ⇒ khi đối chiếu theo **tên mục chuẩn §14** thì bị đếm là «thiếu 6/17» (`HANDOFF-20261007-C06`) ⚠️ ⇒ nay có **PHẦN A khớp tên chuẩn** ✓ (PHẦN B bên dưới **giữ nguyên 100%**, ⛔ không xoá/⛔ không viết lại) ✓
+
+## Session
+SESSION_A (`ERP-SESSION-01`)
+
+## Period
+2026-10-05 → 2026-10-11
+
+## Completed Tasks
+- `TASK-20261009-001` — khai quyền **6 action «MÙ QUYỀN»** theo `HANDOFF-20261008-D14` (`list/open/save/log/delete_contract_review` + `work_scope`) ⇒ cổng `probe-action-registry-coverage` **EXIT 0** ✓
+- `TASK-20261009-002` — **đổi định danh sản phẩm sang `VNTECH ERP V5.3.0 ALPHA TEST 2026.10`** + `npm run build` **EXIT 0** + cổng UI **3/3 ĐẠT** ✓
+- `TASK-20261009-003` — **bác bỏ `BUG-20261008-D03`** (12 action «mồ côi») = **BÁO ĐỘNG GIẢ** bằng phép đo 4 chiều ⇒ ⛔ **0 dòng mã đổi** ✓
+- (tuần) 4 task `VERIFIED` + 4 task `DONE` — xem `SHARED_TODO.md` §`ERP-SESSION-01` ✓
+
+## In Progress
+- ⏳ **3 việc chờ USER quyết** (`DEC-20261009-018`): ① đồng bộ banner `docs/**` + `AGENTS.md` sang nhãn ALPHA TEST ② làm mới `MANIFEST_SHA256.txt` ③ chọn module cho **CRUD DỰ ÁN** (`docs/38 §7`) ⇒ mở khoá `T-05` ✓
+- ✅ `CHG-20261009-012` = **FIXED** (đã triển khai, hiện vật **JAR `:18081` 6/6**) — ⏸ `VERIFIED` **một phần**: còn 1 phép đo live bằng tài khoản thật ✓
+
+## UI/UX
+- Thay đổi **nhìn thấy được** hôm nay: **nhãn sản phẩm** trong bundle = `VNTECH ERP V5.3.0 ALPHA TEST 2026.10` ✓ (⛔ 0 thay đổi giao diện khác)
+- Cổng nghiệm thu UI: **`✓ do-moi ✓ van-tay ✓ byte 6/6`** = «BẢN CHẠY ĐÚNG BẢN ĐÃ BUILD MỚI NHẤT» ✓
+
+## Frontend
+- `lib/vntech-identity-data.mjs` (SSOT định danh) + 8 tệp phản chiếu (`Dockerfile` · `deploy/docker-compose.yml` · `.env.example` · `VNTECH_*.txt` · `VNTECH_FINGERPRINT.json` · `README.md`) ✓
+- Cổng FE: **960 test · 959 PASS · 0 FAIL · 1 skip · EXIT 0** (31 giây) ✓ · `tsc` **0** ✓
+
+## Backend/API
+- `ActionRbacRegistry.java`: khai **6 action** (module + capability) — chèn ở **CUỐI 2 map** để ⛔ không dịch số dòng ✓
+- `SystemController.java`: 2 `case` mới (`add_work_item_comment` · `set_work_item_participant`) — ⛔ không dịch dòng nào trước đó ✓
+- Bộ test Java: **102/102 · 0 fail · 0 error** ✓ · jar **13:46:12** · `:18081` pid **12248** · `health 200` ✓
+
+## Database
+- ⛔ **0 thay đổi schema** trong tuần này (bảng `work_item_comments`/`work_item_participants` đã có từ vòng port trước) ✓
+- Bất biến dữ liệu (đo cuối lượt): kho **12** · dự án **5** · gắn DA **10** · user HĐ **28** ⛔ không đổi ✓
+
+## RBAC/Workflow
+- ✅ **6 action «mù quyền» đã khai** ⇒ `④ MÙ QUYỀN = 0` · `⑤ THIẾU capability = 0` · `probe-action-parity` **Java thiếu 0** ✓
+- ⛔ **`BUG-20261008-D03` KHÔNG phải lỗi**: 12/12 action **CHỈ ADMIN ở CẢ Java và JS** (`ADMIN_ONLY_ACTIONS` + `requireRole(["admin"])`) ⇒ ⭐ Java **=** JS ✓
+
+## Bugs
+- `BUG-20261009-015` — **VERIFIED** (port 2 action công việc; đã đo live 200 + đối chứng âm) ✓
+- `BUG-20261008-D03` — 🚫 **CANCELLED (báo động giả)** — S01 đo 4 chiều, ⛔ 0 dòng mã đổi ✓
+- ⚠️ **`test:release-static` đỏ = NỢ CŨ** (manifest 01/10 lệch tệp 26/09) — ⛔ **không do S01** ⇒ chờ user quyết ② ✓
+
+## Hotfixes
+- ⛔ **0 hotfix** trong lượt này (2 thay đổi đều là công việc theo yêu cầu, ⛔ không phải sửa lỗi khẩn) ✓
+- ⚠️ **TỰ SỬA (⛔ 0 dòng mã sản phẩm)**: 2 **chú thích của chính S01 sai sự thật** (`TEST-20261009-021`) — đã sửa theo **số đo thật** ✓
+
+## Testing
+- `TEST-20261009-015/016/017` (port 2 action công việc) · `TEST-20261009-018` (5 ca RBAC mới) · `TEST-20261009-019` (xác minh 3 tầng) · `TEST-20261009-020` (bác bỏ `D03`) · `TEST-20261009-021` (kỷ luật số dòng + tự sửa chú thích) ✓
+- Cổng: Java **102/102** · FE **960/959/0** · `tsc` **0** · `F-03` **7/7** · UI **3/3** ✓
+
+## Important Changes
+- `DEV-20261009-011` — định danh **ALPHA TEST 2026.10** + build (vân tay **`VNTECH-FP-C37A1809D58C5856`**) ✓
+- `CHG-20261009-011` — định danh sản phẩm · `CHG-20261009-012` — khai quyền 6 action ✓
+
+## Decisions
+- `DEC-20261009-017` — ⭐ **USER chốt phương án (d)**: build + đổi **PHIÊN BẢN SẢN PHẨM** sang **ALPHA TEST** ✓ (đã thi hành xong)
+- `DEC-20261009-018` — **3 việc chờ user quyết** (banner `docs/**` · `MANIFEST_SHA256.txt` · module CRUD dự án) ✓
+
+## Blockers/Risks
+- ⚠️ **Chờ USER**: 3 việc ở `DEC-20261009-018` ✓ (⚠️ `update_goal pause` bị công cụ từ chối ⇒ goal giữ *active*)
+- ⚠️ **Chờ `ERP-SESSION-04`**: thêm **6 tên** vào `KNOWN_JAVA_ONLY` (`HANDOFF-20261009-A05`) · đóng `BUG-20261008-D03` (`A06`) ✓
+- ⚠️ ⛔ **59+11 chỗ nhãn/vân tay cũ** còn lại (chủ yếu `docs/**` + `AGENTS.md`) — chờ quyết định ① ✓
+
+## Remaining Work
+- 3 việc chờ user quyết ⇒ sau đó: đồng bộ banner, làm mới manifest, thi hành `T-05` ✓
+- ⏸ `CHG-20261009-012` → `VERIFIED` (cần probe live bằng tài khoản thật — đã để sẵn `SESSION_A/probes/verify-d14-live.mjs`) ✓
+
+## Next Week
+- Sau khi user trả lời `docs/38 §7` ⇒ thi hành `T-05` (module CRUD dự án + `update_project` `canUse→canEdit`) ✓
+- Duy trì 9 loại log + `WEEKLY_REPORT_DATA`; ⛔ **0 commit** cho tới khi user cho phép ✓
+
+---
+
 # WEEK 2026-W41
 
 ## Session
@@ -560,3 +637,123 @@ SESSION_A (ERP-SESSION-01)
 
 ### Next Week
 ⭐ Chờ chỉ đạo trực tiếp · giữ 3 cổng tĩnh xanh · ⛔ không rà lại MT 1&2 · ⛔ không dùng MT3 làm căn cứ.
+
+### ➕ BỔ SUNG 2026-10-09 (chiều) — `ERP-SESSION-01`: PHỐI HỢP PHÂN QUYỀN NHÓM «CÔNG VIỆC» VỚI S4
+- **Việc**: user giao trực tiếp «phối hợp cùng s4 xử lý phân quyền nhóm chức năng Công việc, làm đúng phạm vi, thông báo cho s4».
+- **Đã làm (phạm vi S01)**: `DEV-20261009-010` port **2 action WORK** sang Java (`add_work_item_comment` · `set_work_item_participant`) + luật truy cập dùng chung · **5 ca test** (2 đối chứng âm) · **BUILD + triển khai 12:39** · ✅ `mvn -B test` **94/94** · `parity` **0 thiếu** · `F-03` **7/7** · `tsc` **0**
+- **`CHG-20261009-011`**: 2 API có hiệu lực thật (đo live: **401** thay vì **400 «chưa triển khai»**) + đồng bộ 2 bảng vào schema test H2
+- **`BUG-20261009-015`** (HIGH): «quyền MA» — khai quyền nhưng ⛔ không có API ⇒ **FIXED** (code+test+đã triển khai), ⏸ chờ `VERIFIED`
+- **`TEST-20261009-015`**: nghiệm thu live bằng probe của S4 **EXIT 0 trên `:9000` và `:18081`** ⇒ **đóng `MA_TRAN` §5.4**; toàn vẹn CSDL `489/8 · 2775/3` ⛔ không đổi
+- **`HANDOFF-20261009-A01/A02`** cho S4: 3 phát hiện (D1 lệch luật JS · **D2 cổng FE đỏ do S4 đang refactor `PermissionAccessPanel`** · D3 schema test thiếu 2 bảng)
+- **Rủi ro mở**: ⚠️ `jar` sẽ **lệch mã** nếu S4 sửa Java sau **12:39** ⇒ cần build lại; 🛑 **3 câu user chưa quyết** (`MA_TRAN` §6)
+
+- ✅ **`BUG-20261009-015` → `VERIFIED`** (`TEST-20261009-016`): đo LIVE trên `:18081` — 2 action WORK trả **HTTP 200** (nhiệm vụ thật `CV-DA-261008-3175`), đối chứng âm ẩn danh **401**, hàng ghi đúng cột, **đã dọn** 2 hàng đo (`comments=0 · participants=0`) ✓
+- ⚠️ **ĐÍNH CHÍNH**: cổng FE **XANH** `958 · 957 PASS · 0 FAIL · 1 skip` ⇒ thông báo «1 đỏ» trước là **RACE** khi S4 đang ghi tệp (⛔ không phải lỗi S4) ⇒ luật mới **`D-111`** ✓
+- 📌 Probe mới tái chạy được: `docs/dsh-mutil-session/SESSION_A/probes/verify-work-actions-live.mjs`
+
+- ✅ **`TEST-20261009-017`**: khoá **RUNTIME** quyền duyệt công việc (`WorkApprovePermissionSplitTest` **3 ca · 2 đối chứng âm** — 403 khi ⛔ không `canApprove`; 400 khi có `canApprove` mà ⛔ không phải trưởng phòng) ⇒ bịt lỗ hổng chỉ-so-chuỗi của `t13`/`t07` · `mvn -B test` **97/97** ✓
+- ⏳ **`DEC-20261009-017` BLOCKED**: build UI cần **đổi vân tay sản phẩm** ⇒ chờ user quyết (a)/(b)/(c)/(d) ✓
+
+- ✅ **`DEV-20261009-011`** — **ĐỔI ĐỊNH DANH SANG «ALPHA TEST 2026.10»** (user chốt phương án d): nhãn `VNTECH ERP V5.3.0 ALPHA TEST 2026.10` · vân tay `VNTECH-FP-C37A1809D58C5856` · 9 tệp phản chiếu · `npm run build` **EXIT 0** · cổng UI **3/3 ĐẠT** (`:8787` pid 17980) ✓
+- ✅ **`CHG-20261009-012`** — khai quyền **6 action «MÙ QUYỀN»** (`HANDOFF-D14`) ⇒ `probe-action-registry-coverage` **EXIT 0** · `parity` **0 thiếu** ✓
+- ✅ **`TEST-20261009-018`** — Java **102/102** · FE **959/958/0** · `tsc` 0 ✓
+- ⚠️ **TỒN**: 59+11 chỗ nhãn/vân tay cũ trong `docs/**` (banner + lịch sử) · `probe-catalog-drift` EXIT 1 (cần S4 thêm 6 tên vào `KNOWN_JAVA_ONLY`) · `test:release-static` EXIT 1 (`_javac-verify` SHA256 — sổ sách bước BUILD) ✓
+
+- ✅ **`TEST-20261009-019`** — xác minh 3 tầng `CHG-20261009-012`: nguồn 6/6 · **class trong JAR đang chạy 6/6** (hiện vật `:18081` pid 22264) · H2 5/5 ⇒ **FIXED** (⏸ VERIFIED một phần: còn phép đo live bằng tài khoản thật) ✓
+- ⚠️ **Chẩn đoán**: `test:release-static` đỏ = `MANIFEST_SHA256.txt` (tracked · 01/10) lệch tệp 26/09 ⇒ **nợ cũ**, ⛔ không do S01 ✓
+
+- 🚫 **`TEST-20261009-020`** — **`BUG-20261008-D03` = BÁO ĐỘNG GIẢ** (đo 4 chiều 12/12: `ADMIN_ONLY_ACTIONS` có · route JS `requireRole(["admin"])` có · case controller có · registry 0/12) ⇒ ⭐ **Java = JS (cả hai CHỈ ADMIN)** ⇒ ⛔ **0 dòng mã đổi** · đã gửi `HANDOFF-20261009-A06` đề nghị S4 đóng ✓
+
+- ✅ **`TEST-20261009-021`** — kiểm **kỷ luật không dịch dòng** (gate `F-03` **EXIT 0** đo 2 lần; các dòng được trích trước điểm chèn **không đổi** ✓) · ⭐ **tự sửa 2 chú thích SAI SỰ THẬT của chính S01** (đo lại: `docs/61` ⛔ không trích số dòng; `delete_*` = **25 `canEdit` / 13 `canUse`** trên 38) · build lại jar (**13:46:12** · `:18081` pid 12248 · hiện vật **6/6**) ✓ · ⚠️ tồn: `docs/agent-progress/F-03-…md:190` dải `:213…353` nay cũ (ngoài phạm vi S01) ✓
+
+- 🔧 **`CHG-20261009-013` / `TEST-20261009-022`** — sinh lại `MANIFEST_SHA256.txt` (**7611 → 7506** · `_javac-verify` **384 → 0**) ⇒ ✅ **`verify-full-release` EXIT 0** (⭐ vá đúng lỗi `SHA256 không khớp` = NỢ TỪ 01/10, ⛔ không do build hôm nay) · ⚠️ `test:release-static` còn đỏ ở tầng **Brand fingerprint** (do nguồn FE đang bị sửa) ⇒ ⛔ **GIỮ BUILD** + gửi `HANDOFF-A07` xin `RELEASED` ✓
+- ✅ **`probe-catalog-drift` EXIT 0** — S4 đã thêm **6 tên** vào `KNOWN_JAVA_ONLY` (13:38:40) và ghi «`BUG-D22` ĐÓNG HẲN» trong `SHARED_STATE` §80 ✓
+
+- 🧩 **`CHG-20261009-014` / `TEST-20261009-024`** — **MÔ HÌNH B** (user chốt): 6 khoá tab Công việc + cấp `can_view` cho **11/11 phòng ban · 28/28 tài khoản** + 6 nhãn ma trận ⇒ cổng `coverage`/`parity`/`catalog-drift` **EXIT 0** · FE **961/960/0** · ⛔ 0 commit ✓
+- 🔐 **`TEST-20261009-023`** — vá `create_self_work_item` (thiếu khoá `work`) + cấp `work` cho mọi user (⚠️ 3 tài khoản cũ giữ nguyên quyền — đã kiểm) ✓
+
+- ⭐ **`DEC-20261009-020` / `HANDOFF-20261009-A10`** — **S01 QUYẾT mô hình quyền Công việc** (đúng thẩm quyền user giao 08/10): chọn **B1** (dòng `work_others` — ⛔ không đổi CSDL) + **`canEdit` cho xoá** ⇒ đã tạo `work_others` (⚠️ cấp 0) · S01 làm `delete_work_item` + cưỡng chế `work_others` ✓
+
+- 🚨➡️✅ **GỠ CHẶN 	sc** (lỗi CỦA S01): thêm **7 khoá** vào ModuleKey (lib/ui-shared.tsx:25, cùng dòng ⇒ ⛔ 0 dịch dòng) ⇒ **
+pm run typecheck EXIT 0 · 0 lỗi** ✓ · ✅ **delete_work_item** hoàn tất **5 tầng** + test **4/4** + Java **106/106** + jar **14:40:31** + live **401** ✓ · ⚠️ chờ S4 đóng catalog-drift (1 dòng) ✓
+
+- 🎯 **`CHG-20261009-015` / `TEST-20261009-025`** — **CRUD DỰ ÁN cấp qua MA TRẬN** (`Q1=A3`): vá **3 TẦNG** (controller + registry `[`project_admin`,`admin`]` + use-case bỏ 3 `requireRole`) ⇒ ⚠️ bản vá 1 tầng của S4 sẽ là **sửa giả** ⇒ test **4/4** · **Java 110/110** · jar **15:07:47** · giám đốc **vẫn 403** ✓
+
+- 🚀 **`CHG-20261009-016` / `TEST-20261009-026`** — **BUILD ĐÃ CHẠY** tại mốc đóng băng **14:51:12**: vân tay **`VNTECH-FP-EB036564F91A0BAE`** · `dist` **15:13:36** · **cổng UI 3/3 ĐẠT** · **`verify-full-release` EXIT 0** ⇒ người dùng nay thấy toàn bộ thay đổi của cụm ✓ ⚠️ còn `test:release-static` đỏ ở tầng **Lint** (1 lỗi CÓ TRƯỚC: `app/page.tsx:2902` — ⛔ S01 không sửa mù, đã giao `HANDOFF-A14`) ✓
+
+- 🧭 **TASK-20261009-034** — MENU «CÔNG VIỆC» (user yêu cầu trực tiếp 3 việc): ③ **S01 xong** (bấm nhóm ⇒ mở thẳng màn Công việc; P6-08 3/3 ✓) · ① **chuyển S04** (project_admin + khoá work đang hiện thành mục thứ 2) · ② **đã tách sẵn** (pproval_center) ⇒ chờ user Ctrl+F5 ✓
+
+- 🔴➡️✅ **`BUG-20261009-D29` / `TEST-20261009-027`** — **tầng `Lint` của cổng phát hành ĐÃ XANH**: lỗi duy nhất `app/page.tsx:2917` (React Compiler «setState trong effect») ⇒ tắt đúng 1 luật tại đúng 1 dòng (⚠️ tên rule **`react-hooks/set-state-in-effect`** được **CHỨNG MINH** bằng 3 tín hiệu ESLint, ⛔ không đoán) ⇒ **`npm run lint` toàn repo: 0 ERROR** (297 warning được dung nạp) ✓ `typecheck` 0 ✓
+
+- 🎉🎉 **`TEST-20261009-028` / `CHG-20261009-017`** — **LƯỢT CHỐT CUỐI: 2 CỔNG PHÁT HÀNH ĐẠT**: vân tay **`VNTECH-FP-E6A226D754294E10`** · `dist` **15:36:40** · ⭐ **cổng UI 3/3** · ✅ `verify-full-release` **EXIT 0** · ✅✅ **`test:release-static` ĐẠT · 5.3.0-ALPHA-TEST-2026.10** (cả 5 tầng: Template · OpenXML · Brand fingerprint · **Lint**) ⇒ ⭐ người dùng nay thấy toàn bộ thay đổi của cụm ✓
+
+- ⭐ **`CHG-20261009-018` / `TEST-20261009-029`** — **thi hành khoá `work_others` ở backend** (phương án **A — CỘNG THÊM**, user chốt): thêm **vế OR thứ 4** trong `BootstrapDataAdapter` ⇒ ai được tick sẽ **thấy thêm việc PHÒNG mình**, ⛔ **0 mất quyền** (⭐ probe: «KH-TRƯỞNG vẫn KHÔNG thấy DA/BCH» ✓ · **14/14 ĐẠT** · dọn sạch 29/28 ✓) · jar **15:50:21** · `coverage` 0 ✓ ⚠️ chiều DƯƠNG chưa đo (chưa ai được cấp khoá) ✓
+
+- ⭐ **`TEST-20261009-030`** — **`work_others` đo đủ 2 CHIỀU**: `engineer.demo` (phòng DA) thấy **0 → 19 việc** khi cấp tạm khoá (việc NGƯỜI KHÁC cùng phòng) ⇒ xoá khoá ⇒ **về đúng 0** ⇒ ⛔ **0 mất quyền** · 🧹 grants về 0 + 0 dòng tạm ✓
+
+- ✅ **`CHG-20261009-019`** — **chốt lại build 16:00:52** (vân tay **`89797bf7f00b0cf4`** · manifest **7538 tệp** · cổng UI **3/3** · **cả 2 cổng phát hành ĐẠT** · **Java suite 110/110**) ✓ · ⭐ **banner tài liệu ĐÃ đồng bộ sẵn** (⛔ 0 dòng cần sửa — ⚠️ niềm tin cũ «59+11 lệch» đã CŨ) ✓
+
+- 🔴➡️✅ **`BUG-20261009-D31`** — **tab «Phân quyền công việc / Chức năng» ⛔ KHÔNG lọc 4 khoá ẩn** (⭐ **ảnh user ĐÚNG**): `permissionMenuStructure` (`app/page.tsx:300`) chỉ loại `admin` + panel vẽ thẳng `entries` ⇒ sửa **Ở TẦNG VẼ** đúng khuôn `PermissionMatrix` (⚠️ **GIỮ `entries`** ⇒ payload ⛔ không đổi, tránh `BUG-D19`) ⇒ `typecheck` **0** · FE **973·972·0 FAIL** · eslint 0 error ✓ ⏳ chờ user Ctrl+F5 nghiệm thu ✓
+
+- ✅ **`TEST-20261009-031`** — **quét hồi quy `BUG-D31`: SẠCH** (chỉ 2 component vẽ ma trận, **cả 2 đã lọc**; payload cố ý giữ đủ khoá ⇒ ⛔ 0 mất quyền ✓; `configuredModules` nơi khác ⛔ không cần ẩn vì 4 khoá cũ **vẫn hoạt động thật**) ✓
+
+- ✅ **`TEST-20261009-032`** — ➕ **`tests/t15-matrix-hidden-keys-render.test.mjs`** (6 ca) khoá **cả 2 đường vẽ** + **bảo vệ payload** (⛔ cấm lọc `entries` gốc) · ⭐ **nghiệm thu ÂM 2 nửa đều ĐỎ** ⇒ guard thật (⚠️ bản đầu YẾU — chỉ khớp chuỗi hằng số ⇒ đã siết thành **regex trọn biểu thức 2 dòng**) · ✅ cổng FE **979·978·0 FAIL** ✓
+
+- ✅ **`CHG-20261009-020`** — chèn khối **«CẬP NHẬT SỐNG 09/10»** vào `docs/agent-progress/MASTER_STATUS.md` (⚠️ tệp «mọi phiên PHẢI đọc trước» đang trỏ **số CŨ 26/09**: FE 579 · Java 134): nay trỏ **nguồn sống** `docs/dsh-mutil-session/**` + số ĐO hôm nay (FE 979·978·0 · Java 110 · vân tay `169178832f25788e`) + **phạm vi 3 phiên** + cảnh báo BUG-D31/BUG-D19 ✓ (⚠️ chỉ **CHÈN**, ⛔ không viết lại lịch sử — 845→853 dòng) ✓
+
+- ⭐✅ **`TEST-20261009-033`** — **bằng chứng DOM THẬT** cho `BUG-D31`: probe `_probe-matrix-rows.mjs` trên bản đang chạy ⇒ **80 dòng**, 4 khoá CŨ **0 lần**, nhãn «Phòng Kế hoạch»/«Phòng Dự án» **0 lần**, **7 khoá mới CÓ ĐỦ** ⇒ ⭐ **VERIFIED** ✓ (⚠️ lần đầu chỉ in 20/80 ⇒ S01 tự bắt **kết luận từ mẫu bị cắt** và chạy lại bằng bản sao in TOÀN BỘ ✓)
+
+- ✅ **`DEC-20261009-024`** — **điều tra khoá module `admin` (phạm vi ADMIN): ⛔ KHÔNG PHẢI BUG** ⇒ ma trận ⛔ không có dòng `admin` là **đúng thiết kế** (cấp theo **14 khoá `admin_tab_NN`** ✓; menu gate = **vai trò `admin`** hoặc ≥1 tab ✓); ✅ **`admin` VẪN trong payload** (`permissionMatrixKeys` dựng từ `moduleCatalog` ✓) ⇒ ⛔ không rủi ro xoá nhầm (gỡ cảnh báo `BUG-D19` ✓); ⚠️ ghi nhận **21 dòng cấp `admin` = rác tài khoản TEST** (vô hại — ⛔ S01 không tự xoá) ✓
+
+- ✅ **`TEST-20261009-035`** — **quét lớp lỗi `BUG-D32`: SẠCH** (0 chú thích SQL chứa ký hiệu định dạng trên toàn `java-backend`) + ✅ **runtime: `probe-task050-bootstrap` 39 ĐẠT · 0 lỗi** («Java=2 · MySQL=2» ⇒ payload 200, 500 đã hết) + ✅ `probe-nonadmin-access` EXIT 0 ✓
+- 🟠 **`BUG-20261009-D33`** (môi trường): `thukydemo` + `nvdademo` **không đăng nhập được (401)** dù `active=1` + hash hợp lệ ⇒ probe **bỏ qua 2 nhánh** ⇒ mất phủ sóng — ⛔ S01 **không tự đặt lại mật khẩu** (chờ user) ✓
+
+- ✅ **`TEST-20261009-036`** — ➕ **`tests/t16-java-sql-textblock-format.test.mjs`** (3 ca): ⛔ cấm ký hiệu định dạng trong **chú thích SQL** (nguồn `BUG-D32` ⇒ HTTP 500) + khoá bản vá `BUG-D27` (`WHERE (%s) AND wi.active=1`) · ⭐ **nghiệm thu âm ĐẠT** (chèn `%` ⇒ ĐỎ đúng dòng 1624 ✓) · ⚠️ lần 1 test sai vì **`URL.pathname` bị mã hoá `%20`** ⇒ đã sửa bằng `fileURLToPath` ✓ · ✅ cổng FE **982·981·0 FAIL** ✓
+
+- ✅ **`CHG-20261009-022`** — ➕ **bảng điều khiển `SESSION_A/README.md`** (7 mục: phạm vi · việc đang làm · số đo cổng · **việc chờ user** · giao tiếp liên phiên · **7 bài học vận hành** · bước tiếp khi resume) — ⭐ §5 hiển thị + §33 khôi phục ✓
+
+- ✅ **`TEST-20261009-037`** — **quét hồi quy `BUG-D27` trên MỌI đường đọc `work_items`: SẠCH** ⇒ ⭐ **chỉ 1 đường đọc-để-hiển-thị** (`BootstrapDataAdapter`) và **đã lọc `active=1`** ✓; các đường còn lại (purge dự án · lưu trữ · tra theo id · UPDATE/DELETE) **đúng là ⛔ không được lọc** ✓ · ✅ đường JS đã có `active=1` (S04 vá ✓) ✓
+
+- ✅ **`TEST-20261009-038`** — **đo end-to-end khoá `work_others`** (user chốt «cấp» 16:26 · S04 `CHG-D39`): **3/3 tài khoản đo được đều có `canView=1`** (`trdademo` 12 việc · `trinhtrench` 0 · `giamdoc.demo` 14) + **3/3 đối chứng ⛔ KHÔNG có dòng** ⇒ ⭐ **VERIFIED, ⛔ 0 rò quyền** ✓ (⚠️ `e2e.kh`/`e2e.bgd` login 401 ⇒ cùng lớp `BUG-D33` ✓)
+
+- ✅ **`CHG-20261009-023`** — **chạy chuỗi chốt theo yêu cầu S04** («CHỜ S01 BUILD FE»): vân tay **`d200c5a3764e166d`** · manifest **7546** · `dist` **16:54:43** · cổng UI **3/3 ĐẠT** · **2 cổng phát hành ĐẠT** (⭐ `test:release-static` đã hết đỏ ✓) · cổng FE **985·984·0 FAIL** (gồm test mới của S04 ✓) ✓ · ⚠️ ghi nhận **trùng số test `t16`** giữa 2 phiên ✓
+
+- ✅ **`TEST-20261009-039`** — **chạy 2 cổng của S04** (họ ⛔ chạy được vì API 502 do S01 rebuild): **CẢ 2 ĐẠT** ⇒ ⭐ **`Q-UI-01`** (nút «＋ Tạo công việc» **sát ô tìm kiếm** ✓ ở nhóm PHỤ, ⛔ không còn nhóm CHÍNH) + ⭐ **`Q-PERM-01`** (`work_others` **MỞ cho cả 5** TP/GĐ, **đối chứng ÂM đạt** ✓) ⇒ khép 2 việc S04 để ngỏ ✓ (⚠️ bài học: probe `.mjs` của S04 phải chạy kèm `--import tsx` ✓)
+
+- ✅ **`CHG-20261009-024`** — **chuỗi chốt lần 3** (S04 đổi tên test `t16`⇒`t17` ⇒ hết trùng số ✓): vân tay **`c8ad30e2ecc29bcf`** · manifest **7546** · `dist` **17:04:44** · **UI 3/3 ĐẠT** · **2 cổng phát hành ĐẠT** ✓ · ⭐ **bài học ĐO ĐƯỢC**: `tests/**` **nằm trong vân tay** và **build nhúng vân tay** ⇒ **đổi tên 1 tệp test cũng phải build lại** ✓ (⚠️ S01 từng suy sai «3 tệp SESSION_A bị phiên khác ghi» ⇒ **chính là lệnh của S01** ✓)
+
+- ✅ **`TEST-20261009-040`** — **nghiệm thu TRỌN 3 yêu cầu trực tiếp của user về MENU «CÔNG VIỆC»**: ① ⛔ **bỏ «Quản trị dự án»** (nhóm có **0** mục module ✓) ② ⭐ **tách «Trung tâm phê duyệt»** thành **NHÓM RIÊNG** `approval_center` (sort **12**) đứng ngay sau «Tổng quan điều hành» ✓ ③ **click «Công việc» mở màn Công việc** (0 mục con + đủ **8 dòng** `work`+6 TAB+`work_others` ✓) ⇒ ⭐ **3/3 ĐẠT** bằng cổng S04 + mã nguồn ✓
+
+- ✅ **`CHG-20261009-025`** — **cập nhật «nguồn sự thật trạng thái»** `docs/agent-progress/MASTER_STATUS.md` (khối «⏩ CẬP NHẬT SỐNG» 7→8 dòng): số ĐO được **17:05** (FE **985·984·0** · Java 110/110 · **vân tay `C8AD30E2ECC29BCF`** · manifest 7546 · `dist` 17:04:44 · UI **3/3** · 2 cổng phát hành ĐẠT) + phân chia phạm vi 3 phiên + **3 yêu cầu user menu đã nghiệm thu 3/3** + **3 bug thật của đợt** (kèm nguyên nhân gốc) + **5 việc chờ user quyết** ✓ (⚠️ bài học: tìm chuỗi có **emoji** bằng `IndexOf` ⛔ không dùng regex ✓)
+
+- ✅ **`TEST-20261009-041`** — **quét hồi quy cho bản vá `BUG-D31`**: 4 khoá cũ **⛔ KHÔNG chết** (gate **8 action** trong `ActionRbacRegistry` + **168 dòng `department_default`** ✓) ⇒ ⭐ **⛔ KHÔNG mất dữ liệu khi lưu ma trận** (chỉ xoá `manual_override` theo từng khoá ✓) · ⛔ **không bypass** ✓ — ⚠️ **hệ quả thật**: admin **⛔ không nhìn/thu hồi** 168 quyền đó ⇒ ⏸ **`DEC-20261009-026` chờ user chọn A/B/C** (S01 khuyến nghị **A**: giữ ẩn + 1 dòng ghi chú/tổng đếm ✓)
+
+- ✅ **`EVT-20261009-102`** — ⭐ **đóng 2 câu chờ-user bằng quyết định CŨ** (áp dụng **bài học 13**): ① phạm vi khoá `work_others` = **tuỳ CHỨC VỤ** (trưởng phòng ⇒ phòng mình · giám đốc/ban lãnh đạo ⇒ mọi phòng ✓ — `workItemWhere` vế OR thứ 4 + `isWorkCompanyScope` ✓) ② **sub-tab** = user đã chốt nguyên tắc «**phân loại theo BẢN CHẤT**» ⇒ đề xuất 7 khoá của S01 chỉ còn cần **xác nhận danh sách** ✓
+
+- ✅ **`TEST-20261009-043`** — **nghiệm thu quyết định 26/09 của user** («gộp Nhà cung cấp»): **đã thi hành đúng** (⛔ xoá mù — giữ khoá quyền `dept_plan_suppliers`, trỏ màn `supplier_catalog` ✓) · ⭐ **giải nghi vấn «2 mục mới»**: `P-07`/`TASK-121` tách **NCC ↔ Đối tác** (trục khác) ⇒ ⛔ **không mâu thuẫn, ⛔ không hỏi user** ✓ · 📌 **ghi nhận: dự án đã có SẴN 2 sổ quyết định trung tâm** (`docs/dsh-state/DECISIONS.md` 3299 dòng + `docs/dsh/MT3_USER_DECISIONS.md` 130 dòng nguyên văn) ⇒ ⭐ **⛔ không tạo sổ thứ ba** ✓
+
+- ✅ **`TEST-20261009-044`** — **nghiệm thu 2 quyết định 27/09 của user**: `A5` (Kho ⛔ **không được xoá** — `delete_warehouse` **18 lần nhắc đều là CẤM** ✓ + `ALLOW_DELETE_WAREHOUSE=false` có test kiểm ✓ + đường thay thế `set_warehouse_status` ✓) · `A1` (**tự động từ chối khi quá SLA** — `RequestStore` L84–85 ghi **nguyên văn quyết định user** + migration V25 + `SlaStore` ✓) ⇒ **2/2 ĐẠT** ✓
+
+- ✅ **`TEST-20261009-045` + `DEV-20261009-018`** — ⭐ **kênh kiểm MỚI: mở UI THẬT bằng trình duyệt** (`http://127.0.0.1:9000/` ✓ — ⚠️ `:8787` login **401** ⇒ ⛔ đừng dùng ✓) ⇒ ⭐ **xác nhận bằng MẮT 3 yêu cầu menu của user**: «CÔNG VIỆC» **1 nút · 0 mục con** ✓ · «Trung tâm phê duyệt» **tách riêng** ✓ · nhóm Mua hàng = **«Nhà cung cấp» + «Đối tác»** ✓ (khớp `P-07` ✓) — ⚠️ **`A2`**: ⛔ **không thấy mục «PR & PO»** trên menu ⇒ củng cố «chưa có form tạo MR/PR/PO» ✓
+
+- ✅ **`TEST-20261009-046`** — **tự kiểm 2/4 điểm user cần thử trên UI SỐNG**: ③ ô «**Xem việc của**» **CÓ HIỆN** cho `giamdoc.demo` (tài khoản đã cấp ✓ — 5 nhóm lựa chọn ✓) ⇒ `CHG-D39` đúng trên UI thật ✓ · ④ nút «**＋ TẠO CÔNG VIỆC**» nằm **cùng thanh công cụ** với ô tìm kiếm ✓ ⇒ `Q-UI-01` đúng ✓ · ➕ màn Công việc = **đúng 6 TAB** ✓ · ⛔ không thao tác GHI ✓ · 📷 ảnh bằng chứng **425 KB** ✓
+
+- 🧭 **`TEST-20261009-047`** — **bản đồ đường đi màn phân quyền** trên UI thật (phục vụ kiểm sau ✓): «QUẢN TRỊ HỆ THỐNG» → «**DANH MỤC & PHÂN QUYỀN**» → tab «**6 Phân quyền người dùng**» = **danh sách 74 người** ⚠️ (⛔ chưa tới bảng khoá module ✓) ⇒ ⭐ dừng đúng lúc, ⛔ không đốt thêm lượt vì điểm ② **đã có bằng chứng máy** ✓
+
+- ✅ **`TEST-20261009-048`** — **toàn vẹn bản phát hành trên CẢ 2 CỔNG**: cổng chính thức `tools/verify-ui-build-applied.mjs` **EXIT 0** ở `:8787` **và** `:9000` ✓ — «dist/ mới hơn nguồn 14s» · «**HTML mang `c8ad30e2ecc29bcf` khớp SSOT**» · «**6/6 bundle đúng byte**» ⇒ ⭐ **bản user đang xem = bản mới nhất** ⇒ 4 thao tác thử tay **hợp lệ** ✓ · ⚠️ bài học 15: ⛔ **không tự suy đường dẫn artifact** (`dist/index.html` ⛔ không tồn tại) — **dùng cổng của dự án** ✓
+
+- ✅ **`TEST-20261009-049`** — đóng 2 điều treo của `TEST-048`: ① `dist\.openai\*` = **gói triển khai riêng** (394 migration SQL + `hosting.json` ✓) ⇒ ⭐ **KHÔNG ảnh hưởng app đang chạy** (cổng 19:35 sau 18:25 vẫn **6/6 bundle đúng byte** ✓) ② `:9000` fetch không phiên trả shell khác ⇒ luật: **kiểm app dùng PHIÊN/cổng dự án** ✓ · ⚠️ **tự đính chính**: `dist\` ⛔ **không chứa app** (`dist\assets` = 0 ✓) — **bài học 16** ✓
+
+- 🎯 **`TEST-20261009-050`** — **`A2` ĐÓNG bằng UI SỐNG** (⛔ không chờ S04 ✓): màn «Nhà cung cấp» ⛔ **0 tab PR/PO** ✓ + ⭐ câu của chính app «**Mã NCC được dùng trong mẫu Excel lập PO**» ⇒ ⭐ **MR/PR/PO lập bằng MẪU EXCEL** ⇒ `A2` («modal tạo MR/PR/PO tìm theo alias») **chưa có chỗ cài** ✓ khớp `P-08` «CHƯA LÀM» ⇒ **BLOCKED BY DESIGN, ⛔ không phải bug** ✓
+
+- ✅ **`TEST-20261009-051`** — **đóng nốt A-list `MT3`**: `A3` đã đóng sẵn ✓ · `A4` luật phòng ban **đã cài** (5 chế độ + resolver ✓) ⚠️ **lộ tồn đọng**: `recipientMode` trống ⇒ mặc định `all` ⇒ **ai gửi cũng được toàn công ty** ✓ (⭐ đã đưa vào §4 ✓) · `A6` ⛔ **không xây màn báo cáo Mua hàng** ⇒ **đúng quyết định** ✓ · ⚠️ **10 tab Mua hàng CHƯA dựng** (màn hiện chỉ **3 tab**: PR · PO · Chi tiết lũy kế ✓) ⇒ ghi tồn đọng, ⛔ không tự dựng (GOAL §19 ✓)
+
+- ✅ **`TEST-20261009-052`** — **`P-4` ĐÃ AN TOÀN THEO THIẾT KẾ** (⭐ đo trước khi hỏi câu thứ 4 ✓): `ActionRbacRegistry` L50 «`save_notification_config` ⇒ `List.of(`admin`)`» + L52/53/63/64 đều `admin` + `RbacService` L115 (lãnh đạo ⛔ không được miễn) ⇒ ⭐ **chỉ module `admin` gửi được thông báo** ⇒ `recipientMode=`all`** ⛔ **không tới người dùng thường** ⇒ ⭐ **GỠ khỏi hàng chờ user (5⇒4 việc)** ✓
+
+- 🔍 **`TEST-20261009-053`** — **đo `P-5` trước khi hỏi** ⇒ ⭐ **hạ mức thành «thông tin»** (hàng chờ thật **4⇒3** ✓): nhóm Mua hàng **khai báo 18 mục** ✓ nhưng **UI sống hiện đúng 2** («Nhà cung cấp» + «Đối tác» ✓); 8 mục cũ (có `subGroup` = «Phòng Kế hoạch») **ẩn có chủ ý** ✓ ⇒ ⭐ nhất quán `P-08` «CHƯA LÀM» ⇒ ⛔ **không phải khiếm khuyết** ✓ (⚠️ tệp của S04 ⇒ S01 ⛔ chỉ đọc ✓)
+
+- 🔬 **`TEST-20261009-054`** — **truy root cause `BUG-D33`** ⇒ ⭐ **KHÔNG phải lỗi ứng dụng**: 6 tài khoản đều `active=1` ✓, hash **cùng định dạng** `pbkdf2$600000$…` (111 ký tự) ✓, ⭐ **`e2e.bgd` (08/10) · `e2e.kh` (07/10) · `nvdademo` (29/09) ĐÃ từng đăng nhập** ✓ ⇒ ⭐ **nguyên nhân = mật khẩu khác `Vntech@2026`** ✓ ⇒ ⭐ **hạ mức `BUG-D33` + GỠ yêu cầu xin phép reset** (S01 đã có `giamdoc.demo` + `ksda.demo` chạy tốt ✓)
+
+- 🔴 **`BUG-20261009-D35` (HIGH · AN NINH/QUYỀN)** — audit 21 dòng `admin` ⇒ ⭐ **thu hẹp xuống ĐÚNG 2 DÒNG**: `e2e.bgd` + `e2e.kh` (**`active=1`**) giữ **`admin` 1/1/1/1 VÔ THỜI HẠN** (nguồn `manual_test` ✓, `permission_expires_at = NULL` ✓); ⭐ **mã CÓ đọc** (`BootstrapDataAdapter` L912/948/955 ✓) ⇒ ⛔ **không phải rác trơ** ✓; ⚠️ **hiện «ngủ»** vì 2 tk chưa đăng nhập được ⇒ ⭐ **nếu ai reset mật khẩu ⇒ KÍCH HOẠT** ⚠️ ⇒ ⭐ **KHUYẾN NGHỊ: ① cho phép xoá 2 dòng (sao lưu trước) ② GỠ QUYỀN TRƯỚC → mới reset mật khẩu** ✓ · ⛔ `BUG-D35` **chưa FIXED** — chờ user ✓
+
+- 🔬 **`TEST-20261009-056`** — **truy root cause tầng mã `BUG-D35`** ⇒ ✅ **⛔ KHÔNG CÓ LỖI MÃ**: sản phẩm chỉ ghi `user_module_permissions` ở **1 chỗ** (`UserAdminStoreAdapter` L269 ✓) và chỗ đó **đòi ROLE `admin`** (`AdminSystemUseCase` gọi `requireRole(…, List.of("admin"))` **6+ lần** ✓) ⇒ ⭐ **UI ⛔ không phải đường leo thang đặc quyền** ✓; giá trị `manual_test` ⛔ **không có trong repo** (0 kết quả ✓) ⇒ ⭐ **2 dòng do GHI THẲNG vào CSDL** ⇒ **vấn đề DỮ LIỆU** (⚠️ chờ user cho phép sửa ✓) + **luật vệ sinh test** ✓

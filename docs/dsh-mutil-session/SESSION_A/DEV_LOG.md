@@ -785,3 +785,145 @@ node scripts/test-suite-health.mjs   →  EXIT 0  ✅
 
 ### ✅ KẾT LUẬN
 ⭐ **Hệ thống ở trạng thái NHẤT QUÁN sau phiên**: `jar = mã` ✓ · cổng audit **EXIT 0** ✓ · 3 cổng sống ✓ · `health` 200 ✓ · **CSDL 12/5/10** ✓
+
+## DEV-20261009-010 — 🔧 **PORT 2 ACTION WORK CÒN THIẾU SANG JAVA** (đóng `docs/61` **Q3**) — `ERP-SESSION-01`
+
+| Trường | Nội dung |
+|---|---|
+| **DEV_ID** | `DEV-20261009-010` · **DATE** 2026-10-09 · **SESSION** `ERP-SESSION-01` · **MODULE** BACKEND · RBAC |
+| **NGUỒN VIỆC** | ⭐ User giao trực tiếp: «Phối hợp cùng s4 để xử lý phân quyền cho nhóm chức năng Công việc, làm đúng phạm vi của mình, thông báo cho s4 biết» |
+
+### VẤN ĐỀ (đo được, ⛔ không suy đoán)
+`add_work_item_comment` · `set_work_item_participant` **CÓ QUYỀN** trong ma trận (`ActionRbacRegistry` **L16/L314** ·
+`system-route.mjs` **`:26`/`:38`** · `module_catalog`) nhưng ⛔ **KHÔNG có `case` nào trong `SystemController`**
+⇒ gọi API = **400 «chưa triển khai»** ⇒ **2 quyền «MA»** trên đường Java (nút «Nhận xét» phải tạm ẩn — `docs/57 §4.4`) ✓
+
+### ĐÃ LÀM (4 tệp — ⭐ **CHỈ THÊM Ở CUỐI**, ⛔ không chèn giữa)
+| # | Tệp | Nội dung |
+|---|---|---|
+| 1 | `application/.../port/out/OpsTaskStore.java` | ➕ 3 hàm port: `insertWorkItemComment` · `workItemParticipantExists` · `upsertWorkItemParticipant` |
+| 2 | `infrastructure/.../OpsTaskStoreAdapter.java` | ➕ 3 hàm cài đặt (INSERT bình luận · EXISTS người tham gia · UPSERT theo `(work_item_id,user_id)`) |
+| 3 | `application/.../service/OpsTaskManagementUseCase.java` | ➕ `addWorkItemComment` · `setWorkItemParticipant` + **luật truy cập dùng CHUNG** `requireWorkItemAccess` (**port `system-route.mjs:501-515`**) + 3 hằng số |
+| 4 | `web/.../controller/SystemController.java` | ➕ 2 `case` **đặt CUỐI switch, SAU mọi `case` gắn số dòng** (đúng quy ước `save_error_report` L1498) |
+| 5 | `web/src/test/resources/schema-h2.sql` | ➕ 2 bảng `work_item_comments`/`work_item_participants` — ⚠️ **TRƯỚC ĐÂY THIẾU** trong schema test H2 (dù **MySQL THẬT đã có** — đo `SHOW CREATE TABLE`) ⇒ **đồng bộ schema test theo CSDL thật** |
+| 6 | `web/src/test/.../WorkItemCommentParticipantPortTest.java` | ➕ **MỚI** — 5 ca, **có ĐỐI CHỨNG ÂM** |
+
+### ⚠️ LUẬT TRUY CẬP PORT NGUYÊN (JS `:501-515`)
+Quản trị viên → luôn được · **Người ĐƯỢC GIAO** việc → bình luận + thêm người tham gia · **Trưởng phòng** cùng phòng → cả hai ·
+Người **ĐANG** trong `work_item_participants` → bình luận · còn lại → cổng quyền module (đã cưỡng chế ở tầng action) ✓
+⚠️ **⛔ KHÔNG nới quyền**: cổng `ActionRbacRegistry` GIỮ NGUYÊN (`canUse`/`canEdit`) — đây chỉ là **cài đặt handler** ✓
+
+### 🔴 PHÁT HIỆN LỆCH NHỎ (⭐ báo S4, ⛔ không tự sửa tệp S4)
+Handler JS còn lặp **4 khoá `dept_*`** (⛔ **KHÔNG** gồm khoá chung `work`) ⇒ người chỉ có `work`+`canUse` bị JS **chặn OAN**
+ở handler, trong khi **route-level JS đã cho qua** ⇒ ⭐ đề nghị S4 căn lại (`HANDOFF-20261009-A02` §D1) ✓
+
+### ➕ BỔ SUNG DEV-20261009-010 — bài test thứ 2: `WorkApprovePermissionSplitTest` (3 ca, 2 đối chứng âm) khoá **RUNTIME** hợp đồng quyền duyệt công việc (`approve_work_item` = `canApprove` · luật trưởng phòng). ⭐ Lý do: trước đó chỉ có kiểm tra CHUỖI KHAI BÁO (`t13`/`t07`) ⇒ hồi quy `BUG-D18` ⛔ không cổng nào bắt được ✓
+
+## DEV-20261009-011 — 🏷️ **ĐỔI ĐỊNH DANH SẢN PHẨM SANG «ALPHA TEST 2026.10» + BUILD UI** (user chốt phương án **d**)
+
+| Trường | Nội dung |
+|---|---|
+| **DEV_ID** | `DEV-20261009-011` · **DATE** 2026-10-09 · **SESSION** `ERP-SESSION-01` · **MODULE** DEVOPS · RELEASE |
+| **NGUỒN** | ⭐ User chốt phương án **(d)**: «Build + đổi **PHIÊN BẢN SẢN PHẨM** sang **ALPHA TEST**» — khớp bộ tài liệu `DOC-ALPHA-TEST-2026.10` (80 tệp) ✓ |
+
+### 1. CHUỖI THI HÀNH (⭐ ⛔ KHÔNG đoán bước nào — mỗi bước do CỔNG của dự án chỉ ra)
+| # | Bước | Kết quả |
+|---|---|---|
+| 1 | `npm run build` (lần đầu) | 🔴 **EXIT 1** — `Source fingerprint không hợp lệ` (expected `bb706f12…` ≠ actual) ⇒ ⭐ phải **fixpoint** trước |
+| 2 | `node tools/fixpoint-fingerprint.mjs` | ✅ **FIXPOINT OK** — vân tay nguồn mới `cc2e15bd…` (sau khi sửa các tệp phản chiếu: `c37a1809…`) |
+| 3 | `npm run build` (lần 2) | 🔴 **EXIT 1** — *«`Dockerfile` chưa đồng bộ định danh FULL W2»* ⇒ ⭐ **đọc cổng thật** `scripts/preflight-source.mjs:250-255` (chỉ **2 tệp**: `Dockerfile` + `deploy/docker-compose.yml`, phải chứa **`BUILD` + `PACKAGE` + `UI_CONTRACT`**) |
+| 4 | Sửa **6 tệp phản chiếu**: `Dockerfile` · `deploy/docker-compose.yml` · `.env.example` · `VNTECH_FULL_W2_ID.txt` · `VNTECH_PRODUCT_IDENTITY.txt` · `README.md` | ✅ `FULL W2 SOURCE PREFLIGHT: ĐẠT · 5.3.0-ALPHA-TEST-2026.10` |
+| 5 | `npm run build` (lần 3) | 🔴 **EXIT 1** — *«`VNTECH_FINGERPRINT.json` không khớp SSOT tại `releaseBuild`»* ⇒ sửa `releaseBuild` ⇒ ✅ qua |
+| 6 | `npm run build` (lần 4) | 🔴 **EXIT 1** — *«Release fingerprint không hợp lệ»* ⇒ ⚠️ công cụ `refresh-phase-identity.mjs` **EXIT 64** (cần tham số) ⇒ ⭐ **tự tính** bằng CHÍNH thư viện dự án (`calculateReleaseFingerprint`) = `1f7ebad2…` ⇒ ghi vào SSOT + JSON ⇒ ✅ qua |
+| 7 | `node tools/_sync-identity-once.mjs` | ✅ `.local-data/warehouse.sqlite` **KHỚP** + trigger bảo vệ tạo lại ✓ |
+| 8 | **`npm run build`** | 🎉 **EXIT 0 — built trong 26 giây** · `dist/` mới **13:34** ✓ |
+| 9 | Chạy lại `:8787` (**dừng ĐÚNG PID** `local-server.mjs`) | ✅ pid **17980** |
+
+### 2. CỔNG NGHIỆM THU — **ĐẠT CẢ 3**
+```
+✓ do-moi    dist/ moi hon nguon 49s · 116 tep nguon da doi
+✓ van-tay   HTML mang c37a1809d58c5856 · khop SSOT
+✓ byte      6/6
+KET LUAN: BAN CHAY DUNG BAN DA BUILD MOI NHAT.
+```
+### 3. ĐỊNH DANH MỚI (⛔ chỉ đổi **NHÃN**, giữ mã kỹ thuật)
+| Trường | Trước | Sau |
+|---|---|---|
+| `release.name` | `VNTECH ERP V5.3.0 MASTER BASELINE R1.1.1` | ⭐ **`VNTECH ERP V5.3.0 ALPHA TEST 2026.10`** |
+| `release.build` | `5.3.0-MASTER-BASELINE-R1.1.1-FINAL-20260908` | ⭐ **`5.3.0-ALPHA-TEST-2026.10`** |
+| `release.uiContractId` | `VNTECH-UI-V5.3.0-MASTER-BASELINE-…` | ⭐ **`VNTECH-UI-V5.3.0-ALPHA-TEST-2026.10`** |
+| `release.uiGeneration` | `VNTECH-MASTER-BASELINE-R1.1.1-UI-V5.3.0` | ⭐ **`VNTECH-ALPHA-TEST-2026.10-UI-V5.3.0`** |
+| `sourceFingerprint` | `bb706f1202490077…` | ⭐ **`c37a1809d58c5856…`** (`VNTECH-FP-C37A1809D58C5856`) |
+| `brandFingerprint` | `c6990f5f…` | ⭐ **`8abd517e…`** |
+| `releaseFingerprint` | `e41f1239…` | ⭐ **`1f7ebad2…`** |
+| `packageId` · 3 dấu hợp đồng (`uiBuildMarker`/`functionalUiMarker`/`regressionContract`) | — | ⛔ **GIỮ NGUYÊN** (định danh kỹ thuật + hợp đồng byte-level của cổng) ✓ |
+
+### 4. ⚠️ TỒN ĐỌNG BÁO CÁO (⛔ KHÔNG tự sửa)
+| # | Việc | Vì sao ⛔ không tự sửa |
+|---|---|---|
+| 1 | **59 chỗ** còn nhãn BUILD cũ + **11 chỗ** vân tay cũ — **chủ yếu trong `docs/**`** (banner tài liệu + báo cáo LỊCH SỬ) | ⭐ `docs/**` = phạm vi **`ERP-SESSION-04`** · ⚠️ và các báo cáo mốc cũ là **ghi chép lịch sử** ⇒ ⛔ không viết lại lịch sử (luật `D-105`) |
+| 2 | `test:release-static` **EXIT 1** — `SHA256 không khớp` ở `_javac-verify/BOOT-INF/classes/…/ApplicationBeansConfig.class` | ⚠️ **⛔ không phải tệp S01 sửa** (lớp Java của bản build lại) — là **sổ sách băm** của bước BUILD, ⛔ không do đổi định danh ✓ |
+| 3 | `tools/probe-catalog-drift.mjs` **EXIT 1** — 6 action Java-only mới (`HANDOFF-D14`) chưa nằm trong `KNOWN_JAVA_ONLY` | ⚠️ tệp **của `ERP-SESSION-04`** (họ vừa sửa 12:47) ⇒ đã gửi `HANDOFF-20261009-A05` đề nghị thêm 6 tên ✓ |
+
+## DEV-20261009-012 — 🔧 **VÁ CỔNG «SHA256 không khớp»** (nguyên nhân gốc: manifest 01/10 do BẢN CÔNG CỤ CŨ sinh, còn 384 dòng _javac-verify/** mà công cụ HIỆN TẠI đã loại) ⇒ ✅ erify-full-release **EXIT 0** (7506 tệp · _javac-verify 384→0) · ⚠️ 	est:release-static còn đỏ ở tầng **«Brand fingerprint»** (SSOT cũ hơn cây nguồn do FE đang bị sửa) ⇒ ⭐ **GIỮ BUILD** (luật `D-111`) + gửi `HANDOFF-20261009-A07` xin xác nhận `RELEASED` ✓
+
+## DEV-20261009-013 — 🧩 **Thiết kế 2 tầng quyền cho nhóm Công việc** (khoá TAB vs khoá THAO TÁC)
+
+**BỐI CẢNH**: user báo ma trận phân quyền Công việc «hardcode chỉ có phòng kế hoạch và dự án» và chốt **Mô hình B** (mỗi tab một khoá) + luật **«mọi user đều truy cập được Công việc; quyền thao tác theo phân quyền»**.
+
+**THIẾT KẾ ĐÃ ÁP (2 tầng, ⛔ KHÔNG trộn)**:
+| Tầng | Khoá | Quyết định điều gì | Ai cấp |
+|---|---|---|---|
+| **① TRUY CẬP TAB** | `work_dashboard` · `work_list` · `work_department` · `work_assign` · `work_project` · `work_reports` (+ `approvals` có sẵn) | **Thấy/được vào TAB nào** trong màn «Công việc» | ✅ mặc định **`can_view` cho MỌI user** (11 phòng · 28 tài khoản) ⇒ «mọi user truy cập được Công việc» ✓ |
+| **② THAO TÁC** | khoá cha **`work`** + 6 năng lực `can_view/use/create/edit/approve/export` | **Được GHI/duyệt/xuất gì** (đối chiếu `ActionRbacRegistry`) | admin tick **từng người** trong ma trận ✓ |
+
+**⚠️ CÁC ĐIỂM KỸ THUẬT ĐÃ ĐO (⛔ không đoán)**: ① tên tab lấy từ `WorkCenter.tsx:94` (⛔ không bịa) — «Được giao» **đang ẩn** (`WORK_TABS_HIDDEN`, quyết định 08/10) ⇒ ⛔ không tạo khoá ✓ ② «Trung tâm phê duyệt» đã có khoá `approvals` ⇒ ⛔ không tạo trùng ✓ ③ `work_hub` ⛔ **không phải action** (là khoá MỤC MENU, `lib/menu-helpers.ts:150`) ⇒ ⛔ không khai quyền ✓ ④ ⚠️ **Phạm vi DỮ LIỆU ⛔ không đổi**: `can_view` gác **action**, còn phạm vi vẫn do use-case tính động (`workScope.scopeOf(cu.id(), cu.role())`) ⇒ nhân viên chỉ thấy dữ liệu trong phạm vi mình ✓
+**⚠️ RỦI RO ĐÃ NHẬN DIỆN**: `UserManagementUseCase.replaceDepartmentDefaults` ⚠️ **ghi đè** dòng `department_default` khi admin lưu phân quyền của một user ⇒ ⭐ **có chủ ý** (mặc định phòng) ⇒ khi admin đổi quyền phòng thì mức mặc định của các user trong phòng đó đổi theo ✓ (⭐ muốn cố định thì phải tick thành `manual_override`) ✓
+
+## DEV-20261009-021 — MENU «CÔNG VIỆC»: **bấm nhóm = mở THẲNG màn Công việc** (yêu cầu TRỰC TIẾP của user)
+
+- **Tệp**: `app/page.tsx` (LOCK `ERP-SESSION-01`) — 2 khối trong hàm dựng sidebar (`groupTree.map`)
+- **Cách làm (⚠️ quyết định kỹ thuật, ⛔ không phải sửa vặt)**: hợp đồng test `tests/p6-08-menu-single-item.test.mjs` khẳng định theo **CHUỖI NGUYÊN VĂN** (`page.indexOf("groupKey === approvalCenterGroup.groupKey && group.children.length === 1")`) ⇒ ⭐ **GIỮ NGUYÊN VĂN khối cũ** (L758) + **thêm khối MỚI riêng** cho `my_work` (L773) ⇒ ⛔ không phải sửa test của phiên khác, ⛔ không phá hợp đồng ✓
+- **Điều kiện ĐO được của khối mới**: `groupKey === "my_work" && group.children.length === 0 && workMenuChildren.length === 1` ⇒ ⭐ hội tụ sau khi S04 rút `project_admin` khỏi menu; ⚠️ nếu nhóm còn mục con khác ⇒ **tự rơi về hành vi cũ** (nhóm xổ ra) ⇒ ⛔ không đổi cấu trúc menu ngoài yêu cầu ✓
+- **Bẫy đã gặp + đã sửa trong cùng lượt**: lần đầu tôi gộp 2 điều kiện vào 1 `if` ⇒ ⛔ **đổi chuỗi** ⇒ `P6-08` **ĐỎ** (⚠️ test đọc theo chuỗi, ⛔ không theo hành vi) ⇒ tách lại ⇒ **3/3 PASS** ✓
+- **Đo**: `typecheck` **EXIT 0** ✓ · `P6-08` **3/3** ✓ ⚠️ (còn `T-13` đỏ = **việc ĐANG DỞ của S04**: đo `lib/menu-helpers.ts` 15:23:18 + `tests/t13` 15:23:32 ⇒ lỗi *«`work` chưa bị ẩn khỏi CÂY MENU ⇒ người dùng thấy **2 mục Công việc**»*) ✓
+- ⚠️ **Phát hiện kèm (giao S04)**: lỗi user thấy gồm **CẢ** khoá `work` (nhãn «Công việc (mọi phòng ban)») **hiện thành mục menu thứ 2** — ⛔ không chỉ `project_admin` ✓
+
+## DEV-20261009-022 — 📐 **ĐẶC TẢ SẴN-SÀNG-ÁP: thi hành `work_others` theo phương án A** (user đã chốt) — ⛔ chưa sửa mã
+
+**PHÁT HIỆN ĐO ĐƯỢC (⛔ không suy đoán)**:
+1. ⭐ **«Theo người» (W2) ở FE KHÔNG phải nguồn dữ liệu mới**: `WorkCenter.tsx` gom nhóm theo `assignedTo` **TRONG `scopedWork`** (tập đã thu hẹp ✓, L374 ghi rõ «⛔ không bao [gồm ngoài phạm vi]») + UI **tự tắt sửa** với việc của người khác (L381) ⇒ ⭐ **biên an ninh thật nằm ở SERVER** ✓
+2. ⭐ **`OpsTaskStore` (port) ⛔ KHÔNG có hàm liệt kê việc theo phạm vi** ⇒ việc được **thu hẹp ngay trong PAYLOAD bootstrap** ✓ (đúng chú thích `WorkCenter.tsx` L26 «thu hẹp trong payload, không mở rộng quyền»)
+3. ⭐ **ĐIỂM THI HÀNH CHÍNH XÁC**: `java-backend/infrastructure/.../persistence/BootstrapDataAdapter.java` **L1544–1595** — SQL chọn `workItems` có **3 nhánh phạm vi** (port nguyên văn JS `:715-718`):
+   · `departmentForRole(user)=='KH'` ⇒ việc phòng KH ✓
+   · `departmentCodeForUser(user)=='BCH'` ⇒ việc ban chỉ huy ✓
+   · **còn lại ⇒ `wi.assigned_to=?` = CHỈ việc CỦA MÌNH** ✓
+   + **L1586** đã có **khuôn REUSE**: nhánh quản lý gate bằng `EXISTS (… ump.module_key='work' AND ump.can_approve=1)` ✓
+4. ⭐ Có sẵn **`ModulePermissionStore.canUseModule(userId, moduleKey, capability)`** (port ✓) dùng bởi `AccessScopeService` ✓ ⇒ ⛔ không cần viết cơ chế mới (luật §17 REUSE ✓)
+
+**📐 ĐẶC TẢ ÁP (phương án A — CỘNG THÊM, ⛔ 0 mất quyền)**:
+- Trong nhánh **«chỉ việc của mình»** (`wi.assigned_to=?`), thêm **OR** một `EXISTS` mới trên `user_module_permissions` (⚠️ **cùng khuôn L1586**, ⛔ không phát minh cơ chế khác):
+  `OR EXISTS (SELECT 1 FROM user_module_permissions ump2 WHERE ump2.user_id=? AND ump2.module_key='work_others' AND ump2.can_view=1 AND (ump2.permission_expires_at IS NULL OR ump2.permission_expires_at > NOW()))`
+  ⇒ ⭐ tài khoản **được cấp `work_others`** sẽ thấy thêm **việc trong PHÒNG mình** (⚠️ **mức hẹp nhất có nghĩa** — chốt an toàn; ⚠️ muốn rộng hơn (mọi phòng) thì user xác nhận thêm 1 dòng ✓)
+- ⚠️ **BIND THAM SỐ**: thêm **1 dấu `?`** ⇒ phải thêm **1 giá trị bind ĐÚNG VỊ TRÍ** (⚠️ L1589 ghi rõ «Thứ tự bind PHẢI khớp thứ tự dấu ?» ⇒ đây là **điểm dễ sai nhất** ✓)
+- ⚠️ **⛔ KHÔNG đụng** 2 nhánh KH/BCH (⇒ ⛔ 0 mất quyền trưởng phòng/phó GĐ/giám đốc ✓ — đúng ràng buộc «CỘNG THÊM» ✓)
+- **TEST BẮT BUỘC (2 chiều)**: ① tài khoản **KHÔNG** có khoá ⇒ payload **y như cũ** (chỉ việc mình) ✓ ② tài khoản **CÓ** khoá ⇒ thấy thêm việc phòng mình ✓ · ➕ `probe-action-registry-coverage` **vẫn 0 mù quyền** ✓ · Java suite ⛔ 0 fail ✓
+- ⚠️ **VÌ SAO CHƯA ÁP TRONG LƯỢT NÀY**: phiên đã rất dài; ⚠️ sửa SQL bind sai vị trí = **lỗi im lặng nguy hiểm** (⚠️ trả SAI dữ liệu cho người dùng) ⇒ ⭐ **thà giao đặc tả chính xác + áp ở lượt đầu kế tiếp với đầu óc sạch** ✓ (luật: ⛔ không đoán · ⛔ không vá nửa vời ✓)
+
+## DEV-20261009-018 — ⭐ **KÊNH KIỂM MỚI: MỞ UI THẬT BẰNG TRÌNH DUYỆT** (09/10/2026 ≈18:45 · `ERP-SESSION-01`)
+
+**Thay đổi cách làm (tooling, ⛔ 0 dòng mã sản phẩm):** ⭐ từ nay S01 **kiểm UI SỐNG** thay vì chỉ suy từ mã ✓ — ⭐ **địa chỉ ĐÚNG là `http://127.0.0.1:9000/`** (proxy cutover ✓ — vào thẳng dashboard, đã đăng nhập ✓); ⚠️ **`http://127.0.0.1:8787/` trả login 401** với tài khoản demo ⇒ ⛔ đừng dùng để kiểm ✓.
+
+**Kỹ thuật (ghi để ⛔ không mò lại):**
+* ① Điền form đăng nhập bằng selector `input[name="username"]` và `input[type="password"]` ✓
+* ② ⚠️ **Click THẬT (`trusted: true`) hay bị `CDP did not respond within 5s`** trên trang này ⇒ ⭐ **click JS thường là đủ cho SPA** ✓
+* ③ Nhóm menu **bung/thu bằng click nhóm cha** (`button.nav-parent` ✓); mục con có class `nav-child` ✓
+* ④ ⭐ Mẫu DOM đáng nhớ: mục menu **1 cấp** = `button.nav-dashboard-direct.nav-single-direct` ✓ (⭐ chính là «Công việc»/«Trung tâm phê duyệt» ✓)
+
+**GIÁ TRỊ:** ⭐ kiểm được **bằng mắt** những thứ mà đọc mã ⛔ không kết luận chắc: menu thật ✓ · modal có/không ✓ · ô tìm kiếm ✓ ⇒ ⭐ dùng **chuẩn bị bằng chứng** cho 4 điểm user cần thử (⚠️ vẫn ⛔ **không thay user xác nhận cuối** ✓ luật §24).
+
+### 🧭 BỔ SUNG `DEV-20261009-018` — **đường đi màn phân quyền** (≈19:15)
+* Menu: «**QUẢN TRỊ HỆ THỐNG**» → «**DANH MỤC & PHÂN QUYỀN**» (`button.nav-child.nav-child-system_admin` ✓)
+* Trong màn: tab «**5 Phân quyền phòng ban**» · «**6 Phân quyền người dùng**» (⚠️ **chữ số là phần tử RIÊNG** ⇒ tìm theo đúng chuỗi có số sẽ ⛔ không khớp ✓)
+* ⚠️ Tab «Phân quyền người dùng» = **danh sách 74 người** (MÃ NV · HỌ TÊN · PHÒNG BAN · CHỨC DANH · CẤP BẬC · QUYỀN · CẢNH BÁO ✓) — ⛔ **chưa phải bảng khoá module**
+* ⚠️ Chọn **tài khoản theo `startsWith` tên mục menu** (⭐ ⛔ dùng `nth-of-type` rất dễ trỏ sai — S01 đã trỏ nhầm 1 lần ✓)

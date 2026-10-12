@@ -935,3 +935,143 @@
 | TEST_REFERENCE | `TEST_LOG` **TEST-D34** · `CHANGE_LOG` **CHG-D10** · `EVENT_LOG` **D260–D261** |
 | REMAINING | ⏳ cần **build** để thấy trên UI · ⚠️ `W-02` cần **chủ tài liệu W-02** cập nhật 3 con số (đã bàn giao) |
 | NEXT_ACTION | ⭐ Trả lời câu hỏi user: **Kanban và tab «Cây» dùng để làm gì** — và chờ user quyết **giữ hay bỏ** 2 chế độ xem này |
+
+---
+
+## TASK-20261008-D44 — **MA TRẬN PHÂN QUYỀN WORK ĐỘNG** (lệnh trực tiếp của user)
+
+| Trường | Nội dung |
+|---|---|
+| TASK_ID | `TASK-20261008-D44` |
+| DATE / SESSION_ID | 2026-10-08 · `ERP-SESSION-04` (`SESSION_D`) |
+| MODULE / FEATURE | RBAC · nhóm quyền **WORK** (Công việc) — ma trận phân quyền |
+| OBJECTIVE | ⛔ Bỏ **hardcode 2 phòng ban** trong ma trận WORK; thiết kế **ĐỘNG** theo `organization_units` (user: *«công ty có rất nhiều phòng ban … không được hardcode mà phải thiết kế động»*) |
+| PRIORITY | **P1** (user giao trực tiếp) |
+| STATUS | ✅ **`VERIFIED` (PHẦN JAVA + CSDL — ĐO LIVE vòng 85)** — ⏳ **phần GIAO DIỆN** (ma trận) chờ **BUILD FE** |
+| IMPLEMENTATION_SUMMARY | ⭐ **PHƯƠNG ÁN A** (user chốt): ① thêm **1 khoá quyền chung `work`** ở **5 tầng** ② phạm vi xem việc **tra ĐỘNG** `users.organization_unit_id → organization_units.code` (⛔ bỏ literal `'KH'`/`'DA'`/`'BCH'`/`kh_truong`/`da_truong`) ③ quyền **DUYỆT** tách riêng (`approve_work_item`/`canApprove` — `Q2-b`) ④ ⭐ **«Admin sẽ quyết định ai là trưởng phòng»** ⇒ tư cách quản lý phòng nhận thêm từ **`work.canApprove` do admin cấp** ⑤ **ẩn 4 khoá cũ** khỏi ma trận (user chốt «ẩn») **kèm** sửa 2 nút hàng loạt để ⛔ không ghi 0 âm thầm ⑥ CSDL: `V40` (idempotent) |
+| FILES_CHANGED | `scripts/system-route.mjs` · `java-backend/**` (4 tệp + `V40` mới) · `lib/ui-shared.tsx` · `lib/menu-helpers.ts` · `app/page.tsx` · `app/screens/PermissionMatrix.tsx` · `app/screens/PermissionAccessPanel.tsx` · `tools/probe-action-parity.mjs` · `java-backend/tools/generate-rbac-registry.mjs` · `tests/t13` · `tests/w03` · `tests/v214` · **CSDL MySQL** (3 bảng) |
+| RESULT | ✅ `node --check` **0** · `javac` **0** · `tsc` **0** · `t13` **15/15** · `t07` **8/8** · `v214` **8/8** · cổng catalog **⛔ không trôi dạt** · ⭐ hồi quy **`958 · 957 pass · FAIL 0`** · ⭐ đối chứng **14/14 bất biến mã** · ✅ DB: `module_catalog` 76→**77** · `department_module_permissions` 481→**489** · `user_module_permissions` 2772→**2775** |
+| TEST_REFERENCE | `TEST_LOG` **TEST-D45** · `CHANGE_LOG` **CHG-D17→D21** · `BUG_HOTFIX_LOG` **BUG-D17/D18/D19** · `DECISION_LOG` mục **6–10** |
+| REMAINING | ✅ **PHẦN JAVA/CSDL ĐÃ `VERIFIED` LIVE (vòng 85 · `TEST-D47`)** — probe `probe-nghiem-thu-pham-vi-dong.mjs` **exit 0 5/5**: giám đốc **19 = admin** · trưởng phòng DA **17** · nhân viên **0** · 2 đối chứng âm ĐẠT · ⭐ lý do: jar Java đang chạy **`10-09 12:39:04`** (**SAU** sửa `BootstrapDataAdapter` **12:34:29`) ⇒ **Java + CSDL đã sống** ⛔ **chỉ GIAO DIỆN** cần BUILD FE (`dist/` = **10-08 16:13:31**) ⇒ ⏳ **BUILD FE** (⏳ chờ user quyết vân tay — `DEC-20261009-017`) · ⛔ chưa thêm mã drizzle `0353` (thuộc BUILD) |ước BUILD) · ⛔ chưa port 2 action Java (`add_work_item_comment`·`set_work_item_participant`) |
+| NEXT_ACTION | ⭐ Sau BUILD: chạy `probes/verify-ma-tran-dong.mjs` + kiểm **giám đốc thấy việc của nhân viên** + kiểm **ma trận chỉ còn 1 dòng «Công việc (mọi phòng ban)»** |
+
+---
+
+## TASK-20261009-D45 — 🆕 **W2: «XEM DANH SÁCH CÔNG VIỆC CỦA NGƯỜI KHÁC THEO PHẠM VI»**
+
+| Trường | Giá trị |
+|---|---|
+| TASK_ID | `TASK-20261009-D45` |
+| DATE | 2026-10-09 |
+| SESSION_ID | `ERP-SESSION-04` (`SESSION_D`) |
+| MODULE | JOBS — «Công việc» (`app/screens/WorkCenter.tsx`) |
+| FEATURE | **W2** — khối «xem danh sách công việc của **NGƯỜI KHÁC** theo phạm vi» (đặc tả user: trưởng phòng → người **trong phòng mình** · giám đốc/admin → **mọi người**) |
+| OBJECTIVE | Thi hành `KE-HOACH-PHAN-QUYEN-CONG-VIEC.md` §5e (`W2`) — ⛔ **không** thêm API/quyền: ⭐ ĐO ĐƯỢC **MÁY CHỦ ĐÃ LỌC PHẠM VI** trong `workItems` ⇒ chỉ **GOM LẠI** dòng đã trả về |
+| PRIORITY | **P1** (user giao trực tiếp) |
+| STATUS | ✅ **DONE** (code + test) — ⏳ `VERIFIED` chờ BUILD của S01 |
+| START / END | 2026-10-09 ≈14:40 → 2026-10-09 14:45 |
+| IMPLEMENTATION_SUMMARY | ① Khối thuần **`workByOwnerGroups(rows)`** (mốc `W2-PURE-BEGIN/END`) — khuôn sao chép `projectWorkGroups` (**REUSE**, luật §17), nhóm theo **`assignedTo`** (khoá ĐỊNH DANH ⇒ **2 người TRÙNG TÊN = 2 nhóm**), nhãn `assignedToName`, bộ đếm = số dòng, sắp giảm dần; dòng thiếu người ⇒ nhóm riêng có nhãn hằng số ② **Bộ chọn cách xem** `OWNER_VIEW_MODES` = «Nhóm của tôi» (**MẶC ĐỊNH `group`** ⇒ ⛔ hành vi cũ KHÔNG đổi) · «Theo người» ③ «Theo người»: dải **mỗi người 1 thẻ** (tên · bộ đếm) + bảng việc của người đó + **trạng thái rỗng** nói rõ ④ ⭐ **CHỈ XEM** việc của người khác: `ownerViewEditable = ownerView !== "owner" || ownerIsMe`; nguồn gom = **`scopedWork`** (tập ĐÃ thu hẹp) — ⛔ không gom payload thô |
+| FILES_CHANGED | `app/screens/WorkCenter.tsx` (khối `W2-PURE` + nhánh tab 1 + 2 biến trạng thái) · `tests/t14-work-owner-view.test.mjs` (**MỚI — 8 test**) |
+| RESULT | ✅ `tsc` **0** · **`t14` 8/8** · `t05` **6/6** (⛔ 0 hồi quy nhóm cá nhân) · ⭐ hồi quy **`969 · 968 pass · FAIL 0 · 1 skip`** (nền 961 ⇒ **+8** đúng bằng số test mới) |
+| TEST_REFERENCE | `TEST_LOG` **TEST-20261009-D57** · `CHANGE_LOG` **CHG-D27** · `EVENT_LOG` «LƯỢT 09/10/2026» |
+| REMAINING | ⏳ hiện trên UI **SAU BUILD FE** của S01 · ⚠️ 2 câu hỏi kỹ thuật đã gửi S01 (`HANDOFF-A13` §⑥) |
+| NEXT_ACTION | Sau build: đo lại `:8787` + nghiệm thu «Theo người» bằng tài khoản trưởng phòng |
+
+---
+
+## TASK-20261009-D46 — 🆕 **W3: NÚT «XOÁ» VIỆC CỦA BẢN THÂN** (gọi `delete_work_item`)
+
+| Trường | Giá trị |
+|---|---|
+| TASK_ID | `TASK-20261009-D46` |
+| DATE | 2026-10-09 |
+| SESSION_ID | `ERP-SESSION-04` (`SESSION_D`) |
+| MODULE | JOBS — «Công việc» (`app/screens/WorkCenter.tsx`) |
+| FEATURE | **W3** — nút «Xoá» việc của bản thân (đặc tả user §1: «quyền **xóa** công việc (của bản thân)») |
+| OBJECTIVE | Thi hành phần **GIAO DIỆN** theo **hợp đồng API** của S01 (`HANDOFF-20261009-A11/A12 ③`: `delete_work_item` = `work` + `canEdit`, chỉ người giao/tạo, ⛔ không xoá việc `COMPLETED`, **xoá mềm**) |
+| PRIORITY | **P1** |
+| STATUS | ✅ **DONE** (code + test) — ⏳ `VERIFIED` chờ BUILD |
+| START / END | 2026-10-09 14:45 → 2026-10-09 14:49 |
+| IMPLEMENTATION_SUMMARY | Nút «Xoá» trong cột «Tiến độ & xác nhận» (`ProgressCell` +2 prop `canDelete`/`onDelete`) — khuôn nhà `.export-mini danger` + `data-vntech="work-delete"` + **hộp xác nhận `window.confirm`** (đúng khuôn `DocumentsScreen`/`PartnerManager`); ⭐ **CHỈ HIỆN KHI ĐỦ 2 CỔNG**: ① `modulePermission(data,"work").canEdit` ② `String(row.assignedBy) === myId` ∧ `!WORK_CLOSED.includes(status)` (mô phỏng ĐÚNG `deleteWorkItem`) ⇒ ⛔ **KHÔNG «nút chết»** (lớp `BUG-D05`); nối **3 bảng sửa được** (Dashboard · Danh sách công việc · Được giao), ⛔ bảng `deptWork` vẫn `allowEdit={false}` |
+| FILES_CHANGED | `app/screens/WorkCenter.tsx` (`ProgressCell` · `TaskTable` · 3 điểm gọi) · `tests/t13-work-progress-cell.test.mjs` (**+test `E`**) · `tools/audit-java-only-actions.mjs` (**khai `delete_work_item`** — ⚠️ `tests/t13` test CŨ **ĐỎ ngay** khi WorkCenter gọi action Java-only chưa khai; **ĐÃ ĐO**) |
+| RESULT | ✅ `tsc` **0** · `eslint` **0 lỗi · 0 warning** · `t13` **19/19** · `t05`+`t07`+`t13`+`t14` = **41/41** · ⭐ hồi quy **`970 · 969 pass · FAIL 0 · 1 skip`** (nền 961 ⇒ **+9**) |
+| TEST_REFERENCE | `TEST_LOG` **TEST-20261009-D58** · `CHANGE_LOG` **CHG-D28** |
+| REMAINING | ⏳ hiện trên UI sau build · ⚠️ **NỢ**: đường JS `scripts/system-route.mjs` ⛔ chưa có `case "delete_work_item"` (xem `CHG-D29`) |
+| NEXT_ACTION | Sau build: đo live 4 ca của S01 (200 · 400 không phải người giao · 400 việc COMPLETED · 403 thiếu `work`) |
+
+---
+
+## TASK-20261009-D47 — 🔧 **ĐÓNG CỔNG ĐỎ `probe-catalog-drift` (S01 nhờ) + DỌN 2 WARNING LINT**
+
+| Trường | Giá trị |
+|---|---|
+| TASK_ID | `TASK-20261009-D47` |
+| DATE | 2026-10-09 |
+| SESSION_ID | `ERP-SESSION-04` (`SESSION_D`) |
+| MODULE | TOOLING (cổng RBAC) + CLEANUP (`app/screens/WorkCenter.tsx`) |
+| FEATURE | ① đóng **cổng ĐỎ** `tools/probe-catalog-drift.mjs` (do action mới `delete_work_item` của S01) ② dọn 2 tồn dư `eslint` |
+| OBJECTIVE | ⚠️ Cổng RBAC **ĐỎ ⇒ chặn phát hành**; ⛔ S01 **không tự sửa** tệp của phiên 04 (`SHARED_STATE` CẬP NHẬT 82) |
+| PRIORITY | **P0** (cổng chặn go-live) |
+| STATUS | ✅ **DONE** |
+| START / END | 2026-10-09 14:46 → 2026-10-09 14:51 |
+| IMPLEMENTATION_SUMMARY | ① Thêm `delete_work_item` vào `KNOWN_JAVA_ONLY` **kèm ĐIỀU KIỆN WHITELIST ĐÃ ĐO** (① `Map.entry("delete_work_item", List.of("work"))` thật ở `ActionRbacRegistry:371` + capability `canEdit` `:652` ② **0 lần** trong `scripts/system-route.mjs`) ⭐ chọn **cách ② (whitelist)** thay vì thêm `case` vào đường JS: **nhỏ · cô lập · ⛔ không đụng vùng khoá `F-03` (0 dòng ròng)** ② Dọn 2 biến không dùng (`assigned` trong `personalWorkGroups` · `managerDepartments` ở thân `WorkCenter`) — ⚠️ **KIỂM TRƯỚC**: `tests/t07:175` khoá `workScopeOf().managerDepartments` KHỚP `kanbanManagerDepartments(me)` ⇒ ⛔ **chỉ** xoá bản sao ở thân component, ⛔ **KHÔNG** chạm hàm thuần |
+| FILES_CHANGED | `tools/probe-catalog-drift.mjs` (+1 tên, kèm chú thích điều kiện) · `tools/audit-java-only-actions.mjs` (+1 tên) · `app/screens/WorkCenter.tsx` (**2 dòng**) |
+| RESULT | ✅ `probe-catalog-drift` **exit 1 → 0** («CHƯA BIẾT: **0**» · «ĐÃ BIẾT 41/43») · `probe-action-parity` **0 thiếu** · `probe-action-registry-coverage` **exit 0** («⛔ MÙ QUYỀN: **0**») · `audit-java-only-actions` **exit 0** («Rủi ro: 0») · `eslint WorkCenter.tsx` **0 lỗi · 0 warning** |
+| TEST_REFERENCE | `TEST_LOG` **TEST-20261009-D59** · `CHANGE_LOG` **CHG-D29** |
+| REMAINING | ⚠️ **NỢ CÓ TÊN**: parity đường JS cho `delete_work_item` (đã ghi vào chú thích mã + `HANDOFF-A13` §②) |
+| NEXT_ACTION | Chờ build S01 xong ⇒ làm **W4/W5** |
+
+---
+
+## TASK-20261009-D48 — ⏳ **W4 + W5 (DẢI TAB 6 KHOÁ `work_*` + MA TRẬN 7 DÒNG)** — CHỜ BUILD
+
+| Trường | Giá trị |
+|---|---|
+| TASK_ID | `TASK-20261009-D48` |
+| DATE | 2026-10-09 |
+| SESSION_ID | `ERP-SESSION-04` (`SESSION_D`) |
+| MODULE | JOBS (dải tab) + RBAC (ma trận phân quyền) |
+| FEATURE | **W4** `WorkCenter.tsx`: dải tab đọc **6 khoá `work_*`** · **W5** `lib/menu-helpers.ts`: **7 dòng ma trận** (`work_dashboard`·`work_list`·`work_department`·`work_assign`·`work_project`·`work_reports`·`work_others`) |
+| OBJECTIVE | Thi hành `HANDOFF-20261009-A09` (S01: «CẦN BẠN NỐI DẢI TAB + MA TRẬN») — ⭐ **HỢP ĐỒNG 2 TẦNG**: ① khoá TAB = *vào/không vào tab* ② `work` + 6 năng lực = *được THAO TÁC gì* |
+| PRIORITY | **P1** |
+| STATUS | ⏳ **OPEN — BLOCKED (có lý do đo được)**: ① USER chốt **thi hành SAU khi S01 build xong** (`DECISION_LOG` `Q-W4`) ② ⛔ mọi sửa `app/**`/`lib/**` lúc này sẽ làm **mã mới hơn bản build** của S01 (⚠️ đúng lỗi `13:36:26` tôi đã tự ghi) |
+| START / END | *(chưa bắt đầu)* |
+| IMPLEMENTATION_SUMMARY | 📐 Kế hoạch **đã ĐO TỪNG DÒNG**: `SESSION_D/probes/KE-HOACH-W45-TAB-6-KHOA-VA-MA-TRAN.md` ⭐ **PHÁT HIỆN QUYẾT ĐỊNH (09/10)**: `configuredModules` (`lib/workflow-helpers.ts:56`) duyệt **`modules[]`** trong `lib/menu-helpers.ts` rồi mới ghép nhãn từ `module_catalog` ⇒ **7 khoá mới ⛔ KHÔNG dựng được dòng ma trận** (chỉ có trong catalog + `titles` `app/page.tsx:138-149`) ⇒ W5 = thêm **7 dòng** vào `modules[]` (nhóm `my_work`, ⛔ **KHÔNG** thêm vào `legacyWorkMenuKeys` ⇒ ⛔ không thành mục menu) ⚠️ W4 phải giữ **bất biến**: ⛔ KHÔNG xoá phần tử `WORK_TABS` (lệch chỉ số) · ⛔ KHÔNG đổi `WORK_TABS_HIDDEN` · ⛔ không dùng `work_others` để ẩn tab |
+| FILES_CHANGED | *(chưa — dự kiến: `app/screens/WorkCenter.tsx` · `lib/menu-helpers.ts` · `tests/t13`)* |
+| RESULT | *(chưa)* |
+| TEST_REFERENCE | *(chưa — dự kiến `t13` mục `F`/`G` + hồi quy đầy đủ)* |
+| REMAINING | ✅ USER đã chốt **phương án `A` — lùi an toàn** (chỉ lọc tab khi tài khoản **ĐÃ CÓ ≥1 khoá `work_*`**; ⛔ chưa có ⇒ giữ nguyên 7 tab) · ℹ️ **DỮ LIỆU MỚI (S01 A09)**: 6 khoá **ĐÃ được cấp `can_view=1` cho 11/11 phòng + 28/28 tài khoản** (⚠️ khác giả định «cấp 0» ban đầu) |
+| NEXT_ACTION | ⏳ Chờ `dist/` mới hơn **13:34:24** ⇒ đo lại `:8787` ⇒ thi hành **W4** → `tsc`+`eslint`+`t13` → **hồi quy đầy đủ** ⇒ **W5** ⇒ ghi log + `RELEASED` mới cho S01 |
+
+### ✅ CẬP NHẬT `TASK-20261009-D48` — **W4 + W5 ĐÃ XONG** (09/10/2026 15:19) — ⛔ KHÔNG còn `BLOCKED`
+
+| Trường | Giá trị |
+|---|---|
+| STATUS | ✅ **DONE** (code + test) — ⏳ `VERIFIED` chờ **BUILD FE MỚI** (⚠️ bản phục vụ `:8787` 15:13:36 đã có `W2/W3` nhưng ⛔ chưa có `W4/W5`) |
+| ĐIỀU KIỆN ĐÃ GỠ | ⭐ **S01 BUILD XONG lúc 15:13:36** (`dist`) ⇒ đúng điều kiện USER chốt («sau khi S01 build xong») ⇒ tôi thi hành ngay **W4 + W5** ✓ |
+| KẾT QUẢ | **W4** (`CHG-D30`): dải tab đọc **6 khoá `work_*`** — **phương án `A` lùi an toàn** + «chốt rơi về» · **W5** (`CHG-D31`): **7 dòng** `modules[]` (6 khoá tab + `work_others`) + **6 khoá tab** vào cổng menu `work_hub` ✓ |
+| BẰNG CHỨNG | `tsc` **0** · `eslint` **0** · `t13` **21/21** (F/W4 + G/W5) · 4 cổng `tools/*` **exit 0** · `verify-ma-tran-dong` **exit 0** · ⭐ hồi quy **`972 · 971 pass · FAIL 0`** · ⭐ **HÀM THẬT**: `configuredModules` **có 7/7** khoá mới, `my_work` **7 → 14 dòng** (hiển thị thực **10**) ✓ |
+| FILES_CHANGED | `app/screens/WorkCenter.tsx` (**15:16:03**) · `lib/menu-helpers.ts` (**15:17:31**) · `tests/t13` (**15:18:42**) · `SESSION_D/probes/verify-w2-w3-tren-payload-that.mjs` (**MỚI**) |
+| REMAINING | ⏳ **1 LƯỢT BUILD FE NỮA** (W4/W5) · ⏳ `BUG-20261009-D27` (**HIGH**) chờ S01 vá (`HANDOFF-A15`) · ⏳ `work_others` (tick ⛔ chưa có tác dụng — `A14`) |
+| NEXT_ACTION | Sau build: đo lại `:8787` (marker W4/W5) + nghiệm thu UI; ⚠️ **nên vá `BUG-D27` TRƯỚC/CÙNG lượt build** để «xoá là mất» thật ✓ |
+
+---
+
+## TASK-20261009-D49 — 📥 **4 YÊU CẦU TRỰC TIẾP CỦA USER (menu Công việc + tabbar)** — 09/10/2026
+
+| Trường | Giá trị |
+|---|---|
+| TASK_ID | `TASK-20261009-D49` |
+| DATE / SESSION | 09/10/2026 · `ERP-SESSION-04` (`SESSION_D`) |
+| MODULE | MENU (sidebar) + JOBS (màn «Công việc») |
+| FEATURE | ① bỏ «QUẢN TRỊ DỰ ÁN» khỏi menu Công việc (**giữ dòng ma trận**) · ② «TRUNG TÂM PHÊ DUYỆT» ra khỏi menu Công việc (user chốt: **lên ngay sau «TỔNG QUAN ĐIỀU HÀNH»**) · ③ click «Công việc» **mở màn luôn** · ④ **bỏ dải tab** «Nhóm của tôi / Theo người» khỏi tabbar «Danh sách công việc» |
+| OBJECTIVE | User gửi **yêu cầu trực tiếp kèm ẢNH CHỤP sidebar** (nguồn sự thật cao nhất — §16) ⇒ thi hành đúng chữ, ⛔ không suy diễn |
+| PRIORITY | **P0** (user trực tiếp) |
+| STATUS | ✅ **DONE** (code + test) — ⏳ `VERIFIED` chờ **BUILD FE** |
+| START / END | 09/10/2026 ≈15:25 → 15:45 |
+| IMPLEMENTATION_SUMMARY | ① `lib/menu-helpers.ts`: đưa **`project_admin`** + **7 khoá `work_*`/`work_others`** vào **`legacyWorkMenuKeys`** (⚠️ `app/page.tsx:734` là nơi lọc `children`) ⇒ ⛔ không mục menu nhưng ⭐ **GIỮ NGUYÊN dòng `modules[]` = dòng MA TRẬN** ② `approvalCenterGroup.sortOrder` **20 → 12** (📏 ĐO: `overview 10` · `my_work 15`) ⇒ «TRUNG TÂM PHÊ DUYỆT» **ngay sau «TỔNG QUAN ĐIỀU HÀNH»** ③ **hệ quả tự nhiên**: nhóm `my_work` còn **đúng 1 mục menu** ⇒ luật «1 mục ⇒ bấm mở thẳng» (S01) áp dụng ⇒ click là vào màn ④ `app/screens/WorkCenter.tsx`: **bỏ dải tab cách xem** + thêm **ô chọn thường** `work-owner-select` trên bảng + **sentinel** `OWNER_UNKNOWN_KEY` (⚠️ nhóm «chưa gán người» có khoá THẬT = `""` ⇒ ⛔ thiếu sentinel sẽ **lẫn** với mục «Nhóm của tôi») |
+| FILES_CHANGED | `lib/menu-helpers.ts` · `app/screens/WorkCenter.tsx` · `tests/t10-approval-center.test.mjs` · `tests/t13` · `tests/t14` · `SESSION_D/probes/verify-menu-my_work.mjs` (**MỚI**) |
+| RESULT | ✅ **PROBE MỚI exit 0**: `configuredModules(payload thật)` **71 dòng** · mục **module** trong `my_work` = **0** · **8/8** khoá vẫn **có dòng ma trận** · thứ tự nhóm `overview(10) → approval_center(12) → my_work(15) → site_command(25) → …` ✓ · `t10`+`t13`+`t14`+`p6-08` = **36/36** · probe W2/W3 payload thật **9/9** · `tsc` **0** · `eslint` **0** · ⭐ hồi quy **`972 · 971 pass · FAIL 0`** |
+| TEST_REFERENCE | `TEST_LOG` **TEST-20261009-D63** · `CHANGE_LOG` **CHG-D32**/**CHG-D33** · `EVENT_LOG` lượt `2026-10-09 15:32:32` |
+| REMAINING | ⏳ **1 LƯỢT BUILD FE** (`HANDOFF-20261009-A17`) · ⏳ `BUG-D27` (S01) · ⚠️ chú thích cũ ở `app/page.tsx:742-743` (S01 cập nhật) |
+| NEXT_ACTION | Sau build: đo lại `:8787` (sidebar: ⛔ hết «QUẢN TRỊ DỰ ÁN», «TRUNG TÂM PHÊ DUYỆT» ở vị trí 2, click «Công việc» vào màn) + nghiệm thu ô chọn «Xem việc của» ✓ |

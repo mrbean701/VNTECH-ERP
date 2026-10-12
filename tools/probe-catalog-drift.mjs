@@ -119,6 +119,40 @@ const KNOWN_JAVA_ONLY = new Set([
   "delete_notification_config", "mark_notification_read", "mark_notification_snooze", "mark_notification_all_read",
   "supplier_materials", "supplier_material_gaps", "save_supplier_material",
   "director_pending_approvals",
+  // ⚠️ BỔ SUNG 08/10/2026 (`ERP-SESSION-04` — `BUG-D20`) — **7 action Java-only ĐÃ TỒN TẠI TỪ TRƯỚC**
+  //   nhưng ⛔ **chưa có trong danh sách này** ⇒ cổng báo **ĐỎ «CÓ trôi dạt»** ⚠️ **LỖI ĐO**, ⛔ không phải
+  //   trôi dạt thật. ⭐ VÌ SAO PHÁT HIỆN ĐƯỢC BÂY GIỜ: bộ sinh `generate-rbac-registry.mjs` từng **XOÁ** các
+  //   mục ghi tay (xem `BUG-D17`) ⇒ lúc đó `onlyRegistry` **RỖNG** ⇒ cổng **XANH GIẢ**; sau khi khôi phục
+  //   đủ 34 mục ghi tay thì cổng mới lộ đúng trạng thái **ĐỎ** ⇒ đã rà và vá danh sách.
+  //   ✅ ĐIỀU KIỆN WHITELIST (đã kiểm **TỪNG TÊN**, ⛔ không thêm mù):
+  //     ① có `Map.entry("<action>", …)` THẬT trong `ActionRbacRegistry.java` (kèm chú thích + module ánh xạ);
+  //     ② ⛔ **KHÔNG xuất hiện lần nào** trong `scripts/system-route.mjs` (ĐO: **7/7 tên = 0 lần**) ⇒ đúng Java-only;
+  //     ③ đối chiếu tổng: registry có **34** action ngoài JS = **27 đã biết + 7 tên này** (khớp tuyệt đối).
+  //   Nhóm theo phân hệ: • KHO: `save_warehouse`·`set_warehouse_status` (`inventory` + `central_warehouse`)
+  //                      • TAB «BÁO LỖI» (MỐC 110/42): `save_error_report`·`error_reports`·`mark_error_report_resolved`
+  //                      • HỢP ĐỒNG/ĐỀ NGHỊ BỔ SUNG: `manage_contract_review`·`request_supplement`
+  "save_warehouse", "set_warehouse_status",
+  "save_error_report", "error_reports", "mark_error_report_resolved",
+  "manage_contract_review", "request_supplement",
+  // ⚠️ BỔ SUNG 08/10/2026 (`ERP-SESSION-04` · theo `HANDOFF-20261009-A05` của `ERP-SESSION-01`): **6 action
+  // «MÙ QUYỀN» đã được KHAI QUYỀN** (`BUG-D22` của phiên 04 → phiên 01 vá `ActionRbacRegistry`) ⇒ chúng trở thành
+  // **Java-only MỚI** ⇒ cổng này ĐỎ 6 mục. ĐIỀU KIỆN WHITELIST (⭐ ĐÃ ĐO TỪNG TÊN — cùng chuẩn `BUG-D20`):
+  //   ① có `Map.entry("<action>", …)` THẬT trong `ActionRbacRegistry.java` (grep = **6/6 CÓ**)
+  //   ② **0 lần** trong `scripts/system-route.mjs` (grep = **6/6 = 0**) ⇒ ⛔ không thuộc danh mục sinh từ JS
+  //   Nhóm: • «REVIEW HĐ» (`dept_legal_contract_review`) 5 action • PAYLOAD PHẠM VI (`work`): `work_scope`
+  "list_contract_review", "open_contract_review", "save_contract_review",
+  "log_contract_review", "delete_contract_review", "work_scope",
+  // ⚠️ BỔ SUNG 09/10/2026 (`ERP-SESSION-04` — theo `CẬP NHẬT 82` của `ERP-SESSION-01`): **`delete_work_item`**
+  //   = action MỚI S01 thêm cho **W3** (nút «Xoá» việc của bản thân — đặc tả Công việc §1 của user) ⇒ nó là
+  //   **Java-only MỚI** ⇒ cổng này ĐỎ 1 mục (`CHƯA BIẾT: 1 → delete_work_item`) và ⚠️ **S01 ⛔ không sửa 2 tệp này**.
+  //   ĐIỀU KIỆN WHITELIST (⭐ ĐÃ ĐO, cùng chuẩn `BUG-D20` — ⛔ không thêm mù):
+  //   ① có `Map.entry("delete_work_item", …)` THẬT trong `ActionRbacRegistry.java` (dòng 371 module `[work]` +
+  //      dòng 652 capability `canEdit`) ✓
+  //   ② **0 lần** trong `scripts/system-route.mjs` (grep = **0**) ⇒ đúng Java-only ✓
+  //   ⇒ ⚠️ **NỢ CÓ TÊN (ghi rõ, ⛔ không giấu)**: đường JS (`scripts/system-route.mjs`) ⛔ **chưa có** action này
+  //      ⇒ nếu sau này chạy lại đường JS thì nút «Xoá» sẽ ⛔ không hoạt động ở đó; muốn parity thật thì phải thêm
+  //      `case "delete_work_item"` **và** giữ ngân sách `F-03` (0 dòng ròng) — ⛔ không làm lúc này để tránh đụng vùng khoá.
+  "delete_work_item",
 ]);
 
 const catalogHasExtra = onlyCatalog.length > 0;
@@ -134,7 +168,10 @@ console.log(`  Bản thi hành có thêm, CHƯA BIẾT: ${unknownJavaOnly.length
 
 const pass = !catalogHasExtra && unknownJavaOnly.length === 0;
 console.log(pass
-  ? "\nKẾT LUẬN: KHÔNG có trôi dạt ⚠️→✅ — danh mục đúng hợp đồng (sinh từ JS); 12 action Java-only\n"
+  // ⚠️ SỬA 08/10/2026 (`ERP-SESSION-04` · `BUG-D20`): câu kết luận TRƯỚC in **số CỨNG «12 action Java-only»**
+  //   trong khi ĐO ĐƯỢC là **34** ⇒ ⚠️ báo cáo SAI số (người đọc tin «12» rồi ⛔ không rà tiếp).
+  //   Nay in **SỐ ĐỘNG** lấy từ chính phép đo ⇒ ⛔ không bao giờ lệch với dữ liệu.
+  ? `\nKẾT LUẬN: KHÔNG có trôi dạt ⚠️→✅ — danh mục đúng hợp đồng (sinh từ JS); ${onlyRegistry.length} action Java-only\n`
     + "         đã được khai đầy đủ trong ActionRbacRegistry.java và ĐÚNG LÀ không thuộc danh mục."
   : "\nKẾT LUẬN: CÓ trôi dạt — cần rà lại (xem danh sách CHƯA BIẾT ở trên).");
 process.exit(pass ? 0 : 1);

@@ -45,7 +45,7 @@ public final class ProjectManagementUseCase {
     }
 
     public String createProject(Principal principal, Map<String, Object> payload) {
-        rbac.requireRole(principalAsCurrent(principal), List.of("admin"));
+        // ⛔ BỎ 09/10/2026 (Q1=A3 user chốt · HANDOFF-A13) — cổng quyền nay do TẦNG REGISTRY quyết (`project_admin` + `canCreate`, kèm "admin" để giám đốc/kế toán ⛔ vẫn 403) — dòng cũ: rbac.requireRole(principalAsCurrent(principal), List.of("admin"));
         String code = trim(payload.get("code")).toUpperCase();
         String name = trim(payload.get("name"));
         if (!CODE.matcher(code).matches() || name.isEmpty())
@@ -80,7 +80,7 @@ public final class ProjectManagementUseCase {
     }
 
     public String updateProject(Principal principal, Map<String, Object> payload) {
-        rbac.requireRole(principalAsCurrent(principal), List.of("admin"));
+        // ⛔ BỎ 09/10/2026 (Q1=A3 · HANDOFF-A13) — cổng quyền nay do TẦNG REGISTRY quyết (`project_admin` + `canEdit`) — dòng cũ: rbac.requireRole(principalAsCurrent(principal), List.of("admin"));
         String projectId = trim(payload.get("projectId"));
         String code = trim(payload.get("code")).toUpperCase();
         String name = trim(payload.get("name"));
@@ -147,7 +147,7 @@ public final class ProjectManagementUseCase {
 
     /** delete_project: chỉ dự án Đóng/Lưu trữ, require confirmCode = mã dự án, bắt buộc archive VERIFIED. */
     public Map<String, Object> deleteProject(Principal principal, Map<String, Object> payload) {
-        rbac.requireRole(principalAsCurrent(principal), List.of("admin"));
+        // ⛔ BỎ 09/10/2026 (Q1=A3 · HANDOFF-A13) — cổng quyền nay do TẦNG REGISTRY quyết (`project_admin` + `canEdit`) — dòng cũ: rbac.requireRole(principalAsCurrent(principal), List.of("admin"));
         String projectId = trim(payload.get("projectId"));
         Map<String, Object> project = store.findProjectById(projectId);
         if (project == null) throw new AuthUseCase.ApiError("Không tìm thấy dự án.", 400);

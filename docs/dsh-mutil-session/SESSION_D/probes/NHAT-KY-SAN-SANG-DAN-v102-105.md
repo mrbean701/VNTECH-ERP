@@ -1,0 +1,30 @@
+# 📋 NHẬT KÝ SẴN SÀNG DÁN — vòng 102–105 (`ERP-SESSION-04`)
+
+> ⚠️ **VÌ SAO CÓ TỆP NÀY**: 4 thay đổi mã dưới đây **chưa được ghi vào `CHANGE_LOG.md`/`BUG_HOTFIX_LOG.md`** vì
+> neo dòng trong các tệp đó **không chắc** (⚠️ tệp bị phiên khác ghi thêm nhiều lần) ⇒ ⛔ **không dám sửa mù**
+> để ⛔ tránh làm **hỏng nhật ký chính**. ⏳ **VIỆC VÒNG SAU: dán 5 dòng dưới vào cuối `CHANGE_LOG.md`.**
+
+---
+
+## A. 5 DÒNG CHO `CHANGE_LOG.md` (dán vào cuối tệp)
+
+| CHANGE_ID | DATE | SESSION | CATEGORY | MODULE | BEFORE | AFTER | REASON | FILES | IMPACT | TEST | STATUS |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| `CHG-20261008-D25` | 2026-10-08 | ERP-SESSION-04 | FEATURE (FE) | CÔNG VIỆC | Modal chi tiết: chỉ có **dòng thông báo** «Nhận xét sẽ bật sau khi backend hoàn tất…» (⚠️ **nội dung SAI** vì BE đã có handler) | **DANH SÁCH bình luận** (lọc theo `data.workItemComments`) + **Ô GỬI** gọi `add_work_item_comment` + trạng thái rỗng | ⭐ **ĐO LIVE**: `add_work_item_comment` = **HTTP 200** («Đã thêm bình luận vào CV-DA-261009-3020») + **đọc lại được** ⇒ theo luật dự án `docs/55:205` («BE xong ⇒ BẬT») | `app/screens/WorkCenter.tsx` · `tests/t13` (test `C`) | ✅ mở lại tính năng đã có BE · ⛔ không mở quyền mới · ⛔ không thêm CSS | ✅ `tsc` 0 · `t13` 17→18/18 · hồi quy FAIL 0 | **FIXED** (⏳ hiện sau rebuild) |
+| `CHG-20261008-D26` | 2026-10-08 | ERP-SESSION-04 | RBAC (FE) | CÔNG VIỆC | `WORK_DEPT_MODULE_KEYS` ⛔ **thiếu** khoá chung `work` ⇒ người chỉ có `work` ⛔ bị chặn khỏi tab «Phòng ban/ Tổ đội» | thêm **`"work"`** (giữ nguyên 4 khoá cũ) | ⭐ **chỗ thứ 3** cùng lớp lỗi `D1` (sau `system-route.mjs:509` · `app/api/files/route.ts:44`) | `app/screens/WorkCenter.tsx:171` · `tests/t13` | ✅ chỉ **MỞ THÊM** 1 khoá hợp lệ | ✅ `tsc` 0 · `t13` 18/18 | **FIXED** (⏳ sau rebuild) |
+| `CHG-20261008-D27` | 2026-10-08 | ERP-SESSION-04 | UI_UX | CÔNG VIỆC (tab) | 7 tab, có **tab riêng «Được giao»** ⚠️ **trùng nội dung** với nhóm con «Được giao» **đã có trong** tab «Danh sách công việc» | **ẨN NÚT tab** «Được giao» (⚠️ **GIỮ NGUYÊN `WORK_TABS` 7 phần tử** + giữ mã khối nội dung) + **chuyển hướng** về «Danh sách công việc» nếu menu trỏ vào tab đã ẩn | ⭐ YÊU CẦU TRỰC TIẾP CỦA USER 08/10/2026 («*Loại bỏ Tab Được giao đi, nó đã có trong tab Danh sách công việc rồi*») | `app/screens/WorkCenter.tsx` (`WORK_TABS_HIDDEN`) · `tests/t13` (test `D`) | ⚠️ **LÝ DO ⛔ KHÔNG XOÁ PHẦN TỬ**: dải tab **và** nội dung chọn theo **CHỈ SỐ** (`tab === i`) ⇒ xoá 1 phần tử ⇒ **LỆCH chỉ số** ⇒ «Phòng ban/Tổ đội»/«Giao việc»/«Dự án»/«Báo cáo» **hiện SAI nội dung** (bẫy im lặng) · 🔁 bật lại = `WORK_TABS_HIDDEN = []` | ✅ `tsc` 0 · `t13` 18/18 · `t01` 9/9 · `p5-01` 4/4 | **FIXED** (⏳ sau rebuild) |
+| `CHG-20261008-D28` | 2026-10-08 | ERP-SESSION-04 | UI_UX | CÔNG VIỆC (modal) | 2 modal (**Tạo công việc** · **Chi tiết công việc**) hiện như **thẻ bên phải, dài hết màn** ⚠️ ⛔ không căn giữa như modal các màn khác | lớp phủ 2 modal nay `position: fixed; inset: 0` + căn **giữa 2 chiều**; thân modal chi tiết giới hạn `maxHeight: 88vh; overflowY: auto` | ⭐ YÊU CẦU TRỰC TIẾP CỦA USER 08/10/2026 («*tôi muốn nó được cân chỉnh vào đúng giữa màn giống như các modal khác*») | `app/screens/WorkCenter.tsx` (2 chỗ) | ⛔ **KHÔNG sửa CSS dùng chung** (`.overlay`/`.modal`): ngân sách CSS **đã vượt trần** (1471/1076) + sẽ ảnh hưởng **mọi màn** ⇒ dùng **style nội tuyến cô lập** cho đúng 2 modal này (nhỏ · cô lập · hoàn tác được) | ✅ `tsc` 0 · `t13` 18/18 · `t07` 8/8 | **FIXED** (⏳ sau rebuild) |
+| `CHG-20261008-D29` | 2026-10-08 | ERP-SESSION-04 | RBAC | DỰ ÁN (**`Q1` ✅ ĐÓNG — user chốt `A3`**) | 3 quyền `create/update/delete_project` **admin-only**, ⛔ **không cấp được qua ma trận** | **khoá RIÊNG `project_admin`** + **1 dòng ma trận** «Quản trị dự án (tạo / sửa / xoá)» + **1 dòng `module_catalog`** (⇒ **78** khoá) + mở rộng **2 bản đồ kiểu TS** (`ModuleKey` · `titles`) | ⭐ **USER CHỐT**: «*Nếu như là quyền crud của Project thì nên thêm vào ma trận*» ⇒ chọn **A3** (⛔ **KHÔNG** A2: khoá `dept_project_plan` đang `can_create=1` ở **42 tài khoản** ⇒ sẽ **nới quyền cho 42 người**) | `lib/menu-helpers.ts` · `app/page.tsx` · `lib/ui-shared.tsx` · CSDL `module_catalog` | ⭐ **AN TOÀN: `0` tài khoản · `0` đơn vị được cấp** ⇒ hành vi hiện tại ⛔ **KHÔNG đổi** · ⚠️ **CÒN THIẾU**: gắn module cho 3 action trong `ActionRbacRegistry.java` (**phiên 01** — bản vá ở `KE-HOACH-A3-CRUD-PROJECT.md` §8) | ✅ `tsc` 0 · hồi quy **961 · 960 pass · FAIL 0** · `probe-catalog-drift` exit 0 · `probe-action-registry-coverage` exit 0 | **FIXED phần FE/CSDL** (⏳ `VERIFIED` sau khi phiên 01 áp bản vá + build + **3 phép kiểm LIVE**) |
+
+## B. 1 DÒNG CHO `BUG_HOTFIX_LOG.md`
+
+| BUG_ID | MODULE | SEVERITY | SOURCE | PROBLEM | IMPACT | ROOT_CAUSE | FIX | STATUS |
+|---|---|---|---|---|---|---|---|---|
+| `BUG-20261008-D26` | CÔNG VIỆC (UI nội dung) | `MEDIUM` (UI) | tự phát hiện khi vá `HANDOFF-D13①` | Modal chi tiết công việc hiện «*Nhận xét sẽ bật sau khi backend hoàn tất phần bình luận công việc*» + chú thích mã «*BE Java ⛔ CHƯA có handler*» ⇒ ⚠️ **CẢ HAI NAY SAI** | 🔴 **nói SAI với người dùng** + **giữ một tính năng ĐÃ SẴN SÀNG ở trạng thái TẮT** | ⚠️ Điều kiện «BE chưa port» (đúng **hôm trước**) **hết đúng** khi phiên 01 port xong, nhưng **⛔ không ai cập nhật lại FE** ⇒ **ghi chú mục nát** (lớp lỗi đã gặp **5 lần** trong đợt) | `CHG-D25` — bật lại danh sách + ô gửi; xoá dòng ⛔ sai; test `t13-C` **cấm tái xuất hiện** | ✅ **FIXED** (⏳ `VERIFIED` sau rebuild) |
+
+## C. BÀI HỌC ĐÃ GHI (nhắc lại để ⛔ không lặp)
+
+1. ⭐ **⛔ không gửi cảnh báo «lỗ hổng/lỗi» nếu CHƯA có PHÉP ĐO LIVE** — đã tự đính chính `BUG-D25` (báo động giả; giám đốc bị chặn **403**).
+2. ⚠️ **`dist` ≠ thứ đang phục vụ** (có **2** tệp `page-*.js`, chỉ **1** được phục vụ) ⇒ muốn biết «người dùng thấy gì» phải **đo trên KÊNH PHỤC VỤ** (`:8787`).
+3. ⚠️ **Tab chọn theo CHỈ SỐ** ⇒ ⛔ **không xoá phần tử** khỏi dải tab; ẩn nút + giữ chỉ số.
+4. ⚠️ **Sau khi tự nhận `RELEASED` thì ⛔ không sửa nữa** — muốn sửa phải hỏi trước (đã từng sửa FE **2 phút sau** khi phiên 01 build).

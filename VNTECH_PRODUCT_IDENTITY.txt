@@ -2,13 +2,13 @@ CÔNG TY CỔ PHẦN THƯƠNG MẠI ĐẦU TƯ PHÁT TRIỂN CÔNG NGHỆ VIỆT
 Product: VNTECH ERP – Universal Central Server Edition
 Product ID: VNTECH-KHO-MEP-001
 Version: 5.3.0
-Release: VNTECH ERP V5.3.0 MASTER BASELINE R1.1.1
+Release: VNTECH ERP V5.3.0 ALPHA TEST 2026.10
 Package: VNTECH_ERP_V5_3_0_MASTER_BASELINE_R1_1_1
-Build: 5.3.0-MASTER-BASELINE-R1.1.1-FINAL-20260908
-Source fingerprint: 7dfd3e8bea628f783de0fc5ff4dcd6343a84cf16412404ec3fc6089b1caaa053
-Fingerprint short: VNTECH-FP-7DFD3E8BEA628F78
-Brand fingerprint: a17b028d82981de533e2c3c4426ec5945709611c2daf3830a535383a663548c1
-Release fingerprint: e41f1239b83d0daa293d6a3e2ac771fc8ecfa07cf705da4b1db1c05490ac0991
+Build: 5.3.0-ALPHA-TEST-2026.10
+Source fingerprint: c37a1809d58c5856c01246ed2f03d8abac791b913ddaedc577c12180a6da32f5
+Fingerprint short: VNTECH-FP-C37A1809D58C5856
+Brand fingerprint: 8abd517e4a60164894449bf4bb9ae58abcc9333f730215354074f1d1014c0d39
+Release fingerprint: 1f7ebad29e8428cd5df00794371d810c559b368884562133a6f266eb7c51f5a3
 Trust mode: development
 License enforcement: disabled by design
 Private key: not present

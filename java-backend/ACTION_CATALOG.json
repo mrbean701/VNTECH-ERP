@@ -1,6 +1,6 @@
 {
   "generatedFrom": "D:\\13. Duong Trong Thang\\Tai lieu\\1. Du an chuan hoa quy trinh\\VNTECH_ERP_V5_3_0_MASTER_BASELINE_R1_1_1_PROJECT_NAV_FINAL_FP_FIXED_20260908\\scripts\\system-route.mjs",
-  "count": 182,
+  "count": 183,
   "actions": [
     {
       "action": "add_work_item_comment",
@@ -8,7 +8,8 @@
         "dept_plan_tasks",
         "dept_project_tasks",
         "dept_plan_assign",
-        "dept_project_assign"
+        "dept_project_assign",
+        "work"
       ],
       "capability": "canUse",
       "dispatcher": true,
@@ -90,6 +91,20 @@
       "dispatcher": true,
       "origin": "handleAction",
       "migrated": true
+    },
+    {
+      "action": "approve_work_item",
+      "module": [
+        "dept_plan_tasks",
+        "dept_project_tasks",
+        "dept_plan_assign",
+        "dept_project_assign",
+        "work"
+      ],
+      "capability": "canApprove",
+      "dispatcher": false,
+      "origin": "reserved/catalog-only",
+      "migrated": false
     },
     {
       "action": "bulk_boq_item_action",
@@ -296,7 +311,8 @@
       "action": "create_work_item",
       "module": [
         "dept_plan_assign",
-        "dept_project_assign"
+        "dept_project_assign",
+        "work"
       ],
       "capability": "canCreate",
       "dispatcher": true,
@@ -716,7 +732,8 @@
       "action": "mark_task_notification_read",
       "module": [
         "dept_plan_tasks",
-        "dept_project_tasks"
+        "dept_project_tasks",
+        "work"
       ],
       "capability": "canView",
       "dispatcher": true,
@@ -757,7 +774,8 @@
       "action": "reassign_work_item",
       "module": [
         "dept_plan_assign",
-        "dept_project_assign"
+        "dept_project_assign",
+        "work"
       ],
       "capability": "canEdit",
       "dispatcher": true,
@@ -1580,7 +1598,8 @@
       "action": "set_work_item_participant",
       "module": [
         "dept_plan_assign",
-        "dept_project_assign"
+        "dept_project_assign",
+        "work"
       ],
       "capability": "canEdit",
       "dispatcher": true,
@@ -1689,7 +1708,8 @@
       "action": "update_work_item_progress",
       "module": [
         "dept_plan_tasks",
-        "dept_project_tasks"
+        "dept_project_tasks",
+        "work"
       ],
       "capability": "canEdit",
       "dispatcher": true,
@@ -1702,7 +1722,8 @@
         "dept_plan_tasks",
         "dept_project_tasks",
         "dept_plan_assign",
-        "dept_project_assign"
+        "dept_project_assign",
+        "work"
       ],
       "capability": "canEdit",
       "dispatcher": true,

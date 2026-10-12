@@ -126,3 +126,41 @@ Shell harness hỏng: `ERR_MODULE_NOT_FOUND: Cannot find package '@deepseek-ai/d
 ⇒ Phiên 04 **⛔ chưa chạy lại cổng nào**; mọi số liệu cổng trong `docs/37`/`docs/38` là **số của phiên khác, có ngày**.
 ⇒ ⚠️ **CẢNH BÁO CHO S01/S02/S03**: khi shell chưa hồi phục thì ⛔ đừng báo «đã chạy lại cổng» — và ⛔ đừng `gd-cycle` (không chạy được).
 
+
+---
+
+## ⭐ ERP-SESSION-04 (`SESSION_D`) — CURRENT ACTIVITY (cập nhật 09/10/2026 ≈15:05, APPEND — ⛔ không sửa khối phiên khác)
+
+```text
+SESSION_ID     : ERP-SESSION-04 (SESSION_D)
+CURRENT TASK   : TASK-20261009-D48 — W4 (dải tab đọc 6 khoá work_*) + W5 (7 dòng ma trận modules[])
+CURRENT STEP   : ⏳ CHỜ BUILD FE của S01 (đã ghi RELEASED); trong lúc chờ: cập nhật structure log + đo W5
+STATUS         : WORKING — 3 việc lượt này DONE (W2 · W3 · đóng cổng drift) · 1 việc OPEN (W4/W5)
+LOCK           : app/screens/WorkCenter.tsx · lib/menu-helpers.ts · tests/** · tools/{probe-catalog-drift,audit-java-only-actions}.mjs · SESSION_D/**
+START_TIME     : 2026-10-09 ≈14:40 (lượt mới) · HEARTBEAT: 2026-10-09 15:05
+BLOCKER        : 🚧 CÓ — ⛔ không sửa app/**·lib/** cho tới khi S01 build xong (USER chốt «sau khi S01 build xong»; dist/ = 13:34:24)
+```
+
+### ⭐ PHẠM VI THẬT CỦA LƯỢT NÀY (mtime để mọi phiên đối chiếu, ⛔ đừng suy từ tên tệp)
+
+| Tệp | mtime | Ghi chú |
+|---|---|---|
+| `app/screens/WorkCenter.tsx` | **14:51:12** | ⭐ đã ghi **`RELEASED — mtime cuối 14:51:12`** cho S01 (`HANDOFF-20261009-A13`) |
+| `tests/t13-work-progress-cell.test.mjs` | **14:49:15** | +test `E` (nút «Xoá») |
+| `tests/t14-work-owner-view.test.mjs` | **14:45:20** | **MỚI** — 8 test cho W2 |
+| `tools/probe-catalog-drift.mjs` | **14:47:09** | đóng cổng ĐỎ (S01 nhờ) |
+| `tools/audit-java-only-actions.mjs` | **14:49:41** | khai `delete_work_item` (bắt buộc bởi `tests/t13` cũ) |
+| ⛔ KHÔNG chạm | — | `app/page.tsx` · `lib/**` · `scripts/**` · `java-backend/**` ⇒ ⭐ `FILES(S04) ∩ FILES(S01–S03) = ∅` |
+
+### ✅ SỐ LIỆU CHỐT (đo được, ⛔ không suy đoán)
+
+- `npm run typecheck` **EXIT 0** · `eslint app/screens/WorkCenter.tsx` **0 lỗi · 0 warning**
+- `npm run test:regression` **`970 test · 969 pass · FAIL 0 · 1 skip · exit 0`** (nền 961 ⇒ **+9**)
+- 4 cổng RBAC **exit 0**: `catalog-drift` («CHƯA BIẾT: 0») · `action-parity` («Java thiếu: 0») · `action-registry-coverage` («⛔ MÙ QUYỀN: 0») · `audit-java-only-actions` («Rủi ro: 0»)
+
+### 📌 CẦN CÁC PHIÊN BIẾT
+
+1. ⭐ **`RELEASED` cho S01** (mtime **14:51:12**) ⇒ ⛔ **từ nay S04 ⛔ không sửa FE** cho tới khi build xong (luật §80).
+2. ⏳ **W4/W5 CHỜ BUILD**: USER chốt **phương án `A` — lùi an toàn** cho dải tab (chỉ lọc tab khi tài khoản **ĐÃ CÓ ≥1 khoá `work_*`**; ⛔ chưa có ⇒ giữ nguyên **7 tab**) · ℹ️ S01 `A09` cho biết 6 khoá **đã cấp `can_view` cho 11/11 phòng + 28/28 tài khoản**.
+3. ⭐ **PHÁT HIỆN MỚI (đo được, dùng cho W5)**: `configuredModules` (`lib/workflow-helpers.ts:56`) duyệt **`modules[]`** trong `lib/menu-helpers.ts` rồi mới ghép nhãn từ `module_catalog` ⇒ **7 khoá `work_*`/`work_others` ⛔ KHÔNG dựng được DÒNG ma trận** dù đã có trong catalog + `titles` (`app/page.tsx:138-149`) ⇒ ⚠️ **ai tưởng «chỉ cần có trong `module_catalog` là xong» thì SAI** ✓
+4. ⚠️ **NỢ CÓ TÊN**: đường JS `scripts/system-route.mjs` ⛔ chưa có `case "delete_work_item"` (giữ `F-03` 0 dòng ròng) — chỉ ảnh hưởng nếu chạy lại đường JS.

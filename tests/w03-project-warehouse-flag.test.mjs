@@ -145,7 +145,12 @@ test("W-03 (5) — ĐỐI CHỨNG ÂM: KHÔNG thêm khoá `module_catalog` mới
   const keysMatch = route.match(/const MODULE_KEYS = \[([\s\S]*?)\];/);
   assert.ok(keysMatch, "Không tìm thấy `MODULE_KEYS` trong " + routePath);
   const keys = keysMatch[1].split(",").map((key) => key.trim().replace(/^"|"$/g, "")).filter(Boolean);
-  assert.equal(keys.length, 61, "Số khoá module phải GIỮ NGUYÊN 61 (baseline đo tại commit 7e93543) — không thêm khoá mới");
+  // ⚠️ CẬP NHẬT 08/10/2026 (`ERP-SESSION-04` — quyết định user, PHƯƠNG ÁN A): 61 → **62**.
+  //   ⭐ LÝ DO: user chốt «ma trận WORK ⛔ không được hardcode 2 phòng ban, phải thiết kế động» ⇒ thêm
+  //   ĐÚNG **1** khoá dùng chung `work` (`scripts/system-route.mjs:14`). ⛔ KHÔNG phải khoá của W-03.
+  //   ⚠️ ĐỐI CHỨNG ÂM của W-03 ⛔ KHÔNG bị nới: 2 khẳng định dưới vẫn cấm mọi khoá liên quan cờ tạo kho.
+  assert.equal(keys.length, 62, "Số khoá module phải là 62 (61 baseline đo tại commit 7e93543 + 1 khoá `work` theo quyết định user 08/10/2026) — ⛔ không thêm khoá nào khác");
+  assert.ok(keys.includes("work"), "Khoá `work` (quyết định user 08/10/2026) phải có trong `MODULE_KEYS`");
   assert.equal(keys.filter((key) => /warehouse/.test(key)).length, 3,
     "Số khoá liên quan kho phải giữ nguyên 3 (`warehouse_receipt`, `warehouse_issue`, `central_warehouse`)");
   assert.equal(keys.filter((key) => /create_warehouse|project_warehouse|warehouse_flag/.test(key)).length, 0,

@@ -41,7 +41,7 @@ import type { MutableRefObject, ReactNode } from "react";
 
 import { ADMIN_HELP_TEXT, TriStateCheckbox } from "@/lib/ui-shared";
 import type { AppData, Row } from "@/lib/ui-shared";
-import { normalizePermissionCaps, PERMISSION_CAPABILITIES, PERMISSION_CAPABILITY_META } from "@/app/screens/PermissionMatrix";
+import { MATRIX_HIDDEN_MODULE_KEYS, normalizePermissionCaps, PERMISSION_CAPABILITIES, PERMISSION_CAPABILITY_META } from "@/app/screens/PermissionMatrix";
 import type { PermissionCapability, PermissionEntry, PermissionState } from "@/app/screens/PermissionMatrix";
 
 type HelpTipComponent = (props: { text: string }) => ReactNode;
@@ -171,6 +171,13 @@ export default function PermissionAccessPanel({
   // ⇒ hai tập LỆCH 16 khoá (`admin_tab_01..14` + `admin` + `reports`) ⇒ tick vào ô ngoài
   // payload bị BỎ QUA khi bấm Lưu. Một hàm, hai phía, ⛔ không còn đường lệch.
   const moduleKeys = permissionMatrixKeys(data, entries);
+  // ⛔ `BUG-D19` (08/10/2026) — **2 NÚT HÀNG LOẠT ⛔ KHÔNG ĐƯỢC CHẠM KHOÁ ĐÃ ẨN KHỎI MA TRẬN**.
+  //   ⚠️ VÌ SAO: `setAll`/`setColumnAll` lặp trên `moduleKeys` (HỢP gồm cả khoá bị ẩn) ⇒ admin bấm
+  //   «□ Bỏ chọn tất cả» hoặc bỏ tick ở **checkbox ĐẦU CỘT** sẽ **GHI 0 ÂM THẦM** cho 4 khoá
+  //   `dept_plan_*`/`dept_project_*` **không còn ô nào trên màn hình để thấy** ⇒ mất quyền mà ⛔ không biết.
+  //   ✅ Nay 2 nút đó chỉ tác động **khoá ĐANG HIỆN**; ⛔ `moduleKeys` (tập gửi lên) **GIỮ NGUYÊN** ⇒
+  //   giá trị đang có của 4 khoá ẩn vẫn được gửi ⇒ ⛔ **KHÔNG mất quyền** (đúng cơ chế FULL-REPLACE).
+  const bulkKeys = moduleKeys.filter((key) => !MATRIX_HIDDEN_MODULE_KEYS.includes(key));
   const activeProjects = (data.adminProjects || []).filter((row) => row.status === "active");
 
   const permissionFor = (moduleKey: string): Row =>
@@ -209,25 +216,27 @@ export default function PermissionAccessPanel({
   };
 
   const setAll = (value: boolean) => {
-    setPermissionState(
-      Object.fromEntries(
-        moduleKeys.map((key) => [
+    setPermissionState({
+      ...permissionState,
+      ...Object.fromEntries(
+        bulkKeys.map((key) => [
           key,
           Object.fromEntries(PERMISSION_CAPABILITIES.map((cap) => [cap, value])) as Cell,
         ]),
       ),
-    );
+    });
   };
 
   const setColumnAll = (cap: PermissionCapability, value: boolean) => {
-    setPermissionState(
-      Object.fromEntries(
-        moduleKeys.map((key) => [
+    setPermissionState({
+      ...permissionState,
+      ...Object.fromEntries(
+        bulkKeys.map((key) => [
           key,
           normalizePermissionCaps(permissionState[key] || (Object.fromEntries(PERMISSION_CAPABILITIES.map((k) => [k, false])) as Cell), cap, value),
         ]),
       ),
-    );
+    });
   };
 
   const setRowAll = (moduleKey: string, value: boolean) => {
@@ -246,10 +255,13 @@ export default function PermissionAccessPanel({
   };
 
   const columnState = (cap: PermissionCapability) => {
-    const selected = moduleKeys.filter((key) => permissionState[key]?.[cap]).length;
+    // ⛔ `BUG-D19` — trạng thái 3 mức của checkbox ĐẦU CỘT phải tính trên **khoá ĐANG HIỆN** (`bulkKeys`):
+    //   nếu tính cả 4 khoá đã ẩn (vốn thường = 1 với mọi người) thì đầu cột hiện «đã chọn» ⚠️ SAI
+    //   so với những gì admin THẤY ⇒ bấm vào sẽ ghi 0 cho khoá ẩn (âm thầm) hoặc không như ý.
+    const selected = bulkKeys.filter((key) => permissionState[key]?.[cap]).length;
     return {
-      all: moduleKeys.length > 0 && selected === moduleKeys.length,
-      some: selected > 0 && selected < moduleKeys.length,
+      all: bulkKeys.length > 0 && selected === bulkKeys.length,
+      some: selected > 0 && selected < bulkKeys.length,
     };
   };
 
@@ -385,7 +397,25 @@ export default function PermissionAccessPanel({
               </tr>
             </thead>
             <tbody>
-              {entries.map((entry) => {
+              {(() => {
+                // ⭐ 09/10/2026 (`ERP-SESSION-01` · phạm vi ADMIN) — **ẨN 4 KHOÁ CŨ khỏi PHẦN VẼ**, đúng khuôn
+                //   `PermissionMatrix.tsx` (L84–86) ✓ — ⚠️ TRƯỚC ĐÂY panel vẽ THẲNG `entries` (⛔ không lọc)
+                //   ⇒ tab «Phân quyền công việc / Chức năng» vẫn hiện «CÔNG VIỆC · Phòng Kế hoạch/Phòng Dự án»
+                //   (⭐ đúng như ảnh user báo) ✓
+                //   ⛔⛔ TUYỆT ĐỐI KHÔNG lọc `entries` gốc: `permissionMatrixKeys(data, entries)` (payload gửi lên)
+                //   suy từ chính `entries` ⇒ lọc ở đó sẽ **MẤT QUYỀN ÂM THẦM** (đúng lỗi `BUG-D19`) ✓
+                //   ⇒ ⭐ lọc Ở TẦNG VẼ + bỏ luôn tiêu đề nhóm rỗng (tránh tiêu đề TRỐNG trên màn hình) ✓
+                const kept = entries.filter((entry) => entry.kind !== "module"
+                  || !MATRIX_HIDDEN_MODULE_KEYS.includes(entry.module?.key ?? String(entry.key).replace(/^module:/, "")));
+                return kept.filter((entry, index) => {
+                  if (entry.kind === "module") return true;
+                  for (let i = index + 1; i < kept.length; i++) {
+                    if (kept[i].kind === "module") return true;   // còn module ⇒ giữ tiêu đề nhóm
+                    if (kept[i].kind === entry.kind) return false; // gặp tiêu đề cùng cấp ⇒ nhóm này RỖNG
+                  }
+                  return false;
+                });
+              })().map((entry) => {
                 if (entry.kind === "group") {
                   return (
                     <tr className="permission-group-row" key={entry.key}>

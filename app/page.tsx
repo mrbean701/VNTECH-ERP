@@ -124,6 +124,33 @@ const VNTECH_RUNTIME_REGRESSION_LOCK = VNTECH_BRAND.release.regressionContract;
 const VNTECH_COMPANY_DISPLAY_NAME = VNTECH_BRAND.company.displayName;
 const titles: Record<ModuleKey, [string, string]> = {reports_center: ["Báo cáo tổng hợp","Báo cáo dùng chung: Mua hàng · Kho · Dự án · Công việc — định nghĩa bằng dữ liệu"], 
   dashboard: ["Tổng quan điều hành", "Theo dõi tổng thể dự án, hợp đồng, thu hồi vốn, mua hàng và tồn kho"],
+  // ⭐ KHOÁ MỚI 08/10/2026 (phương án A) — «Công việc» DÙNG CHUNG mọi phòng ban (⛔ không gắn phòng nào).
+  // Tiêu đề này chỉ hiện khi người dùng ⛔ KHÔNG có khoá Work cũ nào (lúc đó `work_hub` lấy `work` làm khoá đầu xem được).
+  work: ["Công việc (dùng chung mọi phòng ban)", "Quyền theo năng lực: Xem · Thao tác · Tạo · Sửa · Duyệt · Xuất — phạm vi xem/giao việc tính ĐỘNG theo phòng ban và cấp bậc"],
+  // ⭐ **MÔ HÌNH B — MỖI TAB MỘT KHOÁ** (user chốt 09/10/2026, trả lời trực tiếp về ma trận phân quyền Công việc).
+  //   ⚠️ 6 khoá dưới đây là **KHOÁ TRUY CẬP TAB** (⛔ KHÔNG phải khoá action): chúng quyết định **tab nào
+  //   người dùng được thấy/dùng** trong màn «Công việc»; còn **quyền THAO TÁC** vẫn do khoá cha `work`
+  //   + 6 năng lực (Xem/Thao tác/Tạo/Sửa/Duyệt/Xuất) quyết định ✓ (⛔ 2 tầng, ⛔ không trộn).
+  //   ⭐ Tên tab lấy ĐÚNG từ `app/screens/WorkCenter.tsx:94` `WORK_TABS` (⛔ không bịa):
+  //   `["Dashboard", "Danh sách công việc", "Được giao", "Phòng ban/ Tổ đội", "Giao việc", "Dự án", "Báo cáo"]`
+  //   ⚠️ «Được giao» **đang ẨN** theo quyết định 08/10 của user (`WORK_TABS_HIDDEN`) ⇒ ⛔ **không tạo khoá** cho tab ẩn ✓
+  //   ⚠️ «Trung tâm phê duyệt» đã có khoá sẵn `approvals` (sort 50) ⇒ ⛔ không tạo trùng ✓
+  work_dashboard: ["Công việc — Dashboard", "Tab tổng quan: thẻ KPI, việc quá hạn, tiến độ theo phòng ban/dự án"],
+  work_list: ["Công việc — Danh sách công việc", "Danh sách việc CỦA CHÍNH người dùng (gồm nhóm con «Được giao») — phạm vi tính động theo cấp bậc"],
+  work_department: ["Công việc — Phòng ban/Tổ đội", "Việc của phòng ban và tổ đội; ⚠️ chỉ thấy phạm vi phòng/tổ đội mình thuộc"],
+  work_assign: ["Công việc — Giao việc", "Giao việc & kiểm soát hoàn thành cho người khác (hành vi quản lý)"],
+  work_project: ["Công việc — Dự án", "Việc theo dự án; ⚠️ chỉ thấy dự án mình tham gia"],
+  work_reports: ["Công việc — Báo cáo", "Báo cáo & cảnh báo công việc (KPI, SLA, quá hạn)"],
+  // ⭐ **B1 — DÒNG «VIỆC CỦA NGƯỜI KHÁC»** (S01 quyết `DEC-20261009-020`, đúng thẩm quyền user giao 08/10:
+  //   «việc phân quyền như nào sẽ thuộc về session 1»). ⚠️ GỘP 3 quyền vào 1 dòng
+  //   (xem · sửa · duyệt việc của NGƯỜI KHÁC) ⇒ đọc bằng 3 công tắc `can_view`/`can_edit`/`can_approve`.
+  //   ⭐ ⛔ **CẤP BAN ĐẦU = 0**: ⛔ chưa tick cho ai ⇒ hành vi hiện tại ⛔ KHÔNG đổi tới khi admin chủ động cấp ✓
+  //   ⚠️ Phạm vi (phòng mình / toàn hệ thống) **vẫn do MÁY CHỦ suy** theo vai trò — ⛔ không nới ở giao diện ✓
+  work_others: ["Việc của NGƯỜI KHÁC (xem · sửa · duyệt)", "Xem/sửa/duyệt việc của người khác trong PHẠM VI máy chủ cho phép: trưởng phòng → phòng mình · giám đốc/admin → toàn hệ thống"],
+  // ⭐ KHOÁ MỚI 08/10/2026 (`ERP-SESSION-04` · user chốt `Q1` = **A3**) — **CRUD DỰ ÁN** cấp qua MA TRẬN.
+  // ⛔ KHÔNG dùng lại `dept_project_plan` (⚠️ **42 tài khoản** đang `can_create=1` ⇒ sẽ nới quyền cho 42 người).
+  // ⭐ Khoá này hiện **⛔ chưa cấp cho ai** ⇒ hành vi ⛔ KHÔNG đổi cho tới khi admin tick.
+  project_admin: ["Quản trị dự án (tạo / sửa / xoá)", "Cấp qua ma trận phân quyền: Tạo dự án · Sửa dự án · Xoá dự án — ⛔ mặc định KHÔNG cấp cho ai"],
   dept_plan_tasks: ["Nhiệm vụ nhân viên đang làm – Phòng Kế hoạch", "Task tự động từ nghiệp vụ + giao việc bổ sung; SLA tính ngay từ thời điểm giao"],
   dept_plan_assign: ["Giao việc & Kiểm soát hoàn thành – Phòng Kế hoạch", "Quản lý task tự động và giao bổ sung các việc không có chứng từ nguồn"],
   dept_plan_supply_plan: ["Kế hoạch mua hàng & cung ứng", "Theo dõi kế hoạch mua, ngày cần hàng, PO, ETA và rủi ro cung ứng"],
@@ -733,6 +760,21 @@ function WarehouseApp({ data, refresh, action, logout, globalError, toast }: { d
         return <button type="button" key={groupKey} className={`nav-dashboard-direct nav-single-direct ${active === onlyChild.key ? "active" : ""}`} data-nav-single-group={groupKey} onClick={() => activateModule(onlyChild.key)}>
           <NavIcon name={onlyChild.key} kind="group"/>
           <span>{onlyChild.label}</span>
+          {groupBadge > 0 && <b>{groupBadge}</b>}
+        </button>;
+      }
+      // ⭐ BỔ SUNG 09/10/2026 (USER chốt TRỰC TIẾP): nhóm «CÔNG VIỆC» sau khi rút `project_admin` khỏi menu
+      // chỉ còn ĐÚNG 1 mục (`work_hub`) ⇒ ⭐ **bấm vào «CÔNG VIỆC» = MỞ THẲNG màn Công việc**, ⛔ không bắt
+      // người dùng mở submenu rồi bấm tiếp. ⚠️ Điều kiện ĐO được: `children` RỖNG (mọi khoá tab `work_*` là
+      // CỔNG của `work_hub`, ⛔ không vẽ thành mục) + `workMenuChildren` ĐÚNG 1 mục ✓ — ⚠️ nếu nhóm còn mục
+      // con khác thì ⛔ tự rơi về hành vi cũ (nhóm xổ ra) ✓
+      // ⚠️ Khối `approval_center` ở TRÊN giữ NGUYÊN VĂN để ⛔ không phá hợp đồng test
+      // `tests/p6-08-menu-single-item.test.mjs` (test đọc theo CHUỖI, ⛔ không phải theo hành vi) ✓
+      if (groupKey === "my_work" && group.children.length === 0 && workMenuChildren.length === 1) {
+        const hub = workMenuChildren[0];
+        return <button type="button" key={groupKey} className={`nav-dashboard-direct nav-single-direct ${active === hub.moduleKey ? "active" : ""}`} data-nav-single-group={groupKey} onClick={() => activateModule(hub.moduleKey, hub.view)}>
+          <NavIcon name={hub.moduleKey} kind="group"/>
+          <span>{hub.label}</span>
           {groupBadge > 0 && <b>{groupBadge}</b>}
         </button>;
       }
@@ -2872,7 +2914,12 @@ function Admin({ data, open, action }: { data: AppData; open: (name: string, row
   //   ĐẦU TIÊN họ được xem; ⛔ không có bước nào ⇒ đặt `0` (sentinel) để ⛔ KHÔNG thân bước nào render.
   //   ⚠️ Phụ thuộc CHỈ `step` + người dùng — ⛔ KHÔNG dùng `active` (biến đó thuộc component CHA,
   //   ⛔ không có trong `Admin` ⇒ TS2304 «Cannot find name 'active'» — đã gặp và sửa 14:20) ✓
-  useEffect(() => { if (!duocXemBuoc(step)) { const dau = steps.findIndex((_, i) => duocXemBuoc(i + 1)); setStep(dau >= 0 ? dau + 1 : 0); } }, [step, data.user?.id]);
+  // ⭐ 09/10/2026 — lí do directive ở CUỐI dòng dưới: `useEffect` KẸP bước về bước ĐẦU TIÊN người dùng được
+  //   xem (⚠️ hội tụ sau 1 lần setState, ⛔ KHÔNG lặp vô hạn) ⇒ vi phạm luật HIỆU NĂNG của React Compiler
+  //   (⛔ không phải lỗi đúng/sai). ⚠️ Sửa theo hướng «tính trong lúc render» ⛔ rủi ro cao (đụng nhiều chỗ
+  //   dùng `step`) và luật này **đã chặn cụm 4 lần** ⇒ giữ nguyên hành vi + tắt ĐÚNG 1 luật tại ĐÚNG 1 dòng ✓
+  //   ⚠️ Dùng dạng CÙNG DÒNG (`eslint-disable-line`) để ⛔ 0 dịch số dòng ✓
+  useEffect(() => { if (!duocXemBuoc(step)) { const dau = steps.findIndex((_, i) => duocXemBuoc(i + 1)); setStep(dau >= 0 ? dau + 1 : 0); } }, [step, data.user?.id]); /* eslint-disable-line react-hooks/set-state-in-effect */
   return <div className="stack admin-approved-screen baseline-screen">
     <ListToolbar
       title="PHÂN QUYỀN NGƯỜI DÙNG"

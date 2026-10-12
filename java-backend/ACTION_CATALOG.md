@@ -1,7 +1,7 @@
 # ACTION CATALOG — VNTECH ERP (backend Java mục tiêu)
 
 - Nguồn: `scripts/system-route.mjs` (monolith JS — reference implementation, branch `unity`)
-- Tổng action: **182** (write dispatcher + reserved)
+- Tổng action: **183** (write dispatcher + reserved)
 - Cột `migrated` = false: action chưa được port sang Java (Strangler Fig — gateway sẽ proxy sang JS legacy).
 
 ## Theo module
@@ -185,32 +185,36 @@
 - `save_seal` — canCreate
 - `set_seal_status` — canEdit
 
-### dept_plan_assign (5)
+### dept_plan_assign (6)
 
 - `add_work_item_comment` — canUse
+- `approve_work_item` — canApprove
 - `create_work_item` — canCreate
 - `reassign_work_item` — canEdit
 - `set_work_item_participant` — canEdit
 - `update_work_item_status` — canEdit
 
-### dept_plan_tasks (4)
+### dept_plan_tasks (5)
 
 - `add_work_item_comment` — canUse
+- `approve_work_item` — canApprove
 - `mark_task_notification_read` — canView
 - `update_work_item_progress` — canEdit
 - `update_work_item_status` — canEdit
 
-### dept_project_assign (5)
+### dept_project_assign (6)
 
 - `add_work_item_comment` — canUse
+- `approve_work_item` — canApprove
 - `create_work_item` — canCreate
 - `reassign_work_item` — canEdit
 - `set_work_item_participant` — canEdit
 - `update_work_item_status` — canEdit
 
-### dept_project_tasks (4)
+### dept_project_tasks (5)
 
 - `add_work_item_comment` — canUse
+- `approve_work_item` — canApprove
 - `mark_task_notification_read` — canView
 - `update_work_item_progress` — canEdit
 - `update_work_item_status` — canEdit
@@ -317,11 +321,22 @@
 - `confirm_delivery` — canApprove
 - `receive_goods` — canCreate
 
+### work (8)
+
+- `add_work_item_comment` — canUse
+- `approve_work_item` — canApprove
+- `create_work_item` — canCreate
+- `mark_task_notification_read` — canView
+- `reassign_work_item` — canEdit
+- `set_work_item_participant` — canEdit
+- `update_work_item_progress` — canEdit
+- `update_work_item_status` — canEdit
+
 ## Toàn bộ (bảng)
 
 | action | module | capability | dispatcher | migrated |
 |---|---|---|---|---|
-| add_work_item_comment | dept_plan_tasks, dept_project_tasks, dept_plan_assign, dept_project_assign | canUse | ✅ |  |
+| add_work_item_comment | dept_plan_tasks, dept_project_tasks, dept_plan_assign, dept_project_assign, work | canUse | ✅ |  |
 | approve_central_return | central_warehouse | canApprove | ✅ | ✅ |
 | approve_construction_daily_log | construction | canApprove | ✅ | ✅ |
 | approve_po |  |  | ✅ |  |
@@ -330,6 +345,7 @@
 | approve_stock_count | stocktake | canApprove | ✅ | ✅ |
 | approve_team_production |  |  | ✅ | ✅ |
 | approve_transfer_order | inventory | canApprove | ✅ | ✅ |
+| approve_work_item | dept_plan_tasks, dept_project_tasks, dept_plan_assign, dept_project_assign, work | canApprove |  |  |
 | bulk_boq_item_action | boq | canEdit | ✅ | ✅ |
 | bulk_import_projects |  |  | ✅ | ✅ |
 | bulk_import_users |  |  | ✅ | ✅ |
@@ -351,7 +367,7 @@
 | create_stock_count | stocktake | canCreate | ✅ | ✅ |
 | create_transfer_order | inventory | canCreate | ✅ | ✅ |
 | create_user |  |  | ✅ | ✅ |
-| create_work_item | dept_plan_assign, dept_project_assign | canCreate | ✅ | ✅ |
+| create_work_item | dept_plan_assign, dept_project_assign, work | canCreate | ✅ | ✅ |
 | decide_approval | approvals | canApprove | ✅ | ✅ |
 | delete_accounting_voucher | dept_finance_documents | canEdit | ✅ | ✅ |
 | delete_advance_request | dept_finance_advance | canEdit | ✅ | ✅ |
@@ -396,11 +412,11 @@
 | issue_stock | teams, warehouse_issue | canCreate | ✅ | ✅ |
 | login |  |  | ✅ | ✅ |
 | logout |  |  | ✅ | ✅ |
-| mark_task_notification_read | dept_plan_tasks, dept_project_tasks | canView | ✅ | ✅ |
+| mark_task_notification_read | dept_plan_tasks, dept_project_tasks, work | canView | ✅ | ✅ |
 | merge_material_master | material_catalog | canEdit | ✅ | ✅ |
 | preview_material_dependencies | material_catalog | canView | ✅ | ✅ |
 | preview_request_import | requests | canCreate | ✅ | ✅ |
-| reassign_work_item | dept_plan_assign, dept_project_assign | canEdit | ✅ | ✅ |
+| reassign_work_item | dept_plan_assign, dept_project_assign, work | canEdit | ✅ | ✅ |
 | receive_central_return | central_warehouse | canApprove | ✅ | ✅ |
 | receive_goods | receiving, warehouse_receipt | canCreate | ✅ | ✅ |
 | receive_transfer_order | inventory | canApprove | ✅ | ✅ |
@@ -489,7 +505,7 @@
 | set_seal_status | dept_legal_seal | canEdit | ✅ | ✅ |
 | set_supplier_status | supplier_catalog | canEdit | ✅ | ✅ |
 | set_user_status |  |  | ✅ | ✅ |
-| set_work_item_participant | dept_plan_assign, dept_project_assign | canEdit | ✅ |  |
+| set_work_item_participant | dept_plan_assign, dept_project_assign, work | canEdit | ✅ |  |
 | settle_advance_request | dept_finance_advance | canApprove | ✅ | ✅ |
 | settle_team_subcontract |  |  | ✅ | ✅ |
 | setup |  |  | ✅ | ✅ |
@@ -501,5 +517,5 @@
 | update_project |  |  | ✅ | ✅ |
 | update_returned_request | requests | canEdit | ✅ | ✅ |
 | update_user |  |  | ✅ | ✅ |
-| update_work_item_progress | dept_plan_tasks, dept_project_tasks | canEdit | ✅ | ✅ |
-| update_work_item_status | dept_plan_tasks, dept_project_tasks, dept_plan_assign, dept_project_assign | canEdit | ✅ | ✅ |
+| update_work_item_progress | dept_plan_tasks, dept_project_tasks, work | canEdit | ✅ | ✅ |
+| update_work_item_status | dept_plan_tasks, dept_project_tasks, dept_plan_assign, dept_project_assign, work | canEdit | ✅ | ✅ |

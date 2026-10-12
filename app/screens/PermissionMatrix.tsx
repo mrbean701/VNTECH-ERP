@@ -24,6 +24,27 @@ export const PERMISSION_CAPABILITY_META: Record<PermissionCapability, { label: s
 
 export type PermissionState = Record<string, Partial<Record<PermissionCapability, boolean>>>;
 
+/**
+ * ⛔ **4 KHOÁ ẨN KHỎI MA TRẬN** (nhưng ⛔ **KHÔNG xoá** — chúng vẫn là cổng quyền THẬT của tầng UI).
+ *
+ * <p><b>QUYẾT ĐỊNH USER 08/10/2026: «ẩn»</b> — 4 khoá mang **tên 2 phòng ban**
+ * (`dept_plan_*` = Phòng Kế hoạch · `dept_project_*` = Phòng Dự án) làm ma trận bị «chia 2 phòng ban»
+ * trong khi công ty có **11 đơn vị** (`organization_units`). Nay quyền Công việc cấp qua **MỘT khoá chung
+ * `work`** (mọi phòng ban) — xem `docs/dsh-mutil-session/SESSION_D/MA TRAN_WORK_DONG_20261008.md`.
+ *
+ * <p>⚠️ <b>VÌ SAO CHỈ ẨN Ở TẦNG VẼ (⛔ KHÔNG xoá khỏi `module_catalog`):</b> `save_user_access` là
+ * **FULL-REPLACE** ⇒ khoá nào ⛔ **không gửi lên** sẽ **BỊ XOÁ**. Tập khoá GỬI ĐI
+ * (`permissionMatrixKeys`) vẫn **GIỮ ĐỦ** 4 khoá này ⇒ quyền hiện có ⛔ **KHÔNG mất**.
+ * ⛔ **TUYỆT ĐỐI** không xoá chúng khỏi `module_catalog`/`modules[]` (làm vậy = **MẤT QUYỀN THẬT**).
+ *
+ * <p>⚠️ <b>KÈM THEO BẮT BUỘC:</b> 2 nút HÀNG LOẠT (`setAll` · `setColumnAll`) phải **loại 4 khoá này ra**
+ * — nếu không, admin bấm «Bỏ chọn tất cả»/bỏ tick ĐẦU CỘT sẽ **GHI 0 cho khoá không còn ô nào trên màn
+ * hình** ⇒ **mất quyền ÂM THẦM** (xem `BUG-D19` trong `SESSION_D/BUG_HOTFIX_LOG.md`).
+ */
+export const MATRIX_HIDDEN_MODULE_KEYS: string[] = [
+  "dept_plan_tasks", "dept_project_tasks", "dept_plan_assign", "dept_project_assign",
+];
+
 /** Bật 1 quyền thì tự bật `view` (không có `view` thì các quyền khác vô nghĩa). */
 export function normalizePermissionCaps(
   current: Partial<Record<PermissionCapability, boolean>>,
@@ -57,6 +78,21 @@ export default function PermissionMatrix({ entries, state, onToggle, expiryFor, 
   expiryEditable?: boolean;
   capabilities?: PermissionCapability[];
 }) {
+  // ⛔ ẨN 4 KHOÁ CŨ khỏi PHẦN VẼ (quyết định user 08/10/2026) — lọc ở **TẦNG VẼ**:
+  //   ⛔ KHÔNG đụng `entries` (vẫn giữ nguyên) ⇒ ⛔ không đổi tập khoá nào ⇒ **zero rủi ro** cho payload.
+  //   ⚠️ Bỏ luôn DÒNG NHÓM nếu nhóm đó ⛔ không còn module nào (tránh tiêu đề nhóm TRỐNG trên màn hình).
+  const visibleEntries = (() => {
+    const kept = entries.filter((entry) => entry.kind !== "module"
+      || !MATRIX_HIDDEN_MODULE_KEYS.includes(entry.module?.key ?? String(entry.key).replace(/^module:/, "")));
+    return kept.filter((entry, index) => {
+      if (entry.kind === "module") return true;
+      for (let i = index + 1; i < kept.length; i++) {
+        if (kept[i].kind === "module") return true;   // còn module ⇒ giữ tiêu đề nhóm
+        if (kept[i].kind === entry.kind) return false; // gặp tiêu đề cùng cấp ⇒ nhóm này RỖNG
+      }
+      return false;
+    });
+  })();
   return <div className="table-wrap permission-matrix-wrap" data-vntech="permission-matrix">
     <table className="permission-matrix">
       <thead>
@@ -68,7 +104,7 @@ export default function PermissionMatrix({ entries, state, onToggle, expiryFor, 
         </tr>
       </thead>
       <tbody>
-        {entries.map((entry) => {
+        {visibleEntries.map((entry) => {
           if (entry.kind === "group") {
             return <tr className="permission-group-row" key={entry.key}><td colSpan={capabilities.length + 3}><strong>{entry.label}</strong></td></tr>;
           }

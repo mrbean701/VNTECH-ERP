@@ -140,7 +140,11 @@ const GROUP = {
   inventory: ["warehouse_receipt", "warehouse_issue", "inventory", "stocktake", "central_warehouse", "material_catalog"],
   requests: ["requests", "approvals", "purchasing", "supplier_catalog", "receiving", "delivered"],
   materials: ["material_catalog", "central_warehouse", "boq", "requests", "purchasing", "dept_project_material", "material_norms"],
-  workItems: ["dept_plan_tasks", "dept_plan_assign", "dept_project_tasks", "dept_project_assign", "site_command"],
+  // ⚠️ ĐỒNG BỘ 08/10/2026 (`ERP-SESSION-04` · `CHG-D23`): thêm **`"work"`** — đây là **BẢN SAO KỲ VỌNG** của
+  //   cổng `anyModule(view, …)` trong `BootstrapDataAdapter` (Java). Khoá chung `work` đã được thêm vào
+  //   cổng đó (quyết định user: ma trận WORK ⛔ không hardcode 2 phòng ban) ⇒ ⛔ nếu để nguyên thì probe này
+  //   sẽ báo LỆCH (⚠️ lệch do KỲ VỌNG CŨ, ⛔ không phải lỗi mã). ⛔ KHÔNG xoá 4 khoá cũ (vẫn là cổng hợp lệ).
+  workItems: ["dept_plan_tasks", "dept_plan_assign", "dept_project_tasks", "dept_project_assign", "site_command", "work"],
 };
 const LEADERSHIP_ROLE_CODES = new Set(["director", "tgd", "ptgd", "giam_doc", "pho_giam_doc", "thuky", "thu_ky_tgd"]);
 

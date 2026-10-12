@@ -438,3 +438,79 @@ Rà `docs/36` (487 dòng, phủ M1–M13): `uỷ nhiệm` · `admin_tab` · `th�
 
 ### ⑦ CỔNG KIỂM (không đổi — ⛔ không có mã sản phẩm nào bị sửa trong task này)
 Java **88/88** · FE **955 test · 954 pass · 0 fail** · `tsc` **0** · cổng UI **6/6 byte** · probe **17/17** · CSDL kho **12/5/10** · `:8787`/`:9000`/`:18081` sống ✓
+
+## TASK-20261009-001 — Khai quyền **6 action «MÙ QUYỀN»** (`HANDOFF-20261008-D14`)
+
+| Trường | Nội dung |
+|---|---|
+| **TASK_ID** | `TASK-20261009-001` · **DATE** 2026-10-09 · **SESSION_ID** `ERP-SESSION-01` |
+| **MODULE** | RBAC · PHÂN QUYỀN · **FEATURE** Review hợp đồng + Phạm vi công việc |
+| **OBJECTIVE** | Khai quyền cho 6 action ⛔ **chưa có dòng nào** trong `ActionRbacRegistry` ⇒ mọi non-admin nhận **403 kèm THÔNG ĐIỆP SAI** (lớp `P-08`) ✓ |
+| **PRIORITY** | **HIGH** (2 trong 6 action **đang được FE gọi** ⇒ chặn người dùng thật) |
+| **STATUS** | **FIXED** (mã ✅ + test ✅ + **hiện vật JAR 6/6** ✅) — ⏸ `VERIFIED` một phần (chờ probe live bằng tài khoản thật) |
+| **START** | 2026-10-09 (sau khi user giao «phối hợp cùng S4 xử lý phân quyền nhóm Công việc») |
+| **END** | 2026-10-09 13:46 (jar build lại) |
+| **IMPLEMENTATION_SUMMARY** | ① **ĐO TRƯỚC KHI GẮN MODULE** (bài học `P-08`): 6 action ⛔ **không có route JS** ⇒ ⛔ không tồn tại cổng `requireRole` để leo thang · ⛔ không nằm trong `ADMIN_ONLY_ACTIONS` · ✅ cả 6 CÓ `case` trong `SystemController` ② khai theo **TIỀN LỆ** (`manage_contract_review` → `dept_legal_contract_review`) + quy ước **XOÁ = `canEdit`** (**ĐO: 25/38** action `delete_*`) ③ `work_scope` → khoá `work` + `canView` ④ chèn ở **CUỐI 2 map** để ⛔ không dịch số dòng (`F-03`) ✓ |
+| **FILES_CHANGED** | `java-backend/application/.../rbac/ActionRbacRegistry.java` (2 map) · `java-backend/web/src/test/.../ContractReviewWorkScopeRbacTest.java` (**MỚI**, 5 ca) |
+| **RESULT** | ✅ Cổng `probe-action-registry-coverage` **EXIT 0** (`④ MÙ QUYỀN = 0` · `⑤ = 0`) · `probe-action-parity` **Java thiếu 0** · Java **102/102** · cổng `F-03` **7/7** |
+| **TEST_REFERENCE** | `TEST-20261009-018` (5 ca) · `TEST-20261009-019` (xác minh 3 tầng) · `TEST-20261009-021` (kỷ luật số dòng) |
+| **REMAINING** | 1 phép đo **LIVE** bằng tài khoản thật có module (⚠️ ⛔ không tạo tài khoản — luật `D-104`) ⇒ probe để sẵn `probes/verify-d14-live.mjs` ✓ |
+| **NEXT_ACTION** | Chờ user/S4 chạy probe ⇒ chuyển `VERIFIED` ✓ |
+
+## TASK-20261009-002 — Đổi **định danh sản phẩm** sang **`ALPHA TEST 2026.10`** + **build UI**
+
+| Trường | Nội dung |
+|---|---|
+| **TASK_ID** | `TASK-20261009-002` · **DATE** 2026-10-09 · **SESSION_ID** `ERP-SESSION-01` |
+| **MODULE** | RELEASE · DEVOPS · **FEATURE** Định danh sản phẩm / bản chạy |
+| **OBJECTIVE** | ⭐ **USER chốt phương án (d)**: build + đổi **PHIÊN BẢN SẢN PHẨM** sang **ALPHA TEST** cho khớp bộ tài liệu `DOC-ALPHA-TEST-2026.10` ✓ |
+| **PRIORITY** | **HIGH** (là điều kiện để UI mang thay đổi của các phiên ra bản chạy) |
+| **STATUS** | **DONE** (build ✅ + chạy lại ✅ + cổng UI **3/3 ĐẠT** ✅) |
+| **START / END** | 2026-10-09 (≈13:20) → 2026-10-09 **13:34** (build) / **13:37** (jar) |
+| **IMPLEMENTATION_SUMMARY** | ⭐ Mỗi bước do **CỔNG của dự án** chỉ ra (⛔ không đoán): `Source fingerprint` → `Dockerfile chưa đồng bộ định danh FULL W2` (đọc `scripts/preflight-source.mjs:250-255` ⇒ **chỉ 2 tệp** `Dockerfile` + `deploy/docker-compose.yml`) → `VNTECH_FINGERPRINT.json releaseBuild` → `Release fingerprint không hợp lệ` (⚠️ `refresh-phase-identity.mjs` **EXIT 64** ⇒ ⭐ **tự tính bằng CHÍNH thư viện dự án** `calculateReleaseFingerprint` = `1f7ebad2…`) ✓ Sửa **9 tệp phản chiếu**; ⚠️ **giữ nguyên** `packageId` + 3 dấu hợp đồng (hợp đồng byte-level của cổng) ✓ |
+| **FILES_CHANGED** | `lib/vntech-identity-data.mjs` · `VNTECH_PACKAGE_ID.txt` · `VNTECH_FINGERPRINT.json` · `VNTECH_FULL_W2_ID.txt` · `VNTECH_PRODUCT_IDENTITY.txt` · `Dockerfile` · `deploy/docker-compose.yml` · `.env.example` · `README.md` |
+| **RESULT** | ✅ `npm run build` **EXIT 0** (26 giây) · ✅ cổng UI **`✓ do-moi ✓ van-tay ✓ byte 6/6`** = «BẢN CHẠY ĐÚNG BẢN ĐÃ BUILD MỚI NHẤT» · ✅ `.local-data/warehouse.sqlite` **KHỚP** + trigger tạo lại ✓ · ✅ FE **960/959/0** · `tsc` **0** |
+| **TEST_REFERENCE** | `TEST-20261009-018` (hồi quy) · cổng `verify-ui-build-applied` (port 8787) |
+| **REMAINING** | ⚠️ **59+11 chỗ** nhãn/vân tay cũ còn lại (chủ yếu `docs/**` + `AGENTS.md`) — **chờ user quyết** (không tự sửa: `docs/**` = phạm vi S4 + báo cáo lịch sử ⛔ không viết lại) ✓ |
+| **NEXT_ACTION** | Sau khi user cho phép ⇒ đồng bộ banner (giữ nguyên báo cáo mốc cũ) ✓ |
+
+## TASK-20261009-003 — **Bác bỏ `BUG-20261008-D03`** (12 action «mồ côi») bằng phép đo 4 chiều
+
+| Trường | Nội dung |
+|---|---|
+| **TASK_ID** | `TASK-20261009-003` · **DATE** 2026-10-09 · **SESSION_ID** `ERP-SESSION-01` |
+| **MODULE** | RBAC · AUDIT · **FEATURE** Toàn cụm cổng quyền |
+| **OBJECTIVE** | S4 đề xuất giao S01 (`SHARED_TODO` §S4) ⚠️ ⇒ ⭐ **đo TRƯỚC khi sửa** (bài học `P-08`/MỐC 110 §7) ✓ |
+| **PRIORITY** | **MEDIUM** (audit — ⛔ không phải lỗi người dùng) |
+| **STATUS** | **DONE** (⛔ **0 dòng mã đổi**) |
+| **IMPLEMENTATION_SUMMARY** | Đo **4 chiều** trên từng action: ① registry module **0/12 khai** ② **`ADMIN_ONLY_ACTIONS` 12/12 CÓ** ③ **route JS `requireRole(user, ["admin"])` 12/12 CÓ** ④ `case` controller **12/12 CÓ** ⇒ ⭐ nhánh `RbacService:108-112` chạy **TRƯỚC** nhánh `required.isEmpty()` ⇒ **403 kèm THÔNG ĐIỆP ĐÚNG** ⇒ **Java = JS (CẢ HAI CHỈ ADMIN)** ✓ |
+| **FILES_CHANGED** | ⛔ **0 tệp sản phẩm** (chỉ log/registry của S01 + `SHARED_TODO` mục S01) |
+| **RESULT** | 🚫 **KẾT LUẬN**: `BUG-20261008-D03` = **BÁO ĐỘNG GIẢ** ⇒ ⛔ **không "vá" thứ đang đúng** (luật `D-106`) · đã gửi `HANDOFF-20261009-A06` đề nghị S4 đóng `CANCELLED` ✓ |
+| **TEST_REFERENCE** | `TEST-20261009-020` |
+| **REMAINING** | ⏳ Chờ S4 cập nhật trạng thái trong sổ của họ (⚠️ S01 ⛔ không tự sửa sổ phiên khác) ✓ |
+| **NEXT_ACTION** | — (đã đóng phía S01) ✓ |
+
+## TASK-20261009-034 — MENU «CÔNG VIỆC» theo yêu cầu trực tiếp của user (3 việc) — **OPEN**
+
+| **TASK_ID** | `TASK-20261009-034` · **DATE** 2026-10-09 · **SESSION** `ERP-SESSION-01` · **MODULE** MENU · **PRIORITY** HIGH (user-reported UI) |
+|---|---|
+| **OBJECTIVE** | ① bỏ «Quản trị dự án» khỏi menu Công việc ② tách «Trung tâm phê duyệt» khỏi Công việc ③ bấm «CÔNG VIỆC» mở thẳng màn Công việc |
+| **STATUS** | ① ⏳ **CHUYỂN S04** (`lib/menu-helpers.ts` — họ đang sửa ✓) · ② ✅ **ĐÃ TÁCH SẴN** (nhóm riêng `approval_center`) ⇒ chờ user hard-refresh xác nhận · ③ ✅ **S01 XONG** (`DEV-20261009-021`) |
+| **FILES** | ③ `app/page.tsx` (S01) · ① `lib/menu-helpers.ts` (S04) |
+| **TEST_REFERENCE** | `P6-08` **3/3** ✓ · `typecheck` **0** ✓ · ⚠️ `T-13` đỏ = việc đang dở của S04 ✓ |
+| **REMAINING** | S04 xong ① ⇒ `RELEASED` ⇒ S01 build lại ⇒ user nghiệm thu trên `:8787`/`:9000` ✓ |
+| **NEXT_ACTION** | theo dõi `SHARED_STATE` (S04) · ⚠️ nhắc user **Ctrl+F5** (ảnh chụp có thể là cache) ✓ |
+
+## TASK-20261009-035 — thi hành `work_others` (phương án A, user chốt) — **READY**
+| `TASK_ID` | `TASK-20261009-035` · **SESSION** `ERP-SESSION-01` · **STATUS** ⭐ **READY** (đặc tả xong, chưa sửa mã) · **DEV** `DEV-20261009-022`
+|---|---|
+| **ĐIỂM ÁP** | `BootstrapDataAdapter.java` **L1544–1595** — nhánh «chỉ việc CỦA MÌNH» (`wi.assigned_to=?`) ✓ |
+| **CÁCH ÁP** | thêm **OR EXISTS** trên `user_module_permissions` (khoá `work_others`, `can_view=1`, ⚠️ tôn trọng `permission_expires_at`) — **cùng khuôn L1586** ✓ ⇒ cấp khoá ⇒ thấy thêm **việc PHÒNG mình** (mức hẹp nhất ✓) |
+| **⚠️ ĐIỂM DỄ SAI** | thêm 1 dấu `?` ⇒ **bind đúng vị trí** (L1589 cảnh báo sẵn) ✓ |
+| **TEST** | 2 chiều (có/không khoá) + `coverage` 0 mù quyền + Java suite 0 fail ⇒ rồi build lại **jar** + restart `:18081` ✓ |
+
+## TASK-20261009-036 — Khoá hồi quy cho `BUG-20261009-D31`  ✅ DONE
+- **OBJECTIVE**: ⛔ chặn bug tái phát theo đúng cách nó đã xảy ra (⚠️ «1 component được vá, component anh em bị bỏ sót») ✓
+- **FILES**: ➕ `tests/t15-matrix-hidden-keys-render.test.mjs` (6 ca · ⛔ 0 tệp khác) ✓
+- **RESULT**: ✅ đường dương xanh · ⭐ **nghiệm thu âm 2 nửa đều ĐỎ** ⇒ guard THẬT ✓ · ✅ cổng FE 979·978·0 ✓
+- **TEST_REFERENCE**: `TEST-20261009-032` ✓ · **NEXT_ACTION**: chạy chuỗi chốt + chờ user Ctrl+F5 ✓

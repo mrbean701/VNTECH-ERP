@@ -693,3 +693,200 @@ Trước chỉ đạo, S01 đang rà 2 cổng RBAC đỏ. **Kết quả đo đã
 > 🎯 Khi user chuyển sang **«giao việc trực tiếp»** thì **nguồn chọn việc đổi hẳn** —
 > ⛔ đừng tiếp tục «công nhân tự chọn mục kế tiếp» từ backlog, ⚠️ vì như vậy là **làm việc user ⛔ không yêu cầu** và **dễ đụng vùng đã đóng** ✓
 > ⭐ Vẫn **giữ nguyên** nghĩa vụ: bug CRITICAL do user báo · sửa hậu quả do mình gây · cập nhật state/log ✓
+
+## DEC-20261009-017 — 🛑 **CHỜ USER QUYẾT: BUILD UI cần ĐỔI VÂN TAY SẢN PHẨM** (⛔ S01 không tự làm)
+
+| Trường | Nội dung |
+|---|---|
+| **DEC_ID** | `DEC-20261009-017` · **DATE** 2026-10-09 · **SESSION** `ERP-SESSION-01` · **CATEGORY** DEVOPS · RELEASE |
+| **LOẠI** | 🛑 **QUYẾT ĐỊNH CỦA USER** — S01 ⛔ **DỪNG**, ⛔ không tự áp mặc định (luật dừng-chờ-quyết-định) |
+
+### 1. VIỆC ĐANG CHẶN (đo được, ⛔ không suy đoán)
+`node tools/verify-ui-build-applied.mjs --port=8787` ⇒ **«KẾT LUẬN: BẢN CHẠY CŨ»** ⚠️
+| Phép đo | Kết quả |
+|---|---|
+| `dist/` (bản UI đang phục vụ) | **08/10 16:13:31** |
+| Mã FE sửa HÔM NAY | `app/screens/PermissionAccessPanel.tsx` **12:40:20** · `PermissionMatrix.tsx` **12:39:32** · `lib/menu-helpers.ts` **12:15** · `app/page.tsx` (**S4**) |
+⇒ 🔴 **Thay đổi giao diện phân quyền WORK của S4 ⛔ CHƯA hiện ra trên UI đang chạy** ✓
+
+### 2. VÌ SAO ⛔ KHÔNG BUILD ĐƯỢC NGAY
+`npm run build` ⇒ **EXIT 1** với cổng chặn:
+```
+Error: Source fingerprint không hợp lệ:
+   expected bb706f12024900770b0cdefd691c0a7c5d775b29fece3153ea5372d7bc424454
+   actual   aa2…            (vì mã nguồn FE đã đổi hôm nay)
+```
+⭐ Muốn build **BẮT BUỘC** chạy `tools/fixpoint-fingerprint.mjs` (chốt lại vân tay nguồn) ⇒
+⚠️ **ĐỔI VÂN TAY SẢN PHẨM** ⇒ ảnh hưởng **MỌI PHIÊN** (các cổng so vân tay/`verify-ui-build-applied`/gói phát hành phải chạy lại) ✓
+
+### 3. ⚠️ 3 PHƯƠNG ÁN (⛔ S01 không tự chọn)
+| # | Phương án | Hệ quả |
+|---|---|---|
+| **(a)** ⭐ **Cho S01 build NGAY** | Chạy `fixpoint-fingerprint` → `npm run build` → dừng **ĐÚNG** PID `scripts/local-server.mjs` → khởi động lại `:8787` → chạy lại cổng `verify-ui-build-applied` | ✅ Thay đổi phân quyền WORK (ẩn khoá cũ + 2 action mới) **hiện ra ngay** ⚠️ **đổi vân tay** ⇒ phiên khác phải chạy lại cổng · ⚠️ nếu S4 còn sửa FE ⇒ phải build lại lần nữa |
+| **(b)** **Chờ S4 dừng sửa rồi build 1 lần** | S01 chờ tín hiệu `RELEASED` từ S4 | ✅ ⛔ tránh build 2 lần ⚠️ UI vẫn là bản cũ tới lúc đó |
+| **(c)** **Giữ nguyên, ⛔ không build** | — | ✅ ⛔ không đổi vân tay ⚠️ 🔴 **thay đổi của S4 ⛔ không bao giờ hiện** trên UI ⇒ người dùng ⛔ không thấy được kết quả phân quyền mới |
+
+### 4. TRẠNG THÁI AN TOÀN (⭐ quan trọng — ⛔ không có hư hại)
+✅ `dist/` **nguyên vẹn** (08/10 16:13:31) · ✅ `:8787` (pid **14028**) **CHƯA bị dừng** · ✅ `:9000` · `:18081` sống · ✅ CSDL **12/5/10/28** ⛔ không đổi · ✅ **0 commit/push** ✓
+📌 **TÌNH TRẠNG**: `BLOCKED` — chờ user quyết (a)/(b)/(c) ✓
+
+> ⏰ **CẬP NHẬT 2026-10-09**: đã hỏi user qua kênh sk_user (kèm 4 phương án a/b/c/d) ⇒ ⛔ **HẾT THỜI HẠN 15 phút, user CHƯA trả lời** ⇒ ⭐ theo **luật dừng-chờ-quyết-định** (memory #3): S01 ⛔ **KHÔNG tự áp mặc định**, ⛔ **KHÔNG build**, ⛔ ⛔ **KHÔNG chạy ixpoint-fingerprint** ⇒ dist/ **nguyên vẹn** (08/10 16:13:31) · :8787 (pid 14028) **⛔ chưa dừng** · 3 cổng sống · CSDL **12/5/10/28** ⛔ không đổi · **0 commit** ✓ ⏳ **TÌNH TRẠNG: BLOCKED — chờ user quyết (a)/(b)/(c)/(d)** ✓
+
+## DEC-20261009-018 — ⏳ **3 VIỆC CHỜ USER QUYẾT** (S01 DỪNG vòng lặp, ⛔ không tự áp phương án mặc định)
+
+| **DEC_ID** | `DEC-20261009-018` · **DATE** 2026-10-09 · **SESSION** `ERP-SESSION-01` · **CATEGORY** COORDINATION · RELEASE |
+|---|---|
+| **BỐI CẢNH** | Việc user giao (**phân quyền nhóm «Công việc» + phối hợp S4**) ⭐ **ĐÃ XONG & ĐÃ ĐO**: `CHG-20261009-012` (6 action) · `DEV-20261009-011` (định danh **ALPHA TEST** + **build EXIT 0** + cổng UI **3/3 ĐẠT**) · **102/102 Java** · **959/958/0 FE** · `tsc` 0 ✓ |
+| **LUẬT ÁP DỤNG** | ⭐ **Luật dừng-chờ-quyết-định** (user chốt 2026-10-09): chạm **quyết định của user** ⇒ **DỪNG** vòng lặp goal, ⛔ **không tự áp phương án mặc định** rồi chạy tiếp ✓ |
+
+### ⏳ 3 VIỆC CHỜ QUYẾT (⚠️ mỗi việc S01 ⛔ **không tự quyết** — có lý do cụ thể)
+| # | Việc | Vì sao **phải** chờ user | Phương án S01 đề xuất |
+|---|---|---|---|
+| **1** | **Đồng bộ nhãn sản phẩm ở banner `docs/**` (59 chỗ) + `AGENTS.md`** sang `ALPHA TEST 2026.10` | ⚠️ `docs/**` = phạm vi **`ERP-SESSION-04`**; `AGENTS.md` = **tệp GOAL/điều lệ** của CẢ cụm; ⚠️ **11 chỗ vân tay cũ** nằm trong **báo cáo LỊCH SỬ** ⇒ ⛔ không được viết lại lịch sử (luật `D-105`) | ⭐ **Đồng bộ banner** (nhãn «Sản phẩm:») nhưng ⛔ **GIỮ NGUYÊN** các báo cáo mốc cũ (R1.1.1/CLEANUP…) ✓ |
+| **2** | **`MANIFEST_SHA256.txt` lệch** ⇒ `npm run test:release-static` **EXIT 1** | ⚠️ Tệp **git-tracked** = **sổ sách PHÁT HÀNH**; ⭐ **ĐO ĐƯỢC: ⛔ không phải do S01** (tệp bị lệch có mtime **26/09**, manifest **01/10** ⇒ **nợ cũ**) | ⭐ Làm mới manifest bằng **công cụ dự án** (`scripts/generate-release-manifest.mjs`) **sau khi** chốt có build lại jar không ✓ |
+| **3** | **`docs/38 §7` — module nào cho CRUD DỰ ÁN** (chặn `T-05` mà S4 giao S01) | ⚠️ Đây là **quyết định NGHIỆP VỤ/quyền** (ai được tạo/sửa/xoá dự án) — ⛔ S01 ⛔ không tự chọn module | ⭐ Chờ user trả lời 5 câu trong `docs/38` §7 ⇒ S01 thi hành `T-05` (`ActionRbacRegistry` + `update_project` `canUse→canEdit`) ✓ |
+
+### ✅ 2 VIỆC S01 ĐÃ CHỐT **KHÔNG** LÀM (⛔ để ⛔ không sinh nợ giả)
+- 🚫 **`BUG-20261008-D03`** (12 action «mồ côi») = **BÁO ĐỘNG GIẢ** — đo 4 chiều **12/12** (`ADMIN_ONLY_ACTIONS` có · route JS `requireRole(["admin"])` có · `case` có · registry 0/12) ⇒ ⭐ **Java = JS** ⇒ ⛔ **0 dòng mã đổi** ✓ (bằng chứng `TEST-20261009-020`, đã gửi `HANDOFF-20261009-A06` đề nghị S4 đóng `CANCELLED`) ✓
+- ⚠️ **`tools/probe-catalog-drift.mjs` EXIT 1** — ⛔ **không sửa vì là tệp của `ERP-SESSION-04`** (đã gửi `HANDOFF-20261009-A05` kèm **6 tên** + bằng chứng: 6 action Java-only mới) ✓
+
+### 📌 TRẠNG THÁI CUỐI LƯỢT (đo được — ⛔ không suy diễn)
+`:8787` **17980** · `:9000` **5584** · `:18081` **22264** (health 200) · nhãn sản phẩm **`VNTECH ERP V5.3.0 ALPHA TEST 2026.10`** · vân tay **`VNTECH-FP-C37A1809D58C5856`** · cổng UI **3/3 ĐẠT** · **⛔ 0 commit** (71 tệp chưa commit — đúng luật user) ✓
+
+## DEC-20261009-019 — 🛑 **CHỜ USER CHỐT MÔ HÌNH MA TRẬN «CÔNG VIỆC»** (sau khi đã thi hành phần quyền truy cập)
+
+| **DEC_ID** | `DEC-20261009-019` · **DATE** 2026-10-09 (≈14:12) · **SESSION** `ERP-SESSION-01` · **CATEGORY** RBAC · UI_UX |
+|---|---|
+| **ĐÃ THI HÀNH (⛔ không cần chốt)** | ✅ `create_self_work_item` thêm khoá `work` (registry) · ✅ `work` cấp **can_view** cho **11/11 phòng ban** + **28/28 tài khoản hoạt động** ⇒ ⭐ **«mọi user truy cập được Công việc»** đã ĐÚNG ở tầng dữ liệu ✓ |
+| **🛑 CHỜ CHỐT (ảnh hưởng cả `ERP-SESSION-04`)** | ⚠️ User yêu cầu ma trận *«phù hợp với **từng tab, từng chức năng** trong Công việc»* ⇒ có **2 mô hình**, ⛔ tôi **không tự chọn** ✓ |
+| **Mô hình A — 1 khoá + 6 năng lực (ĐANG CÓ)** | Ma trận hiện **1 dòng «Công việc (dùng chung mọi phòng ban)»** với 6 ô: Xem · Thao tác · Tạo · Sửa · Duyệt · Xuất ⇒ ✅ **đơn giản, dữ liệu đã sẵn**, ⛔ không cần migration ⚠️ nhưng **⛔ không tách được quyền theo TỪNG TAB** (ví dụ «được xem Báo cáo nhưng ⛔ không được Giao việc») ✓ |
+| **Mô hình B — khoá riêng cho TỪNG TAB/CHỨC NĂNG** | Tạo khoá mới cho từng tab Công việc (đo từ `WorkCenter`: «**Danh sách công việc**» · «**Được giao**» (đang ẩn) · «**Phòng ban/Tổ đội**» · «**Giao việc**» · «**Dự án**» · «**Báo cáo**» · «**Trung tâm phê duyệt**») ⇒ ⭐ **đúng nguyên văn** yêu cầu user ✓ ⚠️ nhưng cần: `module_catalog` mới + `ActionRbacRegistry` (LOCK S01) + ma trận UI (S4) + cấp quyền lại ✓ |
+| **ĐỀ XUẤT CỦA S01** | ⭐ **Mô hình B** (đúng yêu cầu «từng tab, từng chức năng») — ⚠️ nếu chọn B, S01 đề nghị **giữ `work` làm khoá CHA** («truy cập nhóm Công việc» = mọi user ✓) + **7 khoá con** cho 7 tab ✓ ⇒ ⛔ không phá quyền hiện có và ⛔ không mở rộng quá mức ✓ |
+
+### ✅ CẬP NHẬT `DEC-20261009-019` — **USER ĐÃ CHỐT: MÔ HÌNH B** (2026-10-09 ≈14:20)
+> Trả lời trực tiếp: **«B — mỗi TAB 1 khoá riêng»** ✓ ⇒ ⭐ **S01 đã thi hành xong phần DỮ LIỆU** (`TEST-20261009-024` · `CHG-20261009-014`): 6 khoá tab + cấp `can_view` cho 11 phòng/28 tài khoản + 6 nhãn ở `app/page.tsx` ✓ ⏳ Còn: dải tab `WorkCenter.tsx` + hiển thị ma trận (**phạm vi ERP-SESSION-04**, `HANDOFF-20261009-A09`) + **build** (đang chờ `RELEASED`) ✓
+
+## DEC-20261009-020 — ⭐ **S01 QUYẾT MÔ HÌNH QUYỀN CÔNG VIỆC** (đúng thẩm quyền user giao 08/10) — **B1 + `canEdit` cho xoá**
+
+| **DEC_ID** | `DEC-20261009-020` · **DATE** 2026-10-09 (≈14:30) · **SESSION** `ERP-SESSION-01` · **CATEGORY** RBAC |
+|---|---|
+| **THẨM QUYỀN** | ⭐ **Nguyên văn user (08/10/2026, ghi tại `SESSION_D/probes/KE-HOACH-PHAN-QUYEN-CONG-VIEC.md` §3)**: *«việc **phân quyền** như nào sẽ thuộc về **session 1** hãy làm công việc của mình theo đặc tả tôi vừa gửi»* ⇒ ⭐ **S01 quyết B1/B2 và công tắc xoá**; **S04 làm phần chức năng** ✓ |
+| **ĐÃ CHỌN** | ⭐ **(A) = B1** (thêm **1 dòng ma trận** `work_others` = «Việc của NGƯỜI KHÁC (xem · sửa · duyệt)») ⇒ ⛔ **KHÔNG đổi lược đồ CSDL** · ⛔ **KHÔNG migration** · ⭐ đúng cách đã làm cho `work` và `project_admin` ✓ · ⭐ **(B) = `canEdit`** cho XOÁ việc của bản thân (⛔ không thêm `canDelete`) ✓ |
+| **⚠️ VÌ SAO ⛔ KHÔNG CHỌN B2** | B2 cần **4 cột capability mới** (`canViewOthers`/`canEditOthers`/`canApproveOthers`/`canDeleteOwn`) ⇒ 🔴 **đổi lược đồ + migration `drizzle`** ⇒ ⚠️ **đổi vân tay gói** giữa GO-LIVE khi đang có **lệnh đóng băng build** ⇒ ⚠️ rủi ro ⛔ không tương xứng; ⭐ B1 **diễn đạt ĐỦ** đặc tả user (2 vế «của bản thân» / «của người khác»), B2 chỉ **chi tiết hơn** ⇒ ⭐ **ghi lại làm nợ có tên** nếu user muốn tách rời từng quyền sau này ✓ |
+| **CÁCH THI HÀNH (ai làm gì)** | 📤 **S01**: ① khai `work_others` trong `module_catalog` (đã làm) + nhãn ma trận `app/page.tsx` ② **action mới `delete_work_item`** (Java `SystemController`+use-case+registry, capability **`canEdit`**, ⛔ chỉ xoá việc **DO MÌNH tạo**, ⛔ không xoá việc đã `COMPLETED`) ③ **cưỡng chế `work_others`** trong use-case (phạm vi vẫn do máy chủ suy ✅ §5.1 của S04) ④ test + giữ `probe-action-registry-coverage` **exit 0** ✓ — 🔹 **S04**: đường JS nếu cần parity, nút «Xoá» UI (W3), khối «xem việc người khác» (W2), ma trận UI ✓ |
+| **⚠️ RÀNG BUỘC ĐÃ CAM KẾT VỚI S04** (`§5` kế hoạch của họ) | ⛔ **cấp ban đầu = 0** cho `work_others` (⛔ không tick sẵn cho ai ⇒ hành vi hiện tại ⛔ không đổi) ✓ · ⛔ không nới quyền ở giao diện ✓ · ⛔ không CSS dùng chung ✓ · mọi tuyên bố phải kèm **phép đo** ✓ |
+
+## DEC-20261009-021 — ⚠️ **CHỜ USER QUYẾT: khoá `work_others` (B1) THI HÀNH THẾ NÀO?** — ⛔ S01 KHÔNG tự siết quyền
+
+**Bối cảnh ĐO được (09/10/2026 ≈15:40)**:
+- ⭐ Khoá `work_others` **đã có**: 1 dòng ma trận (`lib/menu-helpers.ts` — S04) + 1 dòng `ActionRbacRegistry` (**L368**, S01) + `module_catalog` (S01) · ⚠️ **cấp ban đầu = 0** ✓
+- ⚠️ **NHƯNG backend ⛔ CHƯA thi hành khoá này**: «việc của NGƯỜI KHÁC» hiện do **`WorkScopeService.scopeOf(userId, role)`** quyết theo **VAI TRÒ/CẤP BẬC**, ⛔ không theo ma trận:
+  `Kind.SELF` (nhân viên) · `Kind.DEPARTMENT` (trưởng phòng, `level_rank ≥ 30`) · `Kind.COMPANY` (phó GĐ `≥ 35` + giám đốc) ⇒ `canViewDepartmentWork = kind != SELF` ✓
+- ⛔⛔ **RỦI RO NẾU SIẾT MÙ**: khoá đang **cấp 0** ⇒ nếu bắt buộc phải có khoá mới xem được việc người khác thì **MỌI trưởng phòng + phó GĐ + giám đốc MẤT quyền đang có** ⇒ ⭐ S01 **DỪNG, ⛔ không tự quyết** (luật: chạm quyết định của user ⇒ chờ user) ✓
+
+**3 PHƯƠNG ÁN ĐỂ USER CHỌN**:
+| # | Phương án | Ảnh hưởng |
+|---|---|---|
+| **A** | ⭐ **CỘNG THÊM** (khuyến nghị): giữ nguyên phạm vi theo vai trò; khoá `work_others` = **cấp THÊM** cho người cần xem việc người khác ngoài phạm vi vai trò | ✅ ⛔ **0 phá vỡ** hành vi hiện tại · ✅ an toàn go-live · ⚠️ cần 1 luật rõ ở use-case (hợp của 2 nguồn) |
+| **B** | **THAY THẾ**: chỉ ai có khoá mới xem được việc người khác (bỏ phạm vi vai trò) | ⚠️ **PHẢI cấp bù NGAY** cho mọi trưởng phòng/phó GĐ/giám đốc (⚠️ dữ liệu: nhiều tài khoản) + migration ⇒ ⚠️ rủi ro go-live |
+| **C** | **GIỮ NGUYÊN (khoá để trống)**: khoá tồn tại trong ma trận nhưng ⛔ chưa thi hành | ✅ 0 rủi ro · ⚠️ admin tick cũng ⛔ chưa có tác dụng ⇒ **nợ có tên** (⚠️ nửa vời nếu user tưởng tick là có quyền) |
+
+**TRẠNG THÁI**: ⏸ **DỪNG vòng lặp goal chờ user quyết** (đúng luật dừng-chờ-quyết-định) ✓ ⛔ S01 ⛔ **KHÔNG** tự áp phương án nào ✓
+
+## DEC-20261009-022 — 📐 **ĐỀ XUẤT PHÂN TẦNG QUYỀN MODULE «CÔNG VIỆC»** (user yêu cầu đề xuất 09/10/2026)
+
+**USER NGUYÊN VĂN**: «*Ma trận phân quyền đang sai, tôi vẫn thấy ghi chú quyền Công việc -> phòng dự án, phân quyền phải theo tab (chức năng). Hiện tại module Công việc đang có 6 tab, cần ít nhất 6 quyền theo 6 tab này, ngoài ra các tab Danh sách công việc và Phòng ban/tổ đội mỗi tab còn 2 tab con nữa xem xét từ đặc tả hệ thống hãy đề xuất cho tôi những sub tab này có cần phân quyền rõ ràng hay không hay là check theo chức vụ*»
+
+**⚠️ NGUYÊN NHÂN «MA TRẬN SAI» — ĐO ĐƯỢC (⛔ không suy đoán)**: 4 khoá **CŨ theo PHÒNG** vẫn **sinh dòng ma trận** kèm `subGroup` «Phòng Kế hoạch» / «Phòng Dự án»:
+`dept_plan_tasks` (sort 10) · `dept_project_tasks` (20) · `dept_plan_assign` (30) · `dept_project_assign` (40) — ⚠️ chúng **đã bị ẩn khỏi MENU** (`legacyWorkMenuKeys`) nhưng **⛔ CHƯA bị ẩn khỏi MA TRẬN** (ma trận đọc `configuredModules` ⇒ ⛔ không qua bộ lọc menu) ✓
+
+**📐 ĐỀ XUẤT PHÂN TẦNG (3 tầng)**:
+| Tầng | Cơ chế | Trạng thái |
+|---|---|---|
+| **① TAB (chức năng)** | **6 khoá ma trận** = 6 tab: `work_dashboard` · `work_list` · `work_department` · `work_assign` · `work_project` · `work_reports` | ✅ **ĐÃ CÓ** (09/10/2026 · Mô hình B · cấp `can_view` cho 11 phòng/28 tk) |
+| **② PHẠM VI DỮ LIỆU** (xem việc ai) | ⭐ **THEO CHỨC VỤ/CẤP BẬC** — ⛔ KHÔNG cấp qua ma trận: nhân viên = việc mình · trưởng phòng (cấp ≥30) = **phòng mình** · phó GĐ (≥35)/giám đốc = **mọi phòng** (`WorkScopeService`) | ✅ **ĐANG CHẠY** (⛔ không đổi) |
+| **③ SUB-TAB** | ⭐ **Phân loại theo BẢN CHẤT** (xem bảng dưới) | 📐 **ĐỀ XUẤT** |
+
+**③ SUB-TAB — ĐỀ XUẤT CỤ THỂ (đo từ mã, ⛔ không bịa)**:
+| Sub-tab (đo được) | Bản chất | ⭐ ĐỀ XUẤT |
+|---|---|---|
+| «Của tôi» · «Đã giao» (tab *Danh sách công việc* — `PERSONAL_GROUPS`) | ⭐ **CHỈ dữ liệu CỦA CHÍNH MÌNH** (việc mình làm · việc mình giao) | ⛔ **KHÔNG khoá riêng** — ai vào được tab (`work_list`) thì thấy cả 2 nhóm ✓ |
+| «**Theo người**» (cách xem thứ 2 của tab *Danh sách* — `W2`) | ⚠️ **XEM DỮ LIỆU NGƯỜI KHÁC** | ✅ **DÙNG khoá `work_others`** (⭐ đúng bản chất B1 · theo **phương án A** user vừa chốt) ⇒ xem được nếu **(trong phạm vi chức vụ) HOẶC (được cấp `work_others`)** ✓ |
+| «Việc phòng ban của tôi» · «Việc của tổ đội tôi tham gia» (tab *Phòng ban/ Tổ đội* — `deptTab`) | ⭐ **2 LÁT CẮT của CÙNG một phạm vi ĐƯỢC PHÉP** (server đã thu hẹp ✓) | ⛔ **KHÔNG khoá riêng** — **theo chức vụ/phạm vi** ✓ (⚠️ cấp khoá riêng ⇒ phải cấp đủ cho mọi trưởng phòng ⇒ phình + dễ chặn oan ✓) |
+| Kanban / Cây («chế độ xem», đang tạm ẩn) | Chỉ là **cách hiển thị** cùng dữ liệu | ⛔ **KHÔNG** |
+
+**⭐ CHỐT ĐỀ XUẤT**: **6 khoá TAB + 1 khoá `work_others` = 7 khoá** ✓ ⛔ **không** thêm khoá cho sub-tab nội bộ ✓ ➕ **XOÁ 4 DÒNG CŨ theo phòng** khỏi ma trận ✓ (⚠️ ⛔ **KHÔNG xoá khai báo** — chúng còn dùng ở nơi khác; chỉ **⛔ không render thành dòng ma trận** ✓)
+**CHỜ USER XÁC NHẬN** trước khi thi hành (⚠️ đổi cấu trúc ma trận = quyết định của user) ✓
+
+## DEC-20261009-023 — ⛔ **RÚT ĐỀ XUẤT ĐỔI NHÃN DÒNG `work`** (đo được: sẽ phá 2 test — ⛔ không đáng)
+
+**Bối cảnh**: S01 từng đề xuất (trong `HANDOFF-A18`) đổi nhãn dòng ma trận `work` từ «Công việc (mọi phòng ban)» thành «Công việc — Quyền thao tác (tạo / sửa / xoá việc)» ✓
+**⚠️ ĐO ĐƯỢC TRƯỚC KHI LÀM (⭐ đúng luật: ĐO rồi mới sửa)**:
+- ⚠️ `tests/t13-work-progress-cell.test.mjs` **L301**: `assert.match(sql, /'work','Công việc \(mọi phòng ban\)'/)` ⇒ khoá **chuỗi SQL** ✓
+- ⚠️ cùng tệp **L380**: `assert.match(menuHelpers, /\{ key: "work", label: "Công việc \(mọi phòng ban\)",/)` ⇒ khoá **chuỗi mã** ✓
+- ⇒ đổi nhãn phải sửa **3 nơi**: `lib/menu-helpers.ts:47` (tệp dùng chung của S04) + `module_catalog.label` (CSDL) + **`tests/t13` (tệp test của S04)** ✓
+**⛔ QUYẾT ĐỊNH: RÚT ĐỀ XUẤT** — ① nhãn «mọi phòng ban» là **QUYẾT ĐỊNH CÓ CHỦ Ý của user 08/10** (phương án A: khoá dùng chung mọi phòng ban) ⛔ **không phải lỗi** ✓ ② lợi ích chỉ là **làm rõ nhãn** ⇒ ⛔ **không xứng** với rủi ro chạm tệp dùng chung + test của phiên khác (luật §41 SAFE·SMALL·ISOLATED·REVERSIBLE) ✓
+**⚠️ BÀI HỌC (lần 3 trong ngày)**: «cải tiến» suy đoán **đều bị ĐO bác bỏ** — ① `MATRIX_HIDDEN_MODULE_KEYS` (**đã đúng sẵn**) ② banner tài liệu (**đã đồng bộ sẵn**) ③ đổi nhãn `work` (**sẽ phá 2 test**) ⇒ ⭐ **LUẬT TỰ ÁP: mọi «việc nên làm» phải qua ĐO trước khi mở tệp** ✓
+
+## DEC-20261009-024 — ⛔ **KẾT LUẬN «KHÔNG PHẢI BUG» có BẰNG CHỨNG**: ma trận ⛔ không có dòng module `admin` là **ĐÚNG THIẾT KẾ**
+
+**Nguồn nghi vấn**: header của `tools/_probe-matrix-rows.mjs` hỏi «ma trận có DÒNG để cấp module `admin` («Danh mục & phân quyền») — thứ mà menu «QUẢN TRỊ HỆ THỐNG» đòi — hay không?» và probe tự trả lời **⛔ KHÔNG** ✓ ⇒ ⚠️ S01 điều tra (phạm vi ADMIN ✓)
+
+**⚠️ 2 CẢNH BÁO GIẢ ĐÃ TỰ GỠ BẰNG ĐO (⭐ không sửa gì cả)**:
+① ⚠️ «Số dòng trong probe LỖI THỜI»: probe trỏ `app/page.tsx:486-487` — nay là chú thích tab «Dashboard» của Công việc ⛔ **không liên quan** (tệp đã dài thêm ✓) ⇒ ⛔ **không suy ra bug từ số dòng cũ** ✓
+② ⚠️ «21 dòng `user_module_permissions.module_key='admin'` có bị XOÁ khi lưu (lớp `BUG-D19`)?» ⇒ ✅ **KHÔNG**: `permissionMatrixKeys` (`PermissionAccessPanel.tsx` L110–117) dựng payload = **`data.moduleCatalog`** ∪ `entryKeys` ⇒ ⭐ **`admin` VẪN nằm trong tập GỬI LÊN** ✓ (⛔ không phải suy từ `entries` ✓)
+
+**📏 BẰNG CHỨNG ĐO ĐƯỢC**:
+| Câu hỏi | Kết quả |
+|---|---|
+| Java có cưỡng chế khoá `admin`? | ⛔ **KHÔNG** — `"admin"` xuất hiện **3 lần ở vị trí GIÁ TRỊ**, cả 3 là **danh sách VAI TRÒ** `List.of("project_admin","admin")` (`create_project` L93 · `delete_project` L139 · `update_project` L326 — ⭐ chính 3 dòng S01 vá hôm nay ✓) ⇒ **⛔ không action nào gắn module `admin`** ✓ |
+| FE có dùng module `admin` làm cổng? | ⛔ Không (chỉ `page.tsx:3001` trong modal dự án) ✓ |
+| Menu «QUẢN TRỊ HỆ THỐNG» gate bằng gì? | ⭐ `systemAdminMenuVisible = isAdminUser(user) \|\| hasAnyAdminGroupPermission` (`page.tsx` L537 ✓) ⇒ **VAI TRÒ `admin`** hoặc **≥1 khoá `admin_tab_NN`** (14 khoá **CÓ** trong ma trận ✓) ✓ |
+| `admin` có trong `module_catalog`? | ✅ CÓ (`Danh mục & phân quyền` · group `system_admin` · sort 10 ✓) ⇒ ⭐ bị **loại CHỦ Ý** khỏi dòng ma trận (`page.tsx:311` `filter((item)=>item.key!=="admin")` ✓) ✓ |
+
+**📌 GHI NHẬN THÊM (⚠️ vô hại — ⛔ S01 KHÔNG tự xoá, chờ user nếu muốn dọn)**: 21 dòng cấp `admin` trong CSDL **toàn bộ là tài khoản TEST**: `probe_grant1_*` ×17 (10 cái `active=0`) · `probe_permsave_*` ×2 · `e2e.bgd` · `e2e.kh` · `giamdoc.demo` (3 tài khoản test — quyền **vô hiệu** vì khoá ⛔ không phải cổng nào) · `hrm` (0 hết) ✓
+
+**⭐ GIÁ TRỊ CỦA LƯỢT NÀY**: điều tra **đóng một nghi vấn bằng bằng chứng**, ⛔ **không «sửa» một thứ vốn đã đúng** (⚠️ đúng bài học bị lặp nhiều lần trong ngày: **đo trước, kết luận sau**) ✓
+
+## DEC-20261009-026 — ⏸ **CHỜ USER CHỌN**: xử lý «quản trị bị mù» với **4 khoá cũ đã ẩn** (168 quyền `department_default` còn hiệu lực)
+
+**BỐI CẢNH (đo được, `TEST-20261009-041`)**: ⭐ 4 khoá `dept_plan_tasks` · `dept_project_tasks` · `dept_plan_assign` · `dept_project_assign` **⛔ KHÔNG chết** — chúng gate **8 action** trong `ActionRbacRegistry.java` (`create_work_item` · `approve_work_item` · `add_work_item_comment` · `update_work_item_progress` · `reassign_work_item` · `create_self_work_item` · `set_work_item_participant` · `mark_task_notification_read`) và CSDL có **168 dòng** cấp **tự động theo phòng ban** (`permission_source='department_default'` ✓).
+
+**ĐÃ KIỂM (⛔ KHÔNG mất dữ liệu)**: lưu ma trận chỉ xoá **`manual_override` theo từng khoá** ⇒ 168 dòng `department_default` **⛔ không bị chạm** ✓ · ⛔ **không bypass** (registry vẫn enforce ✓) · ✅ đã có cơ chế **HỢP** từ `BUG-20261008-014` ✓.
+
+**HỆ QUẢ CÒN LẠI**: admin **⛔ không nhìn/thu hồi** 168 quyền đó trong ma trận ⇒ **quản trị bị «mù» một phần** ✓ (⚠️ hệ quả của quyết định «ẩn» của user — ⛔ S01 không tự sửa ✓).
+
+**3 PHƯƠNG ÁN**: **(A)** ⭐ *giữ ẩn* + **1 dòng ghi chú/tổng đếm** trong tab (0 rủi ro, làm ngay) · **(B)** thêm **nút «Hiện khoá cũ»** (mặc định vẫn ẩn, sửa `PermissionAccessPanel` — tệp S01 ✓) · **(C)** bỏ hẳn 4 khoá khỏi RBAC thủ công ⇒ ⚠️ **lớn, ⛔ không nên trong ALPHA** ✓.
+
+**KHUYẾN NGHỊ S01**: ⭐ **(A)** ✓ — ⏸ **chờ user chọn** ✓
+
+## DEC-20261009-027 — ⏸ **CHỜ USER QUYẾT**: vai trò **`accountant` (kế toán) và `director` (giám đốc) đi qua MỌI danh sách quyền** (trừ action `admin`) — có giữ nguyên không?
+
+**BẰNG CHỨNG (đo được, `TEST-20261009-042` + đọc mã)**:
+* `java-backend/.../rbac/RbacService.java` **L98–99**: `isCompanyLeadership(user)` = `List.of("director", "accountant").contains(user.role())` ✓
+* **L115**: `if (isCompanyLeadership(user) && !required.contains("admin")) return;` ⇒ ⭐ **đi qua mọi action** ✓
+* ⭐ **Đo thật trên hệ thống ĐANG CHẠY**: tài khoản `kttdemo` (`role=accountant`) gọi `approve_work_item` và `delete_work_item` ⇒ **⛔ KHÔNG bị 403** (trong khi `ksda.demo` `role=ksda` và `nvkhdemo` `role=kh_nv` **bị 403** ✓) ⇒ ⭐ **hành vi được xác nhận trên bản chạy** ✓
+* ⭐ **Mã tự ghi chú** (`RbacService` L79–80): «*`RbacService` cho **`director`/`accountant`** đi qua **mọi** danh sách không chứa `"admin"` (nhánh `isCompanyLeadership`) ⇒ ⛔ chưa khớp với route JS*» ⇒ ⭐ **port «nguyên trạng» từ bản JS cũ**, ⛔ **không phải lỗi mới** ✓
+
+**VÌ SAO CẦN QUYẾT**: ⚠️ với ERP thật, «**kế toán**» là vai trò **nghiệp vụ văn phòng** ⛔ không phải ban lãnh đạo ⇒ ⭐ việc kế toán **duyệt/xoá được công việc của mọi phòng** là **rủi ro phân quyền** (⚠️ §20 «AUTHORIZATION» — ⚠️ mức **MEDIUM–HIGH về chính sách**, ⛔ không phải lỗ hổng mới vì là hành vi có từ bản cũ ✓)
+
+**3 PHƯƠNG ÁN**: **(A)** ⭐ *giữ nguyên* (đúng bản cũ) + ghi **1 dòng cảnh báo** vào tài liệu phân quyền ✓ · **(B)** **bỏ `accountant`** khỏi `isCompanyLeadership` (⚠️ chỉ còn `director` — ⚠️ chạm 1 dòng Java + **phải chạy lại test Java 110 ca** + build ✓) · **(C)** giữ `accountant` nhưng **thêm danh sách action được phép** (⚠️ lớn nhất, cần user liệt kê ✓)
+
+**KHUYẾN NGHỊ S01**: ⭐ **(A)** trong giai đoạn ALPHA (⛔ không đổi chính sách quyền giữa kỳ test ✓) — ⚠️ nhưng **phải ghi rõ vào tài liệu** để ⛔ không quên trước GO-LIVE ✓
+
+> ### ✅ ĐÓNG `DEC-20261009-027` (17:40 · `ERP-SESSION-01`) — **⛔ KHÔNG cần user quyết lại: đây là hành vi ĐÃ ĐƯỢC USER QUYẾT từ 18/09/2026**
+> ⭐ Khi lập bản đồ vai trò, S01 tìm thấy ghi chú quyết định **trong chính mã nguồn**: `scripts/system-route.mjs` **L403–413** — «**Q2 (18/09/2026) — NGƯỜI DÙNG QUYẾT: "giữ Java, sửa JS"** cho lớp lệch `isCompanyLeadership` (**`TASK-024`**)» ✓
+> ⭐ Ghi chú đó nói **đúng y điều S01 đo được hôm nay**: «`RbacService.isCompanyLeadership` = `List.of("director","accountant")` → dùng cho **CỔNG QUYỀN HÀNH ĐỘNG** ⇒ *Java cấp THỪA cho `accountant`*» ✓ — ⚠️ tức là **hành vi CỐ Ý**, có **cổng kiểm** `tools/probe-task024-leadership-parity.mjs` ✓
+> ⇒ ⭐ **KẾT LUẬN**: `accountant` đi qua cổng quyền **⛔ KHÔNG phải lỗ hổng mới, ⛔ KHÔNG phải việc cần quyết lại** ✓ — ⭐ S01 **rút lại câu hỏi** (⛔ không để user phải quyết lại điều đã quyết ✓) và **giữ nguyên hành vi** (đúng lựa chọn «giữ Java» của user ✓) ✓
+> ⚠️ **BÀI HỌC (lần 13)**: ⭐ **TRƯỚC khi biến một phát hiện thành «câu hỏi cho user» ⇒ phải TRA XEM ĐÃ CÓ QUYẾT ĐỊNH CŨ CHƯA** (⭐ tìm trong mã: các khối `// ... NGƯỜI DÙNG QUYẾT`/`Q1/Q2`/`TASK-0xx` ✓ + `DECISION_LOG` ✓ + các probe parity ✓) — ⚠️ hôm nay S01 suýt khiến user quyết lại một việc họ đã chốt cách đây 3 tuần ✓
+
+> ### ✅ ĐÓNG 2 CÂU HỎI CHỜ-USER bằng QUYẾT ĐỊNH CŨ + MÃ ĐANG CHẠY (17:50 · `ERP-SESSION-01`) — ⭐ áp dụng ngay bài học 13
+> **Áp dụng bài học 13** («tra quyết định cũ TRƯỚC khi hỏi user»): S01 soát 5 việc đang chờ ⇒ **2 việc thực ra ĐÃ CÓ ĐÁP ÁN** ✓
+>
+> **① ĐÓNG câu «phạm vi khoá `work_others`: phòng mình hay mọi phòng?»** — ⭐ **ĐÁP ÁN: CẢ HAI, TUỲ CHỨC VỤ** (đúng nguyên tắc user đã chốt «**THEO CHỨC VỤ/CẤP BẬC** — ⛔ KHÔNG cấp qua ma trận», `DECISION_LOG` L798–808 + `CHANGE_LOG` L976 «USER CHỐT `A` · giữ nguyên phạm vi theo chức vụ» ✓)
+> * ⭐ **Bằng chứng = CÂU LỆNH ĐANG CHẠY** (`BootstrapDataAdapter.workItemWhere` L1576–1595): `workAll = admin || isWorkCompanyScope(roleCode, roleBase)` ⇒ **mọi phòng** (`1=1`) ✓; người thường ⇒ `assigned_to = mình` **HOẶC** (cùng **phòng mình** **VÀ** một trong: đơn vị `site_command` + dự án ✓ / chức danh `%_truong` ✓ / `work.can_approve=1` ✓ / ⭐ **`work_others.can_view=1`** — **VẾ OR thứ 4** mới thêm 09/10 theo `DEC-20261009-021` (phương án A — **cộng thêm** ✓, tôn trọng `permission_expires_at` ✓))
+> * ⭐ Mã tự ghi chú: «*mở **THÊM** phạm vi «việc NGƯỜI KHÁC trong **PHÒNG mình**» … ⛔ KHÔNG lấy mất quyền của bất kỳ ai (trưởng phòng/phó GĐ/giám đốc giữ nguyên)*» ✓
+> ⇒ ⭐ **Kết luận**: **trưởng phòng ⇒ phòng mình** · **giám đốc/ban lãnh đạo ⇒ mọi phòng** — **đã chạy ĐÚNG như user quyết** ⇒ ⛔ **không cần user quyết gì thêm** ✓ · ⭐ **S01 có thể tự nghiệm thu** (đã đo trước đó: 0 → 19 → 0 việc khi cấp/xoá khoá ✓)
+>
+> **② THU HẸP câu «đề xuất sub-tab»** — ⭐ user **đã chốt NGUYÊN TẮC**: «**SUB-TAB ⇒ Phân loại theo BẢN CHẤT**» (`DECISION_LOG` L809–810 ✓) ⇒ ⭐ đề xuất `DEC-20261009-022` của S01 (6 khoá TAB + `work_others` ✓) **là CÁCH THỰC HIỆN nguyên tắc đó**, ⛔ không phải đề xuất mới ⇒ ⚠️ **chỉ còn cần user xác nhận ĐÚNG DANH SÁCH 7 khoá** ✓ (⚠️ không phải «có làm sub-tab hay không» ✓) ✓
+> ⚠️ **Ghi nhận thêm**: `ActionRbacRegistry` **L368** khẳng định: `delete_work_item` **CHỈ khoá `work`** — ⛔ **KHÔNG** gắn `work_others` («xoá việc của NGƯỜI KHÁC» ⛔ không được phép) ✓ ⇒ ⭐ khớp với đo thật ở `TEST-20261009-042` ✓

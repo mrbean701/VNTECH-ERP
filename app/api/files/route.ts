@@ -41,7 +41,12 @@ async function entityProject(entityType: string, entityId: string) {
 async function moduleAllowed(user: CurrentUser, entityType: string, write: boolean) {
   if (user.role === "admin") return true;
   if (write && entityType === "material_request" && !["commander","project"].includes(String(user.roleBase || user.role))) return false;
-  const moduleKeys = entityType === "goods_receipt" ? ["receiving", "delivered"] : entityType === "central_return" ? ["central_warehouse"] : entityType === "work_item" ? ["dept_plan_tasks", "dept_project_tasks", "dept_plan_assign", "dept_project_assign"] : ["requests", "approvals"];
+  // ⭐ 08/10/2026 (`ERP-SESSION-04` · vá `BUG-D21`-lớp): thêm khoá **CHUNG `work`** vào cổng TỆP ĐÍNH KÈM CÔNG VIỆC.
+  //   ⚠️ VÌ SAO: người **chỉ được cấp khoá `work`** (mọi phòng ban — quyết định user) ⛔ **không tải/xoá được tệp**
+  //   của công việc vì cổng này chỉ liệt kê **4 khoá cũ** (`dept_plan_*`/`dept_project_*`).
+  //   ⭐ Cùng lớp lỗi `ERP-SESSION-01` đã báo ở handler JS (`requireWorkItemAccess` — đã vá) ⇒ vá nốt chỗ này.
+  //   ⛔ KHÔNG xoá 4 khoá cũ: chúng vẫn là cổng hợp lệ của người đã được cấp theo phòng ban.
+  const moduleKeys = entityType === "goods_receipt" ? ["receiving", "delivered"] : entityType === "central_return" ? ["central_warehouse"] : entityType === "work_item" ? ["dept_plan_tasks", "dept_project_tasks", "dept_plan_assign", "dept_project_assign", "work"] : ["requests", "approvals"];
   const placeholders = moduleKeys.map(() => "?").join(",");
   const permissionSql = write && entityType === "central_return" ? "(can_edit=1 OR can_approve=1)" : `${write ? "can_edit" : "can_view"}=1`;
   const row = await env.DB.prepare(`SELECT 1 AS ok FROM user_module_permissions WHERE user_id=? AND module_key IN (${placeholders}) AND ${permissionSql} LIMIT 1`).bind(user.id, ...moduleKeys).first<{ ok: number }>();

@@ -111,11 +111,18 @@ test("VỆ 3 — phần DỰNG STATE không đọc `item.key` của dòng danh m
   assert.doesNotMatch(vungDungState, /permissionState\[item\.key\]/);
   assert.doesNotMatch(vungDungState, /permissionFor\(item\.key\)/);
 
-  // Vùng này phải dùng `moduleKeys` cho cả 3 nơi: state khởi tạo, setAll/setColumnAll, columnState.
+  // Vùng này phải lấy `moduleKeys` (HỢP: danh mục ∪ dòng ma trận) làm NGUỒN DUY NHẤT:
+  //   · USESTATE khởi tạo  : `moduleKeys` (phải đủ MỌI khoá, kể cả khoá ⛔ không được vẽ —
+  //     đó chính là cơ chế ⛔ không mất quyền khi Lưu, xem VỆ 7/8).
+  //   · 2 NÚT HÀNG LOẠT + trạng thái ĐẦU CỘT: `bulkKeys` = `moduleKeys` ĐÃ LỌC khoá ẩn khỏi ma trận
+  //     (⭐ QUYẾT ĐỊNH USER 08/10/2026 «ẩn» 4 khoá `dept_plan_*`/`dept_project_*` — nếu 2 nút này chạy trên
+  //     `moduleKeys` thì bấm «□ Bỏ chọn tất cả» sẽ **GHI 0 ÂM THẦM** cho khoá ⛔ không còn ô nào trên màn hình).
+  // ⚠️ `bulkKeys` PHẢI suy **TỪ `moduleKeys`** (⛔ KHÔNG suy từ `entries`/`item.key`) — nếu không là lệch nguồn.
   assert.match(vungDungState, /moduleKeys\.map\(\(key\) => \{/);
-  assert.match(vungDungState, /moduleKeys\.map\(\(key\) => \[/);
-  assert.match(vungDungState, /const selected = moduleKeys\.filter\(\(key\) => permissionState\[key\]\?\.\[cap\]\)\.length;/);
-  assert.match(vungDungState, /all: moduleKeys\.length > 0 && selected === moduleKeys\.length,/);
+  assert.match(vungDungState, /const bulkKeys = moduleKeys\.filter\(\(key\) => !MATRIX_HIDDEN_MODULE_KEYS\.includes\(key\)\);/);
+  assert.match(vungDungState, /bulkKeys\.map\(\(key\) => \[/);
+  assert.match(vungDungState, /const selected = bulkKeys\.filter\(\(key\) => permissionState\[key\]\?\.\[cap\]\)\.length;/);
+  assert.match(vungDungState, /all: bulkKeys\.length > 0 && selected === bulkKeys\.length,/);
 
   // Phần vẽ vẫn dùng `item.key` — ĐÚNG, vì `item` ở đó là `entry.module`.
   assert.match(code, /const item = entry\.module!;/);
@@ -223,4 +230,56 @@ test("VỆ 7 — payload PHỦ ĐỦ tập khoá panel vẽ (gồm `admin_tab_NN
     ["admin", "reports", ...Array.from({ length: 14 }, (_, i) => `admin_tab_${String(i + 1).padStart(2, "0")}`)].sort(),
     "đúng 16 khoá đã ĐO trên bootstrap thật (tools/probe-permission-save-keyset.mjs)",
   );
+});
+
+// ⭐⭐ QUYẾT ĐỊNH USER 08/10/2026: «**ẩn**» 4 khoá cũ khỏi ma trận (`ERP-SESSION-04`).
+//   VÌ SAO CẦN TEST NÀY (⚠️ `BUG-D19` — suýt gây MẤT QUYỀN ÂM THẦM): ma trận bị «chia 2 phòng ban» vì 4 khoá
+//   `dept_plan_*`/`dept_project_*` mang tên 2 phòng, trong khi công ty có **11 đơn vị**. User chốt ẨN.
+//   ⚠️ Nhưng `save_user_access` là **FULL-REPLACE** ⇒ nếu "ẩn" bị làm SAI cách (xoá khỏi `module_catalog`
+//   hoặc khỏi tập khoá gửi lên) thì **4 khoá đó bị GHI XOÁ** cho mọi tài khoản. Và 2 nút HÀNG LOẠT
+//   (`setAll`/`setColumnAll`) lặp trên HỢP (gồm khoá ẩn) ⇒ bấm «Bỏ chọn tất cả» = **ghi 0 âm thầm**.
+//   ⇒ Test này khoá **CẢ 4 BẤT BIẾN** của cách ẩn AN TOÀN:
+//     ① 4 khoá nằm trong `MATRIX_HIDDEN_MODULE_KEYS`
+//     ② ẩn ở **TẦNG VẼ** (`visibleEntries`) — `entries` ⛔ KHÔNG bị đụng
+//     ③ nguồn khoá GỬI LÊN (`permissionMatrixKeys`) ⛔ KHÔNG lọc theo danh sách ẩn ⇒ vẫn gửi đủ 4 khoá
+//     ④ 2 nút hàng loạt + trạng thái đầu cột dùng `bulkKeys` (⛔ KHÔNG dùng `moduleKeys`)
+test("VỆ 8 — ẨN 4 khoá cũ khỏi ma trận mà ⛔ KHÔNG mất quyền (chống ghi 0 âm thầm)", () => {
+  const matrix = read("app/screens/PermissionMatrix.tsx");
+  const HIDDEN = ["dept_plan_tasks", "dept_project_tasks", "dept_plan_assign", "dept_project_assign"];
+
+  // ① danh sách ẩn phải có ĐỦ 4 khoá (⛔ thiếu 1 khoá ⇒ ma trận vẫn chia phòng ban)
+  const block = matrix.slice(matrix.indexOf("MATRIX_HIDDEN_MODULE_KEYS"), matrix.indexOf("MATRIX_HIDDEN_MODULE_KEYS") + 500);
+  for (const key of HIDDEN) {
+    assert.ok(block.includes(`"${key}"`), `⛔ \`MATRIX_HIDDEN_MODULE_KEYS\` thiếu \`${key}\``);
+  }
+  assert.match(matrix, /export const MATRIX_HIDDEN_MODULE_KEYS: string\[\] = \[/,
+    "phải EXPORT danh sách ẩn để panel dùng CHUNG (⛔ không khai 2 nơi rồi lệch nhau)");
+
+  // ② ẨN Ở TẦNG VẼ: ô `<tr>` lặp trên `visibleEntries`; ⛔ KHÔNG còn lặp trên `entries`
+  assert.match(matrix, /\{visibleEntries\.map\(\(entry\) => \{/,
+    "phần VẼ phải lặp trên `visibleEntries` (đã lọc khoá ẩn)");
+  assert.doesNotMatch(matrix, /\{entries\.map\(\(entry\) => \{/,
+    "⛔ phần VẼ vẫn lặp trên `entries` ⇒ khoá ẩn VẪN hiện ⇒ trái quyết định user");
+  assert.match(matrix, /const visibleEntries = \(\(\) => \{/,
+    "phải có bộ lọc `visibleEntries` (lọc ở TẦNG VẼ ⇒ ⛔ không đổi tập khoá nào)");
+  assert.match(matrix, /if \(kept\[i\]\.kind === "module"\) return true;/,
+    "phải bỏ DÒNG NHÓM rỗng (⛔ không để tiêu đề nhóm TRỐNG khi mọi module của nhóm bị ẩn)");
+
+  // ③ nguồn khoá GỬI LÊN ⛔ KHÔNG được lọc theo danh sách ẩn (nếu lọc ⇒ 4 khoá bị XOÁ khi Lưu)
+  assert.match(panel, /export function permissionMatrixKeys/,
+    "`permissionMatrixKeys` phải còn nguyên (nguồn khoá gửi lên)");
+  const fn = panel.slice(panel.indexOf("export function permissionMatrixKeys"), panel.indexOf("export function permissionMatrixKeys") + 700);
+  assert.ok(!fn.includes("MATRIX_HIDDEN_MODULE_KEYS"),
+    "⛔ `permissionMatrixKeys` bị lọc theo danh sách ẩn ⇒ 4 khoá ⛔ KHÔNG gửi lên ⇒ **BỊ XOÁ** khi Lưu (FULL-REPLACE)");
+
+  // ④ 2 nút hàng loạt + trạng thái 3 mức đầu cột chỉ tác động khoá ĐANG HIỆN
+  assert.match(panel, /const bulkKeys = moduleKeys\.filter\(\(key\) => !MATRIX_HIDDEN_MODULE_KEYS\.includes\(key\)\)/,
+    "phải có `bulkKeys` (khoá đang HIỆN) cho các nút hàng loạt");
+  for (const fnName of ["setAll", "setColumnAll"]) {
+    const body = panel.slice(panel.indexOf(`const ${fnName} = `), panel.indexOf(`const ${fnName} = `) + 600);
+    assert.match(body, /bulkKeys\.map/, `⛔ \`${fnName}\` phải dùng \`bulkKeys\` — nếu dùng \`moduleKeys\` là GHI 0 ÂM THẦM cho khoá đã ẩn`);
+    assert.ok(!/moduleKeys\.map/.test(body), `⛔ \`${fnName}\` còn dùng \`moduleKeys\` ⇒ bấm «Bỏ chọn tất cả» sẽ XOÁ quyền của khoá đã ẩn`);
+  }
+  const colState = panel.slice(panel.indexOf("const columnState = "), panel.indexOf("const columnState = ") + 700);
+  assert.match(colState, /bulkKeys\.filter/, "⛔ `columnState` phải tính trên `bulkKeys` (nếu tính cả khoá ẩn thì đầu cột hiện SAI so với mắt admin)");
 });

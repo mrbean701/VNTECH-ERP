@@ -1556,29 +1556,47 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
         //   :716  workItemBinds tương ứng; :717 truy vấn 29 cột + LIMIT 1000
         //   :718  workItemEvents CHỈ của các công việc vừa trả (IN ds id)
         // ══════════════════════════════════════════════════════════════════════════════════
-        String depForRole = departmentForRole(roleBaseClean);
-        String depCode = departmentCodeForUser(ctx.department(), ctx.roleCode(), roleBaseClean);
-        String workItemWhere;
+        // ══ PHẠM VI XEM VIỆC — **ĐỘNG** (⛔ BỎ danh sách phòng ban CỨNG) ═════════════════════════════
+        // QUYẾT ĐỊNH USER 08/10/2026 (thẻ quyết định · phương án A) — chú thích đầy đủ + số ĐO ở
+        // `scripts/system-route.mjs` (hàm `workScopeAll`, cuối tệp). Tóm tắt luật:
+        //   ① admin HOẶC lãnh đạo công ty (`isWorkCompanyScope`) ⇒ TOÀN BỘ việc.
+        //   ② Còn lại ⇒ việc CỦA MÌNH, cộng việc CÙNG MÃ PHÒNG khi: đơn vị mình là `site_command`
+        //      (GIỮ NGUYÊN quyền cũ theo phạm vi dự án) HOẶC chức danh mình là quản lý phòng `%_truong`.
+        // ⭐ Mã phòng tra **ĐỘNG** `users.organization_unit_id → organization_units.code` ⇒ chạy đúng cho
+        //    CẢ 11 đơn vị (BGD·DA·HCPC·BCH·E2E-BCH-01·E2E-DIAG-BCH·KH·NS·TCKT·VNTECH·VNTECH-01) thay vì
+        //    chỉ 2 phòng như bản cũ. Thiếu đơn vị ⇒ `COALESCE(...)` = rỗng ⇒ ⛔ không khớp ⇒ chỉ việc của mình.
+        // ⚠️ `LIKE '%_truong'` ⛔ KHÔNG viết `'%\_truong'` (SQLite ⛔ không hiểu `\` là ký tự thoát — phải
+        //    giữ dạng chạy được ở CẢ HAI engine, đúng bản JS).
+        // ⭐ QUYẾT ĐỊNH USER 08/10/2026 («**Admin sẽ quyết định ai là trưởng phòng**»): tư cách QUẢN LÝ PHÒNG
+        //    nay nhận diện theo **HAI** nguồn — ① chức danh `%_truong` (giữ nguyên hành vi cũ) HOẶC
+        //    ② **quyền `canApprove` trên khoá `work` do ADMIN CẤP** (`user_module_permissions`).
+        //    ⇒ Admin tick «Duyệt» cho ai trong ma trận thì người đó **vừa duyệt được vừa XEM được việc
+        //    của nhân viên trong phòng mình** — ⛔ không cần tạo chức danh mới, ⛔ không cần sửa mã.
+        //    ⚠️ Thiếu vế ② thì quyết định của admin chỉ mở được nút «Duyệt» mà ⛔ KHÔNG mở phạm vi xem.
+        boolean workAll = admin || isWorkCompanyScope(ctx.roleCode(), ctx.roleBase());
+        String workItemWhere = workAll ? "1=1"
+                : "(wi.assigned_to=? OR (wi.department_code=(SELECT COALESCE(ou.code,'') FROM users mu"
+                + " LEFT JOIN organization_units ou ON ou.id=mu.organization_unit_id WHERE mu.id=?)"
+                + " AND (EXISTS(SELECT 1 FROM users ms LEFT JOIN organization_units ous"
+                + " ON ous.id=ms.organization_unit_id WHERE ms.id=? AND ous.unit_type='site_command'"
+                + " AND (wi.project_id IS NULL OR wi.project_id IN (" + pidSql + ")))"
+                + " OR EXISTS(SELECT 1 FROM users mm LEFT JOIN role_catalog rc ON rc.code=mm.role"
+                + " WHERE mm.id=? AND rc.code LIKE '%_truong')"
+                + " OR EXISTS(SELECT 1 FROM user_module_permissions ump"
+                + " WHERE ump.user_id=? AND ump.module_key='work' AND ump.can_approve=1)"
+                // ⭐ 09/10/2026 (USER chốt `DEC-20261009-021` = **phương án A — CỘNG THÊM**): khoá `work_others`
+                //    mở **THÊM** phạm vi «việc NGƯỜI KHÁC trong PHÒNG mình» cho người được admin tick —
+                //    ⚠️ là **VẾ OR thứ 4** trong cùng nhóm điều kiện ⇒ ⛔ **KHÔNG** lấy mất quyền của bất kỳ ai
+                //    (trưởng phòng/phó GĐ/giám đốc giữ nguyên ✓). ⚠️ `can_view=1` + ⛔ tôn trọng `permission_expires_at`
+                + " OR EXISTS(SELECT 1 FROM user_module_permissions umpo"
+                + " WHERE umpo.user_id=? AND umpo.module_key='work_others' AND umpo.can_view=1"
+                + " AND (umpo.permission_expires_at IS NULL OR umpo.permission_expires_at > CURRENT_TIMESTAMP)))))";
         java.util.List<Object> workItemBinds = new java.util.ArrayList<>();
-        if (admin) {
-            workItemWhere = "1=1";
-        } else if ("KH".equals(depForRole)) {
-            workItemWhere = "(wi.assigned_to=? OR (wi.department_code='KH' AND (wi.assigned_to=?"
-                    + " OR EXISTS(SELECT 1 FROM role_catalog rc WHERE rc.code=? AND rc.code='kh_truong'))))";
+        if (!workAll) {
+            // Thứ tự bind PHẢI khớp thứ tự dấu `?`: assigned_to · mã phòng · site_command · (dự án) · chức danh · quyền admin cấp · `work_others` (MỚI)
             workItemBinds.add(ctx.userId()); workItemBinds.add(ctx.userId());
-            workItemBinds.add(ctx.roleCode());
-        } else if ("DA".equals(depForRole)) {
-            workItemWhere = "(wi.assigned_to=? OR (wi.department_code='DA' AND (wi.assigned_to=?"
-                    + " OR EXISTS(SELECT 1 FROM role_catalog rc WHERE rc.code=? AND rc.code='da_truong'))))";
+            workItemBinds.add(ctx.userId()); workItemBinds.addAll(pids);
             workItemBinds.add(ctx.userId()); workItemBinds.add(ctx.userId());
-            workItemBinds.add(ctx.roleCode());
-        } else if ("BCH".equals(depCode)) {
-            workItemWhere = "(wi.assigned_to=? OR (wi.department_code='BCH' AND (wi.assigned_to=?"
-                    + " OR wi.project_id IS NULL OR wi.project_id IN (" + pidSql + "))))";
-            workItemBinds.add(ctx.userId()); workItemBinds.add(ctx.userId());
-            workItemBinds.addAll(pids);
-        } else {
-            workItemWhere = "wi.assigned_to=?";
             workItemBinds.add(ctx.userId());
         }
         List<Map<String, Object>> workItems = query("""
@@ -1597,7 +1615,13 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                 LEFT JOIN projects p ON p.id=wi.project_id
                 JOIN users ua ON ua.id=wi.assigned_to
                 JOIN users ub ON ub.id=wi.assigned_by
-                WHERE %s
+                -- ⭐ BUG-20261009-D27 (09/10/2026 · ERP-SESSION-01): ⛔ XOÁ MỀM mà dòng VẪN HIỆN ⇒ user tưởng nút «Xoá» (W3) hỏng.
+                --   Nay lọc `wi.active=1` (⚠️ BẮT BUỘC bọc ngoặc quanh mệnh đề WHERE động ở dưới — đó là biểu thức OR phức tạp).
+                --   ⚠️ ⛔ TUYỆT ĐỐI KHÔNG viết ký hiệu định dạng (phần-trăm-s) trong chú thích: text block này đi qua
+                --   `.formatted(...)` ⇒ thêm một ký hiệu nữa mà chỉ có 1 tham số ⇒ `MissingFormatArgumentException` ⇒ HTTP 500
+                --   (⭐ đúng sự cố 16:29 ngày 09/10/2026 — đã đo được, xem `BUG-20261009-D32`).
+                --   ⛔ KHÔNG lọc theo `status`: `COMPLETED`/`CANCELLED` vẫn `active=1` và **PHẢI HIỆN** (chỉ dòng xoá-mềm mới ẩn).
+                WHERE (%s) AND wi.active=1
                 ORDER BY CASE WHEN wi.status IN ('COMPLETED','CANCELLED') THEN 1 ELSE 0 END,
                          CASE wi.priority WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'normal' THEN 2 ELSE 3 END,
                          COALESCE(wi.due_at,'9999'),wi.assigned_at DESC
@@ -1913,7 +1937,7 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
                         "materialAliases", "materialNorms");
             }
             if (!anyModule(view, "dept_plan_tasks", "dept_plan_assign", "dept_project_tasks",
-                    "dept_project_assign", "site_command")) {
+                    "dept_project_assign", "site_command", "work")) {
                 blank(data, "workItems", "workItemEvents", "workItemComments", "workItemParticipants",
                         "taskNotifications");
             }
@@ -2123,5 +2147,24 @@ public class BootstrapDataAdapter implements BootstrapDataPort {
     /** Xoá trắng một nhóm khoá về mảng rỗng — đúng cách JS gán `result.<khoá> = []`. */
     private static void blank(Map<String, Object> data, String... keys) {
         for (String key : keys) data.put(key, List.of());
+    }
+
+    /**
+     * PHẠM VI XEM VIỆC **toàn công ty** — QUYẾT ĐỊNH USER 08/10/2026: «việc của tất cả các nhân viên thì
+     * <b>giám đốc và admin</b> có thể xem».
+     *
+     * <p>⚠️ <b>CỐ Ý ⛔ KHÔNG dùng {@link #isCompanyLeadership}</b> (hàm đang dùng cho quyền MODULE):
+     * ĐO ĐƯỢC trên CSDL thật — `thuky` (3 tài khoản) và `hr` (2 tài khoản) có `base_role='director'` ⇒ hàm
+     * đó trả `true` cho họ ⇒ nếu dùng ở đây thì **thư ký và HR đọc được toàn bộ việc của 73 nhân sự**
+     * (⚠️ gồm cả việc CÁ NHÂN `department_code='CN'`) — vượt yêu cầu của user. Danh sách dưới đây là
+     * **đúng nhóm lãnh đạo điều hành** theo `system_level_catalog` (giam_doc 40 · pho_giam_doc 35).
+     *
+     * <p>Trả `true` ⇒ bỏ hẳn mệnh đề `WHERE` của `work_items` (`1=1`), giống JS `workScopeAll(user)`.
+     */
+    private static boolean isWorkCompanyScope(String roleCode, String roleBase) {
+        Set<String> codes = Set.of("director", "tgd", "giam_doc", "ptgd", "pho_giam_doc");
+        String role = roleCode == null ? "" : roleCode.trim().toLowerCase(java.util.Locale.ROOT);
+        String base = roleBase == null ? "" : roleBase.trim().toLowerCase(java.util.Locale.ROOT);
+        return codes.contains(role) || codes.contains(base);
     }
 }
