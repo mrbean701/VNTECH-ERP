@@ -1,3 +1,9 @@
+> **VNTECH ERP — BỘ TÀI LIỆU PHIÊN BẢN `ALPHA TEST`**
+> · Phiên bản tài liệu: **`DOC-ALPHA-TEST-2026.10`** · Ngày cập nhật: **08/10/2026** · Phiên soạn: `ERP-SESSION-01`
+> · Sản phẩm: `V5.3.0-MASTER-BASELINE-R1.1.1` · Cổng: `:8787` (UI) · `:9000` (cutover) · `:18081` (API Java)
+> · ⚠️ Trạng thái: **ALPHA TEST** — tài liệu phản ánh bản ĐANG CHẠY; ⛔ chưa phải bản phát hành chính thức.
+> · 📌 Nguồn sự thật: **mã nguồn + CSDL thật** (mọi số liệu đều ĐO được, ⛔ không suy đoán).
+
 # BÁO CÁO KẾ HOẠCH GO-LIVE & PHÁT TRIỂN LÕI — VNTECH ERP V5.3.0 (MEP)
 
 Ngày lập: 09/09/2026 · Trạng thái hệ thống: fingerprint `VNTECH-FP-54394992D738B8F0` · migrations `0000..0075` (76 file) · regression **61/61** · workflow E2E **PASS** · build exit 0 · đã push Git nhánh `unity` (commit `ab97b23`).

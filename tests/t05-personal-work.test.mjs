@@ -1,4 +1,5 @@
-// PHASE 3 (`T-05`) — HỢP ĐỒNG "VIỆC CÁ NHÂN": **BA NHÓM RIÊNG** — của tôi · được giao · do tôi tạo.
+// PHASE 3 (`T-05`) — HỢP ĐỒNG "VIỆC CÁ NHÂN": **HAI NHÓM** — của tôi (TOÀN BỘ việc của bản thân) · đã giao (việc mình giao cho NGƯỜI KHÁC).
+// ⭐ CẬP NHẬT 08/10/2026 theo QUYẾT ĐỊNH CỦA USER: «*gộp lại thành 2 nhóm cho gọn*» ⇒ 3 nhóm cũ (của tôi · được giao · do tôi tạo) gộp còn 2.
 //
 // Vì sao kiểm ở tầng NGUỒN + CHẠY THẬT HÀM THUẦN (không phải DOM): nhánh này BỊ CẤM build/khởi động dịch vụ,
 // mà bằng chứng runtime chỉ có nghĩa SAU khi dựng lại bundle (bài học đã ghi nhiều lần trong dự án).
@@ -69,24 +70,31 @@ test("T-05 — HỢP ĐỒNG TÊN TRƯỜNG: dùng `assignedTo`/`assignedToName`
   assert.match(probe, /assignedToName/, "`tools/probe-work-item-field-contract.mjs` phải còn kiểm `assignedToName`");
 });
 
-test("T-05 — BA NHÓM tồn tại với nhãn đúng đề bài: của tôi · được giao · do tôi tạo", () => {
+test("T-05 — HAI NHÓM tồn tại với nhãn đúng đề bài (user chốt 08/10/2026): của tôi · đã giao", () => {
+  // ⭐ USER CHỐT 08/10/2026: «*gộp lại thành 2 nhóm cho gọn*» —
+  //    «Của tôi» = TOÀN BỘ việc của bản thân (tự tạo + người khác giao cho mình) · «Đã giao» = việc mình giao cho NGƯỜI KHÁC.
+  //    ⇒ nhóm «Được giao» (3 nhóm cũ) được GỘP vào «Của tôi» theo quyết định của user.
   const { personalWorkGroups, PERSONAL_GROUPS } = loadPure();
   const groups = personalWorkGroups(ROWS, ME);
-  assert.equal(groups.length, 3, "Phải có ĐÚNG 3 nhóm việc cá nhân");
-  assert.deepEqual(groups.map((g) => g.label), ["Của tôi", "Được giao", "Do tôi tạo"]);
-  assert.deepEqual(groups.map((g) => g.key), ["mine", "assigned", "created"]);
-  assert.deepEqual(PERSONAL_GROUPS.map((g) => g.label), ["Của tôi", "Được giao", "Do tôi tạo"]);
-  assert.equal(new Set(groups.map((g) => g.key)).size, 3, "Ba nhóm phải KHÁC nhau về khoá");
+  assert.equal(groups.length, 2, "Phải có ĐÚNG 2 nhóm việc cá nhân");
+  assert.deepEqual(groups.map((g) => g.label), ["Của tôi", "Đã giao"]);
+  assert.deepEqual(groups.map((g) => g.key), ["mine", "assignedOut"]);
+  assert.deepEqual(PERSONAL_GROUPS.map((g) => g.label), ["Của tôi", "Đã giao"]);
+  assert.equal(new Set(groups.map((g) => g.key)).size, 2, "Hai nhóm phải KHÁC nhau về khoá");
 });
 
 test("T-05 — mỗi nhóm có BỘ LỌC RIÊNG và ra KẾT QUẢ KHÁC NHAU (đo bằng fixtures, không đọc chữ)", () => {
   const { personalWorkGroups } = loadPure();
-  const [mine, assigned, created] = personalWorkGroups(ROWS, ME);
-  assert.deepEqual(mine.rows.map((r) => r.id), ["A", "B"], "«Của tôi» = assignedTo === tôi");
-  assert.deepEqual(assigned.rows.map((r) => r.id), ["B"], "«Được giao» = assignedTo === tôi VÀ assignedBy !== tôi");
-  assert.deepEqual(created.rows.map((r) => r.id), ["A", "C"], "«Do tôi tạo» = assignedBy === tôi");
-  assert.notDeepEqual(assigned.rows.map((r) => r.id), created.rows.map((r) => r.id), "Hai nhóm KHÔNG được trùng kết quả");
-  assert.equal(mine.rows.filter((r) => !assigned.rows.includes(r)).length, 1, "«Của tôi» phải rộng hơn «Được giao» (gồm cả việc tôi tự tạo)");
+  const [mine, assignedOut] = personalWorkGroups(ROWS, ME);
+  assert.deepEqual(mine.rows.map((r) => r.id), ["A", "B"], "«Của tôi» = assignedTo === tôi (tự tạo A + người khác giao B)");
+  assert.deepEqual(assignedOut.rows.map((r) => r.id), ["C"], "«Đã giao» = assignedBy === tôi VÀ assignedTo !== tôi");
+  // ⭐ ĐẶC TRƯNG của hợp đồng 2 nhóm: việc tôi TỰ TẠO (A) thuộc «Của tôi» nhưng ⛔ KHÔNG được lọt vào «Đã giao».
+  assert.ok(mine.rows.some((r) => r.id === "A"), "A (tự tạo cho mình) phải nằm trong «Của tôi»");
+  assert.ok(!assignedOut.rows.some((r) => r.id === "A"), "A (tự tạo cho mình) ⛔ KHÔNG được nằm trong «Đã giao»");
+  // B (người khác giao cho tôi) cũng ⛔ không thuộc «Đã giao» — nay đã gộp vào «Của tôi».
+  assert.ok(!assignedOut.rows.some((r) => r.id === "B"), "B (người khác giao) ⛔ KHÔNG thuộc «Đã giao»");
+  // D (không liên quan) ⛔ không lọt nhóm nào.
+  assert.ok(!mine.rows.some((r) => r.id === "D") && !assignedOut.rows.some((r) => r.id === "D"), "D ⛔ không thuộc nhóm nào");
 });
 
 test("T-05 — mỗi nhóm có BỘ ĐẾM riêng và bộ đếm khớp tập dòng của chính nhóm đó", () => {
@@ -96,33 +104,39 @@ test("T-05 — mỗi nhóm có BỘ ĐẾM riêng và bộ đếm khớp tập d
     assert.equal(typeof group.count, "number", `Nhóm ${group.key} thiếu bộ đếm riêng`);
     assert.equal(group.count, group.rows.length, `Bộ đếm nhóm ${group.key} không khớp số dòng`);
   }
-  assert.deepEqual(groups.map((g) => g.count), [2, 1, 2]);
+  assert.deepEqual(groups.map((g) => g.count), [2, 1]);
   // Bộ đếm phải phản ánh tổng dòng THẬT (không hardcode).
   const bigger = personalWorkGroups([...ROWS, row("E", ME, OTHER), row("F", ME, ME)], ME);
-  assert.deepEqual(bigger.map((g) => g.count), [4, 2, 3], "Bộ đếm không đổi theo dữ liệu ⇒ đang hardcode");
+  assert.deepEqual(bigger.map((g) => g.count), [4, 1], "Bộ đếm không đổi theo dữ liệu ⇒ đang hardcode");
 });
 
 test("T-05 — [đối chứng âm] dòng chỉ có TÊN TRƯỜNG GIẢ (`assigneeUserId`) KHÔNG lọt vào nhóm nào", () => {
   const { personalWorkGroups } = loadPure();
   const legacy = [{ id: "X", taskNo: "CV-X", title: "Việc cũ", assigneeUserId: ME, assigneeName: "Tôi", status: "NEW" }];
   const groups = personalWorkGroups(legacy, ME);
-  assert.deepEqual(groups.map((g) => g.count), [0, 0, 0], "Tên trường giả vẫn được tính ⇒ hợp đồng tên trường bị phá");
+  assert.deepEqual(groups.map((g) => g.count), [0, 0], "Tên trường giả vẫn được tính ⇒ hợp đồng tên trường bị phá");
   // Đối chứng dương: cùng dòng đó, đổi sang tên THẬT thì phải được tính.
   const real = [{ ...legacy[0], assignedTo: ME, assignedBy: ME }];
-  assert.deepEqual(personalWorkGroups(real, ME).map((g) => g.count), [1, 0, 1]);
+  // ⭐ 2 nhóm: dòng tự tạo ⇒ «Của tôi» = 1 · «Đã giao» = 0 (vì assignedTo === tôi).
+  assert.deepEqual(personalWorkGroups(real, ME).map((g) => g.count), [1, 0]);
 });
 
 test("T-05 — UI tab «Cá nhân» RENDER 3 nhóm kèm bộ đếm (không chỉ khai báo trong mã)", () => {
-  const i0 = workCenter.indexOf("{tab === 0 &&");
-  const i1 = workCenter.indexOf("{tab === 1 &&");
-  assert.ok(i0 > 0 && i1 > i0, "Không tách được nhánh tab «Cá nhân»");
+  // ⭐ CẬP NHẬT 08/10/2026 — sau VIỆC 1/2/6 dải tab thành **7 tab** (0 Dashboard · 1 Danh sách công việc ·
+  //   2 Được giao · …) ⇒ tab «Cá nhân» nay tên «Danh sách công việc» và ở CHỈ SỐ 1 ⇒ tách bằng chỉ số MỚI.
+  const i0 = workCenter.indexOf("{tab === 1 &&");
+  const i1 = workCenter.indexOf("{tab === 2 &&");
+  assert.ok(i0 > 0 && i1 > i0, "Không tách được nhánh tab «Danh sách công việc» (chỉ số 1)");
   const tab0 = workCenter.slice(i0, i1);
   assert.match(workCenter, /const personalGroups = personalWorkGroups\(items, myId\);/, "Tab «Cá nhân» chưa tính 3 nhóm bằng `personalWorkGroups`");
   assert.match(tab0, /personalGroups\.map\(/, "Tab «Cá nhân» chưa render dải 3 nhóm");
   assert.match(tab0, /g\.rows\.length|group\.rows\.length/, "Dải nhóm chưa hiện bộ đếm riêng");
   assert.match(tab0, /setPersonalGroup\(/, "Chưa có bộ chọn nhóm (bộ lọc riêng theo nhóm)");
   assert.match(workCenter, /const \[personalGroup, setPersonalGroup\] = useState\("mine"\);/, "Trạng thái nhóm đang chọn chưa mặc định về «Của tôi» (khoá `mine`)");
-  // KHÔNG được phá hợp đồng `T-01` đã đóng.
-  assert.match(tab0, /create_self_work_item/, "Mất form tự tạo việc của T-01");
-  assert.match(tab0, /Danh sách việc của tôi/, "Mất tiêu đề danh sách việc của T-01");
+  // KHÔNG được phá hợp đồng `T-01` đã đóng — ⭐ CẬP NHẬT 08/10/2026 theo VIỆC 4 + VIỆC 2 của user:
+  //   form nội tuyến → **MODAL «Tạo công việc»**; tiêu đề → **«Danh sách công việc»**.
+  assert.match(tab0, /data-vntech="work-create-open"/, "Mất nút mở MODAL «Tạo công việc» của T-01");
+  assert.match(tab0, /data-vntech="work-create-modal"/, "Mất MODAL «Tạo công việc» của T-01");
+  assert.match(workCenter, /create_self_work_item/, "Mất lời gọi `create_self_work_item` (nay ở `submitSelfWork`)");
+  assert.match(tab0, /Danh sách công việc/, "VIỆC 2: mất tiêu đề «Danh sách công việc»");
 });

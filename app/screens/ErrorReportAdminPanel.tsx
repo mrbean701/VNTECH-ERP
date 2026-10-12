@@ -122,7 +122,7 @@ export default function ErrorReportAdminPanel({ data, submit }: {
             <table className="admin-table">
               <thead>
                 <tr>
-                  <th>Mã report</th><th>Mục</th><th>Tiêu đề</th><th>Mã NV</th><th>User</th>
+                  <th>Mã report</th><th>Mục</th><th>Tiêu đề</th><th>Mã NV</th><th>Tên đăng nhập</th>
                   <th>Tên</th><th>Phòng ban</th><th>Thời gian gửi</th><th>Report về</th><th>Thao tác</th>
                 </tr>
               </thead>
@@ -176,7 +176,7 @@ export default function ErrorReportAdminPanel({ data, submit }: {
             <div><dt>Mã report</dt><dd>{open.reportCode}</dd></div>
             <div><dt>Tiêu đề</dt><dd>{open.title}</dd></div>
             <div><dt>Mã nhân viên</dt><dd>{open.employeeCode || "—"}</dd></div>
-            <div><dt>User</dt><dd>{open.username || "—"}</dd></div>
+            <div><dt>Tên đăng nhập</dt><dd>{open.username || "—"}</dd></div>
             <div><dt>Tên</dt><dd>{open.fullName || "—"}</dd></div>
             <div><dt>Phòng ban</dt><dd>{open.organizationName || "—"}</dd></div>
             <div><dt>Thời gian gửi</dt><dd>{open.createdAt || "—"}</dd></div>

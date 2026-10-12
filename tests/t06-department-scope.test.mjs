@@ -139,11 +139,12 @@ test("T-06 — BẤT BIẾN: kết quả LUÔN là tập con của payload (ch�
 });
 
 test("T-06 — UI tab «Phòng ban» dùng phạm vi này và ĐÃ GỠ lỗ hổng nới phạm vi `\"CN\"` cứng", () => {
-  // 📌 CẬP NHẬT 26/09/2026 (MT3 §A.2): tab «Phòng ban» dời từ số 1 → số 2 (do chèn tab «Dự án»).
+  // ⭐ CẬP NHẬT 08/10/2026 (USER — VIỆC 7): «Phòng ban» → «Phòng ban/ Tổ đội», nay là CHỈ SỐ 3
+  //   (dải 7 tab: 0 Dashboard · 1 Danh sách công việc · 2 Được giao · 3 Phòng ban/ Tổ đội · 4 Giao việc · 5 Dự án · 6 Báo cáo).
   // ⛔ Nội dung tab và các khẳng định về PHẠM VI giữ nguyên hoàn toàn.
-  const i1 = workCenter.indexOf("{tab === 2 &&");
-  const i2 = workCenter.indexOf("{tab === 3 &&");
-  assert.ok(i1 > 0 && i2 > i1, "Không tách được nhánh tab «Phòng ban» (nay là tab số 2)");
+  const i1 = workCenter.indexOf("{tab === 3 &&");
+  const i2 = workCenter.indexOf("{tab === 4 &&");
+  assert.ok(i1 > 0 && i2 > i1, "Không tách được nhánh tab «Phòng ban/ Tổ đội» (nay là tab số 3)");
   const tab1 = workCenter.slice(i1, i2);
   assert.match(tab1, /Việc phòng ban của tôi/, "Mất tiêu đề của T-01");
   assert.match(tab1, /Việc của tổ đội tôi tham gia/, "Mất tiêu đề của T-01");

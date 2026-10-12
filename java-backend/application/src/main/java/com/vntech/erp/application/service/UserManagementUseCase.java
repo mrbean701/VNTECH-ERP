@@ -256,7 +256,24 @@ public final class UserManagementUseCase {
     // KHÔNG thêm `@Transactional` ở đây: module `application` cố ý KHÔNG phụ thuộc Spring
     // (kiến trúc hexagonal — chỉ dùng port); đã thử và build fail. Transaction do ADAPTER mở.
     public String saveUserAccess(Principal principal, Map<String, Object> payload) {
-        rbac.requireRole(principalAsCurrent(principal), List.of("admin"));
+        // ⭐ PA-1 (USER 08/10/2026 — `DEC-20261008-001`) — ⛔ THAY `requireRole(…, List.of("admin"))`.
+        //   📍 USER nguyên văn: «role === admin thì có nghĩa là user đó có toàn quyền và override toàn bộ
+        //      phân quyền, là user có khả năng vượt qua mọi quyền mà không cần cấu hình, user có
+        //      role === admin là quản trị hệ thống chỉ được sử dụng trong trường hợp đặc biệt ngoài ra khi
+        //      không có việc gì quan trọng thì quản trị hệ thống sẽ sử dụng tài khoản ITM hoặc tài khoản
+        //      tương tự được cấp full quyền.»
+        //   🔎 NGUYÊN NHÂN GỐC (⭐ ĐO bằng `tools/probe-permission-save-api.mjs`, ⛔ không suy đoán):
+        //      UI — `AdminUserModalTabs.hasAdminTab` (`:22`, `canView === 1`) và
+        //      `app/page.tsx:3433` `canManageUserPermissions` — cho người có `admin_tab_06` **MỞ modal và
+        //      tick được**, nhưng dòng này chỉ nhận `role === "admin"` ⇒ ⭐ **HTTP 403**
+        //      «Thao tác chưa được khai báo quyền trong hệ thống» ⇒ «mở được, tick được, bấm Lưu
+        //      ⛔ không lưu được gì» — ĐÚNG triệu chứng user báo.
+        //   ✅ SỬA THEO ĐÚNG KHUÔN ĐÃ CÓ cho `update_user` (MỐC 103 — `requireAccountUpdateRight` ở trên):
+        //      admin đi qua nhánh `isAdmin`; người khác phải có quyền module CẤU HÌNH của thao tác
+        //      (`save_user_access` ⇒ `admin_tab_06` + `canView`, khai ở `ActionRbacRegistry`).
+        //   ⚠️ GIỮ NGUYÊN mọi chốt an toàn phía sau (MỐC 111 chặn payload rỗng · MỐC 112 nguyên tử).
+        if (!rbac.isAdmin(principalAsCurrent(principal)))
+            rbac.requireActionModule(principalAsCurrent(principal), "save_user_access");
         String targetUserId = trim(payload.get("userId"));
         Map<String, Object> target = store.findUser(targetUserId).orElse(null);
         if (target == null) throw new AuthUseCase.ApiError("Không tìm thấy tài khoản.", 400);
@@ -291,25 +308,74 @@ public final class UserManagementUseCase {
         // là payload hỏng, KHÔNG phải ý định thu hồi toàn bộ quyền ⇒ chặn trước khi xoá.
         if (listOf(payload.get("modulePermissions")).isEmpty())
             throw new AuthUseCase.ApiError("Dữ liệu phân quyền rỗng — hệ thống không lưu để tránh mất toàn bộ quyền hiện có của tài khoản. Vui lòng tải lại trang rồi thao tác lại.", 400);
+        // ⭐ S-1 (USER CHỐT 08/10/2026 — `DEC-20261008-002`) — ⛔ **CHẶN TỰ NÂNG QUYỀN**.
+        //   📍 USER nguyên văn: «chặn tự nâng quyền cho mình, ngoại lệ chỉ có tài khoản ADMIN thích làm gì thì làm.»
+        //   🔎 VÌ SAO CẦN (⭐ ĐO ở `TEST-20261008-003`, ⛔ không suy đoán): sau PA-1, người có `admin_tab_06`
+        //      gọi được `save_user_access` ⇒ ⭐ có thể **tự cấp module `admin`** cho CHÍNH MÌNH ⇒ gọi
+        //      `factory_reset_execute` = **XOÁ SẠCH DỮ LIỆU** (`ActionRbacRegistry:154` map action đó vào
+        //      module `admin`; controller ⛔ không có `requireRequireAdmin`) ⇒ `BUG-20261008-002` (CRITICAL) ✓
+        //   ✅ LUẬT: người gọi ⛔ KHÔNG phải `role = admin` thì ⛔ **không được CẤP THÊM** quyền cho CHÍNH MÌNH.
+        //      ⭐ VẪN CHO PHÉP: sửa quyền người KHÁC · **thu hồi** quyền của mình · **giữ nguyên** quyền đang có
+        //      ⇒ ⭐ chỉ chặn đúng chiều ĐI LÊN, ⛔ không chặn chiều đi xuống ✓
+        //   ⚠️ ĐẶT **TRƯỚC** `clearUserScopes()` ngay dưới — bài học MỐC 111: nếu kiểm SAU khi xoá thì một
+        //      yêu cầu bị TỪ CHỐI vẫn **xoá sạch** quyền hiện có của tài khoản (**mất dữ liệu**) ✓
+        final String[][] selfElevationCaps = {
+                {"canView", "canView"}, {"canUse", "canUse"}, {"canCreate", "canCreate"},
+                {"canEdit", "canEdit"}, {"canApprove", "canApprove"}, {"canExport", "canExport"}};
+        if (!rbac.isAdmin(principalAsCurrent(principal)) && principal.userId().equals(targetUserId)) {
+            for (Object o : listOf(payload.get("modulePermissions"))) {
+                Map<?, ?> row = asMap(o);
+                String moduleKey = trim(row.get("moduleKey"));
+                if (moduleKey.isEmpty()) continue;
+                for (String[] cap : selfElevationCaps) {
+                    if (intOf(row.get(cap[0])) != 1) continue;
+                    if (!rbac.canUseModule(targetUserId, moduleKey, cap[1]))
+                        throw new AuthUseCase.ApiError(
+                                "Không được tự cấp thêm quyền cho chính mình. Hãy nhờ quản trị viên cấp, hoặc cấp cho tài khoản khác.", 403);
+                }
+            }
+        }
         Instant now = Instant.now();
+        // ⭐⭐⭐ V-1 (`BUG-20261008-014` — 🔴 CRITICAL «mất dữ liệu») — `saveUserAccess` là **FULL-REPLACE**:
+        //   `clearUserScopes()` xoá cả 3 bảng rồi chèn lại **theo payload**. ⚠️ Người **⛔ không phải admin**
+        //   chỉ nhận được **MỘT PHẦN** dữ liệu phạm vi:
+        //     · `data.userWarehouseScopes` non-admin **chỉ có của chính họ** (`BootstrapDataAdapter` L959)
+        //     · `data.allModulePermissions` **rỗng** với non-admin (`if (admin)` L943)
+        //     · `data.userScopes` non-admin **chỉ có của chính họ**
+        //   ⇒ payload gửi lên **THIẾU** ⇒ nếu vẫn FULL-REPLACE thì ⛔ **XOÁ OAN** phần họ không nhìn thấy
+        //   ⇒ 🔴 mất dữ liệu (⚠️ con đường: U-1 mở modal «Thêm nhân sự vào kho» cho người uỷ nhiệm) ✓
+        //   ✅ CÁCH VÁ: **HỢP** payload với phạm vi **HIỆN CÓ** — người ⛔ không phải admin chỉ **THÊM/SỬA**,
+        //      ⛔ KHÔNG **XOÁ** (⭐ admin giữ nguyên hành vi FULL-REPLACE như cũ ⇒ ⛔ zero regression) ✓
+        List<Object> listProject = listOf(payload.get("projectScopes"));
+        List<Object> listWarehouse = listOf(payload.get("warehouseScopes"));
+        List<Object> listModule = listOf(payload.get("modulePermissions"));
+        if (!rbac.isAdmin(principalAsCurrent(principal))) {
+            Map<String, List<Map<String, Object>>> hienCo = store.listExistingScopes(targetUserId);
+            listProject = hopThemKhongXoa(hienCo.get("projectScopes"), listProject, "projectId");
+            listWarehouse = hopThemKhongXoa(hienCo.get("warehouseScopes"), listWarehouse, "warehouseId");
+            listModule = hopThemKhongXoa(hienCo.get("modulePermissions"), listModule, "moduleKey");
+        }
+        final List<Object> duAnCuoi = listProject;
+        final List<Object> khoCuoi = listWarehouse;
+        final List<Object> quyenCuoi = listModule;
         // MỐC 112 — nguyên tử: xoá và chèn lại phải cùng thành công hoặc cùng không đổi gì.
         store.runAtomically(() -> {
         store.clearUserScopes(targetUserId);
-        for (Object o : listOf(payload.get("projectScopes"))) {
+        for (Object o : duAnCuoi) {
             Map<?, ?> row = asMap(o);
             String projectId = trim(row.get("projectId"));
             if (!projectId.isEmpty())
                 store.insertProjectScope(idGenerator.next("SCOPE"), targetUserId, projectId,
                         blankDefault(trim(row.get("permission")), "read"), now);
         }
-        for (Object o : listOf(payload.get("warehouseScopes"))) {
+        for (Object o : khoCuoi) {
             Map<?, ?> row = asMap(o);
             String warehouseId = trim(row.get("warehouseId"));
             if (!warehouseId.isEmpty())
                 store.insertWarehouseScope(idGenerator.next("UWS"), targetUserId, warehouseId,
                         blankDefault(trim(row.get("permission")), "read"), now);
         }
-        for (Object o : listOf(payload.get("modulePermissions"))) {
+        for (Object o : quyenCuoi) {
             Map<?, ?> row = asMap(o);
             String moduleKey = trim(row.get("moduleKey"));
             // USER 28/09/2026 — bỏ chặn `admin` (xem giải thích đầy đủ ở dòng ~232).
@@ -815,6 +881,31 @@ public final class UserManagementUseCase {
     }
     private static String trim(Object o) { return o == null ? "" : String.valueOf(o).trim(); }
     private static String blankDefault(String s, String fallback) { return s.isEmpty() ? (fallback == null ? "" : fallback) : s; }
+
+    /**
+     * ⭐⭐ V-1 (`BUG-20261008-014` — 🔴 CRITICAL «mất dữ liệu») — **HỢP** «phạm vi HIỆN CÓ» với «payload» theo khoá:
+     * <ul>
+     *   <li>⭐ khoá trùng ⇒ **payload THẮNG** (người dùng SỬA được) ✓</li>
+     *   <li>⭐ khoá chỉ có ở `hienCo` ⇒ **GIỮ LẠI NGUYÊN** (⛔ KHÔNG XOÁ — ⚠️ đây chính là chỗ chống mất dữ liệu) ✓</li>
+     * </ul>
+     * ⚠️ Vì sao cần: xem giải thích đầy đủ ở khối V-1 trong `saveUserAccess` (người ⛔ không phải admin
+     * chỉ nhận **một phần** dữ liệu phạm vi ⇒ FULL-REPLACE sẽ xoá oan) ✓
+     *
+     * <p>⭐ Cố ý để **package-private** (⛔ không `private`) để test được ở
+     * {@code UserAccessScopeMergeTest} — ⚠️ đây là **hàm thuần** (⛔ không I/O) nên test thẳng là đủ ✓
+     */
+    static List<Object> hopThemKhongXoa(List<Map<String, Object>> hienCo, List<Object> payloadRows, String khoa) {
+        List<Object> kq = new java.util.ArrayList<>(payloadRows);
+        java.util.Set<String> daCoTrongPayload = new java.util.HashSet<>();
+        for (Object o : payloadRows) daCoTrongPayload.add(trim(asMap(o).get(khoa)));
+        if (hienCo != null) {
+            for (Map<String, Object> r : hienCo) {
+                String k = trim(r.get(khoa));
+                if (!k.isEmpty() && !daCoTrongPayload.contains(k)) kq.add(new java.util.LinkedHashMap<>(r));
+            }
+        }
+        return kq;
+    }
     private static double numberValue(Object o) { try { return o == null ? 0 : Double.parseDouble(String.valueOf(o)); } catch (NumberFormatException e) { return 0; } }
     private static int intOf(Object o) { return o == null || "false".equalsIgnoreCase(String.valueOf(o)) || "0".equals(String.valueOf(o)) ? 0 : 1; }
 

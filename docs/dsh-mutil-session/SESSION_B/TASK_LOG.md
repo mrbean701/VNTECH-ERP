@@ -112,3 +112,125 @@ Tiến độ master task: <DONE/tổng 110> (%) ← đọc thẳng từ docs/age
 2. Ghi 3 task đó vào `TASK_INDEX.md` (kèm trạng thái VERIFIED).
 3. Thêm 2 dòng tiến độ vào **mọi** báo cáo Telegram về sau.
 4. Xác định 3 task này có ánh xạ vào **mục nào trong 110** không (nếu không ⇒ ghi rõ là «ngoài 110 mục»).
+
+## ⭐⭐ TASK-231 — CARD KHO CAO ĐỀU + DỌN LABEL JARGON — **DONE** ⭐⭐
+| ⭐ | ⭐ |
+|---|---|
+| **TASK_ID** | ⭐ `TASK-231` (⭐ `ERP-SESSION-02` ✓) |
+| **DATE / START / END** | ⭐ 2026-10-08 · ⭐ bắt đầu sau `TASK-230` · ⭐ kết thúc khi `TEST-037`+`TEST-038` **PASS** ✅ |
+| **MODULE / FEATURE** | ⭐ Hub «Kho vật tư» — ⭐ **DASHBOARD TỒN KHO** (card) + ⭐ **dọn nhãn giao diện** ✓ |
+| **OBJECTIVE (⭐ nguyên văn user)** | ⭐⭐ «*sửa lại dashboard tồn kho các card đang ở trạng thái **kích thước khác nhau** và **hiển thị không đồng đều**, ngoài ra hãy **loại bỏ các đoạn label thừa** đi*» ⭐⭐ ✓ |
+| **PRIORITY** | ⭐ **UI IMPROVEMENT** (⭐ §21 mục 7 ✓) |
+| ⭐ **IMPLEMENTATION_SUMMARY** | ⭐ ① ⭐ **ĐO TRƯỚC** ⇒ ⭐ `chieuCao {202:2, 222:10}` ⭐⭐ **lệch 20px** ⭐⭐ ⚠️ · ⭐ nguyên nhân: ⭐ 2 thẻ thiếu dòng «Dự án:» (kho `transit` ⛔ không thuộc dự án ✓)<br>⭐ ② ⭐ **FIX** `globals.css` ⭐ **+`min-height:222px`** ⭐ ⇒ ⭐ **ĐO SAU `{222:12}` — lệch 0px** ✅<br>⭐ ③ ⭐ **QUÉT TỰ ĐỘNG** 7 màn (3 tab hub + 4 tab chi tiết) ⇒ ⭐ tìm **19 đoạn jargon** ⇒ ⭐ **xoá/reword 18**, ⭐ **giữ 2** (⭐ có bằng chứng mã ⛔ không được xoá ✓) ✅ |
+| **FILES_CHANGED** | ⭐ `app/globals.css` (+`min-height`) · ⭐ `app/screens/WarehouseDashboard.tsx` · ⭐ `app/screens/Inventory.tsx` ✓ |
+| **RESULT** | ⭐⭐ **card lệch 0px** + ⭐⭐⭐ **3 màn SẠCH jargon `[]`** ⭐⭐⭐ ✅ |
+| **TEST_REFERENCE** | ⭐ `TEST-20261007-037` · `TEST-20261007-038` ⭐ (⭐ `CHG-20261007-008` ✓) ✓ |
+| **REMAINING** | ⭐ 2 đoạn «đối chứng nguồn» ⏳ **chờ user quyết** (⛔ xoá sẽ ĐỎ `W-04`) ✓ |
+| **NEXT_ACTION** | ⭐ Chờ user 4 việc (⭐ force-push · commit · `DEC-011` · 2 đoạn nguồn ✓) ✓ |
+
+## ⭐ TASK-232 — BỎ 2 CỘT «DỮ LIỆU CHẾT» Ở «DANH MỤC NHÓM VẬT TƯ» — **DONE** ⭐
+| ⭐ | ⭐ |
+|---|---|
+| **TASK_ID / DATE / SESSION** | ⭐ `TASK-232` · ⭐ 2026-10-08 · ⭐ `ERP-SESSION-02` ✓ |
+| **MODULE / FEATURE** | ⭐ Danh mục vật tư → tab «Danh mục nhóm vật tư» ✓ |
+| ⭐⭐ **OBJECTIVE (⭐ user hỏi rồi chốt)** | ⭐ User hỏi «*tại sao lại có trường **Ý kiến điều chỉnh** và **trạng thái đã duyệt/đề xuất***» ⭐ ⇒ ⭐ tra mã ⇒ phát hiện **dữ liệu chết** ⚠️ ⇒ ⭐ user chốt ⭐⭐ **«C»** ⭐⭐ ⭐ + ⭐ nêu **lý do nghiệp vụ**: «*khi cấu hình nhóm con thì kế toán đã kiểm tra rất kỹ rồi và ⛔ không cần ai duyệt bởi vì chỉ là đưa nhóm con từ **file excel** của công ty đang sử dụng lên hệ thống*» ✓ |
+| **PRIORITY / STATUS** | ⭐ **UI IMPROVEMENT** (§21 mục 7) · ⭐⭐ **DONE** ⭐⭐ ✅ |
+| ⭐ **IMPLEMENTATION_SUMMARY** | ⭐ **4 chỗ** trong `app/page.tsx`: ⭐ ① BỎ `<th>Ý kiến điều chỉnh</th>` ⭐ ② ô «Trạng thái» ⇒ ⭐ chỉ `Number(active)===0?"Đã ẩn":"Đang dùng"` (⭐ bỏ nhánh `review_status` ✓) ⭐ ③ BỎ KPI «Chờ duyệt» ⭐ ④ nhãn lọc «Đang dùng / đề xuất» ⇒ «Đang dùng» ✅ |
+| 🔒 **GIỮ NGUYÊN** | ⭐ ⛔ **KHÔNG xoá dữ liệu** ⚠️ — ⭐ 2 cột CSDL `review_status` + `adjustment_note` **vẫn còn**, ⭐ chỉ ⛔ không hiển thị ✅ |
+| **FILES_CHANGED** | ⭐ `app/page.tsx` ✓ |
+| **RESULT** | ⭐⭐ **header 8 cột** (⭐ trước 9 ✓) ⭐ 4 chuỗi jargon **`false`** ⭐ dòng hiện **«Đang dùng»** ✅ |
+| **TEST_REFERENCE** | ⭐ `TEST-20261007-042` ⭐ (`CHG-20261008-012` · `BUG-20261008-020` · `DEC-20261008-012` ✓) ✓ |
+| **NEXT_ACTION** | ⭐ Chờ user điền quy tắc 4 chức năng kho ✓ |
+
+## ⭐ TASK-233 — AUDIT «CỘT DỮ LIỆU CHẾT» TOÀN MÀN «DANH MỤC VẬT TƯ» — **DONE** ⭐
+| ⭐ | ⭐ |
+|---|---|
+| **TASK_ID / DATE / SESSION** | ⭐ `TASK-233` · ⭐ 2026-10-08 · ⭐ `ERP-SESSION-02` ✓ |
+| **MODULE / FEATURE** | ⭐ Danh mục vật tư — **cả 3 tab** ✓ |
+| ⭐⭐ **OBJECTIVE** | ⭐ **Tự đi tìm cùng loại lỗi** user vừa phát hiện ⭐ — ⭐ câu hỏi: *còn cột nào «hiển thị nhưng ⛔ không ai ghi được»?* ⭐ ⭐ (⭐ theo bài học §33 ✓) ✓ |
+| **PRIORITY / STATUS** | ⭐ **UI IMPROVEMENT / AUDIT** · ⭐⭐ **DONE** ⭐⭐ ✅ |
+| ⭐⭐ **IMPLEMENTATION_SUMMARY** | ⭐ Phương pháp: ⭐ ① liệt kê **cột hiển thị** ⭐ ② liệt kê **ô nhập** ⭐ ③ **đối chiếu** ⇒ cột nào ⛔ không có ô nhập ⇒ nghi dữ liệu chết ✅<br>⭐ **Kết quả 3 tab**: ⭐ ① Danh sách vật tư ⇒ ⭐ **10/10 cột có ô nhập** ⇒ ⛔ **không có cột chết** ✅ ⭐ ② Danh mục nhóm vật tư ⇒ ⚠️ **có 2 cột chết** (⭐ đã sửa ở `TASK-232` ✓) ⭐ ③ Danh mục hệ vật tư ⇒ 5 trường CSDL có thật ✅<br>⭐⭐ **KẾT LUẬN: toàn màn CHỈ có ĐÚNG 1 ca — ĐÃ SỬA XONG** ⭐⭐ ✅ |
+| ⚠️ **PHẠM VI** | ⭐ **CHỈ 3 tab màn «Danh mục vật tư»** ⚠️ ⭐ — ⛔ **KHÔNG suy rộng** ✓ |
+| **FILES_CHANGED** | ⭐ ⛔ **không đổi mã** (⭐ audit thuần ✓) ✓ |
+| **TEST_REFERENCE** | ⭐ `TEST-20261007-043` · ⭐ `TEST-20261007-044` ✓ |
+
+## ⭐⭐ TASK-235 — MODAL «TẠO/SỬA KHO» (component dùng chung cho S01) — **DONE** ⭐⭐
+| ⭐ | ⭐ |
+|---|---|
+| **TASK_ID / DATE / SESSION** | ⭐ `TASK-235` · ⭐ 2026-10-08 · ⭐ `ERP-SESSION-02` ✓ |
+| **MODULE / FEATURE** | ⭐ Kho vật tư → Tạo/Sửa kho ✓ |
+| **OBJECTIVE** | ⭐ ⭐⭐ **GỠ CHỐT §17** ⭐⭐ — ⭐ nút «＋ Tạo kho»/«✎ Sửa» đang **TẠM KHOÁ** vì `page.tsx` ⛔ không có modal `warehouse` ⚠️ ⭐ và `page.tsx` thuộc **S01** ⇒ ⭐ phiên 02 dựng **component dùng chung** để S01 chỉ cần nối ✅ |
+| **PRIORITY / STATUS** | ⭐ **UI IMPROVEMENT** (§21 mục 7) · ⭐⭐ **DONE** ⭐⭐ ✅ |
+| **IMPLEMENTATION_SUMMARY** | ⭐ `app/screens/WarehouseFormModal.tsx` ⭐ — ⭐ `BaseModal` ⭐ từ `@/lib/ui-blocks` ⭐ + ⭐ 3 ô (⭐ Dự án · Mã kho tự sinh `KD-xxx` · Tên kho tự đặt `KHO <dự án>` ✓) ⭐ + ⭐ kiểm bằng `validateWarehouseCode(currentCode)` + `validateProjectWarehouseName` ⭐ + ⭐ cờ `canEdit`/`canEditCode` ⭐ + ⛔ **không có xoá kho** ✅ |
+| **FILES_CHANGED** | ⭐ `app/screens/WarehouseFormModal.tsx` (⭐ mới ✓) ⭐ + ⭐ `tests/task-235-warehouse-form-modal.test.mjs` (⭐ mới ✓) ✓ |
+| **RESULT** | ⭐ test **6/6 PASS** ✅ ⭐ **`901 · 900 pass · 0 fail`** ✅ ⭐ `tsc=0` · ⭐ lint **0 errors** ✅ |
+| **TEST_REFERENCE** | ⭐ `TEST-20261007-047` ⭐ (`CHG-20261008-014` ✓) ✓ |
+| **REMAINING / NEXT_ACTION** | ⭐ ⏳ **S01**: ⭐ thêm case `modal === "warehouse"` ⭐ + ⭐ API `save_warehouse` ⭐ ⇒ ⭐ **sau đó phiên 02 BẬT 4 nút** ✅ |
+
+## ⭐⭐ TASK-237 — QUY TẮC ③ «DỰ ÁN NGỪNG ⇒ HỎI NGỪNG KHO» — **DONE** ⭐⭐
+| ⭐ | ⭐ |
+|---|---|
+| **TASK_ID / DATE / SESSION** | ⭐ `TASK-237` · ⭐ 2026-10-08 · ⭐ `ERP-SESSION-02` ✓ |
+| **MODULE / FEATURE** | ⭐ Kho vật tư → Ẩn / Ngừng hoạt động (⭐ thay cho xoá ✓) ✓ |
+| **OBJECTIVE** | ⭐ **Hoàn tất phần LOGIC cuối cùng của 4 quy tắc kho** ⭐ — ⭐ quy tắc ③: ⛔ **không xoá** ⭐ + ⭐ **liên kết dự án** ⭐ ⇒ ⭐ **hỏi user khi dự án ngừng** ✅ |
+| **PRIORITY / STATUS** | ⭐ **UI IMPROVEMENT** (§21 mục 7) · ⭐⭐ **DONE** ⭐⭐ ✅ |
+| **IMPLEMENTATION_SUMMARY** | ⭐ `projectDeactivationPrompt(project, warehouses)` ⭐ — ⭐ trả ⭐ `{ shouldAsk, warehouses, message }` ⭐ (**⛔ không side-effect** ✓) ⭐ + ⭐ `ALLOW_DELETE_WAREHOUSE = false` ⭐ + ⭐ 2 hành động `hide`/`deactivate` + nhãn tiếng Việt ✅ |
+| **FILES_CHANGED** | ⭐ `lib/warehouse-hub.ts` ⭐ + ⭐ `tests/task-237-project-deactivation.test.mjs` (⭐ mới ✓) ✓ |
+| **RESULT** | ⭐ test **7/7 PASS** ✅ ⭐ **`915 · 914 pass · 0 fail`** ✅ ⭐ `tsc=0` · lint **0 errors** ✅ |
+| **TEST_REFERENCE** | ⭐ `TEST-20261008-049` ⭐ (`CHG-20261008-016` ✓) ✓ |
+| **NEXT_ACTION** | ⭐ ⏳ **S03**: nối vào màn «Ngừng dự án» ⭐ + ⭐ **S01**: API đổi trạng thái kho ✅ |
+
+## ⭐⭐ TASK-243 — GỠ CHỐT QUY TẮC ④: NỐI «GIỮ CHỖ» CHO **PHIẾU XUẤT** — **ĐANG LÀM** ⭐⭐
+| ⭐ | ⭐ |
+|---|---|
+| **TASK_ID / DATE / SESSION** | ⭐ `TASK-243` · ⭐ 2026-10-08 · ⭐ `ERP-SESSION-02` ⭐ (⚠️ **user đã CHO PHÉP sửa backend** ✓) ✓ |
+| **MODULE / FEATURE** | ⭐ Kho vật tư → Cấp phát / Xuất kho — ⭐ **quy tắc ④** ✓ |
+| ⭐⭐⭐ **CHẨN ĐOÁN ĐÃ XONG (⭐ đo từ mã)** | ⭐ ⭐⭐ **JAVA ĐÃ CÓ SẴN HẠ TẦNG — ⛔ không phải viết mới** ⭐⭐ ✅<br>· ⭐ `StockLedgerEngine.availability(...)` ⭐ ⇒ ⭐ `available = Math.max(0, physical − reserved)` ⭐ (`domain/service/StockLedgerEngine.java:24-30` ✓) ⭐ ⭐ **≡ `availableToIssue()` của phiên 02** ✅<br>· ⭐ `StockLedgerEngine.validateIssue(av, qty)` ⭐ ⇒ ⭐ «*if (qty > av.available() + 1e-9)*» ⭐ (`:34` ✓) ⭐ ⭐ **≡ `validateIssueQuantity()` của phiên 02** ✅<br>· ⭐ `RequestStore.createStockReservations(requestId, warehouseId, userId, now)` ⭐ ⇒ ⭐ `INSERT INTO stock_reservations` ⭐ (`RequestStoreAdapter.java:**420-426**` ✓) ✅<br>· ⭐ `StockManagementUseCase.**issueStock()**` (`:53`) ⭐ ⭐⭐ **ĐÃ GỌI** ⭐ `availability()` + `validateIssue()` ⭐ (`:**106-108**` ✓) ⭐ ⇒ ⭐ **backend ĐÃ CHẶN xuất quá `available`** ✅ |
+| ⭐⭐⭐ **LỖ HỔNG CÒN LẠI (⭐ chính là quy tắc ④ user chốt)** | ⭐ `grep createStockReservations` ⭐ ⇒ ⭐ **CHỈ 1 CHỖ GỌI** ⚠️: ⭐ `RequestManagementUseCase.java:**820**` ⭐ = ⭐ **phiếu ĐỀ NGHỊ** *(request)* ⚠️ ⭐ ⭐⇒ ⭐⛔ **PHIẾU XUẤT ⛔ KHÔNG tạo reservation** ⚠️ ⭐ ⭐ **HỆ QUẢ**: ⭐ khi phiếu xuất ở **draft / chờ duyệt** ⚠️ ⭐ số lượng đó **⛔ không được giữ chỗ** ⇒ ⭐ **2 phiếu xuất cùng chờ duyệt VẪN xuất quá được** ⚠️ ⭐ ⭐⭐ **⇒ ĐÚNG LỖ HỔNG USER MÔ TẢ**: ⭐ «*Trong thời gian **tạo phiếu hoặc chờ duyệt** thì số lượng vật tư trong phiếu đó ở trong **trạng thái đang xử lý***» ✅ |
+| ⭐⭐ **VIỆC CẦN LÀM (⭐ đã xác định rõ)** | ⭐ ① ⭐ **Khi TẠO phiếu xuất** ⭐ (`issueStock`, `StockManagementUseCase:53`) ⭐ ⇒ ⭐ **TẠO reservation** ⭐ ⚠️<br>⭐ ② ⭐ **Khi phiếu HOÀN THÀNH** ⭐ (`issueStockConfirm :229` / `confirmStockIssue :276`) ⭐ ⇒ ⭐ **RELEASE reservation** ⭐ (⭐ vì đã **trừ tồn THẬT** ✓) ⭐ ⚠️ nếu ⛔ không release ⇒ ⭐ **giữ chỗ 2 lần** ⚠️<br>⭐ ③ ⭐ **Kiểm `stock_reservations` có cột trỏ được phiếu XUẤT không** ⚠️ ⭐ — ⭐ hiện gắn `request_id` + `request_item_id` ⚠️ ⭐ ⇒ ⭐ nếu phiếu xuất ⛔ không có `request_id` thì phải **thêm cột** *(migration V39 — ⭐ `§19` tên theo phiên ✓)* ⚠️ ✅ |
+| ⚠️ **RỦI RO** | ⭐ **CAO** ⚠️ — ⭐ chạm ⭐ **logic tồn kho** ⭐ ⇒ ⭐ `available` thay đổi sẽ ảnh hưởng ⭐ **phiếu đề nghị + mua hàng** *(cũng đọc `reserved`)* ⚠️ ⭐ ⭐ ⇒ ⭐ **BẮT BUỘC chạy hồi quy toàn bộ** ✅ |
+| **STATUS** | ⭐⭐ **IN_PROGRESS — ⏳ chẩn đoán XONG, chưa sửa mã** ⭐⭐ |
+
+### ⭐ CẬP NHẬT `TASK-243` — **BƯỚC ③ XONG** *(hạ tầng đã sẵn sàng)*
+| ⭐ | ⭐ |
+|---|---|
+| ⭐⭐ **BƯỚC ③ — XONG** | ⭐ Thêm cột ⭐ **`issue_id`** ⭐ + index qua ⭐ **migration `V39`** ⭐ ⭐ **đã áp vào CSDL dev** ⭐ ⇒ ⭐ **`stock_reservations` giờ trỏ được CẢ phiếu ĐỀ NGHỊ (`request_id`) LẪN phiếu XUẤT (`issue_id`)** ✅ ⭐ ⭐ **⇒ HẠ TẦNG ĐÃ SẴN SÀNG** ✅ |
+| ⏳ **BƯỚC ① — CHƯA LÀM** | ⭐ Khi ⭐ **TẠO phiếu xuất** ⭐ (`StockManagementUseCase.**issueStock:53**`) ⭐ ⇒ ⭐ **TẠO reservation** ⭐ ⚠️ ⭐ cần: ⭐ thêm hàm ⭐ `createIssueReservations(issueId, …)` ⭐ ở ⭐ `RequestStore` + `RequestStoreAdapter` ⭐ (⭐ ⛔ không dùng lại `createStockReservations` vì nó gắn `request_id` ⚠️) ✅ |
+| ⏳ **BƯỚC ② — CHƯA LÀM** | ⭐ Khi phiếu ⭐ **HOÀN THÀNH** ⭐ (`issueStockConfirm:**229**` / `confirmStockIssue:**276**`) ⭐ ⇒ ⭐ **RELEASE reservation** ⭐ (⭐ `status='released'` + `released_at` ✓) ⚠️ ⭐ ⭐ **⛔ nếu KHÔNG release ⇒ GIỮ CHỖ 2 LẦN** ⇒ ⭐ `available` bị trừ oan ⇒ ⛔ chặn xuất sai ⚠️ ✅ |
+| ⚠️ **RỦI RO CÒN LẠI** | ⭐ **CAO** ⚠️ — ⭐ 3 tệp Java ⭐ (`RequestStore` interface · `RequestStoreAdapter` · `StockManagementUseCase`) ⚠️ ⭐ + ⭐ `available` đổi sẽ ảnh hưởng ⭐ **phiếu đề nghị + mua hàng** ⚠️ ⭐ ⇒ ⭐ **BẮT BUỘC hồi quy toàn bộ + kiểm tồn kho sau** ✅ |
+
+### ⭐⭐⭐ CẬP NHẬT `TASK-243` — **KẾ HOẠCH JAVA CHÍNH XÁC (⭐ đã đo đủ, ⛔ chưa viết mã)** ⭐⭐⭐
+
+> ⚠️ **Trạng thái thật**: hạ tầng DB **XONG** (`V39` — cột `issue_id` + index, đã áp). ⛔ **Phần Java CHƯA viết.**
+
+#### ⭐ VÒNG ĐỜI PHIẾU XUẤT (⭐ đo từ mã)
+```
+issueStock        (StockManagementUseCase.java:53)   → status 'draft'    ⛔ KHÔNG tạo giữ chỗ   ← (1) CẦN THÊM
+approveStockIssue (…:185)                            → 'approved'
+issueStockConfirm (…:229)  yêu cầu 'approved'        → 'issued'
+confirmStockIssue (…:276)  yêu cầu 'issued'          → 'completed'       ⭐ ĐỔI TỒN KHO THẬT   ← (2) CẦN NHẢ
+```
+⭐ **MẪU CÓ SẴN**: `releaseReservationsForRequest` được gọi ở `StockManagementUseCase.java:**153**` ✅
+
+#### ⭐ 3 TỆP CẦN SỬA (⭐ đã biết CHÍNH XÁC từng chỗ)
+| # | Tệp | Thêm gì |
+|---|---|---|
+| ① | `application/port/out/**WarehouseStockStore.java**` | 2 hàm: ⭐ `createIssueReservations(String issueId, String warehouseId, String userId, Instant now)` ⭐ + ⭐ `releaseReservationsForIssue(String issueId, Instant now)` ⭐ — ⭐ chèn sau `releaseReservationsForRequest` (`:37`) ✅ |
+| ② | `infrastructure/persistence/**WarehouseStockStoreAdapter.java**` | Cài 2 hàm trên, ⭐ **theo đúng mẫu `RequestStoreAdapter:420`** ⭐ (`@Transactional` + `INSERT INTO stock_reservations (id,project_id,warehouse_id,material_id,request_id,request_item_id,**issue_id**,quantity,status,reserved_at,released_at,created_by,created_at,updated_at)`) ⚠️ ⭐ `request_id`/`request_item_id` = **NULL** ⭐ ⚠️ ⭐ `issue_id` = **id phiếu xuất** ✅ · ⭐ RELEASE = `UPDATE … SET status='released',released_at=?,updated_at=? WHERE issue_id=? AND status='active'` ⭐ (⭐ **theo mẫu `releaseReservationsForRequest` ở adapter `:171`** ✓) ✅ |
+| ③ | `application/service/**StockManagementUseCase.java**` | ⭐ Gọi ① ở `issueStock` **sau** `store.insertStockIssue(...)` ⚠️ + ⭐ Gọi ② ở `confirmStockIssue` **sau** `store.confirmStockIssue(...)` ⭐ (⭐ lúc đó `status='completed'` — ⭐ **tồn đã trừ thật** ⇒ ⭐ nhả giữ chỗ ✓) ✅ |
+
+#### ⭐ CÁC CỘT ĐÃ ĐO ĐƯỢC (⭐ ⛔ không phải suy đoán)
+```
+stock_reservations  : id · project_id · warehouse_id · material_id · request_id · request_item_id
+                      ⭐ issue_id (MỚI — V39) · quantity · status · reserved_at · released_at · created_by · created_at · updated_at
+stock_issue_items   : id · issue_id · material_id · request_item_id · quantity · installed_qty · …
+stock_issues.project_id  ⭐ CẦN LẤY cho reservation (⭐ nguồn: `stock_issues` theo `issueId` ✓)
+stock_issues.status thật  : completed(7) · posted(13) · approved(6) · pending_cht(5) · grn_created(2)
+```
+
+#### ⚠️ 2 ĐIỀU KIỆN BẮT BUỘC TRƯỚC KHI COI LÀ XONG
+1. ⭐ **Build lại Java backend + restart `:18081`** ⚠️ *(⛔ không có bước này thì ⛔ mã mới không chạy)*
+2. ⭐ **Kiểm tồn kho THẬT sau** ⭐: ⭐ ví dụ user — ⭐ tạo 2 phiếu xuất cùng vật tư **cùng chờ duyệt** ⭐ ⇒ ⭐ phiếu 2 **phải bị chặn** nếu vượt `available` ⭐ ⭐ + ⭐ khi phiếu 1 `completed` ⇒ ⭐ giữ chỗ **phải nhả** (⭐ ⛔ không nhả 2 lần ✓) ✅
+
+#### ⚠️ RỦI RO (⭐ ⛔ chưa xử lý)
+⭐ **CAO** — ⭐ `available` đổi sẽ ảnh hưởng ⭐ **phiếu đề nghị + mua hàng** *(cũng đọc `reserved`)* ⚠️ ⭐ ⇒ ⭐ **BẮT BUỘC hồi quy toàn bộ + kiểm tồn kho** ✅ ⭐ ⭐ **⇒ ⛔ KHÔNG viết vội khi chưa đủ ngân sách kiểm chứng** ⭐ ✅

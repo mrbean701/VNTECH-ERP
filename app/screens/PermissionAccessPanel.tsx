@@ -41,7 +41,7 @@ import type { MutableRefObject, ReactNode } from "react";
 
 import { ADMIN_HELP_TEXT, TriStateCheckbox } from "@/lib/ui-shared";
 import type { AppData, Row } from "@/lib/ui-shared";
-import { normalizePermissionCaps, PERMISSION_CAPABILITIES, PERMISSION_CAPABILITY_META } from "@/app/screens/PermissionMatrix";
+import { MATRIX_HIDDEN_MODULE_KEYS, normalizePermissionCaps, PERMISSION_CAPABILITIES, PERMISSION_CAPABILITY_META } from "@/app/screens/PermissionMatrix";
 import type { PermissionCapability, PermissionEntry, PermissionState } from "@/app/screens/PermissionMatrix";
 
 type HelpTipComponent = (props: { text: string }) => ReactNode;
@@ -81,6 +81,40 @@ export function countChangedPermissions(data: AppData, userId: string, next: Per
     }
   }
   return changed;
+}
+
+/**
+ * KHOÁ CỦA MỌI Ô TICK TRONG MA TRẬN PHÂN QUYỀN — **NGUỒN DUY NHẤT** cho cả hai phía:
+ * panel VẼ ô tick (`moduleKeys`) và hai modal DỰNG payload `save_user_access`.
+ *
+ * ⛔ VÌ SAO PHẢI DÙNG CHUNG — lỗi user báo 07/10/2026: «tôi vừa thực hiện cấu hình phân quyền
+ *    cho 1 user nhưng gặp lỗi, khi bấm lưu thì nó không lưu phân quyền tôi vừa chọn cho user».
+ *   Ma trận được vẽ theo `permissionMenuStructure(data)` = `configuredModules(data)` ∪ 14 khoá
+ *   `admin_tab_NN` (`app/page.tsx:269-280`) ⇒ ma trận CÓ ô tick cho `admin_tab_01..14`.
+ *   Nhưng payload ở `UserEditModal`/`UserAccessModal` map qua `configuredModules(data)`
+ *   ⇒ **tập khoá GỬI ĐI nhỏ hơn tập khoá VẼ RA** ⇒ tick vào ô ngoài payload bị BỎ QUA.
+ *   📏 ĐO THẬT (`tools/probe-permission-save-keyset.mjs`, bootstrap 76 dòng):
+ *      · panel vẽ **77** khoá · payload gửi **61** khoá · **MẤT 16 khoá**
+ *      · 16 khoá đó = `admin_tab_01..14` + `admin` + `reports`
+ *   ✅ Backend **CHẤP NHẬN** đúng các khoá đó — đo `tools/probe-permission-save-api.mjs`:
+ *      admin lưu `admin_tab_01` ⇒ HTTP 200 và đọc lại thấy persisted
+ *      ⇒ nguyên nhân gốc nằm ở **FRONTEND**, ⛔ KHÔNG phải API.
+ *
+ * ⚠️ Hàm này là HỢP của HAI nguồn — giữ nguyên cả hai (⛔ đừng "dọn cho gọn" một nguồn):
+ *   1. `data.moduleCatalog` (cột `module_key`) — gồm cả khoá KHÔNG có trong menu như
+ *      `admin_tab_NN` và `admin`.
+ *   2. `entries` = `permissionMenuStructure(data)` — dòng ma trận THẬT SỰ được vẽ.
+ *   `save_user_access` là **FULL-REPLACE** (`clearUserScopes()` xoá cứng 3 bảng rồi ghi lại)
+ *   ⇒ khoá nào ⛔ KHÔNG gửi lên sẽ bị XOÁ. Dùng hợp này để ⛔ không âm thầm mất quyền cũ.
+ */
+export function permissionMatrixKeys(data: AppData, entries: PermissionEntry[]): string[] {
+  const catalogKeys = (data.moduleCatalog || [])
+    .filter((item) => item.active !== false)
+    .map((item) => String(item.moduleKey));
+  const entryKeys = entries
+    .map((entry) => String(entry.module?.key ?? ""))
+    .filter((key) => key !== "");
+  return Array.from(new Set<string>([...catalogKeys, ...entryKeys]));
 }
 
 /** `2026-06-30T00:00:00` → `2026-06-30` cho `<input type="date">`. */
@@ -132,20 +166,18 @@ export default function PermissionAccessPanel({
   //   2. Mọi nút hàng loạt («Chọn tất cả», «Bỏ chọn tất cả», checkbox đầu cột) dựng state
   //      bằng khoá `undefined` ⇒ payload `save_user_access` gửi 76 module TẤT CẢ `false` ⇒
   //      `clearUserScopes()` XOÁ SẠCH toàn bộ quyền và KHÔNG lưu quyền vừa chọn.
-  const assignableModules = (data.moduleCatalog || [])
-    .filter((item) => item.active !== false)
-    .map((item) => ({ ...item, key: String(item.moduleKey) }));
-
-  // Khoá của MỌI dòng ma trận thật sự được vẽ (`entries`) ∪ khoá từ danh mục module.
-  // Bản cũ dựng state chỉ từ `assignableModules` ⇒ chức năng có trong `entries` mà không có
-  // trong `moduleCatalog` không có ô trạng thái ⇒ hiện tick trống và bị gửi `false` khi Lưu.
-  const moduleKeys = Array.from(
-    new Set<string>(
-      assignableModules
-        .map((item) => item.key)
-        .concat(entries.map((entry) => String(entry.module?.key ?? "")).filter((key) => key !== "")),
-    ),
-  );
+  // ⭐ BUG-20261007-005 — DÙNG CHUNG `permissionMatrixKeys` với payload của hai modal.
+  // Trước đây panel tự dựng tập khoá riêng còn modal map qua `configuredModules(data)`
+  // ⇒ hai tập LỆCH 16 khoá (`admin_tab_01..14` + `admin` + `reports`) ⇒ tick vào ô ngoài
+  // payload bị BỎ QUA khi bấm Lưu. Một hàm, hai phía, ⛔ không còn đường lệch.
+  const moduleKeys = permissionMatrixKeys(data, entries);
+  // ⛔ `BUG-D19` (08/10/2026) — **2 NÚT HÀNG LOẠT ⛔ KHÔNG ĐƯỢC CHẠM KHOÁ ĐÃ ẨN KHỎI MA TRẬN**.
+  //   ⚠️ VÌ SAO: `setAll`/`setColumnAll` lặp trên `moduleKeys` (HỢP gồm cả khoá bị ẩn) ⇒ admin bấm
+  //   «□ Bỏ chọn tất cả» hoặc bỏ tick ở **checkbox ĐẦU CỘT** sẽ **GHI 0 ÂM THẦM** cho 4 khoá
+  //   `dept_plan_*`/`dept_project_*` **không còn ô nào trên màn hình để thấy** ⇒ mất quyền mà ⛔ không biết.
+  //   ✅ Nay 2 nút đó chỉ tác động **khoá ĐANG HIỆN**; ⛔ `moduleKeys` (tập gửi lên) **GIỮ NGUYÊN** ⇒
+  //   giá trị đang có của 4 khoá ẩn vẫn được gửi ⇒ ⛔ **KHÔNG mất quyền** (đúng cơ chế FULL-REPLACE).
+  const bulkKeys = moduleKeys.filter((key) => !MATRIX_HIDDEN_MODULE_KEYS.includes(key));
   const activeProjects = (data.adminProjects || []).filter((row) => row.status === "active");
 
   const permissionFor = (moduleKey: string): Row =>
@@ -184,25 +216,27 @@ export default function PermissionAccessPanel({
   };
 
   const setAll = (value: boolean) => {
-    setPermissionState(
-      Object.fromEntries(
-        moduleKeys.map((key) => [
+    setPermissionState({
+      ...permissionState,
+      ...Object.fromEntries(
+        bulkKeys.map((key) => [
           key,
           Object.fromEntries(PERMISSION_CAPABILITIES.map((cap) => [cap, value])) as Cell,
         ]),
       ),
-    );
+    });
   };
 
   const setColumnAll = (cap: PermissionCapability, value: boolean) => {
-    setPermissionState(
-      Object.fromEntries(
-        moduleKeys.map((key) => [
+    setPermissionState({
+      ...permissionState,
+      ...Object.fromEntries(
+        bulkKeys.map((key) => [
           key,
           normalizePermissionCaps(permissionState[key] || (Object.fromEntries(PERMISSION_CAPABILITIES.map((k) => [k, false])) as Cell), cap, value),
         ]),
       ),
-    );
+    });
   };
 
   const setRowAll = (moduleKey: string, value: boolean) => {
@@ -221,10 +255,13 @@ export default function PermissionAccessPanel({
   };
 
   const columnState = (cap: PermissionCapability) => {
-    const selected = moduleKeys.filter((key) => permissionState[key]?.[cap]).length;
+    // ⛔ `BUG-D19` — trạng thái 3 mức của checkbox ĐẦU CỘT phải tính trên **khoá ĐANG HIỆN** (`bulkKeys`):
+    //   nếu tính cả 4 khoá đã ẩn (vốn thường = 1 với mọi người) thì đầu cột hiện «đã chọn» ⚠️ SAI
+    //   so với những gì admin THẤY ⇒ bấm vào sẽ ghi 0 cho khoá ẩn (âm thầm) hoặc không như ý.
+    const selected = bulkKeys.filter((key) => permissionState[key]?.[cap]).length;
     return {
-      all: moduleKeys.length > 0 && selected === moduleKeys.length,
-      some: selected > 0 && selected < moduleKeys.length,
+      all: bulkKeys.length > 0 && selected === bulkKeys.length,
+      some: selected > 0 && selected < bulkKeys.length,
     };
   };
 
@@ -360,7 +397,25 @@ export default function PermissionAccessPanel({
               </tr>
             </thead>
             <tbody>
-              {entries.map((entry) => {
+              {(() => {
+                // ⭐ 09/10/2026 (`ERP-SESSION-01` · phạm vi ADMIN) — **ẨN 4 KHOÁ CŨ khỏi PHẦN VẼ**, đúng khuôn
+                //   `PermissionMatrix.tsx` (L84–86) ✓ — ⚠️ TRƯỚC ĐÂY panel vẽ THẲNG `entries` (⛔ không lọc)
+                //   ⇒ tab «Phân quyền công việc / Chức năng» vẫn hiện «CÔNG VIỆC · Phòng Kế hoạch/Phòng Dự án»
+                //   (⭐ đúng như ảnh user báo) ✓
+                //   ⛔⛔ TUYỆT ĐỐI KHÔNG lọc `entries` gốc: `permissionMatrixKeys(data, entries)` (payload gửi lên)
+                //   suy từ chính `entries` ⇒ lọc ở đó sẽ **MẤT QUYỀN ÂM THẦM** (đúng lỗi `BUG-D19`) ✓
+                //   ⇒ ⭐ lọc Ở TẦNG VẼ + bỏ luôn tiêu đề nhóm rỗng (tránh tiêu đề TRỐNG trên màn hình) ✓
+                const kept = entries.filter((entry) => entry.kind !== "module"
+                  || !MATRIX_HIDDEN_MODULE_KEYS.includes(entry.module?.key ?? String(entry.key).replace(/^module:/, "")));
+                return kept.filter((entry, index) => {
+                  if (entry.kind === "module") return true;
+                  for (let i = index + 1; i < kept.length; i++) {
+                    if (kept[i].kind === "module") return true;   // còn module ⇒ giữ tiêu đề nhóm
+                    if (kept[i].kind === entry.kind) return false; // gặp tiêu đề cùng cấp ⇒ nhóm này RỖNG
+                  }
+                  return false;
+                });
+              })().map((entry) => {
                 if (entry.kind === "group") {
                   return (
                     <tr className="permission-group-row" key={entry.key}>

@@ -1,5 +1,8 @@
 "use client";
 
+// ⚠️ MT3-S03 (08/10/2026) — TỆP NÀY HIỆN ⛔ KHÔNG ĐƯỢC DÙNG Ở ĐÂU (đo được: **0 tham chiếu** trong `app/**` + `lib/**`).
+//    ⛔ ĐỪNG tốn công kiểm thử/DOM-verify màn này (bài học `SESSION_C/TEST_LOG.md §C42`).
+//    ⚠️ Cần quyết (nối lại menu · xoá · giữ kèm ghi chú): `SESSION_C/HANDOFF_LOG.md` §`HANDOFF-20261007-C15`.
 // USER 28/09/2026 — MODAL「＋ Tạo Kho cho dự án」.
 //   ⛔ KHÔNG thêm action mới. Dùng action CÓ SẴN `update_project`, vì `ProjectManagementUseCase`
 //      L100-104 gọi `upsertSiteWarehouse` ở CẢ HAI nhánh (có kho sẵn / chưa có kho) ⇒ tạo được kho mới.

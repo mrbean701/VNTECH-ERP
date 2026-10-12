@@ -16,20 +16,18 @@ export interface ReportCatalogEntry {
   source: ReportSource;
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  pending_approval: "Chờ duyệt",
-  approved: "Đã duyệt",
-  rejected: "Từ chối",
-  waiting_delivery: "Chờ giao",
-  delivered: "Đã giao",
-  done: "Hoàn thành",
-  cancelled: "Đã huỷ",
-  open: "Mở",
-  closed: "Đóng",
-};
+// ⛔ ERP-SESSION-03 (07/10/2026) — `BUG-20261007-C03`: ĐÂY TỪNG LÀ BẢN `statusLabel` **THỨ BA** (bảng 9 mã)
+//   với fallback `?? String(v ?? "(không xác định)")` ⇒ **RÒ MÃ THÔ TIẾNG ANH** ra TRUNG TÂM BÁO CÁO với mọi mã
+//   ngoài 9 mã đó (`issued` · `awaiting_po` · `ordered` · `posted` · `partial_delivery` · `returned_to_requester`…).
+//   ✅ Nay dùng bảng nhãn **DUY NHẤT** `lib/status-labels.ts`; ⛔ giữ nguyên câu chữ cho giá trị RỖNG
+//      («(không xác định)») để KHÔNG đổi giao diện báo cáo đang chạy.
+import { statusLabel as sharedStatusLabel } from "../lib/status-labels";
 
 /** Nhãn trạng thái dùng chung cho mọi báo cáo (chỉ để hiển thị; khoá nhóm vẫn là giá trị thật). */
-export const statusLabel = (v: unknown): string => STATUS_LABELS[String(v)] ?? String(v ?? "(không xác định)");
+export const statusLabel = (v: unknown): string => {
+  if (v === null || v === undefined || String(v).trim() === "") return "(không xác định)";
+  return sharedStatusLabel(v);
+};
 
 // ── R-02 — MUA HÀNG ─────────────────────────────────────────────────────────
 const R02: ReportCatalogEntry[] = [

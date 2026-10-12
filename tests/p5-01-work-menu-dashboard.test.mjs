@@ -12,18 +12,23 @@ const read = (p) => readFileSync(new URL(p, import.meta.url), "utf8");
 const menu = read("../lib/menu-helpers.ts");
 const center = read("../app/screens/WorkCenter.tsx");
 
-test("P5-01 — mục «Dashboard» nhóm «Công việc» trỏ ĐÚNG `view: \"dashboard\"` (⛔ không còn `kpi`)", () => {
-  const line = menu.split("\n").find((row) => row.includes('key: "work_dashboard"'));
-  assert.ok(line, "phải có mục menu work_dashboard");
+test("P5-01 — MỤC HUB «Công việc» trỏ ĐÚNG `view: \"dashboard\"` (VIỆC 1, 08/10/2026)", () => {
+  // ⭐ VIỆC 1 (USER 08/10/2026): 5 mục rời ⇒ **1 MỤC HUB `work_hub`** (nhãn «Công việc») — bấm ⇒ tab Dashboard.
+  const line = menu.split("\n").find((row) => row.includes('key: "work_hub"'));
+  assert.ok(line, "phải có mục menu hub `work_hub`");
   assert.match(line, /view: "dashboard"/, "phải trỏ tab Dashboard, ⛔ không trỏ KPI");
   assert.match(line, /groupKey: "my_work"/, "phải thuộc nhóm menu «Công việc»");
 });
 
-test("P5-02 — «Dashboard» đứng ĐẦU nhóm «Công việc» (§3.1 ②)", () => {
+test("P5-02 — nhóm «Công việc» nay có ĐÚNG 1 MỤC HUB + hợp ĐỦ 8 khoá quyền (VIỆC 1)", () => {
   const block = menu.slice(menu.indexOf("const workMenuItems"), menu.indexOf("const legacyWorkMenuKeys"));
-  const keys = [...block.matchAll(/key: "(work_[a-z]+)"/g)].map((m) => m[1]);
-  assert.deepEqual(keys, ["work_dashboard", "work_personal", "work_department", "work_assign", "work_reports"],
-    "Dashboard phải là mục ĐẦU TIÊN của nhóm Công việc");
+  const keys = [...block.matchAll(/key: "(work_[a-z_]+)"/g)].map((m) => m[1]);
+  assert.deepEqual(keys, ["work_hub"], "Sau VIỆC 1 nhóm «Công việc» chỉ còn MỘT mục hub (Dashboard ĐÃ ở tab đầu)");
+  // ⚠️ Thiếu khoá nào ⇒ người chỉ có khoá đó MẤT mục menu (đo ở `app/page.tsx` khối `workMenuChildren`).
+  for (const key of ["dept_plan_kpi", "dept_project_kpi", "dept_plan_tasks", "dept_project_tasks",
+    "dept_plan_assign", "dept_project_assign", "dept_plan_alerts", "dept_project_alerts"]) {
+    assert.ok(block.includes(`"${key}"`), `Mục hub thiếu khoá quyền ${key}`);
+  }
 });
 
 test("P5-01 — `dashboard` ánh xạ ĐÚNG tab index của WORK_TABS (ĐO, ⛔ không hard-code mù)", () => {

@@ -324,3 +324,193 @@ Next Action: Doc ky `eslint.config.*` (luat React Compiler) TRUOC khi sua ⇒ ro
 > ⭐ ⭐ **TỔNG: 12 task** — ⭐ **4 VERIFIED** · ⭐ **4 DONE** · ⭐ **4 FIXED (chờ nghiệm thu)** · ⭐ **0 OPEN** ✓
 > ✅ ⭐ **TẤT CẢ TASK ĐÃ XỬ LÝ XONG** — ⚠️ **4 task `FIXED` đang CHỜ USER NGHIỆM THU** ⇒ `VERIFIED` (§24 ✓)
 > ⭐ ⭐ **`TASK-20261006-011` nay KHÔNG còn `Remaining (b)`** — ⭐ **backend ĐÃ SỬA XONG + ĐÃ LÊN SÓNG + ĐÃ ĐO** ✓
+
+## TASK-20261008-001 — Bắt & vá lỗi «bấm Lưu không lưu được quyền» ở modal phân quyền
+
+| ⭐ | ⭐ |
+|---|---|
+| **TASK_ID** | TASK-20261008-001 |
+| **DATE** | 2026-10-08 |
+| **SESSION_ID** | ERP-SESSION-01 (SESSION_A) |
+| **MODULE** | RBAC · Quản trị hệ thống |
+| **FEATURE** | Modal «Phân quyền công việc / chức năng» + tab 6 «Phân quyền người dùng» |
+| **OBJECTIVE** | User báo bấm Lưu không lưu quyền ⇒ tìm **nguyên nhân gốc** và vá |
+| **PRIORITY** | **HIGH** (§21.4 USER-BLOCKING + mất dữ liệu quyền) |
+| **STATUS** | **FIXED** (nguyên nhân A) · **BLOCKED chờ user quyết** (nguyên nhân B) |
+| **START** | 2026-10-08 10:20:00 |
+| **END** | 2026-10-08 10:50:00 |
+
+### IMPLEMENTATION_SUMMARY
+1. **ĐO trước, ⛔ không đoán** (D-081): viết 2 probe —
+   `tools/probe-permission-save-keyset.mjs` (so tập khoá panel vẽ vs payload gửi) và
+   `tools/probe-permission-save-api.mjs` (đo đường API, tài khoản probe riêng).
+2. Kết quả đo: **(A)** panel 77 khoá vs payload 61 khoá ⇒ **mất 16**; **(B)** user role≠admin
+   có quyền module `admin` ⇒ **HTTP 403**.
+3. **Vá (A)**: một nguồn duy nhất `permissionMatrixKeys(data, entries)` (export từ
+   `PermissionAccessPanel.tsx`) dùng cho **panel + cả hai modal**; gỡ `assignableModules`.
+4. **Hồi quy**: cập nhật `tests/v214-phan-quyen-luu-quyen.test.mjs` theo cấu trúc mới, giữ
+   nguyên ý định 6 VỆ cũ + thêm **VỆ 7** (payload phủ đủ tập panel vẽ, đối chứng âm mất đúng 16).
+5. **Đo lại**: panel 77 = payload 77 · **MẤT 0** · test 7/7 · cổng hồi quy 865 pass/0 fail · tsc 0.
+
+### FILES_CHANGED
+| Tệp | Loại |
+|---|---|
+| `app/screens/PermissionAccessPanel.tsx` | sửa — thêm helper nguồn duy nhất |
+| `app/page.tsx` | sửa — 2 modal dựng payload qua helper, gỡ `assignableModules` |
+| `tests/v214-phan-quyen-luu-quyen.test.mjs` | sửa — cập nhật + thêm VỆ 7 |
+| `tools/probe-permission-save-keyset.mjs` | mới — máy dò lệch tập khoá |
+| `tools/probe-permission-save-api.mjs` | mới — đo đường API |
+
+### RESULT
+✅ Nguyên nhân (A) **FIXED** (CODE FIXED + TEST PASSED, §24).
+⏸ Nguyên nhân (B) **BLOCKED** — là **quyết định phân quyền**, đã ghi `DEC-20261008-001` và
+báo user; ⛔ DSH ⛔ không tự chọn phương án (quy tắc dừng chờ quyết định).
+
+### TEST_REFERENCE
+`TEST-20261008-001` · `BUG-20261008-001` · `CHG-20261008-001` · `DEV-20261008-001`
+
+### REMAINING
+- ⏸ Chờ user chốt `DEC-20261008-001` (PA-1 / PA-2 / PA-3) cho nguyên nhân (B).
+- ⏸ **VERIFIED** còn chờ user xác nhận trên giao diện thật (nuphus browser ⛔ không khả dụng phiên này).
+
+### NEXT_ACTION
+Khi user chốt ⇒ thi hành đúng phương án đã chọn cho (B), chạy lại probe API B2 + hồi quy, rồi VERIFIED.
+
+## TASK-20261008-004 — ✅ Nhận + xử lý `HANDOFF-20261007-007` của `ERP-SESSION-02` (⛔ không viết lại gì — bản sửa đã có sẵn)
+
+| ⭐ | ⭐ |
+|---|---|
+| **TASK_ID** | TASK-20261008-004 · **SESSION** ERP-SESSION-01 · **STATUS** 🟡 **MỘT PHẦN** |
+| **YÊU CẦU (của S02)** | `app/page.tsx` gọi `<Inventory … />` **thiếu `action={action}`** ⇒ `action` luôn `undefined` ⇒ ⭐ nút «Lưu phân công» (`wd-staff-save`) ⛔ KHÔNG LƯU được (chức năng TASK-230 «Thêm nhân sự vào kho» của họ) |
+| **📏 ĐO THỰC TẾ (⭐ nguồn sự thật = mã)** | `<Inventory data={data} project={project} open={open} view={warehouseView} action={action} />` ⇒ ⭐ **`action={action}` ĐÃ CÓ** ✓ |
+| **AI THÊM** | `git log -S …` ⇒ commit **`0119160`** (bản gom 3 phiên) — ⭐ bản sửa đã nằm sẵn trong cây trước khi gom ✓ |
+| **`tsc`** | ✅ **0** (đúng phép kiểm 1/2 họ yêu cầu) |
+| **`Inventory.tsx:478`** | `disabled={!staffPickId||!action}` ⇒ ⭐ với `action` có giá trị, nút chỉ phụ thuộc `staffPickId` ⇒ ⭐ **logic đúng** (⚠️ nghiên cứu mã, ⛔ không thay phép đo DOM) |
+| ⏸ **CHƯA XONG** | ⚠️ Phép đo DOM: `[data-vntech="wd-staff-save"]`.disabled = **false**. Đi được: bundle mới ⇒ hub (`h1="TỒN KHO & ĐIỀU CHUYỂN"`, **12 card**) ⇒ ⛔ **bấm card chưa mở chi tiết** ⇒ dừng ✓ |
+| **PHẢN HỒI** | ✅ Đã ghi vào `SESSION_B/HANDOFF_LOG.md` (⭐ **thêm vào**, ⛔ không ghi đè) + đề nghị S02 đo 1 lệnh (màn của họ) ✓ |
+
+## TASK-20261008-005 — ✅ **BỘ TÀI LIỆU PHIÊN BẢN `ALPHA TEST`**: gắn nhãn 80 tệp · chỉ mục · viết lại 5 tài liệu chính · vá lỗ hổng kiểm thử
+
+| ⭐ | ⭐ |
+|---|---|
+| **TASK_ID** | TASK-20261008-005 · **DATE** 2026-10-08 · **SESSION** ERP-SESSION-01 · **STATUS** ✅ **DONE** |
+| **YÊU CẦU (user)** | «viết tài liệu bàn giao, hướng dẫn sử dụng, mô tả chức năng và hệ thống. Mọi tài liệu đã có trong repo cập nhật lại phiên bản alpha test» |
+
+### ① GẮN NHÃN PHIÊN BẢN `ALPHA TEST` — 80 tệp
+Nhãn chuẩn `DOC-ALPHA-TEST-2026.10` + sản phẩm `V5.3.0-MASTER-BASELINE-R1.1.1` + 3 cổng.
+⭐ **ĐÃ XÁC MINH ⛔ không hỏng nội dung**: `git diff` **+449 / −1** trên 69 tệp ⇒ **chỉ THÊM**, ⛔ không xoá dòng nào (vd `docs/24`: **+6/−0**) ✓
+⚠️ **Phân biệt 2 loại phiên bản**: **TÀI LIỆU** = `DOC-ALPHA-TEST-2026.10` (đã cập nhật) · **SẢN PHẨM** = `V5.3.0-MASTER-BASELINE-R1.1.1` + vân tay `VNTECH-FP-BB706F1202490077` ⛔ **KHÔNG đổi** (vân tay gắn với bản build đang chạy, cổng `verify-ui-build-applied` kiểm `byte 6/6`) ✓
+
+### ② TÀI LIỆU MỚI
+| Tệp | Nội dung |
+|---|---|
+| `docs/00_INDEX_TAI_LIEU_ALPHA_TEST.md` (**105 dòng**) | ⭐ điểm vào: 5 nhóm tài liệu · chuẩn nhãn · 6 cổng kiểm chứng · **§8 SỐ LIỆU NỀN** để đối chiếu |
+| `docs/61_GHI_CHU_PHAT_HANH_ALPHA_TEST_20261008.md` (**69 dòng**) | ghi chú phát hành: bản này là gì · 7 thay đổi lớn kể từ 01/10 · cổng đã xanh · **5 hạng mục tồn & rủi ro** · quy tắc ghi phiếu lỗi |
+
+### ③ VIẾT LẠI 5 TÀI LIỆU CHÍNH (⭐ bản cũ cập nhật 01/10 ⇒ đã lệch)
+| Tài liệu | Trước → Sau |
+|---|---|
+| `31_TAI_LIEU_BAN_GIAO` | 141 → **393 dòng** |
+| `30_HUONG_DAN_NGUOI_DUNG` | 155 → **487 dòng** |
+| `33_MO_TA_CHUC_NANG_VA_HE_THONG` | 190 → **782 dòng** |
+| `32_TAI_LIEU_PHAN_TICH_HE_THONG` | 169 → **489 dòng** |
+| `34_TAI_LIEU_DEV` | 206 → **538 dòng** |
+⭐ Cách làm: **5 subagent song song**, mỗi tài liệu **1 tệp** (⛔ không giẫm nhau) · ⛔ cấm bịa số · ⛔ cấm ghi mật khẩu/token ✓
+
+### ④ 🔴 VÁ LỖ HỔNG THẬT TRONG KẾ HOẠCH KIỂM THỬ ALPHA
+Rà `docs/36` (487 dòng, phủ M1–M13): `uỷ nhiệm` · `admin_tab` · `thêm nhân sự` · `giữ chỗ` · `hub` = **0 lần** ⇒ ⛔ **chưa phủ chức năng vừa xây**.
+✅ Bổ sung **M14** (phân quyền uỷ nhiệm, **8 ca**) · **M15** (4 chức năng kho, **5 ca**) · **M16** (giữ chỗ tồn kho, **4 ca**) + **quy tắc an toàn** («⛔ KHÔNG test thao tác ghi đè quyền trên tài khoản thật»).
+
+### ⑤ SỬA SỐ LIỆU — ⭐ 3 LỖI PHÉP ĐO CỦA CHÍNH TÔI (⛔ không phải của subagent)
+| Số | Tôi đo | Sự thật | Nguyên nhân lỗi của tôi |
+|---|---|---|---|
+| Dòng `app/page.tsx` | 3607 ❌ | **3718** | ⚠️ `Measure-Object -Line` **đếm thiếu** (bỏ dòng) — dùng `(Get-Content).Count` |
+| Nhãn `case "` | 260 ❌ | **261** | ⚠️ neo `^\s*case "` **sót** `L1200: }case "close_po_line" -> {` (case chung dòng) |
+| Cổng `if (admin)` | 5 ❌ | **4** | ⚠️ `L1208` là **COMMENT** (⛔ lại bẫy comment — luật `D-100`) |
+✅ Đã sửa ở **cả 2 phía** (`docs/00_INDEX` §8 · `docs/32` · `docs/33`) ✓
+
+### ⑥ DỌN RÁC DO CHÍNH PROBE CỦA TÔI (⭐ phát hiện bởi subagent bàn giao)
+📏 Đo được: **44 tài khoản `probe_*`** (43 đang hoạt động) do các probe E2E của tôi tạo.
+✅ Đã **vô hiệu hoá 43 tài khoản** (`active=0`) ⇒ tài khoản hoạt động **71 → 28** · ⭐ **hoàn nguyên được** (`UPDATE users SET active=1 WHERE username LIKE 'probe\_%'`) · ⛔ **không xoá** (vướng khoá ngoại) ✓
+✅ Đã kiểm ⛔ không có tài khoản THẬT nào lọt mẫu `probe_%` ✓ · **bất biến kho ⛔ không đổi: 12/5/10** ✓
+✅ Cập nhật `docs/31` (bảng tài khoản + rủi ro **R-5** nay «ĐÃ XỬ LÝ») ✓
+📌 **LUẬT (D-104)**: probe ghi vào CSDL dùng chung **PHẢI tự dọn** hoặc **vô hiệu hoá** sau khi chạy ✓
+
+### ⑦ CỔNG KIỂM (không đổi — ⛔ không có mã sản phẩm nào bị sửa trong task này)
+Java **88/88** · FE **955 test · 954 pass · 0 fail** · `tsc` **0** · cổng UI **6/6 byte** · probe **17/17** · CSDL kho **12/5/10** · `:8787`/`:9000`/`:18081` sống ✓
+
+## TASK-20261009-001 — Khai quyền **6 action «MÙ QUYỀN»** (`HANDOFF-20261008-D14`)
+
+| Trường | Nội dung |
+|---|---|
+| **TASK_ID** | `TASK-20261009-001` · **DATE** 2026-10-09 · **SESSION_ID** `ERP-SESSION-01` |
+| **MODULE** | RBAC · PHÂN QUYỀN · **FEATURE** Review hợp đồng + Phạm vi công việc |
+| **OBJECTIVE** | Khai quyền cho 6 action ⛔ **chưa có dòng nào** trong `ActionRbacRegistry` ⇒ mọi non-admin nhận **403 kèm THÔNG ĐIỆP SAI** (lớp `P-08`) ✓ |
+| **PRIORITY** | **HIGH** (2 trong 6 action **đang được FE gọi** ⇒ chặn người dùng thật) |
+| **STATUS** | **FIXED** (mã ✅ + test ✅ + **hiện vật JAR 6/6** ✅) — ⏸ `VERIFIED` một phần (chờ probe live bằng tài khoản thật) |
+| **START** | 2026-10-09 (sau khi user giao «phối hợp cùng S4 xử lý phân quyền nhóm Công việc») |
+| **END** | 2026-10-09 13:46 (jar build lại) |
+| **IMPLEMENTATION_SUMMARY** | ① **ĐO TRƯỚC KHI GẮN MODULE** (bài học `P-08`): 6 action ⛔ **không có route JS** ⇒ ⛔ không tồn tại cổng `requireRole` để leo thang · ⛔ không nằm trong `ADMIN_ONLY_ACTIONS` · ✅ cả 6 CÓ `case` trong `SystemController` ② khai theo **TIỀN LỆ** (`manage_contract_review` → `dept_legal_contract_review`) + quy ước **XOÁ = `canEdit`** (**ĐO: 25/38** action `delete_*`) ③ `work_scope` → khoá `work` + `canView` ④ chèn ở **CUỐI 2 map** để ⛔ không dịch số dòng (`F-03`) ✓ |
+| **FILES_CHANGED** | `java-backend/application/.../rbac/ActionRbacRegistry.java` (2 map) · `java-backend/web/src/test/.../ContractReviewWorkScopeRbacTest.java` (**MỚI**, 5 ca) |
+| **RESULT** | ✅ Cổng `probe-action-registry-coverage` **EXIT 0** (`④ MÙ QUYỀN = 0` · `⑤ = 0`) · `probe-action-parity` **Java thiếu 0** · Java **102/102** · cổng `F-03` **7/7** |
+| **TEST_REFERENCE** | `TEST-20261009-018` (5 ca) · `TEST-20261009-019` (xác minh 3 tầng) · `TEST-20261009-021` (kỷ luật số dòng) |
+| **REMAINING** | 1 phép đo **LIVE** bằng tài khoản thật có module (⚠️ ⛔ không tạo tài khoản — luật `D-104`) ⇒ probe để sẵn `probes/verify-d14-live.mjs` ✓ |
+| **NEXT_ACTION** | Chờ user/S4 chạy probe ⇒ chuyển `VERIFIED` ✓ |
+
+## TASK-20261009-002 — Đổi **định danh sản phẩm** sang **`ALPHA TEST 2026.10`** + **build UI**
+
+| Trường | Nội dung |
+|---|---|
+| **TASK_ID** | `TASK-20261009-002` · **DATE** 2026-10-09 · **SESSION_ID** `ERP-SESSION-01` |
+| **MODULE** | RELEASE · DEVOPS · **FEATURE** Định danh sản phẩm / bản chạy |
+| **OBJECTIVE** | ⭐ **USER chốt phương án (d)**: build + đổi **PHIÊN BẢN SẢN PHẨM** sang **ALPHA TEST** cho khớp bộ tài liệu `DOC-ALPHA-TEST-2026.10` ✓ |
+| **PRIORITY** | **HIGH** (là điều kiện để UI mang thay đổi của các phiên ra bản chạy) |
+| **STATUS** | **DONE** (build ✅ + chạy lại ✅ + cổng UI **3/3 ĐẠT** ✅) |
+| **START / END** | 2026-10-09 (≈13:20) → 2026-10-09 **13:34** (build) / **13:37** (jar) |
+| **IMPLEMENTATION_SUMMARY** | ⭐ Mỗi bước do **CỔNG của dự án** chỉ ra (⛔ không đoán): `Source fingerprint` → `Dockerfile chưa đồng bộ định danh FULL W2` (đọc `scripts/preflight-source.mjs:250-255` ⇒ **chỉ 2 tệp** `Dockerfile` + `deploy/docker-compose.yml`) → `VNTECH_FINGERPRINT.json releaseBuild` → `Release fingerprint không hợp lệ` (⚠️ `refresh-phase-identity.mjs` **EXIT 64** ⇒ ⭐ **tự tính bằng CHÍNH thư viện dự án** `calculateReleaseFingerprint` = `1f7ebad2…`) ✓ Sửa **9 tệp phản chiếu**; ⚠️ **giữ nguyên** `packageId` + 3 dấu hợp đồng (hợp đồng byte-level của cổng) ✓ |
+| **FILES_CHANGED** | `lib/vntech-identity-data.mjs` · `VNTECH_PACKAGE_ID.txt` · `VNTECH_FINGERPRINT.json` · `VNTECH_FULL_W2_ID.txt` · `VNTECH_PRODUCT_IDENTITY.txt` · `Dockerfile` · `deploy/docker-compose.yml` · `.env.example` · `README.md` |
+| **RESULT** | ✅ `npm run build` **EXIT 0** (26 giây) · ✅ cổng UI **`✓ do-moi ✓ van-tay ✓ byte 6/6`** = «BẢN CHẠY ĐÚNG BẢN ĐÃ BUILD MỚI NHẤT» · ✅ `.local-data/warehouse.sqlite` **KHỚP** + trigger tạo lại ✓ · ✅ FE **960/959/0** · `tsc` **0** |
+| **TEST_REFERENCE** | `TEST-20261009-018` (hồi quy) · cổng `verify-ui-build-applied` (port 8787) |
+| **REMAINING** | ⚠️ **59+11 chỗ** nhãn/vân tay cũ còn lại (chủ yếu `docs/**` + `AGENTS.md`) — **chờ user quyết** (không tự sửa: `docs/**` = phạm vi S4 + báo cáo lịch sử ⛔ không viết lại) ✓ |
+| **NEXT_ACTION** | Sau khi user cho phép ⇒ đồng bộ banner (giữ nguyên báo cáo mốc cũ) ✓ |
+
+## TASK-20261009-003 — **Bác bỏ `BUG-20261008-D03`** (12 action «mồ côi») bằng phép đo 4 chiều
+
+| Trường | Nội dung |
+|---|---|
+| **TASK_ID** | `TASK-20261009-003` · **DATE** 2026-10-09 · **SESSION_ID** `ERP-SESSION-01` |
+| **MODULE** | RBAC · AUDIT · **FEATURE** Toàn cụm cổng quyền |
+| **OBJECTIVE** | S4 đề xuất giao S01 (`SHARED_TODO` §S4) ⚠️ ⇒ ⭐ **đo TRƯỚC khi sửa** (bài học `P-08`/MỐC 110 §7) ✓ |
+| **PRIORITY** | **MEDIUM** (audit — ⛔ không phải lỗi người dùng) |
+| **STATUS** | **DONE** (⛔ **0 dòng mã đổi**) |
+| **IMPLEMENTATION_SUMMARY** | Đo **4 chiều** trên từng action: ① registry module **0/12 khai** ② **`ADMIN_ONLY_ACTIONS` 12/12 CÓ** ③ **route JS `requireRole(user, ["admin"])` 12/12 CÓ** ④ `case` controller **12/12 CÓ** ⇒ ⭐ nhánh `RbacService:108-112` chạy **TRƯỚC** nhánh `required.isEmpty()` ⇒ **403 kèm THÔNG ĐIỆP ĐÚNG** ⇒ **Java = JS (CẢ HAI CHỈ ADMIN)** ✓ |
+| **FILES_CHANGED** | ⛔ **0 tệp sản phẩm** (chỉ log/registry của S01 + `SHARED_TODO` mục S01) |
+| **RESULT** | 🚫 **KẾT LUẬN**: `BUG-20261008-D03` = **BÁO ĐỘNG GIẢ** ⇒ ⛔ **không "vá" thứ đang đúng** (luật `D-106`) · đã gửi `HANDOFF-20261009-A06` đề nghị S4 đóng `CANCELLED` ✓ |
+| **TEST_REFERENCE** | `TEST-20261009-020` |
+| **REMAINING** | ⏳ Chờ S4 cập nhật trạng thái trong sổ của họ (⚠️ S01 ⛔ không tự sửa sổ phiên khác) ✓ |
+| **NEXT_ACTION** | — (đã đóng phía S01) ✓ |
+
+## TASK-20261009-034 — MENU «CÔNG VIỆC» theo yêu cầu trực tiếp của user (3 việc) — **OPEN**
+
+| **TASK_ID** | `TASK-20261009-034` · **DATE** 2026-10-09 · **SESSION** `ERP-SESSION-01` · **MODULE** MENU · **PRIORITY** HIGH (user-reported UI) |
+|---|---|
+| **OBJECTIVE** | ① bỏ «Quản trị dự án» khỏi menu Công việc ② tách «Trung tâm phê duyệt» khỏi Công việc ③ bấm «CÔNG VIỆC» mở thẳng màn Công việc |
+| **STATUS** | ① ⏳ **CHUYỂN S04** (`lib/menu-helpers.ts` — họ đang sửa ✓) · ② ✅ **ĐÃ TÁCH SẴN** (nhóm riêng `approval_center`) ⇒ chờ user hard-refresh xác nhận · ③ ✅ **S01 XONG** (`DEV-20261009-021`) |
+| **FILES** | ③ `app/page.tsx` (S01) · ① `lib/menu-helpers.ts` (S04) |
+| **TEST_REFERENCE** | `P6-08` **3/3** ✓ · `typecheck` **0** ✓ · ⚠️ `T-13` đỏ = việc đang dở của S04 ✓ |
+| **REMAINING** | S04 xong ① ⇒ `RELEASED` ⇒ S01 build lại ⇒ user nghiệm thu trên `:8787`/`:9000` ✓ |
+| **NEXT_ACTION** | theo dõi `SHARED_STATE` (S04) · ⚠️ nhắc user **Ctrl+F5** (ảnh chụp có thể là cache) ✓ |
+
+## TASK-20261009-035 — thi hành `work_others` (phương án A, user chốt) — **READY**
+| `TASK_ID` | `TASK-20261009-035` · **SESSION** `ERP-SESSION-01` · **STATUS** ⭐ **READY** (đặc tả xong, chưa sửa mã) · **DEV** `DEV-20261009-022`
+|---|---|
+| **ĐIỂM ÁP** | `BootstrapDataAdapter.java` **L1544–1595** — nhánh «chỉ việc CỦA MÌNH» (`wi.assigned_to=?`) ✓ |
+| **CÁCH ÁP** | thêm **OR EXISTS** trên `user_module_permissions` (khoá `work_others`, `can_view=1`, ⚠️ tôn trọng `permission_expires_at`) — **cùng khuôn L1586** ✓ ⇒ cấp khoá ⇒ thấy thêm **việc PHÒNG mình** (mức hẹp nhất ✓) |
+| **⚠️ ĐIỂM DỄ SAI** | thêm 1 dấu `?` ⇒ **bind đúng vị trí** (L1589 cảnh báo sẵn) ✓ |
+| **TEST** | 2 chiều (có/không khoá) + `coverage` 0 mù quyền + Java suite 0 fail ⇒ rồi build lại **jar** + restart `:18081` ✓ |
+
+## TASK-20261009-036 — Khoá hồi quy cho `BUG-20261009-D31`  ✅ DONE
+- **OBJECTIVE**: ⛔ chặn bug tái phát theo đúng cách nó đã xảy ra (⚠️ «1 component được vá, component anh em bị bỏ sót») ✓
+- **FILES**: ➕ `tests/t15-matrix-hidden-keys-render.test.mjs` (6 ca · ⛔ 0 tệp khác) ✓
+- **RESULT**: ✅ đường dương xanh · ⭐ **nghiệm thu âm 2 nửa đều ĐỎ** ⇒ guard THẬT ✓ · ✅ cổng FE 979·978·0 ✓
+- **TEST_REFERENCE**: `TEST-20261009-032` ✓ · **NEXT_ACTION**: chạy chuỗi chốt + chờ user Ctrl+F5 ✓

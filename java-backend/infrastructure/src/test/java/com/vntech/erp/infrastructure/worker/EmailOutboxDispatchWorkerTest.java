@@ -72,8 +72,50 @@ class EmailOutboxDispatchWorkerTest {
         verify(sender, never()).send(any(MimeMessage.class));
     }
 
+    /**
+     * ⭐ BUG-20261008-004 — ĐỐI CHỨNG ĐÚNG KIỂU DỮ LIỆU MySQL TRẢ VỀ.
+     *
+     * <p>⚠️ VÌ SAO LỌT LƯỚI TỪ 29/09/2026: 3 test trên dùng {@code "enabled", 1} = **Integer** ⇒
+     * {@code value instanceof Number} = TRUE ⇒ ⛔ chưa bao giờ chạm nhánh **Boolean**. Nhưng
+     * {@code email_settings.enabled} là {@code TINYINT(1)} và trình điều khiển MySQL mặc định
+     * ({@code tinyInt1isBit=true}) trả về **Boolean** ⇒ {@code Integer.parseInt("false")} ⇒
+     * {@code NumberFormatException} **mỗi 60 giây** (bằng chứng: {@code java-run.log} 29/09/2026 và
+     * log backend 08/10/2026, đúng nhịp {@code @Scheduled(fixedDelay=60_000)}).
+     */
+    @Test
+    void enabledLaBoolean_tuMySQL_khongNemNumberFormatException() {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        JavaMailSender sender = mock(JavaMailSender.class);
+        MimeMessage message = mock(MimeMessage.class);
+        when(sender.createMimeMessage()).thenReturn(message);
+        when(jdbc.queryForList(anyString())).thenReturn(List.of(settings(Boolean.TRUE)));
+        when(jdbc.queryForList(anyString(), any(Object[].class))).thenReturn(List.of(mail(0)));
+        when(jdbc.update(anyString(), any(Object[].class))).thenReturn(1);
+
+        new EmailOutboxDispatchWorker(jdbc, ignored -> sender).run();
+
+        verify(sender).send(message);
+    }
+
+    /** Cùng ca trên nhưng {@code enabled = false} ⇒ worker phải BỎ QUA (⛔ không gửi), ⛔ không ném lỗi. */
+    @Test
+    void enabledBooleanFalse_boQuaKhongGui() {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        JavaMailSender sender = mock(JavaMailSender.class);
+        when(jdbc.queryForList(anyString())).thenReturn(List.of(settings(Boolean.FALSE)));
+
+        new EmailOutboxDispatchWorker(jdbc, ignored -> sender).run();
+
+        verify(sender, never()).send(any(MimeMessage.class));
+    }
+
     private static Map<String, Object> settings() {
-        return Map.of("enabled", 1, "smtpHost", "smtp.example.com", "smtpPort", 587,
+        return settings(1);
+    }
+
+    /** {@code enabled} nhận CẢ Integer (H2) LẪN Boolean (MySQL {@code TINYINT(1)}). */
+    private static Map<String, Object> settings(Object enabled) {
+        return Map.of("enabled", enabled, "smtpHost", "smtp.example.com", "smtpPort", 587,
                 "security", "starttls", "username", "mailer", "password", "secret",
                 "senderEmail", "erp@example.com", "senderName", "VNTECH ERP");
     }

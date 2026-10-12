@@ -279,12 +279,12 @@ public class SystemController {
                     return ResponseEntity.ok(json(Map.of("ok", true, "message", message)));
                 }
                 case "create_project" -> {
-                    AuthUseCase.CurrentUser cu = requireRequireAdmin(request);
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
                     String message = projectManagementUseCase.createProject(asPrincipal(cu), payload);
                     return ResponseEntity.ok(json(Map.of("ok", true, "message", message)));
                 }
                 case "update_project" -> {
-                    AuthUseCase.CurrentUser cu = requireRequireAdmin(request);
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
                     String message = projectManagementUseCase.updateProject(asPrincipal(cu), payload);
                     return ResponseEntity.ok(json(Map.of("ok", true, "message", message)));
                 }
@@ -294,7 +294,7 @@ public class SystemController {
                     return ResponseEntity.ok(json(Map.of("ok", true, "message", message)));
                 }
                 case "delete_project" -> {
-                    AuthUseCase.CurrentUser cu = requireRequireAdmin(request);
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
                     Map<String, Object> result = projectManagementUseCase.deleteProject(asPrincipal(cu), payload);
                     Map<String, Object> body = new LinkedHashMap<>();
                     body.put("ok", true);
@@ -411,7 +411,23 @@ public class SystemController {
                     return ResponseEntity.ok(json(Map.of("ok", true, "message", message)));
                 }
                 case "save_user_access" -> {
-                    AuthUseCase.CurrentUser cu = requireRequireAdmin(request);
+                    // ⭐ PA-1 (USER 08/10/2026 — `DEC-20261008-001`) — ĐÚNG LỖI ĐÃ VÁ CHO `update_user`
+                    //    Ở MỐC 109 (xem chú thích đầy đủ ở `case "update_user"` ngay trên), ⛔ nhưng SÓT action này.
+                    //   🔎 ĐO ĐƯỢC (`tools/probe-permission-save-api.mjs`, ⛔ không suy đoán): có **3 TẦNG** chặn
+                    //      `save_user_access`, và tầng này là tầng CUỐI còn lại:
+                    //        ① `ActionRbacRegistry` khai `List.of()` (rỗng) ⇒ default-DENY — ĐÃ SỬA (`admin_tab_06`).
+                    //        ② `UserManagementUseCase.saveUserAccess` `requireRole(…, List.of("admin"))` — ĐÃ SỬA.
+                    //        ③ ⛔ **dòng này** `requireRequireAdmin` ⇒ role ≠ admin LUÔN 403
+                    //           «Tài khoản không có quyền thực hiện nghiệp vụ này.» ⇒ hai sửa trên thành CODE CHẾT.
+                    //      📏 Bằng chứng: sau khi sửa ①+②, probe vẫn nhận **403 thông điệp THỨ BA** (chuỗi của
+                    //         `requireRequireAdmin`) ⇒ chính là dòng này. Sửa nốt ⇒ 200.
+                    //   ✅ NAY: cổng quyền DUY NHẤT là `rbacService.requireActionModule(...)` ở ĐẦU `post()`
+                    //      (dòng ~228-231) — đã chạy TRƯỚC switch và **fail-closed** cho `save_user_access`
+                    //      (`admin_tab_06` + `canView`; admin đi qua nhánh `isAdmin`).
+                    //   ⚠️ GIỮ NGUYÊN mọi chốt an toàn phía sau: MỐC 111 (chặn payload rỗng) · MỐC 112 (nguyên tử)
+                    //      · `UserManagementUseCase` (guard quyền lần nữa). Quyền ĐỔI `role` ⛔ KHÔNG đi qua action
+                    //      này (chỉ `update_user` + `guardRoleChange`, vẫn admin-only).
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request, false);
                     String message = userManagementUseCase.saveUserAccess(asUserPrincipal(cu), payload);
                     return ResponseEntity.ok(json(Map.of("ok", true, "message", message)));
                 }
@@ -529,6 +545,20 @@ public class SystemController {
                 case "save_warehouse_location" -> {
                     AuthUseCase.CurrentUser cu = requireCurrentUser(request);
                     String m = adminSystemUseCase.saveWarehouseLocation(asAdminPrincipal(cu), payload);
+                    return ResponseEntity.ok(json(Map.of("ok", true, "message", m)));
+                }
+                // ⭐ HANDOFF-20261008-009 (yêu cầu `ERP-SESSION-02`) — TẠO/SỬA KHO + ĐỔI TRẠNG THÁI KHO.
+                // ⚠️⚠️ Dùng `requireCurrentUser(request)` (đúng khuôn action anh em `save_warehouse_location`)
+                //   ⛔ **KHÔNG** `requireRequireAdmin` — bài học 3 tầng ở `BUG-20261008-002`: tầng ② cứng
+                //   `role=admin` sẽ chặn oan người được cấp quyền qua CẤU HÌNH ✓
+                case "save_warehouse" -> {
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                    String m = adminSystemUseCase.saveWarehouse(asAdminPrincipal(cu), payload);
+                    return ResponseEntity.ok(json(Map.of("ok", true, "message", m)));
+                }
+                case "set_warehouse_status" -> {
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                    String m = adminSystemUseCase.setWarehouseStatus(asAdminPrincipal(cu), payload);
                     return ResponseEntity.ok(json(Map.of("ok", true, "message", m)));
                 }
                 case "preview_request_import" -> {
@@ -997,7 +1027,7 @@ public class SystemController {
                     Map<String, Object> result = opsTaskManagementUseCase.updateWorkItemProgress(asOpsTaskPrincipal(cu), payload);
                     return ResponseEntity.ok(jsonResult(result));
                 }
-                                case "update_work_item_status" -> {
+                                case "update_work_item_status", "approve_work_item" -> {
                     AuthUseCase.CurrentUser cu = requireCurrentUser(request);
                     Map<String, Object> result = opsTaskManagementUseCase.updateWorkItemStatus(asOpsTaskPrincipal(cu), payload);
                     return ResponseEntity.ok(jsonResult(result));
@@ -1472,6 +1502,26 @@ case "reject_po" -> {
                 case "save_error_report" -> { requireCurrentUser(request); return ResponseEntity.ok(jsonResult(errorReportUseCase.save(payload))); }
                 case "error_reports" -> { requireCurrentUser(request); return ResponseEntity.ok(jsonResult(java.util.Map.of("reports", errorReportUseCase.list(payload)))); }
                 case "mark_error_report_resolved" -> { requireCurrentUser(request); return ResponseEntity.ok(jsonResult(errorReportUseCase.resolve(payload))); }
+                // ⭐ T-04 (PHASE 3 · CÔNG VIỆC) — **PORT NỐT 2 action WORK** cho đường Java (đóng `docs/61` Q3).
+                // ⚠️ VÌ SAO Ở ĐÂY: đặt CUỐI switch, SAU mọi `case` mà hồ sơ `F-03-TAI-CHINH-AUDIT-PHU-THUOC.md`
+                //    gắn số dòng ⇒ ⛔ KHÔNG dịch dòng của bất kỳ action nào (cùng quy ước `save_error_report` ở trên).
+                // ⚠️ Quyền ⛔ KHÔNG đổi: `add_work_item_comment` = `canUse` · `set_work_item_participant` = `canEdit`
+                //    (đã khai sẵn ở `ActionRbacRegistry` L16/L314) ⇒ đây chỉ là CÀI ĐẶT handler còn thiếu.
+                case "add_work_item_comment" -> {
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                    Map<String, Object> result = opsTaskManagementUseCase.addWorkItemComment(asOpsTaskPrincipal(cu), payload);
+                    return ResponseEntity.ok(jsonResult(result));
+                }
+                case "delete_work_item" -> {
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                    return ResponseEntity.ok(jsonResult(
+                            opsTaskManagementUseCase.deleteWorkItem(asOpsTaskPrincipal(cu), payload)));
+                }
+                case "set_work_item_participant" -> {
+                    AuthUseCase.CurrentUser cu = requireCurrentUser(request);
+                    Map<String, Object> result = opsTaskManagementUseCase.setWorkItemParticipant(asOpsTaskPrincipal(cu), payload);
+                    return ResponseEntity.ok(jsonResult(result));
+                }
                 default -> {
                     return ResponseEntity.status(400).body(json(Map.of("ok", false,
                             "error", "Action '" + action + "' chưa được triển khai trên backend Java (Strangler Fig).")));

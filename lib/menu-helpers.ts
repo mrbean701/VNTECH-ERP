@@ -31,6 +31,43 @@ function configuredMenuGroups(data: AppData, includeHidden = false): Row[] {
 
 const modules: { key: ModuleKey; label: string; icon: string; groupKey?: string; subGroup?: string }[] = [
   { key: "dashboard", label: "Tổng quan điều hành", icon: "OV", groupKey: "overview" },
+  // ⭐⭐ QUYẾT ĐỊNH USER 08/10/2026 (thẻ quyết định · PHƯƠNG ÁN A) — **KHOÁ «Công việc» DÙNG CHUNG MỌI PHÒNG BAN**.
+  //   ⛔ VÌ SAO CẦN (ĐO ĐƯỢC, ⛔ không suy diễn): nhóm WORK cũ chỉ có 2 cặp khoá mang tên **2 phòng ban**
+  //     (`dept_plan_*` = Phòng Kế hoạch · `dept_project_*` = Phòng Dự án) trong khi `organization_units` có
+  //     **11 đơn vị** (BGD·DA·HCPC·BCH·E2E-BCH-01·E2E-DIAG-BCH·KH·NS·TCKT·VNTECH·VNTECH-01) ⇒ ma trận phân
+  //     quyền bị «chia 2 phòng ban», nhân sự các phòng còn lại ⛔ không có khoá nào để cấp quyền CÔNG VIỆC.
+  //   ✅ KHOÁ NÀY LÀ CỔNG **NĂNG LỰC** (Xem/Thao tác/Tạo/Sửa/Duyệt/Xuất) ⛔ KHÔNG gắn phòng ban nào;
+  //     **phạm vi** xem/giao việc tính ĐỘNG theo phòng ban + cấp bậc ở backend
+  //     (`scripts/system-route.mjs` → `workScopeAll` · `BootstrapDataAdapter.isWorkCompanyScope`).
+  //   ⚠️ 4 khoá cũ VẪN SỐNG (quyền · tiêu đề màn · tìm kiếm · nhánh render · cổng tab của `WorkCenter`)
+  //     ⇒ ⛔ KHÔNG xoá. Nhưng khoá MỚI ⛔ KHÔNG hiện thành mục menu (xem `legacyWorkMenuKeys` bên dưới):
+  //     menu «Công việc» đã có `work_hub` gom sẵn, thêm dòng nữa là **trùng mục**.
+  //   ⚠️ Dòng này CHỈ xuất hiện ở **MA TRẬN PHÂN QUYỀN** (`permissionMenuStructure` đọc thẳng `configuredModules`)
+  //     — đúng ý user: «ma trận nên có quyền cho từng tab… không được hardcode phòng ban».
+  { key: "work", label: "Công việc (mọi phòng ban)", icon: "CV", groupKey: "my_work" },
+  // ⭐ THÊM 08/10/2026 (`ERP-SESSION-04`) — **QUYỀN CRUD CỦA PROJECT VÀO MA TRẬN** (user chốt `Q1` = **A3**):
+  // ⛔ KHÔNG dùng lại khoá `dept_project_plan` (⚠️ đang `can_create=1` ở **42 tài khoản** ⇒ sẽ NỚI QUYỀN cho 42 người)
+  // ⇒ dùng **khoá RIÊNG** `project_admin`: admin **tick từng người** ⇒ ⭐ ai chưa tick thì ⛔ không có gì thay đổi.
+  { key: "project_admin", label: "Quản trị dự án (tạo / sửa / xoá)", icon: "DA", groupKey: "my_work" },
+  // ⭐ BỔ SUNG 09/10/2026 (`ERP-SESSION-04` — thi hành `HANDOFF-20261009-A09` của S01, **MÔ HÌNH B** của user):
+  //   **6 KHOÁ TAB** của màn «Công việc» + **`work_others`** (S01 quyết `B1`).
+  //   ⚠️ VÌ SAO PHẢI CÓ DÒNG Ở ĐÂY (⚠️ đo được, ⛔ không suy đoán): `configuredModules` (`lib/workflow-helpers.ts:56`)
+  //     duyệt **`modules`** (mảng này) rồi **mới ghép** nhãn/`active`/`sortOrder` từ `module_catalog` ⇒
+  //     khoá có trong `module_catalog` + `titles` mà **⛔ thiếu dòng ở đây thì ⛔ KHÔNG có DÒNG MA TRẬN**
+  //     (ĐO 09/10/2026: `configuredModules(payload thật)` = 64 dòng, **⛔ 0/7** khoá mới xuất hiện).
+  //   ✅ HAI ĐIỀU KIỆN AN TOÀN ĐÃ KIỂM TRƯỚC: ① `my_work` ⛔ **KHÔNG** nằm trong `HUB_TAB_GROUP_KEYS` (đã rút ở VIỆC 1)
+  //     ⇒ thêm dòng **⛔ không sinh tab mục menu mới** ② ⚠️ **BẮT BUỘC**: 7 khoá này **PHẢI** nằm trong
+  //     `legacyWorkMenuKeys` (xem danh sách dưới) — ⛔ nếu thiếu ⇒ chúng **MỌC THÀNH 7 MỤC MENU** trong nhóm
+  //     «Công việc» (⚠️ đúng cơ chế đã làm `project_admin` lọt ra menu — phát hiện trên sidebar thật 15:25) ✓
+  //   ⚠️ Nhãn ở đây là **dự phòng** — nhãn THẬT vẫn lấy từ `module_catalog` (S01 đặt «Công việc — …», `app/page.tsx`
+  //     đặt mô tả cho trang). ⛔ KHÔNG sửa `app/page.tsx` cho việc này.
+  { key: "work_dashboard", label: "Công việc — Dashboard", icon: "CV", groupKey: "my_work" },
+  { key: "work_list", label: "Công việc — Danh sách công việc", icon: "CV", groupKey: "my_work" },
+  { key: "work_department", label: "Công việc — Phòng ban/ Tổ đội", icon: "CV", groupKey: "my_work" },
+  { key: "work_assign", label: "Công việc — Giao việc", icon: "GV", groupKey: "my_work" },
+  { key: "work_project", label: "Công việc — Dự án", icon: "DA", groupKey: "my_work" },
+  { key: "work_reports", label: "Công việc — Báo cáo", icon: "BC", groupKey: "my_work" },
+  { key: "work_others", label: "Việc của NGƯỜI KHÁC (xem · sửa · duyệt)", icon: "CV", groupKey: "my_work" },
   { key: "dept_plan_tasks", label: "Nhiệm vụ nhân viên đang làm", icon: "NV", groupKey: "my_work", subGroup: "Phòng Kế hoạch" },
   { key: "dept_plan_assign", label: "Giao việc & Kiểm soát hoàn thành", icon: "GV", groupKey: "my_work", subGroup: "Phòng Kế hoạch" },
   { key: "dept_plan_supply_plan", label: "Kế hoạch mua hàng & cung ứng", icon: "KH", groupKey: "purchasing", subGroup: "Phòng Kế hoạch" },
@@ -123,17 +160,48 @@ type WorkMenuView = "personal" | "department" | "assign" | "kpi" | "reports" | "
 //    ⇒ ⛔ KHÔNG thể «vào Dashboard bằng click nhóm cha»; cách đúng §3.1 ② là ĐỂ DASHBOARD ĐẦU MENU ✔
 // ⛔ KHÔNG xoá mục (giữ §3.1 ③ làm phương án khác) ⇒ ⛔ không thể tạo hồi quy (mất lối vào) ✔
 const workMenuItems: { key: string; label: string; groupKey: "my_work"; view: WorkMenuView; permissionKeys: ModuleKey[] }[] = [
-  // MT2-P5-01 — `view: "kpi"` ⇒ **`view: "dashboard"`** (mục này là «Dashboard», KHÔNG phải tab KPI).
-  // ⚠️ `permissionKeys` GIỮ NGUYÊN (`dept_plan_kpi`/`dept_project_kpi`) — §3.1 KHÔNG nói đổi quyền ⇒ ⛔ không tự đổi.
-  { key: "work_dashboard", label: "Dashboard", groupKey: "my_work", view: "dashboard", permissionKeys: ["dept_plan_kpi", "dept_project_kpi"] },
-  { key: "work_personal", label: "Cá nhân", groupKey: "my_work", view: "personal", permissionKeys: ["dept_plan_tasks", "dept_project_tasks"] },
-  { key: "work_department", label: "Phòng ban", groupKey: "my_work", view: "department", permissionKeys: ["dept_plan_assign", "dept_project_assign"] },
-  { key: "work_assign", label: "Giao việc", groupKey: "my_work", view: "assign", permissionKeys: ["dept_plan_assign", "dept_project_assign"] },
-  { key: "work_reports", label: "Báo cáo", groupKey: "my_work", view: "reports", permissionKeys: ["dept_plan_alerts", "dept_project_alerts"] },
+  // ⭐⭐ VIỆC 1 (USER 08/10/2026 — chốt qua thẻ quyết định): **GOM 5 MỤC RỜI THÀNH MỘT MỤC HUB «Công việc»**.
+  //   Bấm mục này ⇒ mở màn `WorkCenter` ở **tab «Dashboard»** (Dashboard đã được đưa LÊN ĐẦU dải 7 tab).
+  //   ⚠️ `permissionKeys` = **HỢP của các khoá quyền cũ** — ⛔ THIẾU khoá nào thì người chỉ có khoá đó
+  //      sẽ **MẤT mục menu** (`app/page.tsx` lọc `item.permissionKeys.find((key) => modulePermission(data, key).canView)`).
+  //   ⭐ KHUÔN ĐÃ CÓ TIỀN LỆ: nhóm «Kho vật tư» gom 7 mục → 1 (`warehouse_hub`, khối bên dưới).
+  //   ⛔ KHÔNG khai `moduleKey`: giữ nguyên cơ chế cũ (khoá quyền ĐẦU XEM ĐƯỢC quyết định màn đích).
+  { key: "work_hub", label: "Công việc", groupKey: "my_work", view: "dashboard",
+    // ⭐ BỔ SUNG 09/10/2026 (`ERP-SESSION-04` — Mô hình B): **6 khoá TAB** cũng là CỔNG MENU của `work_hub`.
+    //   ⚠️ VÌ SAO: `app/page.tsx` lọc mục menu bằng `permissionKeys.find((key) => modulePermission(data, key).canView)`
+    //   ⇒ người **CHỈ được cấp khoá tab mới** (⚠️ Mô hình B cho phép điều đó) sẽ **MẤT mục menu «Công việc»**
+    //   = lỗi im lặng đúng lớp `D1` (⛔ tệp vẫn tải được nhưng ⛔ không có lối vào).
+    //   ⭐ ĐO TRƯỚC KHI THÊM (09/10/2026, SQL chỉ đọc): tài khoản hoạt động **CHỈ có khoá tab mới & ⛔ không có
+    //   khoá nào trong 9 khoá cũ** = **0** ⇒ ⛔ **KHÔNG đổi hành vi hôm nay** (no-op), chỉ chặn lỗi về sau ✓
+    //   ⛔ KHÔNG thêm `work_others` ở đây: nó là khoá *xem việc NGƯỜI KHÁC* (tầng DỮ LIỆU/năng lực), ⛔ không phải
+    //   điều kiện để THẤY mục menu «Công việc» của chính mình ✓
+    permissionKeys: ["dept_plan_kpi", "dept_project_kpi", "dept_plan_tasks", "dept_project_tasks",
+      "dept_plan_assign", "dept_project_assign", "dept_plan_alerts", "dept_project_alerts", "work",
+      "work_dashboard", "work_list", "work_department", "work_assign", "work_project", "work_reports"] },
 ];
-// BỐN MỤC CŨ BỊ ẨN KHỎI MENU (`T-01`). Khoá vẫn sống: quyền, tiêu đề, tìm kiếm, thông báo, nhánh render.
+// BỐN MỤC CŨ BỊ ẨN KHỎI MENU (`T-01`) — ⭐ VIỆC 1 (08/10/2026) nay đã GOM HẾT vào `work_hub`.
+// Khoá vẫn sống: quyền, tiêu đề, tìm kiếm, thông báo, nhánh render.
 // `approvals` («Trung tâm phê duyệt») CỐ Ý KHÔNG nằm ở đây — nó là mục thứ 6 của nhóm, do `T-10` tách riêng.
-const legacyWorkMenuKeys: ModuleKey[] = ["dept_plan_tasks", "dept_project_tasks", "dept_plan_assign", "dept_project_assign"];
+// ⚠️ `"work"` (khoá MỚI 08/10/2026 — phương án A) nằm trong danh sách này vì CÙNG MỤC ĐÍCH: khoá vẫn SỐNG
+//   (quyền · ma trận · cổng tab) nhưng ⛔ KHÔNG được vẽ thành mục menu — menu «Công việc» đã do `work_hub`
+//   gom sẵn; nếu để lọt vào cây menu thì người dùng thấy **2 mục «Công việc»** (trùng lối vào).
+// ⭐ YÊU CẦU TRỰC TIẾP CỦA USER (09/10/2026, kèm ảnh chụp sidebar):
+//   «*bỏ **quản trị dự án** ra khỏi menu công việc*» + «*menu Công việc ⛔ không còn menu item (đã chuyển hết
+//   thành tab) ⇒ chỉ cần click vào «Công việc» là hiện màn Công việc — xóa Menu item Công việc*».
+// ⚠️ CƠ CHẾ ĐÃ ĐO (`app/page.tsx:734`): `children` của mỗi nhóm menu được lọc bằng
+//   `!independentMenuKeys.includes(key) && !legacyWorkMenuKeys.includes(key) && …` ⇒ ⭐ **đưa khoá vào danh sách
+//   NÀY = ⛔ không vẽ thành MỤC MENU, nhưng DÒNG VẪN CÒN trong `modules[]` ⇒ ⭐ VẪN CÓ DÒNG MA TRẬN** ✓
+//   (⛔ KHÔNG xoá dòng khai báo trong `modules[]` — ma trận cần nó; ⛔ KHÔNG đụng `app/page.tsx` = LOCK S01.)
+// ⚠️ BỔ SUNG 09/10/2026 (cùng lượt): ① **`project_admin`** (yêu cầu user — nó đang lọt thành mục menu thứ 2 của
+//   nhóm «CÔNG VIỆC») ② ⭐ **7 khoá `work_*`/`work_others` của Mô hình B** — ⚠️ **TỰ PHÁT HIỆN, ĐÃ CHẶN**: chúng
+//   vừa được thêm vào `modules[]` (W5, để có dòng ma trận) ⇒ ⛔ nếu ⛔ không có trong danh sách này thì **7 mục
+//   menu mới** sẽ mọc lên trong nhóm «Công việc» (đúng cơ chế đã làm `project_admin` lọt) ✓
+const legacyWorkMenuKeys: ModuleKey[] = ["dept_plan_tasks", "dept_project_tasks", "dept_plan_assign", "dept_project_assign", "work",
+  "project_admin",
+  "work_dashboard", "work_list", "work_department", "work_assign", "work_project", "work_reports", "work_others"];
+// ⇒ ⭐ SAU LƯỢT NÀY: `children` của nhóm `my_work` chỉ còn **ĐÚNG 1 mục** (`work_hub` = «Công việc») ⇒ luật
+//   «nhóm 1 mục ⇒ **BẤM MỞ THẲNG**» (`app/page.tsx` khối §T-10, S01 đã mở rộng sang `my_work` ở `A15 ③`)
+//   tự áp dụng ⇒ ⭐ **click «Công việc» là vào MÀN Công việc luôn** (⛔ không còn mục con để bấm) ✓
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PHASE 5 (`W-01`) — NHÓM MENU «KHO VẬT TƯ» TÁCH THÀNH 5 MỤC: «Kho · Nhập · Xuất · Điều chuyển · Dashboard tồn kho»
@@ -319,7 +387,17 @@ function supplierPartnerViewFor(view: SupplierPartnerMenuView | null, active: Mo
 // ⚠️ Khoá module MỚI cần `module_catalog` + `MODULE_KEYS` + migration ⇒ NGOÀI PHẠM VI (kết luận đã ghi ở `T-01`).
 // ─────────────────────────────────────────────────────────────────────────────
 const approvalCenterMenuKey: ModuleKey = "approvals";
-const approvalCenterGroup = { groupKey: "approval_center", name: "PHÊ DUYỆT", icon: "PD", sortOrder: 20 } as const;
+// ⭐ YÊU CẦU TRỰC TIẾP CỦA USER 09/10/2026 (kèm ảnh sidebar): «*đưa **Trung tâm phê duyệt** ra khỏi menu Công việc
+//   (Trung tâm phê duyệt là 1 chức năng riêng ⛔ không liên quan đến menu Công việc)*» ⇒ ⭐ user CHỌN phương án
+//   **«Chuyển LÊN NGAY SAU «TỔNG QUAN ĐIỀU HÀNH»»** (thẻ hỏi 09/10/2026) ✓
+// ⚠️ CƠ CHẾ ĐÃ ĐO: `app/page.tsx:746` `groupTree.sort((a, b) => Number(a.sortOrder||0) - Number(b.sortOrder||0))`
+//   và «TỔNG QUAN ĐIỀU HÀNH» là **nút cứng ở ĐẦU sidebar** (`page.tsx:747`, ⛔ không nằm trong `groupTree` vì
+//   `menuGroups` đã lọc bỏ `overview` ở `:730`) ⇒ ⭐ muốn đứng NGAY SAU nó thì `sortOrder` phải **NHỎ HƠN
+//   `my_work` (15)** ✓ • 📏 ĐO 09/10/2026 (payload thật): `overview 10` · `my_work 15` · `site_command 25` ·
+//   `mep 28` · `purchasing 30` · … ⇒ ⭐ chọn **12** = sau Tổng quan (10), TRƯỚC Công việc (15) ✓
+// ⚠️ Trước đây là **20** (⇒ nằm SAU «CÔNG VIỆC» 15 — đúng như ảnh user chụp: nó nằm ngay dưới menu Công việc).
+// ⚠️ Đây là **KHOÁ NHÓM MENU** (⛔ không phải khoá module): ⛔ KHÔNG có dòng `module_catalog`, ⛔ KHÔNG migration ✓
+const approvalCenterGroup = { groupKey: "approval_center", name: "PHÊ DUYỆT", icon: "PD", sortOrder: 12 } as const;
 // Hai mục menu KHÔNG bao giờ nằm trong `children` của nhóm: chúng là mục ĐỘC LẬP ở cấp cao nhất
 // (`dashboard` = «TỔNG QUAN ĐIỀU HÀNH» — hành vi CŨ giữ nguyên; `approvals` = Trung tâm phê duyệt — `T-10`).
 const independentMenuKeys: ModuleKey[] = ["dashboard", "approvals"];
@@ -367,20 +445,22 @@ const purchasingHubTabs: { key: ModuleKey; label: string }[] = [
  * `site_command`) **KHÔNG** vào đây — 1 mục thì ⛔ không có gì để thành tab.
  */
 const HUB_TAB_GROUP_KEYS: string[] = [
-  // ✅ 7 NHÓM ĐÃ ĐO có ≥2 MỤC CON và KHÔNG trùng nhãn (đo 27/09/2026 bằng `node --import tsx`):
-  //   `purchasing` 2 (dùng `purchasingHubTabs` curated 10) · `my_work` 5 · `warehouse` 6
+  // ✅ 6 NHÓM ĐÃ ĐO có ≥2 MỤC CON và KHÔNG trùng nhãn (đo 27/09/2026 bằng `node --import tsx`):
+  //   `purchasing` 2 (dùng `purchasingHubTabs` curated 10) · `warehouse` 6
   //   · `mep` 8 · `finance` 7 · `hr_legal` 6 · `project_management` 7
   //   ⚠️ `my_work`/`warehouse` trước đây bị TẮT vì `view="dashboard"` TRÙNG giữa 2 nhóm ⇒ mở 2 màn
   //   cùng lúc. ⛔ ĐÃ SỬA (user duyệt 27/09): `activateModule` nay xoá `view` của nhóm KHÔNG sở hữu
   //   màn đích (`app/page.tsx` khối "CHẶN RÒ TRẠNG THÁI QUA NHÓM") ⇒ an toàn bật lại.
+  //   ⭐ RÚT `my_work` (08/10/2026 — VIỆC 1): nhóm này nay chỉ còn **1 MỤC CON** (`work_hub`)
+  //   ⇒ theo ĐÚNG luật «nhóm ≥2 mục mới là hub» thì ⛔ không còn là nhóm hub nữa
+  //   (bấm mục con «Công việc» sẽ mở thẳng `WorkCenter` ở tab «Dashboard»).
   "purchasing",
-  "my_work",
   "warehouse",
   "mep",
   "finance",
   "hr_legal",
   "project_management",
-  // ⛔ KHÔNG có: `reports` (chỉ 1 mục) · `overview` (1) · `site_command` (1) · `material_master` (1)
+  // ⛔ KHÔNG có: `reports` (chỉ 1 mục) · `overview` (1) · `site_command` (1) · `material_master` (1) · **`my_work` (1)**
   //    · `system_admin` (1) ⇒ **1 mục thì KHÔNG có gì để thành tab** ⇒ sidebar giữ nguyên như cũ.
   // 📌 NGUỒN TAB KHÔNG CÒN LÀ `modules`: xem `app/page.tsx` — bản đồ `hubChildrenByGroup` dựng từ CÁC
   //   MẢNG CON THẬT (`workMenuItems`·`warehouseMenuItems`·`allocateReturnMenuItems`·

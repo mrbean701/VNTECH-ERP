@@ -22,7 +22,11 @@ function number(value: unknown) { const parsed = Number(value); return Number.is
 function safeFileName(value: string) { return value.replace(/[\\/:*?"<>|]+/g, "-").replace(/\s+/g, "_").slice(0, 90) || "De_nghi_cap_vat_tu"; }
 function blobBytes(bytes: Uint8Array): ArrayBuffer { return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer; }
 function xml(value: unknown) { return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;"); }
-function priorityLabel(value?: string) { return value === "urgent" ? "Khẩn" : value === "high" ? "Cao" : value === "normal" ? "Bình thường" : text(value) || "Bình thường"; }
+// ERP-SESSION-03 (07/10/2026) — `BUG-20261007-C05`: bản dịch Ưu tiên thứ **5** nằm Ở ĐÂY và **SÓT `critical`/`low`**
+//   ⇒ rơi vào `text(value)` = **in MÃ THÔ vào TỆP XUẤT** (PDF/XLSX của phiếu đề nghị). Nay đi qua bảng nhãn DÙNG CHUNG.
+//   ⚠️ Giữ hành vi cũ cho giá trị RỖNG: `statusLabel` trả «—» còn bản cũ trả «Bình thường» ⇒ giữ «Bình thường».
+import { statusLabel } from "@/lib/status-labels";
+function priorityLabel(value?: string) { const raw = text(value); return raw ? statusLabel(raw, "priority") : "Bình thường"; }
 function viDate(value?: string) { if (!value) return ""; const date = new Date(value); return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric", hour: value.includes("T") ? "2-digit" : undefined, minute: value.includes("T") ? "2-digit" : undefined }).format(date); }
 function money(value: number) { return new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 }).format(value); }
 function qty(value: number) { return new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 3 }).format(value); }
@@ -104,8 +108,11 @@ export type SupplyExportDocument = {
 function supplyTitle(doc: SupplyExportDocument) {
   return doc.kind === "po" ? "ĐƠN ĐẶT HÀNG (PO) - ĐỐI CHIẾU CHUỖI CUNG ỨNG" : "PHIẾU GIAO HÀNG - ĐỐI CHIẾU CHUỖI CUNG ỨNG";
 }
-function certificateLabel(value?: string) { return value === "complete" ? "Đã có" : value === "not_required" ? "Không yêu cầu" : value === "missing" ? "Chưa có" : text(value) || "—"; }
-function documentLabel(value?: string) { return value === "complete" ? "Đã có" : value === "missing" ? "Chưa có" : text(value) || "—"; }
+// ⛔ ERP-SESSION-03 (07/10/2026) — `BUG-20261007-C06`: 2 hàm dưới TỪNG tự dịch (⛔ trùng lặp, và bản sao kia ở
+//   `lib/ui-shared.tsx::deliveredExportRows` lại **in MÃ THÔ** vào tệp xuất) ⇒ nay uỷ quyền bảng nhãn DÙNG CHUNG.
+//   ⚠️ Giữ nguyên hành vi cho giá trị RỖNG (`"—"`) để ⛔ không đổi giao diện tệp xuất đang chạy.
+function certificateLabel(value?: string) { const raw = text(value); return raw ? statusLabel(raw, "certificate_status") : "—"; }
+function documentLabel(value?: string) { const raw = text(value); return raw ? statusLabel(raw, "delivery_document") : "—"; }
 function lineVariance(line: SupplyExportLine) { return number(line.actualCumulativeQty) - number(line.orderedQty); }
 function lineRemaining(line: SupplyExportLine) { return Math.max(0, number(line.orderedQty) - number(line.acceptedCumulativeQty)); }
 function lineAssessment(line: SupplyExportLine) {

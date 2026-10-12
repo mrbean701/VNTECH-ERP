@@ -253,3 +253,235 @@ export function documentsOfWarehouse(
   if (!id) return [];
   return (rows || []).filter((r) => fields.some((f) => String(r?.[f] ?? "") === id));
 }
+
+// ---------------------------------------------------------------------------------------------
+// ⭐⭐⭐ TASK-234 (08/10/2026) — QUY TẮC SINH **MÃ KHO** & **TÊN KHO** (⭐ USER CHỐT) ⭐⭐⭐
+//   NGUỒN: `DEC-20261008-013` — trích NGUYÊN VĂN lời user:
+//     • «*Mã kho sinh theo quy tắc : **KD-xxx** (xxx là số thứ tự **không được trùng với các kho khác**)*»
+//     • «*Tên kho thì đặt theo quy tắc : **KHO xxx** (xxx là **tên dự án**)*»
+//   ⚠️ 2 hàm này CHỈ SINH CHUỖI — ⛔ KHÔNG ghi CSDL (việc ghi thuộc backend — `HANDOFF-20261008-009`).
+// ---------------------------------------------------------------------------------------------
+/** Tiền tố mã kho theo quy tắc user chốt: «KD-xxx». */
+export const WAREHOUSE_CODE_PREFIX = "KD-";
+
+/**
+ * ⭐ Sinh **MÃ KHO kế tiếp** theo quy tắc user chốt: `KD-xxx` — xxx = số thứ tự, **⛔ KHÔNG trùng**.
+ *
+ * ⚠️ DÙNG **max + 1** (⛔ không dùng «số nhỏ nhất còn trống») — LÝ DO: user yêu cầu
+ *    «**không được trùng với các kho khác**»; nếu tái dùng số của kho đã **ngừng hoạt động**
+ *    thì chứng từ cũ (đang tham chiếu mã đó) sẽ **trỏ nhầm sang kho mới** ⚠️.
+ *    ⇒ Đếm **tăng đơn điệu** ⇒ mã cũ ⛔ không bao giờ bị dùng lại ✅.
+ *
+ * @param existingCodes mã của MỌI kho đã từng có (kể cả đã ẩn/ngừng) — nguồn: `warehouses[].code`
+ */
+export function nextWarehouseCode(existingCodes: readonly unknown[] | null | undefined): string {
+  const re = new RegExp(`^${WAREHOUSE_CODE_PREFIX}(\\d+)$`, "i");
+  let max = 0;
+  for (const raw of existingCodes || []) {
+    const m = re.exec(String(raw ?? "").trim());
+    if (m) {
+      const n = Number(m[1]);
+      if (Number.isFinite(n) && n > max) max = n;
+    }
+  }
+  return WAREHOUSE_CODE_PREFIX + String(max + 1).padStart(3, "0");
+}
+
+/**
+ * ⭐ Tên kho **DỰ ÁN** theo quy tắc user chốt: `KHO <tên dự án>`.
+ * ⚠️ GHI ĐÈ 2 kiểu tên cũ đo được («*Kho dự án A06*» · «*Kho công trường PRJ-DEMO-01*») — user chốt lại.
+ * ⛔ KHÔNG dùng cho KHO TỔNG (kho Tổng giữ tên riêng của nó).
+ */
+export function projectWarehouseName(projectName: unknown): string {
+  const ten = String(projectName ?? "").trim();
+  return ten ? `KHO ${ten}` : "KHO";
+}
+
+/**
+ * ⭐⭐ KIỂM **MÃ KHO** khi TẠO MỚI hoặc **SỬA** (⭐ quy tắc user chốt `DEC-20261008-013`) ⭐⭐
+ *
+ * ⚠️ VÌ SAO CẦN: user chốt ② «*sửa kho: cho sửa… **có cho phép sửa mã kho***» ⇒ **mã kho ĐỔI ĐƯỢC**
+ *    ⇒ khi sửa **phải kiểm lại** (⛔ không được để trùng kho khác) ⚠️ — nhưng **phải BỎ QUA chính nó**
+ *    (nếu ⛔ không bỏ qua thì **sửa mà giữ nguyên mã** sẽ bị báo «trùng» SAI).
+ *
+ * @param newCode     mã người dùng nhập
+ * @param existingCodes mã của MỌI kho khác (nguồn: `warehouses[].code`)
+ * @param currentCode mã HIỆN TẠI của kho đang sửa (⛔ để trống khi TẠO MỚI) — sẽ được BỎ QUA khi đối chiếu
+ * @returns `{ ok, code, errors }` — `code` là mã ĐÃ CHUẨN HOÁ (trim + IN HOA), `errors` rỗng nghĩa là hợp lệ
+ */
+export function validateWarehouseCode(
+  newCode: unknown,
+  existingCodes: readonly unknown[] | null | undefined,
+  currentCode?: unknown,
+): { ok: boolean; code: string; errors: string[] } {
+  const code = String(newCode ?? "").trim().toUpperCase();
+  const errors: string[] = [];
+  const dangChuan = new RegExp(`^${WAREHOUSE_CODE_PREFIX}\\d+$`);
+
+  if (!code) {
+    errors.push("Mã kho là bắt buộc.");
+  } else if (!dangChuan.test(code)) {
+    errors.push(`Mã kho phải theo quy tắc ${WAREHOUSE_CODE_PREFIX}xxx (ví dụ ${WAREHOUSE_CODE_PREFIX}001).`);
+  } else {
+    const boQua = String(currentCode ?? "").trim().toUpperCase();
+    for (const raw of existingCodes || []) {
+      const other = String(raw ?? "").trim().toUpperCase();
+      if (!other || other === boQua) continue; // bỏ qua chính nó khi SỬA
+      if (other === code) {
+        errors.push(`Mã kho ${code} đã được dùng cho kho khác.`);
+        break;
+      }
+    }
+  }
+  return { ok: errors.length === 0, code, errors };
+}
+
+/**
+ * ⭐⭐ KIỂM **TÊN KHO** (⭐ quy tắc user chốt: «*Tên kho thì đặt theo quy tắc : **KHO xxx** (xxx là tên dự án)*») ⭐⭐
+ * ⚠️ Kho **DỰ ÁN** phải theo mẫu `KHO <tên dự án>` (⛔ không dùng mẫu này cho KHO TỔNG).
+ */
+export function validateProjectWarehouseName(
+  newName: unknown,
+  projectName: unknown,
+): { ok: boolean; name: string; expected: string; errors: string[] } {
+  const name = String(newName ?? "").trim();
+  const expected = projectWarehouseName(projectName);
+  const errors: string[] = [];
+  if (!name) errors.push("Tên kho là bắt buộc.");
+  else if (name !== expected) errors.push(`Tên kho dự án phải là «${expected}».`);
+  return { ok: errors.length === 0, name, expected, errors };
+}
+
+// ---------------------------------------------------------------------------------------------
+// ⭐⭐⭐ TASK-236 — QUY TẮC ④: «GIỮ CHỖ KHI PHIẾU ĐANG XỬ LÝ» (⭐ USER CHỐT) ⭐⭐⭐
+//   NGUỒN: `DEC-20261008-013` — trích NGUYÊN VĂN lời user:
+//     «khi phiếu ở trạng thái **hoàn thành** thì mới được **thay đổi tồn kho** trong kho đích và nguồn.
+//      Trong thời gian **tạo phiếu hoặc chờ duyệt** thì số lượng vật tư trong phiếu đó ở trong
+//      **trạng thái đang xử lý** (**không cho user khác thao tác vào những mã vật tư đó**),
+//      ví dụ như **dây diện cadivi 1.5 tồn 100 - phiếu xuất 70 (đang xử lý)** thì những user khác
+//      **không được thao tác xuất quá số lượng đang trạng thái bình thường**»
+//   ⚠️ HẠ TẦNG ĐÃ CÓ: bảng `stock_reservations` + trường `reserved` + `available = balance − reserved`
+//      (đo từ `BootstrapDataAdapter.java:303` · `WarehouseStockStoreAdapter.java:65`)
+//      ⚠️ NHƯNG hiện chỉ gắn vào `request_id` (phiếu ĐỀ NGHỊ — `RequestStoreAdapter.java:426`)
+//      ⇒ cần NỐI THÊM vào phiếu XUẤT/CẤP PHÁT — việc đó thuộc backend (`HANDOFF-20261008-009`).
+//   ⇒ 2 hàm dưới đây là PHẦN LOGIC THUẦN của phiên 02: UI/kiểm tra dùng chung, ⛔ KHÔNG ghi CSDL.
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * ⭐ Số lượng **CÒN ĐƯỢC PHÉP XUẤT** = tồn thực tế − phần ĐANG GIỮ CHỖ (phiếu đang xử lý).
+ * ⚠️ Đúng ví dụ user chốt: tồn **100** − đang xử lý **70** ⇒ còn **30**.
+ * ⛔ KHÔNG BAO GIỜ trả số âm (dữ liệu lệch ⇒ kẹp về 0, ⛔ không cho xuất âm).
+ */
+export function availableToIssue(balance: unknown, reserved: unknown): number {
+  const ton = Number(balance ?? 0);
+  const giu = Number(reserved ?? 0);
+  if (!Number.isFinite(ton)) return 0;
+  const con = ton - (Number.isFinite(giu) ? giu : 0);
+  return con > 0 ? con : 0;
+}
+
+/**
+ * ⭐⭐ KIỂM SỐ LƯỢNG XUẤT/CẤP PHÁT — ⛔ chặn xuất quá phần «đang bình thường» (quy tắc ④) ⭐⭐
+ *
+ * @param want    số lượng muốn xuất
+ * @param balance tồn THỰC TẾ trong kho nguồn
+ * @param reserved phần ĐANG GIỮ CHỖ cho các phiếu đang tạo/chờ duyệt (⛔ chưa trừ tồn)
+ * @returns `{ ok, available, errors }` — `available` = số còn được phép xuất
+ */
+export function validateIssueQuantity(
+  want: unknown,
+  balance: unknown,
+  reserved: unknown,
+): { ok: boolean; available: number; errors: string[] } {
+  const soLuong = Number(want ?? 0);
+  const available = availableToIssue(balance, reserved);
+  const errors: string[] = [];
+  if (!Number.isFinite(soLuong) || soLuong <= 0) {
+    errors.push("Số lượng xuất phải lớn hơn 0.");
+  } else if (soLuong > available) {
+    errors.push(
+      `Chỉ còn ${available} được phép xuất (tồn ${Number(balance ?? 0)} trừ ${Number(reserved ?? 0)} đang xử lý).`,
+    );
+  }
+  return { ok: errors.length === 0, available, errors };
+}
+
+/**
+ * ⭐ Trạng thái của một phiếu cấp phát/xuất — quy tắc ④: **CHỈ `hoàn thành` mới đổi tồn kho**.
+ * ⛔ Khi ở `tạo phiếu`/`chờ duyệt` ⇒ số lượng phải vào trạng thái **ĐANG XỬ LÝ** (giữ chỗ), ⛔ KHÔNG trừ tồn.
+ */
+export const ISSUE_DONE_STATUS = "completed";
+
+/** ⭐ Phiếu ở trạng thái này thì số lượng được coi là **ĐANG XỬ LÝ** (giữ chỗ, ⛔ chưa trừ tồn). */
+export const ISSUE_PENDING_STATUSES: readonly string[] = ["draft", "pending_approval"];
+
+/**
+ * ⭐ Quy tắc ④: phiếu có được phép **THAY ĐỔI TỒN KHO** không?
+ * ⛔ CHỈ khi `hoàn thành` — mọi trạng thái khác (tạo/chờ duyệt) chỉ ĐANG XỬ LÝ.
+ */
+export function canChangeStockOnIssue(status: unknown): boolean {
+  return String(status ?? "").trim().toLowerCase() === ISSUE_DONE_STATUS;
+}
+
+/** ⭐ Số lượng của phiếu này có đang **ĐANG XỬ LÝ** (giữ chỗ) không? */
+export function isIssueHoldingStock(status: unknown): boolean {
+  return ISSUE_PENDING_STATUSES.includes(String(status ?? "").trim().toLowerCase());
+}
+
+// ---------------------------------------------------------------------------------------------
+// ⭐⭐⭐ TASK-237 — QUY TẮC ③ (PHẦN CÒN LẠI): «DỰ ÁN NGỪNG ⇒ HỎI USER CÓ NGỪNG KHO KHÔNG» ⭐⭐⭐
+//   NGUỒN: `DEC-20261008-013` — trích NGUYÊN VĂN lời user:
+//     «Xóa kho: **không cho phép** nhưng cho phép **ẩn kho** hoặc **set trạng thái ngừng hoạt động**.
+//      Logic **kho ngừng hoạt động cũng sẽ phải liên kết đến dự án** (nếu là kho dự án),
+//      khi **dự án ngừng hoạt động** thì sẽ **hỏi user có ngừng kho dự án "  " hay không**,
+//      nếu chọn **không** thì **kệ** còn chọn **có** thì **ngừng**»
+//   ⚠️ 2 hành động THAY THẾ cho xoá: **ẨN kho** · **NGỪNG HOẠT ĐỘNG** (set `active = 0`).
+//   ⚠️ Kho TỔNG ⛔ KHÔNG gắn dự án ⇒ ⛔ KHÔNG áp logic này.
+// ---------------------------------------------------------------------------------------------
+
+/** ⭐ 2 hành động THAY THẾ cho «xoá kho» — quy tắc ③ user chốt: ⛔ TUYỆT ĐỐI KHÔNG xoá. */
+export const WAREHOUSE_DEACTIVATE_ACTIONS: readonly string[] = ["hide", "deactivate"];
+
+/** ⭐ Có được phép XOÁ kho không? ⛔ KHÔNG — user chốt «Xóa kho: **không cho phép**». */
+export const ALLOW_DELETE_WAREHOUSE = false;
+
+/** ⭐ Tên hiển thị của 2 hành động (⭐ dùng cho nút/nhãn UI, ⛔ không hard-code rải rác). */
+export const WAREHOUSE_DEACTIVATE_LABELS: Record<string, string> = {
+  hide: "Ẩn kho",
+  deactivate: "Ngừng hoạt động",
+};
+
+/**
+ * ⭐⭐ KHO DỰ ÁN ⇒ khi DỰ ÁN ngừng hoạt động, hệ thống phải **HỎI user** có ngừng kho không (quy tắc ③) ⭐⭐
+ *
+ * ⚠️ ĐÂY LÀ CÂU HỎI, ⛔ KHÔNG phải hành động — ⭐ user chốt rõ:
+ *    «*nếu chọn **không** thì **kệ** còn chọn **có** thì **ngừng**»* ⇒ ⛔ hệ thống ⛔ **KHÔNG tự ngừng kho**.
+ *
+ * @param project      dự án đang được ngừng (nguồn: `projects[]`)
+ * @param warehouses   TOÀN BỘ kho (nguồn: `warehouses[]`) — hàm tự lọc kho thuộc dự án
+ * @returns `{ shouldAsk, warehouses, message }`
+ *   • `shouldAsk=false` ⇒ ⛔ KHÔNG hỏi (dự án không có kho nào ⇒ ⛔ không có gì để ngừng)
+ *   • `warehouses`     ⇒ danh sách kho DỰ ÁN còn đang hoạt động (⭐ chỉ hỏi những kho CHƯA ngừng)
+ */
+export function projectDeactivationPrompt(
+  project: Record<string, unknown> | null | undefined,
+  warehouses: readonly Record<string, unknown>[] | null | undefined,
+): { shouldAsk: boolean; warehouses: { id: string; name: string; code: string }[]; message: string } {
+  const projectId = String(project?.id ?? "").trim();
+  const tenDuAn = String(project?.name ?? "").trim();
+  const list: { id: string; name: string; code: string }[] = [];
+  if (projectId) {
+    for (const w of warehouses || []) {
+      // ⭐ chỉ kho DỰ ÁN thuộc đúng dự án này, và ⭐ chỉ kho CÒN đang hoạt động (⛔ bỏ kho đã ngừng)
+      if (String(w?.projectId ?? "").trim() !== projectId) continue;
+      if (Number(w?.active ?? 1) === 0) continue;
+      list.push({ id: String(w?.id ?? ""), name: String(w?.name ?? ""), code: String(w?.code ?? "") });
+    }
+  }
+  const message = list.length
+    ? `Dự án ${tenDuAn || projectId} ngừng hoạt động. Bạn có ngừng ${list.length} kho của dự án không? (${list
+        .map((w) => w.name || w.code)
+        .join(", ")})`
+    : "";
+  return { shouldAsk: list.length > 0, warehouses: list, message };
+}

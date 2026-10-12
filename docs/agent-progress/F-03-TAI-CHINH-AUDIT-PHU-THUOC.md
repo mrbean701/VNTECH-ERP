@@ -48,29 +48,29 @@ trong `docs/24`/`MASTER_STATUS` là **mốc cũ**, nay đã `123` (thêm `audit_
 
 | # | Action | JS (`scripts/system-route.mjs`) | Java (`SystemController.java`) | Module (`ActionRbacRegistry.java`) |
 |---|---|---|---|---|
-| 1 | `save_capital_recovery` | :1382 | :629 | :184 |
-| 2 | `delete_capital_recovery` | :1393 | :634 | :102 |
-| 3 | `save_contract_payment` | :1396 | :639 | :187 |
-| 4 | `import_contract_payments` | :1403 | :644 | :144 |
-| 5 | `delete_contract_payment` | :1406 | :689 | :105 |
-| 6 | `save_production_report` | :1359 | :619 | (nhóm `production`) |
-| 7 | `approve_production_report` | :1366 | :624 | (nhóm `production`) |
-| 8 | `save_team_payment` | :1418 | :664 | :237 (`teams`) |
-| 9 | `settle_team_subcontract` | :1421 | :684 | :274 (`teams`) |
-| 10 | `save_payment_plan` | :2164 | :694 | :206 |
-| 11 | `set_payment_plan_status` | :2170 | :699 | :261 |
-| 12 | `delete_payment_plan` | :2173 | :704 | :122 |
-| 13 | `save_advance_request` | :2176 | :709 | :176 |
-| 14 | `settle_advance_request` | :2182 | :714 | :273 |
-| 15 | `delete_advance_request` | :2185 | :719 | :96 |
-| 16 | `save_site_expense_claim` | :2188 | :724 | :211 |
-| 17 | `approve_site_expense_claim` | :2194 | :729 | :28 |
-| 18 | `delete_site_expense_claim` | :2197 | :865 | :136 |
-| 19 | `save_bank_account` | :2200 | :734 | :178 |
-| 20 | `save_cashbook_entry` | :2206 | :739 | :185 |
-| 21 | `delete_cashbook_entry` | :2212 | :744 | :103 |
-| 22 | `save_accounting_voucher` | :2215 | :749 | :175 |
-| 23 | `delete_accounting_voucher` | :2221 | :754 | :95 |
+| 1 | `save_capital_recovery` | :1382 | :659 | :184 |
+| 2 | `delete_capital_recovery` | :1393 | :664 | :102 |
+| 3 | `save_contract_payment` | :1396 | :669 | :187 |
+| 4 | `import_contract_payments` | :1403 | :674 | :144 |
+| 5 | `delete_contract_payment` | :1406 | :719 | :105 |
+| 6 | `save_production_report` | :1359 | :649 | (nhóm `production`) |
+| 7 | `approve_production_report` | :1366 | :654 | (nhóm `production`) |
+| 8 | `save_team_payment` | :1418 | :694 | :237 (`teams`) |
+| 9 | `settle_team_subcontract` | :1421 | :714 | :274 (`teams`) |
+| 10 | `save_payment_plan` | :2164 | :724 | :206 |
+| 11 | `set_payment_plan_status` | :2170 | :729 | :261 |
+| 12 | `delete_payment_plan` | :2173 | :734 | :122 |
+| 13 | `save_advance_request` | :2176 | :739 | :176 |
+| 14 | `settle_advance_request` | :2182 | :744 | :273 |
+| 15 | `delete_advance_request` | :2185 | :749 | :96 |
+| 16 | `save_site_expense_claim` | :2188 | :754 | :211 |
+| 17 | `approve_site_expense_claim` | :2194 | :759 | :28 |
+| 18 | `delete_site_expense_claim` | :2197 | :895 | :136 |
+| 19 | `save_bank_account` | :2200 | :764 | :178 |
+| 20 | `save_cashbook_entry` | :2206 | :769 | :185 |
+| 21 | `delete_cashbook_entry` | :2212 | :774 | :103 |
+| 22 | `save_accounting_voucher` | :2215 | :779 | :175 |
+| 23 | `delete_accounting_voucher` | :2221 | :784 | :95 |
 
 **Kết luận: CONFIRMED** — 23/23 action có **đủ 2 đường ghi** (parity JS ↔ Java), đúng kiến trúc dự án
 (Java phục vụ action GHI; action ĐỌC do SSR/RSC).

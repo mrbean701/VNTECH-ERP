@@ -102,3 +102,71 @@ Impact: ⛔ Tranh bao loi gia (false RED) va tranh bo sot bug that (false GREEN)
 | ⭐ **ĐỀ XUẤT ③ — «PHIẾU CẤP PHÁT»** | ⭐⛔ **CHƯA ĐỦ DỮ LIỆU ĐỂ ĐỀ XUẤT** ⚠️ — ⭐ `AllocateReturn.tsx:5-6` ghi rõ «⭐ **⛔ Không tự suy diễn nghiệp vụ** ✓» ⭐ + ⭐ đo thật: ⭐ `issues[]` (29) ⭐ **⛔ KHÔNG có trường `warehouseId`** ⚠️ ⭐ ⇒ ⭐ **CẦN ANH CHO BIẾT**: ⭐ ① phiếu cấp phát gồm **trường nào**? ⭐ ② ⭐ **trừ tồn kho nào** (⭐ `issues` ⛔ không gắn kho ⚠️)? ⭐ ③ có cần **duyệt** không? ✓ |
 | ⭐ **BẰNG CHỨNG** | ⭐ `schema-h2.sql` (`CREATE TABLE warehouses`) ⭐ `system-route.mjs:628/943/1710/2500` ⭐ + ⭐ `BUG-20261007-013/014/015` ⭐ `CHG-20261007-006` ✓ |
 | **STATUS** | ⭐⭐ **OPEN — CHỜ ANH DUYỆT** ⭐⭐ ⭐ ⛔ **CHƯA VIẾT MÃ** (⭐ §14: ⛔ không bịa nghiệp vụ ✓) ⭐ ⭐ **anh chỉ cần**: ⭐ ✅ **DUYỆT** ⭐ hoặc ✏️ **SỬA** ⭐ hoặc ➕ **BỔ SUNG** ⭐⭐⭐ ③ ⭐⭐⭐ ✓ |
+
+## ⭐ DEC-20261008-012 — XỬ LÝ 2 CỘT «TRẠNG THÁI» + «Ý KIẾN ĐIỀU CHỈNH» (⭐ chờ user chọn A/B/C) ⭐
+| ⭐ | ⭐ |
+|---|---|
+| ⭐⭐ **CÂU HỎI USER** | ⭐ «*tại sao lại có trường **Ý kiến điều chỉnh** và **trạng thái đã duyệt và đề xuất** là sao*» ⭐ |
+| ⭐ **TRẢ LỜI (⭐ có bằng chứng mã)** | ⭐ ① ⭐ Là **cột CSDL có thật**: ⭐ `material_subcategories.review_status` (⭐ `NOT NULL DEFAULT 'approved'` ✓) ⭐ + ⭐ `adjustment_note` (⭐ NULLABLE ✓) ✓<br>⭐ ② ⭐ UI hiện ở `app/page.tsx:**1448**` ⭐ ⭐ ③ ⭐ ⚠️ **NHƯNG**: ⭐ modal (`:3086`) **⛔ không có 2 ô đó** ⭐ + ⭐ đường Java **⛔ không ghi** (⭐ `MaterialCatalogStore.java:61` · `MaterialCatalogManagementUseCase.java:641` ✓) ⭐ ⇒ ⭐⭐ **«Đã duyệt» = GIÁ TRỊ MẶC ĐỊNH CSDL** ⚠️ ⭐ «Đề xuất» = ⭐ **trường TRỐNG ⇒ UI tự gán** ⚠️ ⭐ «Ý kiến điều chỉnh» = ⭐ **luôn trống** ⭐ ⭐⭐ ⇒ ⭐⭐ **DỮ LIỆU CHẾT — hiển thị gây hiểu nhầm** ⭐⭐ ✓ |
+| ⭐ **3 PHƯƠNG ÁN** | ⭐ **A. XOÁ 2 cột** ⭐ (⭐ nhanh, hết hiểu nhầm ✓) ⭐ ⭐ **B. LÀM THẬT** ⭐ (⭐ thêm 2 ô modal + ⭐ sửa Java ⚠️ **thuộc S01** ✓) ⭐ ⭐ **C. GIỮ + GHI RÕ NGUỒN** ⭐ (⭐ «Đã duyệt» ⇒ «**Mặc định hệ thống**» ⚠️ + ⭐ **bỏ cột «Ý kiến điều chỉnh»** vì luôn trống ✓) ✓ |
+| ⭐⭐ **KHUYẾN NGHỊ CỦA EM** | ⭐ **C** ⭐ — ⭐ ⛔ không xoá dữ liệu ⭐ mà ⭐ **sửa cho trung thực** ⚠️ ⭐ + ⭐ bỏ cột **luôn trống** ⭐ ⭐ (⭐ theo luật user ④: ⭐ «*chỉ có tác dụng để dev check thì xóa đi*» ⭐ ⇒ ⭐ cột «Ý kiến điều chỉnh» **luôn 💬** ⇒ ⭐ **thừa** ✓) ✓ |
+| **STATUS** | ⭐⭐ **OPEN — ⛔ CHƯA SỬA** ⏳ **chờ user chọn A / B / C** ⭐ ⚠️ (⭐ ⛔ không tự ý sửa vì đây là **quyết định về dữ liệu hiển thị** ✓) ✓ |
+
+## ⭐⭐⭐ DEC-20261008-013 — QUY TẮC NGHIỆP VỤ **4 CHỨC NĂNG KHO** (⭐ USER CHỐT 2026-10-08) ⭐⭐⭐
+> ⚠️ **ĐÂY LÀ NGUỒN SỰ THẬT** cho việc viết mã 4 chức năng kho. Trích **nguyên văn** lời user + diễn giải.
+
+### ⭐⭐ ① TẠO KHO — **HỎI NGAY KHI LẬP DỰ ÁN** ⭐⭐
+| ⭐ | ⭐ |
+|---|---|
+| ⭐⭐ **USER NGUYÊN VĂN** | «*tạo kho cần có logic **hỏi user từ khi dự án được lập**. có nghĩa là khi **user tạo dự án mới** thì hệ thống sẽ **hỏi có tạo kho cho dự án hay không**, nếu user bấm **có** thì sẽ hiển thị lên màn hình «**Đang tạo kho ...**» (Kho sẽ được tạo với các thông tin cơ bản như **tên kho, mã kho, tên dự án**, ⛔ **chưa cần phải thêm thủ kho hay các thông tin khác** sau này user sẽ tự cấu hình sau), nếu user bấm **không** thì có nghĩa là **kho dự án sẽ được tạo sau (tạo thủ công)**. **Mặc định hệ thống sẽ có 1 kho Tổng***» |
+| ⭐ **DIỄN GIẢI** | ⭐ ① ⭐ **Điểm kích hoạt** = ⭐ **lúc TẠO DỰ ÁN MỚI** ⚠️ (⭐ ⛔ không phải từ màn Kho ✓) ⭐ ② ⭐ Hiện **hộp hỏi**: «*Có tạo kho cho dự án này không?*» ⭐ ③ ⭐ **CÓ** ⇒ ⭐ hiện trạng thái «**Đang tạo kho …**» ⭐ + ⭐ tạo kho với **3 thông tin cơ bản**: ⭐ **Tên kho** · ⭐ **Mã kho** · ⭐ **Tên dự án** ⭐ ⚠️ (**⛔ chưa cần** thủ kho/thông tin khác ✓) ⭐ ④ ⭐ **KHÔNG** ⇒ ⭐ kho dự án **tạo sau bằng tay** (⭐ qua nút «＋ Tạo kho» ✓) ⭐ ⑤ ⭐ **Mặc định hệ thống luôn có 1 KHO TỔNG** ⭐ — ⭐ đo được: `warehouses` có **1 kho `central`** ✅ |
+| ⭐ **HỆ QUẢ KỸ THUẬT** | ⭐ ① ⭐ Màn «Tạo dự án» (⭐ `ProjectEntityModal` ✓) cần **thêm bước hỏi** ⭐ ⚠️ ⭐ ② ⭐ Cần **API tạo kho** (⭐ ⛔ backend chưa có ✓) ⭐ ③ ⭐ Cần **mã kho tự sinh** theo dự án ⭐ ⚠️ (⭐ ⛔ user ⛔ chưa nói quy tắc sinh mã — ⚠️ **CẦN HỎI LẠI** ✓) |
+
+### ⭐⭐ ② SỬA KHO — **CÓ PHÂN QUYỀN + CHO SỬA MÃ KHO** ⭐⭐
+| ⭐ | ⭐ |
+|---|---|
+| ⭐⭐ **USER NGUYÊN VĂN** | «*sửa kho : **cho sửa**, nhưng phải có **phân quyền sửa kho** thì mới được, **có cho phép sửa mã kho***» |
+| ⭐ **DIỄN GIẢI** | ⭐ ① ⭐ **Kiểm quyền** trước khi cho sửa ⭐ ⚠️ (⭐ cần biết **dùng quyền nào** — ⚠️ **CẦN HỎI LẠI**: module `inventory`? `central_warehouse`? role admin? ✓) ⭐ ② ⭐ ⭐⭐ **MÃ KHO ĐƯỢC SỬA** ⭐⭐ ⚠️ — ⭐ ⚠️ **LƯU Ý RỦI RO**: ⭐ mã kho có thể đang được **chứng từ cũ tham chiếu** ⚠️ ⇒ ⭐ cần ghi **lý do đổi** hoặc ⭐ chấp nhận mã cũ trong chứng từ ✓ |
+
+### ⭐⭐ ③ XOÁ KHO — **⛔ KHÔNG XOÁ — CHỈ ẨN / NGỪNG HOẠT ĐỘNG** ⭐⭐
+| ⭐ | ⭐ |
+|---|---|
+| ⭐⭐ **USER NGUYÊN VĂN** | «*Xóa kho: **không cho phép** nhưng **cho phép ẩn kho** hoặc **set trạng thái ngừng hoạt động**. Logic **kho ngừng hoạt động cũng sẽ phải liên kết đến dự án** (nếu là kho dự án), khi **dự án ngừng hoạt động** thì sẽ **hỏi user có ngừng kho dự án "  " hay không**, nếu chọn **không** thì **kệ** còn chọn **có** thì **ngừng***» |
+| ⭐ **DIỄN GIẢI** | ⭐ ① ⭐ ⛔ **BỎ hẳn chức năng XOÁ** ⚠️ ⭐ ② ⭐ Thay bằng **2 hành động**: ⭐ **ẨN kho** ⭐ + ⭐ **NGỪNG HOẠT ĐỘNG** (⭐ set `active=0` ✓) ⭐ ③ ⭐ **LIÊN KẾT DỰ ÁN**: ⭐ khi **DỰ ÁN ngừng hoạt động** ⚠️ ⇒ ⭐ **hỏi user**: «*Ngừng kho dự án «[tên kho]» không?*» ⭐ ④ ⭐ **KHÔNG** ⇒ ⭐ **kệ** (⭐ kho vẫn hoạt động ✓) ⭐ ⑤ ⭐ **CÓ** ⇒ ⭐ **ngừng kho** ✅ |
+| ⭐ **HỆ QUẢ KỸ THUẬT** | ⭐ ⛔ **KHÔNG cần API `delete_warehouse`** ⭐⭐ — ⭐ thay bằng **API đổi trạng thái** ⭐ ⚠️ (⭐ cần kiểm backend có action nào sẵn ✓) ⭐ + ⭐ **màn «Ngừng dự án»** cần thêm bước hỏi ⚠️ |
+
+### ⭐⭐⭐ ④ CẤP PHÁT - HOÀN TRẢ — **CHỈ TRỪ TỒN KHI HOÀN THÀNH + GIỮ CHỖ KHI ĐANG XỬ LÝ** ⭐⭐⭐
+| ⭐ | ⭐ |
+|---|---|
+| ⭐⭐ **USER NGUYÊN VĂN** | «*khi phiếu ở trạng thái **hoàn thành** thì mới được **thay đổi tồn kho trong kho đích và nguồn**. Trong thời gian **tạo phiếu hoặc chờ duyệt** thì số lượng vật tư trong phiếu đó ở trong **trạng thái đang xử lý** (**không cho user khác thao tác vào những mã vật tư đó**, ví dụ như **dây diện cadivi 1.5 tồn 100 - phiếu xuất 70 (đang xử lý)** thì những user khác **không được thao tác xuất quá số lượng đang trạng thái bình thường***» |
+| ⭐ **DIỄN GIẢI** | ⭐ ① ⭐ **Tồn kho CHỈ đổi khi phiếu = `hoàn thành`** ⚠️ ⭐ (⭐ ⛔ không trừ lúc tạo/chờ duyệt ✓) ⭐ ② ⭐ Khi phiếu **đang tạo / chờ duyệt** ⇒ ⭐ số lượng đó vào trạng thái «**đang xử lý**» ⭐ = ⭐ **GIỮ CHỖ** ⭐ ③ ⭐ ⛔ **User khác KHÔNG thao tác được vào phần đã giữ** ⚠️ ⭐ ④ ⭐ **VÍ DỤ SỐ** (⭐ nguyên văn ✓): ⭐ dây điện cadivi 1.5 ⭐ **tồn 100** ⭐ − ⭐ phiếu xuất **70 (đang xử lý)** ⭐ ⇒ ⭐ user khác **⛔ không xuất quá** ⭐ **30** ⭐ (⭐ = 100 − 70 ✓) ✓ |
+| ⭐⭐ **ĐỐI CHIẾU MÃ — ⭐ CÓ THỂ ĐÃ CÓ SẴN** | ⭐ ĐO ĐƯỢC: ⭐ `inventory[]` có trường ⭐⭐ **`reserved`** ⭐⭐ ⭐ + ⭐ SQL gốc: ⭐ `reservations AS (SELECT material_id,warehouse_id,COALESCE(SUM(quantity),0) AS reserved FROM **stock_reservations** WHERE status='active' GROUP BY …)` ⭐ ⚠️ ⭐ + ⭐ `available = balance − reserved` ⭐ ⭐⭐ ⇒ ⭐ **HẠ TẦNG «GIỮ CHỖ» ĐÃ CÓ** ⭐⭐ ⭐ — ⭐ ⚠️ **CẦN KIỂM**: ⭐ ① ⭐ có action nào **TẠO** `stock_reservations` không? ⭐ ② ⭐ phiếu xuất/cấp phát có **gọi** nó không? ⭐ ③ ⭐ có **chặn** khi `available < qty` không? ✓ |
+
+### ⚠️⚠️ **3 ĐIỂM CẦN USER LÀM RÕ TRƯỚC KHI VIẾT MÃ** ⚠️⚠️
+| # | Điểm | Vì sao cần |
+|---|---|---|
+| ⭐ **1** | ⭐ **Mã kho sinh theo quy tắc nào?** ⭐ | ⭐ User nói «tạo kho với **tên kho, mã kho, tên dự án**» ⭐ nhưng ⛔ **chưa nói mã kho lấy từ đâu** ⚠️ ⭐ (⭐ đo được kho thật: `KHO-DIAG` · `KHO-DA-MAU-01` · `KHO-P1` — ⭐ không thấy quy tắc chung ✓) ✓ |
+| ⭐ **2** | ⭐ **«Phân quyền sửa kho» = quyền nào?** ⭐ | ⭐ Cần biết **module/quyền cụ thể** để kiểm ⚠️ ⭐ (⭐ `ActionRbacRegistry` có **268 action** — ⭐ đề xuất: ⭐ dùng module `inventory` hoặc `central_warehouse` ⚠️ **chờ user chốt** ✓) ✓ |
+| ⭐ **3** | ⭐ **Tên kho dự án đặt thế nào?** ⭐ | ⭐ User nói có «**tên kho**» ⭐ nhưng ⛔ chưa nói **mẫu tên** ⚠️ ⭐ (⭐ đo được: «*Kho dự án A06*» · «*Kho công trường PRJ-DEMO-01*» — ⭐ 2 kiểu khác nhau ⚠️ ✓) ✓ |
+
+### ⭐ **TRUY VẾT**
+⭐ `BUG-20261007-013` (⭐ `allocate` ✓) · ⭐ `BUG-20261007-014` (⭐ `warehouse` ✓) · ⭐ `BUG-20261007-015` (⭐ `delete_warehouse` ✓) · ⭐ `DEC-20261007-011` (⭐ đề xuất trước đó ✓) · ⭐ `4-CHUC-NANG-KHO.md` ✓
+
+### ⭐⭐⭐ DEC-20261008-013 (BỔ SUNG) — USER LÀM RÕ **3 ĐIỂM** + **CHO PHÉP SỬA DB** ⭐⭐⭐
+| ⭐ | ⭐ |
+|---|---|
+| ⭐⭐ **① MÃ KHO** | ⭐⭐ **USER NGUYÊN VĂN**: «*Mã kho sinh theo quy tắc : **KD-xxx** (xxx là số thứ tự **không được trùng với các kho khác**), **nếu cần thiết sửa db thì cứ làm***» ⭐⭐ ⭐ ⇒ ⭐ ① ⭐ tiền tố ⭐⭐ **`KD-`** ⭐⭐ ⭐ ② ⭐ phần số = **số thứ tự**, ⭐ ⭐⭐ **⛔ KHÔNG ĐƯỢC TRÙNG** ⭐⭐ ⭐ ③ ⭐⭐⭐ **USER CHO PHÉP SỬA CSDL** ⭐⭐⭐ ⇒ ⭐ **được tạo migration/sequence nếu cần** ✅ |
+| ⭐⭐ **② BỘ QUYỀN MODULE KHO** | ⭐⭐ **USER NGUYÊN VĂN**: «*Tạo **bộ quyền cơ bản cho Module KHO** hãy **tham khảo các quyền tương tự của các module khác** dựa theo logic của kho **nếu không tự quyết được thì báo cáo***» ⭐⭐ ⭐ ⇒ ⭐ ① ⭐ tham khảo module khác ⭐ ② ⭐ nếu ⛔ **không tự quyết được ⇒ PHẢI BÁO CÁO** ⚠️ ✓ |
+| ⭐⭐ **③ TÊN KHO** | ⭐⭐ **USER NGUYÊN VĂN**: «*Tên kho thì đặt theo quy tắc : **KHO xxx** (xxx là tên tự án)*» ⭐⭐ ⭐ (⭐ «tên tự án» = **tên DỰ ÁN** ✓) ⭐ ⇒ ⭐ mẫu: ⭐⭐ **`KHO <tên dự án>`** ⭐⭐ ⭐ ⚠️ **GHI ĐÈ** đề xuất trước của phiên 02 (⭐ 2 kiểu cũ «*Kho dự án A06*» / «*Kho công trường …*» ⛔ **KHÔNG dùng nữa** ✓) ✓ |
+| ⭐ **ĐÃ LÀM NGAY (⭐ thuộc phiên 02)** | ⭐ `lib/warehouse-hub.ts` ⭐ (**tệp của phiên 02** ✓): ⭐ thêm ⭐⭐ `WAREHOUSE_CODE_PREFIX = "KD-"` ⭐⭐ + ⭐⭐ `nextWarehouseCode(existingCodes)` ⭐⭐ (⭐ dùng **max+1** ⇒ ⭐ **⛔ không bao giờ trùng, kể cả mã đã ngừng** ✓) ⭐ + ⭐⭐ `projectWarehouseName(projectName)` ⭐⭐ (⭐ ⇒ `KHO <tên dự án>` ✓) ✅ |
+| **⚠️ CÒN LẠI (⭐ chờ/khác phiên)** | ⭐ ① ⭐ **API tạo/sửa/ngừng kho + nối giữ chỗ** ⇒ ⭐ **`java-backend` của S01** (`HANDOFF-009` ✓) ⭐ ② ⭐ **UI hỏi khi lập dự án** ⇒ ⭐ **S03** (`HANDOFF-010` ✓) ⭐ ③ ⭐ **Bộ quyền module KHO** ⇒ ⭐ **phân tích + báo cáo user** (⭐ theo đúng lời user ✓) ✓ |
+
+### ⭐⭐ DEC-20261008-014 — CHỐT MODULE QUYỀN CHO 3 ACTION KHO (⭐ CÓ BẰNG CHỨNG ĐO) ⭐⭐
+| ⭐ | ⭐ |
+|---|---|
+| ⭐⭐ **CĂN CỨ** | ⭐ User nói: ⭐ «*Tạo bộ quyền cơ bản cho Module KHO hãy **tham khảo các quyền tương tự của các module khác** dựa theo logic của kho **nếu không tự quyết được thì báo cáo***» ⭐ + ⭐ «*nếu cần thiết **sửa db** thì cứ làm*» ✅ |
+| ⭐⭐⭐ **ĐÃ THAM KHẢO (⭐ đo từ mã)** | ⭐ `V3__reference_seed.sql` ⭐: ⭐ module KHO **ĐÃ CÓ SẴN 3** ⭐ `central_warehouse` ⭐ `warehouse_receipt` ⭐ `warehouse_issue` ⭐ + ⭐ nhóm ⭐ `group_key='warehouse'` ⭐ + ⭐ `ActionRbacRegistry.java:**278**` ⭐ mẫu ánh xạ ⭐ `save_warehouse_location → List.of("inventory","central_warehouse")` ⭐ + ⭐ `:527` ⭐ mẫu cờ ⭐ `→ "canEdit"` ✅ |
+| ⭐⭐ **CHỐT (⭐ tự quyết ĐƯỢC, ⛔ không cần báo cáo thêm)** | ⭐ 3 action dùng ⭐ **`central_warehouse`** ⭐: ⭐ `create_warehouse` → `canCreate` ⭐ · ⭐ `update_warehouse` → `canEdit` ⭐ · ⭐ `set_warehouse_status` → `canEdit` ⭐ ⭐ **LÝ DO**: ⭐ kho Tổng + kho dự án **cùng bảng** + **cùng nhóm menu** ⇒ ⭐ **cùng một thao tác quản lý** ✅ |
+| ⛔ **QUYẾT ĐỊNH ÂM (⭐ quan trọng)** | ⭐⛔ **KHÔNG khai `delete_warehouse`** ⭐ — ⭐ user chốt «*Xóa kho: **không cho phép***» ⭐ ⭐ + ⭐ biến thành hằng ⭐ `ALLOW_DELETE_WAREHOUSE = false` ⭐ ở `lib/warehouse-hub.ts` ⭐ (⭐ có **test** kiểm ✓) ✅ |
+| ⚠️ **GIỚI HẠN — ⭐ PHẢI BÁO USER** | ⭐ Việc khai 3 action ⭐ **BẮT BUỘC sửa `java-backend`** ⚠️ ⭐ (⭐ `ActionRbacRegistry` là **Java** ⛔ không phải CSDL ✓) ⭐ ⭐ ⇒ ⭐ «sửa db» **⛔ không đủ** ⚠️ ⭐ ⭐ **⇒ ĐÃ BÁO**: ⭐ bản vá sẵn ở ⭐ `BAN-VA-QUYEN-KHO.md` ⭐ + ⭐ câu hỏi ② cho user (⭐ cho phiên 02 sửa Java hay để S01 ✓) ✅ |
+| **STATUS** | ⭐⭐ **DECIDED (⭐ phần tự quyết được)** ⚠️ **chờ user trả lời câu ②** ✅ |

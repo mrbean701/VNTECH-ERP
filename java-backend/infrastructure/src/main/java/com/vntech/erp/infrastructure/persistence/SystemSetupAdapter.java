@@ -34,13 +34,18 @@ public class SystemSetupAdapter implements SystemSetupPort {
                 """, "EMAIL", "starttls", "VNTECH ERP", adminUserId, now, now);
 
         // INSERT IGNORE (JS) -> kiểm tra tồn tại trước (tránh lỗi unique code)
+        // ⭐ TASK-242 (08/10/2026) — ĐỔI `KHO-TONG` ⇒ `KD-001` THEO QUY TẮC USER CHỐT
+        //    (`DEC-20261008-013`): «Mã kho sinh theo quy tắc : KD-xxx (xxx là số thứ tự KHÔNG được trùng…)»
+        //    + «Mặc định hệ thống sẽ có 1 kho Tổng» ⇒ kho Tổng = mã ĐẦU TIÊN `KD-001` ✓
+        //    ⚠️ Đi kèm `V38__session02_warehouse_code_kd_rule.sql` (đổi mã kho ĐÃ có) — ⛔ phải cùng nhau,
+        //    nếu chỉ đổi một bên thì DB cũ và DB mới sẽ ⛔ LỆCH mã kho Tổng.
         Integer existing = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM warehouses WHERE code = ?", Integer.class, "KHO-TONG");
+                "SELECT COUNT(*) FROM warehouses WHERE code = ?", Integer.class, "KD-001");
         if (existing == null || existing == 0) {
             jdbcTemplate.update("""
                     INSERT INTO warehouses (id, code, name, type, project_id, parent_warehouse_id, keeper_user_id, active, created_at, updated_at)
                     VALUES (?, ?, ?, ?, NULL, NULL, ?, 1, ?, ?)
-                    """, "WH-CENTRAL", "KHO-TONG", "Kho trung tâm", "central", adminUserId, now, now);
+                    """, "WH-CENTRAL", "KD-001", "Kho trung tâm", "central", adminUserId, now, now);
         }
     }
 }

@@ -175,8 +175,20 @@ dbTest("W-02 — CSDL THẬT: một dự án có ≥ 2 kho (chiều N>1) VÀ có
     "Nếu có dự án 0 kho thì BẮT BUỘC còn dự án ≥ 2 kho để không phải là 1:0");
 
   const central = sql("SELECT code,type FROM warehouses WHERE project_id IS NULL;");
-  assert.ok(central.includes("KHO-TONG"),
+  // ⭐ TASK-242 (08/10/2026) — ĐỔI CÁCH KIỂM: theo Ý ĐỊNH, ⛔ KHÔNG theo MÃ CỤ THỂ.
+  //   ⚠️ LÝ DO (đo được): user chốt quy tắc mã kho `KD-xxx` (`DEC-20261008-013`) ⇒ kho Tổng
+  //   `KHO-TONG` được đổi thành `KD-001` (migration `V38`) ⇒ câu `includes("KHO-TONG")` sẽ ĐỎ OAN,
+  //   ⛔ trong khi Ý ĐỊNH của test (W-02) là «phải tồn tại kho KHÔNG thuộc dự án ⇒ quan hệ 1:N là TUỲ CHỌN»
+  //   — ý đó ⛔ KHÔNG hề nói mã kho phải là gì.
+  //   ⇒ Kiểm: có ≥ 1 dòng `project_id IS NULL` và có kho `type='central'` (bất kể mã).
+  //   ⚠️⚠️ BÀI HỌC (đã gặp thật — test ĐỎ OAN 1 lần): `mysql.exe -N -B` trả về **CRLF** (`\r\n`),
+  //   split trên `"\n"` để lại `"central\r"` ⇒ `.includes("central")` = FALSE ⚠️
+  //   ⇒ PHẢI `split(/\r?\n/)` + `.trim()` từng ô. ⛔ Không giả định định dạng xuống dòng.
+  const centralRows = central.split(/\r?\n/).filter(Boolean);
+  assert.ok(centralRows.length > 0,
     `Phải tồn tại kho KHÔNG thuộc dự án (Kho Tổng) ⇒ quan hệ là tuỳ chọn. Đo được: "${central}"`);
+  assert.ok(centralRows.some((row) => row.split("\t").map((cell) => cell.trim()).includes("central")),
+    `Phải có kho loại 'central' không thuộc dự án (Kho Tổng). Đo được: "${central}"`);
 });
 
 dbTest("W-02 — CSDL THẬT: 0 dòng mồ côi (`project_id` không trỏ tới dự án nào) + số dòng khớp tệp audit", () => {

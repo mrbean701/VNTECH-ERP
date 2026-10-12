@@ -286,6 +286,59 @@ public class AdminSystemStoreAdapter implements AdminSystemStore {
                 now, formKey, fieldKey);
     }
 
+    // ---------- warehouses — ⭐ HANDOFF-20261008-009 (tạo/sửa/ngừng kho) ----------
+    // ⚠️ Bảng thật: `warehouses(id,code,name,type,project_id,parent_warehouse_id,keeper_user_id,active,
+    //    created_at,updated_at)` — đọc từ `java-backend/web/src/test/resources/schema-h2.sql:2090` ✓
+    // ⛔ `project_id`/`parent_warehouse_id`/`keeper_user_id` ĐƯỢC PHÉP NULL ⇒ chuỗi rỗng phải ghi NULL
+    //    (⛔ không ghi '' — sẽ tạo khoá ngoại giả trỏ tới chuỗi rỗng).
+    @Override
+    @Transactional
+    public void upsertWarehouse(String id, String code, String name, String type, String projectId,
+                                String parentWarehouseId, String keeperUserId, boolean active, Instant now) {
+        List<Map<String, Object>> existing = jdbcTemplate.queryForList("SELECT id FROM warehouses WHERE id=?", id);
+        if (!existing.isEmpty()) {
+            jdbcTemplate.update("""
+                    UPDATE warehouses SET code=?,name=?,type=?,project_id=?,parent_warehouse_id=?,
+                                          keeper_user_id=?,active=?,updated_at=? WHERE id=?""",
+                    code, name, type, projectId.isEmpty() ? null : projectId,
+                    parentWarehouseId.isEmpty() ? null : parentWarehouseId,
+                    keeperUserId.isEmpty() ? null : keeperUserId, active ? 1 : 0, now, id);
+        } else {
+            jdbcTemplate.update("""
+                    INSERT INTO warehouses (id,code,name,type,project_id,parent_warehouse_id,keeper_user_id,
+                                            active,created_at,updated_at)
+                    VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                    id, code, name, type, projectId.isEmpty() ? null : projectId,
+                    parentWarehouseId.isEmpty() ? null : parentWarehouseId,
+                    keeperUserId.isEmpty() ? null : keeperUserId, active ? 1 : 0, now, now);
+        }
+    }
+
+    /** ⛔ KHÔNG có hàm XOÁ: «ngừng hoạt động» là đường duy nhất (phiên 02 chốt `ALLOW_DELETE_WAREHOUSE=false`). */
+    @Override
+    @Transactional
+    public void setWarehouseActive(String id, boolean active, Instant now) {
+        jdbcTemplate.update("UPDATE warehouses SET active=?,updated_at=? WHERE id=?", active ? 1 : 0, now, id);
+    }
+
+    /** ⚠️ ⛔ KHÔNG lọc `active` — CỐ Ý khác `findWarehouse` (xem chú thích ở cổng). */
+    @Override
+    public boolean warehouseExists(String id) {
+        return !jdbcTemplate.queryForList("SELECT id FROM warehouses WHERE id=?", id).isEmpty();
+    }
+
+    /** Mã kho ⛔ không được trùng (so KHÔNG phân biệt hoa/thường, bỏ qua chính nó khi sửa). */
+    @Override
+    public boolean warehouseCodeExists(String code, String excludeId) {
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(
+                "SELECT id FROM warehouses WHERE upper(code)=upper(?)", code);
+        for (Map<String, Object> row : rows) {
+            String id = String.valueOf(row.get("id"));
+            if (excludeId == null || excludeId.isEmpty() || !excludeId.equals(id)) return true;
+        }
+        return false;
+    }
+
     // ---------- warehouse_locations ----------
     @Override
     public Optional<Map<String, Object>> findWarehouse(String warehouseId) {

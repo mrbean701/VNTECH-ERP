@@ -1,3 +1,9 @@
+> **VNTECH ERP — BỘ TÀI LIỆU PHIÊN BẢN `ALPHA TEST`**
+> · Phiên bản tài liệu: **`DOC-ALPHA-TEST-2026.10`** · Ngày cập nhật: **08/10/2026** · Phiên soạn: `ERP-SESSION-01`
+> · Sản phẩm: `V5.3.0-MASTER-BASELINE-R1.1.1` · Cổng: `:8787` (UI) · `:9000` (cutover) · `:18081` (API Java)
+> · ⚠️ Trạng thái: **ALPHA TEST** — tài liệu phản ánh bản ĐANG CHẠY; ⛔ chưa phải bản phát hành chính thức.
+> · 📌 Nguồn sự thật: **mã nguồn + CSDL thật** (mọi số liệu đều ĐO được, ⛔ không suy đoán).
+
 # 36 — KẾ HOẠCH KIỂM THỬ ALPHA (THEO BỘ PHẬN CHUYÊN MÔN)
 
 > **Mục đích:** hướng dẫn nhân sự test **từng nhóm chức năng một**, theo đúng **bộ phận chuyên môn** sử dụng.
@@ -470,3 +476,57 @@ Con số chắc chắn: **đếm trực tiếp bảng task = 100 dòng · 98 DON
 3. Từng bước lưu lại vết thời gian + người thao tác (xem ở dòng thời gian của phiếu).
 4. Cuối chuỗi: **tổng tiền PO khớp tổng tiền phiếu**; **tồn kho tăng** đúng số lượng nhận; **giảm** đúng số lượng cấp phát.
 5. Quay lại Dashboard → các thẻ KPI cập nhật đúng.
+
+---
+
+## 📌 LIÊN KẾT BỘ TÀI LIỆU `ALPHA TEST`
+
+Kế hoạch kiểm thử này thuộc **bộ tài liệu phiên bản `DOC-ALPHA-TEST-2026.10`**:
+- ⭐ Điểm vào: [`00_INDEX_TAI_LIEU_ALPHA_TEST.md`](00_INDEX_TAI_LIEU_ALPHA_TEST.md)
+- Tài liệu nền cần đọc trước khi kiểm thử: [`33_MO_TA_CHUC_NANG_VA_HE_THONG.md`](33_MO_TA_CHUC_NANG_VA_HE_THONG.md) (chức năng) · [`30_HUONG_DAN_NGUOI_DUNG.md`](30_HUONG_DAN_NGUOI_DUNG.md) (cách dùng)
+- ⚠️ Cổng kiểm chứng phải xanh TRƯỚC khi bắt đầu kiểm thử: xem §7 của chỉ mục.
+
+---
+
+# PHẦN BỔ SUNG `ALPHA TEST` (08/10/2026) — CÁC CHỨC NĂNG MỚI ⚠️ CHƯA CÓ TRONG M1–M13
+
+> ⚠️ **VÌ SAO BỔ SUNG**: rà tệp này thấy các từ khoá `uỷ nhiệm` · `admin_tab` · `thêm nhân sự` ·
+> `giữ chỗ` · `hub` đều **0 lần** ⇒ kế hoạch cũ ⛔ **chưa phủ** phần phân quyền uỷ nhiệm + 4 chức năng kho
+> + giữ chỗ tồn kho. ⭐ Tiêu chí dưới đây lấy từ **phép đo THẬT** ngày 08/10/2026 ✓
+
+## M14 — PHÂN QUYỀN UỶ NHIỆM (BGD · ITM · Quản trị hệ thống)
+
+| # | Kịch bản | Các bước | ⭐ Kỳ vọng (đã đo được) | Mức nếu sai |
+|---|---|---|---|---|
+| **M14-01** | ⛔ **Không tự nâng quyền cho mình** (`S-1`) | Đăng nhập tài khoản **KHÔNG phải** `role=admin` ⇒ mở Quản trị ⇒ bước 6 «Phân quyền người dùng» ⇒ **tự cấp thêm quyền cho CHÍNH MÌNH** ⇒ bấm Lưu | ⛔ **BỊ CHẶN** (lỗi quyền) · ⭐ tài khoản `role=admin` thì **được phép** | 🔴 CRITICAL |
+| **M14-02** | ⭐ **Thấy menu Quản trị theo QUYỀN CẤU HÌNH** (`M-2`) | Tài khoản có **≥1** quyền nhóm quản trị (`admin` hoặc `admin_tab_NN`) ⇒ xem menu trái | ⭐ **THẤY** nhóm «QUẢN TRỊ HỆ THỐNG» + **vào được** màn «DANH MỤC & PHÂN QUYỀN» | 🟠 HIGH |
+| **M14-03** | ⛔ **Không có quyền ⇒ không thấy** | Tài khoản **⛔ không** có quyền nhóm quản trị nào ⇒ xem menu | ⛔ **KHÔNG thấy** nhóm quản trị; nếu vào bằng URL ⇒ hiện màn **từ chối truy cập** | 🟠 HIGH |
+| **M14-04** | ⭐ **Bước thiếu quyền phải BỊ KHOÁ** | Tài khoản chỉ có `admin_tab_02` ⇒ mở màn Quản trị ⇒ quan sát dải **14 bước** | Bước 01 («Tài khoản») **bị khoá** · bấm ⛔ không mở được · ⛔ không có hiện tượng «lọt» sang bước khác | 🟠 HIGH |
+| **M14-05** | ⭐⭐ **U-1 — thấy tài khoản TRONG PHẠM VI** | Tài khoản `admin_tab_01` **+ có phạm vi dự án** ⇒ vào bước 01 | Bảng tài khoản **có dữ liệu** (⭐ đo được: **12 dòng** ở ca mẫu) · nút «Sửa tài khoản» **hiện** · mở được modal | 🟠 HIGH |
+| **M14-06** | ⭐ **U-1 — ⛔ KHÔNG thấy toàn bộ** | Cùng tài khoản M14-05 ⇒ **đếm** số dòng bảng | Số dòng **NHỎ HƠN** tổng số tài khoản hệ thống (⭐ đo được: **73** tài khoản toàn hệ) ⇒ đúng «lọc theo phạm vi» | 🟠 HIGH |
+| **M14-07** | ⛔ **Giữ admin-only** (⭐ U-1 ⛔ không áp) | Tài khoản uỷ nhiệm ⇒ kiểm dữ liệu nhận được | ⛔ **KHÔNG** nhận `allModulePermissions` · `emailOutbox` · `emailRecipients` (⭐ rỗng `[]`) | 🟠 HIGH |
+| **M14-08** | Modal «Sửa tài khoản» đủ tab | Mở modal ở M14-05 | Thấy tab **«Sửa tài khoản»** + **«Phân quyền công việc / Chức năng»** (⭐ đo được: **5 tab**) · đổi tab ⇒ **width & vùng tiêu đề ⛔ KHÔNG đổi** (lệch **0px**) | 🟡 MEDIUM |
+
+## M15 — 4 CHỨC NĂNG KHO MỚI (Thủ kho · Quản trị)
+
+| # | Kịch bản | Các bước | ⭐ Kỳ vọng | Mức nếu sai |
+|---|---|---|---|---|
+| **M15-01** | **Tạo kho** | Hub Kho ⇒ `＋ TẠO KHO` ⇒ nhập mã/tên/loại/dự án ⇒ Lưu | Tạo thành công · ⛔ **trùng mã ⇒ báo lỗi** (đã có test API khoá điều này) | 🟠 HIGH |
+| **M15-02** | **Sửa kho** | Chọn 1 kho ⇒ `✎ SỬA` ⇒ đổi tên ⇒ Lưu | Lưu thành công · ⚠️ **dự án gắn kho ⛔ KHÔNG bị mất** (⭐ bẫy đã trả giá: gửi thiếu `projectId` ⇒ ghi `NULL`) | 🟠 HIGH |
+| **M15-03** | **Ngừng hoạt động** (⭐ thay cho «Xoá kho») | Chọn kho ⇒ `⏹ NGỪNG HOẠT ĐỘNG` | Kho **⛔ biến khỏi danh sách đang hoạt động** · ⚠️ **⛔ KHÔNG có nút «Xoá kho»** (hệ ⛔ không cho xoá cứng) | 🟠 HIGH |
+| **M15-04** | ⭐ **Thêm nhân sự vào kho** | Chọn kho ⇒ tab **«Nhân sự»** ⇒ `＋ THÊM NHÂN SỰ` ⇒ tìm & chọn 1 nhân sự | ⭐ nút «**LƯU PHÂN CÔNG**» chuyển từ **mờ** sang **BẬT** sau khi chọn người (⭐ đo được: `disabled` `true → false`) | 🟠 HIGH |
+| **M15-05** | ⚠️ **Thao tác ghi quyền nhân sự là GHI ĐÈ TOÀN PHẦN** | Ở M15-04 ⇒ trước khi bấm Lưu, ghi nhận quyền hiện có của nhân sự đó | ⚠️ Người test **phải biết**: thao tác này **ghi lại toàn bộ** phạm vi/quyền của nhân sự ⇒ ⛔ **chỉ test trên tài khoản thử**, ⛔ **KHÔNG dùng tài khoản thật** | 🔴 CRITICAL (quy tắc an toàn) |
+
+## M16 — GIỮ CHỖ TỒN KHO KHI PHIẾU ĐANG XỬ LÝ (Thủ kho · KH · BCH)
+
+| # | Kịch bản | Các bước | ⭐ Kỳ vọng | Mức nếu sai |
+|---|---|---|---|---|
+| **M16-01** | **Phiếu xuất đang xử lý ⇒ giữ chỗ** | Tạo 1 phiếu **XUẤT** ở trạng thái nháp/chờ duyệt với vật tư *X* (⭐ vd tồn 100, xuất 70) | Lượng **70** của *X* vào trạng thái **đang xử lý** | 🔴 CRITICAL |
+| **M16-02** | ⛔ **Người khác không xuất quá phần còn lại** | Trong lúc phiếu M16-01 **chưa hoàn thành**, tạo phiếu xuất khác cho cùng *X* | ⛔ **Chỉ xuất được tối đa 30** (phần ⛔ không bị giữ chỗ) · vượt ⇒ báo lỗi | 🔴 CRITICAL |
+| **M16-03** | **Hoàn thành ⇒ mới đổi tồn** | Duyệt & hoàn thành phiếu M16-01 | ⭐ **Chỉ khi HOÀN THÀNH** tồn kho nguồn/đích mới thay đổi · phần giữ chỗ được **nhả** | 🔴 CRITICAL |
+| **M16-04** | **Huỷ phiếu ⇒ nhả giữ chỗ** | Huỷ phiếu ở M16-01 | Phần giữ chỗ được **nhả** ⇒ phiếu khác xuất lại được đủ | 🟠 HIGH |
+
+## 15b. QUY TẮC GHI PHIẾU LỖI CHO M14–M16
+- ⭐ **Bắt buộc kèm**: tài khoản test · quyền đã cấp · **số ĐO được** (số dòng bảng, trạng thái nút, mã lỗi HTTP).
+- ⛔ **Không** ghi phiếu lỗi dựa trên «cảm giác» — ⚠️ tệp này đã ghi nhận nhiều ca «đỏ do PHÉP ĐO, ⛔ không phải lỗi sản phẩm».
+- ⚠️ **Cảnh báo an toàn**: ⛔ **KHÔNG** test M15-04/M15-05 trên tài khoản thật (thao tác ghi đè quyền).

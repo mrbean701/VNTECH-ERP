@@ -66,6 +66,21 @@ public interface AdminSystemStore {
     void upsertWarehouseLocation(String warehouseId, String code, String name, String locationType,
                                  boolean secure, boolean active, Instant now);
 
+    // ---- warehouses — ⭐ HANDOFF-20261008-009 (yêu cầu `ERP-SESSION-02`, phiên 01 thi hành) ----
+    // ⚠️ 3 hàm THUẦN THÊM (⛔ không đổi chữ ký hàm cũ — bài học `insertUser`) ✓
+    // ⛔ KHÔNG có hàm XOÁ kho: phiên 02 chốt `ALLOW_DELETE_WAREHOUSE = false`
+    //    ⇒ «ngừng hoạt động» (`active=0`) là đường DUY NHẤT, giữ nguyên lịch sử phiếu kho ✓
+    void upsertWarehouse(String id, String code, String name, String type, String projectId,
+                         String parentWarehouseId, String keeperUserId, boolean active, Instant now);
+    void setWarehouseActive(String id, boolean active, Instant now);
+    boolean warehouseCodeExists(String code, String excludeId);
+    /**
+     * ⚠️ Tra kho **⛔ KHÔNG lọc `active`** — CỐ Ý khác {@link #findWarehouse(String)} (hàm đó lọc `active=1`).
+     * Vì sao cần: kho ĐÃ NGỪNG HOẠT ĐỘNG vẫn phải sửa được + bật lại được; nếu dùng `findWarehouse`
+     * thì kho đã ngừng bị coi là «không còn tồn tại» ⇒ ⛔ khoá vĩnh viễn không bật lại được ✓
+     */
+    boolean warehouseExists(String id);
+
     // ---- business_role_engine_catalog (save_engine_role_profile) ----
     Optional<Map<String, Object>> findEngineProfile(String profileId, String engineKey);
     boolean engineCompanyCodeExists(String companyCode, String excludeId);

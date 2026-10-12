@@ -623,4 +623,61 @@ public class OpsTaskStoreAdapter implements OpsTaskStore {
     }
 
     private static String sv(Map<String, Object> m, String k) { Object v = m.get(k); return v == null ? "" : String.valueOf(v); }
+
+    // ══════════════════════════════════════════════════════════════════════════════════════════════════
+    // T-04 (PHASE 3 · CÔNG VIỆC) — 3 hàm cài đặt cho 2 action WORK vừa port (đóng `docs/61` **Q3**).
+    // ⚠️ ĐẶT Ở **CUỐI LỚP** (⛔ KHÔNG chèn vào giữa): giữ nguyên SỐ DÒNG của mọi phần phía trên
+    //    (bài học `BUG-D08` / gate `F-03` — tài liệu dự án gắn số dòng theo mã).
+    // Đối chiếu JS `scripts/system-route.mjs:1294` (bình luận) · `:1308-1311` (người tham gia).
+    // ══════════════════════════════════════════════════════════════════════════════════════════════════
+
+    @Override @Transactional
+    public void insertWorkItemComment(Map<String, Object> c, Instant now) {
+        // JS `:1294`: INSERT INTO work_item_comments(id,work_item_id,user_id,comment,visibility,created_at,updated_at)
+        jdbcTemplate.update("""
+                INSERT INTO work_item_comments (id,work_item_id,user_id,comment,visibility,created_at,updated_at)
+                VALUES (?,?,?,?,?,?,?)""",
+                c.get("id"), c.get("workItemId"), c.get("userId"), c.get("comment"),
+                c.get("visibility"), now, now);
+    }
+
+    @Override @Transactional(readOnly = true)
+    public boolean workItemParticipantExists(String workItemId, String userId) {
+        // JS `:507`: LIMIT 1 — chỉ cần biết CÓ hay KHÔNG
+        return first("SELECT 1 AS ok FROM work_item_participants WHERE work_item_id=? AND user_id=? LIMIT 1",
+                workItemId, userId).isPresent();
+    }
+
+    @Override @Transactional
+    public void upsertWorkItemParticipant(Map<String, Object> p, Instant now) {
+        // JS `:1309-1311`: tra dòng đang có theo (work_item_id,user_id) rồi UPDATE, ⛔ không thì INSERT.
+        Optional<Map<String, Object>> existing =
+                first("SELECT id FROM work_item_participants WHERE work_item_id=? AND user_id=?",
+                        p.get("workItemId"), p.get("userId"));
+        if (existing.isPresent()) {
+            jdbcTemplate.update("""
+                    UPDATE work_item_participants SET role_in_task=?,notify=?,added_by=?,updated_at=? WHERE id=?""",
+                    p.get("roleInTask"), p.get("notify"), p.get("addedBy"), now, sv(existing.get(), "id"));
+            return;
+        }
+        jdbcTemplate.update("""
+                INSERT INTO work_item_participants (id,work_item_id,user_id,role_in_task,notify,added_by,
+                                                   created_at,updated_at)
+                VALUES (?,?,?,?,?,?,?,?)""",
+                p.get("id"), p.get("workItemId"), p.get("userId"), p.get("roleInTask"), p.get("notify"),
+                p.get("addedBy"), now, now);
+    }
+
+    /**
+     * XOÁ MỀM công việc — cùng khuôn với `update_work_item_status → CANCELLED`
+     * (⭐ ĐO TRÊN CSDL THẬT 09/10/2026: **7/29** việc đang ở `status='CANCELLED'` + `active=0`)
+     * ⇒ ⛔ **không xoá cứng** ⇒ giữ vết kiểm toán (`work_item_events` · comments · participants) ✓
+     */
+    @Override @Transactional
+    public void softDeleteWorkItem(String id, String actorUserId, Instant now) {
+        jdbcTemplate.update("""
+                UPDATE work_items
+                   SET status='CANCELLED', active=0, cancelled_at=?, cancelled_by=?, updated_at=?
+                 WHERE id=?""", now, actorUserId, now, id);
+    }
 }

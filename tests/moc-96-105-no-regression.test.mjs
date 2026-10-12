@@ -57,8 +57,24 @@ const between = (src, from, to, span = 1400) => {
   return a < 0 ? "" : src.slice(a, a + span);
 };
 
+// ⛔ MỐC 03 (07/10/2026, ERP-SESSION-03) — `between` ở trên **BỎ QUA tham số `to`** và luôn cắt `span`
+//    ký tự. Vì vậy khi `HrProfileEditModal` được bổ sung logic (hotfix `BUG-20261007-C01`) thì cửa sổ
+//    1400 ký tự **TRÀN SANG khối code mới** ⇒ test đỏ OAN («modal gửi "fallback"», «email»).
+//    ⇒ Cắt **ĐÚNG theo mốc kết thúc của chính lời gọi**. ⛔ GIỮ NGUYÊN `between` cho 7 call site cũ
+//    (đổi hành vi của nó sẽ gây hiệu ứng phụ ở các chỗ khác trong tệp này).
+// ⚠️ Mốc kết thúc nhận **REGEX**, ⛔ không nhận chuỗi: tệp này dùng **CRLF** nên chuỗi `");\\n"`
+//    KHÔNG BAO GIỜ khớp (`);\\r\\n`) ⇒ nếu truyền chuỗi thì hàm lại rơi về «cắt hết phần còn lại»
+//    và test tiếp tục đỏ OAN y như lỗi vừa gặp.
+const betweenExact = (src, from, endsWith) => {
+  const a = src.indexOf(from);
+  if (a < 0) return "";
+  const rest = src.slice(a);
+  const match = rest.match(endsWith);
+  return match ? rest.slice(0, match.index + match[0].length) : rest;
+};
+
 test("BUG-01 — payload `save_hr_record` KHÔNG được chứa field mà bảng hr_records thiếu", () => {
-  const block = between(HR_MODAL, 'submit("save_hr_record"', ");\n", 1400);
+  const block = betweenExact(HR_MODAL, 'submit("save_hr_record"', /\}\);\r?\n/);
   assert.ok(block, "phải tìm thấy lời gọi save_hr_record trong HrProfileEditModal");
   const obj = block.slice(block.indexOf("{") + 1, block.lastIndexOf("}"));
   const sent = [...obj.matchAll(/(?:^|[\s{,])(\w+):/gm)].map((m) => m[1])
@@ -72,11 +88,18 @@ test("BUG-01 — payload `save_hr_record` KHÔNG được chứa field mà bản
 });
 
 test("BUG-01 — `email` phải đi qua `update_user` (users.email), KHÔNG qua `save_hr_record`", () => {
-  const block = between(HR_MODAL, 'submit("save_hr_record"', ");\n", 1400);
+  const block = betweenExact(HR_MODAL, 'submit("save_hr_record"', /\}\);\r?\n/);
   assert.doesNotMatch(block, /(?:^|[\s{,])email:/m,
     "⛔ BUG-01 tái phát: `email` lại được gửi vào save_hr_record (bảng không có cột này)");
-  assert.match(HR_MODAL, /accountPayload\.email\s*=/,
+  // MỐC 03 (07/10/2026) — payload tài khoản nay dựng bằng OBJECT LITERAL (mỗi trường một dòng, có
+  // fallback theo hồ sơ hiện có) thay cho chuỗi `accountPayload.email = …` ⇒ soi ĐÚNG khối literal đó.
+  // ⛔ Vẫn giữ nguyên ĐIỀU CẦN CHỨNG MINH: `email` đi qua `update_user` (cột `users.email`), ⛔ không qua `save_hr_record`.
+  const payloadBlock = betweenExact(HR_MODAL, "const accountPayload: Row = {", /\};/);
+  assert.ok(payloadBlock, "phải tìm thấy `const accountPayload: Row = {` trong HrProfileEditModal");
+  assert.match(payloadBlock, /email:\s*accountText\("email"/,
     "email phải đi qua accountPayload → update_user (đúng cột users.email)");
+  assert.match(HR_MODAL, /submit\("update_user", accountPayload\)/,
+    "accountPayload phải được gửi qua `update_user`");
 });
 
 test("BUG-02 — `updateUser` phải dùng cổng quyền khớp registry, KHÔNG chốt cứng ROLE admin", () => {

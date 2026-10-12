@@ -23,9 +23,9 @@ RUN node --test tests/rendered-html.test.mjs
 FROM node:22-bookworm-slim AS runtime
 LABEL org.opencontainers.image.title="VNTECH ERP" \
       org.opencontainers.image.version="5.3.0" \
-      org.opencontainers.image.revision="5.3.0-MASTER-BASELINE-R1.1.1-FINAL-20260908" \
+      org.opencontainers.image.revision="5.3.0-ALPHA-TEST-2026.10" \
       vntech.package.id="VNTECH_ERP_V5_3_0_MASTER_BASELINE_R1_1_1" \
-      vntech.ui.contract="VNTECH-UI-V5.3.0-MASTER-BASELINE-R1.1.1-FINAL-20260908" \
+      vntech.ui.contract="VNTECH-UI-V5.3.0-ALPHA-TEST-2026.10" \
       vntech.product.id="VNTECH-KHO-MEP-001" \
       vntech.trust.mode="development" \
       vntech.license.enforcement="disabled-by-design"
@@ -34,9 +34,9 @@ ENV NODE_ENV=production \
     PORT=8787 \
     VNTECH_DB_ENGINE=postgres \
     VNTECH_RELEASE_VERSION=5.3.0 \
-    VNTECH_RELEASE_BUILD=5.3.0-MASTER-BASELINE-R1.1.1-FINAL-20260908 \
+    VNTECH_RELEASE_BUILD=5.3.0-ALPHA-TEST-2026.10 \
     VNTECH_PACKAGE_ID=VNTECH_ERP_V5_3_0_MASTER_BASELINE_R1_1_1 \
-    VNTECH_UI_CONTRACT_ID=VNTECH-UI-V5.3.0-MASTER-BASELINE-R1.1.1-FINAL-20260908 \
+    VNTECH_UI_CONTRACT_ID=VNTECH-UI-V5.3.0-ALPHA-TEST-2026.10 \
     VNTECH_TRUST_MODE=development \
     VNTECH_LICENSE_ENFORCEMENT=0
 COPY package.json package-lock.json ./

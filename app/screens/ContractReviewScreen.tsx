@@ -11,11 +11,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { StatusBadge } from "@/app/components/ui";
 import { ListToolbar } from "@/app/components/ui/ListToolbar";
 import { BaseModal } from "@/lib/ui-blocks";
-import { CardHead, Empty } from "@/lib/ui-shared";
+import { CardHead, Empty, date } from "@/lib/ui-shared";
 import type { AppData, Row } from "@/lib/ui-shared";
 
 const s = (v: unknown) => (v === null || v === undefined ? "" : String(v));
-const d = (v: unknown) => (v ? s(v).slice(0, 10) : "—");
+const d = (v: unknown) => date(v); // MT3-S03 (08/10/2026) — ⛔ hết in NGÀY ISO thô: đi qua `date()` DÙNG CHUNG ⇒ `dd/mm/yyyy`
 const viewedOf = (r: Row) => r.viewed === true || s(r.viewed) === "1" || s(r.viewed) === "true";
 
 /** ⛔ MỐC 106: chiều rộng tab CỐ ĐỊNH, không theo độ dài tiêu đề. */

@@ -44,8 +44,15 @@ for (const m of jsText.matchAll(/action\s*===\s*"([a-z0-9_]+)"/g)) jsActions.add
 // CẢNH BÁO: SystemController có NHIỀU switch, trong đó có switch duyệt TÊN CHỈ MỤC SQL. Nếu bắt
 // hết mọi `case` thì sẽ đếm nhầm cả những tên như `users_username_uidx` hay `primary_key_f` thành
 // action (đây chính là lỗi tôi từng mắc khi viết báo cáo audit). Vì vậy phải TÁCH hai nhóm.
+// ⚠️ SỬA 08/10/2026 (`ERP-SESSION-04` — phát hiện khi port `approve_work_item`): regex CŨ
+// `/case\s+"([a-z0-9_]+)"\s*(?:->|:)/g` chỉ bắt nhãn **ĐẦU TIÊN** của một nhóm `case`.
+// Java cho phép GỘP nhiều nhãn: `case "a", "b" -> {` ⇒ nhãn `a` bị bỏ (theo sau là dấu `,`)
+// và nhãn `b` cũng bị bỏ (⛔ không có chữ `case` ngay trước nó) ⇒ cổng báo **THIẾU OAN**
+// (ĐO ĐƯỢC: `update_work_item_status` bị báo thiếu dù đã có nhánh). Nay bắt **CẢ NHÓM NHÃN**.
 const javaAllCases = new Set();
-for (const m of javaText.matchAll(/case\s+"([a-z0-9_]+)"\s*(?:->|:)/g)) javaAllCases.add(m[1]);
+for (const m of javaText.matchAll(/\bcase\s+((?:"[a-z0-9_]+"\s*,\s*)*"[a-z0-9_]+"\s*(?:->|:))/g)) {
+  for (const lab of m[1].matchAll(/"([a-z0-9_]+)"/g)) javaAllCases.add(lab[1]);
+}
 
 // Tên trông giống chỉ mục/khoá SQL chứ không phải action nghiệp vụ.
 const SQLISH = /(_uidx|_idx$|^primary_key|_key$|_no_uidx$)/;

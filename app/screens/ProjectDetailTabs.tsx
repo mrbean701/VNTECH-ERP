@@ -23,7 +23,10 @@ import type { FormEvent } from "react";
 import { DataTable, StatusBadge } from "@/app/components/ui";
 import { daysFromToday } from "@/lib/date-helpers";
 import { downloadCsv, downloadSimpleXlsx } from "@/lib/tabular-export";
-import { CardHead, UI_TODAY, date, format, money, PROJECT_STATUS_LABELS } from "@/lib/ui-shared";
+import { CardHead, UI_TODAY, date, format, money, PROJECT_STATUS_LABELS, taskStatusLabel } from "@/lib/ui-shared";
+// ERP-SESSION-03 (07/10/2026) — `BUG-20261007-C04`: cột «Ưu tiên» in MÃ THÔ (`high`/`critical`…)
+// ⇒ nay đi qua bảng nhãn DÙNG CHUNG (domain `priority`).
+import { statusLabel } from "@/lib/status-labels";
 import type { AppData, Row } from "@/lib/ui-shared";
 import { projectManagerName } from "@/app/screens/project-filters";
 import { BaseModal } from "@/lib/ui-blocks";
@@ -193,7 +196,7 @@ function ProjectDetailTabs({ data, project, section, onSection, openEntity, crea
           <thead><tr><th>Hạng mục</th><th>Giá trị</th></tr></thead>
           <tbody>
             <tr><td>Mã · tên dự án</td><td><strong>{project.code}</strong> · {project.name}</td></tr>
-            <tr><td>Trạng thái</td><td><StatusBadge value={PROJECT_STATUS_LABELS[String(project.status || "active")] || String(project.status || "—")}/></td></tr>
+            <tr><td>Trạng thái</td><td><StatusBadge value={PROJECT_STATUS_LABELS[String(project.status || "active")] || statusLabel(project.status || "active", "project")}/></td></tr>
             <tr><td>Hợp đồng</td><td>{project.contractNo || "Chưa gắn hợp đồng"}{project.contractName ? ` · ${project.contractName}` : ""}</td></tr>
             <tr><td>Ngày bắt đầu</td><td>{date(project.startDate)}</td></tr>
             <tr><td>Kết thúc dự kiến</td><td>{date(project.plannedEndDate)}</td></tr>
@@ -223,7 +226,7 @@ function ProjectDetailTabs({ data, project, section, onSection, openEntity, crea
           ? <div className="empty"><span>✓</span><strong>Chưa có công việc/nhiệm vụ.</strong><p>Dùng «＋ TẠO CÔNG VIỆC» hoặc «⇩ MẪU EXCEL CÔNG VIỆC» để nhập dữ liệu.</p></div>
           : <div className="table-wrap"><table><thead><tr><th>Tiêu đề</th><th>Nhóm việc</th><th>Phụ trách</th><th>Hạn</th><th>Ưu tiên</th><th>Trạng thái</th></tr></thead><tbody>
               {(data.workItems || []).filter((row) => String(row.projectId) === pid).map((row) => (
-                <tr key={String(row.id)}><td><strong>{String(row.title || "—")}</strong></td><td>{String(row.workGroup || "—")}</td><td>{String(row.assignedToName || row.assignedTo || "—")}</td><td>{row.dueAt ? date(String(row.dueAt)) : "—"}</td><td>{String(row.priority || "—")}</td><td><StatusBadge value={String(row.status || "todo")} /></td></tr>
+                <tr key={String(row.id)}><td><strong>{String(row.title || "—")}</strong></td><td>{String(row.workGroup || "—")}</td><td>{String(row.assignedToName || row.assignedTo || "—")}</td><td>{row.dueAt ? date(String(row.dueAt)) : "—"}</td><td>{statusLabel(String(row.priority || "normal"), "priority")}</td><td><StatusBadge value={taskStatusLabel(String(row.status || "todo"))} /></td></tr>
               ))}
             </tbody></table></div>}
       </section>

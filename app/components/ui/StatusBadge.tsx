@@ -58,19 +58,25 @@ export function StatusBadge({ value, label, tone, title }: {
   /** Chú thích khi rê chuột — hữu ích khi nhãn là mã kỹ thuật. */
   title?: string;
 }) {
-  const resolved = tone ?? toneOf(value);
   // MT3 §IV.6 / ma trận #5 — 1 BẢNG ÁNH XẠ DÙNG CHUNG: nếu người gọi KHÔNG truyền `label`
   //   thì tự tra `lib/status-labels.ts` thay vì in mã thô (`pending_approval`) ra màn hình.
-  // ⚠️ CHỐT AN TOÀN: CHỈ tra khi giá trị **trông như mã thô** (chữ thường + số + `_`, KHÔNG dấu cách).
+  // ⚠️ CHỐT AN TOÀN: CHỈ tra khi giá trị **trông như mã thô** (không dấu cách, không ký tự tiếng Việt).
   //   Lý do: `statusLabel` có `humanize()` cho giá trị lạ ⇒ nếu `value` **đã là tiếng Việt**
   //   (vd «Đang hoạt động») thì việc đổi hoa/thường là **hồi quy giao diện** ⛔ không mong muốn.
-  //   ⛔ Nhờ chốt này, nhãn đã đúng tiếng Việt được **giữ NGUYÊN**, chỉ mã thô mới được dịch.
   const rawText = String(value ?? "");
-  const looksLikeRawCode = rawText.length > 0 && /^[a-z0-9_.-]+$/.test(rawText);
+  // ⛔ ERP-SESSION-03 (07/10/2026) — `BUG-20261007-C03`: chốt CŨ là `/^[a-z0-9_.-]+$/` (**chỉ chữ THƯỜNG**)
+  //    ⇒ mã trạng thái VIẾT HOA của Công việc (`IN_PROGRESS` · `WAITING_SUPPLIER` · `REWORK` · `SUBMITTED`…)
+  //    **KHÔNG được dịch** và in NGUYÊN MÃ TIẾNG ANH ra màn hình — đúng lỗi user báo «1 số nơi hiển thị tiếng Anh».
+  //    ✅ Nay nhận CẢ chữ HOA. Vẫn ⛔ KHÔNG đụng chuỗi có dấu cách hoặc ký tự tiếng Việt ⇒ nhãn đã đúng giữ nguyên.
+  const looksLikeRawCode = rawText.length > 0 && /^[A-Za-z0-9_.-]+$/.test(rawText);
+  const display: ReactNode = label ?? (looksLikeRawCode ? statusLabel(value) : rawText);
+  // Màu suy từ CHỮ ĐANG HIỂN THỊ (tập từ khoá của `toneOf` là tiếng Việt: «chờ» · «đã» · «từ»…).
+  // ⛔ Trước đây màu suy từ MÃ THÔ nên mọi badge vừa được dịch đều rơi về `blue` (mất ngữ nghĩa màu).
+  const resolved = tone ?? toneOf(typeof display === "string" || typeof display === "number" ? display : value);
   return (
     <span className={`pill ${resolved}`} title={title}>
       <i />
-      {label ?? (looksLikeRawCode ? statusLabel(value) : rawText)}
+      {display}
     </span>
   );
 }

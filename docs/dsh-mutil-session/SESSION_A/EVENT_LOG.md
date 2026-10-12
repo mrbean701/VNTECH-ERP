@@ -542,3 +542,296 @@ TELEGRAM: START đã gửi ✓
 ⭐ ⇒ mọi lần anh thử «Chọn tất cả»/«Chi tiết» TRƯỚC lúc đó đã thấy HÀNH VI CŨ ⚠️
 ```
 ⭐ ⭐ **HẠN CHẾ THỰC TẾ** ⭐ ⭐ — ⭐ ⭐ plugin **«MÙ»**: ⛔ không đọc DOM ⇒ phải **đo toạ độ bằng mắt** ⇒ ⭐ ⭐ **nguy hiểm khi bấm trượt lên nút SỬA/XOÁ dữ liệu thật** ⚠️ ⭐ ⭐ cửa sổ khác + toast DSH ⭐ **CHE** mục tiêu (⭐ đã gặp thật: `hwnd 14158148` che ERP ✓)
+
+## EVT-20261007-035
+
+Date: 2026-10-07
+Session: ERP-SESSION-01
+Type: TEST_COMPLETE
+
+### Mô tả
+Hoàn thành test phân quyền Quản trị hệ thống (3 kịch bản) + test cấp quyền admin cho user director.
+
+### Kết quả
+① e2e.bgd (director, KHÔNG có perm admin) ⇒ vào menu nhưng BỊ CHẶN «CHƯA ĐƯỢC PHÂN QUYỀN» — PASS
+② Cấp quyền admin qua CSDL (user_module_permissions) + restart + đăng nhập lại ⇒ VẪN BỊ CHẶN — TÌM RA ROOT CAUSE
+③ BootstrapDataAdapter.java:844-900 — 3 nhánh phân quyền:
+   - admin (role=admin): toàn bộ module BAO GỒM admin
+   - company_leadership (roleBase=director): toàn bộ module TRỪ admin ← e2e.bgd rơi vào đây
+   - user thường: lấy từ user_module_permissions
+   ⇒ e2e.bgd (director) KHÔNG có quyền admin trong bootstrap ⇒ ĐÚNG THIẾT KẾ
+
+### Ý nghĩa
+Phát hiện này quan trọng cho GO-LIVE: khi cấu hình phân quyền cho người dùng, PHẢI hiểu rằng quyền admin KHÔNG thể cấp qua giao diện «Phân quyền người dùng» cho user có roleBase=director. Phải đổi role thành "admin" trong bảng users.
+
+### Liên quan
+- TEST-20261007-003 (E2E bước 1-2)
+- BUG-20261007-002 (FIXED — page.tsx:523)
+- Kiểm hardcode Quản trị hệ thống (3 hardcode có chủ đích)
+
+---
+
+## EVT-20261007-037
+
+Date: 2026-10-07
+Session: ERP-SESSION-01
+Type: TEST_COMPLETE
+
+### Mô tả
+Hoàn thành test phân quyền Quản trị hệ thống qua 2 kịch bản API.
+
+### Kết quả
+1. Cấp full quyền admin (`module_key=admin`) cho `e2e.kh` → bootstrap trả `admin: canView=1`, 60 modules → PASS
+2. Chỉ cấp 1 tab (`module_key=admin_tab_01`) → bootstrap trả `admin: NOT FOUND`, `admin_tab_01: canView=1` → PASS
+3. Đã khôi phục admin perm cho `e2e.kh`
+
+### Phát hiện
+- Phân quyền module-level trong `user_module_permissions` hoạt động đúng
+- Bootstrap API trả đúng danh sách module theo quyền đã cấp
+- Cần phân biệt: `module_key=admin` = toàn quyền, `module_key=admin_tab_NN` = 1 tab cụ thể
+
+### Liên quan
+- DEC-20261007-016 (quyết định phân quyền)
+
+---
+
+## EVT-20261008-001 — BUG_FOUND: «bấm Lưu không lưu được quyền» (user báo trực tiếp)
+
+| ⭐ | ⭐ |
+|---|---|
+| **EVT_ID** | EVT-20261008-001 |
+| **DATE** | 2026-10-08 10:20:00 |
+| **SESSION_ID** | ERP-SESSION-01 (SESSION_A) |
+| **EVENT** | `BUG_FOUND` |
+| **MODULE** | RBAC · Phân quyền người dùng |
+| **SEVERITY** | HIGH (user-blocking + mất dữ liệu âm thầm) |
+
+USER, nguyên văn: «tôi vừa thực hiện cấu hình phân quyền cho 1 user nhưng gặp lỗi, khi bấm lưu
+thì nó không lưu phân quyền tôi vừa chọn cho user, check lại modal phân quyền công việc/
+chức năng xem sao.»
+
+⇒ Ưu tiên §21.4 (USER-BLOCKING) + §45 (mất dữ liệu quyền) ⇒ **DỪNG việc khác, chuyển sang bắt lỗi**.
+⇒ Loại trừ lần lượt: backend `admin_tab_NN` (NHẬN) · lỗi `undefined` vòng 214 (đã vá) ·
+chốt P5.3 phòng ban (đã bỏ 06/10) · guard payload rỗng MỐC 111 (không rỗng).
+⇒ **2 nguyên nhân gốc đo được**: (A) frontend lệch 16 khoá · (B) backend chặn theo role.
+
+---
+
+## EVT-20261008-002 — HOTFIX_COMPLETE + TEST + REGRESSION: vá (A), đo lại MẤT 0 khoá
+
+| ⭐ | ⭐ |
+|---|---|
+| **EVT_ID** | EVT-20261008-002 |
+| **DATE** | 2026-10-08 10:45:00 |
+| **SESSION_ID** | ERP-SESSION-01 (SESSION_A) |
+| **EVENT** | `HOTFIX_COMPLETE` → `TEST_COMPLETE` → `REGRESSION` |
+| **RELATED** | BUG-20261008-001 · CHG-20261008-001 · TEST-20261008-001 |
+
+| Mốc | Việc | Kết quả |
+|---|---|---|
+| `OWNERSHIP_CLAIM` | claim `app/screens/PermissionAccessPanel.tsx` (khối ma trận) + 2 modal trong `app/page.tsx` | ✅ |
+| `HOTFIX_START` | thêm `permissionMatrixKeys` (nguồn duy nhất), panel + 2 modal cùng dùng | ✅ |
+| `TEST_START` | probe key-set + probe API + test v214 (thêm VỆ 7) | ✅ |
+| `TEST_COMPLETE` | panel **77** = payload **77** · **MẤT 0 khoá** · test v214 **7/7** | ✅ |
+| `REGRESSION` | cổng `scripts/regression-suite.mjs` **865 pass · 0 fail** · `tsc --noEmit` **exit 0** | ✅ |
+| `OWNERSHIP_RELEASE` | đã hoàn tất, ⛔ không giữ lock | ✅ |
+| `BLOCKER` | (B) `requireRole(List.of("admin"))` — **quyết định phân quyền**, chờ user | ⏸ |
+
+## EVT-20261008-003 — USER CHỌN PA-1 → thi hành → VERIFY (`save_user_access` hết 403)
+
+| ⭐ | ⭐ |
+|---|---|
+| **EVT_ID** | EVT-20261008-003 |
+| **DATE** | 2026-10-08 11:40:00 → 11:50:00 |
+| **SESSION_ID** | ERP-SESSION-01 (SESSION_A) |
+| **EVENT** | `DECISION` → `HOTFIX_START` → `HOTFIX_COMPLETE` → `TEST_COMPLETE` → `REGRESSION` → `BLOCKER` |
+
+| Mốc | Việc | Kết quả |
+|---|---|---|
+| `DECISION` | user chốt **PA-1** + ngữ nghĩa `role=admin` (break-glass) vs ITM (quyền theo cấu hình) | ✅ `DEC-20261008-001` |
+| `HOTFIX_START` | rà **3 TẦNG** chặn; sửa ①`ActionRbacRegistry` ②`ACTION_CAPABILITIES` ③`UserManagementUseCase` ④`SystemController` | ✅ |
+| — | 📏 **đo từng tầng** qua việc **thông điệp 403 đổi 3 lần** (D-093) | ✅ loại trừ được từng tầng |
+| `HOTFIX_COMPLETE` | dừng ĐÚNG PID 18081 → build **fat jar 91 MB** → chạy lại (PID 12420) | ✅ `Started … in 10.783 s` |
+| `TEST_COMPLETE` | `probe-permission-save-api.mjs` → B2 **200** · B2b **ghi thật** · B3 **403** | ✅ **EXIT 0** |
+| `REGRESSION` | Java **86/86** · cổng FE **865 pass/0 fail** · F-03 **7/7** (sau khi cập nhật hồ sơ số dòng) | ✅ |
+| `BLOCKER` 🚨 | **phát hiện CRITICAL**: người có `admin_tab_06` **tự cấp module `admin`** ⇒ gọi được `factory_reset_execute` (XOÁ DỮ LIỆU) | ⏸ `BUG-20261008-002` · `DEC-20261008-002` |
+| `OWNERSHIP_RELEASE` | đã hoàn tất phần đã chốt; ⛔ không giữ lock | ✅ |
+
+---
+
+## EVT-20261008-004 — 🚨 CRITICAL ALERT: đường **tự leo thang quyền tới xoá dữ liệu** (hệ quả PA-1)
+
+| ⭐ | ⭐ |
+|---|---|
+| **EVT_ID** | EVT-20261008-004 |
+| **DATE** | 2026-10-08 11:52:00 |
+| **SESSION_ID** | ERP-SESSION-01 (SESSION_A) |
+| **EVENT** | `BUG_FOUND` (CRITICAL) + `ALERT` |
+
+**Chuỗi**: admin cấp `admin_tab_06` → người đó `save_user_access` (**200** sau PA-1) → **tự cấp module
+`admin`** → gọi `factory_reset_execute` (`ActionRbacRegistry:154` = `List.of("admin")`, controller
+⛔ không `requireRequireAdmin`) → **XOÁ SẠCH DỮ LIỆU**.
+
+⚠️ Lập luận an toàn CŨ trong mã («tab 12 chỉ hiện với role=admin — `ADMIN_ROLE_ONLY_STEPS`») chỉ bảo vệ
+**GIAO DIỆN**, ⛔ không bảo vệ **API**.
+
+⇒ Đã: ghi `BUG-20261008-002` (**CRITICAL**) · `DEC-20261008-002` (3 phương án S-1/S-2/S-3) ·
+thêm dòng 9 bảng điều khiển `docs/dsh-mutil-session/SESSION_C/README.md` · **gửi Telegram CRITICAL**.
+⛔ **KHÔNG tự thêm guard** — là **chính sách phân quyền**, ⏸ chờ user.
+
+## EVT-20261008-005 — AUDIT XUNG ĐỘT ĐA PHIÊN: `ERP-SESSION-03` sửa ngoài phạm vi (6 tệp nhóm S01)
+
+| ⭐ | ⭐ |
+|---|---|
+| **EVT_ID** | EVT-20261008-005 |
+| **DATE** | 2026-10-08 13:30:00 |
+| **SESSION_ID** | ERP-SESSION-01 (SESSION_A) |
+| **EVENT** | `AUDIT` → `BLOCKER` (phạm vi) → `HANDOFF` |
+| **RELATED** | `HANDOFF-20261008-002` |
+
+### YÊU CẦU USER (nguyên văn)
+> «có 1 session đang làm nhầm phân vùng nhiệm vụ của session 1 hãy audit để tránh conflict»
+
+### CÁCH AUDIT (theo §5/§16/§28 — đối chiếu STATE vs ACTUAL CODE)
+1. Liệt kê thư mục phiên + `docs/dsh-state/` theo **mtime** ⇒ phát hiện **`SESSION_D` MỚI** và 2 tệp sửa **12:36**.
+2. Đọc `SESSION_REGISTRY.md` (bảng §5 + bảng «KHOÁ TỆP»).
+3. **Quét marker phiên khác trong mã** (`grep ERP-SESSION-0[234]` trên `app/**`) ⇒ ⭐ **cách phát hiện hiệu quả nhất**.
+4. `git status --short` + `git diff --stat` cho vùng S01 ⇒ xác định **ai** đã sửa **tệp nào**.
+5. Chạy **2 cổng** (`tsc` + hồi quy) để phân biệt **xung đột MÃ** vs **xung đột PHẠM VI**.
+
+### 📏 KẾT QUẢ ĐO
+| Nội dung | Kết quả |
+|---|---|
+| Thủ phạm | **`ERP-SESSION-03`** |
+| Số tệp **ngoài phạm vi** đã sửa | **6** — `lib/workflow-helpers.ts` (⚠️ **hôm nay 12:36**) · `Purchasing.tsx` · `Requests.tsx` · `RequestDrawer.tsx` · `ReceiptDrawer.tsx` · `Delivered.tsx` |
+| `app/page.tsx` (S01 LOCK) | ⛔ **CHƯA bị sửa** — diff `20+/10−` **toàn bộ của S01**; ⛔ không có marker SESSION-03 |
+| ⚠️ Nguy cơ | Comment S03 ghi «CÙNG LỚP `canAdministerStaff` trong `page.tsx`» — mà hàm đó **có thật** tại **`page.tsx:3235`** ⇒ **sắp** đụng tệp của S01 |
+| `tsc --noEmit` | ✅ **EXIT 0** |
+| Cổng hồi quy | ✅ **921 test · 920 pass · 0 fail · 1 skip** |
+| **Kết luận** | 🔴 **XUNG ĐỘT PHẠM VI** — ⛔ **KHÔNG hỏng mã** ⇒ ⛔ **không cần revert** |
+| `ERP-SESSION-04` (`SESSION_D`) | ✅ **SẠCH** — khai báo scope **chỉ `docs/**`**, ghi rõ ⛔ không giữ `app/**`/`lib/**`/`java-backend/**` |
+| `SESSION_REGISTRY.md` | ⚠️ **CŨ/THIẾU** — ⛔ chưa đăng ký S03; bảng «KHOÁ TỆP» ⛔ không liệt kê `page.tsx` + 6 tệp trên |
+
+### HÀNH ĐỘNG ĐÃ LÀM
+- Ghi **`HANDOFF-20261008-002`** cho S03 (4 yêu cầu: ngừng sửa · ⛔ không đụng `page.tsx` · handoff kèm bằng chứng · đăng ký phiên).
+- **Append** mục audit vào **cuối** `docs/dsh-state/SESSION_REGISTRY.md` (§4: ⛔ không ghi đè đoạn của phiên khác).
+- ⛔ **KHÔNG revert / ⛔ KHÔNG ghi đè** bản của S03 (luật 19 áp dụng **cả hai chiều**).
+- Báo user + Telegram.
+
+## EVT-20261008-006 — BAN GIAO TRANG THAI (§32) + 2 CHU Y PHOI HOP (§37 · §40)
+
+### ⭐ [2026-10-08 15:00 · `ERP-SESSION-01`] BÀN GIAO TRẠNG THÁI (§32) + 2 CHÚ Ý PHỐI HỢP (§37 · §40)
+
+#### A. `ERP-SESSION-01` — ĐÃ THAY ĐỔI GÌ (⭐ 7 tệp nguồn + 1 test, tất cả ĐÃ ĐO)
+| Tệp | Nội dung | Trạng thái |
+|---|---|---|
+| `app/page.tsx` | (A) `permissionMatrixKeys` · **M-2** 3 cổng + gate từng bước quản trị | ✅ VERIFIED |
+| `java-backend/application/…/rbac/ActionRbacRegistry.java` | **PA-1**: `save_user_access` → `admin_tab_06` + `canView` | ✅ EXIT 0 |
+| `java-backend/application/…/rbac/RbacService.java` | ➕ `canUseModule` (lớp mỏng mở port sẵn có) | ✅ |
+| `java-backend/application/…/service/UserManagementUseCase.java` | **PA-1** chốt 3 tầng + **S-1** chặn tự nâng quyền | ✅ EXIT 0 |
+| `java-backend/infrastructure/…/worker/EmailOutboxDispatchWorker.java` | **BUG-004** xử lý `Boolean` (MySQL `TINYINT(1)`) | ✅ log 0 lỗi/130s |
+| `java-backend/infrastructure/src/test/…/EmailOutboxDispatchWorkerTest.java` | ➕ 2 ca Boolean | ✅ 5/5 |
+| `tests/m118-system-admin-menu-gate.test.mjs` | cập nhật theo **Ý ĐỊNH GỐC MỐC 118** (⛔ không nới) | ✅ 3/3 |
+
+**KẾT QUẢ ĐO**: `tsc` EXIT 0 · cổng FE **925 test · 924 pass · 0 fail** · Java **86/86** · E2E **11/11** · cổng UI **6/6 bundle đúng byte**.
+**SỰ CỐ**: ✅ ⛔ không có tồn đọng · **DEPENDENCY**: ⏸ chờ `S03` nối UI khi lập dự án (`HANDOFF-20261008-010`).
+**NEXT STEP**: bước 1-3 của `HANDOFF-20261008-003` (API kho) — xem §B dưới.
+
+#### B. ⚠️ CHÚ Ý PHỐI HỢP ① — `app/screens/AllocateReturn.tsx` (⛔ §40 DEPENDENCY DISCOVERY)
+📏 **ĐO ĐƯỢC**: `git status` cho thấy **`app/screens/AllocateReturn.tsx` ĐANG bị sửa** (cùng nhiều tệp
+`app/screens/*` khác) — ⚠️ mà `HANDOFF-20261008-009` giao S01 có phần **modal `allocate`**.
+⇒ ⭐ **CHUYỂN TỪ `INDEPENDENT` SANG `COORDINATED`**: S01 giữ `app/page.tsx` (⛔ không đụng
+`AllocateReturn.tsx` cho tới khi biết ai giữ) ⇒ nếu modal `allocate` nằm trong tệp đó thì
+**S01 ⛔ KHÔNG tự sửa** — ➕ ghi handoff cho phiên đang giữ.
+
+#### C. ⚠️ CHÚ Ý PHỐI HỢP ② — `tools/baseline/*.png` bị ghi đè (§37 GENERATED FILES)
+📏 **ĐO ĐƯỢC**: nhiều ảnh chuẩn thị giác (`01-dashboard__desktop.png` · `03-work__desktop.png` ·
+`04-team__*.png` …) **đang ở trạng thái đã đổi** — ⭐ nguyên nhân: **các lượt chạy
+`node scripts/regression-suite.mjs` CỦA CHÍNH S01** (⚠️ cổng này có sinh/cập nhật ảnh chuẩn).
+⭐ **LUẬT ĐỀ NGHỊ CHO MỌI PHIÊN**: chạy cổng hồi quy ⇒ **kiểm `git status -- tools/baseline`** sau đó;
+⛔ **KHÔNG** `git checkout` đè (⚠️ có thể là ảnh mới nhất của phiên khác) — nếu commit thì **commit luôn cả ảnh** ✓
+
+
+---
+
+## CẬP NHẬT 2026-10-08 (chiều→tối) — ERP-SESSION-01`n
+| **EVT-20261008-007** | 2026-10-08 | `BUG_FOUND` | CRITICAL: migration V39 (S2) không idempotent ⇒ Flyway FAILED ⇒ BACKEND DOWN (`BUG-20261008-011`) |
+| **EVT-20261008-008** | 2026-10-08 | `HOTFIX_COMPLETE` | Khôi phục dịch vụ: đo trước chứng minh CSDL khớp đủ ý định V39 ⇒ sửa 1 dòng lịch sử Flyway ⇒ `Schema up to date` · 0 ERROR |
+| **EVT-20261008-009** | 2026-10-08 | `BUG_FOUND` | 2 test Java lỗi vì `schema-h2.sql` thiếu gương `issue_id` (`BUG-20261008-012`) |
+| **EVT-20261008-010** | 2026-10-08 | `HOTFIX_COMPLETE` | Thêm 1 dòng gương H2 ⇒ Java 88/88 (0 failure · 0 error) · BUILD SUCCESS |
+| **EVT-20261008-011** | 2026-10-08 | `BUG_FOUND` | Họ bug «quyền uỷ nhiệm»: `BUG-005/006/008/009` (FE 13 chỗ · 4 cổng `page.tsx`) |
+| **EVT-20261008-012** | 2026-10-08 | `HOTFIX_COMPLETE` | Đóng cả họ: audit FE 13 chỗ + BE 33 hàm + 216 action ⇒ LỆCH THẬT = 0 |
+| **EVT-20261008-013** | 2026-10-08 | `VERIFICATION` | HANDOFF-20261007-007 (S2) VERIFIED 2/2: `tsc`=0 + ĐO DOM `wd-staff-save`.disabled = false ⇒ 🟢 |
+| **EVT-20261008-014** | 2026-10-08 | `VERIFICATION` | BUG-008 chứng minh ĐỦ 2 CHIỀU (ÂM khoá / DƯƠNG mở) ⇒ probe E2E 15/15 ĐẠT · HẾT finding |
+| **EVT-20261008-015** | 2026-10-08 | `DECISION` | RÚT LẠI `DEC-20261008-004` (tôi báo động sai): 33 chốt quyền backend NHẤT QUÁN ⇒ lệch thật = 0 |
+| **EVT-20261008-016** | 2026-10-08 | `BUILD` | REBUILD toàn hệ theo yêu cầu user: FE vân tay BB706F1202490077 (6/6 byte) + jar mới · 3 cổng sống · CSDL 12/5/10 |
+| **EVT-20261008-017** | 2026-10-08 | `OWNERSHIP_RELEASE` | COMMIT `0119160` (292 tệp) → merge 2 commit của S2 → `defccb1` → PUSH `unity` (8d9c303..defccb1) ✅ |
+| **EVT-20261008-018** | 2026-10-08 | `TEST_COMPLETE` | Cổng cuối: FE 955/954 pass · 0 fail · Java 88/88 · tsc 0 · probe 15/15 · CSDL 12/5/10 |
+
+
+### EVT-20261009-0xx — mốc trong lượt này (`ERP-SESSION-01`)
+- **SESSION_START** · tiếp tục goal GO-LIVE (round 309) sau khi user chốt phương án **(d)**
+- **TASK_COMPLETE** · `DEV-20261009-011` — đổi định danh sản phẩm sang **ALPHA TEST 2026.10** + **`npm run build` EXIT 0** + cổng UI **3/3 ĐẠT**
+- **TASK_COMPLETE** · `CHG-20261009-012` — khai quyền **6 action «MÙ QUYỀN»** (`HANDOFF-20261008-D14`) ⇒ cổng `coverage` **EXIT 0**
+- **VERIFICATION** · `TEST-20261009-019` — xác minh 3 tầng (nguồn · **class trong JAR đang chạy** · H2) ⇒ **6/6 action có trong hiện vật `:18081`** ✓
+- **BLOCKER (đã gỡ hướng)** · không đo live được bằng tài khoản thật (401 · ⛔ không tạo tài khoản — `D-104`) ⇒ để probe chỉ-đọc cho user ✓
+- **DIAGNOSIS (⛔ không phải của S01)** · `test:release-static` đỏ vì `MANIFEST_SHA256.txt` (tracked · 01/10) lệch với tệp **26/09** trong `_javac-verify` ⇒ ⚠️ **nợ cũ**, ⛔ không do build lại hôm nay ⇒ ⛔ S01 không tự sửa (sổ sách phát hành) ✓
+- **OWNERSHIP_RELEASE** · S01 nhả phạm vi `ActionRbacRegistry` · `lib/vntech-identity-data.mjs` · các tệp định danh gốc ✓ (⚠️ còn: chờ user quyết banner `docs/**` + S4 thêm 6 tên `KNOWN_JAVA_ONLY`)
+
+| EVT-20261009-091 | 2026-10-09 15:37 | `ERP-SESSION-01` | **VERIFICATION** | ⭐⭐ LƯỢT CHỐT CUỐI: **CẢ 2 CỔNG PHÁT HÀNH ĐẠT** (`test:release-static` **EXIT 0** · `verify-full-release` **EXIT 0**) · vân tay `VNTECH-FP-E6A226D754294E10` · `dist` 15:36:40 · cổng UI **3/3** |
+
+| EVT-20261009-092 | 2026-10-09 16:02 | `ERP-SESSION-01` | **VERIFICATION** | ⭐ `work_others` **ĐO ĐỦ 2 CHIỀU**: 0 → **19** (việc người khác cùng phòng) → **0** khi xoá khoá ⇒ ⛔ 0 mất quyền · 🧹 dọn sạch 100% |
+
+| EVT-20261009-093 | 2026-10-09 16:35 | `ERP-SESSION-01` | **VERIFICATION** | ✅ **Quét hồi quy `BUG-D31`**: CHỈ 2 component vẽ ma trận (`PermissionMatrix` + `PermissionAccessPanel`) — **cả 2 đã lọc** · payload ⛔ cố ý không lọc (chống `BUG-D19`) ⇒ ⭐ **SẠCH, 0 chỗ hổng** ✓ |
+
+| EVT-20261009-094 | 2026-10-09 16:50 | `ERP-SESSION-01` | **SESSION_STATE** | ➕ **Tạo BẢNG ĐIỀU KHIỂN `SESSION_A/README.md`** (7 mục: định danh/phạm vi · việc đang làm · số đo cổng · việc chờ user · giao tiếp liên phiên · **7 bài học vận hành** · bước tiếp khi resume ✓) — ⭐ luật §5 «CURRENT ACTIVITY MUST BE VISIBLE» + §33 recovery ✓ (⚠️ S03/S04 đã có, S01 ⛔ chưa ⇒ nay có ✓) |
+
+| EVT-20261009-095 | 2026-10-09 17:05 | `ERP-SESSION-01` | **RELEASE** | ✅ **Chuỗi chốt lần 3**: `c8ad30e2ecc29bcf` · manifest 7546 · `dist` **17:04:44** · **UI 3/3** · 2 cổng phát hành **ĐẠT** ✓ (⭐ nguyên nhân: S04 đổi tên test `t16`⇒`t17` theo đề nghị của S01 ✓) |
+
+| EVT-20261009-096 | 2026-10-09 17:10 | `ERP-SESSION-01` | **VERIFICATION** | ✅ **Nghiệm thu 3 yêu cầu trực tiếp của user về menu «Công việc»** (`TEST-20261009-040`): ① bỏ «Quản trị dự án» ✓ ② tách «Trung tâm phê duyệt» (nhóm riêng `approval_center` sort 12 ✓) ③ click nhóm ⇒ mở màn Công việc ✓ ⇒ **3/3 ĐẠT** ✓ |
+
+| EVT-20261009-097 | 2026-10-09 17:10 | `ERP-SESSION-01` | **STATE_UPDATE** | ✅ Cập nhật **nguồn sự thật trạng thái** (`MASTER_STATUS.md` khối «CẬP NHẬT SỐNG»): số cũ «979·978 · 1 bug» ⇒ số ĐO **17:05** «985·984 · 3 bug» + vân tay/manifest/`dist`/cổng + 5 việc chờ user ✓ (`CHG-20261009-025`) |
+
+| EVT-20261009-098 | 2026-10-09 17:15 | `ERP-SESSION-01` | **REGRESSION** | ⚠️ Quét hồi quy `BUG-D31`: 4 khoá cũ **còn sống** (8 action + **168 dòng** `department_default` ✓) ⇒ ✅ **⛔ không mất dữ liệu** khi lưu ma trận · ⛔ không bypass ✓ — ⏸ **`DEC-20261009-026` chờ user chọn A/B/C** ✓ |
+
+| EVT-20261009-099 | 2026-10-09 17:20 | `ERP-SESSION-01` | **BUG_FOUND + HOTFIX_COMPLETE** | 🔴 `BUG-20261009-D34` (tự gây): thử quyền đã **tạo 3 bản ghi thật** (giả định sai «id giả ⇒ không ghi») ⇒ ✅ **đã dọn sạch + kiểm 2 lớp** (CSDL 29 dòng · payload 0 rác ✓) · ✅ `TEST-20261009-042`: RBAC tầng action **chặn 403 đúng** ✓ (⚠️ còn **1 câu hỏi MỞ**: vì sao `kttdemo` qua cổng — đã đính chính trung thực ✓) |
+
+| EVT-20261009-100 | 2026-10-09 17:30 | `ERP-SESSION-01` | **VERIFICATION** | ✅ **ĐÓNG câu hỏi mở** của `TEST-20261009-042`: `kttdemo` qua cổng vì `role=accountant` ∈ `isCompanyLeadership` (`RbacService` L98–99 + L115 ⇒ **đi qua mọi action** trừ `admin` ✓) — ⛔ không phải lỗi thiếu cổng ✓ ⇒ ⚠️ nổi lên **`DEC-20261009-027`** (kế toán = siêu quyền, là port «nguyên trạng» bản JS cũ) **chờ user quyết A/B/C** ✓ |
+
+| EVT-20261009-101 | 2026-10-09 17:40 | `ERP-SESSION-01` | **DECISION_CLOSED** | ✅ **ĐÓNG `DEC-20261009-027`** (⛔ không cần user quyết lại): phát hiện quyết định cũ của user (**Q2, 18/09/2026**, `TASK-024`: «**giữ Java, sửa JS**» — `system-route.mjs` L403–413 ✓) ⇒ ⭐ `accountant` đi qua cổng quyền là **hành vi CỐ Ý** ✓ · ➕ **§8 BẢN ĐỒ VAI TRÒ ⇒ QUYỀN** vào bảng điều khiển ✓ |
+
+| EVT-20261009-102 | 2026-10-09 17:50 | `ERP-SESSION-01` | **DECISION_CLOSED** | ✅ **ĐÓNG 2 câu chờ-user** bằng quyết định cũ + mã đang chạy (⭐ bài học 13 áp dụng ngay): ① `work_others` = **tuỳ chức vụ** (trưởng phòng⇒phòng mình · giám đốc⇒mọi phòng ✓ — `workItemWhere` vế OR thứ 4 ✓) ② **sub-tab** = user đã chốt «phân loại theo BẢN CHẤT» ⇒ đề xuất S01 chỉ còn **xác nhận 7 khoá** ✓ |
+
+| EVT-20261009-103 | 2026-10-09 18:00 | `ERP-SESSION-01` | **VERIFICATION** | ✅ **Nghiệm thu quyết định 26/09 của user** («gộp Nhà cung cấp»): **đã thi hành đúng** (dòng cũ ẩn khỏi menu ✓ · giữ khoá quyền `dept_plan_suppliers` ✓ · ⛔ không xoá mù ✓) — ⭐ và **giải được nghi vấn «2 mục mới»**: `P-07` (`TASK-121` ✓) tách **NCC ↔ Đối tác** = **trục khác**, ⛔ không mâu thuẫn ✓ ⇒ ⛔ **không hỏi user** ✓ (⭐ bài học 13 áp dụng lần 3 trong buổi ✓) |
+
+| EVT-20261009-104 | 2026-10-09 18:10 | `ERP-SESSION-01` | **VERIFICATION** | ✅ **Nghiệm thu 2 quyết định 27/09**: `A5` (Kho ⛔ không xoá — 18 lần nhắc `delete_warehouse` **đều là CẤM** ✓ + đường thay thế `set_warehouse_status` ✓) · `A1` (TỰ ĐỘNG TỪ CHỐI khi quá SLA — `RequestStore` L84–85 **ghi nguyên văn quyết định user** ✓) ⇒ **2/2 ĐẠT** ✓ (⚠️ tồn đọng: thời điểm kích hoạt SLA — ⛔ chưa đo ✓) |
+
+| EVT-20261009-105 | 2026-10-09 18:15 | `ERP-SESSION-01` | **TEST_INCONCLUSIVE** | ⚠️ `A2` (alias trong modal MR/PR/PO): alias **CÓ** ở màn danh mục (`MaterialListTable` L69 «tên phụ» + L56 gộp `aliasOf` ✓) ⚠️ **chưa thấy** trong `Purchasing.tsx`/`RequestDrawer`/`PurchaseOrderDrawer` ⇒ ⭐ **ghi «CẦN ĐO THÊM»**, ⛔ **không kết luận** ✓ (luật «test before FIXED» ✓) |
+
+| EVT-20261009-106 | 2026-10-09 18:30 | `ERP-SESSION-01` | **TEST_INCONCLUSIVE** | ⚠️ `A2` — **4 cách đo đều chưa thấy** form tạo MR/PR/PO trong UI (`Purchasing.tsx` là màn HIỂN THỊ ✓; chữ «tạo phiếu» chỉ ở `Inventory` (phiếu KHO) ✓) ⇒ ⭐ **khớp lộ trình `P-08` «CHƯA LÀM»** ⇒ ⛔ **không kết luận thiếu sót**, đã **hỏi S04** (người có bản đồ UI) ✓ |
+
+| EVT-20261009-107 | 2026-10-09 18:45 | `ERP-SESSION-01` | **TOOLING + VERIFICATION** | ⭐ **Mở được UI THẬT bằng trình duyệt** (`:9000` ✓ — ⚠️ `:8787` login 401 ✓) ⇒ xác nhận **bằng mắt**: «CÔNG VIỆC» **1 nút, 0 mục con** ✓ · «Trung tâm phê duyệt» **tách riêng** ✓ · nhóm Mua hàng = **«Nhà cung cấp» + «Đối tác»** ✓ (khớp P-07) · ⚠️ **⛔ không thấy mục «PR & PO»** trong menu ⇒ củng cố A2 chưa có form ✓ |
+
+| EVT-20261009-107 | 2026-10-09 18:45 | `ERP-SESSION-01` | **TOOLING + VERIFICATION** | ⭐ **Mở được UI THẬT bằng trình duyệt** (`:9000` ✓ — ⚠️ `:8787` login 401 ✓) ⇒ xác nhận **bằng mắt**: «CÔNG VIỆC» **1 nút, 0 mục con** ✓ · «Trung tâm phê duyệt» **tách riêng** ✓ · nhóm Mua hàng = **«Nhà cung cấp» + «Đối tác»** ✓ (khớp `P-07`) · ⚠️ **⛔ không thấy mục «PR & PO»** trong menu ⇒ củng cố `A2` chưa có form ✓ |
+
+| EVT-20261009-108 | 2026-10-09 19:00 | `ERP-SESSION-01` | **VERIFICATION (UI THẬT)** | ✅ Tự kiểm 2/4 điểm user cần thử trên UI sống: ③ ô «**Xem việc của**» **CÓ HIỆN** cho `giamdoc.demo` (5 lựa chọn nhóm ✓ ⇒ `CHG-D39` đúng ✓) · ④ nút «**＋ TẠO CÔNG VIỆC**» cùng thanh công cụ với ô tìm kiếm ✓ (khớp cổng S04 ✓) · ➕ màn Công việc có **đúng 6 TAB** ✓ · ⛔ **không thao tác GHI** (⛔ không bấm «Xoá» ✓) · 📷 ảnh: `bang-chung-cong-viec-20261009.png` ✓ |
+
+| EVT-20261009-109 | 2026-10-09 19:15 | `ERP-SESSION-01` | **UI SURVEY** | ⚠️ Khảo sát đường đi màn phân quyền: «QUẢN TRỊ HỆ THỐNG» → «**DANH MỤC & PHÂN QUYỀN**» → tab «**6 Phân quyền người dùng**» = **danh sách 74 người** (⛔ chưa phải bảng khoá module ✓) ⇒ ⭐ **S01 DỪNG đúng lúc** (điểm ② đã có **bằng chứng máy** từ probe DOM: 4 khoá cũ ×0 · 7 khoá mới đủ ✓) · ⛔ 0 thao tác GHI ✓ |
+
+| EVT-20261009-110 | 2026-10-09 19:35 | `ERP-SESSION-01` | **RELEASE-INTEGRITY** | ✅ **Cổng chính thức ĐẠT trên CẢ 2 CỔNG** (`:8787` + `:9000` — ⭐ cổng user đang xem ✓): «do-moi dist/ mới hơn nguồn 14s» ✓ · «**HTML mang `c8ad30e2ecc29bcf` · khớp SSOT**» ✓ · «**6/6 bundle đúng byte**» ✓ ⇒ **BẢN CHẠY = BẢN MỚI NHẤT** ✓ (⚠️ S01 tự gây 1 **cảnh báo giả** do so với `dist\index.html` ⛔ không tồn tại ⇒ **đã đính chính trong cùng lượt** ✓) |
+
+| EVT-20261009-111 | 2026-10-09 19:50 | `ERP-SESSION-01` | **INVESTIGATION CLOSED** | ✅ Truy xong 2 điều treo: ① `dist\.openai\*` = **gói triển khai RIÊNG** (394 migration SQL + `hosting.json` ✓ — ⛔ **không phải app** ✓) ⇒ ⭐ **KHÔNG ảnh hưởng bản đang chạy** (cổng 19:35 sau 18:25 vẫn **6/6 bundle đúng byte** ✓✓) ② `:9000` fetch **không phiên** trả shell khác ⇒ ⭐ **luật: kiểm app phải dùng PHIÊN hoặc cổng dự án** ✓ · ⚠️ **tự đính chính**: `dist\` ⛔ **không chứa app** (`dist\assets` = 0 tệp ✓) — ⭐ bài học 16 ✓ |
+
+| EVT-20261009-112 | 2026-10-09 20:00 | `ERP-SESSION-01` | **VERIFICATION (UI THẬT)** | 🎯 **`A2` ĐÓNG DỨT ĐIỂM**: màn «Nhà cung cấp» ⛔ **0 tab PR/PO bấm được** ✓ · ⭐ câu **của chính app**: «**Mã NCC được dùng trong mẫu Excel lập PO**» ⇒ ⭐ **MR/PR/PO lập bằng MẪU EXCEL, ⛔ không có modal tạo** ⇒ `A2` **chưa có chỗ cài** ✓ khớp `P-08` «CHƯA LÀM» ✓ ⇒ ⭐ **BLOCKED BY DESIGN, ⛔ không phải bug** ✓ (⚠️ ghi nhận 1 **dương tính giả**: «PR» chỉ là tên dự án «**PR**J-DEMO-01» ✓) |
+
+| EVT-20261009-113 | 2026-10-09 20:15 | `ERP-SESSION-01` | **VERIFICATION** | ✅ **Đóng nốt A-list `MT3`**: `A3` **đã đóng sẵn** (UTF-8 đạt ✓ · BE-07 kết thúc ✓) · `A4` luật phòng ban **đã cài** (5 chế độ ✓) ⚠️ **nhưng lộ TỒN ĐỌNG**: trống ⇒ mặc định `all` ⇒ **ai gửi cũng được toàn công ty** ✓ (⭐ đã đưa vào §4 ✓ ⛔ không tự chọn ✓) · `A6` ⛔ **không có màn báo cáo Mua hàng** ⇒ **tôn trọng đúng** ✓ · ⚠️ **10 tab Mua hàng CHƯA dựng** (màn chỉ có 3 tab ✓) ⇒ ghi tồn đọng ✓ |
+
+| EVT-20261009-114 | 2026-10-09 20:30 | `ERP-SESSION-01` | **VERIFICATION** | ✅ **`P-4` HOÁ RA ĐÃ AN TOÀN THEO THIẾT KẾ** ⇒ ⭐ **GỠ khỏi hàng chờ user** (5⇒4 ✓): `ActionRbacRegistry` **L50** «`save_notification_config` ⇒ `List.of(`admin`)`» ✓ + L52/53/63/64 đều `admin` ✓ + `RbacService` L115 ⇒ **lãnh đạo ⛔ không được miễn** ✓ ⇒ ⭐ **chỉ module `admin` mới gửi được thông báo** ⇒ câu hỏi «ai gửi được `all`?» **đã được MÃ trả lời** ✓ (⭐ bài học 13 áp dụng lần 4 ✓) |
+
+| EVT-20261009-115 | 2026-10-09 20:45 | `ERP-SESSION-01` | **VERIFICATION** | 🔍 **Đo `P-5` trước khi hỏi user** ⇒ ⭐ **HẠ MỨC thành «THÔNG TIN»** (hàng chờ thật 4⇒3 ✓): nhóm Mua hàng **khai báo 18 mục** ✓ nhưng **UI sống hiện đúng 2** («Nhà cung cấp» + «Đối tác» ✓); 8 mục cũ có `subGroup` = «Phòng Kế hoạch» ⇒ **ẩn CÓ CHỦ Ý** ✓ ⇒ ⭐ nhất quán `P-08` «CHƯA LÀM» ⇒ ⛔ **không phải khiếm khuyết, ⛔ không cần user quyết ngay** ✓ (⚠️ `menu-helpers.ts` là tệp của S04 ⇒ S01 ⛔ chỉ đọc ✓) |
+
+| EVT-20261009-116 | 2026-10-09 21:15 | `ERP-SESSION-01` | **ROOT CAUSE** | 🔬 **`BUG-D33` KHÔNG phải lỗi ứng dụng** ⇒ ⭐ **hạ mức + gỡ yêu cầu xin phép reset** ✓: 6 tài khoản đều `active=1` ✓ · hash **cùng định dạng** `pbkdf2$600000$…` 111 ký tự ✓ · ⭐ **`e2e.bgd` (08/10) · `e2e.kh` (07/10) · `nvdademo` (29/09) ĐÃ đăng nhập thành công** ✓ ⇒ ⭐ **nguyên nhân = MẬT KHẨU khác `Vntech@2026`** ✓ — ⭐ S01 đã có 2 tài khoản chạy tốt để kiểm thử ✓ (⚠️ `thukydemo` chưa từng đăng nhập ✓ · ⚠️ `e2edemo` không có trong kết quả ✓) |
+
+| EVT-20261009-117 | 2026-10-09 21:45 | `ERP-SESSION-01` | **BUG_FOUND (HIGH)** | 🔴 **`BUG-20261009-D35` — AN NINH/QUYỀN (HIGH)**: audit 21 dòng `admin` ⇒ ⭐ **thu hẹp xuống ĐÚNG 2 DÒNG**: `e2e.bgd` + `e2e.kh` (**`active=1`**) giữ **`admin` 1/1/1/1 VÔ THỜI HẠN** nguồn `manual_test` ✓ · ⚠️ **hiện «ngủ»** vì 2 tk chưa đăng nhập được (`BUG-D33`) ✓ ⇒ ⭐ **rủi ro kích hoạt nếu ai reset mật khẩu** ⚠️ · ⚠️ **THỨ TỰ BẮT BUỘC: GỠ QUYỀN TRƯỚC → mới reset mật khẩu** ✓ · ⛔ **S01 ⛔ KHÔNG tự xoá dữ liệu** — chờ user cho phép ✓ |
+
+| EVT-20261009-118 | 2026-10-09 22:15 | `ERP-SESSION-01` | **ROOT CAUSE (tầng mã)** | ✅ **`BUG-D35`: ⛔ KHÔNG CÓ LỖI MÃ** ⇒ ⭐ **vấn đề DỮ LIỆU**: ① sản phẩm chỉ ghi `user_module_permissions` ở **1 chỗ** (`UserAdminStoreAdapter` L269 ✓, còn lại là tệp TEST ✓) ② chỗ đó đòi **ROLE `admin`** (`AdminSystemUseCase` gọi `requireRole(…, List.of("admin"))` **6+ lần** ✓) ⇒ ⭐ **UI ⛔ không phải đường leo thang** ✓ ③ giá trị `manual_test` ⛔ **không có ở đâu trong repo** (0 kết quả ✓) ⇒ ⭐ **2 dòng do GHI THẲNG vào CSDL** ✓ ⇒ ⭐ **sửa = sửa DỮ LIỆU** (chờ user ✓) + **luật vệ sinh test** ✓ |

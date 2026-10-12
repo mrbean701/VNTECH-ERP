@@ -174,6 +174,34 @@ public class UserAdminStoreAdapter implements UserAdminStore {
         jdbcTemplate.update("DELETE FROM user_module_permissions WHERE user_id=?", userId);
     }
 
+    /**
+     * ⭐⭐ V-1 (`BUG-20261008-014` — 🔴 CRITICAL «mất dữ liệu»): đọc 3 nhóm phạm vi **HIỆN CÓ** của một người,
+     * trả về **ĐÚNG DẠNG PAYLOAD** của `saveUserAccess` ⇒ use-case **HỢP** được (⛔ không xoá oan phần
+     * người gọi ⛔ không nhìn thấy) ✓
+     *
+     * <p>⚠️ BỐI CẢNH: `saveUserAccess` là **FULL-REPLACE**. Người **⛔ không phải admin** chỉ nhận một phần dữ liệu
+     * (`data.userWarehouseScopes` non-admin **chỉ có của chính họ**; `data.allModulePermissions` **rỗng** với non-admin)
+     * ⇒ nếu vẫn FULL-REPLACE thì ⛔ **XOÁ SẠCH** phần họ không thấy ⇒ 🔴 mất dữ liệu ✓
+     */
+    @Override
+    public java.util.Map<String, java.util.List<java.util.Map<String, Object>>> listExistingScopes(String userId) {
+        java.util.List<java.util.Map<String, Object>> ps = jdbcTemplate.queryForList("""
+                SELECT project_id AS projectId, permission FROM user_project_scopes
+                WHERE user_id=? ORDER BY project_id""", userId);
+        java.util.List<java.util.Map<String, Object>> ws = jdbcTemplate.queryForList("""
+                SELECT warehouse_id AS warehouseId, permission FROM user_warehouse_scopes
+                WHERE user_id=? ORDER BY warehouse_id""", userId);
+        java.util.List<java.util.Map<String, Object>> ms = jdbcTemplate.queryForList("""
+                SELECT module_key AS moduleKey, can_view AS canView, can_use AS canUse, can_create AS canCreate,
+                       can_edit AS canEdit, can_approve AS canApprove, can_export AS canExport
+                FROM user_module_permissions WHERE user_id=? ORDER BY module_key""", userId);
+        java.util.Map<String, java.util.List<java.util.Map<String, Object>>> kq = new java.util.LinkedHashMap<>();
+        kq.put("projectScopes", ps);
+        kq.put("warehouseScopes", ws);
+        kq.put("modulePermissions", ms);
+        return kq;
+    }
+
     @Override
     @Transactional
     public int deleteModuleOverride(String userId, String moduleKey) {

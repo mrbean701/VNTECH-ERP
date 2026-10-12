@@ -26,6 +26,13 @@ const JAVA_ONLY = [
   "create_self_work_item", "delete_department_permission", "delete_system_level", "delete_workflow",
   "rebuild_department_permissions", "save_department_permission", "save_system_level", "save_workflow",
   "set_system_level_status", "set_user_system_level", "set_workflow_status", "system_level_impact",
+  // ⭐ BỔ SUNG 09/10/2026 (`ERP-SESSION-04` — W3): **`delete_work_item`** = action MỚI của `ERP-SESSION-01`
+  //   (nút «Xoá» việc của bản thân, đặc tả Công việc §1 của user). Nay `app/screens/WorkCenter.tsx` GỌI action này
+  //   ⇒ theo luật của `tests/t13` («mọi action WorkCenter gọi, nếu chỉ có ở Java thì PHẢI khai ở đây») nó phải có tên
+  //   trong danh sách này. ⚠️ Khác 12 mục gốc: mục này **CÓ module** (`work` + capability `canEdit` — đã đo dòng 371/652
+  //   của `ActionRbacRegistry.java`) ⇒ ⛔ không thuộc nhóm «module rỗng» mà audit này đi tìm (`verdict` sẽ là
+  //   «có module → kiểm theo module»). Đường JS (`scripts/system-route.mjs`) ⛔ chưa có ⇒ đúng là Java-only.
+  "delete_work_item",
 ];
 
 const ctrl = readFileSync(CTRL, "utf8");

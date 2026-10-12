@@ -11,14 +11,28 @@
 
 import { configuredMenuGroups, modules } from "@/lib/menu-helpers";
 import type { AppData, Row } from "@/lib/ui-shared";
+// ⛔⛔ BUG-20261007-C13 (HIGH — CÙNG LỚP `canAdministerStaff` trong `page.tsx`) · ERP-SESSION-03 · 2026-10-09 · HOTFIX (phần trong quyền phiên 03)
+//   ⚠️ TRƯỚC KHI VÁ: `hasApprovePermission` **CHỈ** xét `allModulePermissions` (quyền **CẤP NGƯỜI DÙNG**) theo `userId`
+//      ⇒ ⛔ **BỎ QUA quyền CẤP PHÒNG BAN** ⇒ ⭐ **ĐO ĐƯỢC**: bảng `department_module_permissions` có **nhiều** dòng `can_approve=1`
+//      (`approvals` **6 phòng** · `receipt/warehouse_receipt` **3** · **`dept_legal_hr` 3** · …) ⇒ ⚠️ người được cấp quyền **DUYỆT** theo phòng ban bị đánh dấu **SAI**.
+//   ⚠️ HỆ QUẢ (đo trong `app/screens/WorkflowModal.tsx`): `onlyPermitted` **LỌC** theo `hasApprovePermission` ⇒ ⭐ **ẨN người duyệt HỢP LỆ**;
+//      và badge ghi «**Chưa có quyền duyệt**» ⚠️ **sai** cho người có quyền theo phòng ban.
+//   ✅ CÁCH VÁ: xét **thêm** quyền phòng ban (`data.departmentModulePermissions` × `organizationUnitId` của user) — ⭐ dữ liệu đã có sẵn trên `AppData`.
+//      ⚠️ VẪN giữ nhánh quyền cấp người dùng + `admin` (⛔ không bỏ đường nào).
 function workflowApproverCandidates(data: AppData, moduleKey: string): Row[] {
   return (data.users || [])
     .filter((u) => Number(u.active ?? 1) === 1)
     .map((u): Row => {
       const perm = (data.allModulePermissions || []).find(
         (p) => String(p.userId) === String(u.id) && String(p.moduleKey) === moduleKey);
+      // ⭐ Quyền DUYỆT cấp theo PHÒNG BAN của user (⭐ đo được: `department_module_permissions` có `can_approve`).
+      const deptApprove = (data.departmentModulePermissions || []).some((d: Row) =>
+        String(d.organizationUnitId) === String(u.organizationUnitId)
+        && String(d.moduleKey) === moduleKey
+        && Number(d.active ?? 1) === 1
+        && Number(d.canApprove) === 1);
       const isAdmin = String(u.role) === "admin";
-      return { ...u, hasApprovePermission: isAdmin || Number(perm?.canApprove) === 1 };
+      return { ...u, hasApprovePermission: isAdmin || Number(perm?.canApprove) === 1 || deptApprove };
     })
     .sort((a, b) => Number(b.hasApprovePermission) - Number(a.hasApprovePermission)
       || String(a.fullName || "").localeCompare(String(b.fullName || ""), "vi"));

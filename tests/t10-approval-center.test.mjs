@@ -37,7 +37,12 @@ const MODULE_KEY_BLOCK = uiShared.slice(uiShared.indexOf("type ModuleKey ="), ui
 test("T-10 — Approval Center TÁCH khỏi nhóm «CÔNG VIỆC» bằng UI (khoá đã có `approvals`, KHÔNG khoá module mới)", () => {
   // 1) Khoá dùng để tách = `approvals` (ĐÃ CÓ) — khai báo tường minh trong `lib/menu-helpers.ts`.
   assert.match(menuHelpers, /const approvalCenterMenuKey: ModuleKey = "approvals";/, "Thiếu khai báo khoá `approvals` cho Trung tâm phê duyệt");
-  assert.match(menuHelpers, /const approvalCenterGroup = \{ groupKey: "approval_center", name: "PHÊ DUYỆT", icon: "PD", sortOrder: 20 \} as const;/, "Thiếu khai báo NHÓM MENU độc lập `approval_center`");
+  // ⚠️ CẬP NHẬT 09/10/2026 — YÊU CẦU TRỰC TIẾP CỦA USER (kèm ảnh sidebar): «*đưa Trung tâm phê duyệt ra khỏi
+  //    menu Công việc*» ⇒ user chọn «**CHUYỂN LÊN NGAY SAU «TỔNG QUAN ĐIỀU HÀNH»**» ⇒ `sortOrder` **20 → 12**
+  //    (📏 ĐO payload thật: `overview 10` · `my_work 15` ⇒ 12 nằm giữa). ⛔ Vẫn GIỮ NGUYÊN bất biến: đây là
+  //    **KHOÁ NHÓM MENU** (`approval_center`, ⛔ không phải khoá module, ⛔ không dòng CSDL, ⛔ không migration).
+  assert.match(menuHelpers, /const approvalCenterGroup = \{ groupKey: "approval_center", name: "PHÊ DUYỆT", icon: "PD", sortOrder: 12 \} as const;/,
+    "Thiếu khai báo NHÓM MENU độc lập `approval_center` (hoặc `sortOrder` ⛔ không còn là 12 = sau «TỔNG QUAN ĐIỀU HÀNH», trước «CÔNG VIỆC»)");
   assert.match(menuHelpers, /const independentMenuKeys: ModuleKey\[\] = \["dashboard", "approvals"\];/, "Thiếu danh sách mục menu ĐỘC LẬP ở cấp cao nhất");
   // 2) `approvals` KHÔNG còn nằm trong `children` của BẤT KỲ nhóm nào (kể cả `my_work` — nhóm DB đang gán cho nó).
   assert.match(page, /!independentMenuKeys\.includes\(item\.key\)/, "Cây menu chưa loại các mục ĐỘC LẬP khỏi `children` của nhóm");
@@ -74,11 +79,12 @@ test("T-10 — BẰNG CHỨNG «KHÔNG MIGRATION / KHÔNG KHOÁ MODULE MỚI» (
   assert.deepEqual(groupSql, [], "Nhóm menu mới bị seed vào `menu_group_catalog` ⇒ cần migration, ngoài phạm vi T-10");
 });
 
-test("T-10 — KHÔNG phá 5 mục «CÔNG VIỆC» đã chốt ở T-01", () => {
+test("T-10 — KHÔNG phá MỤC HUB «CÔNG VIỆC» (VIỆC 1: 5 mục ⇒ 1 mục `work_hub`)", () => {
   assert.match(menuHelpers, /const workMenuItems: \{ key: string; label: string; groupKey: "my_work"; view: WorkMenuView; permissionKeys: ModuleKey\[\] \}\[\] = \[/);
-  assert.equal((menuHelpers.match(/groupKey: "my_work", view: /g) || []).length, 5, "5 mục «CÔNG VIỆC» phải giữ nguyên");
-  // Vẫn vẽ 5 mục đó ở CẢ sidebar lẫn menu mobile.
-  assert.equal((page.match(/groupKey==="my_work"&&workMenuChildren\.map\(/g) || []).length, 2, "Mất dải 5 mục ở sidebar hoặc menu mobile");
+  // ⭐ CẬP NHẬT 08/10/2026 (USER — VIỆC 1): nhóm «Công việc» GOM 5 mục rời ⇒ **ĐÚNG 1 mục hub** `work_hub`.
+  assert.equal((menuHelpers.match(/groupKey: "my_work", view: /g) || []).length, 1, "Nhóm «CÔNG VIỆC» phải chỉ còn 1 MỤC HUB");
+  // Vẫn vẽ mục đó ở CẢ sidebar lẫn menu mobile.
+  assert.equal((page.match(/groupKey==="my_work"&&workMenuChildren\.map\(/g) || []).length, 2, "Mất dải mục «CÔNG VIỆC» ở sidebar hoặc menu mobile");
   // `workMenuBadge(item.badgeKeys)` vẫn đúng 4 lần (2 badge nhóm + 2 badge mục con) — không nhân đôi/nuốt badge.
-  assert.equal((page.match(/workMenuBadge\(item\.badgeKeys\)/g) || []).length, 4, "Huy hiệu 5 mục «CÔNG VIỆC» bị đổi số lần vẽ");
+  assert.equal((page.match(/workMenuBadge\(item\.badgeKeys\)/g) || []).length, 4, "Huy hiệu mục «CÔNG VIỆC» bị đổi số lần vẽ");
 });

@@ -130,16 +130,17 @@ test("T-08 — UI KHÔNG hardcode số: mọi giá trị lấy từ khối tính
 
 // 📌 CẬP NHẬT 26/09/2026 (MT3 §A.2): thêm tab «Dự án» ở index 1 ⇒ «Dashboard» dời từ tab 3 → tab 4.
 // ⛔ Khối dashboard VẪN phải nằm trong tab «Dashboard», KHÔNG được tách sang tab mới.
-test("T-08 — GẮN vào tab «Dashboard» của WorkCenter (nay là tab số 4 sau MT3 §A.2), dải tab 6 mục", () => {
+test("T-08 — GẮN vào tab «Dashboard» của WorkCenter (nay là TAB ĐẦU — số 0), dải tab 7 mục", () => {
   assert.match(workCenter, /import \{ WorkDashboard \} from "@\/app\/screens\/WorkDashboard";/, "WorkCenter chưa import khối dashboard");
   assert.match(workCenter, /<WorkDashboard\b/, "WorkCenter chưa render khối dashboard");
   assert.match(workCenter, /personalRows=\{mine\}/, "Khối «Cá nhân» phải nhận ĐÚNG tập việc của tôi");
   assert.match(workCenter, /scopeRows=\{scopedWork\}/, "Khối phòng ban/dự án phải nhận tập việc trong PHẠM VI ĐƯỢC PHÉP (T-06)");
   assert.match(workCenter, /isLate=\{isTaskLate\}/, "Khối dashboard phải dùng CÙNG luật quá hạn của màn Công việc");
-  // Phải nằm TRONG tab «Dashboard» (nay là số 4) — không tạo tab/màn mới.
-  const i3 = workCenter.indexOf("{tab === 4 &&");
-  const i4 = workCenter.indexOf("{tab === 5 &&");
-  assert.ok(i3 > 0 && i4 > i3, "Mất nhánh tab «Dashboard»/«Báo cáo»");
+  // Phải nằm TRONG tab «Dashboard» (nay là TAB ĐẦU — số 0) — không tạo tab/màn mới.
+  // ⚠️ Trong NGUỒN, nhánh sau `{tab === 0 &&` là `{tab === 6 &&` («Báo cáo») — xem chú thích thứ tự nhánh ở `t01`.
+  const i3 = workCenter.indexOf("{tab === 0 &&");
+  const i4 = workCenter.indexOf("{tab === 6 &&");
+  assert.ok(i3 > 0 && i4 > i3, "Mất nhánh tab «Dashboard» (số 0) / «Báo cáo» (số 6)");
   assert.ok(workCenter.slice(i3, i4).includes("<WorkDashboard"), "Khối dashboard phải nằm trong tab «Dashboard»");
-  assert.equal((workCenter.match(/const WORK_TABS = \["Cá nhân", "Dự án", "Phòng ban", "Giao việc", "Dashboard", "Báo cáo"\];/g) || []).length, 1, "Không được đổi dải 6 tab (MT3 §A.2)");
+  assert.equal((workCenter.match(/const WORK_TABS = \["Dashboard", "Danh sách công việc", "Được giao", "Phòng ban\/ Tổ đội", "Giao việc", "Dự án", "Báo cáo"\];/g) || []).length, 1, "Dải tab phải đúng 7 tab đã chốt 08/10/2026");
 });

@@ -163,4 +163,46 @@ public interface OpsTaskStore {
                               List<Map<String, Object>> approvers, Instant now);
     void setWorkflowStatus(String id, boolean active, Instant now);
     void deleteWorkflowSafe(String id);
+
+    // ══════════════════════════════════════════════════════════════════════════════════════════════════
+    // T-04 (PHASE 3 · CÔNG VIỆC) — PORT 2 action WORK còn thiếu trên đường Java (đóng `docs/61` **Q3**):
+    // `add_work_item_comment` · `set_work_item_participant`.
+    // ⚠️ ĐẶT Ở CUỐI INTERFACE (⛔ KHÔNG chèn vào giữa): hồ sơ/gate của dự án gắn **SỐ DÒNG** cho các
+    //    phần phía trên ⇒ chèn giữa sẽ dịch dòng và làm đỏ gate (bài học `BUG-D08` / `F-03`).
+    // Nguồn đối chiếu (⛔ không suy diễn): `scripts/system-route.mjs:1286-1314` (2 handler) ·
+    //    `:489` (`WORK_ITEM_PARTICIPANT_ROLES`) · `:501-515` (`requireWorkItemAccess`).
+    // ══════════════════════════════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Ghi 1 bình luận công việc — JS `:1294` (`INSERT INTO work_item_comments`).
+     * Khoá map: {@code id, workItemId, userId, comment, visibility}.
+     */
+    void insertWorkItemComment(Map<String, Object> comment, Instant now);
+
+    /**
+     * Người dùng có ĐANG là người tham gia công việc không — JS `:507`
+     * (`SELECT 1 FROM work_item_participants WHERE work_item_id=? AND user_id=?`) — dùng cho luật bình luận.
+     */
+    boolean workItemParticipantExists(String workItemId, String userId);
+
+    /**
+     * Thêm/ghi đè NGƯỜI THAM GIA công việc — JS `:1308-1311`:
+     * <b>MỘT dòng cho mỗi (công việc, người)</b> — đã có ⇒ UPDATE vai trò/cờ thông báo (⛔ không sinh dòng trùng).
+     * Khoá map: {@code id, workItemId, userId, roleInTask, notify, addedBy}.
+     */
+    void upsertWorkItemParticipant(Map<String, Object> participant, Instant now);
+
+    /**
+     * ⭐ **XOÁ MỀM một công việc** (`delete_work_item`, user báo trực tiếp 09/10/2026 — đặc tả Công việc §1:
+     * *«quyền xoá công việc (của bản thân)»*).
+     *
+     * <p><b>⚠️ VÌ SAO LÀ XOÁ MỀM (ĐO, ⛔ không đoán):</b> bảng `work_items` **đã có sẵn** 3 cột
+     * {@code cancelled_at} · {@code cancelled_by} · {@code active}, và **ĐO TRÊN CSDL THẬT 09/10/2026**:
+     * <b>7/29</b> công việc đang ở `status='CANCELLED'` + `active=0` ⇒ ⭐ đây **đã là khuôn có sẵn** của hệ
+     * thống (⛔ không phát minh cơ chế mới — luật REUSE) ⇒ ⛔ **không phải sửa truy vấn danh sách** ✓
+     *
+     * <p>⚠️ Side-effect CÓ CHỦ Ý: ⛔ **KHÔNG** xoá cứng dòng nào ⇒ giữ **vết kiểm toán**
+     * (`work_item_events` · `work_item_comments` · `work_item_participants` ⛔ không mất) ✓
+     */
+    void softDeleteWorkItem(String id, String actorUserId, Instant now);
 }

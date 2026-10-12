@@ -115,8 +115,12 @@ test("T-07 — KÉO-THẢ gọi ACTION THẬT, không chỉ đổi giao diện",
   assert.match(kanban, /kanbanDropGuard\(/, "Chưa kiểm cổng an toàn trước khi gọi action");
   assert.match(kanban, /onMove\(row\.id, column\.dropStatus, reason\)/, "Thả xuống cột phải gọi `onMove` với trạng thái đích của CHÍNH cột đó");
   // Hợp đồng với màn Công việc: `onMove` được cấp bằng ACTION THẬT `update_work_item_status`.
-  assert.match(workCenter, /action\("update_work_item_status",\s*\{\s*workItemId/, "WorkCenter chưa nối `onMove` vào action thật `update_work_item_status`");
+  // ⭐ USER 08/10/2026 (quyết định `Q2-b`): riêng trạng thái **`COMPLETED`** dùng action DUYỆT riêng
+  //    `approve_work_item` (capability `canApprove`) ⇒ test vẫn khoá ĐÚNG ý định «gọi action THẬT».
+  assert.match(workCenter, /action\(status === "COMPLETED" \? "approve_work_item" : "update_work_item_status",\s*\{\s*workItemId/,
+    "WorkCenter chưa nối `onMove` vào action THẬT (`update_work_item_status`, riêng COMPLETED ⇒ `approve_work_item`)");
   assert.match(route, /case "update_work_item_status"|"update_work_item_status"/, "Action `update_work_item_status` không tồn tại ở backend");
+  assert.match(route, /"approve_work_item"/, "Action DUYỆT `approve_work_item` không tồn tại ở backend");
   // Không được chuyển trạng thái bằng state cục bộ (đổi giao diện mà không lưu).
   assert.doesNotMatch(kanban.replace(/\/\/[^\n]*/g, ""), /setRows\(|setStatus\(/, "Có dấu hiệu đổi trạng thái bằng state cục bộ thay vì gọi action thật");
 });
@@ -152,9 +156,9 @@ test("T-07 — Board được GẮN vào màn Công việc (import + render), ph
   assert.match(workCenter, /<WorkKanban\b/, "WorkCenter chưa render board Kanban");
   assert.match(workCenter, /scopeNote=\{/, "Board chưa nhận ghi chú phạm vi (T-06)");
   assert.match(workCenter, /managerDepartments=\{kanbanManagerDepartments\(/, "Chưa truyền phòng mà người dùng là trưởng phòng");
-  // Board phải là một PHẦN của màn Công việc, không mở màn/menu mới (T-01 đã chốt 5 mục menu).
-  // 📌 CẬP NHẬT 26/09/2026 (MT3 §A.2): dải tab nay 6 tab (thêm «Dự án» ở index 1) — ⛔ Board KHÔNG được đổi.
-  assert.equal((workCenter.match(/const WORK_TABS = \["Cá nhân", "Dự án", "Phòng ban", "Giao việc", "Dashboard", "Báo cáo"\];/g) || []).length, 1, "Board không được đổi dải 6 tab (MT3 §A.2)");
+  // Board phải là một PHẦN của màn Công việc, không mở màn/menu mới.
+  // ⭐ CẬP NHẬT 08/10/2026 (USER — VIỆC 1/2/6/7): dải **7 tab** (Dashboard ĐẦU) — ⛔ vị trí GẮN Board vẫn không được đổi.
+  assert.equal((workCenter.match(/const WORK_TABS = \["Dashboard", "Danh sách công việc", "Được giao", "Phòng ban\/ Tổ đội", "Giao việc", "Dự án", "Báo cáo"\];/g) || []).length, 1, "Board phải nằm trong dải 7 tab đã chốt 08/10/2026");
 });
 
 test("T-07 — HAI nơi suy «trưởng phòng» (T-06 phạm vi ↔ T-07 cổng kéo-thả) PHẢI cho CÙNG kết quả", () => {

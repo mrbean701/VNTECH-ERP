@@ -1,7 +1,21 @@
+> **VNTECH ERP — BỘ TÀI LIỆU PHIÊN BẢN `ALPHA TEST`**
+> · Phiên bản tài liệu: **`DOC-ALPHA-TEST-2026.10`** · Ngày cập nhật: **08/10/2026** · Phiên soạn: `ERP-SESSION-01`
+> · Sản phẩm: `V5.3.0-MASTER-BASELINE-R1.1.1` · Cổng: `:8787` (UI) · `:9000` (cutover) · `:18081` (API Java)
+> · ⚠️ Trạng thái: **ALPHA TEST** — tài liệu phản ánh bản ĐANG CHẠY; ⛔ chưa phải bản phát hành chính thức.
+> · 📌 Nguồn sự thật: **mã nguồn + CSDL thật** (mọi số liệu đều ĐO được, ⛔ không suy đoán).
+
 # MASTER STATUS — VNTECH ERP V5.3.0
 
 > Tệp này là NGUỒN SỰ THẬT về trạng thái toàn cục. Mọi phiên làm việc mới PHẢI đọc tệp này trước.
 
+> ⏩ **CẬP NHẬT SỐNG 09/10/2026 (`ERP-SESSION-01`)** — ⚠️ **CÁC SỐ LIỆU Ở §MT1/§MT2 BÊN DƯỚI LÀ MỐC CŨ (26/09/2026) — ⛔ ĐỪNG DÙNG ĐỂ BÁO CÁO**; dùng đúng khối này.
+> · 📌 **Nguồn SỐNG của đợt hiện tại**: `docs/dsh-mutil-session/` — `SHARED_STATE.md` (điều phối nhiều phiên) · `SESSION_A/README.md` (**bảng điều khiển S01 — đọc TRƯỚC**) · `SESSION_D/README.md` (S04) · `SESSION_A/{TEST,CHANGE,EVENT,BUG_HOTFIX,DECISION,HANDOFF}_LOG.md` · `SESSION_A/WEEKLY_REPORT_DATA.md` (dữ liệu báo cáo tuần).
+> · 📊 **Số ĐO được (09/10/2026 lúc 17:05, ⛔ không suy đoán)**: frontend **985 tests · 984 pass · 0 FAIL · 1 skip** · Java **110/110 · 0 Fail** · `tsc` **0** · `eslint` **0 error** · `coverage` **0 mù quyền** · `catalog-drift` **0** · `F-03` **7/7** · vân tay nguồn **`VNTECH-FP-C8AD30E2ECC29BCF`** · **manifest 7546 tệp** · `dist` **17:04:44** · ⭐ **cổng UI 3/3 ĐẠT** · `verify-full-release` **EXIT 0** · `test:release-static` **ĐẠT** (`5.3.0-ALPHA-TEST-2026.10`) · 3 cổng chạy: `:8787` (UI) · `:9000` (cutover) · `:18081` (API Java).
+> · 🧭 **Phân chia phạm vi đang hiệu lực (user chốt 09/10/2026)**: **`ERP-SESSION-01`** = **PR&PO + QUẢN TRỊ HỆ THỐNG (ADMIN)** + ma trận phân quyền + identity/vân tay/phát hành + `docs/agent-progress/**` · **`ERP-SESSION-04`** = **UI màn «Công việc»** (`app/screens/WorkCenter.tsx` · `lib/menu-helpers.ts` · `scripts/system-route.mjs` · `PermissionMatrix.tsx` · `tests/t13`,`t14`,`t17`…) · **`ERP-SESSION-03`** = **HR–Teams**. ⛔ **Không phiên nào tự sửa phạm vi phiên khác** — muốn thì ghi `SHARED_STATE.md` + `HANDOFF_LOG` của phiên đó.
+> · ✅ **3 YÊU CẦU TRỰC TIẾP CỦA USER VỀ MENU «CÔNG VIỆC» — ĐÃ NGHIỆM THU 3/3** (`TEST-20261009-040`, bằng cổng tự động + mã nguồn): ① ⛔ bỏ «Quản trị dự án» ra khỏi menu Công việc (nhóm `my_work` còn **0** mục module) ② ⭐ «Trung tâm phê duyệt» **tách hoàn toàn** thành **nhóm riêng** `approval_center` (sort **12**, đứng ngay sau «Tổng quan điều hành») ③ **click «Công việc» mở thẳng màn Công việc** (⛔ không còn mục con để «rơi vào»).
+> · 🔴 **3 BUG THẬT của đợt 09/10/2026 (đều do USER phát hiện khi thử tay)**: `BUG-20261009-D31` **VERIFIED** — tab «Phân quyền công việc / Chức năng» vẫn hiện 4 dòng quyền CŨ theo phòng ⇒ vá **ở tầng VẼ** (⛔ không lọc payload — luật BUG-D19), chứng minh bằng DOM thật (80 dòng · 4 khoá cũ **0 lần** · 7 khoá mới đủ) · `BUG-20261009-D27` **FIXED** — nút «Xoá» xoá mềm nhưng dòng vẫn hiện ⇒ vá **cả 2 đường** (Java `BootstrapDataAdapter` `WHERE (%s) AND wi.active=1` + JS `scripts/system-route.mjs`), cổng S04 `probe-workitems-active.mjs` **EXIT 0**, payload **21→14** dòng · `BUG-20261009-D32` **FIXED (sự cố do `ERP-SESSION-01` tự gây, đã báo + khắc phục)** — đóng gói jar khi API còn chạy (Windows khoá tệp ⇒ jar mỏng) + **chú thích SQL chứa ký hiệu định dạng** trong text block `.formatted(...)` ⇒ `MissingFormatArgumentException` ⇒ **HTTP 500** ⇒ ⭐ nay có **CỔNG VĨNH VIỄN** `tests/t16-java-sql-textblock-format.test.mjs` (3 ca, đã qua **nghiệm thu âm**) ✓
+> · ⏸ **5 VIỆC ĐANG CHỜ USER QUYẾT** (⛔ không tự chọn mặc định): ① nghiệm thu tay 2 bug đã vá (`D27` · `D31`) ② xác nhận **đề xuất 6 khoá TAB + `work_others`** cho menu «Công việc» ③ **phạm vi khoá `work_others`**: chỉ **phòng mình** (đang chạy) hay **mọi phòng** ④ `BUG-20261009-D33`: có **đặt lại mật khẩu** 4 tài khoản test (`thukydemo` · `nvdademo` · `e2e.kh` · `e2e.bgd`) không ⑤ có **dọn 21 dòng rác test** cấp khoá `admin` không (⚠️ vô hại).
+> · ⛔ **`AUTO_COMMIT = FALSE` / `AUTO_PUSH = FALSE`** đang được tuân thủ tuyệt đối: **≈102 tệp chưa commit · 0 commit** trong đợt này.
 ---
 
 ## ⚠️ CÓ **2** MASTER TASK SONG SONG — ĐỌC KỸ ĐỂ KHÔNG LẪN SỐ
@@ -63,6 +77,14 @@
 > máy này **CÓ** JDK 21 + **Maven 3.9.16** và **build offline được** (`mvn -o compile` BUILD SUCCESS 5/5 module) —
 > xem **D-110**. Ngoài ra số `D-044` ở đây là **gán nhầm**: D-044 nói về việc không hạ phiên bản test để làm xanh.
 > **Số liệu ở bảng trên giữ nguyên, chưa sửa.**
+
+> ## 🛑 ĐÓNG CÂU HỎI (a)/(b) — **QUYẾT ĐỊNH USER 09/10/2026** (`DEC-20261008-015`)
+> **Nguyên văn user:** «**MT3 đã rollback không lấy MT3 làm căn cứ cho công việc sắp tới nữa**» ✓
+> ⇒ ⛔ **KHÔNG** «đánh lại mục MT3 để làm tiếp» · ⛔ **KHÔNG** «khôi phục UI MT3» — **câu hỏi đã ĐÓNG** ✓
+> 📏 **Đo được (09/10/2026)**: `git log unity..backup/mt3-head-20260928` = **0 commit** · `git diff --shortstat unity...<nhánh>` = **rỗng**
+> ⇒ ⭐ lựa chọn **(b) vốn đã BẤT KHẢ THI** (khôi phục = ⛔ không đổi gì) ✓ · `tests/` nay **158 tệp** (⚠️ cảnh báo trên nói «119 tệp, chạy 14» ⇒ **đã cũ**) ✓
+> 🧊 **8 tệp `KNOWN_RED` = NỢ CŨ ĐÓNG BĂNG (MT3)** — giữ để cổng ⛔ không giấu nợ mới, ⚠️ nhưng ⛔ **không phải việc cần làm** và ⛔ **không là căn cứ** cho công việc sắp tới ✓
+> ⚠️ Nếu một hành vi MT3 được nhắc lại vì **yêu cầu nghiệp vụ mới** ⇒ ⭐ làm như **TÍNH NĂNG MỚI**, ⛔ đừng vin vào «khôi phục MT3» ✓
 
 | Phase | DONE / tổng | Ghi chú |
 |---|---|---|
@@ -822,3 +844,10 @@ nếu chưa chứng minh ảnh chuẩn là **ảnh thật của đúng màn đó
 
 **TRUY VẾT:** `BUG_HOTFIX_LOG.md` (SESSION_B) `BUG-20261006-005` · `BUG-20261006-006` · `BUG-20261006-007` ·
 `TEST-20261006-015` · `TEST-20261007-023`
+
+---
+
+> ## 🛑 CHỈ ĐẠO USER 09/10/2026 (`DEC-20261008-016`) — ⛔ KHÔNG RÀ SOÁT LẠI
+> «**Master task 1 và 2 đã được đánh dấu là đã xong không rà soát lại nữa, công việc hiện tại được giao việc trực tiếp bởi** [user]»
+> ⇒ ⛔ **KHÔNG** đối chiếu tiến độ / đánh lại trạng thái mục / rà `KNOWN_RED` / kiểm kê lại danh sách 110 mục.
+> 🎯 **Công việc nay do USER giao trực tiếp** ✓

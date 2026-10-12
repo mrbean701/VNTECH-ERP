@@ -147,6 +147,63 @@ class AdminSystemIntegrationTest {
                         .cookie(cookie))
                 .andExpect(status().isBadRequest());
     }
+    /**
+     * ⭐ HANDOFF-20261008-009 — `save_warehouse`: TẠO được + ⛔ **CHẶN TRÙNG MÃ** (mã kho là danh tính
+     * nghiệp vụ: phiếu nhập/xuất trỏ theo MÃ ⇒ trùng mã sẽ làm phiếu trỏ sai kho).
+     */
+    @Test
+    void saveWarehouse_taoMoiVaChanTrungMa() throws Exception {
+        jakarta.servlet.http.Cookie cookie = adminCookie();
+        mockMvc.perform(post("/api/system")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"action\":\"save_warehouse\",\"code\":\"WH-TEST-01\",\"name\":\"Kho kiểm thử 01\"}")
+                        .cookie(cookie))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ok").value(true));
+        // ⛔ mã trùng (KHÁC hoa/thường) ⇒ PHẢI 400
+        mockMvc.perform(post("/api/system")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"action\":\"save_warehouse\",\"code\":\"wh-test-01\",\"name\":\"Kho trùng mã\"}")
+                        .cookie(cookie))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Mã kho WH-TEST-01 đã tồn tại."));
+        // ⛔ thiếu tên ⇒ PHẢI 400
+        mockMvc.perform(post("/api/system")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"action\":\"save_warehouse\",\"code\":\"WH-TEST-02\"}")
+                        .cookie(cookie))
+                .andExpect(status().isBadRequest());
+    }
+
+    /**
+     * ⭐ HANDOFF-20261008-009 — `set_warehouse_status`: «ngừng hoạt động» rồi **BẬT LẠI ĐƯỢC**.
+     *
+     * <p>⚠️ ĐÂY LÀ CHỐT CHỐNG BẪY: `store.findWarehouse(id)` lọc `active=1` ⇒ nếu use-case dùng nó thì
+     * kho vừa ngừng sẽ bị coi là «không còn tồn tại» và **lượt bật lại PHẢI 400** ⇒ test này sẽ ĐỎ.
+     * Vì vậy use-case dùng `store.warehouseExists(id)` (⛔ không lọc trạng thái) ✓
+     */
+    @Test
+    void setWarehouseStatus_ngungRoiBatLaiDuoc() throws Exception {
+        jakarta.servlet.http.Cookie cookie = adminCookie();
+        String body = "{\"action\":\"set_warehouse_status\",\"id\":\"WH-CENTRAL\",\"active\":false}";
+        mockMvc.perform(post("/api/system").contentType(MediaType.APPLICATION_JSON).content(body).cookie(cookie))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ok").value(true));
+        // ⭐ BẬT LẠI — kho ĐANG `active=0` ⇒ vẫn phải tìm thấy ⇒ 200 (⛔ không được 400)
+        mockMvc.perform(post("/api/system")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"action\":\"set_warehouse_status\",\"id\":\"WH-CENTRAL\",\"active\":true}")
+                        .cookie(cookie))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ok").value(true));
+        // ⛔ kho không tồn tại ⇒ 400
+        mockMvc.perform(post("/api/system")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"action\":\"set_warehouse_status\",\"id\":\"WH-KHONG-CO\",\"active\":false}")
+                        .cookie(cookie))
+                .andExpect(status().isBadRequest());
+    }
+
     @Test
     void saveProjectContract_createsAndUpdates() throws Exception {
         jakarta.servlet.http.Cookie cookie = adminCookie();

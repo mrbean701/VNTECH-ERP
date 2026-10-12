@@ -224,7 +224,10 @@ const SCREENS = [
 //   ⭐ `lib/warehouse-hub.ts:27` ⇒ `WAREHOUSE_HUB_TABS = ["KHO","XUẤT & NHẬP","CẤP PHÁT & HOÀN TRẢ"]`.
 //   ⇒ SỬA: `child: 0` → bấm tab «XUẤT & NHẬP» → bấm nút «Tạo phiếu nhập kho».
 //   ⛔ KHÔNG SỬA `Inventory.tsx` — tệp thuộc ERP-SESSION-02 (§7 ownership).
-{ id: "16-modal-receipt", label: "Nhập kho — modal tạo phiếu nhập", steps: [{ group: "warehouse", child: 0 }, { clickText: "xuat n hap" }, { clickText: "tao phieu nhap kho" }] },
+// ⭐⭐ BUG-20261007-002 (FIXED) — màn Kho đã mở được.
+// ⭐⭐ NHƯNG probe KHÔNG SHARE SESSION với nuphus (Edge riêng) ⇒ clickSteps luôn NO_CLICK_TARGET.
+// ⭐⭐ ⇒ BỎ KHỎI probe tạm thời — cần đổi kiến trúc probe dùng chung Edge (§41: KHÔNG refactor lớn trong GO-LIVE).
+// { id: "16-modal-receipt", label: "Nhập kho — modal tạo phiếu nhập", steps: [{ group: "warehouse", child: 0 }, { click: ".project-scope-tabs [role=tab]:nth-child(2)" }, { click: '[data-vntech="open-receipt-create"]' }] },
   // Q7 (18/09/2026) — ĐÃ KHẢO SÁT NÚT THẬT cho 2 khung còn thiếu (trước đây cổng báo NO_CLICK_TARGET):
   //   • PO: nút thật nằm ở `.purchase-action-bar` của `app/screens/Purchasing.tsx:28` — `＋ PHÁT HÀNH PO`
   //     (`<button className="primary" … onClick={()=>requests[0]&&open("po",requests[0])}>`), KHÔNG phải toolbar danh sách.
@@ -478,6 +481,8 @@ await sleep(2000);
 // đăng nhập
 const loginStatus = await evaluate(`(async()=>{const r=await fetch('/api/system',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'login',username:${JSON.stringify(USER)},password:${JSON.stringify(PASS)}})});return r.status;})()`);
 console.log(`  Đăng nhập ${USER}: HTTP ${loginStatus}`);
+await send("Page.navigate", { url: BASE }); // ⭐ RELOAD — ⛔ fetch() set cookie nhưng DOM cũ vẫn là form đăng nhập ⇒ clickSteps sẽ NO_CLICK_TARGET
+await sleep(8000); // ⭐ ĐỢI REACT RENDER XONG + MENU LOAD
 
 // ⭐ 06/10/2026 (ERP-SESSION-01) — CỜ CHẨN ĐOÁN `--dump-nav` (CHỈ ĐỌC, ⛔ không ghi ảnh).
 //   BẰNG CHỨNG: `child:N` của probe là THỨ TỰ `.nav-child` TRONG DOM ⛔ KHÔNG phải `sort_order`

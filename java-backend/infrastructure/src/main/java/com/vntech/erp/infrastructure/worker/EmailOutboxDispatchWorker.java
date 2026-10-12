@@ -165,7 +165,22 @@ public class EmailOutboxDispatchWorker {
         return properties;
     }
 
+    /**
+     * ⭐ BUG-20261008-004 — {@code email_settings.enabled} là {@code TINYINT(1)}; trình điều khiển MySQL
+     * mặc định ({@code tinyInt1isBit=true}) trả về **Boolean**, ⛔ KHÔNG phải {@code Number} ⇒ nhánh
+     * {@code Number} không bắt được ⇒ rơi xuống {@code Integer.parseInt("false")} ⇒
+     * {@code NumberFormatException} **mỗi 60 giây** (đúng nhịp {@code @Scheduled(fixedDelay = 60_000)}).
+     *
+     * <p>📏 Bằng chứng: lỗi có trong {@code java-run.log} từ **29/09/2026** và trong log backend
+     * 08/10/2026 — ⛔ không do thay đổi nào ngày 08/10. Lọt lưới vì test cũ dùng {@code "enabled", 1}
+     * ({@code Integer}) ⇒ chưa bao giờ chạm nhánh Boolean; nay đã có ca kiểm thử riêng
+     * ({@code enabledLaBoolean_tuMySQL_khongNemNumberFormatException}).
+     *
+     * <p>⚠️ Giữ ĐÚNG ngữ nghĩa cũ cho {@code Number} và chuỗi: {@code smtpPort} / {@code attemptCount}
+     * vẫn đi qua nhánh số ⇒ ⛔ không đổi hành vi nào khác.
+     */
     private static int intValue(Object value) {
+        if (value instanceof Boolean flag) return flag ? 1 : 0;
         return value instanceof Number number ? number.intValue() : Integer.parseInt(text(value));
     }
 

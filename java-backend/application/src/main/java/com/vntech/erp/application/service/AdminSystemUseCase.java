@@ -313,6 +313,68 @@ public final class AdminSystemUseCase {
         return "Đã lưu vị trí " + code + " tại kho.";
     }
 
+    /**
+     * ⭐ `save_warehouse` — HANDOFF-20261008-009 (yêu cầu `ERP-SESSION-02`, phiên 01 thi hành) — TẠO/SỬA KHO.
+     *
+     * <p>⚠️ CHỈ `code` + `name` bắt buộc; `type` SUY RA khi thiếu (`central` nếu ⛔ không có dự án,
+     * `project` nếu có) ⇒ ⛔ không bắt UI gửi `type`.
+     * <p>⚠️⚠️ BẪY ĐÃ TRÁNH: `store.findWarehouse(id)` lọc `active=1` ⇒ kho ĐÃ NGỪNG sẽ bị coi là
+     * «không còn tồn tại» ⇒ ⛔ không bao giờ bật lại được. Vì vậy ở đây dùng `store.warehouseExists(id)`
+     * (tra **⛔ không lọc trạng thái**) ✓
+     * <p>⛔ KHÔNG xoá kho: phiên 02 chốt `ALLOW_DELETE_WAREHOUSE = false` ⇒ dùng
+     * {@link #setWarehouseStatus} để «ngừng hoạt động», giữ nguyên lịch sử phiếu kho ✓
+     */
+    public String saveWarehouse(Principal principal, Map<String, Object> payload) {
+        // ⚠️⚠️ KHỚP HỢP ĐỒNG VỚI UI (⭐ đọc mã nơi GỌI trước khi chốt tên khoá):
+        //   `app/screens/WarehouseFormModal.tsx:85` gửi **`warehouseId`** — ⭐ đúng quy ước nhà
+        //   (`saveWarehouseLocation` ngay trên cũng đọc `warehouseId`), ⛔ KHÔNG phải `id`.
+        //   📏 Nếu chỉ đọc `id` thì «Sửa kho» ⛔ **luôn bị coi là TẠO MỚI** ⇒ trùng mã ⇒ 400.
+        //   ⇒ Nhận CẢ HAI (`warehouseId` trước, `id` sau) để ⛔ không vỡ bên nào.
+        String id = trim(payload.get("warehouseId"));
+        if (id.isEmpty()) id = trim(payload.get("id"));
+        String code = trim(payload.get("code")).toUpperCase();
+        String name = trim(payload.get("name"));
+        String projectId = trim(payload.get("projectId"));
+        String parentId = trim(payload.get("parentWarehouseId"));
+        String keeperId = trim(payload.get("keeperUserId"));
+        String type = trim(payload.get("type"));
+        if (code.isEmpty() || name.isEmpty()) throw Api("Mã và tên kho là bắt buộc.");
+        if (type.isEmpty()) type = projectId.isEmpty() ? "central" : "project";
+        boolean creating = id.isEmpty();
+        // ⭐ Mã kho là DANH TÍNH nghiệp vụ (phiếu kho trỏ theo MÃ) ⇒ chặn trùng TRƯỚC khi ghi.
+        if (store.warehouseCodeExists(code, creating ? "" : id)) throw Api("Mã kho " + code + " đã tồn tại.");
+        if (creating) {
+            id = idGenerator.next("WH");
+            // ⛔ Tạo kho cho DỰ ÁN ⇒ phải có quyền trên DỰ ÁN đó (⛔ không chỉ quyền module).
+            if (!projectId.isEmpty()) accessScope.requireProjectAccess(principal.userId(), principal.role(),
+                    projectId, true, "Không có quyền tạo kho cho dự án này.");
+        } else {
+            if (!store.warehouseExists(id)) throw Api("Kho không còn tồn tại.");
+            accessScope.requireWarehouseAccess(principal.userId(), principal.role(),
+                    principal.warehouseScopeKind(), id, true, "Không có quyền sửa kho này.");
+        }
+        boolean active = !(payload.get("active") == Boolean.FALSE || "0".equals(trim(payload.get("active"))));
+        store.upsertWarehouse(id, code, name, type, projectId, parentId, keeperId, active, Instant.now());
+        return creating ? "Đã tạo kho " + code + "." : "Đã lưu kho " + code + ".";
+    }
+
+    /**
+     * ⭐ `set_warehouse_status` — «NGỪNG HOẠT ĐỘNG» / bật lại kho.
+     * ⚠️ Cố ý ⛔ KHÔNG có `delete_warehouse`: phiếu nhập/xuất lịch sử trỏ vào kho ⇒ xoá sẽ làm mồ côi dữ liệu ✓
+     */
+    public String setWarehouseStatus(Principal principal, Map<String, Object> payload) {
+        // ⚠️ Cùng lý do như `saveWarehouse`: nhận `warehouseId` (quy ước nhà) ⭐ và `id` (dự phòng).
+        String id = trim(payload.get("warehouseId"));
+        if (id.isEmpty()) id = trim(payload.get("id"));
+        if (id.isEmpty()) throw Api("Thiếu kho cần đổi trạng thái.");
+        if (!store.warehouseExists(id)) throw Api("Kho không còn tồn tại.");
+        accessScope.requireWarehouseAccess(principal.userId(), principal.role(),
+                principal.warehouseScopeKind(), id, true, "Không có quyền đổi trạng thái kho này.");
+        boolean active = !(payload.get("active") == Boolean.FALSE || "0".equals(trim(payload.get("active"))));
+        store.setWarehouseActive(id, active, Instant.now());
+        return active ? "Đã cho kho hoạt động trở lại." : "Đã ngừng hoạt động kho (lịch sử phiếu được giữ nguyên).";
+    }
+
     // ================= business_role_engine_catalog =================
     private static final List<String> ALLOWED_ENGINES = List.of("engineer", "commander", "project",
             "procurement", "accountant", "warehouse", "team", "director");

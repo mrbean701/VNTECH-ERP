@@ -317,7 +317,7 @@ function Inventory({ data, project, open, action, view = null }: { data: AppData
         {/* ⭐ TASK-230 ⑥ — yêu cầu user: «tab Tồn kho của kho cần thêm search sort filter, thêm nút tạo phiếu
             đề nghị ở trong danh sách tồn kho». Nút dùng modal `request` CÓ THẬT trong app/page.tsx (đủ 40 modal). */}
         <ListToolbar title="TỒN KHO CỦA KHO NÀY"
-          note="Nguồn: `data.inventory` lọc theo `warehouseId` (⭐ liên kết CHÍNH XÁC)."
+          note="Vật tư đang có trong kho này."
           count={whRowsLoc.length} total={whRows.length} unit="mặt hàng"
           search={{ value: wdInvQuery, onChange: setWdInvQuery, placeholder: "Tìm theo mã hoặc tên vật tư..." }}
           sort={{ value: wdInvSortKey, onChange: setWdInvSortKey, options: [
@@ -424,7 +424,7 @@ function Inventory({ data, project, open, action, view = null }: { data: AppData
             ⇒ ⛔ BẮT BUỘC gửi **đủ** `projectScopes` + `warehouseScopes` + `modulePermissions` hiện có,
             nếu gửi thiếu sẽ **XOÁ mất phạm vi khác** của tài khoản. */}
         <ListToolbar title="NHÂN SỰ CỦA KHO"
-          note="Nguồn: `data.userWarehouseScopes` (⭐ có `warehouseId` THẬT) nối tên/chức danh/phòng ban qua `staffDirectory`. ⚠️ Bản cũ lọc `staffDirectory.warehouseId` — trường ⛔ KHÔNG tồn tại ⇒ tab LUÔN RỖNG (đã sửa)."
+          note="Nhân sự được gán vào kho này."
           count={keeperRows.length} total={keeperRows.length} unit="nhân sự"
           search={{ value: staffQuery, onChange: setStaffQuery, placeholder: "Tìm theo tên · mã NV · phòng ban..." }}
           actions={isAdmin?<button type="button" className="primary" data-vntech="wd-staff-add" onClick={()=>{setStaffModalOpen(true);setStaffPickId("");setStaffRole("write");}}>＋ Thêm nhân sự</button>:undefined}
@@ -501,7 +501,7 @@ function Inventory({ data, project, open, action, view = null }: { data: AppData
     {tabBar}
     {tab===0&&<ListToolbar
       title="TỒN KHO & ĐIỀU CHUYỂN"
-      note="Theo dõi tồn theo đúng dự án/kho được phân quyền; điều chuyển phải có xác nhận kho đích."
+      note="Tồn kho theo phạm vi bạn được phân quyền."
       count={filtered.length} total={scopedInventory.length} unit="mã vật tư"
       search={{ value: query, onChange: setQuery, placeholder: "Tìm kiếm theo mã vật tư, tên vật tư..." }}
       sort={{ value: sortKey, onChange: setSortKey, options: [{ value: "code", label: "Mã vật tư" }, { value: "name", label: "Tên vật tư" }, { value: "avail_desc", label: "Tồn khả dụng — cao nhất" }, { value: "avail_asc", label: "Tồn khả dụng — thấp nhất" }, { value: "min_desc", label: "Tồn tối thiểu — cao nhất" }, { value: "wh", label: "Kho / vị trí" }] }}
@@ -537,14 +537,19 @@ function Inventory({ data, project, open, action, view = null }: { data: AppData
             `action("delete_warehouse")` ⛔ không tồn tại ở CẢ JS lẫn Java backend.
             ⇒ ⛔ Không để nút bấm mà IM LẶNG (§22 — error state). Mở lại khi backend bổ sung modal + action.
             ⛔ GIỮ NGUYÊN onClick để hoàn nguyên chỉ bằng cách bỏ `disabled`. */}
-        <ListToolbar title="KHO" note="Danh sách kho trong phạm vi dự án bạn được phân quyền. Bấm một thẻ để xem thủ kho, lịch sử xuất/nhập, lịch sử cấp phát/hoàn trả và danh mục vật tư trong kho. ⚠️ Ba nút «Tạo kho / Sửa / Xóa» đang TẠM KHOÁ: backend chưa khai báo modal «warehouse» và action «delete_warehouse» (§14/§20 — chờ bổ sung)."
+        <ListToolbar title="KHO" note="Bấm một thẻ để mở chi tiết kho."
           count={visibleWarehouses.length} total={allowedWarehouses.length} unit="kho"
           search={{value:whQuery,onChange:setWhQuery,placeholder:"Tìm theo tên hoặc mã kho..."}}
           sort={{value:whSortKey,onChange:setWhSortKey,options:[{value:"name_asc",label:"Tên A→Z"},{value:"name_desc",label:"Tên Z→A"},{value:"items_desc",label:"Nhiều vật tư trước"}]}}
           actions={<>
-            <button type="button" className="primary" disabled title="TẠM KHOÁ (BUG-20261007-014): app/page.tsx chưa có modal «warehouse» ⇒ bấm ⛔ không mở gì. Chờ backend bổ sung." onClick={()=>open("warehouse")}>＋ Tạo kho</button>
-            <button type="button" className="secondary" disabled title="TẠM KHOÁ (BUG-20261007-014): modal «warehouse» chưa tồn tại ⇒ ⛔ không sửa được. Chờ backend bổ sung." onClick={()=>{const w=allowedWarehouses.find((x:Row)=>String(x.id)===selectedWhId);if(w)open("warehouse",w);}}>✎ Sửa</button>
-            <button type="button" className="secondary" disabled title="TẠM KHOÁ (BUG-20261007-015): action «delete_warehouse» ⛔ không tồn tại ở cả JS lẫn Java backend ⇒ ⛔ không xoá được." onClick={()=>{const w=allowedWarehouses.find((x:Row)=>String(x.id)===selectedWhId);if(w&&action&&window.confirm(`Xóa kho ${String(w.warehouseName||w.warehouseCode)}?`))void action("delete_warehouse",{warehouseId:w.id});}}>🗑 Xóa</button>
+            <button type="button" className="primary" data-vntech="open-warehouse" onClick={()=>open("warehouse")}>＋ Tạo kho</button>
+            <button type="button" className="secondary" data-vntech="edit-warehouse" disabled={!selectedWhId} onClick={()=>{const w=allowedWarehouses.find((x:Row)=>String(x.id)===selectedWhId);if(w)open("warehouse",w);}}>✎ Sửa</button>
+            {/* ⭐ TASK-240 (08/10/2026) — ĐỔI «🗑 Xóa» ⇒ «⏹ Ngừng hoạt động».
+                QUY TẮC ③ USER CHỐT (`DEC-20261008-013`): «Xóa kho: KHÔNG cho phép nhưng cho phép ẩn kho
+                hoặc set trạng thái ngừng hoạt động» ⇒ ⛔ TUYỆT ĐỐI KHÔNG gọi `delete_warehouse`
+                (⭐ hằng `ALLOW_DELETE_WAREHOUSE = false` ở `lib/warehouse-hub.ts` — có test kiểm ✓).
+                API (S01 thi hành, `HANDOFF-20261008-009`): `set_warehouse_status { warehouseId, active }`. */}
+            <button type="button" className="secondary" data-vntech="deactivate-warehouse" disabled={!selectedWhId} onClick={()=>{const w=allowedWarehouses.find((x:Row)=>String(x.id)===selectedWhId);if(w&&action&&window.confirm(`Ngừng hoạt động kho ${String(w.warehouseName||w.warehouseCode||w.code)}? Phiếu kho cũ vẫn giữ nguyên.`))void action("set_warehouse_status",{warehouseId:w.id,active:false});}}>⏹ Ngừng hoạt động</button>
           </>}
           secondaryActions={<button type="button" className="secondary" onClick={()=>exportWarehousesCsv(visibleWarehouses)}>⇩ Xuất Excel</button>}
         />
@@ -582,7 +587,7 @@ function Inventory({ data, project, open, action, view = null }: { data: AppData
                 <div className="wc-row"><span>Thủ kho</span><span className="wc-keeper" title={keepers.join(", ")||"Chưa gán người phụ trách kho"}>{keeperText}</span></div>
                 <div className="wc-row"><span>Trạng thái</span><span className="wc-chip ok">Đang hoạt động</span></div>
               </div>
-              <em className="warehouse-card-hint">Bấm để mở chi tiết kho · {whRows.length} vật tư</em>
+              <em className="warehouse-card-hint">{whRows.length} vật tư · bấm để mở</em>
             </button>;
           })}
           {!visibleWarehouses.length&&<Empty text={whQuery?"Không có kho nào khớp từ khoá tìm kiếm.":"Chưa có kho nào trong phạm vi bạn được phân quyền."}/>}
@@ -593,7 +598,7 @@ function Inventory({ data, project, open, action, view = null }: { data: AppData
 
       {/* ── MT3 §F — TAB 2 «NHẬP KHO & XUẤT KHO»: gộp 2 mục cũ, có 2 sub-tab ── */}
       {tab===1&&<section className="card" data-vntech="warehouse-io-tab">
-        <CardHead title="NHẬP KHO & XUẤT KHO" note="Gộp hai mục cũ theo MT3 §F; chọn sub-tab bên dưới."/>
+        <CardHead title="NHẬP KHO & XUẤT KHO" note="Chọn loại phiếu bên dưới."/>
         <div className="project-scope-tabs" role="tablist" aria-label="Nhập kho và Xuất kho">
           <button type="button" role="tab" aria-selected={ioTab==="issue"} className={ioTab==="issue"?"active":""} onClick={()=>setIoTab("issue")}>Xuất kho</button>
           <button type="button" role="tab" aria-selected={ioTab==="receipt"} className={ioTab==="receipt"?"active":""} onClick={()=>setIoTab("receipt")}>Nhập kho</button>
@@ -614,13 +619,13 @@ function Inventory({ data, project, open, action, view = null }: { data: AppData
         </div>
         <ListToolbar
           title={arTab==="allocate"?"DANH SÁCH PHIẾU CẤP PHÁT":"DANH SÁCH PHIẾU HOÀN TRẢ"}
-          note="Nguồn: phiếu xuất kho cấp cho tổ đội (cấp phát) · phiếu hoàn trả về kho. ⛔ Chưa có sửa/xoá: backend chưa khai báo action (§14/§20). ⚠️ Nút «Tạo phiếu cấp phát» đang TẠM KHOÁ: app/page.tsx chưa có modal «allocate» (BUG-20261007-013)."
+          note="Phiếu cấp phát vật tư cho tổ đội · phiếu hoàn trả về kho."
           count={arRows.length} total={arSource.length} unit={arTab==="allocate"?"phiếu cấp phát":"phiếu hoàn trả"}
           search={{ value: arQuery, onChange: setArQuery, placeholder: "Tìm mã đơn · dự án · tổ đội · người nhận..." }}
           sort={{ value: arSortKey, onChange: setArSortKey, options: [{ value: "date", label: "Ngày" }, { value: "no", label: "Mã đơn" }, { value: "project", label: "Dự án" }, { value: "qty_desc", label: "Số lượng — cao nhất" }] }}
           filters={[{ key: "status", label: "Trạng thái", value: arStatus, onChange: setArStatus, options: [{ value: "ALL", label: "Tất cả trạng thái" }, ...arStatusOptions.map((s) => ({ value: s, label: s }))] }]}
           actions={arTab==="allocate"
-            ? <button type="button" className="primary" data-vntech="open-allocate" disabled title="TẠM KHOÁ (BUG-20261007-013): app/page.tsx chưa có modal «allocate» ⇒ bấm ⛔ không mở gì. Nút «Tạo phiếu hoàn trả» vẫn dùng được." onClick={()=>open("allocate")}>＋ Tạo phiếu cấp phát</button>
+            ? <button type="button" className="primary" data-vntech="open-allocate" disabled title="TẠM KHOÁ (BUG-20261007-013) — ⚠️ CÒN LẠI 1 NÚT DUY NHẤT: `app/page.tsx` ⛔ CHƯA có modal «allocate». ⇒ `ERP-SESSION-01` cần: (1) thêm case modal «allocate» + (2) backend ghi `stock_reservations` cho phiếu CẤP PHÁT (quy tắc ④ — `HANDOFF-20261008-009`). Nút «Tạo phiếu hoàn trả» vẫn dùng được." onClick={()=>open("allocate")}>＋ Tạo phiếu cấp phát</button>
             : <button type="button" className="primary" data-vntech="open-return" onClick={()=>open("return")}>＋ Tạo phiếu hoàn trả</button>}
         />
         {arTab==="allocate"
@@ -684,7 +689,7 @@ function Inventory({ data, project, open, action, view = null }: { data: AppData
     {tab===1&&ioTab==="issue"&&<section className="card" data-vntech="issue-list-screen">
       <ListToolbar
         title="DANH SÁCH PHIẾU XUẤT · ĐƠN XUẤT KHO"
-        note="§7.5 — phiếu xuất kho cho tổ đội (nguồn: stock_issues + stock_issue_items). Tạo mới qua nút «XUẤT KHO» phía trên. ⛔ Không có sửa/xoá phiếu xuất: backend chưa khai báo action — không bịa nghiệp vụ (§14/§20)."
+        note="Phiếu xuất kho cấp cho tổ đội. Tạo mới bằng nút bên phải."
         count={issueRows.length} total={scopeIssues.length} unit="phiếu"
         search={{ value: issueQuery, onChange: setIssueQuery, placeholder: "Tìm phiếu xuất · dự án · tổ đội · người nhận..." }}
         sort={{ value: issueSortKey, onChange: setIssueSortKey, options: [{ value: "issuedAt", label: "Ngày xuất" }, { value: "issueNo", label: "Số phiếu" }, { value: "project", label: "Dự án" }, { value: "qty_desc", label: "Số lượng — cao nhất" }] }}

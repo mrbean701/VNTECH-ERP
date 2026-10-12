@@ -15,12 +15,31 @@ import type { AppData, Row } from "@/lib/ui-shared";
 export const USER_TAB_01 = "admin_tab_01";
 export const USER_TAB_06 = "admin_tab_06";
 
+/**
+ * Người dùng có quyền `moduleKey` (mức `canView`) hay không?
+ *
+ * ⛔⛔ VÁ 08/10/2026 (`BUG-20261008-008` — ⭐ CÙNG LỚP `BUG-20261006-005` / vụ `id` vs `warehouseId`):
+ * TRƯỚC BẢN VÁ hàm này **CHỈ** đọc `data.allModulePermissions` —
+ * 📏 mà `BootstrapDataAdapter.java:943` chỉ đổ trường đó khi **`admin === true`**
+ * (`data.put("allModulePermissions", admin ? query(...) : …)`) ⇒ ⭐ **với MỌI non-admin, hàm LUÔN trả FALSE**
+ * ⇒ 📏 ĐO ĐƯỢC ở E2E `tools/probe-grant-1-perm-e2e.mjs`: tài khoản ĐÃ được cấp `admin_tab_06`
+ *    (menu quản trị hiện, vào được màn) mà `hasAdminTab(...)` trả **false** ⇒
+ *    ⚠️ hệ quả: nút «Sửa tài khoản» ở `app/page.tsx:1847` **⛔ KHÔNG BAO GIỜ HIỆN** với người được
+ *    **uỷ nhiệm** `admin_tab_01` ⇒ ⭐ cấp quyền qua cấu hình ⛔ **không có tác dụng gì** ✓
+ * ✅ NAY: đọc `allModulePermissions` (lọc theo chính mình — có khi bootstrap gửi kèm) ⭐ **HOẶC**
+ *    `data.modulePermissions` (quyền **CỦA CHÍNH người đang đăng nhập** — ⭐ nguồn LUÔN có, xem
+ *    `lib/permissions.ts:17`). ⚠️ Ở nguồn 2 ⛔ **KHÔNG** lọc `userId` vì các dòng đó đã là của chính họ ✓
+ */
 export function hasAdminTab(data: AppData, moduleKey: string): boolean {
   const me = String((data.user as Row | undefined)?.id ?? "");
   if (!me) return false;
-  return (data.allModulePermissions || []).some(
-    (p: Row) => String(p.userId) === me && String(p.moduleKey) === moduleKey && Number(p.canView) === 1,
-  );
+  const khop = (rows: Row[] | undefined, locTheoUser: boolean) =>
+    (rows || []).some((p: Row) =>
+      (!locTheoUser || String(p.userId) === me)
+      && String(p.moduleKey) === moduleKey
+      && Number(p.canView) === 1);
+  if (khop(data.allModulePermissions as Row[] | undefined, true)) return true;
+  return khop(data.modulePermissions as Row[] | undefined, false);
 }
 
 /** Chế độ mở: "account" (thẻ 1) · "access" (thẻ 2). */

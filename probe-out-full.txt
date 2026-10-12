@@ -1,0 +1,105 @@
+══════════════════════════════════════════════════════════════════════════════
+  CỔNG CHẶN HỒI QUY THỊ GIÁC  [CHỤP ẢNH CHUẨN]
+  16 màn × 4 kích thước = 64 ảnh
+══════════════════════════════════════════════════════════════════════════════
+  Đăng nhập admin: HTTP 200
+
+▸ 01-dashboard  —  Tổng quan điều hành
+   ✅ desktop  đã ghi ảnh chuẩn (417 KB) · nav=OK · khung=không mở khung
+   ✅ laptop   đã ghi ảnh chuẩn (310 KB) · nav=OK · khung=không mở khung
+   ✅ tablet   đã ghi ảnh chuẩn (188 KB) · nav=OK · khung=không mở khung
+   ✅ phone    đã ghi ảnh chuẩn (108 KB) · nav=OK · khung=không mở khung
+
+▸ 02-project  —  Quản lý dự án
+   ✅ desktop  đã ghi ảnh chuẩn (379 KB) · nav=OK · khung=không mở khung
+   ✅ laptop   đã ghi ảnh chuẩn (274 KB) · nav=OK · khung=không mở khung
+   ✅ tablet   đã ghi ảnh chuẩn (171 KB) · nav=OK · khung=không mở khung
+   ✅ phone    đã ghi ảnh chuẩn (98 KB) · nav=OK · khung=không mở khung
+
+▸ 03-work  —  Công việc
+   ✅ desktop  đã ghi ảnh chuẩn (345 KB) · nav=OK · khung=không mở khung
+   ✅ laptop   đã ghi ảnh chuẩn (252 KB) · nav=OK · khung=không mở khung
+   ✅ tablet   đã ghi ảnh chuẩn (153 KB) · nav=OK · khung=không mở khung
+   ✅ phone    đã ghi ảnh chuẩn (89 KB) · nav=OK · khung=không mở khung
+
+▸ 04-team  —  Tổ đội
+   ✅ desktop  đã ghi ảnh chuẩn (358 KB) · nav=OK · khung=không mở khung
+   ✅ laptop   đã ghi ảnh chuẩn (279 KB) · nav=OK · khung=không mở khung
+   ✅ tablet   đã ghi ảnh chuẩn (155 KB) · nav=OK · khung=không mở khung
+   ✅ phone    đã ghi ảnh chuẩn (92 KB) · nav=OK · khung=không mở khung
+
+▸ 05-material  —  Danh mục vật tư gốc
+   ✅ desktop  đã ghi ảnh chuẩn (387 KB) · nav=OK · khung=không mở khung
+   ✅ laptop   đã ghi ảnh chuẩn (273 KB) · nav=OK · khung=không mở khung
+   ✅ tablet   đã ghi ảnh chuẩn (147 KB) · nav=OK · khung=không mở khung
+   ✅ phone    đã ghi ảnh chuẩn (85 KB) · nav=OK · khung=không mở khung
+
+▸ 06-warehouse  —  Kho Tổng
+   ✅ desktop  đã ghi ảnh chuẩn (388 KB) · nav=OK · khung=không mở khung
+   ✅ laptop   đã ghi ảnh chuẩn (277 KB) · nav=OK · khung=không mở khung
+   ✅ tablet   đã ghi ảnh chuẩn (172 KB) · nav=OK · khung=không mở khung
+   ✅ phone    đã ghi ảnh chuẩn (87 KB) · nav=OK · khung=không mở khung
+
+▸ 07-admin  —  Danh mục & phân quyền
+   ✅ desktop  đã ghi ảnh chuẩn (414 KB) · nav=OK · khung=không mở khung
+   ✅ laptop   đã ghi ảnh chuẩn (284 KB) · nav=OK · khung=không mở khung
+   ✅ tablet   đã ghi ảnh chuẩn (159 KB) · nav=OK · khung=không mở khung
+   ✅ phone    đã ghi ảnh chuẩn (93 KB) · nav=OK · khung=không mở khung
+
+▸ 08-requests  —  Phiếu đề nghị mua hàng
+   ✅ desktop  đã ghi ảnh chuẩn (381 KB) · nav=OK · khung=không mở khung
+   ✅ laptop   đã ghi ảnh chuẩn (263 KB) · nav=OK · khung=không mở khung
+   ✅ tablet   đã ghi ảnh chuẩn (157 KB) · nav=OK · khung=không mở khung
+   ✅ phone    đã ghi ảnh chuẩn (87 KB) · nav=OK · khung=không mở khung
+
+▸ 09-dept-assign-kh  —  Phòng Kế hoạch — Giao việc (trạng thái rỗng)
+   ✅ desktop  đã ghi ảnh chuẩn (1539 KB) · nav=OK · khung=không mở khung
+   ✅ laptop   đã ghi ảnh chuẩn (1418 KB) · nav=OK · khung=không mở khung
+   ✅ tablet   đã ghi ảnh chuẩn (1167 KB) · nav=OK · khung=không mở khung
+   ✅ phone    đã ghi ảnh chuẩn (1048 KB) · nav=OK · khung=không mở khung
+
+▸ 10-dept-assign-da  —  Giao việc (màn giao việc, 7 việc thật) — sau T-01 menu my_work đổi: child 2 = Giao việc, child 3 = Dashboard
+   ✅ desktop  đã ghi ảnh chuẩn (1539 KB) · nav=OK · khung=không mở khung
+   ✅ laptop   đã ghi ảnh chuẩn (1418 KB) · nav=OK · khung=không mở khung
+   ✅ tablet   đã ghi ảnh chuẩn (1167 KB) · nav=OK · khung=không mở khung
+   ✅ phone    đã ghi ảnh chuẩn (1048 KB) · nav=OK · khung=không mở khung
+
+▸ 11-modal-request  —  Phiếu đề nghị — modal lập phiếu (rộng nhất)
+   ✅ desktop  đã ghi ảnh chuẩn (381 KB) · nav=NO_CLICK_TARGET · khung=không mở khung
+   ✅ laptop   đã ghi ảnh chuẩn (263 KB) · nav=NO_CLICK_TARGET · khung=không mở khung
+   ✅ tablet   đã ghi ảnh chuẩn (157 KB) · nav=NO_CLICK_TARGET · khung=không mở khung
+   ✅ phone    đã ghi ảnh chuẩn (87 KB) · nav=NO_CLICK_TARGET · khung=không mở khung
+
+▸ 12-drawer-request-detail  —  Phiếu đề nghị — drawer chi tiết
+   ✅ desktop  đã ghi ảnh chuẩn (261 KB) · nav=OK · khung=340,27 → 1580,1053 (khung nhìn 1920×1080)
+   ✅ laptop   đã ghi ảnh chuẩn (145 KB) · nav=OK · khung=219,19 → 1147,749 (khung nhìn 1366×768)
+   ✅ tablet   đã ghi ảnh chuẩn (118 KB) · nav=OK · khung=22,26 → 746,998 (khung nhìn 768×1024)
+   ✅ phone    đã ghi ảnh chuẩn (84 KB) · nav=OK · khung=515,2230 → 905,3074 (khung nhìn 1420×3074)
+
+▸ 13-modal-material  —  Danh mục vật tư — modal thêm/sửa vật tư
+   ✅ desktop  đã ghi ảnh chuẩn (364 KB) · nav=OK · khung=340,157 → 1580,923 (khung nhìn 1920×1080)
+   ✅ laptop   đã ghi ảnh chuẩn (145 KB) · nav=OK · khung=219,19 → 1147,749 (khung nhìn 1366×768)
+   ✅ tablet   đã ghi ảnh chuẩn (142 KB) · nav=OK · khung=22,129 → 746,895 (khung nhìn 768×1024)
+   ✅ phone    đã ghi ảnh chuẩn (41 KB) · nav=OK · khung=0,20 → 390,844 (khung nhìn 390×844)
+
+▸ 17-modal-po  —  Mua hàng & PO — modal phát hành PO
+   ✅ desktop  đã ghi ảnh chuẩn (261 KB) · nav=OK · khung=680,0 → 1920,1080 (khung nhìn 1920×1080)
+   ✅ laptop   đã ghi ảnh chuẩn (166 KB) · nav=OK · khung=437,0 → 1366,768 (khung nhìn 1366×768)
+   ✅ tablet   đã ghi ảnh chuẩn (64 KB) · nav=OK · khung=0,0 → 768,1024 (khung nhìn 768×1024)
+   ✅ phone    đã ghi ảnh chuẩn (48 KB) · nav=OK · khung=0,0 → 390,844 (khung nhìn 390×844)
+
+▸ 19-report-center  —  Báo cáo tổng hợp — màn dùng chung (R-01)
+   ✅ desktop  đã ghi ảnh chuẩn (342 KB) · nav=OK · khung=không mở khung
+   ✅ laptop   đã ghi ảnh chuẩn (267 KB) · nav=OK · khung=không mở khung
+   ✅ tablet   đã ghi ảnh chuẩn (139 KB) · nav=OK · khung=không mở khung
+   ✅ phone    đã ghi ảnh chuẩn (99 KB) · nav=OK · khung=không mở khung
+
+▸ 18-modal-team-create  —  Quản trị — modal tạo tổ đội dự án (bước 2)
+   ✅ desktop  đã ghi ảnh chuẩn (378 KB) · nav=OK · khung=340,332 → 1580,748 (khung nhìn 1920×1080)
+   ✅ laptop   đã ghi ảnh chuẩn (255 KB) · nav=OK · khung=219,176 → 1147,592 (khung nhìn 1366×768)
+   ✅ tablet   đã ghi ảnh chuẩn (191 KB) · nav=OK · khung=22,296 → 746,728 (khung nhìn 768×1024)
+   ✅ phone    đã ghi ảnh chuẩn (83 KB) · nav=OK · khung=0,197 → 390,844 (khung nhìn 390×844)
+
+══════════════════════════════════════════════════════════════════════════════
+KẾT LUẬN: ĐÃ GHI 64 ẢNH CHUẨN vào tools/baseline/
+══════════════════════════════════════════════════════════════════════════════

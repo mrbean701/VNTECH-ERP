@@ -112,3 +112,7 @@ logs-ls.out
 logs-ls.err
 logs-local-server.out
 logs-local-server.err
+# ⭐ RÁC CỦA CÔNG CỤ GHI LOG `tools/_append-log.mjs` — bản sao lưu tạm khi nối log.
+#    ⚠️ 9 tệp loại này TỪNG BỊ COMMIT (do `git add -A`) ⇒ đã gỡ 09/10/2026.
+#    ⛔ Không phải nhật ký ⇒ ⛔ không commit.
+*.bak-append-*

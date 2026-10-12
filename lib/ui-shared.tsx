@@ -11,6 +11,10 @@
 
 import type { FormFieldConfig } from "@/lib/form-fields";
 import { pdfFromJpegs } from "@/lib/boq-export";
+// ERP-SESSION-03 (07/10/2026) — `BUG-20261007-C06`: tệp xuất «Đơn hàng đã giao» PHẢI dùng bảng nhãn DÙNG CHUNG
+// (⛔ trước đây in mã thô `complete`/`missing` cho 2 cột «Chứng chỉ» và «Giấy giao hàng»).
+// ⚠️ `lib/status-labels.ts` KHÔNG import gì ⇒ ⛔ không tạo import vòng.
+import { statusLabel } from "@/lib/status-labels";
 import { downloadBlob, downloadCsv, downloadSimpleXlsx } from "@/lib/tabular-export";
 import { FormEvent, ReactNode, useCallback, useEffect, useState } from "react";
 
@@ -18,7 +22,7 @@ import { FormEvent, ReactNode, useCallback, useEffect, useState } from "react";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Row = Record<string, any>;
 
-type ModuleKey = "reports_center" | "dashboard" | "dept_plan_tasks" | "dept_plan_assign" | "dept_plan_supply_plan" | "dept_plan_tender" | "dept_plan_rfq" | "dept_plan_purchasing" | "dept_plan_supply" | "dept_plan_contracts" | "dept_plan_suppliers" | "dept_plan_price_data" | "dept_plan_kpi" | "dept_plan_alerts" | "dept_project_tasks" | "dept_project_pda" | "dept_project_assign" | "dept_project_plan" | "dept_project_shop" | "dept_project_boq" | "dept_project_material" | "dept_project_issues" | "dept_project_asbuilt" | "dept_project_payment" | "dept_project_tender" | "dept_project_kpi" | "dept_project_alerts" | "dept_finance_payment_plan" | "dept_finance_recovery" | "dept_finance_advance" | "dept_finance_site_cost" | "dept_finance_cashbank" | "dept_finance_documents" | "dept_legal_hr" | "dept_legal_labor" | "dept_legal_correspondence" | "dept_legal_documents" | "dept_legal_seal" | "dept_legal_benefits" | "dept_legal_contract_review" | "site_command" | "project_progress" | "construction" | "production" | "capital_recovery" | "requests" | "approvals" | "purchasing" | "supplier_catalog" | "receiving" | "delivered" | "warehouse_receipt" | "warehouse_issue" | "inventory" | "material_norms" | "central_warehouse" | "material_catalog" | "boq" | "payments" | "teams" | "stocktake" | "reports" | "admin";
+type ModuleKey = "reports_center" | "dashboard" | "dept_plan_tasks" | "dept_plan_assign" | "dept_plan_supply_plan" | "dept_plan_tender" | "dept_plan_rfq" | "dept_plan_purchasing" | "dept_plan_supply" | "dept_plan_contracts" | "dept_plan_suppliers" | "dept_plan_price_data" | "dept_plan_kpi" | "dept_plan_alerts" | "dept_project_tasks" | "dept_project_pda" | "dept_project_assign" | "dept_project_plan" | "dept_project_shop" | "dept_project_boq" | "dept_project_material" | "dept_project_issues" | "dept_project_asbuilt" | "dept_project_payment" | "dept_project_tender" | "dept_project_kpi" | "dept_project_alerts" | "dept_finance_payment_plan" | "dept_finance_recovery" | "dept_finance_advance" | "dept_finance_site_cost" | "dept_finance_cashbank" | "dept_finance_documents" | "dept_legal_hr" | "dept_legal_labor" | "dept_legal_correspondence" | "dept_legal_documents" | "dept_legal_seal" | "dept_legal_benefits" | "dept_legal_contract_review" | "site_command" | "project_progress" | "construction" | "production" | "capital_recovery" | "requests" | "approvals" | "purchasing" | "supplier_catalog" | "receiving" | "delivered" | "warehouse_receipt" | "warehouse_issue" | "inventory" | "material_norms" | "central_warehouse" | "material_catalog" | "boq" | "payments" | "teams" | "stocktake" | "reports" | "work" | "project_admin" | "work_dashboard" | "work_list" | "work_department" | "work_assign" | "work_project" | "work_reports" | "work_others" | "admin";
 
 const UI_NOW_MS = new Date().getTime();
 
@@ -59,7 +63,7 @@ const NAV_ICON_TYPE: Record<string,string> = {
   project_progress:"calendar", construction:"hardhat", production:"chart", capital_recovery:"coins", boq:"measure", payments:"wallet", teams:"users",
   requests:"clipboard", approvals:"check", supplier_catalog:"handshake", receiving:"truck", delivered:"deliver",
   warehouse_receipt:"receive", warehouse_issue:"issue", inventory:"transfer", stocktake:"stocktake", material_norms:"ruler", central_warehouse:"warehouse", material_catalog:"boxes",
-  admin:"gear", dept_personal:"user",
+  admin:"gear", dept_personal:"user", work:"tasks",
   my_work:"tasks", mep:"blueprint", finance:"coins", hr_legal:"briefcase", reports:"chart"
 };
 
@@ -70,7 +74,7 @@ const NAV_ICON_TONE: Record<string,string> = {
   requests:"red",approvals:"red",receiving:"red",delivered:"red",
   warehouse_receipt:"purple",warehouse_issue:"purple",inventory:"purple",stocktake:"purple",material_norms:"purple",central_warehouse:"purple",material_catalog:"purple",
   dept_plan_tasks:"green",dept_plan_assign:"green",dept_plan_supply_plan:"green",dept_plan_tender:"green",dept_plan_rfq:"green",dept_plan_purchasing:"green",dept_plan_supply:"green",dept_plan_contracts:"green",dept_plan_suppliers:"green",dept_plan_price_data:"green",dept_plan_kpi:"green",dept_plan_alerts:"green",
-  dept_project_tasks:"blue",dept_project_pda:"blue",dept_project_assign:"blue",dept_project_plan:"blue",dept_project_shop:"blue",dept_project_boq:"blue",dept_project_material:"blue",dept_project_issues:"blue",dept_project_asbuilt:"blue",dept_project_payment:"blue",dept_project_tender:"blue",dept_project_kpi:"blue",dept_project_alerts:"blue",dept_finance_payment_plan:"orange",dept_finance_recovery:"orange",dept_finance_advance:"orange",dept_finance_site_cost:"orange",dept_finance_cashbank:"orange",dept_finance_documents:"orange",dept_legal_hr:"purple",dept_legal_labor:"purple",dept_legal_correspondence:"purple",dept_legal_documents:"purple",dept_legal_seal:"purple",dept_legal_benefits:"purple",dept_legal_contract_review:"purple",dept_personal:"blue"
+  dept_project_tasks:"blue",dept_project_pda:"blue",dept_project_assign:"blue",dept_project_plan:"blue",dept_project_shop:"blue",dept_project_boq:"blue",dept_project_material:"blue",dept_project_issues:"blue",dept_project_asbuilt:"blue",dept_project_payment:"blue",dept_project_tender:"blue",dept_project_kpi:"blue",dept_project_alerts:"blue",dept_finance_payment_plan:"orange",dept_finance_recovery:"orange",dept_finance_advance:"orange",dept_finance_site_cost:"orange",dept_finance_cashbank:"orange",dept_finance_documents:"orange",dept_legal_hr:"purple",dept_legal_labor:"purple",dept_legal_correspondence:"purple",dept_legal_documents:"purple",dept_legal_seal:"purple",dept_legal_benefits:"purple",dept_legal_contract_review:"purple",dept_personal:"blue",work:"green"
 };
 
 const DEPT_MODULE_GROUP: Record<string,string> = {
@@ -284,7 +288,11 @@ function Kpi({ icon, label, value, note, tone = "blue", percent }: { icon: strin
 
 const UI_TODAY = new Date(UI_NOW_MS).toISOString().slice(0, 10);
 
-function deliveredExportRows(rows:Row[]) { return rows.map(row=>[row.poNo||"",row.projectName||row.projectCode||"",row.supplierName||"",row.warehouseName||"",String(row.receivedAt||""),row.bchConfirmedByName||"",String(row.bchConfirmedAt||""),Number(row.acceptedQty||0),row.certificateStatus||"",row.deliveryDocumentStatus||""]); }
+// ⛔ ERP-SESSION-03 (07/10/2026) — `BUG-20261007-C06`: 2 cột CUỐI («Chứng chỉ» = CO/CQ, «Giấy giao hàng»)
+// ⛔ TRƯỚC ĐÂY đưa **MÃ THÔ TIẾNG ANH** (`complete`/`missing`/`not_required`) vào **CẢ XLSX LẪN CSV**.
+// ✅ Nay đi qua bảng nhãn DÙNG CHUNG (domain `certificate_status` / `delivery_document`) — cùng nguồn với
+//    tệp PO/GRN của `lib/request-export.ts` (REUSE — Goal §17).
+function deliveredExportRows(rows:Row[]) { return rows.map(row=>[row.poNo||"",row.projectName||row.projectCode||"",row.supplierName||"",row.warehouseName||"",String(row.receivedAt||""),row.bchConfirmedByName||"",String(row.bchConfirmedAt||""),Number(row.acceptedQty||0),statusLabel(row.certificateStatus,"certificate_status"),statusLabel(row.deliveryDocumentStatus,"delivery_document")]); }
 
 function exportDeliveredXlsx(rows:Row[]) { downloadSimpleXlsx({sheetName:"Đơn đã giao",title:"ĐƠN HÀNG ĐÃ GIAO",headers:["PO","Dự án","Nhà cung cấp","Kho nhận","Ngày giao","BCH xác nhận","Thời điểm xác nhận","SL chấp nhận","Chứng chỉ","Giấy giao hàng"],rows:deliveredExportRows(rows),widths:[20,30,32,26,20,24,22,16,18,20],freezeRows:2},`Don_hang_da_giao_${UI_TODAY}`); }
 

@@ -12,7 +12,7 @@
 //     acceptedQty — ⚠️ KHÔNG có "kho nhập" ⇒ hiển thị "—" (§14, ⛔ không bịa).
 
 import { DataTable, ListToolbar, StatusBadge } from "@/app/components/ui";
-import { format } from "@/lib/ui-shared";
+import { date, format } from "@/lib/ui-shared";
 // MT3 §IV.6 — trạng thái hiển thị bằng nguồn ánh xạ DÙNG CHUNG (⛔ không lộ mã thô ra UI).
 import { statusLabel } from "@/lib/status-labels";
 import type { AppData, Row } from "@/lib/ui-shared";
@@ -44,9 +44,9 @@ function AllocateReturn({ data, project }: { data: AppData; project: string }) {
             { key: "c4", header: "Tổ đội / người nhận", render: (row) => <>{row.teamName} · {row.receivedByName || "—"}</> },
             { key: "c5", header: "Dự án", render: (row) => <>{row.projectCode}</> },
             { key: "c6", header: "Kho xuất", render: () => <span className="muted">—</span> },
-            { key: "c7", header: "Ngày xuất", render: (row) => <>{row.issuedAt ? String(row.issuedAt).slice(0, 10) : "—"}</> },
+            { key: "c7", header: "Ngày xuất", render: (row) => <>{date(row.issuedAt)}</> },
             { key: "c8", header: "SL xuất", render: (row) => <><strong>{format.format(row.totalQty || 0)}</strong></> },
-            { key: "c9", header: "Trạng thái", render: (row) => <><StatusBadge value={String(row.status) === "issued" ? "Đã xuất" : String(row.status)} /></> },
+            { key: "c9", header: "Trạng thái", render: (row) => <><StatusBadge value={String(row.status) === "issued" ? "Đã xuất" : statusLabel(row.status)} /></> },
           ]} emptyText="Chưa có phiếu cấp phát trong phạm vi." />
         ) : (
           <DataTable rows={scopeReturns} rowKey={(row, index) => String(`${row.id}-${index}`)} columns={[
@@ -56,7 +56,7 @@ function AllocateReturn({ data, project }: { data: AppData; project: string }) {
             { key: "c4", header: "Tổ đội / người nhận", render: (row) => <>{row.teamName} · {row.returnedByName || "—"}</> },
             { key: "c5", header: "Dự án", render: (row) => <>{row.projectCode}</> },
             { key: "c6", header: "Kho nhập", render: () => <span className="muted">—</span> },
-            { key: "c7", header: "Ngày trả", render: (row) => <>{row.returnedAt ? String(row.returnedAt).slice(0, 10) : "—"}</> },
+            { key: "c7", header: "Ngày trả", render: (row) => <>{date(row.returnedAt)}</> },
             { key: "c8", header: "SL nhận", render: (row) => <><strong>{format.format(row.acceptedQty || 0)}</strong></> },
             { key: "c9", header: "Trạng thái", render: (row) => <><StatusBadge value={statusLabel(row.status)} /></> },
           ]} emptyText="Chưa có phiếu hoàn trả trong phạm vi." />

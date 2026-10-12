@@ -23,7 +23,19 @@ async function walk(root) {
     // Mục đích kiểm giữ nguyên: không có khoá bí mật trong KHO MÃ (xem scripts/preflight-source.mjs).
     if (["node_modules", "dist", ".next", ".wrangler", ".sites-runtime", ".local-data"].includes(entry)) continue;
     const path = join(root, entry);
-    if ((await stat(path)).isDirectory()) files.push(...await walk(path));
+    // MT3-S03 (08/10/2026) — ⛔ CHỐNG «ĐỎ OAN» DO TRANH CHẤP (TOCTOU) KHI NHIỀU PHIÊN CHẠY SONG SONG:
+    // `readdir` liệt kê xong rồi `stat` từng tệp, nhưng phiên khác có thể ĐANG ghi/xoá tệp tạm ở gốc repo
+    // (đo được: `ENOENT … probe-err.txt` trong khi `probe-err-full.txt` vừa được phiên khác tạo lúc 19:35).
+    // ⭐ Cách xử lý ĐÚNG: tệp BIẾN MẤT giữa 2 bước ⇒ BỎ QUA (nó ⛔ không còn trong kho mã để mà kiểm),
+    //    ⛔ KHÔNG làm đỏ phép kiểm «không có khoá bí mật trong source». Lỗi KHÁC vẫn ném ra bình thường.
+    let info;
+    try {
+      info = await stat(path);
+    } catch (error) {
+      if (error && error.code === "ENOENT") continue;
+      throw error;
+    }
+    if (info.isDirectory()) files.push(...await walk(path));
     else files.push(path);
   }
   return files;

@@ -21,8 +21,8 @@ import java.util.Set;
 public final class OpsTaskManagementUseCase {
 
     private static final Set<String> TASK_STATUSES = Set.of("NEW", "IN_PROGRESS", "SUBMITTED", "COMPLETED",
-            "BLOCKED", "WAITING", "ON_HOLD", "CANCELLED");
-    private static final Set<String> TASK_WAITING = Set.of("BLOCKED", "WAITING", "ON_HOLD");
+            "BLOCKED", "WAITING", "WAITING_SUPPLIER", "WAITING_CLIENT", "WAITING_APPROVAL", "WAITING_PROJECT", "REWORK", "ON_HOLD", "CANCELLED");
+    private static final Set<String> TASK_WAITING = Set.of("BLOCKED", "WAITING", "WAITING_SUPPLIER", "WAITING_CLIENT", "WAITING_APPROVAL", "WAITING_PROJECT", "ON_HOLD");
 
     private final OpsTaskStore store;
     private final IdGenerator idGenerator;
@@ -255,7 +255,7 @@ public final class OpsTaskManagementUseCase {
                 + "Mã: " + taskNo + "\n"
                 + "Công việc: " + taskTitle + "\n"
                 + "Dự án: " + projectText + "\n"
-                + "Người giao: " + sv(contact, "fullName") + "\n"
+                + "Người giao: " + actor.fullName() + "\n"
                 + "Thời điểm giao: " + now + "\n"
                 + "Hạn hoàn thành: " + dueText + "\n"
                 + "Ưu tiên: " + sv(task, "priority") + "\n"
@@ -382,7 +382,7 @@ public final class OpsTaskManagementUseCase {
         store.updateWorkItemStatus(u, now);
         store.insertWorkItemEvent(idGenerator.next("EVT"), taskId, "STATUS", currentStatus, next,
                 principal.userId(), null, null, reason.isEmpty() ? null : reason, null, now);
-        notifySafely("COMPLETED".equals(next) ? "TASK_COMPLETED" : "TASK_STATUS_CHANGED");
+        notifySafely("COMPLETED".equals(next) ? "TASK_COMPLETED" : "TASK_STATUS_CHANGED"); if ("COMPLETED".equals(next)) queueCompletionNotice(task, principal, now);
         return Map.of("message", "Đã chuyển " + sv(task, "task_no") + " sang " + next
                 + ". SLA gốc vẫn tính từ assigned_at; thời gian chờ hợp lệ được tách khỏi lỗi công việc.");
     }
@@ -808,4 +808,226 @@ public final class OpsTaskManagementUseCase {
     private static String nvl(Object o) { String s = trim(o); return s.isEmpty() ? null : s; }
     private static String blankDefault(String s, String fallback) { return s.isEmpty() ? fallback : s; }
     private static AuthUseCase.ApiError Api(String message) { return new AuthUseCase.ApiError(message, 400); }
+
+    /**
+     * ⭐ `BUG-20261008-D12` (USER UỶ QUYỀN 08/10/2026) — YÊU CẦU **6c**: *«người giao nhận thông báo khi việc hoàn thành»*.
+     * ⚠️ TRƯỚC ĐÂY đường Java chỉ phát `notifySafely("TASK_COMPLETED")` = **THEO CẤU HÌNH**
+     * (`notification_configs`) ⇒ ⛔ **không đảm bảo gửi cho ĐÚNG NGƯỜI GIAO** (và ⛔ không phát nếu chưa cấu hình).
+     * ⭐ NAY: ghi **TRỰC TIẾP** 1 hàng `task_notifications` (`channel="in_app"`) cho **NGƯỜI GIAO** + 1 hàng
+     * `email_outbox` (event `task_completed`) — ⛔ **không phụ thuộc cấu hình** (giống đường Node:
+     * `queueCompletionNotice` trong `scripts/system-route.mjs`).
+     * ⚠️ BỎ QUA 2 ca: ① việc ⛔ **không có người giao** (`assigned_by` rỗng = việc TỰ TẠO)
+     * ② **người xác nhận CHÍNH LÀ người giao** (⛔ không tự báo cho chính mình).
+     * ⚠️ ĐẶT Ở **CUỐI LỚP** (⛔ không chèn vào giữa): tài liệu/gate của dự án có thể khoá **SỐ DÒNG**
+     * của các phần phía trên ⇒ chèn giữa sẽ **dịch số dòng** và làm đỏ gate (bài học `BUG-D08`/`F-03`).
+     */
+    private void queueCompletionNotice(Map<String, Object> task, Principal actor, Instant now) {
+        String assignerId = sv(task, "assigned_by");
+        if (assignerId.isEmpty()) return;
+        if (assignerId.equals(actor.userId())) return;
+        Map<String, Object> contact = store.findUserContact(assignerId).orElse(null);
+        if (contact == null) return;
+        String taskNo = sv(task, "taskNo");
+        String taskTitle = sv(task, "title");
+        String projectId = sv(task, "projectId");
+        Map<String, Object> project = projectId.isEmpty() ? null : store.findActiveProject(projectId).orElse(null);
+        String projectText = project == null ? "Không gắn dự án"
+                : sv(project, "code") + " - " + sv(project, "name");
+        Map<String, Object> notice = new LinkedHashMap<>();
+        notice.put("id", idGenerator.next("NTF"));
+        notice.put("workItemId", sv(task, "id"));
+        notice.put("userId", assignerId);
+        notice.put("channel", "in_app");
+        notice.put("title", "Công việc đã hoàn thành: " + taskTitle);
+        notice.put("body", taskNo + " · " + actor.fullName() + " đã xác nhận HOÀN THÀNH · " + projectText);
+        store.insertTaskNotification(notice, now);
+
+        String email = sv(contact, "email");
+        if (email.isEmpty()) return;
+        String base = trim(store.emailBaseUrl()).replaceAll("/+$", "");
+        String link = base + "/?task=" + sv(task, "id");
+        String textBody = "Công việc bạn giao đã được xác nhận HOÀN THÀNH.\n"
+                + "Mã: " + taskNo + "\n"
+                + "Công việc: " + taskTitle + "\n"
+                + "Người xác nhận: " + actor.fullName() + "\n"
+                + "Thời điểm: " + now + "\n"
+                + "Mở nhiệm vụ: " + link;
+        String htmlBody = "<div style=\"font-family:Arial,sans-serif;max-width:680px;color:#173f58\">"
+                + "<h2>" + html(taskTitle) + "</h2><p><b>" + html(taskNo) + "</b></p>"
+                + "<p>Người xác nhận: " + html(actor.fullName()) + "</p>"
+                + "<p><a href=\"" + html(link) + "\" style=\"background:#0b78be;color:white;text-decoration:none;"
+                + "padding:10px 16px;border-radius:6px\">Mở nhiệm vụ</a></p></div>";
+        Map<String, Object> mail = new LinkedHashMap<>();
+        mail.put("id", idGenerator.next("MAIL"));
+        mail.put("recipients", email);
+        mail.put("subject", "[VNTECH ERP] " + taskNo + " - " + taskTitle);
+        mail.put("textBody", textBody);
+        mail.put("htmlBody", htmlBody);
+        store.insertEmailOutbox(mail, now);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════════════════════════════
+    // T-04 (PHASE 3 · CÔNG VIỆC) — **PORT 2 ACTION WORK CÒN THIẾU TRÊN ĐƯỜNG JAVA** ⇒ đóng `docs/61` **Q3**.
+    //
+    // ⚠️ VẤN ĐỀ ĐÃ ĐO ĐƯỢC (09/10/2026): 2 action dưới đây **CÓ QUYỀN** trong ma trận
+    //    (`ActionRbacRegistry` L16/L314 + `scripts/system-route.mjs` `:26`/`:38` + `module_catalog`) nhưng
+    //    ⛔ **KHÔNG có `case` nào trong `SystemController`** ⇒ UI gọi vào = **400 «chưa triển khai»**
+    //    ⇒ 2 quyền **«MA»** trên bản chạy Java (nút «Nhận xét» phải tạm ẩn — `docs/57 §4.4`).
+    //
+    // ⭐ NAY: chỉ **CÀI ĐẶT HANDLER** — ⛔ **KHÔNG nới quyền**: cổng quyền ở tầng action GIỮ NGUYÊN
+    //    (`add_work_item_comment` = `canUse` · `set_work_item_participant` = `canEdit`, trên các module
+    //    công việc + khoá chung `work`), và luật truy cập trong use-case bên dưới **CHẶT HƠN** cổng đó.
+    //
+    // ⚠️ ĐẶT Ở **CUỐI LỚP** (⛔ KHÔNG chèn vào giữa): hồ sơ/gate gắn SỐ DÒNG cho các phần phía trên
+    //    ⇒ chèn giữa sẽ dịch dòng làm đỏ gate (bài học `BUG-D08`/`F-03` — xem chú thích `queueCompletionNotice`).
+    // ══════════════════════════════════════════════════════════════════════════════════════════════════
+
+    /** Vai trò người tham gia công việc — JS `system-route.mjs:489`. */
+    private static final Set<String> WORK_ITEM_PARTICIPANT_ROLES =
+            Set.of("owner", "assignee", "follower", "supporter");
+    /** Nhãn hiển thị theo vai trò — JS `:1312`. */
+    private static final Map<String, String> WORK_PARTICIPANT_LABELS = Map.of(
+            "owner", "người chịu trách nhiệm", "assignee", "người thực hiện",
+            "follower", "người theo dõi", "supporter", "người hỗ trợ");
+    /** Giới hạn nội dung bình luận — JS `:1291` (4000 ký tự). */
+    private static final int WORK_COMMENT_MAX = 4000;
+
+    /**
+     * LUẬT TRUY CẬP MỘT CÔNG VIỆC — port `requireWorkItemAccess` (`scripts/system-route.mjs:501-515`).
+     *
+     * <p>⭐ MỘT nguồn sự thật cho **CẢ** bình luận **VÀ** người tham gia (⛔ không để 2 đường lệch nhau):
+     * <ul>
+     *   <li>Quản trị viên ⇒ luôn được;</li>
+     *   <li>Người <b>ĐƯỢC GIAO</b> việc ⇒ bình luận + tự thêm người hỗ trợ (việc của chính họ);</li>
+     *   <li><b>Trưởng phòng</b> của phòng công việc ⇒ điều phối cả hai;</li>
+     *   <li>Người <b>ĐANG</b> ở trong {@code work_item_participants} ⇒ bình luận;</li>
+     *   <li>còn lại ⇒ đòi quyền DÙNG trên module công việc.</li>
+     * </ul>
+     *
+     * <p>⚠️ <b>VỀ NHÁNH CUỐI (đã cân nhắc, có lý do):</b> cổng quyền ở tầng action
+     * ({@code ActionRbacRegistry}) <b>đã cưỡng chế</b> {@code canUse}/{@code canEdit} trên đúng bộ module
+     * công việc <b>TRƯỚC KHI</b> vào use-case ⇒ nhánh cuối chỉ cần <b>rơi qua</b> (⛔ không lặp lại SQL kiểm
+     * quyền ở tầng application — luật dự án §15, và ⛔ tránh 2 nguồn sự thật chệch nhau).
+     * ⚠️ GHI NHẬN LỆCH NHỎ so với JS: handler JS còn lặp 4 khoá {@code dept_*} (⛔ **không** gồm khoá chung
+     * {@code work}) ⇒ người chỉ có {@code work}+{@code canUse} bị JS **chặn oan** ở handler, trong khi
+     * route-level JS <b>đã cho qua</b>. ⇒ ⭐ báo `ERP-SESSION-04` căn lại đường JS (xem `HANDOFF-20261009-A02`).
+     */
+    private void requireWorkItemAccess(Principal principal, Map<String, Object> task, boolean participantMode) {
+        if ("admin".equals(principal.roleBase()) || "admin".equals(principal.role())) return;
+        boolean mine = !sv(task, "assigned_to").isEmpty() && sv(task, "assigned_to").equals(principal.userId());
+        boolean manager = store.userIsDepartmentManager(principal.userId(), sv(task, "department_code"));
+        if (mine || manager) return;
+        if (!participantMode && store.workItemParticipantExists(sv(task, "id"), principal.userId())) return;
+        if (participantMode) {
+            throw Api("Chỉ người được giao việc, Trưởng phòng hoặc người có quyền điều phối công việc "
+                    + "mới thêm được người tham gia.");
+        }
+        // Nhánh bình luận: quyền `canUse` trên module công việc đã được cưỡng chế ở tầng action ⇒ hợp lệ.
+    }
+
+    /**
+     * `add_work_item_comment` — port JS `system-route.mjs:1286-1296` (T-04 · PHASE 3).
+     * ⛔ CHỈ ĐỌC/GHI bảng `work_item_comments`; ⛔ không đụng luồng trạng thái nhiệm vụ.
+     */
+    public Map<String, Object> addWorkItemComment(Principal principal, Map<String, Object> payload) {
+        String taskId = trim(payload.get("workItemId"));
+        String text = trim(payload.get("comment"));
+        Map<String, Object> task = store.findWorkItem(taskId)
+                .orElseThrow(() -> Api("Không tìm thấy nhiệm vụ."));
+        if (text.isEmpty()) throw Api("Cần nhập nội dung bình luận.");
+        if (text.length() > WORK_COMMENT_MAX)
+            throw Api("Nội dung bình luận tối đa " + WORK_COMMENT_MAX + " ký tự.");
+        requireWorkItemAccess(principal, task, false);
+        Instant now = Instant.now();
+        String visibility = "public".equals(trim(payload.get("visibility"))) ? "public" : "internal";
+        Map<String, Object> comment = new LinkedHashMap<>();
+        comment.put("id", idGenerator.next("WCM"));
+        comment.put("workItemId", taskId);
+        comment.put("userId", principal.userId());
+        comment.put("comment", text);
+        comment.put("visibility", visibility);
+        store.insertWorkItemComment(comment, now);
+        String taskNo = sv(task, "task_no");
+        return Map.of("message", "Đã thêm bình luận vào " + (taskNo.isEmpty() ? taskId : taskNo) + ".");
+    }
+
+    /**
+     * `set_work_item_participant` — port JS `system-route.mjs:1297-1314` (T-04 · PHASE 3).
+     * ⚠️ MỘT dòng cho mỗi (công việc, người): thêm lần sau là **GHI ĐÈ** vai trò/cờ thông báo (JS `:1308`).
+     */
+    public Map<String, Object> setWorkItemParticipant(Principal principal, Map<String, Object> payload) {
+        String taskId = trim(payload.get("workItemId"));
+        String targetUserId = trim(payload.get("userId"));
+        Map<String, Object> task = store.findWorkItem(taskId)
+                .orElseThrow(() -> Api("Không tìm thấy nhiệm vụ."));
+        if (targetUserId.isEmpty()) throw Api("Thiếu người tham gia công việc.");
+        String roleInTask = trim(payload.get("roleInTask"));
+        if (roleInTask.isEmpty()) roleInTask = "follower";
+        if (!WORK_ITEM_PARTICIPANT_ROLES.contains(roleInTask))
+            throw Api("Vai trò tham gia công việc không hợp lệ. Chỉ nhận: "
+                    + String.join(" · ", WORK_ITEM_PARTICIPANT_ROLES) + ".");
+        Map<String, Object> target = store.findUserContact(targetUserId)
+                .orElseThrow(() -> Api("Không tìm thấy người được thêm vào công việc."));
+        requireWorkItemAccess(principal, task, true);
+        // JS `:1307`: chỉ TẮT khi payload.notify === false hoặc chuỗi "0"; còn lại BẬT.
+        Object rawNotify = payload.get("notify");
+        boolean notify = !(Boolean.FALSE.equals(rawNotify) || "0".equals(trim(rawNotify)));
+        Instant now = Instant.now();
+        Map<String, Object> participant = new LinkedHashMap<>();
+        participant.put("id", idGenerator.next("WPT"));
+        participant.put("workItemId", taskId);
+        participant.put("userId", targetUserId);
+        participant.put("roleInTask", roleInTask);
+        participant.put("notify", notify ? 1 : 0);
+        participant.put("addedBy", principal.userId());
+        store.upsertWorkItemParticipant(participant, now);
+        String taskNo = sv(task, "task_no");
+        String label = WORK_PARTICIPANT_LABELS.getOrDefault(roleInTask, roleInTask);
+        return Map.of("message", "Đã thêm " + sv(target, "fullName") + " làm " + label
+                + " của " + (taskNo.isEmpty() ? taskId : taskNo) + ".");
+    }
+
+    /**
+     * `delete_work_item` — ⭐ **USER BÁO TRỰC TIẾP 09/10/2026** (đặc tả Công việc §1: *«quyền **xoá** công việc
+     * (của bản thân)»*). S01 thi hành theo thẩm quyền user giao (`DEC-20261009-020`).
+     *
+     * <p><b>LUẬT ĐÃ ÁP (⛔ không tự nghĩ thêm — lấy từ đặc tả user + kế hoạch `ERP-SESSION-04` §4):</b>
+     * <ol>
+     *   <li>⛔ **CHỈ người ĐÃ GIAO/TẠO** việc ({@code assigned_by} = người gọi) mới xoá được
+     *       ⇒ **⛔ không xoá việc của người khác** (admin là ngoại lệ duy nhất, cùng khuôn `requireWorkItemAccess`) ✓</li>
+     *   <li>⛔ **KHÔNG xoá việc đã `COMPLETED`** ⇒ nêu **đích danh lý do** + gợi ý dùng «Huỷ việc»
+     *       ({@code update_work_item_status} → `CANCELLED`) để **giữ lịch sử nghiệm thu** ✓</li>
+     *   <li>**XOÁ MỀM** (`status=CANCELLED` + `active=0` + `cancelled_at/by`) — ⭐ cùng khuôn **đã có sẵn**
+     *       trong hệ thống (ĐO CSDL thật: **7/29** việc ở đúng trạng thái này) ⇒ ⛔ không xoá cứng,
+     *       ⛔ không mất `work_item_events`/comments/participants ✓</li>
+     *   <li>Capability **`canEdit`** trên khoá **`work`** (⭐ S01 quyết: **XOÁ = `canEdit`**,
+     *       ⛔ không thêm `canDelete` — tránh đổi lược đồ CSDL giữa GO-LIVE) ✓</li>
+     * </ol>
+     *
+     * <p>⚠️ **ĐỐI CHỨNG ÂM BẮT BUỘC** (bài học `P-08`/MỐC 110 §7): tài khoản ⛔ **không có** `work`+`canEdit`
+     * bị **403 ở tầng action**; tài khoản có quyền nhưng ⛔ **không phải người giao việc** bị **400 ở đây**
+     * ⇒ 2 tầng đều có ca âm trong `WorkItemDeleteRbacTest` ✓
+     */
+    public Map<String, Object> deleteWorkItem(Principal principal, Map<String, Object> payload) {
+        String taskId = trim(payload.get("workItemId"));
+        if (taskId.isEmpty()) taskId = trim(payload.get("id"));
+        if (taskId.isEmpty()) throw Api("Cần chọn công việc để xoá.");
+        Map<String, Object> task = store.findWorkItem(taskId)
+                .orElseThrow(() -> Api("Không tìm thấy nhiệm vụ."));
+        if ("COMPLETED".equals(sv(task, "status"))) {
+            throw Api("Việc đã Hoàn thành nên không xoá được. Hãy dùng chức năng «Huỷ việc» "
+                    + "(chuyển trạng thái sang Đã huỷ) để giữ lịch sử nghiệm thu.");
+        }
+        if (!"admin".equals(principal.role())) {
+            boolean mine = !sv(task, "assigned_by").isEmpty()
+                    && sv(task, "assigned_by").equals(principal.userId());
+            if (!mine) {
+                throw Api("Chỉ người đã giao/tạo công việc mới xoá được công việc này.");
+            }
+        }
+        Instant now = Instant.now();
+        store.softDeleteWorkItem(taskId, principal.userId(), now);
+        String taskNo = sv(task, "task_no");
+        return Map.of("message", "Đã xoá công việc " + (taskNo.isEmpty() ? taskId : taskNo) + ".");
+    }
 }

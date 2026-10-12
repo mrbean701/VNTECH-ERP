@@ -13,7 +13,7 @@ public final class ActionRbacRegistry {
     private ActionRbacRegistry() { }
 
     private static final Map<String, List<String>> ACTION_MODULES = Map.ofEntries(
-            Map.entry("add_work_item_comment", List.of("dept_plan_tasks", "dept_project_tasks", "dept_plan_assign", "dept_project_assign")),
+            Map.entry("add_work_item_comment", List.of("dept_plan_tasks", "dept_project_tasks", "dept_plan_assign", "dept_project_assign", "work")),
             Map.entry("approve_central_return", List.of("central_warehouse")),
             Map.entry("approve_construction_daily_log", List.of("construction")),
             // TASK-135 (21/09/2026) — SỬA LỖI ĐO ĐƯỢC: `approve_po` khai MODULE RỖNG ⇒ rơi vào nhánh
@@ -71,6 +71,10 @@ public final class ActionRbacRegistry {
             Map.entry("mark_notification_all_read", List.of()),
             Map.entry("approve_team_production", List.of("teams")),
             Map.entry("approve_transfer_order", List.of("inventory")),
+            // ⭐ USER 08/10/2026 (Q2-b) — TÁCH ACTION DUYỆT VIỆC khỏi `update_work_item_status` để ma trận
+            // phân quyền phân biệt «người SỬA việc» (canEdit) với «người DUYỆT việc» (canApprove).
+            // ⭐ + PHƯƠNG ÁN A (cùng ngày): nhận thêm khoá CHUNG `work` ⇒ mọi phòng ban (11 đơn vị) cấp được.
+            Map.entry("approve_work_item", List.of("dept_plan_tasks", "dept_project_tasks", "dept_plan_assign", "dept_project_assign", "work")),
             Map.entry("bulk_boq_item_action", List.of("boq")),
             Map.entry("bulk_import_projects", List.of()),
             Map.entry("bulk_import_users", List.of()),
@@ -86,7 +90,7 @@ public final class ActionRbacRegistry {
             Map.entry("confirm_installation", List.of("teams")),
             Map.entry("create_central_return", List.of("central_warehouse")),
             Map.entry("create_po", List.of("purchasing")),
-            Map.entry("create_project", List.of()),
+            Map.entry("create_project", List.of("project_admin", "admin")),
             // MT2-P14-03c (23/09/2026) — SỬA LỖI CHẶN OAN «CHỈ HUY TRƯỞNG»:
             // JS `scripts/system-route.mjs:1699` mở action này bằng `requireRole(user,["commander","admin"])`
             // (⛔ KHÔNG module-gate) ⇒ `commander` ĐƯỢC tạo tổ đội. Nhưng registry để `List.of()` = MẶC ĐỊNH TỪ CHỐI
@@ -99,7 +103,7 @@ public final class ActionRbacRegistry {
             Map.entry("create_stock_count", List.of("stocktake")),
             Map.entry("create_transfer_order", List.of("inventory")),
             Map.entry("create_user", List.of()),
-            Map.entry("create_work_item", List.of("dept_plan_assign", "dept_project_assign")),
+            Map.entry("create_work_item", List.of("dept_plan_assign", "dept_project_assign", "work")),
             Map.entry("decide_approval", List.of("approvals")),
             // MT3 §B.3 — «yêu cầu bổ sung» là HÀNH ĐỘNG CỦA NGƯỜI DUYỆT ⇒ cùng cổng module với `decide_approval`
             // (⛔ 0 module mới, ⛔ không hard-code admin). Cổng owner-đúng-bước kiểm ở use-case.
@@ -132,7 +136,7 @@ public final class ActionRbacRegistry {
             Map.entry("delete_menu_group", List.of()),
             Map.entry("delete_partner", List.of("supplier_catalog")),
             Map.entry("delete_payment_plan", List.of("dept_finance_payment_plan")),
-            Map.entry("delete_project", List.of()),
+            Map.entry("delete_project", List.of("project_admin", "admin")),
             Map.entry("delete_project_contract", List.of("boq")),
             Map.entry("delete_project_team", List.of()),
             Map.entry("delete_request", List.of("requests")),
@@ -159,11 +163,11 @@ public final class ActionRbacRegistry {
             Map.entry("issue_stock", List.of("teams", "warehouse_issue")),
             Map.entry("login", List.of()),
             Map.entry("logout", List.of()),
-            Map.entry("mark_task_notification_read", List.of("dept_plan_tasks", "dept_project_tasks")),
+            Map.entry("mark_task_notification_read", List.of("dept_plan_tasks", "dept_project_tasks", "work")),
             Map.entry("merge_material_master", List.of("material_catalog")),
             Map.entry("preview_material_dependencies", List.of("material_catalog")),
             Map.entry("preview_request_import", List.of("requests")),
-            Map.entry("reassign_work_item", List.of("dept_plan_assign", "dept_project_assign")),
+            Map.entry("reassign_work_item", List.of("dept_plan_assign", "dept_project_assign", "work")),
             Map.entry("receive_central_return", List.of("central_warehouse")),
             Map.entry("receive_goods", List.of("receiving", "warehouse_receipt")),
             Map.entry("receive_transfer_order", List.of("inventory")),
@@ -250,7 +254,7 @@ public final class ActionRbacRegistry {
             Map.entry("delete_workflow", List.of("admin")),
             // · `create_self_work_item` (`WorkCenter.tsx:216`): SOI GƯƠNG `mark_task_notification_read` —
             //   đăng ký **2 module** để ai có 1 trong 2 đều làm được (⛔ không tự đặt luật mới).
-            Map.entry("create_self_work_item", List.of("dept_plan_tasks", "dept_project_tasks")),
+            Map.entry("create_self_work_item", List.of("dept_plan_tasks", "dept_project_tasks", "work")),
             Map.entry("supplier_material_gaps", List.of("supplier_catalog")),
             Map.entry("save_system_level", List.of()),
             Map.entry("save_team_payment", List.of("teams")),
@@ -258,8 +262,28 @@ public final class ActionRbacRegistry {
             Map.entry("save_team_subcontract", List.of("teams")),
             Map.entry("save_trust_development_settings", List.of()),
             Map.entry("save_ui_display_settings", List.of()),
-            Map.entry("save_user_access", List.of()),
+            // ⭐ PA-1 (USER 08/10/2026 — `DEC-20261008-001`) — PHÂN QUYỀN NGƯỜI DÙNG ⇒ `admin_tab_06`.
+            // USER nguyên văn: «role === admin thì có nghĩa là user đó có toàn quyền và override toàn bộ
+            // phân quyền, là user có khả năng vượt qua mọi quyền mà không cần cấu hình, user có
+            // role === admin là quản trị hệ thống chỉ được sử dụng trong trường hợp đặc biệt ngoài ra khi
+            // không có việc gì quan trọng thì quản trị hệ thống sẽ sử dụng tài khoản ITM hoặc tài khoản
+            // tương tự được cấp full quyền.»
+            //   ⇒ ⭐ QUYỀN PHẢI ĐẾN TỪ **CẤU HÌNH**, ⛔ không chỉ từ `role`.
+            // ⚠️ TRƯỚC ĐÂY `List.of()` = RỖNG ⇒ `requireActionModule` **MẶC ĐỊNH TỪ CHỐI** (PHASE 0B S-03,
+            //    xem nhánh `required.isEmpty()`) ⇒ user role ≠ admin **LUÔN 403**
+            //    «Thao tác chưa được khai báo quyền trong hệ thống» dù ĐÃ được cấp quyền ở ma trận.
+            // ✅ KHỚP UI (đo, ⛔ không suy đoán):
+            //    · `app/screens/AdminUserModalTabs.tsx:22` — `hasAdminTab` kiểm `canView === 1`;
+            //    · `app/screens/AdminUserModalTabs.tsx:36` — `canAccess = isAdmin || hasAdminTab(… USER_TAB_06)`;
+            //    · `app/page.tsx:3433` — `canManageUserPermissions = isAdminUser || admin_tab_06 + canView`.
+            //    ↳ tài liệu thiết kế: `docs/dsh-state/CHECKLIST.md:1318`
+            //      «"Phân quyền công việc / Chức năng" ⇒ `admin_tab_06` (Tab 06) hoặc `role=admin`».
+            Map.entry("save_user_access", List.of("admin_tab_06")),
             Map.entry("save_warehouse_location", List.of("inventory", "central_warehouse")),
+            // ⭐ HANDOFF-20261008-009 (yêu cầu `ERP-SESSION-02`, phiên 01 thi hành) — TẠO/SỬA KHO + ĐỔI TRẠNG THÁI KHO
+            // ⚠️ Dùng ĐÚNG nhóm module của action anh em `save_warehouse_location` ⇒ ⛔ 0 khoá mới trong `module_catalog` ✓
+            Map.entry("save_warehouse", List.of("inventory", "central_warehouse")),
+            Map.entry("set_warehouse_status", List.of("inventory", "central_warehouse")),
             Map.entry("set_approval_stage_status", List.of()),
             Map.entry("set_benefit_record_status", List.of("dept_legal_benefits")),
             Map.entry("set_boq_item_status", List.of("boq")),
@@ -287,7 +311,7 @@ public final class ActionRbacRegistry {
             Map.entry("set_system_level_status", List.of()),
             Map.entry("set_user_status", List.of()),
             Map.entry("set_user_system_level", List.of()),
-            Map.entry("set_work_item_participant", List.of("dept_plan_assign", "dept_project_assign")),
+            Map.entry("set_work_item_participant", List.of("dept_plan_assign", "dept_project_assign", "work")),
             Map.entry("system_level_impact", List.of()),
             Map.entry("settle_advance_request", List.of("dept_finance_advance")),
             Map.entry("settle_team_subcontract", List.of("teams")),
@@ -299,11 +323,52 @@ public final class ActionRbacRegistry {
             // Sửa ĐƠN GIÁ của chính PO ⇒ khai module SẴN CÓ `purchasing` (cùng `create_po`/`close_po_line`).
             Map.entry("update_po_price", List.of("purchasing")),
             Map.entry("update_profile_avatar", List.of()),
-            Map.entry("update_project", List.of()),
+            Map.entry("update_project", List.of("project_admin", "admin")),
             Map.entry("update_returned_request", List.of("requests")),
             Map.entry("update_user", List.of("admin_tab_01")),
-            Map.entry("update_work_item_progress", List.of("dept_plan_tasks", "dept_project_tasks")),
-            Map.entry("update_work_item_status", List.of("dept_plan_tasks", "dept_project_tasks", "dept_plan_assign", "dept_project_assign"))
+            Map.entry("update_work_item_progress", List.of("dept_plan_tasks", "dept_project_tasks", "work")),
+            Map.entry("update_work_item_status", List.of("dept_plan_tasks", "dept_project_tasks", "dept_plan_assign", "dept_project_assign", "work")),
+            // ══════════════════════════════════════════════════════════════════════════════════════════
+            // `HANDOFF-20261008-D14` (`ERP-SESSION-04` → `ERP-SESSION-01`) — **6 ACTION «MÙ QUYỀN»**:
+            // khai quyền cho các action ⛔ **KHÔNG có dòng nào** trong registry ⇒ rơi vào
+            // `getOrDefault(..., List.of())` (fail-closed) ⇒ **mọi non-admin nhận 403 kèm THÔNG ĐIỆP SAI**
+            // («Thao tác chưa được khai báo quyền…») — đúng lớp lỗi **`P-08`** đã vá cho 18 action khác.
+            //
+            // ⚠️ **ĐÃ ĐO trước khi gắn module** (bài học `P-08`: gắn module cho action mà route JS đòi
+            //    `requireRole(["admin"])` = **LEO THANG**):
+            //    · ⭐ CẢ 6 action ⛔ **KHÔNG có trong `scripts/system-route.mjs`** (Java-only, ⛔ không có trong
+            //      `ACTION_CATALOG` — đúng hợp đồng «catalog sinh từ JS») ⇒ ⛔ **KHÔNG tồn tại cổng `requireRole`**
+            //      nào để leo thang qua ✓
+            //    · ⭐ CẢ 6 ⛔ **KHÔNG nằm trong** `RbacService.ADMIN_ONLY_ACTIONS` ⇒ chúng ⛔ không phải admin-only
+            //      theo thiết kế ⇒ việc ⛔ thiếu khai báo là **THIẾU SÓT**, ⛔ không phải chủ ý ✓
+            //    · ⚠️ **HỆ QUẢ CÓ CHỦ Ý**: đối tượng ĐƯỢC CẤP module `dept_legal_contract_review` /
+            //      `work` sẽ **ĐI QUA ĐƯỢC** (hôm nay bị 403) — đây là **KHÔI PHỤC hành vi dự định** theo
+            //      TIỀN LỆ đã có: action anh em `manage_contract_review` (cùng nhóm Review HĐ) **ĐÃ CÓ**
+            //      `dept_legal_contract_review` (xem dòng khai `manage_contract_review` ở trên) ✓
+            //
+            // ⚠️ **ĐẶT Ở CUỐI 2 MAP** (⛔ KHÔNG chèn theo thứ tự alphabet): một số hồ sơ của dự án
+            //    **trích SỐ DÒNG** của tệp này — ĐO 09/10/2026: `docs/agent-progress/F-03-TAI-CHINH-AUDIT-PHU-THUOC.md:190`
+            //    trích `ActionRbacRegistry.java:213…353` · `docs/agent-progress/F-04-HANH-CHINH-KIEN-TRUC.md:64`
+            //    trích `:144`/`:145` ⇒ ⚠️ chèn giữa sẽ **dịch số dòng** và làm các trích dẫn đó **sai** ✓
+            //    ⚠️ Còn **gate** `tests/f03-tai-chinh-audit-deps.test.mjs` kiểm theo **NỘI DUNG**
+            //    (`read(REGISTRY).includes('Map.entry("<action>"')`) — ⛔ **không** theo số dòng ✓ (đã chạy: **EXIT 0**)
+            // ══════════════════════════════════════════════════════════════════════════════════════════
+            // Nhóm REVIEW HỢP ĐỒNG — theo tiền lệ `manage_contract_review` ⇒ module `dept_legal_contract_review`.
+            Map.entry("list_contract_review", List.of("dept_legal_contract_review")),
+            Map.entry("open_contract_review", List.of("dept_legal_contract_review")),
+            Map.entry("save_contract_review", List.of("dept_legal_contract_review")),
+            Map.entry("log_contract_review", List.of("dept_legal_contract_review")),
+            Map.entry("delete_contract_review", List.of("dept_legal_contract_review")),
+            // Phạm vi xem/giao CÔNG VIỆC — ⭐ CHỈ ĐỌC phạm vi **CỦA CHÍNH NGƯỜI GỌI**
+            // (`OpsTaskManagementUseCase.workScope` → `workScope.scopeOf(cu.id(), cu.role())`) ⇒ gắn khoá
+            // công việc `work` + `canView` là ĐỦ và ⛔ KHÔNG nới oan (⛔ không chọn `PUBLIC_ACTIONS` vì
+            // vẫn là dữ liệu thuộc nhóm Công việc; ⚠️ ĐO: hiện ⛔ chưa có FE nào gọi action này).
+            Map.entry("work_scope", List.of("work")),
+            // ⭐ `delete_work_item` (09/10/2026 — user báo trực tiếp: đặc tả Công việc §1 «quyền xoá công việc
+            //    (của bản thân)»). ⚠️ CHỈ khoá `work` — ⛔ **KHÔNG** gắn `work_others`: xoá việc của NGƯỜI KHÁC
+            //    ⛔ không được phép (use-case `deleteWorkItem` chặn bằng `assigned_by == người gọi` ✓).
+            //    ⚠️ ĐẶT Ở CUỐI MAP để ⛔ không dịch số dòng (luật `F-03`) ✓
+            Map.entry("delete_work_item", List.of("work"))
     );
 
     private static final Map<String, String> ACTION_CAPABILITIES = Map.ofEntries(
@@ -322,6 +387,7 @@ public final class ActionRbacRegistry {
             Map.entry("approve_stock_issue", "canApprove"), // TASK-132 — bước ② WF-XUATKHO-01
             Map.entry("approve_team_production", "canUse"),
             Map.entry("approve_transfer_order", "canApprove"),
+            Map.entry("approve_work_item", "canApprove"),
             Map.entry("bulk_boq_item_action", "canEdit"),
             Map.entry("bulk_import_projects", "canUse"),
             Map.entry("bulk_import_users", "canUse"),
@@ -360,7 +426,7 @@ public final class ActionRbacRegistry {
             Map.entry("mark_notification_snooze", "canView"),
             Map.entry("mark_notification_all_read", "canView"),
             Map.entry("create_po", "canCreate"),
-            Map.entry("create_project", "canUse"),
+            Map.entry("create_project", "canCreate"),
             Map.entry("create_project_team", "canUse"),
             Map.entry("create_request", "canCreate"),
             Map.entry("create_stock_count", "canCreate"),
@@ -392,7 +458,7 @@ public final class ActionRbacRegistry {
             Map.entry("delete_menu_group", "canUse"),
             Map.entry("delete_partner", "canEdit"),
             Map.entry("delete_payment_plan", "canEdit"),
-            Map.entry("delete_project", "canUse"),
+            Map.entry("delete_project", "canEdit"),
             Map.entry("delete_project_contract", "canEdit"),
             Map.entry("delete_project_team", "canUse"),
             Map.entry("delete_request", "canEdit"),
@@ -502,8 +568,16 @@ public final class ActionRbacRegistry {
             Map.entry("save_team_subcontract", "canUse"),
             Map.entry("save_trust_development_settings", "canUse"),
             Map.entry("save_ui_display_settings", "canUse"),
-            Map.entry("save_user_access", "canUse"),
+            // ⭐ PA-1 (USER 08/10/2026) — capability `canView` cho KHỚP UI.
+            // `hasAdminTab` (`AdminUserModalTabs.tsx:22`) và `canManageUserPermissions`
+            // (`app/page.tsx:3433`) đều kiểm `Number(p.canView) === 1` ⇒ «được dùng tab NN» = `canView`.
+            // ⛔ Nếu để `canUse`: tài khoản chỉ được tick cột «Xem» ở Tab 06 vẫn **403** ⇒ LẶP LẠI ĐÚNG
+            //    triệu chứng user báo («mở được modal, tick được, bấm Lưu ⛔ không lưu»).
+            Map.entry("save_user_access", "canView"),
             Map.entry("save_warehouse_location", "canEdit"),
+            // ⭐ HANDOFF-20261008-009 — cùng capability với action anh em (Ghi = sửa cấu hình kho)
+            Map.entry("save_warehouse", "canEdit"),
+            Map.entry("set_warehouse_status", "canEdit"),
             Map.entry("set_approval_stage_status", "canUse"),
             Map.entry("set_benefit_record_status", "canEdit"),
             Map.entry("set_boq_item_status", "canEdit"),
@@ -550,12 +624,32 @@ public final class ActionRbacRegistry {
             // đúng quy ước «sửa ⇒ canEdit»; nếu đặc tả muốn rộng hơn thì đổi lại `canUse` (1 dòng).
             Map.entry("update_po_price", "canEdit"),
             Map.entry("update_profile_avatar", "canUse"),
-            Map.entry("update_project", "canUse"),
+            Map.entry("update_project", "canEdit"),
             Map.entry("update_returned_request", "canEdit"),
             // MỐC 103 — sửa tài khoản cần quyền SỬA (trước đây là `canUse` ⇒ quá rộng).
             Map.entry("update_user", "canEdit"),
             Map.entry("update_work_item_progress", "canEdit"),
-            Map.entry("update_work_item_status", "canEdit")
+            Map.entry("update_work_item_status", "canEdit"),
+            // ══════════════════════════════════════════════════════════════════════════════════════════
+            // NĂNG LỰC cho 6 action của `HANDOFF-20261008-D14` — ⚠️ PHẢI khai KÈM module ở map trên:
+            // cổng `probe-action-registry-coverage` mục ⑤ bắt «khai MODULE nhưng THIẾU capability» ✓
+            // ⚠️ ĐẶT Ở CUỐI MAP (⛔ không chèn giữa) — giữ nguyên SỐ DÒNG các dòng phía trên (gate `F-03`).
+            // ══════════════════════════════════════════════════════════════════════════════════════════
+            // Review hợp đồng: XEM (đọc) · LƯU (tạo) · GHI NHẬT KÝ (sửa) · XOÁ = `canEdit`
+            // ⭐ ĐO 09/10/2026 trên chính tệp này: **38** action `delete_*` khai capability ⇒ **25 dùng `canEdit`**
+            //    (13 dùng `canUse`) ⇒ `canEdit` là quy ước **PHỔ BIẾN NHẤT** của dự án cho hành vi XOÁ, và
+            //    **⛔ KHÔNG tồn tại `canDelete`** trong registry ✓ (⚠️ ⛔ không phải quy ước tuyệt đối 38/38)
+            Map.entry("list_contract_review", "canView"),
+            Map.entry("open_contract_review", "canView"),
+            Map.entry("save_contract_review", "canCreate"),
+            Map.entry("log_contract_review", "canEdit"),
+            Map.entry("delete_contract_review", "canEdit"),
+            // Phạm vi công việc CỦA CHÍNH MÌNH ⇒ chỉ cần XEM khoá `work`.
+            Map.entry("work_scope", "canView"),
+            // ⭐ `delete_work_item` — ⭐ **S01 QUYẾT (`DEC-20261009-020`): XOÁ = `canEdit`** (⛔ không thêm
+            //    `canDelete` ⇒ ⛔ không đổi lược đồ CSDL giữa GO-LIVE, ⛔ không cần migration) ✓
+            //    ⚠️ ĐẶT Ở CUỐI MAP để ⛔ không dịch số dòng ✓
+            Map.entry("delete_work_item", "canEdit")
     );
 
     /** Module yêu cầu của action (rỗng = không gated theo module, như JS `!required`). */
@@ -567,4 +661,38 @@ public final class ActionRbacRegistry {
     public static String capabilityFor(String action) {
         return ACTION_CAPABILITIES.getOrDefault(action, "canUse");
     }
+
+    // ══════════════════════════════════════════════════════════════════════════════════════════════════
+    // ⭐ **SỬA 09/10/2026 — USER BÁO TRỰC TIẾP VỀ MA TRẬN PHÂN QUYỀN NHÓM «CÔNG VIỆC»**
+    //    (⚠️ chú thích đặt ở CUỐI tệp để ⛔ KHÔNG dịch số dòng của 2 map phía trên — luật `F-03`)
+    //
+    // **VIỆC ĐÃ SỬA**: `create_self_work_item` nay khai thêm khoá hợp nhất **`work`**
+    //    (dòng khai trong `ACTION_MODULES`: `List.of("dept_plan_tasks", "dept_project_tasks", "work")`).
+    //
+    // **VẤN ĐỀ ĐO ĐƯỢC (⛔ không đoán)**:
+    //   · Khoá hợp nhất **`work`** («Công việc (mọi phòng ban)») chỉ được cấp cho **3 tài khoản**
+    //     (`e2e.kh` · `trinhtrench` · `trdademo`), trong khi hệ thống có **28 tài khoản hoạt động**
+    //     ở **8 phòng ban** ⇒ ⭐ user chốt: **MỌI user PHẢI truy cập được Công việc**; chỉ *quyền thao tác*
+    //     mới theo phân quyền của từng người ✓
+    //   · ⚠️ **7/8 action** nhóm Công việc **đã có** `work`; **duy nhất** `create_self_work_item` thì chưa
+    //     ⇒ ai chỉ có khoá `work` **⛔ KHÔNG tự tạo được việc của chính mình** — trái tên action («tự tạo»)
+    //     và trái với `work_scope` (đã khai `work`) ⇒ ⭐ đây là **bản ghi LỆCH**, ⛔ không phải chủ ý ✓
+    //   · ⛔ **`work_hub` KHÔNG phải action**: nó là **khoá mục menu** (`lib/menu-helpers.ts:150`,
+    //     `groupKey: "my_work"`) và **cố ý** ⛔ không khai `moduleKey` (đo: `case` trong `SystemController`
+    //     = **0**) ⇒ ⛔ **không có gì phải khai** (tránh «vá» một thứ không tồn tại) ✓
+    //
+    // **LUẬT ĐÃ ÁP** (bài học `P-08` / MỐC 110 §7): khai/nới quyền **theo hướng MỞ RA** ⇒ **BẮT BUỘC**
+    //   kèm **đối chứng âm** (tài khoản ⛔ không có quyền vẫn **403**) — xem
+    //   `ContractReviewWorkScopeRbacTest` (2 ca âm + 2 ca dương) ✓
+    //   ⚠️ `create_self_work_item` ⛔ **không có route JS** (Java-only) ⇒ ⛔ **không tồn tại cổng
+    //   `requireRole` nào để leo thang** ✓
+    //
+    // **⛔ VÌ SAO KHÔNG ĐẶT `PUBLIC_ACTIONS`**: tạo việc là **hành vi GHI** ⇒ vẫn phải gated theo khoá
+    //   Công việc + capability **`canUse`** (⛔ không phải «mọi user đã đăng nhập đều ghi được») ✓
+    //
+    // **⚠️ TỰ SỬA NGAY TRONG LƯỢT**: bản sửa đầu tiên của tôi thêm một **map MỚI**
+    //   (`ACTION_MODULES_SUPPLEMENT_20261009`) mà ⛔ **KHÔNG ai đọc** (`modulesFor()` chỉ đọc
+    //   `ACTION_MODULES`) ⇒ đó là **sửa GIẢ, ⛔ không có hiệu lực** ⇒ đã **gỡ bỏ** và sửa **đúng dòng khai**
+    //   ⭐ bài học: **thêm mã mới mà ⛔ không có đường đọc = coi như chưa sửa** — phải kiểm **đường thi hành** ✓
+    // ══════════════════════════════════════════════════════════════════════════════════════════════════
 }

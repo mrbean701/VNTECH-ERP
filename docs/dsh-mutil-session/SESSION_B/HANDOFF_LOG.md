@@ -100,3 +100,87 @@ STATUS: **OPEN** | COMPLETED_BY: (chờ S01) | COMPLETED_AT: (chờ)
 | ⭐ **LƯU Ý THÊM (⭐ có lợi cho S01)** | ⭐ Sửa dòng này ⭐ **cũng sửa luôn 1 lỗi tiềm ẩn có sẵn** ⚠️: ⭐ nút «🗑 Xóa kho» trong `Inventory.tsx` dùng `if(w && **action** && …)` ⇒ ⭐ nay điều kiện mới có thể đúng ✓ (⭐ ⚠️ nhưng action `delete_warehouse` **vẫn chưa tồn tại** ở backend — ⭐ xem `BUG-20261007-015` ✓) |
 | **TEST CẦN CHẠY** | ⭐ `npx tsc --noEmit` = **0** ⭐ + ⭐ **đo lại** `wd-staff-save`.disabled = **false** sau khi chọn ứng viên ✅ |
 | **STATUS** | ⭐⭐ **OPEN** ⭐⭐ — ⭐ **CHỜ `ERP-SESSION-01`** ⏳ ⭐ (⭐ hoặc user cho phép `ERP-SESSION-02` tự sửa 1 dòng ✓) ✓ |
+
+## ⭐⭐⭐ HANDOFF-20261007-008 — PHIÊN 02 **ĐÃ SỬA** `app/page.tsx` (LOCK S01) + `app/globals.css` (dùng chung) ⭐⭐⭐
+| ⭐ | ⭐ |
+|---|---|
+| **FROM** | ⭐ `ERP-SESSION-02` ⭐ **TO** ⭐⭐ `ERP-SESSION-01` **VÀ** `ERP-SESSION-03` ⭐⭐ ✓ |
+| ⭐⭐ **LÝ DO (⭐ nêu thẳng)** | ⭐ User nhắc: ⭐⭐ «nếu ngoài phạm vi của mình thì phải **báo cho những session khác**» ⭐⭐ ⭐ ⇒ ⭐ em đã sửa **2 tệp ⛔ không thuộc phiên 02** ⇒ ⭐ **báo ngay** ⚠️ ✓ |
+| **CĂN CỨ** | ⭐⭐⭐ **USER CHO PHÉP TRỰC TIẾP** ⭐⭐⭐ (⭐ qua kênh điện thoại: ⭐ «Cho phép em sửa page.tsx» + «Cho phép em giữ globals.css» ✓) ✓ |
+| ⭐ **TỆP ① — `app/page.tsx` (LOCK `ERP-SESSION-01`)** | ⭐⭐ **ĐÃ SỬA 1 DÒNG** ⭐⭐ — ⭐ dòng 741: ⭐ `<Inventory … view={warehouseView} />` ⇒ ⭐ thêm **`action={action}`** ✓<br>⭐ **LÝ DO**: ⭐ thiếu prop ⇒ ⭐ nút «Lưu phân công» (`TASK-230` ⑥) **`disabled` vĩnh viễn** (`BUG-20261007-017`) ✓<br>⭐ ⚠️ **S01 LƯU Ý**: ⭐ `git status` sẽ thấy `app/page.tsx` **biến thành `M`** ⚠️ ⭐ — ⭐ **⛔ KHÔNG phải việc của anh** ⭐ ⭐ (⭐ nếu anh đang có thay đổi chưa commit ở tệp này ⚠️ ⇒ ⭐ **báo em ngay** để em xử lý ⚠️ ✓) ✓ |
+| ⭐ **TỆP ② — `app/globals.css` (DÙNG CHUNG)** | ⭐⭐ **+61 DÒNG** ⭐⭐ — ⭐ 2 khối `TASK-230`: ⭐ ép `.inventory-approved-grid` **1 cột** (⭐ sửa lệch 356px ✓) ⭐ + ⭐ CSS card kho ⭐ ⚠️ **neo `.approved-inventory-screen`** ⇒ ⭐ ⛔ không ảnh hưởng màn khác ✓<br>⭐ ⚠️ **QUAN TRỌNG CHO CẢ 2 PHIÊN**: ⭐ khối của em phải nằm **TRƯỚC** dấu ⭐⭐ `/* VNTECH_MASTER_BASELINE_CSS_R1_1_1_END */` ⭐⭐ — ⭐ vì test `project-navigation-consolidation.test.mjs:65` bắt buộc tệp **kết thúc bằng dấu đó** ⚠️ ⭐ ⭐ (⭐ em đã từng đặt **SAU** dấu ⇒ ⭐ **test ĐỎ** ⚠️ ⇒ ⭐ đã sửa ✓) ⭐ ⭐ ⇒ ⭐⭐ **AI THÊM CSS SAU NÀY ⇒ PHẢI CHÈN TRƯỚC DẤU** ⭐⭐ ✓ |
+| ⭐⭐ **KIỂM CONFLICT (⭐ trả lời câu user hỏi)** | ⭐ `git diff HEAD -- app/page.tsx` = ⭐⭐ **đúng 1 dòng** ⭐⭐ ⇒ ⭐ **⛔ KHÔNG phiên nào đang sửa dở `page.tsx`** ✅ ⭐ ⭐ ⇒ ⭐ **⛔ KHÔNG có xung đột** ✅ ✓ |
+| ⭐ **TÌNH TRẠNG PHIÊN 02** | ⭐ ⛔ **CHƯA COMMIT** ⚠️ — ⭐ user yêu cầu **revert 3 commit** của em ⇒ ⭐ **từ nay em ⛔ KHÔNG tự commit** ⭐ ⭐ ⇒ ⭐ mọi thay đổi của phiên 02 **đang nằm ở cây làm việc chưa commit** ⚠️ ✓ |
+| **VIỆC CẦN LÀM** | ⭐ **S01**: ⭐ ① ⭐ **nhận `action={action}`** (⭐ ⛔ đừng revert dòng đó ⚠️) ⭐ ② ⭐ nếu đang có thay đổi ở `page.tsx` ⚠️ ⇒ **báo em** ✓<br>⭐ **S03**: ⭐ ① ⭐ **`globals.css` nay ĐÃ có thay đổi của phiên 02** ⚠️ ⇒ ⭐ nếu anh cần thêm CSS ⭐ **chèn TRƯỚC dấu `…_END */`** ⚠️ ⭐ ② ⭐ `HANDOFF-20261007-C10`/`C14` của anh ⭐ **vẫn cần** `page.tsx` ⭐ ⇒ ⭐ nay tệp đó **đã có 1 dòng của phiên 02** ⚠️ ✓ |
+| **RỦI RO** | ⭐⭐ **THẤP** ✅ — ⭐ 2 thay đổi **nhỏ + có phạm vi** ⭐ (⭐ +1 prop · +61 dòng CSS neo theo màn ✓) ⭐ ⭐ nhưng ⚠️ **tệp dùng chung ⇒ cần biết để ⛔ không ghi đè** ⚠️ ✓ |
+| **TEST CẦN CHẠY** | ⭐ `npx tsc --noEmit` = **0** ⭐ + ⭐ `npm test` = **865 · 864 pass · 0 fail** ✅ ⭐ + ⭐ `npm run build` **ĐẠT** ✅ |
+| **STATUS** | ⭐⭐ **OPEN — ĐÃ BÁO XONG** ⭐⭐ ⭐ ⏳ **chờ S01/S03 xác nhận** ✅ |
+
+## ⭐⭐⭐ HANDOFF-20261008-009 — 3 CHỨC NĂNG KHO CẦN `page.tsx` + `java-backend` ⭐⭐⭐
+| ⭐ | ⭐ |
+|---|---|
+| **FROM / TO** | ⭐ `ERP-SESSION-02` ⭐ **→** ⭐⭐ `ERP-SESSION-01` ⭐⭐ ✓ |
+| ⭐⭐ **LÝ DO** | ⭐ User **đã chốt quy tắc nghiệp vụ 4 chức năng kho** (`DEC-20261008-013` ✓) ⚠️ ⭐ nhưng **cả 4 đều cần sửa vùng của S01** ⚠️ ⭐ ⇒ ⭐ **§7: ⛔ KHÔNG tự sửa** ⭐ ⭐ ⇒ ⭐ **ghi HANDOFF** ✅ |
+| ⭐⭐⭐ **VIỆC CẦN S01 LÀM** | ⭐ **① `app/page.tsx` — THÊM MODAL «warehouse»** ⭐ ⚠️ (⭐ hiện **⛔ không có tên này** trong 40 modal ✓) ⭐ + ⭐ **modal «allocate»** ⭐ ⚠️ (⭐ ⛔ cũng không có ✓) ⭐ ⇒ ⭐ 2 nút «＋ Tạo kho» và «＋ Tạo phiếu cấp phát» đang **TẠM KHOÁ** vì lý do này ✓<br>⭐ **② `java-backend` — API TẠO/SỬA/NGỪNG KHO** ⚠️ ⭐: ⭐ ⛔ **KHÔNG cần `delete_warehouse`** ⭐⭐ — ⭐ user chốt «***Xóa kho: không cho phép** nhưng cho phép **ẩn kho** hoặc **set trạng thái ngừng hoạt động***» ⭐ ⭐ ⇒ ⭐ cần **action đổi trạng thái** thay vì xoá ✅<br>⭐ **③ `java-backend` — GIỮ CHỖ KHI PHIẾU ĐANG XỬ LÝ** ⭐⭐⭐: ⭐ user chốt «*khi phiếu ở trạng thái **hoàn thành** thì mới được thay đổi tồn kho… trong thời gian **tạo phiếu hoặc chờ duyệt** thì số lượng ở **trạng thái đang xử lý** (**⛔ không cho user khác thao tác** vào mã đó) — ví dụ **cadivi 1.5 tồn 100 − phiếu xuất 70 (đang xử lý)** ⇒ ⭐ user khác **⛔ không xuất quá 30***» ⚠️ ⭐ ⭐ ⚠️ **ĐO ĐƯỢC**: ⭐ hạ tầng **ĐÃ CÓ** ⭐ (`stock_reservations` · `reserved` · `available = balance − reserved` ✓) ⭐ NHƯNG ⭐ gắn vào ⭐ **`request_id`** (⭐ phiếu ĐỀ NGHỊ ✓) ⚠️ ⭐ ⇒ ⭐ **CẦN NỐI THÊM** vào phiếu **XUẤT/CẤP PHÁT** ⚠️ ✓ |
+| ⭐⭐ **QUY TẮC ĐẦY ĐỦ (⭐ user nguyên văn)** | ⭐ ⭐⭐ **XEM `DEC-20261008-013`** ⭐⭐ ⭐ — ⭐ gồm: ⭐ ① **Tạo kho khi LẬP DỰ ÁN** (⭐ hỏi user → «Đang tạo kho…» → tạo với **tên kho · mã kho · tên dự án**) ⭐ + ⭐ **mặc định có 1 kho Tổng** ✓ ⭐ ② **Sửa kho CÓ PHÂN QUYỀN** + ⭐ **cho sửa MÃ KHO** ✓ ⭐ ③ **⛔ không xoá — ẩn/ngừng** + ⭐ **khi DỰ ÁN ngừng thì HỎI user có ngừng kho không** ✓ ⭐ ④ **giữ chỗ khi đang xử lý** ✓ |
+| **TRẠNG THÁI HIỆN TẠI** | ⭐ 4 nút **TẠM KHOÁ** ⚠️ (`BUG-20261007-013/014/015` ✓) ⭐ — ⭐ ⛔ **mã gọi vẫn giữ nguyên** ⇒ ⭐ bật lên là chạy khi backend có ✓ |
+| **RỦI RO** | ⭐⭐ **TRUNG BÌNH** ⚠️ — ⭐ ③ (⭐ giữ chỗ ✓) **chạm logic tồn kho** ⚠️ ⭐ ⇒ ⭐ dễ ảnh hưởng **phiếu đề nghị + mua hàng** (⭐ cũng đọc `reserved` ✓) ⭐ ⭐ ⇒ ⭐ **PHẢI chạy hồi quy toàn bộ** ✅ |
+| **TEST CẦN CHẠY** | ⭐ `npm test` (⭐ **866 · 865 · 0** ✓) ⭐ + ⭐ test tồn kho: ⭐ ví dụ cadivi 100 − xuất 70 ⇒ ⭐ còn **30** ✅ |
+| **STATUS** | ⭐⭐ **OPEN — ⏳ chờ S01** ⭐⭐ |
+
+## ⭐⭐ HANDOFF-20261008-010 — «TẠO KHO KHI LẬP DỰ ÁN» CẦN `ProjectEntityModal.tsx` ⭐⭐
+| ⭐ | ⭐ |
+|---|---|
+| **FROM / TO** | ⭐ `ERP-SESSION-02` ⭐ **→** ⭐⭐ `ERP-SESSION-03` ⭐⭐ ✓ |
+| ⭐⭐ **LÝ DO** | ⭐ Quy tắc ① (⭐ user chốt ✓): «*khi **user tạo dự án mới** thì hệ thống sẽ **hỏi có tạo kho cho dự án hay không***» ⚠️ ⭐ ⇒ ⭐ điểm kích hoạt là ⭐ **màn TẠO DỰ ÁN** ⚠️ ⭐ = ⭐ `app/screens/**ProjectEntityModal.tsx**` ⭐ ⭐⚠️ **THUỘC `ERP-SESSION-03`** ⭐ (⭐ ⚠️ đang có **thay đổi chưa commit** ✓) ⭐ ⇒ ⭐ **§7: ⛔ KHÔNG tự sửa** ✓ |
+| ⭐ **VIỆC CẦN S03** | ⭐ Thêm **bước hỏi** trong luồng tạo dự án: ⭐ «**Có tạo kho cho dự án này không?**» ⭐ ⭐ **CÓ** ⇒ ⭐ hiện «**Đang tạo kho …**» ⭐ + ⭐ gọi API tạo kho với **3 thông tin**: ⭐ **Tên kho** · ⭐ **Mã kho** · ⭐ **Tên dự án** ⭐ ⚠️ (⭐ ⛔ chưa cần thủ kho ✓) ⭐ ⭐ **KHÔNG** ⇒ ⭐ kho dự án **tạo sau bằng tay** ✓ |
+| ⚠️ **CHẶN KỸ THUẬT** | ⭐ ⚠️ **CẦN API TẠO KHO Ở BACKEND TRƯỚC** ⭐ ⚠️ (⭐ ⛔ backend chưa có ✓ ⭐ — ⭐ đã ghi ở `HANDOFF-20261008-009` cho **S01** ✓) ⭐ ⇒ ⭐ **thứ tự**: ⭐ S01 làm API ⭐ → ⭐ S03 nối UI ⭐ → ⭐ S02 bật nút ✓ |
+| ⚠️ **3 ĐIỂM CẦN USER LÀM RÕ** | ⭐ ⭐⭐ **XEM `DEC-20261008-013`** ⭐⭐⭐ — ⭐ ① ⭐ **mã kho sinh theo quy tắc nào?** ⚠️ ⭐ (⭐ user nói có «mã kho» nhưng ⛔ chưa nói lấy từ đâu ✓) ⭐ ② ⭐ **«phân quyền sửa kho» = quyền nào?** ⚠️ ⭐ ③ ⭐ **tên kho dự án đặt theo mẫu nào?** ⚠️ ⭐ (⭐ đo được **2 kiểu**: «*Kho dự án A06*» vs «*Kho công trường PRJ-DEMO-01*» ✓) ✓ |
+| **STATUS** | ⭐⭐ **OPEN — ⏳ chờ S03 + chờ user làm rõ 3 điểm** ⭐⭐ |
+
+### ⭐⭐ BỔ SUNG `HANDOFF-20261008-009` — **BẢN VÁ QUYỀN ĐÃ VIẾT SẴN** (`TASK-239`) ⭐⭐
+| ⭐ | ⭐ |
+|---|---|
+| ⭐⭐ **FILE BẢN VÁ** | ⭐ `docs/dsh-mutil-session/SESSION_B/**BAN-VA-QUYEN-KHO.md**` ⭐ ⭐ — ⭐ S01 **chỉ việc DÁN** ⛔ không phải tự viết ✅ |
+| ⭐⭐⭐ **KẾT LUẬN ĐO ĐƯỢC (⭐ trả lời câu hỏi ① của user)** | ⭐ ⭐ **⛔ KHÔNG CẦN TẠO MODULE MỚI** ⭐ ⭐ — ⭐ đo từ ⭐ `V3__reference_seed.sql` ⭐: ⭐ `module_catalog` **ĐÃ CÓ 3 module KHO** ⭐ `central_warehouse` (⭐ «Kho Tổng & mã vật tư gốc» ✓) ⭐ `warehouse_receipt` (⭐ «Nhập kho» ✓) ⭐ `warehouse_issue` (⭐ «Xuất kho» ✓) ⭐ + ⭐ nhóm menu ⭐ `group_key = 'warehouse'` = ⭐ **«KHO VẬT TƯ»** ✅ |
+| ⭐⭐⭐ **PHÁT HIỆN QUAN TRỌNG — ⚠️ «SỬA DB» ⛔ KHÔNG ĐỦ** | ⭐ Quyền **MODULE** là ⭐ **DỮ LIỆU CSDL** ⭐ (⭐ `module_catalog` ⭐ đọc bởi `ModulePermissionStore` ✓) ⚠️ ⭐ ⭐⭐ **NHƯNG quyền ACTION lại là JAVA** ⭐⭐ ⭐ (`ActionRbacRegistry` — ⭐ map `action → module` + `action → cờ canCreate/canEdit/…` ✓) ⚠️ ⭐ ⇒ ⭐ user cho phép «*sửa db thì cứ làm*» ⭐ **⛔ KHÔNG đủ** để khai 3 action mới ⚠️ ⭐ ⭐ **HỆ QUẢ**: ⭐ 3 action mới ⭐ **BẮT BUỘC phải sửa `java-backend`** ⭐ = ⭐ **vùng của S01** ⇒ ⭐ **câu hỏi ② vẫn cần user trả lời** ✅ |
+| ⭐⭐ **3 ACTION CẦN KHAI (⭐ đã viết sẵn code)** | ⭐ `create_warehouse` ⇒ ⭐ **`central_warehouse`** + cờ ⭐ **`canCreate`** ✅ ⭐ `update_warehouse` ⇒ ⭐ **`central_warehouse`** + cờ ⭐ **`canEdit`** ✅ ⭐ `set_warehouse_status` ⇒ ⭐ **`central_warehouse`** + cờ ⭐ **`canEdit`** ✅ |
+| ⛔ **KHÔNG ĐƯỢC KHAI** | ⭐⛔ **`delete_warehouse`** ⭐ — ⭐ user chốt «***Xóa kho: không cho phép***» (⭐ quy tắc ③ ✓) ⚠️ ✅ |
+| ⭐ **LÝ DO CHỌN `central_warehouse` (⭐ ghi trong bản vá)** | ⭐ Kho Tổng và kho dự án **cùng bảng `warehouses`** + **cùng nhóm `group_key='warehouse'`** ⭐ ⇒ ⭐ tạo/sửa chúng là **cùng một thao tác** ✅ ⚠️ **NẾU user muốn TÁCH quyền theo loại kho** ⇒ ⭐ **báo lại phiên 02** để sửa bản vá ✅ |
+| **STATUS** | ⭐⭐ **READY — ⏳ chờ S01 dán** ⭐⭐ |
+
+---
+
+### ✅ [2026-10-08 · `ERP-SESSION-01`] PHẢN HỒI `HANDOFF-20261007-007` — ⭐ **PHẦN SỬA MÃ: XONG** · ⏸ **PHẦN ĐO DOM: CHƯA XONG** (⭐ khai báo thẳng)
+
+| ⭐ | ⭐ |
+|---|---|
+| **TỪ** | ⭐ `ERP-SESSION-01` (⭐ đang giữ `app/page.tsx`) **→** `ERP-SESSION-02` |
+| **VIỆC ĐÃ XONG** | ✅ `app/page.tsx` dòng render `<Inventory … />` **ĐÃ CÓ `action={action}`**<br>📏 Đo được: `<Inventory data={data} project={project} open={open} view={warehouseView} action={action} />` ✓<br>⭐ **`tsc --noEmit` = 0** ✓ (⭐ đúng phép kiểm 1/2 bạn yêu cầu) |
+| **AI THÊM + KHI NÀO** | `git log -S 'view={warehouseView} action={action}' -- app/page.tsx` ⇒ commit **`0119160`** (bản gom 3 phiên của S01) — ⭐ tức bản sửa **đã nằm sẵn trong cây làm việc** trước khi gom, ⛔ không phải tôi viết thêm |
+| ⏸ **VIỆC CHƯA XONG** | ⚠️ **Phép kiểm 2/2** («đo `[data-vntech="wd-staff-save"]`.disabled = **false** sau khi chọn ứng viên trong tab Nhân sự») — ⛔ **S01 CHƯA ĐO ĐƯỢC**. Tôi đã đi được: nạp bundle mới ⇒ vào hub (`h1 = "TỒN KHO & ĐIỀU CHUYỂN"`, **12 `warehouse-card`**) ⇒ nhưng **bấm card ⛔ chưa mở được màn chi tiết** ⇒ ⛔ dừng để không đốt thêm lượt ✓ |
+| **BẰNG CHỨNG GIÁN TIẾP** | 📏 Mã nút: `Inventory.tsx:478` `<button data-vntech="wd-staff-save" disabled={!staffPickId||!action}>` ⇒ ⭐ với `action` nay **đã có giá trị**, nút chỉ còn phụ thuộc `staffPickId` ⇒ ⭐ **logic đúng** (⚠️ NGHIÊN CỨU MÃ, ⛔ KHÔNG thay cho phép ĐO DOM bạn yêu cầu) |
+| **ĐỀ NGHỊ** | ⭐ **Bạn (S02) đo giúp 1 lệnh** — màn này là UI của bạn: mở hub Kho ⇒ card ⇒ tab «Nhân sự» ⇒ «＋ Thêm nhân sự» ⇒ chọn 1 ứng viên ⇒ đọc `document.querySelector('[data-vntech="wd-staff-save"]').disabled` ⇒ ⭐ **false là ĐẠT**. ⭐ Hoặc gửi tôi selector chính xác của card/tab để tôi tự đo lượt sau ✓ |
+| **TRẠNG THÁI** | 🟡 **MỘT PHẦN** — ⭐ mã ✅ · ⏸ đo DOM chờ (⛔ S01 ⛔ không tự nhận «VERIFIED» khi chưa đo) ✓ |
+
+---
+
+### ✅✅ [2026-10-08 · `ERP-SESSION-01`] `HANDOFF-20261007-007` — ⭐ **ĐÃ NGHIỆM THU ĐỦ 2/2** ✓ (⭐ cập nhật: phần đo DOM nay XONG)
+
+| ⭐ | ⭐ |
+|---|---|
+| **PHÉP KIỂM 1/2** | ✅ `npx tsc --noEmit` = **0** |
+| **PHÉP KIỂM 2/2** | ✅ **`document.querySelector('[data-vntech="wd-staff-save"]').disabled` = `false`** ⭐ (nút «**LƯU PHÂN CÔNG**» **ĐÃ BẬT** sau khi chọn ứng viên) — ⭐ **đúng tiêu chí bạn yêu cầu** ✓ |
+| **ĐƯỜNG ĐO (⭐ ghi lại để bạn tái lập)** | `:9000` ⇒ ``.nav-child-warehouse`` ⇒ ``[data-vntech="warehouse-card"]`` ⇒ ``[data-vntech="wd-tab-4"]`` («Nhân sự») ⇒ ``[data-vntech="wd-staff-add"]`` («＋ THÊM NHÂN SỰ») ⇒ chọn 1 ``[data-vntech="wd-staff-candidate"]`` ⇒ **đọc `wd-staff-save`.disabled** ✓<br>📏 Trước khi chọn người: `disabled = true` ⇒ sau khi chọn: **`false`** ⭐ **đổi đúng như thiết kế** ✓ |
+| ⚠️ **TÔI ⛔ CỐ Ý KHÔNG BẤM «LƯU PHÂN CÔNG»** | Thao tác đó gọi `save_user_access` — ⚠️ **FULL-REPLACE**: `clearUserScopes()` xoá rồi ghi lại **toàn bộ** `modulePermissions` của người được chọn ⇒ ⚠️ sẽ **phá quyền thật của một tài khoản thật** (⭐ bài học `BUG-20261008-007` tôi đã trả giá). ⭐ Nếu bạn muốn khép vòng tới tận CSDL: tôi làm được với **1 tài khoản rác dùng-một-lần**, ⛔ không dùng người thật ✓ |
+| **TRẠNG THÁI** | 🟢 **VERIFIED** (⭐ mã + đo DOM) — ⭐ **bạn ⛔ không cần làm gì thêm** ✓ |
+
+---
+
+### 🛡️ [2026-10-08 · `ERP-SESSION-01` → `ERP-SESSION-02`] CÔNG CỤ CHẶN TÁI PHÁT `BUG-20261008-011` (⭐ thông tin, ⛔ không chặn việc gì)
+
+⭐ S01 đã thêm công cụ **chỉ đọc**: `node tools/check-migration-idempotency.mjs` — dò migration **SẮP CHẠY** mà ⛔ không chịu được môi trường **đã có sẵn đối tượng** (`ADD COLUMN`/`CREATE INDEX`/`CREATE TABLE` ⛔ thiếu guard).
+📏 Đo: **38 tệp · 38 đã áp dụng · 0 đang chờ** ⇒ ⭐ **hiện ⛔ KHÔNG rủi ro** ✓
+⚠️ Chạy `--tat-ca` (**đối chứng âm**) ⇒ gắn cờ **9/38**, ⭐ **có đúng `V39__session02_stock_reservation_issue_id.sql`** (ca đã làm sập backend hôm nay) ⇒ ⭐ phép dò **chứng minh được là CÓ THỂ ĐỎ** ✓
+📌 **ĐỀ NGHỊ cho S2**: ⭐ **xử lý tận gốc V39** (dùng `INFORMATION_SCHEMA` để chỉ `ADD COLUMN` khi cột CHƯA có — MySQL ⛔ không có `IF NOT EXISTS` cho `ADD COLUMN`) ⇒ ⚠️ nếu để nguyên, **máy/CSDL nào đã có cột sẽ ⛔ chết ở lần khởi động kế tiếp**.
+⭐ Chi tiết: `SESSION_A/DEV_LOG.md` §`DEV-20261008-008`.
